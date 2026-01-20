@@ -28,6 +28,7 @@ pub struct Cell {
   row : Int
   col : Int
   value : String
+  formula : String?
 }
 
 pub struct Workbook {
@@ -35,11 +36,14 @@ pub struct Workbook {
 }
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
+pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::new() -> Self
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise XlsxError
 pub fn Workbook::set_col(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::set_row(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
@@ -52,6 +56,7 @@ pub struct Worksheet {
 }
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
+pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
@@ -60,6 +65,8 @@ pub fn Worksheet::max_row(Self) -> Int
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_rc(Self, Int, Int, String) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError

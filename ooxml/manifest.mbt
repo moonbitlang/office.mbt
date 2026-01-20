@@ -20,6 +20,9 @@ let rel_theme = "http://schemas.openxmlformats.org/officeDocument/2006/relations
 let rel_shared_strings = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"
 
 ///|
+let rel_calc_chain = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain"
+
+///|
 let ct_rels = "application/vnd.openxmlformats-package.relationships+xml"
 
 ///|
@@ -41,6 +44,9 @@ let ct_shared_strings = "application/vnd.openxmlformats-officedocument.spreadshe
 let ct_theme = "application/vnd.openxmlformats-officedocument.theme+xml"
 
 ///|
+let ct_calc_chain = "application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"
+
+///|
 let ct_core_props = "application/vnd.openxmlformats-package.core-properties+xml"
 
 ///|
@@ -57,6 +63,7 @@ pub struct WorkbookManifest {
 pub fn WorkbookManifest::new(
   sheet_count : Int,
   include_shared_strings? : Bool = true,
+  include_calc_chain? : Bool = false,
 ) -> WorkbookManifest {
   let safe_sheet_count = if sheet_count < 0 { 0 } else { sheet_count }
   let content_types = ContentTypes::new()
@@ -67,6 +74,9 @@ pub fn WorkbookManifest::new(
   content_types.add_override("/xl/theme/theme1.xml", ct_theme)
   if include_shared_strings {
     content_types.add_override("/xl/sharedStrings.xml", ct_shared_strings)
+  }
+  if include_calc_chain {
+    content_types.add_override("/xl/calcChain.xml", ct_calc_chain)
   }
   if safe_sheet_count > 0 {
     for i in 1..<=safe_sheet_count {
@@ -107,6 +117,11 @@ pub fn WorkbookManifest::new(
         rel_type=rel_shared_strings,
         target="sharedStrings.xml",
       ),
+    )
+  }
+  if include_calc_chain {
+    ignore(
+      workbook_rels.add_auto(rel_type=rel_calc_chain, target="calcChain.xml"),
     )
   }
   { content_types, root_rels, workbook_rels }

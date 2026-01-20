@@ -7,13 +7,15 @@ fn collect_shared_strings(
   let mut total = 0
   for sheet in workbook.sheets() {
     for cell in sheet.cells() {
-      total = total + 1
-      match index_map.get(cell.value) {
-        Some(_) => ()
-        None => {
-          let idx = shared_strings.length()
-          shared_strings.push(cell.value)
-          index_map.set(cell.value, idx)
+      if cell.formula is None {
+        total = total + 1
+        match index_map.get(cell.value) {
+          Some(_) => ()
+          None => {
+            let idx = shared_strings.length()
+            shared_strings.push(cell.value)
+            index_map.set(cell.value, idx)
+          }
         }
       }
     }
@@ -62,6 +64,38 @@ fn write_shared_strings_xml(
 }
 
 ///|
+fn collect_formula_cells(workbook : Workbook) -> Array[(Int, String)] {
+  let formula_cells : Array[(Int, String)] = []
+  for i, sheet in workbook.sheets() {
+    let sheet_id = i + 1
+    for cell in sheet.cells() {
+      match cell.formula {
+        Some(_) => formula_cells.push((sheet_id, cell.reference))
+        None => ()
+      }
+    }
+  }
+  formula_cells
+}
+
+///|
+fn write_calc_chain_xml(cells : Array[(Int, String)]) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<calcChain xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
+  )
+  for cell in cells {
+    let (sheet_id, reference) = cell
+    sb.write_view("  <c r=\"")
+    sb.write_view(escape_xml_attr(reference))
+    sb.write_view("\" i=\"\{sheet_id}\"/>\n")
+  }
+  sb.write_view("</calcChain>")
+  sb.to_string()
+}
+
+///|
 fn write_worksheet_xml(
   sheet : Worksheet,
   string_map : Map[String, Int],
@@ -82,13 +116,33 @@ fn write_worksheet_xml(
       current_row = cell.row
       sb.write_view("    <row r=\"\{current_row}\">\n")
     }
-    let idx = match string_map.get(cell.value) {
-      Some(value) => value
-      None => raise XlsxError::InvalidSharedString(index=cell.row)
-    }
     sb.write_view("      <c r=\"")
     sb.write_view(escape_xml_attr(cell.reference))
-    sb.write_view("\" t=\"s\"><v>\{idx}</v></c>\n")
+    match cell.formula {
+      Some(formula) => {
+        if cell.value != "" {
+          sb.write_view("\" t=\"str\">")
+        } else {
+          sb.write_view("\">")
+        }
+        sb.write_view("<f>")
+        sb.write_view(escape_xml_text(formula))
+        sb.write_view("</f>")
+        if cell.value != "" {
+          sb.write_view("<v>")
+          sb.write_view(escape_xml_text(cell.value))
+          sb.write_view("</v>")
+        }
+        sb.write_view("</c>\n")
+      }
+      None => {
+        let idx = match string_map.get(cell.value) {
+          Some(value) => value
+          None => raise XlsxError::InvalidSharedString(index=cell.row)
+        }
+        sb.write_view("\" t=\"s\"><v>\{idx}</v></c>\n")
+      }
+    }
   }
   if current_row >= 0 {
     sb.write_view("    </row>\n")
@@ -185,9 +239,12 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   )
   let include_shared = shared_strings.length() > 0
   let sheet_count = workbook.sheets().length()
+  let formula_cells = collect_formula_cells(workbook)
+  let include_calc_chain = formula_cells.length() > 0
   let manifest = @ooxml.WorkbookManifest::new(
     sheet_count,
     include_shared_strings=include_shared,
+    include_calc_chain~,
   )
   let archive = @zip.Archive::new()
   archive.add(
@@ -216,6 +273,12 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       @encoding/utf8.encode(
         write_shared_strings_xml(shared_strings, total_count),
       ),
+    )
+  }
+  if include_calc_chain {
+    archive.add(
+      "xl/calcChain.xml",
+      @encoding/utf8.encode(write_calc_chain_xml(formula_cells)),
     )
   }
   archive.add("xl/styles.xml", @encoding/utf8.encode(default_styles_xml))

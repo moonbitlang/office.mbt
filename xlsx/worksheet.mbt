@@ -4,6 +4,7 @@ pub struct Cell {
   row : Int
   col : Int
   value : String
+  formula : String?
 }
 
 ///|
@@ -47,11 +48,11 @@ pub fn Worksheet::set_cell(
   let canonical = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
-      self.cells[i] = { reference: canonical, row, col, value }
+      self.cells[i] = { reference: canonical, row, col, value, formula: None }
       return
     }
   }
-  self.cells.push({ reference: canonical, row, col, value })
+  self.cells.push({ reference: canonical, row, col, value, formula: None })
 }
 
 ///|
@@ -69,6 +70,50 @@ pub fn Worksheet::get_cell(
 }
 
 ///|
+pub fn Worksheet::set_cell_formula(
+  self : Worksheet,
+  reference : String,
+  formula : String,
+  value? : String = "",
+) -> Unit raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = {
+        reference: canonical,
+        row,
+        col,
+        value,
+        formula: Some(formula),
+      }
+      return
+    }
+  }
+  self.cells.push({
+    reference: canonical,
+    row,
+    col,
+    value,
+    formula: Some(formula),
+  })
+}
+
+///|
+pub fn Worksheet::get_cell_formula(
+  self : Worksheet,
+  reference : StringView,
+) -> String? raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      return cell.formula
+    }
+  }
+  None
+}
+
+///|
 pub fn Worksheet::set_cell_rc(
   self : Worksheet,
   row : Int,
@@ -78,11 +123,29 @@ pub fn Worksheet::set_cell_rc(
   let reference = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
-      self.cells[i] = { reference, row, col, value }
+      self.cells[i] = { reference, row, col, value, formula: None }
       return
     }
   }
-  self.cells.push({ reference, row, col, value })
+  self.cells.push({ reference, row, col, value, formula: None })
+}
+
+///|
+pub fn Worksheet::set_cell_formula_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+  formula : String,
+  value? : String = "",
+) -> Unit raise XlsxError {
+  let reference = cell_ref_from(row, col)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = { reference, row, col, value, formula: Some(formula) }
+      return
+    }
+  }
+  self.cells.push({ reference, row, col, value, formula: Some(formula) })
 }
 
 ///|

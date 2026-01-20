@@ -47,7 +47,7 @@ pub struct WorkbookManifest {
   workbook_rels : Relationships
 }
 pub fn WorkbookManifest::content_types_xml(Self) -> String
-pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool) -> Self
+pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool, include_calc_chain? : Bool) -> Self
 pub fn WorkbookManifest::root_rels_xml(Self) -> String
 pub fn WorkbookManifest::workbook_rels_xml(Self) -> String
 

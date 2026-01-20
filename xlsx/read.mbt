@@ -70,18 +70,34 @@ fn parse_worksheet(
     }
     let cell_type = attr_value(tag, "t")
     let rest = try! text[end + 1:]
-    let v_start = match rest.find("<v>") {
-      Some(pos) => pos + 3
-      None => raise XlsxError::InvalidXml(msg="cell value missing")
+    let formula = match rest.find("<f>") {
+      Some(pos) => {
+        let f_rest = try! rest[pos + 3:]
+        let f_end = match f_rest.find("</f>") {
+          Some(end) => end
+          None => raise XlsxError::InvalidXml(msg="formula not closed")
+        }
+        Some(unescape_xml_text(try! f_rest[:f_end]))
+      }
+      None => None
     }
-    let v_rest = try! rest[v_start:]
-    let v_end = match v_rest.find("</v>") {
-      Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="cell value not closed")
+    let raw_value = match rest.find("<v>") {
+      Some(pos) => {
+        let v_rest = try! rest[pos + 3:]
+        let v_end = match v_rest.find("</v>") {
+          Some(end) => end
+          None => raise XlsxError::InvalidXml(msg="cell value not closed")
+        }
+        try! v_rest[:v_end]
+      }
+      None =>
+        match formula {
+          Some(_) => ""
+          None => raise XlsxError::InvalidXml(msg="cell value missing")
+        }
     }
-    let raw_value = try! v_rest[:v_end]
     let value = match cell_type {
-      Some(kind) if kind == "s" => {
+      Some(kind) if kind == "s" && formula is None => {
         let index = @strconv.parse_int(raw_value, base=10) catch {
           _ => raise XlsxError::InvalidXml(msg="shared string index invalid")
         }
@@ -94,7 +110,7 @@ fn parse_worksheet(
     }
     let (row, col) = cell_ref_to_rc(ref_value)
     let canonical = cell_ref_from(row, col)
-    cells.push({ reference: canonical, row, col, value })
+    cells.push({ reference: canonical, row, col, value, formula })
   }
   cells
 }

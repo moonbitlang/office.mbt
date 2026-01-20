@@ -59,6 +59,34 @@ pub fn Workbook::get_cell(
 }
 
 ///|
+pub fn Workbook::set_cell_formula(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  formula : String,
+  value? : String = "",
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_formula(reference, formula, value~)
+}
+
+///|
+pub fn Workbook::get_cell_formula(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> String? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_formula(reference)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,
@@ -85,6 +113,22 @@ pub fn Workbook::get_cell_rc(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_rc(row, col)
+}
+
+///|
+pub fn Workbook::set_cell_formula_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+  formula : String,
+  value? : String = "",
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_formula_rc(row, col, formula, value~)
 }
 
 ///|
