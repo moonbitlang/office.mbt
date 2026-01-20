@@ -524,8 +524,21 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
     Some(value) => parse_styles(decode_utf8(value))
     None => [Style::new()]
   }
+  let core_properties = match archive.get("docProps/core.xml") {
+    Some(value) => parse_core_properties(decode_utf8(value))
+    None => CoreProperties::new()
+  }
+  let app_properties = match archive.get("docProps/app.xml") {
+    Some(value) => parse_app_properties(decode_utf8(value))
+    None => AppProperties::new()
+  }
   let style_count = styles.length()
-  let workbook : Workbook = { sheets: [], styles }
+  let workbook : Workbook = {
+    sheets: [],
+    styles,
+    core_properties,
+    app_properties,
+  }
   for i, name in sheet_names {
     let sheet_path = "xl/worksheets/sheet\{i + 1}.xml"
     let sheet_bytes = match archive.get(sheet_path) {

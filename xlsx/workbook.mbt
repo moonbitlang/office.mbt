@@ -2,11 +2,18 @@
 pub struct Workbook {
   sheets : Array[Worksheet]
   styles : Array[Style]
+  mut core_properties : CoreProperties
+  mut app_properties : AppProperties
 }
 
 ///|
 pub fn Workbook::new() -> Workbook {
-  { sheets: [], styles: [Style::new()] }
+  {
+    sheets: [],
+    styles: [Style::new()],
+    core_properties: CoreProperties::new(),
+    app_properties: AppProperties::new(),
+  }
 }
 
 ///|
@@ -54,6 +61,32 @@ pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
 ///|
 pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
   self.styles[:]
+}
+
+///|
+pub fn Workbook::core_properties(self : Workbook) -> CoreProperties {
+  self.core_properties
+}
+
+///|
+pub fn Workbook::set_core_properties(
+  self : Workbook,
+  props : CoreProperties,
+) -> Unit {
+  self.core_properties = props
+}
+
+///|
+pub fn Workbook::app_properties(self : Workbook) -> AppProperties {
+  self.app_properties
+}
+
+///|
+pub fn Workbook::set_app_properties(
+  self : Workbook,
+  props : AppProperties,
+) -> Unit {
+  self.app_properties = props
 }
 
 ///|

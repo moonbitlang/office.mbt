@@ -31,6 +31,18 @@ pub impl Eq for XlsxError
 pub impl Show for XlsxError
 
 // Types and methods
+pub struct AppProperties {
+  mut application : String
+  mut doc_security : Int?
+  mut scale_crop : Bool?
+  mut company : String
+  mut links_up_to_date : Bool?
+  mut hyperlinks_changed : Bool?
+  mut app_version : String
+}
+pub fn AppProperties::new() -> Self
+pub fn AppProperties::with_values(application? : String, doc_security? : Int, scale_crop? : Bool, company? : String, links_up_to_date? : Bool, hyperlinks_changed? : Bool, app_version? : String) -> Self
+
 pub struct Cell {
   reference : String
   row : Int
@@ -44,6 +56,25 @@ pub struct Chart {
   reference : String
   xml : String
 }
+
+pub struct CoreProperties {
+  mut title : String
+  mut subject : String
+  mut creator : String
+  mut keywords : String
+  mut description : String
+  mut last_modified_by : String
+  mut language : String
+  mut identifier : String
+  mut revision : String
+  mut content_status : String
+  mut category : String
+  mut version : String
+  mut created : String
+  mut modified : String
+}
+pub fn CoreProperties::new() -> Self
+pub fn CoreProperties::with_values(title? : String, subject? : String, creator? : String, keywords? : String, description? : String, last_modified_by? : String, language? : String, identifier? : String, revision? : String, content_status? : String, category? : String, version? : String, created? : String, modified? : String) -> Self
 
 pub struct Image {
   reference : String
@@ -133,6 +164,8 @@ pub fn Table::new(String, String, ArrayView[String], display_name? : String, sty
 pub struct Workbook {
   sheets : Array[Worksheet]
   styles : Array[Style]
+  mut core_properties : CoreProperties
+  mut app_properties : AppProperties
 }
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
@@ -147,6 +180,8 @@ pub fn Workbook::add_style(Self, Style) -> Int
 pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::app_properties(Self) -> AppProperties
+pub fn Workbook::core_properties(Self) -> CoreProperties
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
@@ -158,6 +193,7 @@ pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
+pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
@@ -165,6 +201,7 @@ pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise X
 pub fn Workbook::set_cell_style(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style_rc(Self, StringView, Int, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_col(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
+pub fn Workbook::set_core_properties(Self, CoreProperties) -> Unit
 pub fn Workbook::set_row(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
 pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
