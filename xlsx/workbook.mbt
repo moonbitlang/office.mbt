@@ -86,3 +86,57 @@ pub fn Workbook::get_cell_rc(
   }
   sheet.get_cell_rc(row, col)
 }
+
+///|
+pub fn Workbook::set_row(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  values : ArrayView[String],
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_row(row, values)
+}
+
+///|
+pub fn Workbook::get_row(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Array[String] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_row(row)
+}
+
+///|
+pub fn Workbook::set_col(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  values : ArrayView[String],
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_col(col, values)
+}
+
+///|
+pub fn Workbook::get_col(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+) -> Array[String] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_col(col)
+}

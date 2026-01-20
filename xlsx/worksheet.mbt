@@ -103,6 +103,108 @@ pub fn Worksheet::get_cell_rc(
 }
 
 ///|
+pub fn Worksheet::max_row(self : Worksheet) -> Int {
+  let mut max_row = 0
+  for cell in self.cells {
+    if cell.row > max_row {
+      max_row = cell.row
+    }
+  }
+  max_row
+}
+
+///|
+pub fn Worksheet::max_col(self : Worksheet) -> Int {
+  let mut max_col = 0
+  for cell in self.cells {
+    if cell.col > max_col {
+      max_col = cell.col
+    }
+  }
+  max_col
+}
+
+///|
+pub fn Worksheet::set_row(
+  self : Worksheet,
+  row : Int,
+  values : ArrayView[String],
+) -> Unit raise XlsxError {
+  if row <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+  }
+  for i, value in values {
+    self.set_cell_rc(row, i + 1, value)
+  }
+}
+
+///|
+pub fn Worksheet::get_row(
+  self : Worksheet,
+  row : Int,
+) -> Array[String] raise XlsxError {
+  if row <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+  }
+  let mut max_col = 0
+  for cell in self.cells {
+    if cell.row == row && cell.col > max_col {
+      max_col = cell.col
+    }
+  }
+  if max_col == 0 {
+    return []
+  }
+  let values : Array[String] = Array::make(max_col, "")
+  for cell in self.cells {
+    if cell.row == row {
+      values[cell.col - 1] = cell.value
+    }
+  }
+  values
+}
+
+///|
+pub fn Worksheet::set_col(
+  self : Worksheet,
+  col : Int,
+  values : ArrayView[String],
+) -> Unit raise XlsxError {
+  if col <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+  }
+  for i, value in values {
+    self.set_cell_rc(i + 1, col, value)
+  }
+}
+
+///|
+pub fn Worksheet::get_col(
+  self : Worksheet,
+  col : Int,
+) -> Array[String] raise XlsxError {
+  if col <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+  }
+  let mut max_row = 0
+  for cell in self.cells {
+    if cell.col == col && cell.row > max_row {
+      max_row = cell.row
+    }
+  }
+  if max_row == 0 {
+    return []
+  }
+  let values : Array[String] = Array::make(max_row, "")
+  for cell in self.cells {
+    if cell.col == col {
+      values[cell.row - 1] = cell.value
+    }
+  }
+  values
+}
+
+///|
 fn compare_cell(a : Cell, b : Cell) -> Int {
   if a.row != b.row {
     a.row - b.row
