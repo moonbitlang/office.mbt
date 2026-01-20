@@ -35,6 +35,8 @@ pub struct Worksheet {
   data_validations : Array[String]
   conditional_formats : Array[String]
   mut stream_state : StreamState
+  mut vml_drawing_xml : String?
+  mut vml_drawing_hf_xml : String?
 }
 
 ///|
@@ -51,6 +53,8 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     data_validations: [],
     conditional_formats: [],
     stream_state: StreamState::Idle,
+    vml_drawing_xml: None,
+    vml_drawing_hf_xml: None,
   }
 }
 
@@ -104,6 +108,16 @@ pub fn Worksheet::data_validations(self : Worksheet) -> ArrayView[String] {
 ///|
 pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
   self.conditional_formats[:]
+}
+
+///|
+pub fn Worksheet::vml_drawing_xml(self : Worksheet) -> String? {
+  self.vml_drawing_xml
+}
+
+///|
+pub fn Worksheet::vml_drawing_hf_xml(self : Worksheet) -> String? {
+  self.vml_drawing_hf_xml
 }
 
 ///|
@@ -472,6 +486,28 @@ pub fn Worksheet::add_chart(
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
   self.charts.push({ reference, xml })
+}
+
+///|
+pub fn Worksheet::add_vml_drawing_xml(
+  self : Worksheet,
+  xml : String,
+) -> Unit raise XlsxError {
+  if xml == "" {
+    raise XlsxError::InvalidVmlDrawing(msg="vml drawing xml empty")
+  }
+  self.vml_drawing_xml = Some(xml)
+}
+
+///|
+pub fn Worksheet::add_vml_drawing_hf_xml(
+  self : Worksheet,
+  xml : String,
+) -> Unit raise XlsxError {
+  if xml == "" {
+    raise XlsxError::InvalidVmlDrawing(msg="vml drawing hf xml empty")
+  }
+  self.vml_drawing_hf_xml = Some(xml)
 }
 
 ///|

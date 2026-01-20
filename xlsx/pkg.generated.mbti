@@ -21,6 +21,7 @@ pub suberror XlsxError {
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
+  InvalidVmlDrawing(msg~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed
@@ -144,6 +145,8 @@ pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type?
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
 pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
+pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
@@ -180,6 +183,8 @@ pub struct Worksheet {
   data_validations : Array[String]
   conditional_formats : Array[String]
   mut stream_state : StreamState
+  mut vml_drawing_xml : String?
+  mut vml_drawing_hf_xml : String?
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
@@ -190,6 +195,8 @@ pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? :
 pub fn Worksheet::add_sparkline(Self, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
+pub fn Worksheet::add_vml_drawing_hf_xml(Self, String) -> Unit raise XlsxError
+pub fn Worksheet::add_vml_drawing_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
@@ -221,6 +228,8 @@ pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
+pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
+pub fn Worksheet::vml_drawing_xml(Self) -> String?
 
 // Type aliases
 

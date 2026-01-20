@@ -198,6 +198,32 @@ pub fn Workbook::add_chart(
 }
 
 ///|
+pub fn Workbook::add_vml_drawing_xml(
+  self : Workbook,
+  sheet_name : StringView,
+  xml : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_vml_drawing_xml(xml)
+}
+
+///|
+pub fn Workbook::add_vml_drawing_hf_xml(
+  self : Workbook,
+  sheet_name : StringView,
+  xml : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_vml_drawing_hf_xml(xml)
+}
+
+///|
 pub fn Workbook::add_data_validation_xml(
   self : Workbook,
   sheet_name : StringView,

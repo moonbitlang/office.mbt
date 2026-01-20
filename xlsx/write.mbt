@@ -117,6 +117,9 @@ let rel_pivot_cache = "http://schemas.openxmlformats.org/officeDocument/2006/rel
 let rel_pivot_cache_records = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheRecords"
 
 ///|
+let rel_vml = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing"
+
+///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
 
 ///|
@@ -135,10 +138,14 @@ let ct_pivot_cache_def = "application/vnd.openxmlformats-officedocument.spreadsh
 let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
 
 ///|
+let ct_vml = "application/vnd.openxmlformats-officedocument.vmlDrawing"
+
+///|
 fn write_sheet_rels_xml(
   drawing_target : String?,
   table_targets : ArrayView[String],
   pivot_table_targets : ArrayView[String],
+  vml_targets : ArrayView[String],
 ) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -168,6 +175,14 @@ fn write_sheet_rels_xml(
   for target in pivot_table_targets {
     sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
     sb.write_view(rel_pivot_table)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
+  for target in vml_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_vml)
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(target))
     sb.write_view("\"/>\n")
@@ -417,12 +432,16 @@ fn write_worksheet_xml(
   drawing_rel_id : Int?,
   table_rel_ids : ArrayView[Int],
   pivot_rel_ids : ArrayView[Int],
+  legacy_drawing_rel_id : Int?,
+  legacy_drawing_hf_rel_id : Int?,
 ) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   let needs_rels = drawing_rel_id is Some(_) ||
     table_rel_ids.length() > 0 ||
-    pivot_rel_ids.length() > 0
+    pivot_rel_ids.length() > 0 ||
+    legacy_drawing_rel_id is Some(_) ||
+    legacy_drawing_hf_rel_id is Some(_)
   if needs_rels {
     sb.write_view(
       "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
@@ -528,6 +547,15 @@ fn write_worksheet_xml(
   }
   match drawing_rel_id {
     Some(rel_id) => sb.write_view("  <drawing r:id=\"rId\{rel_id}\"/>\n")
+    None => ()
+  }
+  match legacy_drawing_rel_id {
+    Some(rel_id) => sb.write_view("  <legacyDrawing r:id=\"rId\{rel_id}\"/>\n")
+    None => ()
+  }
+  match legacy_drawing_hf_rel_id {
+    Some(rel_id) =>
+      sb.write_view("  <legacyDrawingHF r:id=\"rId\{rel_id}\"/>\n")
     None => ()
   }
   if sheet.sparkline_groups().length() > 0 {
@@ -664,6 +692,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   let added_extensions : Map[String, Bool] = {}
   let mut image_index = 1
   let mut chart_index = 1
+  let mut vml_index = 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
     let sheet_tables = tables_by_sheet[i]
@@ -693,8 +722,35 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       pivot_targets.push("../pivotTables/pivotTable\{pivot_id}.xml")
       rel_id = rel_id + 1
     }
+    let vml_targets : Array[String] = []
+    let vml_parts : Array[(Int, String)] = []
+    let legacy_drawing_rel_id = match sheet.vml_drawing_xml() {
+      Some(xml) => {
+        let id = rel_id
+        rel_id = rel_id + 1
+        let vml_id = vml_index
+        vml_index = vml_index + 1
+        vml_targets.push("../drawings/vmlDrawing\{vml_id}.vml")
+        vml_parts.push((vml_id, xml))
+        Some(id)
+      }
+      None => None
+    }
+    let legacy_drawing_hf_rel_id = match sheet.vml_drawing_hf_xml() {
+      Some(xml) => {
+        let id = rel_id
+        rel_id = rel_id + 1
+        let vml_id = vml_index
+        vml_index = vml_index + 1
+        vml_targets.push("../drawings/vmlDrawing\{vml_id}.vml")
+        vml_parts.push((vml_id, xml))
+        Some(id)
+      }
+      None => None
+    }
     let sheet_xml = write_worksheet_xml(
-      sheet, string_map, drawing_rel_id, table_rel_ids, pivot_rel_ids,
+      sheet, string_map, drawing_rel_id, table_rel_ids, pivot_rel_ids, legacy_drawing_rel_id,
+      legacy_drawing_hf_rel_id,
     )
     archive.add(
       "xl/worksheets/sheet\{sheet_id}.xml",
@@ -702,13 +758,14 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     )
     if drawing_rel_id is Some(_) ||
       table_targets.length() > 0 ||
-      pivot_targets.length() > 0 {
+      pivot_targets.length() > 0 ||
+      vml_targets.length() > 0 {
       let drawing_target = match drawing_rel_id {
         Some(_) => Some("../drawings/drawing\{sheet_id}.xml")
         None => None
       }
       let sheet_rels_xml = write_sheet_rels_xml(
-        drawing_target, table_targets, pivot_targets,
+        drawing_target, table_targets, pivot_targets, vml_targets,
       )
       archive.add(
         "xl/worksheets/_rels/sheet\{sheet_id}.xml.rels",
@@ -769,6 +826,17 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         }
         None => ()
       }
+    }
+    for part in vml_parts {
+      let (vml_id, xml) = part
+      archive.add(
+        "xl/drawings/vmlDrawing\{vml_id}.vml",
+        @encoding/utf8.encode(xml),
+      )
+      manifest.add_content_override(
+        "/xl/drawings/vmlDrawing\{vml_id}.vml",
+        ct_vml,
+      )
     }
     if !has_drawing {
       continue

@@ -9,6 +9,7 @@ pub suberror XlsxError {
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
+  InvalidVmlDrawing(msg~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed

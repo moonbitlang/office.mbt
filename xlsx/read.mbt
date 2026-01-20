@@ -285,6 +285,44 @@ fn parse_pivot_table_part_ids(
 }
 
 ///|
+fn parse_legacy_drawing_rel_id(
+  xml : StringView,
+  tag_name : StringView,
+) -> String? raise XlsxError {
+  let marker = "<\{tag_name.to_string()}"
+  let mut first = true
+  for chunk in xml.to_string().split(marker) {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None =>
+            raise XlsxError::InvalidXml(
+              msg="\{tag_name.to_string()} tag not closed",
+            )
+        }
+    }
+    let tag = text[:end] catch {
+        _ =>
+          raise XlsxError::InvalidXml(msg="\{tag_name.to_string()} tag invalid")
+      }
+    let id = match attr_value(tag, "r:id") {
+      Some(value) => value
+      None =>
+        raise XlsxError::InvalidXml(msg="\{tag_name.to_string()} id missing")
+    }
+    return Some(id)
+  }
+  None
+}
+
+///|
 fn parse_relationship_targets(
   xml : StringView,
   rel_type : StringView,
@@ -500,8 +538,18 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
     )
     let table_part_ids = parse_table_part_ids(sheet_xml)
     let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
+    let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
+      sheet_xml, "legacyDrawing",
+    )
+    let legacy_drawing_hf_rel_id = parse_legacy_drawing_rel_id(
+      sheet_xml, "legacyDrawingHF",
+    )
     let sparkline_groups = parse_sparkline_groups(sheet_xml)
-    let rels_xml = if table_part_ids.length() > 0 || pivot_part_ids.length() > 0 {
+    let needs_rels = table_part_ids.length() > 0 ||
+      pivot_part_ids.length() > 0 ||
+      legacy_drawing_rel_id is Some(_) ||
+      legacy_drawing_hf_rel_id is Some(_)
+    let rels_xml = if needs_rels {
       let rels_path = "xl/worksheets/_rels/sheet\{i + 1}.xml.rels"
       let rels_bytes = match archive.get(rels_path) {
         Some(value) => value
@@ -607,6 +655,46 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       }
       parsed_pivots
     }
+    let vml_targets = if legacy_drawing_rel_id is Some(_) ||
+      legacy_drawing_hf_rel_id is Some(_) {
+      parse_relationship_targets(rels_xml, rel_vml)
+    } else {
+      {}
+    }
+    let vml_drawing_xml = match legacy_drawing_rel_id {
+      Some(rel_id) => {
+        let target = match vml_targets.get(rel_id) {
+          Some(value) => value
+          None =>
+            raise XlsxError::InvalidXml(msg="vml drawing relationship missing")
+        }
+        let vml_path = resolve_rel_target(target, "worksheets")
+        let vml_bytes = match archive.get(vml_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=vml_path)
+        }
+        Some(decode_utf8(vml_bytes))
+      }
+      None => None
+    }
+    let vml_drawing_hf_xml = match legacy_drawing_hf_rel_id {
+      Some(rel_id) => {
+        let target = match vml_targets.get(rel_id) {
+          Some(value) => value
+          None =>
+            raise XlsxError::InvalidXml(
+              msg="vml drawing hf relationship missing",
+            )
+        }
+        let vml_path = resolve_rel_target(target, "worksheets")
+        let vml_bytes = match archive.get(vml_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=vml_path)
+        }
+        Some(decode_utf8(vml_bytes))
+      }
+      None => None
+    }
     workbook.sheets.push({
       name,
       cells,
@@ -614,6 +702,8 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       tables,
       sparkline_groups,
       pivot_tables,
+      vml_drawing_xml,
+      vml_drawing_hf_xml,
       images: [],
       charts: [],
       data_validations: [],
