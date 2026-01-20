@@ -5,6 +5,7 @@ pub struct Cell {
   col : Int
   value : String
   formula : String?
+  style_id : Int
 }
 
 ///|
@@ -93,11 +94,25 @@ pub fn Worksheet::set_cell(
   let canonical = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
-      self.cells[i] = { reference: canonical, row, col, value, formula: None }
+      self.cells[i] = {
+        reference: canonical,
+        row,
+        col,
+        value,
+        formula: None,
+        style_id: cell.style_id,
+      }
       return
     }
   }
-  self.cells.push({ reference: canonical, row, col, value, formula: None })
+  self.cells.push({
+    reference: canonical,
+    row,
+    col,
+    value,
+    formula: None,
+    style_id: 0,
+  })
 }
 
 ///|
@@ -131,6 +146,7 @@ pub fn Worksheet::set_cell_formula(
         col,
         value,
         formula: Some(formula),
+        style_id: cell.style_id,
       }
       return
     }
@@ -141,6 +157,7 @@ pub fn Worksheet::set_cell_formula(
     col,
     value,
     formula: Some(formula),
+    style_id: 0,
   })
 }
 
@@ -153,6 +170,98 @@ pub fn Worksheet::get_cell_formula(
   for cell in self.cells {
     if cell.row == row && cell.col == col {
       return cell.formula
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::set_cell_style(
+  self : Worksheet,
+  reference : String,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  if style_id < 0 {
+    raise XlsxError::InvalidStyleId(index=style_id)
+  }
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = {
+        reference: canonical,
+        row,
+        col,
+        value: cell.value,
+        formula: cell.formula,
+        style_id,
+      }
+      return
+    }
+  }
+  self.cells.push({
+    reference: canonical,
+    row,
+    col,
+    value: "",
+    formula: None,
+    style_id,
+  })
+}
+
+///|
+pub fn Worksheet::get_cell_style(
+  self : Worksheet,
+  reference : StringView,
+) -> Int? raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      return Some(cell.style_id)
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::set_cell_style_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  if style_id < 0 {
+    raise XlsxError::InvalidStyleId(index=style_id)
+  }
+  let reference = cell_ref_from(row, col)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = {
+        reference,
+        row,
+        col,
+        value: cell.value,
+        formula: cell.formula,
+        style_id,
+      }
+      return
+    }
+  }
+  self.cells.push({ reference, row, col, value: "", formula: None, style_id })
+}
+
+///|
+pub fn Worksheet::get_cell_style_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> Int? raise XlsxError {
+  if row <= 0 || col <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+  }
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      return Some(cell.style_id)
     }
   }
   None
@@ -251,11 +360,18 @@ pub fn Worksheet::set_cell_rc(
   let reference = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
-      self.cells[i] = { reference, row, col, value, formula: None }
+      self.cells[i] = {
+        reference,
+        row,
+        col,
+        value,
+        formula: None,
+        style_id: cell.style_id,
+      }
       return
     }
   }
-  self.cells.push({ reference, row, col, value, formula: None })
+  self.cells.push({ reference, row, col, value, formula: None, style_id: 0 })
 }
 
 ///|
@@ -269,11 +385,25 @@ pub fn Worksheet::set_cell_formula_rc(
   let reference = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
-      self.cells[i] = { reference, row, col, value, formula: Some(formula) }
+      self.cells[i] = {
+        reference,
+        row,
+        col,
+        value,
+        formula: Some(formula),
+        style_id: cell.style_id,
+      }
       return
     }
   }
-  self.cells.push({ reference, row, col, value, formula: Some(formula) })
+  self.cells.push({
+    reference,
+    row,
+    col,
+    value,
+    formula: Some(formula),
+    style_id: 0,
+  })
 }
 
 ///|

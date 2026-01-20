@@ -1,11 +1,12 @@
 ///|
 pub struct Workbook {
   sheets : Array[Worksheet]
+  styles : Array[Style]
 }
 
 ///|
 pub fn Workbook::new() -> Workbook {
-  { sheets: [] }
+  { sheets: [], styles: [Style::new()] }
 }
 
 ///|
@@ -29,6 +30,27 @@ pub fn Workbook::sheet(self : Workbook, name : StringView) -> Worksheet? {
 ///|
 pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
   self.sheets[:]
+}
+
+///|
+pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
+  self.styles[:]
+}
+
+///|
+pub fn Workbook::add_style(self : Workbook, style : Style) -> Int {
+  self.styles.push(style)
+  self.styles.length() - 1
+}
+
+///|
+fn Workbook::check_style_id(
+  self : Workbook,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  if style_id < 0 || style_id >= self.styles.length() {
+    raise XlsxError::InvalidStyleId(index=style_id)
+  }
 }
 
 ///|
@@ -84,6 +106,34 @@ pub fn Workbook::get_cell_formula(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_formula(reference)
+}
+
+///|
+pub fn Workbook::set_cell_style(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  self.check_style_id(style_id)
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_style(reference, style_id)
+}
+
+///|
+pub fn Workbook::get_cell_style(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> Int? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_style(reference)
 }
 
 ///|
@@ -184,6 +234,36 @@ pub fn Workbook::get_cell_rc(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_rc(row, col)
+}
+
+///|
+pub fn Workbook::set_cell_style_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  self.check_style_id(style_id)
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_style_rc(row, col, style_id)
+}
+
+///|
+pub fn Workbook::get_cell_style_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+) -> Int? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_style_rc(row, col)
 }
 
 ///|

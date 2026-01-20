@@ -5,5 +5,6 @@ pub suberror XlsxError {
   InvalidXml(msg~ : String)
   InvalidCellRef(value~ : String)
   InvalidSharedString(index~ : Int)
+  InvalidStyleId(index~ : Int)
   UnsupportedFeature(msg~ : String)
 } derive(Eq, Show)

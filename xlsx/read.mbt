@@ -47,9 +47,142 @@ fn parse_shared_strings(xml : StringView) -> Array[String] {
 }
 
 ///|
+fn extract_tag_body(
+  xml : StringView,
+  tag_name : StringView,
+) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
+  let open_tag = "<\{tag_name.to_string()}"
+  let close_tag = "</\{tag_name.to_string()}>"
+  let start = match xml_str.find(open_tag) {
+    Some(pos) => pos
+    None => return None
+  }
+  let after_start = xml_str[start:] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+    }
+  let open_end_rel = match after_start.find(">") {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="tag open not closed")
+  }
+  let body_start = start + open_end_rel + 1
+  let end = match xml_str.find(close_tag) {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="tag close missing")
+  }
+  let body = xml_str[body_start:end] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag body invalid")
+    }
+  Some(body.to_string())
+}
+
+///|
+fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
+  let num_fmts : Map[Int, String] = {}
+  let body = match extract_tag_body(xml, "numFmts") {
+    Some(value) => value
+    None => return num_fmts
+  }
+  let mut first = true
+  for chunk in body.split("<numFmt ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="numFmt tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="numFmt tag invalid")
+      }
+    let id_text = match attr_value(tag, "numFmtId") {
+      Some(value) => value
+      None => continue
+    }
+    let fmt_text = match attr_value(tag, "formatCode") {
+      Some(value) => value
+      None => continue
+    }
+    let id = @strconv.parse_int(id_text, base=10) catch {
+      _ => raise XlsxError::InvalidXml(msg="numFmtId invalid")
+    }
+    num_fmts[id] = unescape_xml_text(fmt_text)
+  }
+  num_fmts
+}
+
+///|
+fn parse_cell_xfs(
+  xml : StringView,
+  num_fmts : Map[Int, String],
+) -> Array[Style] raise XlsxError {
+  let styles : Array[Style] = []
+  let body = match extract_tag_body(xml, "cellXfs") {
+    Some(value) => value
+    None => {
+      styles.push(Style::new())
+      return styles
+    }
+  }
+  let mut first = true
+  for chunk in body.split("<xf ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="xf tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="xf tag invalid")
+      }
+    let num_fmt_id = match attr_value(tag, "numFmtId") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="numFmtId invalid")
+        }
+      None => 0
+    }
+    let style = match num_fmts.get(num_fmt_id) {
+      Some(code) => Style::number_format(code)
+      None =>
+        if num_fmt_id == 0 {
+          Style::new()
+        } else {
+          Style::builtin_number_format(num_fmt_id)
+        }
+    }
+    styles.push(style)
+  }
+  if styles.length() == 0 {
+    styles.push(Style::new())
+  }
+  styles
+}
+
+///|
+fn parse_styles(xml : StringView) -> Array[Style] raise XlsxError {
+  let num_fmts = parse_num_fmts(xml)
+  parse_cell_xfs(xml, num_fmts)
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[String],
+  style_count : Int,
 ) -> Array[Cell] raise XlsxError {
   let cells : Array[Cell] = []
   let mut first = true
@@ -67,6 +200,16 @@ fn parse_worksheet(
     let ref_value = match attr_value(tag, "r") {
       Some(value) => value
       None => raise XlsxError::InvalidXml(msg="cell reference missing")
+    }
+    let style_id = match attr_value(tag, "s") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="style id invalid")
+        }
+      None => 0
+    }
+    if style_id < 0 || style_id >= style_count {
+      raise XlsxError::InvalidStyleId(index=style_id)
     }
     let cell_type = attr_value(tag, "t")
     let rest = try! text[end + 1:]
@@ -110,7 +253,7 @@ fn parse_worksheet(
     }
     let (row, col) = cell_ref_to_rc(ref_value)
     let canonical = cell_ref_from(row, col)
-    cells.push({ reference: canonical, row, col, value, formula })
+    cells.push({ reference: canonical, row, col, value, formula, style_id })
   }
   cells
 }
@@ -130,7 +273,12 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
     Some(value) => parse_shared_strings(decode_utf8(value))
     None => []
   }
-  let workbook = Workbook::new()
+  let styles = match archive.get("xl/styles.xml") {
+    Some(value) => parse_styles(decode_utf8(value))
+    None => [Style::new()]
+  }
+  let style_count = styles.length()
+  let workbook : Workbook = { sheets: [], styles }
   for i, name in sheet_names {
     let sheet_path = "xl/worksheets/sheet\{i + 1}.xml"
     let sheet_bytes = match archive.get(sheet_path) {
@@ -138,7 +286,7 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       None => raise XlsxError::MissingPart(path=sheet_path)
     }
     let sheet_xml = decode_utf8(sheet_bytes)
-    let cells = parse_worksheet(sheet_xml, shared_strings)
+    let cells = parse_worksheet(sheet_xml, shared_strings, style_count)
     workbook.sheets.push({
       name,
       cells,

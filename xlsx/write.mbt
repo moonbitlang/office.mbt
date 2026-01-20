@@ -272,12 +272,16 @@ fn write_worksheet_xml(
     }
     sb.write_view("      <c r=\"")
     sb.write_view(escape_xml_attr(cell.reference))
+    sb.write_view("\"")
+    if cell.style_id != 0 {
+      sb.write_view(" s=\"\{cell.style_id}\"")
+    }
     match cell.formula {
       Some(formula) => {
         if cell.value != "" {
-          sb.write_view("\" t=\"str\">")
+          sb.write_view(" t=\"str\">")
         } else {
-          sb.write_view("\">")
+          sb.write_view(">")
         }
         sb.write_view("<f>")
         sb.write_view(escape_xml_text(formula))
@@ -294,7 +298,7 @@ fn write_worksheet_xml(
           Some(value) => value
           None => raise XlsxError::InvalidSharedString(index=cell.row)
         }
-        sb.write_view("\" t=\"s\"><v>\{idx}</v></c>\n")
+        sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
       }
     }
   }
@@ -324,39 +328,6 @@ fn write_worksheet_xml(
   sb.write_view("</worksheet>")
   sb.to_string()
 }
-
-///|
-let default_styles_xml =
-  #|<?xml version="1.0" encoding="UTF-8"?>
-  #|<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  #|  <fonts count="1">
-  #|    <font>
-  #|      <sz val="11"/>
-  #|      <color theme="1"/>
-  #|      <name val="Calibri"/>
-  #|      <family val="2"/>
-  #|      <scheme val="minor"/>
-  #|    </font>
-  #|  </fonts>
-  #|  <fills count="2">
-  #|    <fill><patternFill patternType="none"/></fill>
-  #|    <fill><patternFill patternType="gray125"/></fill>
-  #|  </fills>
-  #|  <borders count="1">
-  #|    <border><left/><right/><top/><bottom/><diagonal/></border>
-  #|  </borders>
-  #|  <cellStyleXfs count="1">
-  #|    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
-  #|  </cellStyleXfs>
-  #|  <cellXfs count="1">
-  #|    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-  #|  </cellXfs>
-  #|  <cellStyles count="1">
-  #|    <cellStyle name="Normal" xfId="0" builtinId="0"/>
-  #|  </cellStyles>
-  #|  <dxfs count="0"/>
-  #|  <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
-  #|</styleSheet>
 
 ///|
 let default_theme_xml =
@@ -505,7 +476,10 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       @encoding/utf8.encode(write_calc_chain_xml(formula_cells)),
     )
   }
-  archive.add("xl/styles.xml", @encoding/utf8.encode(default_styles_xml))
+  archive.add(
+    "xl/styles.xml",
+    @encoding/utf8.encode(write_styles_xml(workbook.styles())),
+  )
   archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))
   archive.add("docProps/core.xml", @encoding/utf8.encode(default_core_xml))
   archive.add("docProps/app.xml", @encoding/utf8.encode(default_app_xml))
