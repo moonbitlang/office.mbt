@@ -75,6 +75,7 @@ pub fn Workbook::get_cell_style(Self, StringView, StringView) -> Int? raise Xlsx
 pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
+pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
@@ -87,10 +88,12 @@ pub fn Workbook::set_row(Self, StringView, Int, ArrayView[String]) -> Unit raise
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
 pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
 pub fn Workbook::styles(Self) -> ArrayView[Style]
+pub fn Workbook::unmerge_cells(Self, StringView, String) -> Unit raise XlsxError
 
 pub struct Worksheet {
   name : String
   cells : Array[Cell]
+  merged_cells : Array[String]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -115,6 +118,8 @@ pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::max_col(Self) -> Int
 pub fn Worksheet::max_row(Self) -> Int
+pub fn Worksheet::merge_cells(Self, String) -> Unit raise XlsxError
+pub fn Worksheet::merged_cells(Self) -> ArrayView[String]
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
@@ -125,6 +130,7 @@ pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
+pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
 
 // Type aliases
 

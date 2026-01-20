@@ -208,6 +208,32 @@ pub fn Workbook::add_conditional_format_xml(
 }
 
 ///|
+pub fn Workbook::merge_cells(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.merge_cells(range_ref)
+}
+
+///|
+pub fn Workbook::unmerge_cells(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.unmerge_cells(range_ref)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

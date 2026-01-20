@@ -179,11 +179,46 @@ fn parse_styles(xml : StringView) -> Array[Style] raise XlsxError {
 }
 
 ///|
+fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
+  let merged : Array[String] = []
+  let body = match extract_tag_body(xml, "mergeCells") {
+    Some(value) => value
+    None => return merged
+  }
+  let mut first = true
+  for chunk in body.split("<mergeCell ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="mergeCell tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="mergeCell tag invalid")
+      }
+    let ref_value = match attr_value(tag, "ref") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="mergeCell ref missing")
+    }
+    let normalized = normalize_range_ref(ref_value)
+    merged.push(normalized)
+  }
+  merged
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[String],
   style_count : Int,
-) -> Array[Cell] raise XlsxError {
+) -> (Array[Cell], Array[String]) raise XlsxError {
   let cells : Array[Cell] = []
   let mut first = true
   for chunk in xml.to_string().split("<c ") {
@@ -255,7 +290,8 @@ fn parse_worksheet(
     let canonical = cell_ref_from(row, col)
     cells.push({ reference: canonical, row, col, value, formula, style_id })
   }
-  cells
+  let merged_cells = parse_merge_cells(xml)
+  (cells, merged_cells)
 }
 
 ///|
@@ -286,10 +322,13 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       None => raise XlsxError::MissingPart(path=sheet_path)
     }
     let sheet_xml = decode_utf8(sheet_bytes)
-    let cells = parse_worksheet(sheet_xml, shared_strings, style_count)
+    let (cells, merged_cells) = parse_worksheet(
+      sheet_xml, shared_strings, style_count,
+    )
     workbook.sheets.push({
       name,
       cells,
+      merged_cells,
       images: [],
       charts: [],
       data_validations: [],

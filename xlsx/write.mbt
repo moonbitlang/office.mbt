@@ -243,6 +243,68 @@ fn write_drawing_xml(
 }
 
 ///|
+fn worksheet_dimension(sheet : Worksheet) -> String? raise XlsxError {
+  let mut has_any = false
+  let mut min_row = 0
+  let mut min_col = 0
+  let mut max_row = 0
+  let mut max_col = 0
+  for cell in sheet.cells() {
+    let row = cell.row
+    let col = cell.col
+    if !has_any {
+      has_any = true
+      min_row = row
+      max_row = row
+      min_col = col
+      max_col = col
+    } else {
+      if row < min_row {
+        min_row = row
+      }
+      if row > max_row {
+        max_row = row
+      }
+      if col < min_col {
+        min_col = col
+      }
+      if col > max_col {
+        max_col = col
+      }
+    }
+  }
+  for range_ref in sheet.merged_cells() {
+    let (row1, col1, row2, col2) = parse_range_ref(range_ref)
+    if !has_any {
+      has_any = true
+      min_row = row1
+      max_row = row2
+      min_col = col1
+      max_col = col2
+    } else {
+      if row1 < min_row {
+        min_row = row1
+      }
+      if row2 > max_row {
+        max_row = row2
+      }
+      if col1 < min_col {
+        min_col = col1
+      }
+      if col2 > max_col {
+        max_col = col2
+      }
+    }
+  }
+  if !has_any {
+    return None
+  }
+  let start_ref = cell_ref_from(min_row, min_col)
+  let end_ref = cell_ref_from(max_row, max_col)
+  Some("\{start_ref}:\{end_ref}")
+}
+
+///|
 fn write_worksheet_xml(
   sheet : Worksheet,
   string_map : Map[String, Int],
@@ -258,6 +320,14 @@ fn write_worksheet_xml(
     sb.write_view(
       "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
     )
+  }
+  match worksheet_dimension(sheet) {
+    Some(value) => {
+      sb.write_view("  <dimension ref=\"")
+      sb.write_view(escape_xml_attr(value))
+      sb.write_view("\"/>\n")
+    }
+    None => ()
   }
   sb.write_view("  <sheetData>\n")
   let cells = sheet.sorted_cells()
@@ -306,6 +376,15 @@ fn write_worksheet_xml(
     sb.write_view("    </row>\n")
   }
   sb.write_view("  </sheetData>\n")
+  if sheet.merged_cells().length() > 0 {
+    sb.write_view("  <mergeCells count=\"\{sheet.merged_cells().length()}\">\n")
+    for range_ref in sheet.merged_cells() {
+      sb.write_view("    <mergeCell ref=\"")
+      sb.write_view(escape_xml_attr(range_ref))
+      sb.write_view("\"/>\n")
+    }
+    sb.write_view("  </mergeCells>\n")
+  }
   for xml in sheet.conditional_formats() {
     sb.write_view("  ")
     sb.write_view(xml)

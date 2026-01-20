@@ -26,6 +26,7 @@ pub struct Chart {
 pub struct Worksheet {
   name : String
   cells : Array[Cell]
+  merged_cells : Array[String]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -37,6 +38,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
   {
     name,
     cells: [],
+    merged_cells: [],
     images: [],
     charts: [],
     data_validations: [],
@@ -52,6 +54,11 @@ pub fn Worksheet::name(self : Worksheet) -> String {
 ///|
 pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
   self.cells[:]
+}
+
+///|
+pub fn Worksheet::merged_cells(self : Worksheet) -> ArrayView[String] {
+  self.merged_cells[:]
 }
 
 ///|
@@ -82,6 +89,34 @@ fn Worksheet::sorted_cells(self : Worksheet) -> Array[Cell] {
   }
   sort_cells(sorted)
   sorted
+}
+
+///|
+fn parse_range_ref(
+  range_ref : StringView,
+) -> (Int, Int, Int, Int) raise XlsxError {
+  let parts : Array[String] = []
+  for part in range_ref.to_string().split(":") {
+    parts.push(part.to_string())
+  }
+  if parts.length() != 2 {
+    raise XlsxError::InvalidCellRef(value=range_ref.to_string())
+  }
+  let (row1, col1) = cell_ref_to_rc(parts[0])
+  let (row2, col2) = cell_ref_to_rc(parts[1])
+  let min_row = if row1 < row2 { row1 } else { row2 }
+  let max_row = if row1 > row2 { row1 } else { row2 }
+  let min_col = if col1 < col2 { col1 } else { col2 }
+  let max_col = if col1 > col2 { col1 } else { col2 }
+  (min_row, min_col, max_row, max_col)
+}
+
+///|
+fn normalize_range_ref(range_ref : StringView) -> String raise XlsxError {
+  let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+  let start_ref = cell_ref_from(min_row, min_col)
+  let end_ref = cell_ref_from(max_row, max_col)
+  "\{start_ref}:\{end_ref}"
 }
 
 ///|
@@ -265,6 +300,34 @@ pub fn Worksheet::get_cell_style_rc(
     }
   }
   None
+}
+
+///|
+pub fn Worksheet::merge_cells(
+  self : Worksheet,
+  range_ref : String,
+) -> Unit raise XlsxError {
+  let normalized = normalize_range_ref(range_ref)
+  for existing in self.merged_cells {
+    if existing == normalized {
+      return
+    }
+  }
+  self.merged_cells.push(normalized)
+}
+
+///|
+pub fn Worksheet::unmerge_cells(
+  self : Worksheet,
+  range_ref : String,
+) -> Unit raise XlsxError {
+  let normalized = normalize_range_ref(range_ref)
+  for i, existing in self.merged_cells {
+    if existing == normalized {
+      ignore(self.merged_cells.remove(i))
+      return
+    }
+  }
 }
 
 ///|

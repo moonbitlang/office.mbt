@@ -29,6 +29,7 @@ test "xlsx package fixtures" {
     content=(
       #|<?xml version="1.0" encoding="UTF-8"?>
       #|<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      #|  <dimension ref="A1:A1"/>
       #|  <sheetData>
       #|    <row r="1">
       #|      <c r="A1" t="s"><v>0</v></c>
