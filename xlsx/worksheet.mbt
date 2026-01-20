@@ -34,6 +34,7 @@ pub struct Worksheet {
   charts : Array[Chart]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  mut stream_state : StreamState
 }
 
 ///|
@@ -49,6 +50,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     charts: [],
     data_validations: [],
     conditional_formats: [],
+    stream_state: StreamState::Idle,
   }
 }
 
@@ -105,6 +107,15 @@ pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
 }
 
 ///|
+fn Worksheet::ensure_stream_idle(self : Worksheet) -> Unit raise XlsxError {
+  if self.stream_state != StreamState::Idle {
+    raise XlsxError::StreamModeConflict(
+      msg="worksheet is in stream writer mode",
+    )
+  }
+}
+
+///|
 fn Worksheet::sorted_cells(self : Worksheet) -> Array[Cell] {
   let sorted : Array[Cell] = []
   for cell in self.cells {
@@ -148,6 +159,7 @@ pub fn Worksheet::set_cell(
   reference : String,
   value : String,
 ) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   for i, cell in self.cells {
@@ -194,6 +206,7 @@ pub fn Worksheet::set_cell_formula(
   formula : String,
   value? : String = "",
 ) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   for i, cell in self.cells {
@@ -239,6 +252,7 @@ pub fn Worksheet::set_cell_style(
   reference : String,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
   if style_id < 0 {
     raise XlsxError::InvalidStyleId(index=style_id)
   }
@@ -288,6 +302,7 @@ pub fn Worksheet::set_cell_style_rc(
   col : Int,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
   if style_id < 0 {
     raise XlsxError::InvalidStyleId(index=style_id)
   }
@@ -506,6 +521,7 @@ pub fn Worksheet::set_cell_rc(
   col : Int,
   value : String,
 ) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
   let reference = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
@@ -531,6 +547,7 @@ pub fn Worksheet::set_cell_formula_rc(
   formula : String,
   value? : String = "",
 ) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
   let reference = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {

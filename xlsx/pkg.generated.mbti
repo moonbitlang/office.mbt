@@ -21,6 +21,9 @@ pub suberror XlsxError {
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
+  StreamModeConflict(msg~ : String)
+  StreamRowOrder(last~ : Int, next~ : Int)
+  StreamWriterClosed
   UnsupportedFeature(msg~ : String)
 }
 pub impl Eq for XlsxError
@@ -62,6 +65,13 @@ pub struct PivotTable {
 }
 pub fn PivotTable::new(String, String, cache_records_xml? : String) -> Self raise XlsxError
 
+pub struct RowStream {
+  cells : Array[Cell]
+  mut index : Int
+}
+pub fn RowStream::new(Worksheet) -> Self
+pub fn RowStream::next(Self) -> Array[String]?
+
 pub struct Sparkline {
   range_ref : String
   location : String
@@ -77,6 +87,30 @@ pub(all) enum SparklineType {
   Column
   WinLoss
 }
+
+pub struct StreamCell {
+  value : String
+  formula : String?
+  style_id : Int
+}
+pub fn StreamCell::new(String, formula? : String, style_id? : Int) -> Self
+
+pub(all) enum StreamState {
+  Idle
+  Writing
+  Flushed
+}
+pub impl Eq for StreamState
+
+pub struct StreamWriter {
+  sheet : Worksheet
+  mut last_row : Int
+  style_count : Int
+  mut closed : Bool
+}
+pub fn StreamWriter::flush(Self) -> Unit raise XlsxError
+pub fn StreamWriter::set_row(Self, String, ArrayView[String]) -> Unit raise XlsxError
+pub fn StreamWriter::set_row_cells(Self, String, ArrayView[StreamCell]) -> Unit raise XlsxError
 
 pub struct Style {
   number_format : NumberFormat?
@@ -119,6 +153,8 @@ pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
+pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
+pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
@@ -143,6 +179,7 @@ pub struct Worksheet {
   charts : Array[Chart]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  mut stream_state : StreamState
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
@@ -172,6 +209,7 @@ pub fn Worksheet::merged_cells(Self) -> ArrayView[String]
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
 pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
+pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError

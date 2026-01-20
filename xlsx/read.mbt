@@ -618,6 +618,7 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       charts: [],
       data_validations: [],
       conditional_formats: [],
+      stream_state: StreamState::Idle,
     })
   }
   workbook

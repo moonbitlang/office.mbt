@@ -17,6 +17,25 @@ pub fn Workbook::add_sheet(self : Workbook, name : String) -> Worksheet {
 }
 
 ///|
+pub fn Workbook::new_stream_writer(
+  self : Workbook,
+  sheet_name : StringView,
+) -> StreamWriter raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  if sheet.stream_state != StreamState::Idle {
+    raise XlsxError::StreamModeConflict(msg="stream writer already active")
+  }
+  if sheet.cells().length() > 0 {
+    raise XlsxError::StreamModeConflict(msg="worksheet already has data")
+  }
+  sheet.stream_state = StreamState::Writing
+  StreamWriter::new(sheet, self.styles.length())
+}
+
+///|
 pub fn Workbook::sheet(self : Workbook, name : StringView) -> Worksheet? {
   let needle = name.to_string()
   for sheet in self.sheets {
@@ -35,6 +54,18 @@ pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
 ///|
 pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
   self.styles[:]
+}
+
+///|
+pub fn Workbook::row_stream(
+  self : Workbook,
+  sheet_name : StringView,
+) -> RowStream raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  RowStream::new(sheet)
 }
 
 ///|
