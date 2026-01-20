@@ -24,3 +24,15 @@ test "utf index errors" {
   let out_of_range = try? utf16_index_to_utf8_offset(s, 5)
   inspect(out_of_range, content="Err(OutOfRange(index=5, len=4))")
 }
+
+///|
+test "utf index bounds" {
+  let s = "A😀中"
+  let bytes = @encoding/utf8.encode(s)
+  let negative_offset = try? utf8_offset_to_utf16_index(bytes, -1)
+  inspect(negative_offset, content="Err(OutOfRange(index=-1, len=8))")
+  let past_end = try? utf8_offset_to_utf16_index(bytes, 9)
+  inspect(past_end, content="Err(OutOfRange(index=9, len=8))")
+  let negative_index = try? utf16_index_to_utf8_offset(s, -1)
+  inspect(negative_index, content="Err(OutOfRange(index=-1, len=4))")
+}
