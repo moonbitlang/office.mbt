@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/ooxml"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct ContentTypeDefault {
+  extension : String
+  content_type : String
+}
+
+pub struct ContentTypeOverride {
+  part_name : String
+  content_type : String
+}
+
+pub struct ContentTypes {
+  defaults : Array[ContentTypeDefault]
+  overrides : Array[ContentTypeOverride]
+}
+pub fn ContentTypes::add_default(Self, String, String) -> Unit
+pub fn ContentTypes::add_override(Self, String, String) -> Unit
+pub fn ContentTypes::new() -> Self
+pub fn ContentTypes::to_xml(Self) -> String
+
+pub struct Relationship {
+  id : String
+  rel_type : String
+  target : String
+  target_mode : String?
+}
+
+pub struct Relationships {
+  items : Array[Relationship]
+  mut next_id : Int
+}
+pub fn Relationships::add(Self, String, rel_type~ : String, target~ : String, target_mode? : String) -> Unit
+pub fn Relationships::add_auto(Self, rel_type~ : String, target~ : String, target_mode? : String) -> String
+pub fn Relationships::new() -> Self
+pub fn Relationships::to_xml(Self) -> String
+
+pub struct WorkbookManifest {
+  content_types : ContentTypes
+  root_rels : Relationships
+  workbook_rels : Relationships
+}
+pub fn WorkbookManifest::content_types_xml(Self) -> String
+pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool) -> Self
+pub fn WorkbookManifest::root_rels_xml(Self) -> String
+pub fn WorkbookManifest::workbook_rels_xml(Self) -> String
+
+// Type aliases
+
+// Traits
+
