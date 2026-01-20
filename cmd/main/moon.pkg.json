@@ -1,0 +1,9 @@
+{
+  "is-main": true,
+  "import": [
+    {
+      "path": "bobzhang/mbtexcel",
+      "alias": "lib"
+    }
+  ]
+}

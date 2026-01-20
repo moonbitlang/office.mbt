@@ -1,5 +1,6 @@
 {
   "import": [
+    "bobzhang/mbtexcel/xlsx",
     {
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"
