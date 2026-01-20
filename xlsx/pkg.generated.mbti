@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/xlsx"
+
+// Values
+pub fn read(BytesView) -> Workbook raise XlsxError
+
+pub fn write(Workbook) -> Bytes raise XlsxError
+
+// Errors
+pub suberror XlsxError {
+  MissingPart(path~ : String)
+  InvalidXml(msg~ : String)
+  InvalidCellRef(value~ : String)
+  InvalidSharedString(index~ : Int)
+  UnsupportedFeature(msg~ : String)
+}
+pub impl Eq for XlsxError
+pub impl Show for XlsxError
+
+// Types and methods
+pub struct Cell {
+  reference : String
+  row : Int
+  col : Int
+  value : String
+}
+
+pub struct Workbook {
+  sheets : Array[Worksheet]
+}
+pub fn Workbook::add_sheet(Self, String) -> Worksheet
+pub fn Workbook::new() -> Self
+pub fn Workbook::sheet(Self, StringView) -> Worksheet?
+pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
+
+pub struct Worksheet {
+  name : String
+  cells : Array[Cell]
+}
+pub fn Worksheet::cells(Self) -> ArrayView[Cell]
+pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
+pub fn Worksheet::name(Self) -> String
+pub fn Worksheet::new(String) -> Self
+pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
+
+// Type aliases
+
+// Traits
+

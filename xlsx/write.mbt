@@ -1,0 +1,228 @@
+///|
+fn collect_shared_strings(
+  workbook : Workbook,
+) -> (Array[String], Map[String, Int], Int) {
+  let shared_strings : Array[String] = []
+  let index_map : Map[String, Int] = {}
+  let mut total = 0
+  for sheet in workbook.sheets() {
+    for cell in sheet.cells() {
+      total = total + 1
+      match index_map.get(cell.value) {
+        Some(_) => ()
+        None => {
+          let idx = shared_strings.length()
+          shared_strings.push(cell.value)
+          index_map.set(cell.value, idx)
+        }
+      }
+    }
+  }
+  (shared_strings, index_map, total)
+}
+
+///|
+fn write_workbook_xml(sheets : ArrayView[Worksheet]) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
+  )
+  sb.write_view("  <sheets>\n")
+  for i, sheet in sheets {
+    let sheet_id = i + 1
+    sb.write_view("    <sheet name=\"")
+    sb.write_view(escape_xml_attr(sheet.name()))
+    sb.write_view("\" sheetId=\"")
+    sb.write_view("\{sheet_id}\"")
+    sb.write_view(" r:id=\"rId\{sheet_id}\"/>\n")
+  }
+  sb.write_view("  </sheets>\n")
+  sb.write_view("</workbook>")
+  sb.to_string()
+}
+
+///|
+fn write_shared_strings_xml(
+  values : Array[String],
+  total_count : Int,
+) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"\{total_count}\" uniqueCount=\"\{values.length()}\">\n",
+  )
+  for value in values {
+    sb.write_view("  <si><t>")
+    sb.write_view(escape_xml_text(value))
+    sb.write_view("</t></si>\n")
+  }
+  sb.write_view("</sst>")
+  sb.to_string()
+}
+
+///|
+fn write_worksheet_xml(
+  sheet : Worksheet,
+  string_map : Map[String, Int],
+) -> String raise XlsxError {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
+  )
+  sb.write_view("  <sheetData>\n")
+  let cells = sheet.sorted_cells()
+  let mut current_row = -1
+  for cell in cells {
+    if cell.row != current_row {
+      if current_row >= 0 {
+        sb.write_view("    </row>\n")
+      }
+      current_row = cell.row
+      sb.write_view("    <row r=\"\{current_row}\">\n")
+    }
+    let idx = match string_map.get(cell.value) {
+      Some(value) => value
+      None => raise XlsxError::InvalidSharedString(index=cell.row)
+    }
+    sb.write_view("      <c r=\"")
+    sb.write_view(escape_xml_attr(cell.reference))
+    sb.write_view("\" t=\"s\"><v>\{idx}</v></c>\n")
+  }
+  if current_row >= 0 {
+    sb.write_view("    </row>\n")
+  }
+  sb.write_view("  </sheetData>\n")
+  sb.write_view("</worksheet>")
+  sb.to_string()
+}
+
+///|
+let default_styles_xml =
+  #|<?xml version="1.0" encoding="UTF-8"?>
+  #|<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  #|  <fonts count="1">
+  #|    <font>
+  #|      <sz val="11"/>
+  #|      <color theme="1"/>
+  #|      <name val="Calibri"/>
+  #|      <family val="2"/>
+  #|      <scheme val="minor"/>
+  #|    </font>
+  #|  </fonts>
+  #|  <fills count="2">
+  #|    <fill><patternFill patternType="none"/></fill>
+  #|    <fill><patternFill patternType="gray125"/></fill>
+  #|  </fills>
+  #|  <borders count="1">
+  #|    <border><left/><right/><top/><bottom/><diagonal/></border>
+  #|  </borders>
+  #|  <cellStyleXfs count="1">
+  #|    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+  #|  </cellStyleXfs>
+  #|  <cellXfs count="1">
+  #|    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+  #|  </cellXfs>
+  #|  <cellStyles count="1">
+  #|    <cellStyle name="Normal" xfId="0" builtinId="0"/>
+  #|  </cellStyles>
+  #|  <dxfs count="0"/>
+  #|  <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
+  #|</styleSheet>
+
+///|
+let default_theme_xml =
+  #|<?xml version="1.0" encoding="UTF-8"?>
+  #|<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+  #|  <a:themeElements>
+  #|    <a:clrScheme name="Office">
+  #|      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+  #|      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+  #|      <a:dk2><a:srgbClr val="1F497D"/></a:dk2>
+  #|      <a:lt2><a:srgbClr val="EEECE1"/></a:lt2>
+  #|      <a:accent1><a:srgbClr val="4F81BD"/></a:accent1>
+  #|      <a:accent2><a:srgbClr val="C0504D"/></a:accent2>
+  #|      <a:accent3><a:srgbClr val="9BBB59"/></a:accent3>
+  #|      <a:accent4><a:srgbClr val="8064A2"/></a:accent4>
+  #|      <a:accent5><a:srgbClr val="4BACC6"/></a:accent5>
+  #|      <a:accent6><a:srgbClr val="F79646"/></a:accent6>
+  #|      <a:hlink><a:srgbClr val="0000FF"/></a:hlink>
+  #|      <a:folHlink><a:srgbClr val="800080"/></a:folHlink>
+  #|    </a:clrScheme>
+  #|    <a:fontScheme name="Office">
+  #|      <a:majorFont><a:latin typeface="Calibri"/></a:majorFont>
+  #|      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+  #|    </a:fontScheme>
+  #|    <a:fmtScheme name="Office"/>
+  #|  </a:themeElements>
+  #|</a:theme>
+
+///|
+let default_core_xml =
+  #|<?xml version="1.0" encoding="UTF-8"?>
+  #|<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+  #| xmlns:dc="http://purl.org/dc/elements/1.1/"
+  #| xmlns:dcterms="http://purl.org/dc/terms/"
+  #| xmlns:dcmitype="http://purl.org/dc/dcmitype/"
+  #| xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  #|  <dc:creator>mbtexcel</dc:creator>
+  #|  <cp:lastModifiedBy>mbtexcel</cp:lastModifiedBy>
+  #|</cp:coreProperties>
+
+///|
+let default_app_xml =
+  #|<?xml version="1.0" encoding="UTF-8"?>
+  #|<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+  #| xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  #|  <Application>mbtexcel</Application>
+  #|</Properties>
+
+///|
+pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
+  let (shared_strings, string_map, total_count) = collect_shared_strings(
+    workbook,
+  )
+  let include_shared = shared_strings.length() > 0
+  let sheet_count = workbook.sheets().length()
+  let manifest = @ooxml.WorkbookManifest::new(
+    sheet_count,
+    include_shared_strings=include_shared,
+  )
+  let archive = @zip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @encoding/utf8.encode(manifest.content_types_xml()),
+  )
+  archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
+  archive.add(
+    "xl/workbook.xml",
+    @encoding/utf8.encode(write_workbook_xml(workbook.sheets())),
+  )
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @encoding/utf8.encode(manifest.workbook_rels_xml()),
+  )
+  for i, sheet in workbook.sheets() {
+    let sheet_xml = write_worksheet_xml(sheet, string_map)
+    archive.add(
+      "xl/worksheets/sheet\{i + 1}.xml",
+      @encoding/utf8.encode(sheet_xml),
+    )
+  }
+  if include_shared {
+    archive.add(
+      "xl/sharedStrings.xml",
+      @encoding/utf8.encode(
+        write_shared_strings_xml(shared_strings, total_count),
+      ),
+    )
+  }
+  archive.add("xl/styles.xml", @encoding/utf8.encode(default_styles_xml))
+  archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))
+  archive.add("docProps/core.xml", @encoding/utf8.encode(default_core_xml))
+  archive.add("docProps/app.xml", @encoding/utf8.encode(default_app_xml))
+  @zip.write(archive) catch {
+    err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+  }
+}

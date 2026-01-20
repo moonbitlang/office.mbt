@@ -1,0 +1,11 @@
+{
+  "import": [
+    "bobzhang/mbtexcel/zip",
+    "bobzhang/mbtexcel/ooxml",
+    {
+      "path": "moonbitlang/core/encoding/utf8",
+      "alias": "encoding/utf8"
+    },
+    "moonbitlang/core/strconv"
+  ]
+}
