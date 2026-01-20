@@ -14,6 +14,9 @@ let flag_data_descriptor : Int = 0x0008
 let flag_utf8 : Int = 0x0800
 
 ///|
+let data_descriptor_sig : Int = 0x08074b50
+
+///|
 let zip64_eocd_sig : Int = 0x06064b50
 
 ///|

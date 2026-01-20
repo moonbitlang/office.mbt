@@ -22,7 +22,7 @@ pub impl Show for ZipError
 pub struct Archive {
   entries : Array[Entry]
 }
-pub fn Archive::add(Self, String, Bytes, compression? : Compression) -> Unit
+pub fn Archive::add(Self, String, Bytes, compression? : Compression, data_descriptor? : Bool) -> Unit
 pub fn Archive::entries(Self) -> ArrayView[Entry]
 pub fn Archive::get(Self, StringView) -> Bytes?
 pub fn Archive::names(Self) -> Array[String]
@@ -39,6 +39,7 @@ pub struct Entry {
   name : String
   data : Bytes
   compression : Compression
+  data_descriptor : Bool
 }
 
 // Type aliases

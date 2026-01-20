@@ -3,6 +3,7 @@ pub struct Entry {
   name : String
   data : Bytes
   compression : Compression
+  data_descriptor : Bool
 }
 
 ///|
@@ -21,8 +22,9 @@ pub fn Archive::add(
   name : String,
   data : Bytes,
   compression? : Compression = Compression::Store,
+  data_descriptor? : Bool = false,
 ) -> Unit {
-  self.entries.push({ name, data, compression })
+  self.entries.push({ name, data, compression, data_descriptor })
 }
 
 ///|
