@@ -500,7 +500,7 @@ fn agile_decrypt(
   let decrypted = decrypt_package(
     package_key, encrypted_package_buf, encryption,
   )
-  if !password_ok && !looks_like_zip(decrypted) {
+  if !password_ok && !is_valid_zip(decrypted) {
     raise XlsxError::InvalidPassword
   }
   decrypted
@@ -594,6 +594,15 @@ fn looks_like_zip(bytes : BytesView) -> Bool {
   bytes[1] == b'K' &&
   bytes[2] == 0x03 &&
   bytes[3] == 0x04
+}
+
+///|
+fn is_valid_zip(bytes : BytesView) -> Bool {
+  if !looks_like_zip(bytes) {
+    return false
+  }
+  let result : Result[@zip.Archive, Error] = try? @zip.read(bytes)
+  result is Ok(_)
 }
 
 ///|

@@ -474,6 +474,15 @@ test "read encrypted wrong password" {
 }
 
 ///|
+test "decrypt agile wrong password" {
+  let bytes = decode_base64_multiline(encrypt_sha1_b64)
+  let result : Result[Bytes, Error] = try? decrypt_encrypted_package(
+    bytes, "wrong",
+  )
+  inspect(result is Err(XlsxError::InvalidPassword), content="true")
+}
+
+///|
 test "read encrypted without password" {
   let bytes = decode_base64_multiline(encrypt_sha1_b64)
   let result : Result[Workbook, Error] = try? read(bytes)
