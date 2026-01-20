@@ -444,6 +444,56 @@ fn worksheet_dimension(sheet : Worksheet) -> String? raise XlsxError {
 }
 
 ///|
+fn write_row_attributes(sb : StringBuilder, dim : RowDimension) -> Unit {
+  match dim.height {
+    Some(height) => {
+      sb.write_view(" ht=\"")
+      sb.write_view(height.to_string())
+      sb.write_view("\" customHeight=\"1\"")
+    }
+    None => ()
+  }
+  if dim.hidden {
+    sb.write_view(" hidden=\"1\"")
+  }
+  if dim.outline_level > 0 {
+    sb.write_view(" outlineLevel=\"\{dim.outline_level}\"")
+  }
+  match dim.style_id {
+    Some(style_id) => sb.write_view(" s=\"\{style_id}\" customFormat=\"1\"")
+    None => ()
+  }
+}
+
+///|
+fn write_col_attributes(
+  sb : StringBuilder,
+  col : Int,
+  dim : ColDimension,
+) -> Unit {
+  sb.write_view("    <col min=\"\{col}\" max=\"\{col}\"")
+  match dim.width {
+    Some(width) => {
+      sb.write_view(" width=\"")
+      sb.write_view(width.to_string())
+      sb.write_view("\" customWidth=\"1\"")
+    }
+    None => ()
+  }
+  if dim.hidden {
+    sb.write_view(" hidden=\"1\"")
+  }
+  if dim.outline_level > 0 {
+    sb.write_view(" outlineLevel=\"\{dim.outline_level}\"")
+  }
+  match dim.style_id {
+    Some(style_id) => sb.write_view(" style=\"\{style_id}\"")
+    None => ()
+  }
+  sb.write_view("/>\n")
+}
+
+///|
 fn write_worksheet_xml(
   sheet : Worksheet,
   string_map : Map[String, Int],
@@ -477,50 +527,92 @@ fn write_worksheet_xml(
     }
     None => ()
   }
+  if sheet.col_dimensions.length() > 0 {
+    let cols : Array[Int] = []
+    for col, _ in sheet.col_dimensions {
+      cols.push(col)
+    }
+    cols.sort_by((a, b) => a - b)
+    sb.write_view("  <cols>\n")
+    for col in cols {
+      match sheet.col_dimensions.get(col) {
+        Some(dim) => write_col_attributes(sb, col, dim)
+        None => ()
+      }
+    }
+    sb.write_view("  </cols>\n")
+  }
   sb.write_view("  <sheetData>\n")
   let cells = sheet.sorted_cells()
-  let mut current_row = -1
+  let row_cells : Map[Int, Array[Cell]] = {}
   for cell in cells {
-    if cell.row != current_row {
-      if current_row >= 0 {
-        sb.write_view("    </row>\n")
-      }
-      current_row = cell.row
-      sb.write_view("    <row r=\"\{current_row}\">\n")
+    let entries = match row_cells.get(cell.row) {
+      Some(value) => value
+      None => []
     }
-    sb.write_view("      <c r=\"")
-    sb.write_view(escape_xml_attr(cell.reference))
-    sb.write_view("\"")
-    if cell.style_id != 0 {
-      sb.write_view(" s=\"\{cell.style_id}\"")
-    }
-    match cell.formula {
-      Some(formula) => {
-        if cell.value != "" {
-          sb.write_view(" t=\"str\">")
-        } else {
-          sb.write_view(">")
-        }
-        sb.write_view("<f>")
-        sb.write_view(escape_xml_text(formula))
-        sb.write_view("</f>")
-        if cell.value != "" {
-          sb.write_view("<v>")
-          sb.write_view(escape_xml_text(cell.value))
-          sb.write_view("</v>")
-        }
-        sb.write_view("</c>\n")
-      }
-      None => {
-        let idx = match string_map.get(cell.value) {
-          Some(value) => value
-          None => raise XlsxError::InvalidSharedString(index=cell.row)
-        }
-        sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
-      }
+    entries.push(cell)
+    row_cells[cell.row] = entries
+  }
+  let row_keys : Array[Int] = []
+  let row_present : Map[Int, Bool] = {}
+  for row, _ in row_cells {
+    row_keys.push(row)
+    row_present[row] = true
+  }
+  for row, _ in sheet.row_dimensions {
+    if !row_present.contains(row) {
+      row_keys.push(row)
     }
   }
-  if current_row >= 0 {
+  row_keys.sort_by((a, b) => a - b)
+  for row in row_keys {
+    let row_entries = match row_cells.get(row) {
+      Some(value) => value
+      None => []
+    }
+    sb.write_view("    <row r=\"\{row}\"")
+    match sheet.row_dimensions.get(row) {
+      Some(dim) => write_row_attributes(sb, dim)
+      None => ()
+    }
+    if row_entries.length() == 0 {
+      sb.write_view("/>\n")
+      continue
+    }
+    sb.write_view(">\n")
+    for cell in row_entries {
+      sb.write_view("      <c r=\"")
+      sb.write_view(escape_xml_attr(cell.reference))
+      sb.write_view("\"")
+      if cell.style_id != 0 {
+        sb.write_view(" s=\"\{cell.style_id}\"")
+      }
+      match cell.formula {
+        Some(formula) => {
+          if cell.value != "" {
+            sb.write_view(" t=\"str\">")
+          } else {
+            sb.write_view(">")
+          }
+          sb.write_view("<f>")
+          sb.write_view(escape_xml_text(formula))
+          sb.write_view("</f>")
+          if cell.value != "" {
+            sb.write_view("<v>")
+            sb.write_view(escape_xml_text(cell.value))
+            sb.write_view("</v>")
+          }
+          sb.write_view("</c>\n")
+        }
+        None => {
+          let idx = match string_map.get(cell.value) {
+            Some(value) => value
+            None => raise XlsxError::InvalidSharedString(index=cell.row)
+          }
+          sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
+        }
+      }
+    }
     sb.write_view("    </row>\n")
   }
   sb.write_view("  </sheetData>\n")

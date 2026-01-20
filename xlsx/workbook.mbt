@@ -331,6 +331,28 @@ fn clone_strings(values : ArrayView[String]) -> Array[String] {
 }
 
 ///|
+fn clone_row_dimensions(
+  values : Map[Int, RowDimension],
+) -> Map[Int, RowDimension] {
+  let out : Map[Int, RowDimension] = {}
+  for row, dim in values {
+    out[row] = dim
+  }
+  out
+}
+
+///|
+fn clone_col_dimensions(
+  values : Map[Int, ColDimension],
+) -> Map[Int, ColDimension] {
+  let out : Map[Int, ColDimension] = {}
+  for col, dim in values {
+    out[col] = dim
+  }
+  out
+}
+
+///|
 fn clone_cells(values : ArrayView[Cell]) -> Array[Cell] {
   let out : Array[Cell] = []
   for value in values {
@@ -424,6 +446,8 @@ fn clone_worksheet(
     charts: clone_charts(sheet.charts),
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
+    row_dimensions: clone_row_dimensions(sheet.row_dimensions),
+    col_dimensions: clone_col_dimensions(sheet.col_dimensions),
     state,
     stream_state: StreamState::Idle,
     vml_drawing_xml: sheet.vml_drawing_xml,
@@ -854,4 +878,278 @@ pub fn Workbook::get_col(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_col(col)
+}
+
+///|
+pub fn Workbook::set_row_height(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  height : Double,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_row_height(row, height)
+}
+
+///|
+pub fn Workbook::get_row_height(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Double? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_row_height(row)
+}
+
+///|
+pub fn Workbook::set_row_visible(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  visible : Bool,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_row_visible(row, visible)
+}
+
+///|
+pub fn Workbook::row_visible(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Bool raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.row_visible(row)
+}
+
+///|
+pub fn Workbook::set_row_outline_level(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  level : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_row_outline_level(row, level)
+}
+
+///|
+pub fn Workbook::row_outline_level(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Int raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.row_outline_level(row)
+}
+
+///|
+pub fn Workbook::set_row_style(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  self.check_style_id(style_id)
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_row_style(row, style_id)
+}
+
+///|
+pub fn Workbook::get_row_style(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Int? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_row_style(row)
+}
+
+///|
+pub fn Workbook::set_col_width(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  width : Double,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_col_width(col, width)
+}
+
+///|
+pub fn Workbook::get_col_width(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+) -> Double? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_col_width(col)
+}
+
+///|
+pub fn Workbook::set_col_visible(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  visible : Bool,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_col_visible(col, visible)
+}
+
+///|
+pub fn Workbook::col_visible(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+) -> Bool raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.col_visible(col)
+}
+
+///|
+pub fn Workbook::set_col_outline_level(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  level : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_col_outline_level(col, level)
+}
+
+///|
+pub fn Workbook::col_outline_level(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+) -> Int raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.col_outline_level(col)
+}
+
+///|
+pub fn Workbook::set_col_style(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  self.check_style_id(style_id)
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_col_style(col, style_id)
+}
+
+///|
+pub fn Workbook::get_col_style(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+) -> Int? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_col_style(col)
+}
+
+///|
+pub fn Workbook::insert_rows(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  count : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.insert_rows(row, count)
+}
+
+///|
+pub fn Workbook::remove_rows(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  count : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.remove_rows(row, count)
+}
+
+///|
+pub fn Workbook::insert_cols(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  count : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.insert_cols(col, count)
+}
+
+///|
+pub fn Workbook::remove_cols(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+  count : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.remove_cols(col, count)
 }

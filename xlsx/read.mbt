@@ -472,11 +472,172 @@ fn resolve_rel_target(
 }
 
 ///|
+fn parse_bool_attr(value : StringView) -> Bool {
+  match value.to_string() {
+    "1" => true
+    "true" => true
+    "TRUE" => true
+    _ => false
+  }
+}
+
+///|
+fn parse_row_dimensions(
+  xml : StringView,
+  style_count : Int,
+) -> Map[Int, RowDimension] raise XlsxError {
+  let dims : Map[Int, RowDimension] = {}
+  let mut first = true
+  for chunk in xml.to_string().split("<row ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="row tag not closed")
+    }
+    let tag = try! text[:end]
+    let row_text = match attr_value(tag, "r") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="row index missing")
+    }
+    let row = @strconv.parse_int(row_text, base=10) catch {
+      _ => raise XlsxError::InvalidXml(msg="row index invalid")
+    }
+    if row <= 0 {
+      raise XlsxError::InvalidXml(msg="row index invalid")
+    }
+    let height = match attr_value(tag, "ht") {
+      Some(value) =>
+        Some(
+          @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="row height invalid")
+          },
+        )
+      None => None
+    }
+    let hidden = match attr_value(tag, "hidden") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    }
+    let outline_level = match attr_value(tag, "outlineLevel") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="row outline level invalid")
+        }
+      None => 0
+    }
+    let style_id = match attr_value(tag, "s") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="row style id invalid")
+        }
+      None => 0
+    }
+    if style_id < 0 || style_id >= style_count {
+      raise XlsxError::InvalidStyleId(index=style_id)
+    }
+    let style = if style_id > 0 { Some(style_id) } else { None }
+    if height is None && !hidden && outline_level == 0 && style is None {
+      continue
+    }
+    dims[row] = { height, hidden, outline_level, style_id: style }
+  }
+  dims
+}
+
+///|
+fn parse_col_dimensions(
+  xml : StringView,
+  style_count : Int,
+) -> Map[Int, ColDimension] raise XlsxError {
+  let dims : Map[Int, ColDimension] = {}
+  let mut first = true
+  for chunk in xml.to_string().split("<col ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="col tag not closed")
+    }
+    let tag = try! text[:end]
+    let min_text = match attr_value(tag, "min") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="col min missing")
+    }
+    let max_text = match attr_value(tag, "max") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="col max missing")
+    }
+    let min_col = @strconv.parse_int(min_text, base=10) catch {
+      _ => raise XlsxError::InvalidXml(msg="col min invalid")
+    }
+    let max_col = @strconv.parse_int(max_text, base=10) catch {
+      _ => raise XlsxError::InvalidXml(msg="col max invalid")
+    }
+    if min_col <= 0 || max_col <= 0 || max_col < min_col {
+      raise XlsxError::InvalidXml(msg="col range invalid")
+    }
+    let width = match attr_value(tag, "width") {
+      Some(value) =>
+        Some(
+          @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="col width invalid")
+          },
+        )
+      None => None
+    }
+    let hidden = match attr_value(tag, "hidden") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    }
+    let outline_level = match attr_value(tag, "outlineLevel") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="col outline level invalid")
+        }
+      None => 0
+    }
+    let style_id = match attr_value(tag, "style") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="col style id invalid")
+        }
+      None => 0
+    }
+    if style_id < 0 || style_id >= style_count {
+      raise XlsxError::InvalidStyleId(index=style_id)
+    }
+    let style = if style_id > 0 { Some(style_id) } else { None }
+    if width is None && !hidden && outline_level == 0 && style is None {
+      continue
+    }
+    let dim = { width, hidden, outline_level, style_id: style }
+    let mut col = min_col
+    while col <= max_col {
+      dims[col] = dim
+      col = col + 1
+    }
+  }
+  dims
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[String],
   style_count : Int,
-) -> (Array[Cell], Array[String]) raise XlsxError {
+) -> (
+  Array[Cell],
+  Array[String],
+  Map[Int, RowDimension],
+  Map[Int, ColDimension],
+) raise XlsxError {
   let cells : Array[Cell] = []
   let mut first = true
   for chunk in xml.to_string().split("<c ") {
@@ -549,7 +710,9 @@ fn parse_worksheet(
     cells.push({ reference: canonical, row, col, value, formula, style_id })
   }
   let merged_cells = parse_merge_cells(xml)
-  (cells, merged_cells)
+  let row_dimensions = parse_row_dimensions(xml, style_count)
+  let col_dimensions = parse_col_dimensions(xml, style_count)
+  (cells, merged_cells, row_dimensions, col_dimensions)
 }
 
 ///|
@@ -604,7 +767,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       None => raise XlsxError::MissingPart(path=sheet_path)
     }
     let sheet_xml = decode_utf8(sheet_bytes)
-    let (cells, merged_cells) = parse_worksheet(
+    let (cells, merged_cells, row_dimensions, col_dimensions) = parse_worksheet(
       sheet_xml, shared_strings, style_count,
     )
     let table_part_ids = parse_table_part_ids(sheet_xml)
@@ -779,6 +942,8 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       charts: [],
       data_validations: [],
       conditional_formats: [],
+      row_dimensions,
+      col_dimensions,
       state,
       stream_state: StreamState::Idle,
     })
