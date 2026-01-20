@@ -34,6 +34,21 @@ test "stream writer row order" {
 }
 
 ///|
+test "stream writer closed" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let writer = workbook.new_stream_writer("Sheet1")
+  writer.set_row("A1", ["A"])
+  writer.flush()
+  let result = try writer.set_row("A2", ["B"]) catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(result, content="Err(StreamWriterClosed)")
+}
+
+///|
 test "stream writer mode conflict" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -59,5 +74,15 @@ test "row stream iterates" {
   let stream = sheet.row_stream()
   inspect(stream.next(), content="Some([\"A\", \"B\"])")
   inspect(stream.next(), content="Some([\"C\"])")
+  inspect(stream.next(), content="None")
+}
+
+///|
+test "workbook row stream" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_row(1, ["A"])
+  let stream = workbook.row_stream("Sheet1")
+  inspect(stream.next(), content="Some([\"A\"])")
   inspect(stream.next(), content="None")
 }
