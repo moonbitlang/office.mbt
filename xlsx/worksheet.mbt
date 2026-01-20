@@ -43,7 +43,7 @@ pub fn Worksheet::set_cell(
   reference : String,
   value : String,
 ) -> Unit raise XlsxError {
-  let (row, col) = parse_cell_ref(reference)
+  let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
   for i, cell in self.cells {
     if cell.row == row && cell.col == col {
@@ -59,7 +59,41 @@ pub fn Worksheet::get_cell(
   self : Worksheet,
   reference : StringView,
 ) -> String? raise XlsxError {
-  let (row, col) = parse_cell_ref(reference)
+  let (row, col) = cell_ref_to_rc(reference)
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      return Some(cell.value)
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::set_cell_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+  value : String,
+) -> Unit raise XlsxError {
+  let reference = cell_ref_from(row, col)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = { reference, row, col, value }
+      return
+    }
+  }
+  self.cells.push({ reference, row, col, value })
+}
+
+///|
+pub fn Worksheet::get_cell_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> String? raise XlsxError {
+  if row <= 0 || col <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+  }
   for cell in self.cells {
     if cell.row == row && cell.col == col {
       return Some(cell.value)

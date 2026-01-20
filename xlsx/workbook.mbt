@@ -30,3 +30,59 @@ pub fn Workbook::sheet(self : Workbook, name : StringView) -> Worksheet? {
 pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
   self.sheets[:]
 }
+
+///|
+pub fn Workbook::set_cell(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell(reference, value)
+}
+
+///|
+pub fn Workbook::get_cell(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> String? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell(reference)
+}
+
+///|
+pub fn Workbook::set_cell_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+  value : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_rc(row, col, value)
+}
+
+///|
+pub fn Workbook::get_cell_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+) -> String? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_rc(row, col)
+}

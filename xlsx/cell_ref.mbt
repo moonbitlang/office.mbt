@@ -1,5 +1,5 @@
 ///|
-fn parse_cell_ref(reference : StringView) -> (Int, Int) raise XlsxError {
+pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
   let mut col = 0
   let row_sb = StringBuilder::new()
   let mut seen_digit = false
@@ -28,7 +28,7 @@ fn parse_cell_ref(reference : StringView) -> (Int, Int) raise XlsxError {
 }
 
 ///|
-fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
+pub fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
   if row <= 0 || col <= 0 {
     raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
   }

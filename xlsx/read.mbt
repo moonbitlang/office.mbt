@@ -92,7 +92,7 @@ fn parse_worksheet(
       }
       _ => unescape_xml_text(raw_value)
     }
-    let (row, col) = parse_cell_ref(ref_value)
+    let (row, col) = cell_ref_to_rc(ref_value)
     let canonical = cell_ref_from(row, col)
     cells.push({ reference: canonical, row, col, value })
   }
