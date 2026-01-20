@@ -48,3 +48,15 @@ test "deflate encode fixed literals" {
   let compressed = deflate_encode(data)
   inspect(deflate_decode(compressed) == data, content="true")
 }
+
+///|
+test "deflate encode lz77 matches" {
+  let data_array : Array[Byte] = []
+  for _ in 0..<1024 {
+    data_array.push(b'A')
+  }
+  let data = Bytes::from_array(data_array)
+  let compressed = deflate_encode(data)
+  inspect(deflate_decode(compressed) == data, content="true")
+  inspect(compressed.length() < data.length(), content="true")
+}

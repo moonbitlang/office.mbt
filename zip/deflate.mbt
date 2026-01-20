@@ -78,6 +78,132 @@ fn reverse_bits(value : UInt, bits : Int) -> UInt {
 }
 
 ///|
+let length_base : Array[Int] = [
+  3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83,
+  99, 115, 131, 163, 195, 227, 258,
+]
+
+///|
+let length_extra : Array[Int] = [
+  0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5,
+  5, 0,
+]
+
+///|
+let dist_base : Array[Int] = [
+  1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769,
+  1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
+]
+
+///|
+let dist_extra : Array[Int] = [
+  0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11,
+  12, 12, 13, 13,
+]
+
+///|
+fn length_to_symbol(length : Int) -> (Int, Int, Int) raise ZipError {
+  if length < 3 || length > 258 {
+    raise ZipError::UnsupportedFeature(msg="invalid match length")
+  }
+  for idx in 0..<length_base.length() {
+    let base = length_base[idx]
+    let extra = length_extra[idx]
+    let max_len = base + ((1 << extra) - 1)
+    if length <= max_len {
+      return (idx + 257, extra, length - base)
+    }
+  }
+  raise ZipError::UnsupportedFeature(msg="length not encodable")
+}
+
+///|
+fn distance_to_symbol(distance : Int) -> (Int, Int, Int) raise ZipError {
+  if distance <= 0 || distance > 32768 {
+    raise ZipError::UnsupportedFeature(msg="invalid match distance")
+  }
+  for idx in 0..<dist_base.length() {
+    let base = dist_base[idx]
+    let extra = dist_extra[idx]
+    let max_dist = base + ((1 << extra) - 1)
+    if distance <= max_dist {
+      return (idx, extra, distance - base)
+    }
+  }
+  raise ZipError::UnsupportedFeature(msg="distance not encodable")
+}
+
+///|
+fn hash3(bytes : BytesView, pos : Int) -> Int {
+  let b0 = bytes[pos].to_int()
+  let b1 = bytes[pos + 1].to_int()
+  let b2 = bytes[pos + 2].to_int()
+  let hash = (b0 << 10) ^ (b1 << 5) ^ b2
+  hash & ((1 << 15) - 1)
+}
+
+///|
+fn insert_position(
+  bytes : BytesView,
+  pos : Int,
+  head : Array[Int],
+  prev : Array[Int],
+) -> Unit {
+  if pos + 2 >= bytes.length() {
+    return
+  }
+  let h = hash3(bytes, pos)
+  prev[pos] = head[h]
+  head[h] = pos
+}
+
+///|
+fn find_match(
+  bytes : BytesView,
+  pos : Int,
+  head : Array[Int],
+  prev : Array[Int],
+) -> (Int, Int) {
+  let len = bytes.length()
+  if pos + 3 > len {
+    return (0, 0)
+  }
+  let max_len = if len - pos < 258 { len - pos } else { 258 }
+  let h = hash3(bytes, pos)
+  let mut candidate = head[h]
+  let mut best_len = 0
+  let mut best_dist = 0
+  let mut chain_count = 0
+  loop true {
+    false => ()
+    true => {
+      if candidate < 0 || chain_count >= 128 {
+        continue false
+      }
+      let dist = pos - candidate
+      if dist > 32768 {
+        continue false
+      }
+      let mut l = 0
+      while l < max_len && bytes[candidate + l] == bytes[pos + l] {
+        l = l + 1
+      }
+      if l >= 3 && l > best_len {
+        best_len = l
+        best_dist = dist
+        if l == max_len {
+          continue false
+        }
+      }
+      candidate = prev[candidate]
+      chain_count = chain_count + 1
+      continue true
+    }
+  }
+  (best_len, best_dist)
+}
+
+///|
 priv struct HuffmanTable {
   max_bits : Int
   sym : Array[Int]
@@ -227,22 +353,6 @@ fn decode_huffman_block(
   dist_table : HuffmanTable,
   out : Array[Byte],
 ) -> Unit raise ZipError {
-  let length_base = [
-    3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67,
-    83, 99, 115, 131, 163, 195, 227, 258,
-  ]
-  let length_extra = [
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5,
-    5, 5, 0,
-  ]
-  let dist_base = [
-    1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769,
-    1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
-  ]
-  let dist_extra = [
-    0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11,
-    11, 12, 12, 13, 13,
-  ]
   loop true {
     false => ()
     true => {
@@ -343,10 +453,44 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
   let writer = BitWriter::new()
   writer.write_bits(1, 1)
   writer.write_bits(1, 2)
-  for b in bytes {
-    let (code, len) = fixed_literal_code(b.to_int())
-    let rev = reverse_bits(code.reinterpret_as_uint(), len).reinterpret_as_int()
-    writer.write_bits(rev, len)
+  let len = bytes.length()
+  let head : Array[Int] = Array::make(1 << 15, -1)
+  let prev : Array[Int] = Array::make(len, -1)
+  let mut i = 0
+  loop true {
+    false => ()
+    true => {
+      if i >= len {
+        continue false
+      }
+      let (match_len, match_dist) = find_match(bytes, i, head, prev)
+      if match_len >= 3 {
+        let (len_sym, len_extra, len_value) = length_to_symbol(match_len)
+        let (len_code, len_bits) = fixed_literal_code(len_sym)
+        let len_rev = reverse_bits(len_code.reinterpret_as_uint(), len_bits).reinterpret_as_int()
+        writer.write_bits(len_rev, len_bits)
+        if len_extra > 0 {
+          writer.write_bits(len_value, len_extra)
+        }
+        let (dist_sym, dist_extra, dist_value) = distance_to_symbol(match_dist)
+        let dist_rev = reverse_bits(dist_sym.reinterpret_as_uint(), 5).reinterpret_as_int()
+        writer.write_bits(dist_rev, 5)
+        if dist_extra > 0 {
+          writer.write_bits(dist_value, dist_extra)
+        }
+        for j in 0..<match_len {
+          insert_position(bytes, i + j, head, prev)
+        }
+        i = i + match_len
+        continue true
+      }
+      let (code, bits) = fixed_literal_code(bytes[i].to_int())
+      let rev = reverse_bits(code.reinterpret_as_uint(), bits).reinterpret_as_int()
+      writer.write_bits(rev, bits)
+      insert_position(bytes, i, head, prev)
+      i = i + 1
+      continue true
+    }
   }
   let (end_code, end_len) = fixed_literal_code(256)
   let end_rev = reverse_bits(end_code.reinterpret_as_uint(), end_len).reinterpret_as_int()
