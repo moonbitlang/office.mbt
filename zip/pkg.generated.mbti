@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/zip"
+
+// Values
+pub fn read(BytesView) -> Archive raise ZipError
+
+pub fn write(Archive) -> Bytes raise ZipError
+
+// Errors
+pub suberror ZipError {
+  OutOfBounds(offset~ : Int)
+  InvalidSignature(expected~ : Int, actual~ : Int, offset~ : Int)
+  MissingEndOfCentral
+  UnsupportedFeature(msg~ : String)
+  UnsupportedCompression(method_id~ : Int)
+  InvalidUtf8(offset~ : Int)
+}
+pub impl Eq for ZipError
+pub impl Show for ZipError
+
+// Types and methods
+pub struct Archive {
+  entries : Array[Entry]
+}
+pub fn Archive::add(Self, String, Bytes, compression? : Compression) -> Unit
+pub fn Archive::entries(Self) -> ArrayView[Entry]
+pub fn Archive::get(Self, StringView) -> Bytes?
+pub fn Archive::names(Self) -> Array[String]
+pub fn Archive::new() -> Self
+
+pub enum Compression {
+  Store
+}
+pub impl Eq for Compression
+pub impl Show for Compression
+
+pub struct Entry {
+  name : String
+  data : Bytes
+  compression : Compression
+}
+
+// Type aliases
+
+// Traits
+
