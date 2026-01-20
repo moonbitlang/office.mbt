@@ -19,6 +19,7 @@ pub suberror XlsxError {
   InvalidSharedString(index~ : Int)
   InvalidStyleId(index~ : Int)
   InvalidTable(msg~ : String)
+  InvalidSparkline(msg~ : String)
   UnsupportedFeature(msg~ : String)
 }
 pub impl Eq for XlsxError
@@ -51,6 +52,22 @@ pub enum NumberFormat {
   Custom(String)
 }
 
+pub struct Sparkline {
+  range_ref : String
+  location : String
+}
+
+pub struct SparklineGroup {
+  sparkline_type : SparklineType
+  sparklines : Array[Sparkline]
+}
+
+pub(all) enum SparklineType {
+  Line
+  Column
+  WinLoss
+}
+
 pub struct Style {
   number_format : NumberFormat?
 }
@@ -78,6 +95,8 @@ pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[St
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
+pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
+pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
 pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
@@ -107,6 +126,7 @@ pub struct Worksheet {
   cells : Array[Cell]
   merged_cells : Array[String]
   tables : Array[Table]
+  sparkline_groups : Array[SparklineGroup]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -117,6 +137,8 @@ pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_sparkline(Self, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
+pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
@@ -144,6 +166,7 @@ pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
+pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
 

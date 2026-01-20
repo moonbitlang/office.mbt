@@ -463,6 +463,9 @@ fn write_worksheet_xml(
     Some(rel_id) => sb.write_view("  <drawing r:id=\"rId\{rel_id}\"/>\n")
     None => ()
   }
+  if sheet.sparkline_groups().length() > 0 {
+    sb.write_view(write_sparkline_ext_xml(sheet.sparkline_groups()))
+  }
   sb.write_view("</worksheet>")
   sb.to_string()
 }

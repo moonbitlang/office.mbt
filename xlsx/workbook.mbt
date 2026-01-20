@@ -251,6 +251,36 @@ pub fn Workbook::add_table(
 }
 
 ///|
+pub fn Workbook::add_sparkline(
+  self : Workbook,
+  sheet_name : StringView,
+  location : String,
+  range_ref : String,
+  sparkline_type? : SparklineType = SparklineType::Line,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_sparkline(location, range_ref, sparkline_type~)
+}
+
+///|
+pub fn Workbook::add_sparkline_group(
+  self : Workbook,
+  sheet_name : StringView,
+  locations : ArrayView[String],
+  ranges : ArrayView[String],
+  sparkline_type? : SparklineType = SparklineType::Line,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_sparkline_group(locations, ranges, sparkline_type~)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

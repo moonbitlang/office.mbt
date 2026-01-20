@@ -419,6 +419,7 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       sheet_xml, shared_strings, style_count,
     )
     let table_part_ids = parse_table_part_ids(sheet_xml)
+    let sparkline_groups = parse_sparkline_groups(sheet_xml)
     let tables = if table_part_ids.length() == 0 {
       []
     } else {
@@ -450,6 +451,7 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       cells,
       merged_cells,
       tables,
+      sparkline_groups,
       images: [],
       charts: [],
       data_validations: [],

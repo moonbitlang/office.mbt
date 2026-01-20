@@ -28,6 +28,7 @@ pub struct Worksheet {
   cells : Array[Cell]
   merged_cells : Array[String]
   tables : Array[Table]
+  sparkline_groups : Array[SparklineGroup]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -41,6 +42,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     cells: [],
     merged_cells: [],
     tables: [],
+    sparkline_groups: [],
     images: [],
     charts: [],
     data_validations: [],
@@ -66,6 +68,13 @@ pub fn Worksheet::merged_cells(self : Worksheet) -> ArrayView[String] {
 ///|
 pub fn Worksheet::tables(self : Worksheet) -> ArrayView[Table] {
   self.tables[:]
+}
+
+///|
+pub fn Worksheet::sparkline_groups(
+  self : Worksheet,
+) -> ArrayView[SparklineGroup] {
+  self.sparkline_groups[:]
 }
 
 ///|
@@ -349,6 +358,39 @@ pub fn Worksheet::add_table(
   let table = Table::new(name, range_ref, columns, display_name~, style_name~)
   self.tables.push(table)
   table
+}
+
+///|
+pub fn Worksheet::add_sparkline(
+  self : Worksheet,
+  location : String,
+  range_ref : String,
+  sparkline_type? : SparklineType = SparklineType::Line,
+) -> Unit raise XlsxError {
+  self.add_sparkline_group([location], [range_ref], sparkline_type~)
+}
+
+///|
+pub fn Worksheet::add_sparkline_group(
+  self : Worksheet,
+  locations : ArrayView[String],
+  ranges : ArrayView[String],
+  sparkline_type? : SparklineType = SparklineType::Line,
+) -> Unit raise XlsxError {
+  if locations.length() == 0 || ranges.length() == 0 {
+    raise XlsxError::InvalidSparkline(msg="sparkline inputs empty")
+  }
+  if locations.length() != ranges.length() {
+    raise XlsxError::InvalidSparkline(msg="sparkline inputs mismatch")
+  }
+  let sparklines : Array[Sparkline] = []
+  for i, location in locations {
+    let (row, col) = cell_ref_to_rc(location)
+    let canonical_loc = cell_ref_from(row, col)
+    let normalized_range = normalize_range_ref(ranges[i])
+    sparklines.push({ range_ref: normalized_range, location: canonical_loc })
+  }
+  self.sparkline_groups.push({ sparkline_type, sparklines })
 }
 
 ///|
