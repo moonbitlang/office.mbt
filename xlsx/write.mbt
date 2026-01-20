@@ -24,12 +24,24 @@ fn collect_shared_strings(
 }
 
 ///|
-fn write_workbook_xml(sheets : ArrayView[Worksheet]) -> String {
+fn write_workbook_xml(workbook : Workbook) -> String {
+  let sheets = workbook.sheets()
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
   )
+  if sheets.length() > 0 {
+    let active_index = workbook.active_sheet_index()
+    let safe_active = if active_index < 0 || active_index >= sheets.length() {
+      0
+    } else {
+      active_index
+    }
+    sb.write_view("  <bookViews>\n")
+    sb.write_view("    <workbookView activeTab=\"\{safe_active}\"/>\n")
+    sb.write_view("  </bookViews>\n")
+  }
   sb.write_view("  <sheets>\n")
   for i, sheet in sheets {
     let sheet_id = i + 1
@@ -37,7 +49,13 @@ fn write_workbook_xml(sheets : ArrayView[Worksheet]) -> String {
     sb.write_view(escape_xml_attr(sheet.name()))
     sb.write_view("\" sheetId=\"")
     sb.write_view("\{sheet_id}\"")
-    sb.write_view(" r:id=\"rId\{sheet_id}\"/>\n")
+    sb.write_view(" r:id=\"rId\{sheet_id}\"")
+    match sheet.state() {
+      SheetState::Visible => ()
+      SheetState::Hidden => sb.write_view(" state=\"hidden\"")
+      SheetState::VeryHidden => sb.write_view(" state=\"veryHidden\"")
+    }
+    sb.write_view("/>\n")
   }
   sb.write_view("  </sheets>\n")
   sb.write_view("</workbook>")
@@ -610,7 +628,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
   archive.add(
     "xl/workbook.xml",
-    @encoding/utf8.encode(write_workbook_xml(workbook.sheets())),
+    @encoding/utf8.encode(write_workbook_xml(workbook)),
   )
   let tables_by_sheet : Array[Array[(Int, Table)]] = []
   let mut next_table_id = 1

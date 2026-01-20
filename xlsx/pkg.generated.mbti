@@ -18,6 +18,10 @@ pub fn write_with_password(Workbook, String) -> Bytes raise XlsxError
 pub suberror XlsxError {
   MissingPart(path~ : String)
   SheetNotFound(name~ : String)
+  InvalidSheetName(msg~ : String)
+  SheetAlreadyExists(name~ : String)
+  InvalidSheetIndex(index~ : Int)
+  InvalidSheetOperation(msg~ : String)
   InvalidXml(msg~ : String)
   InvalidBase64(msg~ : String)
   InvalidCellRef(value~ : String)
@@ -115,6 +119,14 @@ pub struct RowStream {
 pub fn RowStream::new(Worksheet) -> Self
 pub fn RowStream::next(Self) -> Array[String]?
 
+pub enum SheetState {
+  Visible
+  Hidden
+  VeryHidden
+}
+pub impl Eq for SheetState
+pub impl Show for SheetState
+
 pub struct Sparkline {
   range_ref : String
   location : String
@@ -177,14 +189,16 @@ pub struct Workbook {
   styles : Array[Style]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
+  mut active_sheet_index : Int
 }
+pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String) -> PivotTable raise XlsxError
-pub fn Workbook::add_sheet(Self, String) -> Worksheet
+pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
 pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
@@ -192,7 +206,9 @@ pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], 
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties
+pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
+pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
@@ -201,9 +217,11 @@ pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise Xls
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
+pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
@@ -214,13 +232,18 @@ pub fn Workbook::set_cell_style_rc(Self, StringView, Int, Int, Int) -> Unit rais
 pub fn Workbook::set_col(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::set_core_properties(Self, CoreProperties) -> Unit
 pub fn Workbook::set_row(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
+pub fn Workbook::set_sheet_name(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::set_sheet_visible(Self, StringView, Bool, very_hidden? : Bool) -> Unit raise XlsxError
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
+pub fn Workbook::sheet_index(Self, StringView) -> Int raise XlsxError
+pub fn Workbook::sheet_name(Self, Int) -> String?
+pub fn Workbook::sheet_visible(Self, StringView) -> Bool raise XlsxError
 pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
 pub fn Workbook::styles(Self) -> ArrayView[Style]
 pub fn Workbook::unmerge_cells(Self, StringView, String) -> Unit raise XlsxError
 
 pub struct Worksheet {
-  name : String
+  mut name : String
   cells : Array[Cell]
   merged_cells : Array[String]
   tables : Array[Table]
@@ -230,6 +253,7 @@ pub struct Worksheet {
   charts : Array[Chart]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  mut state : SheetState
   mut stream_state : StreamState
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
@@ -273,7 +297,9 @@ pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
+pub fn Worksheet::set_state(Self, SheetState) -> Unit
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
+pub fn Worksheet::state(Self) -> SheetState
 pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?

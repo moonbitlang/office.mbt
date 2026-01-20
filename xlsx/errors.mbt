@@ -2,6 +2,10 @@
 pub suberror XlsxError {
   MissingPart(path~ : String)
   SheetNotFound(name~ : String)
+  InvalidSheetName(msg~ : String)
+  SheetAlreadyExists(name~ : String)
+  InvalidSheetIndex(index~ : Int)
+  InvalidSheetOperation(msg~ : String)
   InvalidXml(msg~ : String)
   InvalidBase64(msg~ : String)
   InvalidCellRef(value~ : String)

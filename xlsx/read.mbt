@@ -6,8 +6,10 @@ fn decode_utf8(bytes : Bytes) -> String raise XlsxError {
 }
 
 ///|
-fn parse_workbook_sheets(xml : StringView) -> Array[String] raise XlsxError {
-  let names : Array[String] = []
+fn parse_workbook_sheets(
+  xml : StringView,
+) -> Array[(String, SheetState)] raise XlsxError {
+  let sheets : Array[(String, SheetState)] = []
   let mut first = true
   for chunk in xml.to_string().split("<sheet ") {
     if first {
@@ -20,12 +22,52 @@ fn parse_workbook_sheets(xml : StringView) -> Array[String] raise XlsxError {
       None => raise XlsxError::InvalidXml(msg="sheet tag not closed")
     }
     let tag = try! text[:end]
-    match attr_value(tag, "name") {
-      Some(value) => names.push(unescape_xml_text(value))
+    let name = match attr_value(tag, "name") {
+      Some(value) => unescape_xml_text(value)
       None => raise XlsxError::InvalidXml(msg="sheet name missing")
     }
+    let state = match attr_value(tag, "state") {
+      Some(value) =>
+        match value.to_lower() {
+          "hidden" => SheetState::Hidden
+          "veryhidden" => SheetState::VeryHidden
+          _ => SheetState::Visible
+        }
+      None => SheetState::Visible
+    }
+    sheets.push((name, state))
   }
-  names
+  sheets
+}
+
+///|
+fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
+  let xml_str = xml.to_string()
+  let marker = "<workbookView"
+  match xml_str.find(marker) {
+    None => None
+    Some(start) => {
+      let rest = xml_str[start + marker.length():] catch {
+          _ => raise XlsxError::InvalidXml(msg="workbookView slice invalid")
+        }
+      let end = match rest.find(">") {
+        Some(pos) => pos
+        None => raise XlsxError::InvalidXml(msg="workbookView tag not closed")
+      }
+      let tag = rest[:end] catch {
+          _ => raise XlsxError::InvalidXml(msg="workbookView tag invalid")
+        }
+      match attr_value(tag, "activeTab") {
+        Some(value) =>
+          Some(
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="activeTab invalid")
+            },
+          )
+        None => None
+      }
+    }
+  }
 }
 
 ///|
@@ -520,7 +562,16 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     None => raise XlsxError::MissingPart(path="xl/workbook.xml")
   }
   let workbook_xml = decode_utf8(workbook_bytes)
-  let sheet_names = parse_workbook_sheets(workbook_xml)
+  let sheets = parse_workbook_sheets(workbook_xml)
+  let active_index = match parse_active_sheet_index(workbook_xml) {
+    Some(value) => value
+    None => 0
+  }
+  let safe_active_index = if active_index < 0 || active_index >= sheets.length() {
+    0
+  } else {
+    active_index
+  }
   let shared_strings = match archive.get("xl/sharedStrings.xml") {
     Some(value) => parse_shared_strings(decode_utf8(value))
     None => []
@@ -543,8 +594,10 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     styles,
     core_properties,
     app_properties,
+    active_sheet_index: safe_active_index,
   }
-  for i, name in sheet_names {
+  for i, entry in sheets {
+    let (name, state) = entry
     let sheet_path = "xl/worksheets/sheet\{i + 1}.xml"
     let sheet_bytes = match archive.get(sheet_path) {
       Some(value) => value
@@ -726,6 +779,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       charts: [],
       data_validations: [],
       conditional_formats: [],
+      state,
       stream_state: StreamState::Idle,
     })
   }

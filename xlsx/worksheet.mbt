@@ -23,8 +23,15 @@ pub struct Chart {
 }
 
 ///|
+pub enum SheetState {
+  Visible
+  Hidden
+  VeryHidden
+} derive(Eq, Show)
+
+///|
 pub struct Worksheet {
-  name : String
+  mut name : String
   cells : Array[Cell]
   merged_cells : Array[String]
   tables : Array[Table]
@@ -34,6 +41,7 @@ pub struct Worksheet {
   charts : Array[Chart]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  mut state : SheetState
   mut stream_state : StreamState
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
@@ -52,6 +60,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     charts: [],
     data_validations: [],
     conditional_formats: [],
+    state: SheetState::Visible,
     stream_state: StreamState::Idle,
     vml_drawing_xml: None,
     vml_drawing_hf_xml: None,
@@ -61,6 +70,16 @@ pub fn Worksheet::new(name : String) -> Worksheet {
 ///|
 pub fn Worksheet::name(self : Worksheet) -> String {
   self.name
+}
+
+///|
+pub fn Worksheet::state(self : Worksheet) -> SheetState {
+  self.state
+}
+
+///|
+pub fn Worksheet::set_state(self : Worksheet, state : SheetState) -> Unit {
+  self.state = state
 }
 
 ///|
