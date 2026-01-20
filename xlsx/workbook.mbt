@@ -281,6 +281,21 @@ pub fn Workbook::add_sparkline_group(
 }
 
 ///|
+pub fn Workbook::add_pivot_table_xml(
+  self : Workbook,
+  sheet_name : StringView,
+  table_xml : String,
+  cache_definition_xml : String,
+  cache_records_xml? : String = "",
+) -> PivotTable raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_pivot_table_xml(table_xml, cache_definition_xml, cache_records_xml~)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

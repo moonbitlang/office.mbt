@@ -248,6 +248,43 @@ fn parse_table_part_ids(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+fn parse_pivot_table_part_ids(
+  xml : StringView,
+) -> Array[String] raise XlsxError {
+  let ids : Array[String] = []
+  let body = match extract_tag_body(xml, "pivotTableParts") {
+    Some(value) => value
+    None => return ids
+  }
+  let mut first = true
+  for chunk in body.split("<pivotTablePart ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None =>
+            raise XlsxError::InvalidXml(msg="pivotTablePart tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="pivotTablePart tag invalid")
+      }
+    let id = match attr_value(tag, "r:id") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="pivotTablePart id missing")
+    }
+    ids.push(id)
+  }
+  ids
+}
+
+///|
 fn parse_relationship_targets(
   xml : StringView,
   rel_type : StringView,
@@ -292,17 +329,60 @@ fn parse_relationship_targets(
 }
 
 ///|
-fn resolve_sheet_target(target : StringView) -> String raise XlsxError {
+fn first_relationship_target(targets : Map[String, String]) -> String? {
+  for _, target in targets {
+    return Some(target)
+  }
+  None
+}
+
+///|
+fn rels_path_for(path : StringView, folder : StringView) -> String {
+  let path_str = path.to_string()
+  let prefix = "xl/\{folder.to_string()}/"
+  if path_str.has_prefix(prefix) {
+    path_str.replace_all(old=prefix, new="xl/\{folder.to_string()}/_rels/") +
+    ".rels"
+  } else {
+    "xl/\{folder.to_string()}/_rels/" + path_str + ".rels"
+  }
+}
+
+///|
+fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
+  let path_str = path.to_string()
+  let prefix_str = prefix.to_string()
+  if !path_str.has_prefix(prefix_str) || !path_str.has_suffix(".xml") {
+    return 0
+  }
+  let start = prefix_str.length()
+  let end = path_str.length() - 4
+  let slice = path_str[start:end] catch { _ => return 0 }
+  @strconv.parse_int(slice.to_string(), base=10) catch {
+    _ => 0
+  }
+}
+
+///|
+fn resolve_rel_target(
+  target : StringView,
+  base_folder : StringView,
+) -> String raise XlsxError {
   let target_str = target.to_string()
   if target_str.has_prefix("../") {
     let rest = target_str[3:] catch {
         _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
       }
     "xl/" + rest.to_string()
-  } else if target_str.has_prefix("tables/") {
-    "xl/" + target_str
-  } else {
+  } else if target_str.has_prefix("xl/") {
     target_str
+  } else {
+    let base = base_folder.to_string()
+    if base.has_suffix("/") {
+      "xl/" + base + target_str
+    } else {
+      "xl/" + base + "/" + target_str
+    }
   }
 }
 
@@ -419,16 +499,21 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       sheet_xml, shared_strings, style_count,
     )
     let table_part_ids = parse_table_part_ids(sheet_xml)
+    let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
     let sparkline_groups = parse_sparkline_groups(sheet_xml)
-    let tables = if table_part_ids.length() == 0 {
-      []
-    } else {
+    let rels_xml = if table_part_ids.length() > 0 || pivot_part_ids.length() > 0 {
       let rels_path = "xl/worksheets/_rels/sheet\{i + 1}.xml.rels"
       let rels_bytes = match archive.get(rels_path) {
         Some(value) => value
         None => raise XlsxError::MissingPart(path=rels_path)
       }
-      let rels_xml = decode_utf8(rels_bytes)
+      decode_utf8(rels_bytes)
+    } else {
+      ""
+    }
+    let tables = if table_part_ids.length() == 0 {
+      []
+    } else {
       let rel_targets = parse_relationship_targets(rels_xml, rel_table)
       let parsed_tables : Array[Table] = []
       for rel_id in table_part_ids {
@@ -436,7 +521,7 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
           Some(value) => value
           None => raise XlsxError::InvalidXml(msg="table relationship missing")
         }
-        let table_path = resolve_sheet_target(target)
+        let table_path = resolve_rel_target(target, "worksheets")
         let table_bytes = match archive.get(table_path) {
           Some(value) => value
           None => raise XlsxError::MissingPart(path=table_path)
@@ -446,12 +531,89 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
       }
       parsed_tables
     }
+    let pivot_tables = if pivot_part_ids.length() == 0 {
+      []
+    } else {
+      let rel_targets = parse_relationship_targets(rels_xml, rel_pivot_table)
+      let parsed_pivots : Array[PivotTable] = []
+      for rel_id in pivot_part_ids {
+        let target = match rel_targets.get(rel_id) {
+          Some(value) => value
+          None =>
+            raise XlsxError::InvalidXml(msg="pivot table relationship missing")
+        }
+        let pivot_path = resolve_rel_target(target, "worksheets")
+        let pivot_bytes = match archive.get(pivot_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=pivot_path)
+        }
+        let pivot_xml = decode_utf8(pivot_bytes)
+        let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
+        let pivot_rels_bytes = match archive.get(pivot_rels_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=pivot_rels_path)
+        }
+        let pivot_rels_xml = decode_utf8(pivot_rels_bytes)
+        let cache_targets = parse_relationship_targets(
+          pivot_rels_xml, rel_pivot_cache,
+        )
+        let cache_target = match first_relationship_target(cache_targets) {
+          Some(value) => value
+          None =>
+            raise XlsxError::InvalidXml(msg="pivot cache relationship missing")
+        }
+        let cache_path = resolve_rel_target(cache_target, "pivotTables")
+        let cache_bytes = match archive.get(cache_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=cache_path)
+        }
+        let cache_xml = decode_utf8(cache_bytes)
+        let cache_id = parse_id_from_path(
+          cache_path, "xl/pivotCache/pivotCacheDefinition",
+        )
+        let pivot_id = parse_id_from_path(
+          pivot_path, "xl/pivotTables/pivotTable",
+        )
+        let cache_records_xml = match
+          archive.get(rels_path_for(cache_path, "pivotCache")) {
+          Some(value) => {
+            let cache_rels_xml = decode_utf8(value)
+            let record_targets = parse_relationship_targets(
+              cache_rels_xml, rel_pivot_cache_records,
+            )
+            match first_relationship_target(record_targets) {
+              Some(record_target) => {
+                let record_path = resolve_rel_target(
+                  record_target, "pivotCache",
+                )
+                let record_bytes = match archive.get(record_path) {
+                  Some(value) => value
+                  None => raise XlsxError::MissingPart(path=record_path)
+                }
+                Some(decode_utf8(record_bytes))
+              }
+              None => None
+            }
+          }
+          None => None
+        }
+        parsed_pivots.push({
+          table_id: pivot_id,
+          cache_id,
+          table_xml: pivot_xml,
+          cache_definition_xml: cache_xml,
+          cache_records_xml,
+        })
+      }
+      parsed_pivots
+    }
     workbook.sheets.push({
       name,
       cells,
       merged_cells,
       tables,
       sparkline_groups,
+      pivot_tables,
       images: [],
       charts: [],
       data_validations: [],

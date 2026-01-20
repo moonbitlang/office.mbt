@@ -108,6 +108,15 @@ let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relations
 let rel_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table"
 
 ///|
+let rel_pivot_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable"
+
+///|
+let rel_pivot_cache = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition"
+
+///|
+let rel_pivot_cache_records = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheRecords"
+
+///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
 
 ///|
@@ -117,9 +126,19 @@ let ct_chart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xm
 let ct_table = "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"
 
 ///|
+let ct_pivot_table = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"
+
+///|
+let ct_pivot_cache_def = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml"
+
+///|
+let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
+
+///|
 fn write_sheet_rels_xml(
   drawing_target : String?,
   table_targets : ArrayView[String],
+  pivot_table_targets : ArrayView[String],
 ) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -146,6 +165,44 @@ fn write_sheet_rels_xml(
     sb.write_view("\"/>\n")
     rel_id = rel_id + 1
   }
+  for target in pivot_table_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_pivot_table)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
+  sb.write_view("</Relationships>")
+  sb.to_string()
+}
+
+///|
+fn write_pivot_table_rels_xml(cache_id : Int) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
+  )
+  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
+  sb.write_view(rel_pivot_cache)
+  sb.write_view(
+    "\" Target=\"../pivotCache/pivotCacheDefinition\{cache_id}.xml\"/>\n",
+  )
+  sb.write_view("</Relationships>")
+  sb.to_string()
+}
+
+///|
+fn write_pivot_cache_rels_xml(cache_id : Int) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
+  )
+  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
+  sb.write_view(rel_pivot_cache_records)
+  sb.write_view("\" Target=\"pivotCacheRecords\{cache_id}.xml\"/>\n")
   sb.write_view("</Relationships>")
   sb.to_string()
 }
@@ -359,10 +416,13 @@ fn write_worksheet_xml(
   string_map : Map[String, Int],
   drawing_rel_id : Int?,
   table_rel_ids : ArrayView[Int],
+  pivot_rel_ids : ArrayView[Int],
 ) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  let needs_rels = drawing_rel_id is Some(_) || table_rel_ids.length() > 0
+  let needs_rels = drawing_rel_id is Some(_) ||
+    table_rel_ids.length() > 0 ||
+    pivot_rel_ids.length() > 0
   if needs_rels {
     sb.write_view(
       "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
@@ -442,6 +502,13 @@ fn write_worksheet_xml(
       sb.write_view("    <tablePart r:id=\"rId\{rel_id}\"/>\n")
     }
     sb.write_view("  </tableParts>\n")
+  }
+  if pivot_rel_ids.length() > 0 {
+    sb.write_view("  <pivotTableParts count=\"\{pivot_rel_ids.length()}\">\n")
+    for rel_id in pivot_rel_ids {
+      sb.write_view("    <pivotTablePart r:id=\"rId\{rel_id}\"/>\n")
+    }
+    sb.write_view("  </pivotTableParts>\n")
   }
   for xml in sheet.conditional_formats() {
     sb.write_view("  ")
@@ -537,10 +604,6 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     "xl/workbook.xml",
     @encoding/utf8.encode(write_workbook_xml(workbook.sheets())),
   )
-  archive.add(
-    "xl/_rels/workbook.xml.rels",
-    @encoding/utf8.encode(manifest.workbook_rels_xml()),
-  )
   let tables_by_sheet : Array[Array[(Int, Table)]] = []
   let mut next_table_id = 1
   for sheet in workbook.sheets() {
@@ -564,12 +627,47 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     }
     tables_by_sheet.push(sheet_tables)
   }
+  let pivots_by_sheet : Array[Array[(Int, Int, PivotTable)]] = []
+  let mut next_pivot_table_id = 1
+  let mut next_cache_id = 1
+  for sheet in workbook.sheets() {
+    for pivot in sheet.pivot_tables() {
+      if pivot.table_id >= next_pivot_table_id {
+        next_pivot_table_id = pivot.table_id + 1
+      }
+      if pivot.cache_id >= next_cache_id {
+        next_cache_id = pivot.cache_id + 1
+      }
+    }
+  }
+  for sheet in workbook.sheets() {
+    let sheet_pivots : Array[(Int, Int, PivotTable)] = []
+    for pivot in sheet.pivot_tables() {
+      let table_id = if pivot.table_id > 0 {
+        pivot.table_id
+      } else {
+        let id = next_pivot_table_id
+        next_pivot_table_id = next_pivot_table_id + 1
+        id
+      }
+      let cache_id = if pivot.cache_id > 0 {
+        pivot.cache_id
+      } else {
+        let id = next_cache_id
+        next_cache_id = next_cache_id + 1
+        id
+      }
+      sheet_pivots.push((table_id, cache_id, pivot))
+    }
+    pivots_by_sheet.push(sheet_pivots)
+  }
   let added_extensions : Map[String, Bool] = {}
   let mut image_index = 1
   let mut chart_index = 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
     let sheet_tables = tables_by_sheet[i]
+    let sheet_pivots = pivots_by_sheet[i]
     let has_drawing = sheet.images().length() > 0 || sheet.charts().length() > 0
     let mut rel_id = 1
     let drawing_rel_id = if has_drawing {
@@ -587,19 +685,31 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       table_targets.push("../tables/table\{table_id}.xml")
       rel_id = rel_id + 1
     }
+    let pivot_rel_ids : Array[Int] = []
+    let pivot_targets : Array[String] = []
+    for entry in sheet_pivots {
+      let (pivot_id, _cache_id, _pivot) = entry
+      pivot_rel_ids.push(rel_id)
+      pivot_targets.push("../pivotTables/pivotTable\{pivot_id}.xml")
+      rel_id = rel_id + 1
+    }
     let sheet_xml = write_worksheet_xml(
-      sheet, string_map, drawing_rel_id, table_rel_ids,
+      sheet, string_map, drawing_rel_id, table_rel_ids, pivot_rel_ids,
     )
     archive.add(
       "xl/worksheets/sheet\{sheet_id}.xml",
       @encoding/utf8.encode(sheet_xml),
     )
-    if drawing_rel_id is Some(_) || table_targets.length() > 0 {
+    if drawing_rel_id is Some(_) ||
+      table_targets.length() > 0 ||
+      pivot_targets.length() > 0 {
       let drawing_target = match drawing_rel_id {
         Some(_) => Some("../drawings/drawing\{sheet_id}.xml")
         None => None
       }
-      let sheet_rels_xml = write_sheet_rels_xml(drawing_target, table_targets)
+      let sheet_rels_xml = write_sheet_rels_xml(
+        drawing_target, table_targets, pivot_targets,
+      )
       archive.add(
         "xl/worksheets/_rels/sheet\{sheet_id}.xml.rels",
         @encoding/utf8.encode(sheet_rels_xml),
@@ -613,6 +723,52 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         @encoding/utf8.encode(table_xml),
       )
       manifest.add_content_override("/xl/tables/table\{table_id}.xml", ct_table)
+    }
+    for entry in sheet_pivots {
+      let (pivot_id, cache_id, pivot) = entry
+      archive.add(
+        "xl/pivotTables/pivotTable\{pivot_id}.xml",
+        @encoding/utf8.encode(pivot.table_xml),
+      )
+      manifest.add_content_override(
+        "/xl/pivotTables/pivotTable\{pivot_id}.xml",
+        ct_pivot_table,
+      )
+      let pivot_rels_xml = write_pivot_table_rels_xml(cache_id)
+      archive.add(
+        "xl/pivotTables/_rels/pivotTable\{pivot_id}.xml.rels",
+        @encoding/utf8.encode(pivot_rels_xml),
+      )
+      archive.add(
+        "xl/pivotCache/pivotCacheDefinition\{cache_id}.xml",
+        @encoding/utf8.encode(pivot.cache_definition_xml),
+      )
+      manifest.add_content_override(
+        "/xl/pivotCache/pivotCacheDefinition\{cache_id}.xml",
+        ct_pivot_cache_def,
+      )
+      manifest.add_workbook_relationship(
+        rel_pivot_cache,
+        "pivotCache/pivotCacheDefinition\{cache_id}.xml",
+      )
+      match pivot.cache_records_xml {
+        Some(records) => {
+          archive.add(
+            "xl/pivotCache/pivotCacheRecords\{cache_id}.xml",
+            @encoding/utf8.encode(records),
+          )
+          manifest.add_content_override(
+            "/xl/pivotCache/pivotCacheRecords\{cache_id}.xml",
+            ct_pivot_cache_records,
+          )
+          let cache_rels_xml = write_pivot_cache_rels_xml(cache_id)
+          archive.add(
+            "xl/pivotCache/_rels/pivotCacheDefinition\{cache_id}.xml.rels",
+            @encoding/utf8.encode(cache_rels_xml),
+          )
+        }
+        None => ()
+      }
     }
     if !has_drawing {
       continue
@@ -679,6 +835,10 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))
   archive.add("docProps/core.xml", @encoding/utf8.encode(default_core_xml))
   archive.add("docProps/app.xml", @encoding/utf8.encode(default_app_xml))
+  archive.add(
+    "xl/_rels/workbook.xml.rels",
+    @encoding/utf8.encode(manifest.workbook_rels_xml()),
+  )
   archive.add(
     "[Content_Types].xml",
     @encoding/utf8.encode(manifest.content_types_xml()),

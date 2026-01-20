@@ -8,5 +8,6 @@ pub suberror XlsxError {
   InvalidStyleId(index~ : Int)
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
+  InvalidPivotTable(msg~ : String)
   UnsupportedFeature(msg~ : String)
 } derive(Eq, Show)

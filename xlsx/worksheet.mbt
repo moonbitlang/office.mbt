@@ -29,6 +29,7 @@ pub struct Worksheet {
   merged_cells : Array[String]
   tables : Array[Table]
   sparkline_groups : Array[SparklineGroup]
+  pivot_tables : Array[PivotTable]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -43,6 +44,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     merged_cells: [],
     tables: [],
     sparkline_groups: [],
+    pivot_tables: [],
     images: [],
     charts: [],
     data_validations: [],
@@ -75,6 +77,11 @@ pub fn Worksheet::sparkline_groups(
   self : Worksheet,
 ) -> ArrayView[SparklineGroup] {
   self.sparkline_groups[:]
+}
+
+///|
+pub fn Worksheet::pivot_tables(self : Worksheet) -> ArrayView[PivotTable] {
+  self.pivot_tables[:]
 }
 
 ///|
@@ -391,6 +398,22 @@ pub fn Worksheet::add_sparkline_group(
     sparklines.push({ range_ref: normalized_range, location: canonical_loc })
   }
   self.sparkline_groups.push({ sparkline_type, sparklines })
+}
+
+///|
+pub fn Worksheet::add_pivot_table_xml(
+  self : Worksheet,
+  table_xml : String,
+  cache_definition_xml : String,
+  cache_records_xml? : String = "",
+) -> PivotTable raise XlsxError {
+  let pivot = PivotTable::new(
+    table_xml,
+    cache_definition_xml,
+    cache_records_xml~,
+  )
+  self.pivot_tables.push(pivot)
+  pivot
 }
 
 ///|

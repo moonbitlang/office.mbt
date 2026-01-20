@@ -20,6 +20,7 @@ pub suberror XlsxError {
   InvalidStyleId(index~ : Int)
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
+  InvalidPivotTable(msg~ : String)
   UnsupportedFeature(msg~ : String)
 }
 pub impl Eq for XlsxError
@@ -51,6 +52,15 @@ pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
 }
+
+pub struct PivotTable {
+  table_id : Int
+  cache_id : Int
+  table_xml : String
+  cache_definition_xml : String
+  cache_records_xml : String?
+}
+pub fn PivotTable::new(String, String, cache_records_xml? : String) -> Self raise XlsxError
 
 pub struct Sparkline {
   range_ref : String
@@ -94,6 +104,7 @@ pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit ra
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
+pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
 pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
@@ -127,6 +138,7 @@ pub struct Worksheet {
   merged_cells : Array[String]
   tables : Array[Table]
   sparkline_groups : Array[SparklineGroup]
+  pivot_tables : Array[PivotTable]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -137,6 +149,7 @@ pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_sparkline(Self, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
@@ -158,6 +171,7 @@ pub fn Worksheet::merge_cells(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::merged_cells(Self) -> ArrayView[String]
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
+pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError
