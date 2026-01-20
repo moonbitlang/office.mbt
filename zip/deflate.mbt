@@ -282,6 +282,79 @@ fn decode_huffman_block(
 }
 
 ///|
+priv struct BitWriter {
+  mut bit_buf : UInt
+  mut bit_count : Int
+  out : Array[Byte]
+}
+
+///|
+fn BitWriter::new() -> BitWriter {
+  { bit_buf: 0, bit_count: 0, out: [] }
+}
+
+///|
+fn BitWriter::write_bits(
+  self : BitWriter,
+  value : Int,
+  count : Int,
+) -> Unit raise ZipError {
+  if count < 0 {
+    raise ZipError::UnsupportedFeature(msg="negative bit count")
+  }
+  for i in 0..<count {
+    let bit = (value >> i) & 1
+    self.bit_buf = self.bit_buf | (bit.reinterpret_as_uint() << self.bit_count)
+    self.bit_count = self.bit_count + 1
+    if self.bit_count == 8 {
+      self.out.push(self.bit_buf.to_byte())
+      self.bit_buf = 0
+      self.bit_count = 0
+    }
+  }
+}
+
+///|
+fn BitWriter::finish(self : BitWriter) -> Bytes {
+  if self.bit_count > 0 {
+    self.out.push(self.bit_buf.to_byte())
+  }
+  Bytes::from_array(self.out)
+}
+
+///|
+fn fixed_literal_code(symbol : Int) -> (Int, Int) raise ZipError {
+  if symbol < 0 || symbol > 287 {
+    raise ZipError::UnsupportedFeature(msg="invalid fixed literal symbol")
+  }
+  if symbol <= 143 {
+    (symbol + 0x30, 8)
+  } else if symbol <= 255 {
+    (symbol - 144 + 0x190, 9)
+  } else if symbol <= 279 {
+    (symbol - 256, 7)
+  } else {
+    (symbol - 280 + 0xC0, 8)
+  }
+}
+
+///|
+fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
+  let writer = BitWriter::new()
+  writer.write_bits(1, 1)
+  writer.write_bits(1, 2)
+  for b in bytes {
+    let (code, len) = fixed_literal_code(b.to_int())
+    let rev = reverse_bits(code.reinterpret_as_uint(), len).reinterpret_as_int()
+    writer.write_bits(rev, len)
+  }
+  let (end_code, end_len) = fixed_literal_code(256)
+  let end_rev = reverse_bits(end_code.reinterpret_as_uint(), end_len).reinterpret_as_int()
+  writer.write_bits(end_rev, end_len)
+  writer.finish()
+}
+
+///|
 fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
   let reader = BitReader::new(bytes)
   let out : Array[Byte] = []

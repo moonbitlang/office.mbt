@@ -31,3 +31,17 @@ test "zip invalid bytes" {
   let result : Result[Archive, ZipError] = try? read(bad)
   inspect(result is Err(_), content="true")
 }
+
+///|
+test "zip deflate roundtrip" {
+  let archive = Archive::new()
+  archive.add("a.txt", b"hello", compression=Compression::Deflate)
+  let bytes = write(archive)
+  let parsed = read(bytes)
+  inspect(
+    parsed.get("a.txt"),
+    content=(
+      #|Some(b"hello")
+    ),
+  )
+}

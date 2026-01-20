@@ -41,3 +41,10 @@ test "deflate dynamic huffman" {
   let expected = Bytes::from_array(expected_array)
   inspect(deflate_decode(stream) == expected, content="true")
 }
+
+///|
+test "deflate encode fixed literals" {
+  let data : Bytes = "MoonBit deflate"
+  let compressed = deflate_encode(data)
+  inspect(deflate_decode(compressed) == data, content="true")
+}

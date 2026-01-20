@@ -28,7 +28,7 @@ pub fn Archive::get(Self, StringView) -> Bytes?
 pub fn Archive::names(Self) -> Array[String]
 pub fn Archive::new() -> Self
 
-pub enum Compression {
+pub(all) enum Compression {
   Store
   Deflate
 }

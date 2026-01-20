@@ -1,5 +1,5 @@
 ///|
-pub enum Compression {
+pub(all) enum Compression {
   Store
   Deflate
 } derive(Show, Eq)

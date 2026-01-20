@@ -37,14 +37,14 @@ pub fn write(archive : Archive) -> Bytes raise ZipError {
   let out : Array[Byte] = []
   let central : Array[Byte] = []
   for entry in archive.entries() {
-    if entry.compression != Compression::Store {
-      raise ZipError::UnsupportedFeature(
-        msg="only store compression is supported",
-      )
+    let (method_id, payload) = match entry.compression {
+      Store => (0, entry.data)
+      Deflate => (8, deflate_encode(entry.data))
     }
     let name_bytes = @encoding/utf8.encode(entry.name)
     let name_len = name_bytes.length()
     let data_len = entry.data.length()
+    let payload_len = payload.length()
     if name_len > 0xFFFF {
       raise ZipError::UnsupportedFeature(msg="file name too long")
     }
@@ -53,25 +53,25 @@ pub fn write(archive : Archive) -> Bytes raise ZipError {
     write_u32_le(out, local_header_sig.reinterpret_as_uint())
     write_u16_le(out, 20)
     write_u16_le(out, flag_utf8)
-    write_u16_le(out, 0)
+    write_u16_le(out, method_id)
     write_u16_le(out, 0)
     write_u16_le(out, 0)
     write_u32_le(out, crc)
-    write_u32_le(out, to_u32(data_len))
+    write_u32_le(out, to_u32(payload_len))
     write_u32_le(out, to_u32(data_len))
     write_u16_le(out, name_len)
     write_u16_le(out, 0)
     write_bytes(out, name_bytes)
-    write_bytes(out, entry.data)
+    write_bytes(out, payload)
     write_u32_le(central, central_header_sig.reinterpret_as_uint())
     write_u16_le(central, 20)
     write_u16_le(central, 20)
     write_u16_le(central, flag_utf8)
-    write_u16_le(central, 0)
+    write_u16_le(central, method_id)
     write_u16_le(central, 0)
     write_u16_le(central, 0)
     write_u32_le(central, crc)
-    write_u32_le(central, to_u32(data_len))
+    write_u32_le(central, to_u32(payload_len))
     write_u32_le(central, to_u32(data_len))
     write_u16_le(central, name_len)
     write_u16_le(central, 0)
