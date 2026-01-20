@@ -105,21 +105,47 @@ let rel_image = "http://schemas.openxmlformats.org/officeDocument/2006/relations
 let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
 
 ///|
+let rel_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table"
+
+///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
 
 ///|
 let ct_chart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
 
 ///|
-fn write_sheet_rels_xml(drawing_id : Int) -> String {
+let ct_table = "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"
+
+///|
+fn write_sheet_rels_xml(
+  drawing_target : String?,
+  table_targets : ArrayView[String],
+) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
   )
-  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
-  sb.write_view(rel_drawing)
-  sb.write_view("\" Target=\"../drawings/drawing\{drawing_id}.xml\"/>\n")
+  let mut rel_id = 1
+  match drawing_target {
+    Some(target) => {
+      sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+      sb.write_view(rel_drawing)
+      sb.write_view("\" Target=\"")
+      sb.write_view(escape_xml_attr(target))
+      sb.write_view("\"/>\n")
+      rel_id = rel_id + 1
+    }
+    None => ()
+  }
+  for target in table_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_table)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
   sb.write_view("</Relationships>")
   sb.to_string()
 }
@@ -296,6 +322,29 @@ fn worksheet_dimension(sheet : Worksheet) -> String? raise XlsxError {
       }
     }
   }
+  for table in sheet.tables() {
+    let (row1, col1, row2, col2) = parse_range_ref(table.range_ref)
+    if !has_any {
+      has_any = true
+      min_row = row1
+      max_row = row2
+      min_col = col1
+      max_col = col2
+    } else {
+      if row1 < min_row {
+        min_row = row1
+      }
+      if row2 > max_row {
+        max_row = row2
+      }
+      if col1 < min_col {
+        min_col = col1
+      }
+      if col2 > max_col {
+        max_col = col2
+      }
+    }
+  }
   if !has_any {
     return None
   }
@@ -308,11 +357,13 @@ fn worksheet_dimension(sheet : Worksheet) -> String? raise XlsxError {
 fn write_worksheet_xml(
   sheet : Worksheet,
   string_map : Map[String, Int],
-  has_drawing : Bool,
+  drawing_rel_id : Int?,
+  table_rel_ids : ArrayView[Int],
 ) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  if has_drawing {
+  let needs_rels = drawing_rel_id is Some(_) || table_rel_ids.length() > 0
+  if needs_rels {
     sb.write_view(
       "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
     )
@@ -385,6 +436,13 @@ fn write_worksheet_xml(
     }
     sb.write_view("  </mergeCells>\n")
   }
+  if table_rel_ids.length() > 0 {
+    sb.write_view("  <tableParts count=\"\{table_rel_ids.length()}\">\n")
+    for rel_id in table_rel_ids {
+      sb.write_view("    <tablePart r:id=\"rId\{rel_id}\"/>\n")
+    }
+    sb.write_view("  </tableParts>\n")
+  }
   for xml in sheet.conditional_formats() {
     sb.write_view("  ")
     sb.write_view(xml)
@@ -401,8 +459,9 @@ fn write_worksheet_xml(
     }
     sb.write_view("  </dataValidations>\n")
   }
-  if has_drawing {
-    sb.write_view("  <drawing r:id=\"rId1\"/>\n")
+  match drawing_rel_id {
+    Some(rel_id) => sb.write_view("  <drawing r:id=\"rId\{rel_id}\"/>\n")
+    None => ()
   }
   sb.write_view("</worksheet>")
   sb.to_string()
@@ -479,22 +538,82 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(manifest.workbook_rels_xml()),
   )
-  for i, sheet in workbook.sheets() {
-    let has_drawing = sheet.images().length() > 0 || sheet.charts().length() > 0
-    let sheet_xml = write_worksheet_xml(sheet, string_map, has_drawing)
-    archive.add(
-      "xl/worksheets/sheet\{i + 1}.xml",
-      @encoding/utf8.encode(sheet_xml),
-    )
+  let tables_by_sheet : Array[Array[(Int, Table)]] = []
+  let mut next_table_id = 1
+  for sheet in workbook.sheets() {
+    for table in sheet.tables() {
+      if table.id >= next_table_id {
+        next_table_id = table.id + 1
+      }
+    }
+  }
+  for sheet in workbook.sheets() {
+    let sheet_tables : Array[(Int, Table)] = []
+    for table in sheet.tables() {
+      let table_id = if table.id > 0 {
+        table.id
+      } else {
+        let id = next_table_id
+        next_table_id = next_table_id + 1
+        id
+      }
+      sheet_tables.push((table_id, table))
+    }
+    tables_by_sheet.push(sheet_tables)
   }
   let added_extensions : Map[String, Bool] = {}
   let mut image_index = 1
   let mut chart_index = 1
   for i, sheet in workbook.sheets() {
-    if sheet.images().length() == 0 && sheet.charts().length() == 0 {
+    let sheet_id = i + 1
+    let sheet_tables = tables_by_sheet[i]
+    let has_drawing = sheet.images().length() > 0 || sheet.charts().length() > 0
+    let mut rel_id = 1
+    let drawing_rel_id = if has_drawing {
+      let id = rel_id
+      rel_id = rel_id + 1
+      Some(id)
+    } else {
+      None
+    }
+    let table_rel_ids : Array[Int] = []
+    let table_targets : Array[String] = []
+    for entry in sheet_tables {
+      let (table_id, _table) = entry
+      table_rel_ids.push(rel_id)
+      table_targets.push("../tables/table\{table_id}.xml")
+      rel_id = rel_id + 1
+    }
+    let sheet_xml = write_worksheet_xml(
+      sheet, string_map, drawing_rel_id, table_rel_ids,
+    )
+    archive.add(
+      "xl/worksheets/sheet\{sheet_id}.xml",
+      @encoding/utf8.encode(sheet_xml),
+    )
+    if drawing_rel_id is Some(_) || table_targets.length() > 0 {
+      let drawing_target = match drawing_rel_id {
+        Some(_) => Some("../drawings/drawing\{sheet_id}.xml")
+        None => None
+      }
+      let sheet_rels_xml = write_sheet_rels_xml(drawing_target, table_targets)
+      archive.add(
+        "xl/worksheets/_rels/sheet\{sheet_id}.xml.rels",
+        @encoding/utf8.encode(sheet_rels_xml),
+      )
+    }
+    for entry in sheet_tables {
+      let (table_id, table) = entry
+      let table_xml = write_table_xml(table_id, table)
+      archive.add(
+        "xl/tables/table\{table_id}.xml",
+        @encoding/utf8.encode(table_xml),
+      )
+      manifest.add_content_override("/xl/tables/table\{table_id}.xml", ct_table)
+    }
+    if !has_drawing {
       continue
     }
-    let drawing_id = i + 1
     let image_targets : Array[String] = []
     let chart_targets : Array[String] = []
     let drawing_images : Array[(String, Int)] = []
@@ -522,23 +641,18 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       manifest.add_content_override("/xl/charts/\{file_name}", ct_chart)
     }
     manifest.add_content_override(
-      "/xl/drawings/drawing\{drawing_id}.xml",
+      "/xl/drawings/drawing\{sheet_id}.xml",
       ct_drawing,
     )
     let drawing_xml = write_drawing_xml(drawing_images, drawing_charts)
     archive.add(
-      "xl/drawings/drawing\{drawing_id}.xml",
+      "xl/drawings/drawing\{sheet_id}.xml",
       @encoding/utf8.encode(drawing_xml),
     )
     let drawing_rels_xml = write_drawing_rels_xml(image_targets, chart_targets)
     archive.add(
-      "xl/drawings/_rels/drawing\{drawing_id}.xml.rels",
+      "xl/drawings/_rels/drawing\{sheet_id}.xml.rels",
       @encoding/utf8.encode(drawing_rels_xml),
-    )
-    let sheet_rels_xml = write_sheet_rels_xml(drawing_id)
-    archive.add(
-      "xl/worksheets/_rels/sheet\{drawing_id}.xml.rels",
-      @encoding/utf8.encode(sheet_rels_xml),
     )
   }
   if include_shared {

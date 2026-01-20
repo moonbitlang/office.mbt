@@ -234,6 +234,23 @@ pub fn Workbook::unmerge_cells(
 }
 
 ///|
+pub fn Workbook::add_table(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+  name : String,
+  columns : ArrayView[String],
+  display_name? : String = "",
+  style_name? : String = "TableStyleMedium9",
+) -> Table raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_table(range_ref, name, columns, display_name~, style_name~)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

@@ -18,6 +18,7 @@ pub suberror XlsxError {
   InvalidCellRef(value~ : String)
   InvalidSharedString(index~ : Int)
   InvalidStyleId(index~ : Int)
+  InvalidTable(msg~ : String)
   UnsupportedFeature(msg~ : String)
 }
 pub impl Eq for XlsxError
@@ -57,6 +58,16 @@ pub fn Style::builtin_number_format(Int) -> Self
 pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
 
+pub struct Table {
+  id : Int
+  name : String
+  display_name : String
+  range_ref : String
+  columns : Array[String]
+  style_name : String
+}
+pub fn Table::new(String, String, ArrayView[String], display_name? : String, style_name? : String) -> Self raise XlsxError
+
 pub struct Workbook {
   sheets : Array[Worksheet]
   styles : Array[Style]
@@ -68,6 +79,7 @@ pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
 pub fn Workbook::add_style(Self, Style) -> Int
+pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
@@ -94,6 +106,7 @@ pub struct Worksheet {
   name : String
   cells : Array[Cell]
   merged_cells : Array[String]
+  tables : Array[Table]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -104,6 +117,7 @@ pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
@@ -130,6 +144,7 @@ pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
+pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
 
 // Type aliases

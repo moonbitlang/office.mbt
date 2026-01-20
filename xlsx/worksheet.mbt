@@ -27,6 +27,7 @@ pub struct Worksheet {
   name : String
   cells : Array[Cell]
   merged_cells : Array[String]
+  tables : Array[Table]
   images : Array[Image]
   charts : Array[Chart]
   data_validations : Array[String]
@@ -39,6 +40,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     name,
     cells: [],
     merged_cells: [],
+    tables: [],
     images: [],
     charts: [],
     data_validations: [],
@@ -59,6 +61,11 @@ pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
 ///|
 pub fn Worksheet::merged_cells(self : Worksheet) -> ArrayView[String] {
   self.merged_cells[:]
+}
+
+///|
+pub fn Worksheet::tables(self : Worksheet) -> ArrayView[Table] {
+  self.tables[:]
 }
 
 ///|
@@ -328,6 +335,20 @@ pub fn Worksheet::unmerge_cells(
       return
     }
   }
+}
+
+///|
+pub fn Worksheet::add_table(
+  self : Worksheet,
+  range_ref : String,
+  name : String,
+  columns : ArrayView[String],
+  display_name? : String = "",
+  style_name? : String = "TableStyleMedium9",
+) -> Table raise XlsxError {
+  let table = Table::new(name, range_ref, columns, display_name~, style_name~)
+  self.tables.push(table)
+  table
 }
 
 ///|

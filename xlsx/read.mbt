@@ -214,6 +214,99 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+fn parse_table_part_ids(xml : StringView) -> Array[String] raise XlsxError {
+  let ids : Array[String] = []
+  let body = match extract_tag_body(xml, "tableParts") {
+    Some(value) => value
+    None => return ids
+  }
+  let mut first = true
+  for chunk in body.split("<tablePart ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="tablePart tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="tablePart tag invalid")
+      }
+    let id = match attr_value(tag, "r:id") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="tablePart id missing")
+    }
+    ids.push(id)
+  }
+  ids
+}
+
+///|
+fn parse_relationship_targets(
+  xml : StringView,
+  rel_type : StringView,
+) -> Map[String, String] raise XlsxError {
+  let targets : Map[String, String] = {}
+  let mut first = true
+  for chunk in xml.to_string().split("<Relationship ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="relationship tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="relationship tag invalid")
+      }
+    let rel = match attr_value(tag, "Type") {
+      Some(value) => value
+      None => continue
+    }
+    if rel != rel_type.to_string() {
+      continue
+    }
+    let id = match attr_value(tag, "Id") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="relationship id missing")
+    }
+    let target = match attr_value(tag, "Target") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="relationship target missing")
+    }
+    targets[id] = target
+  }
+  targets
+}
+
+///|
+fn resolve_sheet_target(target : StringView) -> String raise XlsxError {
+  let target_str = target.to_string()
+  if target_str.has_prefix("../") {
+    let rest = target_str[3:] catch {
+        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+      }
+    "xl/" + rest.to_string()
+  } else if target_str.has_prefix("tables/") {
+    "xl/" + target_str
+  } else {
+    target_str
+  }
+}
+
+///|
 fn parse_worksheet(
   xml : StringView,
   shared_strings : Array[String],
@@ -325,10 +418,38 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
     let (cells, merged_cells) = parse_worksheet(
       sheet_xml, shared_strings, style_count,
     )
+    let table_part_ids = parse_table_part_ids(sheet_xml)
+    let tables = if table_part_ids.length() == 0 {
+      []
+    } else {
+      let rels_path = "xl/worksheets/_rels/sheet\{i + 1}.xml.rels"
+      let rels_bytes = match archive.get(rels_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=rels_path)
+      }
+      let rels_xml = decode_utf8(rels_bytes)
+      let rel_targets = parse_relationship_targets(rels_xml, rel_table)
+      let parsed_tables : Array[Table] = []
+      for rel_id in table_part_ids {
+        let target = match rel_targets.get(rel_id) {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="table relationship missing")
+        }
+        let table_path = resolve_sheet_target(target)
+        let table_bytes = match archive.get(table_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=table_path)
+        }
+        let table_xml = decode_utf8(table_bytes)
+        parsed_tables.push(parse_table_xml(table_xml))
+      }
+      parsed_tables
+    }
     workbook.sheets.push({
       name,
       cells,
       merged_cells,
+      tables,
       images: [],
       charts: [],
       data_validations: [],
