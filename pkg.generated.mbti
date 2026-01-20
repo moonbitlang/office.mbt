@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel"
+
+// Values
+pub fn fib(Int) -> Int64
+
+pub fn sum(data~ : Array[Int], start? : Int, length? : Int) -> Int
+
+pub fn utf16_index_to_utf8_offset(StringView, Int) -> Int raise UtfIndexError
+
+pub fn utf16_len(StringView) -> Int
+
+pub fn utf8_len(StringView) -> Int
+
+pub fn utf8_offset_to_utf16_index(BytesView, Int) -> Int raise UtfIndexError
+
+// Errors
+pub suberror UtfIndexError {
+  OutOfRange(index~ : Int, len~ : Int)
+  InvalidBoundary(index~ : Int)
+  InvalidUtf8(offset~ : Int)
+}
+pub impl Eq for UtfIndexError
+pub impl Show for UtfIndexError
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
