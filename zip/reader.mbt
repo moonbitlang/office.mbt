@@ -139,6 +139,7 @@ fn ensure_flags_supported(flags : Int) -> Unit raise ZipError {
 fn compression_from_method(method_id : Int) -> Compression raise ZipError {
   match method_id {
     0 => Compression::Store
+    8 => Compression::Deflate
     _ => raise ZipError::UnsupportedCompression(method_id~)
   }
 }
@@ -158,7 +159,7 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
   let flags = reader.read_u16()
   ensure_flags_supported(flags)
   let method_id = reader.read_u16()
-  ignore(compression_from_method(method_id))
+  let compression = compression_from_method(method_id)
   let _mod_time = reader.read_u16()
   let _mod_date = reader.read_u16()
   let _crc32 = reader.read_u32()
@@ -170,7 +171,11 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
   if comp_size != meta.compressed_size {
     raise ZipError::UnsupportedFeature(msg="mismatched compressed size")
   }
-  reader.read_bytes(comp_size).to_bytes()
+  let compressed = reader.read_bytes(comp_size)
+  match compression {
+    Store => compressed.to_bytes()
+    Deflate => deflate_decode(compressed)
+  }
 }
 
 ///|

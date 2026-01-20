@@ -30,6 +30,7 @@ pub fn Archive::new() -> Self
 
 pub enum Compression {
   Store
+  Deflate
 }
 pub impl Eq for Compression
 pub impl Show for Compression
