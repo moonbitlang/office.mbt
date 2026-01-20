@@ -103,6 +103,20 @@ pub fn Workbook::add_image(
 }
 
 ///|
+pub fn Workbook::add_chart(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  xml : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_chart(reference, xml)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

@@ -16,15 +16,22 @@ pub struct Image {
 }
 
 ///|
+pub struct Chart {
+  reference : String
+  xml : String
+}
+
+///|
 pub struct Worksheet {
   name : String
   cells : Array[Cell]
   images : Array[Image]
+  charts : Array[Chart]
 }
 
 ///|
 pub fn Worksheet::new(name : String) -> Worksheet {
-  { name, cells: [], images: [] }
+  { name, cells: [], images: [], charts: [] }
 }
 
 ///|
@@ -40,6 +47,11 @@ pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
 ///|
 pub fn Worksheet::images(self : Worksheet) -> ArrayView[Image] {
   self.images[:]
+}
+
+///|
+pub fn Worksheet::charts(self : Worksheet) -> ArrayView[Chart] {
+  self.charts[:]
 }
 
 ///|
@@ -158,6 +170,16 @@ pub fn Worksheet::add_image(
   let (_row, _col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
   self.images.push({ reference, data, extension: ext, content_type })
+}
+
+///|
+pub fn Worksheet::add_chart(
+  self : Worksheet,
+  reference : String,
+  xml : String,
+) -> Unit raise XlsxError {
+  let (_row, _col) = cell_ref_to_rc(reference)
+  self.charts.push({ reference, xml })
 }
 
 ///|

@@ -31,6 +31,11 @@ pub struct Cell {
   formula : String?
 }
 
+pub struct Chart {
+  reference : String
+  xml : String
+}
+
 pub struct Image {
   reference : String
   data : Bytes
@@ -41,6 +46,7 @@ pub struct Image {
 pub struct Workbook {
   sheets : Array[Worksheet]
 }
+pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
@@ -62,9 +68,12 @@ pub struct Worksheet {
   name : String
   cells : Array[Cell]
   images : Array[Image]
+  charts : Array[Chart]
 }
+pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
+pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError

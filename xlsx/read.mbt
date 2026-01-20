@@ -139,7 +139,7 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
     }
     let sheet_xml = decode_utf8(sheet_bytes)
     let cells = parse_worksheet(sheet_xml, shared_strings)
-    workbook.sheets.push({ name, cells, images: [] })
+    workbook.sheets.push({ name, cells, images: [], charts: [] })
   }
   workbook
 }

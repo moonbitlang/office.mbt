@@ -102,7 +102,13 @@ let rel_drawing = "http://schemas.openxmlformats.org/officeDocument/2006/relatio
 let rel_image = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
 
 ///|
+let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
+
+///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
+
+///|
+let ct_chart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
 
 ///|
 fn write_sheet_rels_xml(drawing_id : Int) -> String {
@@ -119,37 +125,54 @@ fn write_sheet_rels_xml(drawing_id : Int) -> String {
 }
 
 ///|
-fn write_drawing_rels_xml(image_targets : Array[String]) -> String {
+fn write_drawing_rels_xml(
+  image_targets : Array[String],
+  chart_targets : Array[String],
+) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
   )
-  for i, target in image_targets {
-    let rel_id = i + 1
+  let mut rel_id = 1
+  for target in image_targets {
     sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
     sb.write_view(rel_image)
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(target))
     sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
+  for target in chart_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_chart)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
   }
   sb.write_view("</Relationships>")
   sb.to_string()
 }
 
 ///|
-fn write_drawing_xml(images : Array[(String, Int)]) -> String raise XlsxError {
+fn write_drawing_xml(
+  images : Array[(String, Int)],
+  charts : Array[(String, Int)],
+) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
   )
-  for i, image in images {
+  let mut obj_id = 1
+  for image in images {
     let (reference, rel_id) = image
     let (row, col) = cell_ref_to_rc(reference)
     let col_idx = col - 1
     let row_idx = row - 1
-    let pic_id = i + 1
+    let pic_id = obj_id
+    obj_id = obj_id + 1
     sb.write_view("  <xdr:oneCellAnchor>\n")
     sb.write_view("    <xdr:from>\n")
     sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -173,6 +196,45 @@ fn write_drawing_xml(images : Array[(String, Int)]) -> String raise XlsxError {
     sb.write_view("        <a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>\n")
     sb.write_view("      </xdr:spPr>\n")
     sb.write_view("    </xdr:pic>\n")
+    sb.write_view("    <xdr:clientData/>\n")
+    sb.write_view("  </xdr:oneCellAnchor>\n")
+  }
+  for chart in charts {
+    let (reference, rel_id) = chart
+    let (row, col) = cell_ref_to_rc(reference)
+    let col_idx = col - 1
+    let row_idx = row - 1
+    let frame_id = obj_id
+    obj_id = obj_id + 1
+    sb.write_view("  <xdr:oneCellAnchor>\n")
+    sb.write_view("    <xdr:from>\n")
+    sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+    sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+    sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+    sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+    sb.write_view("    </xdr:from>\n")
+    sb.write_view("    <xdr:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("    <xdr:graphicFrame>\n")
+    sb.write_view("      <xdr:nvGraphicFramePr>\n")
+    sb.write_view(
+      "        <xdr:cNvPr id=\"\{frame_id}\" name=\"Chart \{frame_id}\"/>\n",
+    )
+    sb.write_view("        <xdr:cNvGraphicFramePr/>\n")
+    sb.write_view("      </xdr:nvGraphicFramePr>\n")
+    sb.write_view("      <xdr:xfrm>\n")
+    sb.write_view("        <a:off x=\"0\" y=\"0\"/>\n")
+    sb.write_view("        <a:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("      </xdr:xfrm>\n")
+    sb.write_view("      <a:graphic>\n")
+    sb.write_view(
+      "        <a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">\n",
+    )
+    sb.write_view(
+      "          <c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"rId\{rel_id}\"/>\n",
+    )
+    sb.write_view("        </a:graphicData>\n")
+    sb.write_view("      </a:graphic>\n")
+    sb.write_view("    </xdr:graphicFrame>\n")
     sb.write_view("    <xdr:clientData/>\n")
     sb.write_view("  </xdr:oneCellAnchor>\n")
   }
@@ -352,7 +414,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     @encoding/utf8.encode(manifest.workbook_rels_xml()),
   )
   for i, sheet in workbook.sheets() {
-    let has_drawing = sheet.images().length() > 0
+    let has_drawing = sheet.images().length() > 0 || sheet.charts().length() > 0
     let sheet_xml = write_worksheet_xml(sheet, string_map, has_drawing)
     archive.add(
       "xl/worksheets/sheet\{i + 1}.xml",
@@ -361,13 +423,16 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   }
   let added_extensions : Map[String, Bool] = {}
   let mut image_index = 1
+  let mut chart_index = 1
   for i, sheet in workbook.sheets() {
-    if sheet.images().length() == 0 {
+    if sheet.images().length() == 0 && sheet.charts().length() == 0 {
       continue
     }
     let drawing_id = i + 1
     let image_targets : Array[String] = []
+    let chart_targets : Array[String] = []
     let drawing_images : Array[(String, Int)] = []
+    let drawing_charts : Array[(String, Int)] = []
     let mut rel_id = 1
     for image in sheet.images() {
       let file_name = "image\{image_index}.\{image.extension}"
@@ -381,16 +446,25 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         added_extensions.set(image.extension, true)
       }
     }
+    for chart in sheet.charts() {
+      let file_name = "chart\{chart_index}.xml"
+      chart_index = chart_index + 1
+      archive.add("xl/charts/\{file_name}", @encoding/utf8.encode(chart.xml))
+      chart_targets.push("../charts/\{file_name}")
+      drawing_charts.push((chart.reference, rel_id))
+      rel_id = rel_id + 1
+      manifest.add_content_override("/xl/charts/\{file_name}", ct_chart)
+    }
     manifest.add_content_override(
       "/xl/drawings/drawing\{drawing_id}.xml",
       ct_drawing,
     )
-    let drawing_xml = write_drawing_xml(drawing_images)
+    let drawing_xml = write_drawing_xml(drawing_images, drawing_charts)
     archive.add(
       "xl/drawings/drawing\{drawing_id}.xml",
       @encoding/utf8.encode(drawing_xml),
     )
-    let drawing_rels_xml = write_drawing_rels_xml(image_targets)
+    let drawing_rels_xml = write_drawing_rels_xml(image_targets, chart_targets)
     archive.add(
       "xl/drawings/_rels/drawing\{drawing_id}.xml.rels",
       @encoding/utf8.encode(drawing_rels_xml),
