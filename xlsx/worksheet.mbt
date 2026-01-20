@@ -8,14 +8,23 @@ pub struct Cell {
 }
 
 ///|
+pub struct Image {
+  reference : String
+  data : Bytes
+  extension : String
+  content_type : String
+}
+
+///|
 pub struct Worksheet {
   name : String
   cells : Array[Cell]
+  images : Array[Image]
 }
 
 ///|
 pub fn Worksheet::new(name : String) -> Worksheet {
-  { name, cells: [] }
+  { name, cells: [], images: [] }
 }
 
 ///|
@@ -26,6 +35,11 @@ pub fn Worksheet::name(self : Worksheet) -> String {
 ///|
 pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
   self.cells[:]
+}
+
+///|
+pub fn Worksheet::images(self : Worksheet) -> ArrayView[Image] {
+  self.images[:]
 }
 
 ///|
@@ -111,6 +125,39 @@ pub fn Worksheet::get_cell_formula(
     }
   }
   None
+}
+
+///|
+fn normalize_extension(extension : StringView) -> String raise XlsxError {
+  let value = extension.to_string()
+  let trimmed = if value.has_prefix(".") {
+    if value.length() <= 1 {
+      raise XlsxError::UnsupportedFeature(msg="image extension missing")
+    }
+    let view = value[1:] catch {
+        _ => raise XlsxError::UnsupportedFeature(msg="invalid image extension")
+      }
+    view.to_string()
+  } else {
+    value
+  }
+  if trimmed == "" {
+    raise XlsxError::UnsupportedFeature(msg="image extension missing")
+  }
+  trimmed
+}
+
+///|
+pub fn Worksheet::add_image(
+  self : Worksheet,
+  reference : String,
+  data : Bytes,
+  extension : String,
+  content_type : String,
+) -> Unit raise XlsxError {
+  let (_row, _col) = cell_ref_to_rc(reference)
+  let ext = normalize_extension(extension)
+  self.images.push({ reference, data, extension: ext, content_type })
 }
 
 ///|

@@ -31,9 +31,17 @@ pub struct Cell {
   formula : String?
 }
 
+pub struct Image {
+  reference : String
+  data : Bytes
+  extension : String
+  content_type : String
+}
+
 pub struct Workbook {
   sheets : Array[Worksheet]
 }
+pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
@@ -53,13 +61,16 @@ pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
 pub struct Worksheet {
   name : String
   cells : Array[Cell]
+  images : Array[Image]
 }
+pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
+pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::max_col(Self) -> Int
 pub fn Worksheet::max_row(Self) -> Int
 pub fn Worksheet::name(Self) -> String

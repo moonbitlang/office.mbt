@@ -141,3 +141,30 @@ pub fn WorkbookManifest::root_rels_xml(self : WorkbookManifest) -> String {
 pub fn WorkbookManifest::workbook_rels_xml(self : WorkbookManifest) -> String {
   self.workbook_rels.to_xml()
 }
+
+///|
+pub fn WorkbookManifest::add_content_default(
+  self : WorkbookManifest,
+  extension : String,
+  content_type : String,
+) -> Unit {
+  self.content_types.add_default(extension, content_type)
+}
+
+///|
+pub fn WorkbookManifest::add_content_override(
+  self : WorkbookManifest,
+  part_name : String,
+  content_type : String,
+) -> Unit {
+  self.content_types.add_override(part_name, content_type)
+}
+
+///|
+pub fn WorkbookManifest::add_workbook_relationship(
+  self : WorkbookManifest,
+  rel_type : String,
+  target : String,
+) -> Unit {
+  ignore(self.workbook_rels.add_auto(rel_type~, target~))
+}

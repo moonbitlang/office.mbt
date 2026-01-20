@@ -87,6 +87,22 @@ pub fn Workbook::get_cell_formula(
 }
 
 ///|
+pub fn Workbook::add_image(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  data : Bytes,
+  extension : String,
+  content_type : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_image(reference, data, extension, content_type)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

@@ -96,15 +96,107 @@ fn write_calc_chain_xml(cells : Array[(Int, String)]) -> String {
 }
 
 ///|
-fn write_worksheet_xml(
-  sheet : Worksheet,
-  string_map : Map[String, Int],
-) -> String raise XlsxError {
+let rel_drawing = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing"
+
+///|
+let rel_image = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+
+///|
+let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
+
+///|
+fn write_sheet_rels_xml(drawing_id : Int) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
   )
+  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
+  sb.write_view(rel_drawing)
+  sb.write_view("\" Target=\"../drawings/drawing\{drawing_id}.xml\"/>\n")
+  sb.write_view("</Relationships>")
+  sb.to_string()
+}
+
+///|
+fn write_drawing_rels_xml(image_targets : Array[String]) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
+  )
+  for i, target in image_targets {
+    let rel_id = i + 1
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_image)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+  }
+  sb.write_view("</Relationships>")
+  sb.to_string()
+}
+
+///|
+fn write_drawing_xml(images : Array[(String, Int)]) -> String raise XlsxError {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
+  )
+  for i, image in images {
+    let (reference, rel_id) = image
+    let (row, col) = cell_ref_to_rc(reference)
+    let col_idx = col - 1
+    let row_idx = row - 1
+    let pic_id = i + 1
+    sb.write_view("  <xdr:oneCellAnchor>\n")
+    sb.write_view("    <xdr:from>\n")
+    sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+    sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+    sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+    sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+    sb.write_view("    </xdr:from>\n")
+    sb.write_view("    <xdr:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("    <xdr:pic>\n")
+    sb.write_view("      <xdr:nvPicPr>\n")
+    sb.write_view(
+      "        <xdr:cNvPr id=\"\{pic_id}\" name=\"Image \{pic_id}\"/>\n",
+    )
+    sb.write_view("        <xdr:cNvPicPr/>\n")
+    sb.write_view("      </xdr:nvPicPr>\n")
+    sb.write_view("      <xdr:blipFill>\n")
+    sb.write_view("        <a:blip r:embed=\"rId\{rel_id}\"/>\n")
+    sb.write_view("        <a:stretch><a:fillRect/></a:stretch>\n")
+    sb.write_view("      </xdr:blipFill>\n")
+    sb.write_view("      <xdr:spPr>\n")
+    sb.write_view("        <a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>\n")
+    sb.write_view("      </xdr:spPr>\n")
+    sb.write_view("    </xdr:pic>\n")
+    sb.write_view("    <xdr:clientData/>\n")
+    sb.write_view("  </xdr:oneCellAnchor>\n")
+  }
+  sb.write_view("</xdr:wsDr>")
+  sb.to_string()
+}
+
+///|
+fn write_worksheet_xml(
+  sheet : Worksheet,
+  string_map : Map[String, Int],
+  has_drawing : Bool,
+) -> String raise XlsxError {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  if has_drawing {
+    sb.write_view(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
+    )
+  } else {
+    sb.write_view(
+      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
+    )
+  }
   sb.write_view("  <sheetData>\n")
   let cells = sheet.sorted_cells()
   let mut current_row = -1
@@ -148,6 +240,9 @@ fn write_worksheet_xml(
     sb.write_view("    </row>\n")
   }
   sb.write_view("  </sheetData>\n")
+  if has_drawing {
+    sb.write_view("  <drawing r:id=\"rId1\"/>\n")
+  }
   sb.write_view("</worksheet>")
   sb.to_string()
 }
@@ -247,10 +342,6 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     include_calc_chain~,
   )
   let archive = @zip.Archive::new()
-  archive.add(
-    "[Content_Types].xml",
-    @encoding/utf8.encode(manifest.content_types_xml()),
-  )
   archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
   archive.add(
     "xl/workbook.xml",
@@ -261,10 +352,53 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     @encoding/utf8.encode(manifest.workbook_rels_xml()),
   )
   for i, sheet in workbook.sheets() {
-    let sheet_xml = write_worksheet_xml(sheet, string_map)
+    let has_drawing = sheet.images().length() > 0
+    let sheet_xml = write_worksheet_xml(sheet, string_map, has_drawing)
     archive.add(
       "xl/worksheets/sheet\{i + 1}.xml",
       @encoding/utf8.encode(sheet_xml),
+    )
+  }
+  let added_extensions : Map[String, Bool] = {}
+  let mut image_index = 1
+  for i, sheet in workbook.sheets() {
+    if sheet.images().length() == 0 {
+      continue
+    }
+    let drawing_id = i + 1
+    let image_targets : Array[String] = []
+    let drawing_images : Array[(String, Int)] = []
+    let mut rel_id = 1
+    for image in sheet.images() {
+      let file_name = "image\{image_index}.\{image.extension}"
+      image_index = image_index + 1
+      archive.add("xl/media/\{file_name}", image.data)
+      image_targets.push("../media/\{file_name}")
+      drawing_images.push((image.reference, rel_id))
+      rel_id = rel_id + 1
+      if !added_extensions.contains(image.extension) {
+        manifest.add_content_default(image.extension, image.content_type)
+        added_extensions.set(image.extension, true)
+      }
+    }
+    manifest.add_content_override(
+      "/xl/drawings/drawing\{drawing_id}.xml",
+      ct_drawing,
+    )
+    let drawing_xml = write_drawing_xml(drawing_images)
+    archive.add(
+      "xl/drawings/drawing\{drawing_id}.xml",
+      @encoding/utf8.encode(drawing_xml),
+    )
+    let drawing_rels_xml = write_drawing_rels_xml(image_targets)
+    archive.add(
+      "xl/drawings/_rels/drawing\{drawing_id}.xml.rels",
+      @encoding/utf8.encode(drawing_rels_xml),
+    )
+    let sheet_rels_xml = write_sheet_rels_xml(drawing_id)
+    archive.add(
+      "xl/worksheets/_rels/sheet\{drawing_id}.xml.rels",
+      @encoding/utf8.encode(sheet_rels_xml),
     )
   }
   if include_shared {
@@ -285,6 +419,10 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))
   archive.add("docProps/core.xml", @encoding/utf8.encode(default_core_xml))
   archive.add("docProps/app.xml", @encoding/utf8.encode(default_app_xml))
+  archive.add(
+    "[Content_Types].xml",
+    @encoding/utf8.encode(manifest.content_types_xml()),
+  )
   @zip.write(archive) catch {
     err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
   }
