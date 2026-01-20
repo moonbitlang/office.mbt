@@ -3,6 +3,7 @@ pub suberror XlsxError {
   MissingPart(path~ : String)
   SheetNotFound(name~ : String)
   InvalidXml(msg~ : String)
+  InvalidBase64(msg~ : String)
   InvalidCellRef(value~ : String)
   InvalidSharedString(index~ : Int)
   InvalidStyleId(index~ : Int)
@@ -13,5 +14,11 @@ pub suberror XlsxError {
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed
+  EncryptedPackage
+  InvalidEncryptionInfo(msg~ : String)
+  InvalidEncryptedPackage(msg~ : String)
+  InvalidPassword
+  InvalidPasswordLength(len~ : Int)
+  UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
 } derive(Eq, Show)

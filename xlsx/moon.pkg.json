@@ -6,6 +6,12 @@
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"
     },
+    {
+      "path": "moonbitlang/core/encoding/utf16",
+      "alias": "encoding/utf16"
+    },
+    "moonbitlang/core/random",
+    "moonbitlang/core/buffer",
     "moonbitlang/core/strconv"
   ]
 }

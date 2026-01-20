@@ -8,13 +8,18 @@ pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
 
 pub fn read(BytesView) -> Workbook raise XlsxError
 
+pub fn read_with_password(BytesView, String) -> Workbook raise XlsxError
+
 pub fn write(Workbook) -> Bytes raise XlsxError
+
+pub fn write_with_password(Workbook, String) -> Bytes raise XlsxError
 
 // Errors
 pub suberror XlsxError {
   MissingPart(path~ : String)
   SheetNotFound(name~ : String)
   InvalidXml(msg~ : String)
+  InvalidBase64(msg~ : String)
   InvalidCellRef(value~ : String)
   InvalidSharedString(index~ : Int)
   InvalidStyleId(index~ : Int)
@@ -25,6 +30,12 @@ pub suberror XlsxError {
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed
+  EncryptedPackage
+  InvalidEncryptionInfo(msg~ : String)
+  InvalidEncryptedPackage(msg~ : String)
+  InvalidPassword
+  InvalidPasswordLength(len~ : Int)
+  UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
 }
 pub impl Eq for XlsxError

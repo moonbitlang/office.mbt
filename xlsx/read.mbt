@@ -32,14 +32,19 @@ fn parse_workbook_sheets(xml : StringView) -> Array[String] raise XlsxError {
 fn parse_shared_strings(xml : StringView) -> Array[String] {
   let values : Array[String] = []
   let mut first = true
-  for chunk in xml.to_string().split("<t>") {
+  for chunk in xml.to_string().split("<t") {
     if first {
       first = false
       continue
     }
     let text = chunk.to_string()
-    match text.find("</t>") {
-      Some(end) => values.push(unescape_xml_text(try! text[:end]))
+    let start = match text.find(">") {
+      Some(pos) => pos + 1
+      None => continue
+    }
+    let rest = try! text[start:]
+    match rest.find("</t>") {
+      Some(end) => values.push(unescape_xml_text(try! rest[:end]))
       None => ()
     }
   }
@@ -506,7 +511,7 @@ fn parse_worksheet(
 }
 
 ///|
-pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
+fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
   let archive = @zip.read(bytes) catch {
     err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
   }
@@ -725,4 +730,29 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
     })
   }
   workbook
+}
+
+///|
+pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
+  if is_encrypted_package(bytes) {
+    raise XlsxError::EncryptedPackage
+  }
+  read_zip_bytes(bytes)
+}
+
+///|
+pub fn read_with_password(
+  bytes : BytesView,
+  password : String,
+) -> Workbook raise XlsxError {
+  if is_encrypted_package(bytes) {
+    let decrypted = decrypt_encrypted_package(bytes, password)
+    let result : Result[Workbook, Error] = try? read_zip_bytes(decrypted)
+    match result {
+      Ok(workbook) => workbook
+      Err(_) => raise XlsxError::InvalidPassword
+    }
+  } else {
+    read_zip_bytes(bytes)
+  }
 }

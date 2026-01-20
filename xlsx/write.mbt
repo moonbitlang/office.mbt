@@ -901,3 +901,16 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
   }
 }
+
+///|
+pub fn write_with_password(
+  workbook : Workbook,
+  password : String,
+) -> Bytes raise XlsxError {
+  let raw = write(workbook)
+  if password.length() == 0 {
+    raw
+  } else {
+    encrypt_package(raw, password)
+  }
+}

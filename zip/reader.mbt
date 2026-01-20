@@ -14,6 +14,15 @@ let flag_data_descriptor : Int = 0x0008
 let flag_utf8 : Int = 0x0800
 
 ///|
+let flag_encrypted : Int = 0x0001
+
+///|
+let flag_deflate_max : Int = 0x0002
+
+///|
+let flag_deflate_fast : Int = 0x0004
+
+///|
 let data_descriptor_sig : Int = 0x08074b50
 
 ///|
@@ -189,9 +198,20 @@ fn decode_name(bytes : BytesView, offset : Int) -> String raise ZipError {
 
 ///|
 fn ensure_flags_supported(flags : Int) -> Unit raise ZipError {
-  let supported = flag_data_descriptor | flag_utf8
-  if (flags & supported) != flags {
-    raise ZipError::UnsupportedFeature(msg="unsupported zip flags")
+  if (flags & flag_encrypted) != 0 {
+    raise ZipError::UnsupportedFeature(
+      msg="encrypted zip entries not supported",
+    )
+  }
+  let supported = flag_data_descriptor |
+    flag_utf8 |
+    flag_deflate_max |
+    flag_deflate_fast
+  let unsupported = flags & supported.lnot()
+  if unsupported != 0 {
+    raise ZipError::UnsupportedFeature(
+      msg="unsupported zip flags: 0x\{unsupported.to_string(radix=16)}",
+    )
   }
 }
 
