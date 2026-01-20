@@ -302,6 +302,22 @@ fn write_worksheet_xml(
     sb.write_view("    </row>\n")
   }
   sb.write_view("  </sheetData>\n")
+  for xml in sheet.conditional_formats() {
+    sb.write_view("  ")
+    sb.write_view(xml)
+    sb.write_view("\n")
+  }
+  if sheet.data_validations().length() > 0 {
+    sb.write_view(
+      "  <dataValidations count=\"\{sheet.data_validations().length()}\">\n",
+    )
+    for xml in sheet.data_validations() {
+      sb.write_view("    ")
+      sb.write_view(xml)
+      sb.write_view("\n")
+    }
+    sb.write_view("  </dataValidations>\n")
+  }
   if has_drawing {
     sb.write_view("  <drawing r:id=\"rId1\"/>\n")
   }

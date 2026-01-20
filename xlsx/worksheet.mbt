@@ -27,11 +27,20 @@ pub struct Worksheet {
   cells : Array[Cell]
   images : Array[Image]
   charts : Array[Chart]
+  data_validations : Array[String]
+  conditional_formats : Array[String]
 }
 
 ///|
 pub fn Worksheet::new(name : String) -> Worksheet {
-  { name, cells: [], images: [], charts: [] }
+  {
+    name,
+    cells: [],
+    images: [],
+    charts: [],
+    data_validations: [],
+    conditional_formats: [],
+  }
 }
 
 ///|
@@ -52,6 +61,16 @@ pub fn Worksheet::images(self : Worksheet) -> ArrayView[Image] {
 ///|
 pub fn Worksheet::charts(self : Worksheet) -> ArrayView[Chart] {
   self.charts[:]
+}
+
+///|
+pub fn Worksheet::data_validations(self : Worksheet) -> ArrayView[String] {
+  self.data_validations[:]
+}
+
+///|
+pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
+  self.conditional_formats[:]
 }
 
 ///|
@@ -180,6 +199,46 @@ pub fn Worksheet::add_chart(
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
   self.charts.push({ reference, xml })
+}
+
+///|
+pub fn Worksheet::add_data_validation_xml(
+  self : Worksheet,
+  xml : String,
+) -> Unit {
+  self.data_validations.push(xml)
+}
+
+///|
+pub fn Worksheet::add_data_validation_list(
+  self : Worksheet,
+  range_ref : String,
+  values : ArrayView[String],
+  allow_blank? : Bool = true,
+) -> Unit raise XlsxError {
+  if values.length() == 0 {
+    raise XlsxError::UnsupportedFeature(msg="empty validation list")
+  }
+  let sb = StringBuilder::new()
+  for i, value in values {
+    if i > 0 {
+      sb.write_char(',')
+    }
+    sb.write_view(value)
+  }
+  let joined = sb.to_string()
+  let allow = if allow_blank { "1" } else { "0" }
+  let formula = "\"\{joined}\""
+  let xml = "<dataValidation type=\"list\" allowBlank=\"\{allow}\" sqref=\"\{escape_xml_attr(range_ref)}\"><formula1>\{escape_xml_text(formula)}</formula1></dataValidation>"
+  self.data_validations.push(xml)
+}
+
+///|
+pub fn Worksheet::add_conditional_format_xml(
+  self : Worksheet,
+  xml : String,
+) -> Unit {
+  self.conditional_formats.push(xml)
 }
 
 ///|

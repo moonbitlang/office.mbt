@@ -117,6 +117,47 @@ pub fn Workbook::add_chart(
 }
 
 ///|
+pub fn Workbook::add_data_validation_xml(
+  self : Workbook,
+  sheet_name : StringView,
+  xml : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_data_validation_xml(xml)
+}
+
+///|
+pub fn Workbook::add_data_validation_list(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+  values : ArrayView[String],
+  allow_blank? : Bool = true,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_data_validation_list(range_ref, values, allow_blank~)
+}
+
+///|
+pub fn Workbook::add_conditional_format_xml(
+  self : Workbook,
+  sheet_name : StringView,
+  xml : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_conditional_format_xml(xml)
+}
+
+///|
 pub fn Workbook::set_cell_rc(
   self : Workbook,
   sheet_name : StringView,

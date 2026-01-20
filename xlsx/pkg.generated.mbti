@@ -47,6 +47,9 @@ pub struct Workbook {
   sheets : Array[Worksheet]
 }
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
+pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
+pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
@@ -69,11 +72,18 @@ pub struct Worksheet {
   cells : Array[Cell]
   images : Array[Image]
   charts : Array[Chart]
+  data_validations : Array[String]
+  conditional_formats : Array[String]
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
+pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
+pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
+pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
+pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
