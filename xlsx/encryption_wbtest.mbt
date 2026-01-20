@@ -408,6 +408,20 @@ test "encryption info detection" {
 }
 
 ///|
+test "agile verify password" {
+  let bytes = decode_base64_multiline(encrypt_sha1_b64)
+  let reader = cfb_read(bytes)
+  let info = reader.read_stream("EncryptionInfo")
+  let xml = @encoding/utf8.decode(info[8:])
+  let encryption = parse_encryption_info(xml)
+  validate_encryption_info(encryption)
+  let password_hash = derive_password_hash("password", encryption)
+  inspect(agile_verify_password(password_hash, encryption), content="true")
+  let wrong_hash = derive_password_hash("wrong", encryption)
+  inspect(agile_verify_password(wrong_hash, encryption), content="false")
+}
+
+///|
 test "encryption info standard detection" {
   let bytes = decode_base64_multiline(encrypt_aes_b64)
   inspect(bytes.length(), content="8192")

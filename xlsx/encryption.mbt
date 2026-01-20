@@ -4,6 +4,16 @@ let block_key : Bytes = Bytes::from_array(
 )
 
 ///|
+let verifier_hash_input_block_key : Bytes = Bytes::from_array(
+  [0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79].map(v => v.to_byte()),
+)
+
+///|
+let verifier_hash_value_block_key : Bytes = Bytes::from_array(
+  [0xd7, 0xaa, 0x0f, 0x6d, 0x30, 0x61, 0x34, 0x4e].map(v => v.to_byte()),
+)
+
+///|
 let iter_count = 50_000
 
 ///|
@@ -346,26 +356,34 @@ fn encryption_mechanism(
 }
 
 ///|
-fn convert_password_to_key(
+fn derive_password_hash(
   password : String,
-  block : BytesView,
   encryption : EncryptionInfo,
 ) -> Bytes raise XlsxError {
-  let salt_value = encryption.encrypted_key.key_data.salt_value
+  let key_data = encryption.encrypted_key.key_data
+  let salt_value = key_data.salt_value
   let password_bytes = @encoding/utf16.encode(
     password,
     bom=false,
     endianness=@encoding/utf16.Endian::Little,
   )
-  let mut key = hash_parts(encryption.key_data.hash_algorithm, [
-    salt_value, password_bytes,
-  ])
+  let mut key = hash_parts(key_data.hash_algorithm, [salt_value, password_bytes])
   for i in 0..<encryption.encrypted_key.spin_count {
     let iterator = u32_le_bytes(i)
-    key = hash_parts(encryption.key_data.hash_algorithm, [iterator, key])
+    key = hash_parts(key_data.hash_algorithm, [iterator, key])
   }
-  key = hash_parts(encryption.key_data.hash_algorithm, [key, block])
-  let key_bytes = encryption.encrypted_key.key_data.key_bits / 8
+  key
+}
+
+///|
+fn derive_password_key_from_hash(
+  password_hash : BytesView,
+  block : BytesView,
+  encryption : EncryptionInfo,
+) -> Bytes raise XlsxError {
+  let key_data = encryption.encrypted_key.key_data
+  let key = hash_parts(key_data.hash_algorithm, [password_hash, block])
+  let key_bytes = key_data.key_bits / 8
   if key.length() < key_bytes {
     let out : Array[Byte] = key.to_array()
     while out.length() < key_bytes {
@@ -381,24 +399,29 @@ fn convert_password_to_key(
 
 ///|
 fn agile_verify_password(
-  key : BytesView,
+  password_hash : BytesView,
   encryption : EncryptionInfo,
 ) -> Bool raise XlsxError {
-  let salt = encryption.encrypted_key.key_data.salt_value
+  let key_data = encryption.encrypted_key.key_data
+  let salt = key_data.salt_value
+  let input_key = derive_password_key_from_hash(
+    password_hash, verifier_hash_input_block_key, encryption,
+  )
+  let value_key = derive_password_key_from_hash(
+    password_hash, verifier_hash_value_block_key, encryption,
+  )
   let verifier_input = aes_cbc_decrypt(
-    key,
+    input_key,
     salt,
     encryption.encrypted_key.encrypted_verifier_hash_input,
   )
   let verifier_hash_value = aes_cbc_decrypt(
-    key,
+    value_key,
     salt,
     encryption.encrypted_key.encrypted_verifier_hash_value,
   )
-  let expected_hash = hash_parts(encryption.key_data.hash_algorithm, [
-    verifier_input,
-  ])
-  let hash_size = encryption.encrypted_key.key_data.hash_size
+  let expected_hash = hash_parts(key_data.hash_algorithm, [verifier_input])
+  let hash_size = key_data.hash_size
   let size = if hash_size < expected_hash.length() {
     hash_size
   } else {
@@ -489,8 +512,9 @@ fn agile_decrypt(
     !is_aes_cipher(encryption.encrypted_key.key_data) {
     raise XlsxError::UnsupportedEncryption(msg="unsupported cipher settings")
   }
-  let key = convert_password_to_key(password, block_key, encryption)
-  let password_ok = agile_verify_password(key, encryption)
+  let password_hash = derive_password_hash(password, encryption)
+  let key = derive_password_key_from_hash(password_hash, block_key, encryption)
+  let password_ok = agile_verify_password(password_hash, encryption)
   let salt = encryption.encrypted_key.key_data.salt_value
   let package_key = aes_cbc_decrypt(
     key,
