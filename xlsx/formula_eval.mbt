@@ -1819,6 +1819,188 @@ fn eval_function(
         FormulaValue::Error(formula_error_value)
       }
     "BASE" => base_values(values)
+    "BIN2DEC" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(_) =>
+            match value_as_string(values[0]) {
+              Ok(text) => bin2dec_string(text)
+              Err(err) => err
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "BIN2HEX" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(_) =>
+            match value_as_string(values[0]) {
+              Ok(text) => {
+                let decimal = bin2dec_string(text)
+                match decimal {
+                  FormulaValue::Error(_) => decimal
+                  _ => {
+                    let new_values : Array[FormulaValue] = [decimal]
+                    if values.length() == 2 {
+                      new_values.push(values[1])
+                    }
+                    dec2x_values("BIN2HEX", new_values)
+                  }
+                }
+              }
+              Err(err) => err
+            }
+          Err(err) => err
+        }
+      }
+    "BIN2OCT" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(_) =>
+            match value_as_string(values[0]) {
+              Ok(text) => {
+                let decimal = bin2dec_string(text)
+                match decimal {
+                  FormulaValue::Error(_) => decimal
+                  _ => {
+                    let new_values : Array[FormulaValue] = [decimal]
+                    if values.length() == 2 {
+                      new_values.push(values[1])
+                    }
+                    dec2x_values("BIN2OCT", new_values)
+                  }
+                }
+              }
+              Err(err) => err
+            }
+          Err(err) => err
+        }
+      }
+    "DEC2BIN" => dec2x_values("DEC2BIN", values)
+    "DEC2HEX" => dec2x_values("DEC2HEX", values)
+    "DEC2OCT" => dec2x_values("DEC2OCT", values)
+    "HEX2BIN" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_string(values[0]) {
+          Ok(text) => {
+            let decimal = hex2dec_string(text)
+            match decimal {
+              FormulaValue::Error(_) => decimal
+              _ => {
+                let new_values : Array[FormulaValue] = [decimal]
+                if values.length() == 2 {
+                  new_values.push(values[1])
+                }
+                dec2x_values("HEX2BIN", new_values)
+              }
+            }
+          }
+          Err(err) => err
+        }
+      }
+    "HEX2DEC" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => hex2dec_string(text)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "HEX2OCT" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_string(values[0]) {
+          Ok(text) => {
+            let decimal = hex2dec_string(text)
+            match decimal {
+              FormulaValue::Error(_) => decimal
+              _ => {
+                let new_values : Array[FormulaValue] = [decimal]
+                if values.length() == 2 {
+                  new_values.push(values[1])
+                }
+                dec2x_values("HEX2OCT", new_values)
+              }
+            }
+          }
+          Err(err) => err
+        }
+      }
+    "OCT2BIN" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(_) =>
+            match value_as_string(values[0]) {
+              Ok(text) => {
+                let decimal = oct2dec_string(text)
+                let new_values : Array[FormulaValue] = [decimal]
+                if values.length() == 2 {
+                  new_values.push(values[1])
+                }
+                dec2x_values("OCT2BIN", new_values)
+              }
+              Err(err) => err
+            }
+          Err(err) => err
+        }
+      }
+    "OCT2DEC" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(_) =>
+            match value_as_string(values[0]) {
+              Ok(text) => oct2dec_string(text)
+              Err(err) => err
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "OCT2HEX" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(_) =>
+            match value_as_string(values[0]) {
+              Ok(text) => {
+                let decimal = oct2dec_string(text)
+                let new_values : Array[FormulaValue] = [decimal]
+                if values.length() == 2 {
+                  new_values.push(values[1])
+                }
+                dec2x_values("OCT2HEX", new_values)
+              }
+              Err(err) => err
+            }
+          Err(err) => err
+        }
+      }
     "BITAND" => bitwise_values("BITAND", values)
     "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
     "BITOR" => bitwise_values("BITOR", values)
@@ -3346,6 +3528,149 @@ fn base_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     text = pad + text
   }
   FormulaValue::String(text)
+}
+
+///|
+fn dec2x_limits(name : String) -> (Double, Double, Int) {
+  match name {
+    "DEC2BIN" | "HEX2BIN" | "OCT2BIN" => (511.0, -512.0, 2)
+    "BIN2HEX" | "DEC2HEX" | "OCT2HEX" => (549755813887.0, -549755813888.0, 16)
+    "BIN2OCT" | "DEC2OCT" | "HEX2OCT" => (536870911.0, -536870912.0, 8)
+    _ => (0.0, 0.0, 10)
+  }
+}
+
+///|
+fn dec2x_values(
+  name : String,
+  values : ArrayView[FormulaValue],
+) -> FormulaValue {
+  if values.length() < 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let decimal = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let (max_limit, min_limit, base) = dec2x_limits(name)
+  if decimal < min_limit || decimal > max_limit {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let decimal_int = Double::to_int64(trunc_double(decimal))
+  let raw = Int64::reinterpret_as_uint64(decimal_int)
+  let mut digits = UInt64::to_string(raw, radix=base)
+  if values.length() == 2 {
+    let places_num = match value_as_number(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    if places_num < 0.0 || places_num > 10.0 {
+      return FormulaValue::Error(formula_error_num)
+    }
+    let places = Double::to_int(trunc_double(places_num))
+    if digits.length() > places {
+      return FormulaValue::Error(formula_error_num)
+    }
+    let pad = "0".repeat(places - digits.length())
+    digits = pad + digits
+    return FormulaValue::String(digits.to_upper())
+  }
+  if decimal < 0.0 && digits.length() > 10 {
+    let chars = digits.to_array()
+    let start = chars.length() - 10
+    let sb = StringBuilder::new()
+    for i in start..<chars.length() {
+      sb.write_char(chars[i])
+    }
+    return FormulaValue::String(sb.to_string().to_upper())
+  }
+  FormulaValue::String(digits.to_upper())
+}
+
+///|
+fn bin2dec_string(text : String) -> FormulaValue {
+  let chars = text.to_array()
+  let mut decimal = 0.0
+  let length = chars.length()
+  for i in 1..<=length {
+    let idx = length - i
+    let ch = chars[idx]
+    if i == 10 && ch == '1' {
+      decimal = decimal + @math.pow(-2.0, Double::from_int(i - 1))
+      continue
+    }
+    if ch == '1' {
+      decimal = decimal + @math.pow(2.0, Double::from_int(i - 1))
+      continue
+    }
+    if ch != '0' {
+      return FormulaValue::Error(formula_error_num)
+    }
+  }
+  FormulaValue::Number(decimal)
+}
+
+///|
+fn hex_digit_value(ch : Char) -> Int? {
+  if ch >= '0' && ch <= '9' {
+    Some(ch.to_int() - '0'.to_int())
+  } else if ch >= 'A' && ch <= 'F' {
+    Some(ch.to_int() - 'A'.to_int() + 10)
+  } else if ch >= 'a' && ch <= 'f' {
+    Some(ch.to_int() - 'a'.to_int() + 10)
+  } else {
+    None
+  }
+}
+
+///|
+fn hex2dec_string(text : String) -> FormulaValue {
+  let chars = text.to_array()
+  let mut decimal = 0.0
+  let length = chars.length()
+  for i in 1..<=length {
+    let idx = length - i
+    let ch = chars[idx]
+    match hex_digit_value(ch) {
+      Some(value) => {
+        if i == 10 && ch == 'F' {
+          decimal = decimal + @math.pow(-16.0, Double::from_int(i - 1))
+          continue
+        }
+        decimal = decimal +
+          Double::from_int(value) * @math.pow(16.0, Double::from_int(i - 1))
+      }
+      None => return FormulaValue::Error(formula_error_num)
+    }
+  }
+  FormulaValue::Number(decimal)
+}
+
+///|
+fn oct2dec_string(text : String) -> FormulaValue {
+  let chars = text.to_array()
+  let mut decimal = 0.0
+  let length = chars.length()
+  for i in 1..<=length {
+    let idx = length - i
+    let ch = chars[idx]
+    let digit = @strconv.parse_int(String::from_array([ch]), base=10) catch {
+      _ => return FormulaValue::Error(formula_error_num)
+    }
+    if digit < 0 || digit > 7 {
+      return FormulaValue::Error(formula_error_num)
+    }
+    if i == 10 && ch == '7' {
+      decimal = decimal + @math.pow(-8.0, Double::from_int(i - 1))
+      continue
+    }
+    decimal = decimal +
+      Double::from_int(digit) * @math.pow(8.0, Double::from_int(i - 1))
+  }
+  FormulaValue::Number(decimal)
 }
 
 ///|
