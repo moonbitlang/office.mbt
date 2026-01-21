@@ -1054,6 +1054,136 @@ fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn proper_case(text : String) -> String {
+  let sb = StringBuilder::new()
+  let mut prev_letter = false
+  for ch in text {
+    let is_letter = ch.is_ascii_alphabetic()
+    if !prev_letter && is_letter {
+      sb.write_char(ch.to_ascii_uppercase())
+    } else {
+      sb.write_char(ch.to_ascii_lowercase())
+    }
+    prev_letter = is_letter
+  }
+  sb.to_string()
+}
+
+///|
+fn decimal_places_from_text(text : String) -> Int {
+  match text.find(".") {
+    Some(pos) => {
+      let tail = text.unsafe_substring(start=pos + 1, end=text.length())
+      let mut count = 0
+      for ch in tail {
+        if ch.is_ascii_digit() {
+          count = count + 1
+        } else {
+          break
+        }
+      }
+      count
+    }
+    None => 0
+  }
+}
+
+///|
+fn textjoin_collect_value(
+  value : FormulaValue,
+  ignore_empty : Bool,
+  out : Array[String],
+) -> Result[Unit, FormulaValue] {
+  match value {
+    FormulaValue::List(list) => {
+      for item in list {
+        match textjoin_collect_value(item, ignore_empty, out) {
+          Ok(_) => ()
+          Err(err) => return Err(err)
+        }
+      }
+      Ok(())
+    }
+    _ =>
+      match normalize_scalar(value) {
+        FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+        FormulaValue::Empty =>
+          if !ignore_empty {
+            out.push("")
+            Ok(())
+          } else {
+            Ok(())
+          }
+        FormulaValue::String(text) =>
+          if text != "" || !ignore_empty {
+            out.push(text)
+            Ok(())
+          } else {
+            Ok(())
+          }
+        FormulaValue::Number(_) | FormulaValue::Bool(_) => {
+          out.push(formula_value_string(value))
+          Ok(())
+        }
+        FormulaValue::List(_) => Ok(())
+      }
+  }
+}
+
+///|
+fn text_after_before_index(
+  text : String,
+  delimiter : String,
+  instance_num : Int,
+  match_mode : Int,
+  match_end : Bool,
+) -> Int? {
+  if instance_num == 0 {
+    return None
+  }
+  let search_text = if match_mode == 1 { text.to_lower() } else { text }
+  let search_delim = if match_mode == 1 {
+    delimiter.to_lower()
+  } else {
+    delimiter
+  }
+  let mut found = -1
+  let mut start_pos = if instance_num < 0 { search_text.length() } else { 0 }
+  let count = if instance_num < 0 { -instance_num } else { instance_num }
+  for i in 0..<count {
+    if instance_num > 0 {
+      match find_substring_from(search_text, search_delim, start_pos) {
+        Some(idx) => {
+          found = idx
+          start_pos = idx + search_delim.length()
+        }
+        None =>
+          if match_end && i == count - 1 {
+            found = search_text.length()
+          } else {
+            return None
+          }
+      }
+    } else {
+      let slice = search_text.unsafe_substring(start=0, end=start_pos)
+      match slice.rev_find(search_delim) {
+        Some(idx) => {
+          found = idx
+          start_pos = idx
+        }
+        None =>
+          if match_end && i == count - 1 {
+            found = 0
+          } else {
+            return None
+          }
+      }
+    }
+  }
+  Some(found)
+}
+
+///|
 fn compare_strings(left : String, right : String) -> Int {
   let l = left.to_array()
   let r = right.to_array()
@@ -4539,6 +4669,15 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "PROPER" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => FormulaValue::String(proper_case(text))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "TRIM" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
@@ -4853,11 +4992,67 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "FIXED" =>
+      if values.length() >= 1 && values.length() <= 3 {
+        let number = match value_as_number(values[0]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let mut decimals = if values.length() == 1 {
+          decimal_places_from_text(formula_value_string(values[0]))
+        } else {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        }
+        if decimals < 0 {
+          decimals = 0
+        }
+        let no_commas = if values.length() == 3 {
+          match value_as_bool(values[2]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          false
+        }
+        FormulaValue::String(format_fixed_number(number, decimals, !no_commas))
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "VALUE" =>
       if values.length() == 1 {
         match value_as_number_text(values[0]) {
           Ok(num) => FormulaValue::Number(num)
           Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "VALUETOTEXT" =>
+      if values.length() == 1 || values.length() == 2 {
+        let format = if values.length() == 2 {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          0
+        }
+        if format != 0 && format != 1 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let text = formula_value_string(values[0])
+          match value_as_number(values[0]) {
+            Ok(_) => FormulaValue::String(text)
+            Err(_) =>
+              if format == 1 {
+                FormulaValue::String("\"" + text + "\"")
+              } else {
+                FormulaValue::String(text)
+              }
+          }
         }
       } else {
         FormulaValue::Error(formula_error_value)
@@ -4874,6 +5069,163 @@ fn eval_function(
               format_number_code(format_number(num), format_text),
             )
           Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ARRAYTOTEXT" =>
+      if values.length() == 1 || values.length() == 2 {
+        let format = if values.length() == 2 {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          0
+        }
+        if format != 0 && format != 1 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let range = match args[0] {
+          Expr::Range(_, _, _) | Expr::Cell(_, _) =>
+            eval_range_expr(workbook, sheet_name, args[0], ctx)
+          _ => RangeValues::{ rows: 1, cols: 1, values: [values[0]] }
+        }
+        let rows : Array[String] = []
+        for row in 0..<range.rows {
+          let cells : Array[String] = []
+          for col in 0..<range.cols {
+            let value = range.values[row * range.cols + col]
+            match normalize_scalar(value) {
+              FormulaValue::Error(err) => return FormulaValue::Error(err)
+              _ => {
+                let text = formula_value_string(value)
+                match value_as_number(value) {
+                  Ok(_) => cells.push(text)
+                  Err(_) =>
+                    if format == 1 {
+                      cells.push("\"" + text + "\"")
+                    } else {
+                      cells.push(text)
+                    }
+                }
+              }
+            }
+          }
+          let joined = if format == 1 {
+            cells.join(",")
+          } else {
+            cells.join(", ")
+          }
+          rows.push(joined)
+        }
+        if format == 1 {
+          FormulaValue::String("{" + rows.join(";") + "}")
+        } else {
+          FormulaValue::String(rows.join(", "))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TEXTAFTER" | "TEXTBEFORE" =>
+      if values.length() >= 2 && values.length() <= 6 {
+        let text = match value_as_string(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let delimiter = match value_as_string(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        if text == "" {
+          return FormulaValue::Error(formula_error_na)
+        }
+        let instance_num = if values.length() >= 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if instance_num == 0 ||
+          instance_num > text.length() ||
+          -instance_num > text.length() {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let match_mode = if values.length() >= 4 {
+          match value_as_int(values[3]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          0
+        }
+        if match_mode != 0 && match_mode != 1 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let match_end = if values.length() >= 5 {
+          match value_as_bool(values[4]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          false
+        }
+        let if_not_found = if values.length() == 6 {
+          values[5]
+        } else {
+          FormulaValue::Empty
+        }
+        let idx_opt = text_after_before_index(
+          text, delimiter, instance_num, match_mode, match_end,
+        )
+        let idx = match idx_opt {
+          Some(value) => value
+          None => return if_not_found
+        }
+        if idx < 0 {
+          return if_not_found
+        }
+        if name == "TEXTAFTER" {
+          let start = idx + delimiter.length()
+          if start >= text.length() {
+            FormulaValue::Empty
+          } else {
+            FormulaValue::String(
+              text.unsafe_substring(start~, end=text.length()),
+            )
+          }
+        } else if idx <= 0 {
+          FormulaValue::String("")
+        } else {
+          FormulaValue::String(text.unsafe_substring(start=0, end=idx))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TEXTJOIN" =>
+      if values.length() >= 3 {
+        let delimiter = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let ignore_empty = match value_as_bool(values[1]) {
+          Ok(flag) => flag
+          Err(err) => return err
+        }
+        let parts : Array[String] = []
+        for i in 2..<values.length() {
+          match textjoin_collect_value(values[i], ignore_empty, parts) {
+            Ok(_) => ()
+            Err(err) => return err
+          }
+        }
+        let result = parts.join(delimiter)
+        if result.length() > max_cell_chars {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          FormulaValue::String(result)
         }
       } else {
         FormulaValue::Error(formula_error_value)
