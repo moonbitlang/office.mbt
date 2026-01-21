@@ -1657,6 +1657,30 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "IFERROR" =>
+      if values.length() == 2 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(_) => values[1]
+          FormulaValue::Empty => FormulaValue::Number(0.0)
+          _ => values[0]
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IFNA" =>
+      if values.length() == 2 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(err) =>
+            if err == formula_error_na {
+              values[1]
+            } else {
+              values[0]
+            }
+          _ => values[0]
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     _ => FormulaValue::Error(formula_error_name)
   }
 }

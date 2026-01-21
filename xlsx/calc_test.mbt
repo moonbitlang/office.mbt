@@ -165,6 +165,22 @@ test "calc counta function" {
 }
 
 ///|
+test "calc error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "IFERROR(1/0,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
+  sheet.set_cell_formula("A2", "IFERROR(B1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="0")
+  sheet.set_cell_formula("A3", "IFERROR(COUNTIFS(B1,1,2),7)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="7")
+  sheet.set_cell_formula("A4", "IFNA(COUNTIFS(B1,1,2),7)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="7")
+  sheet.set_cell_formula("A5", "IFNA(1/0,7)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#DIV/0!")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
