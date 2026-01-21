@@ -35,6 +35,24 @@ let excel_max_rows = 1048576
 let excel_max_cols = 16384
 
 ///|
+let max_financial_iterations = 128
+
+///|
+let financial_precision = 1.0e-8
+
+///|
+let rate_max_iterations = 100
+
+///|
+let rate_precision = 1.0e-6
+
+///|
+let xirr_max_iterations = 50
+
+///|
+let xirr_precision = 1.0e-10
+
+///|
 let rand_state : @random.Rand = @random.Rand::new()
 
 ///|
@@ -5860,6 +5878,15 @@ fn eval_function(
     "FTEST" => ftest_values(workbook, sheet_name, args, values, ctx)
     "FdotTEST" | "F.TEST" | "_XLFN.F.TEST" =>
       ftest_values(workbook, sheet_name, args, values, ctx)
+    "FV" => fv_values(values)
+    "FVSCHEDULE" => fvschedule_values(values)
+    "IRR" => irr_values(values)
+    "MIRR" => mirr_values(values)
+    "NPV" => npv_values(values)
+    "PV" => pv_values(values)
+    "RATE" => rate_values(values)
+    "XIRR" => xirr_values(values)
+    "XNPV" => xnpv_values(values)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
     "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
     "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
@@ -10957,6 +10984,537 @@ fn ftest_values(
     probability = 2.0 - probability
   }
   number_or_num_error(round_significant_digits(probability, 15))
+}
+
+///|
+fn value_as_number_opt_financial(value : FormulaValue) -> Double? {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) => Some(num)
+    FormulaValue::Bool(flag) => Some(if flag { 1.0 } else { 0.0 })
+    FormulaValue::Empty => Some(0.0)
+    FormulaValue::String(text) => parse_double_opt(text)
+    FormulaValue::Error(_) => Some(0.0)
+    FormulaValue::List(_) => None
+  }
+}
+
+///|
+fn value_as_number_financial(value : FormulaValue) -> Double {
+  match value_as_number_opt_financial(value) {
+    Some(num) => num
+    None => 0.0
+  }
+}
+
+///|
+fn fv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let nper = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pmt = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = if values.length() >= 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let typ = if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  if typ != 0.0 && typ != 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let result = if rate != 0.0 {
+    let factor = @math.pow(1.0 + rate, nper)
+    -pv * factor - pmt * (1.0 + rate * typ) * (factor - 1.0) / rate
+  } else {
+    -pv - pmt * nper
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn fvschedule_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let principal = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let schedule = flatten_values([values[1]])
+  let mut result = principal
+  for value in schedule {
+    match normalize_scalar(value) {
+      FormulaValue::Empty => ()
+      FormulaValue::Error(_) => ()
+      FormulaValue::String(text) =>
+        if text == "" {
+          ()
+        } else {
+          match parse_double_opt(text) {
+            Some(num) => result = result * (1.0 + num)
+            None => return FormulaValue::Error(formula_error_value)
+          }
+        }
+      _ =>
+        match value_as_number(value) {
+          Ok(num) => result = result * (1.0 + num)
+          Err(err) => return err
+        }
+    }
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn calc_npv(rate : Double, values : ArrayView[FormulaValue]) -> Double {
+  let mut result = 0.0
+  let mut period = 1
+  for value in values {
+    match value_as_number_opt_financial(value) {
+      Some(num) => {
+        result = result + num / @math.pow(1.0 + rate, Double::from_int(period))
+        period = period + 1
+      }
+      None => ()
+    }
+  }
+  result
+}
+
+///|
+fn npv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mut result = 0.0
+  let mut period = 1
+  for idx in 1..<values.length() {
+    match value_as_number_opt_financial(values[idx]) {
+      Some(num) => {
+        result = result + num / @math.pow(1.0 + rate, Double::from_int(period))
+        period = period + 1
+      }
+      None => ()
+    }
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn pv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let nper = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pmt = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let fv = if values.length() >= 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let mut typ = 0.0
+  if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => if num != 0.0 { typ = 1.0 }
+      Err(err) => return err
+    }
+  }
+  let result = if rate == 0.0 {
+    -pmt * nper - fv
+  } else {
+    let factor = @math.pow(1.0 + rate, nper)
+    ((1.0 - factor) / rate * pmt * (1.0 + rate * typ) - fv) / factor
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn calc_rate(
+  nper : Double,
+  pmt : Double,
+  pv : Double,
+  fv : Double,
+  typ : Double,
+  guess : Double,
+) -> Double {
+  let mut rate = guess
+  let mut iter = 0
+  let mut is_close = false
+  while iter < rate_max_iterations && !is_close {
+    let t1 = @math.pow(rate + 1.0, nper)
+    let t2 = @math.pow(rate + 1.0, nper - 1.0)
+    let rt = rate * typ + 1.0
+    let p0 = pmt * (t1 - 1.0)
+    let f1 = fv + t1 * pv + p0 * rt / rate
+    let n1 = nper * t2 * pv
+    let n2 = p0 * rt / @math.pow(rate, 2.0)
+    let f2 = n1 - n2
+    let f3 = (nper * pmt * t2 * rt + p0 * typ) / rate
+    let delta = f1 / (f2 + f3)
+    if Double::abs(delta) < rate_precision {
+      is_close = true
+    }
+    iter = iter + 1
+    rate = rate - delta
+  }
+  rate
+}
+
+///|
+fn rate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 6 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let nper = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pmt = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let fv = if values.length() >= 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let mut typ = 0.0
+  if values.length() >= 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => if num != 0.0 { typ = 1.0 }
+      Err(err) => return err
+    }
+  }
+  let guess = if values.length() == 6 {
+    match value_as_number(values[5]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.1
+  }
+  let result = calc_rate(nper, pmt, pv, fv, typ, guess)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn irr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let list_values = flatten_values([values[0]])
+  let guess = if values.length() == 2 {
+    match value_as_number(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.1
+  }
+  let mut x1 = 0.0
+  let mut x2 = guess
+  let mut f1 = calc_npv(x1, list_values)
+  let mut f2 = calc_npv(x2, list_values)
+  for _ in 0..<max_financial_iterations {
+    if f1 * f2 < 0.0 {
+      break
+    }
+    if Double::abs(f1) < Double::abs(f2) {
+      x1 = x1 + 1.6 * (x1 - x2)
+      f1 = calc_npv(x1, list_values)
+      continue
+    }
+    x2 = x2 + 1.6 * (x2 - x1)
+    f2 = calc_npv(x2, list_values)
+  }
+  if f1 * f2 > 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let f = calc_npv(x1, list_values)
+  let mut rtb = 0.0
+  let mut dx = 0.0
+  if f < 0.0 {
+    rtb = x1
+    dx = x2 - x1
+  } else {
+    rtb = x2
+    dx = x1 - x2
+  }
+  let mut x_mid = rtb
+  for _ in 0..<max_financial_iterations {
+    dx = dx * 0.5
+    x_mid = rtb + dx
+    let f_mid = calc_npv(x_mid, list_values)
+    if f_mid <= 0.0 {
+      rtb = x_mid
+    }
+    if Double::abs(f_mid) < financial_precision ||
+      Double::abs(dx) < financial_precision {
+      break
+    }
+  }
+  number_or_num_error(round_significant_digits(x_mid, 15))
+}
+
+///|
+fn mirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let list_values = flatten_values([values[0]])
+  let finance_rate = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let reinvest_rate = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let n = list_values.length()
+  let fr = 1.0 + finance_rate
+  let rr = 1.0 + reinvest_rate
+  let mut npv_pos = 0.0
+  let mut npv_neg = 0.0
+  for idx in 0..<n {
+    let value = value_as_number_financial(list_values[idx])
+    if value >= 0.0 {
+      npv_pos = npv_pos + value / @math.pow(rr, Double::from_int(idx))
+    } else {
+      npv_neg = npv_neg + value / @math.pow(fr, Double::from_int(idx))
+    }
+  }
+  if npv_neg == 0.0 || npv_pos == 0.0 || reinvest_rate <= -1.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let result = @math.pow(
+      -npv_pos * @math.pow(rr, Double::from_int(n)) / (npv_neg * rr),
+      1.0 / (Double::from_int(n) - 1.0),
+    ) -
+    1.0
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn prepare_x_args(
+  values : Array[FormulaValue],
+  dates : Array[FormulaValue],
+) -> Result[(Array[Double], Array[Double]), FormulaValue] {
+  let value_args : Array[Double] = []
+  for value in values {
+    match value_as_number(value) {
+      Ok(num) => value_args.push(num)
+      Err(err) => return Err(err)
+    }
+  }
+  if value_args.length() < 2 {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  let date_args : Array[Double] = []
+  let mut last_date = 0.0
+  for date in dates {
+    match normalize_scalar(date) {
+      FormulaValue::Empty =>
+        return Err(FormulaValue::Error(formula_error_value))
+      _ =>
+        match value_as_number(date) {
+          Ok(num) => {
+            if num < last_date {
+              return Err(FormulaValue::Error(formula_error_value))
+            }
+            date_args.push(num)
+            last_date = num
+          }
+          Err(err) => return Err(err)
+        }
+    }
+  }
+  if value_args.length() != date_args.length() {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  Ok((value_args, date_args))
+}
+
+///|
+fn xirr_part1(
+  values : Array[Double],
+  dates : Array[Double],
+  rate : Double,
+) -> Double {
+  let r = rate + 1.0
+  let mut result = values[0]
+  let first_date = dates[0]
+  for idx in 1..<values.length() {
+    result = result +
+      values[idx] / @math.pow(r, (dates[idx] - first_date) / 365.0)
+  }
+  result
+}
+
+///|
+fn xirr_part2(
+  values : Array[Double],
+  dates : Array[Double],
+  rate : Double,
+) -> Double {
+  let r = rate + 1.0
+  let mut result = 0.0
+  let first_date = dates[0]
+  for idx in 1..<values.length() {
+    let frac = (dates[idx] - first_date) / 365.0
+    result = result - frac * values[idx] / @math.pow(r, frac + 1.0)
+  }
+  result
+}
+
+///|
+fn xirr_compute(
+  values : Array[Double],
+  dates : Array[Double],
+  guess : Double,
+) -> FormulaValue {
+  let mut has_positive = false
+  let mut has_negative = false
+  for value in values {
+    if value > 0.0 {
+      has_positive = true
+    }
+    if value < 0.0 {
+      has_negative = true
+    }
+  }
+  if !has_positive || !has_negative {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let mut result = guess
+  let mut count = 0
+  let mut failed = false
+  while true {
+    let result_value = xirr_part1(values, dates, result)
+    let new_rate = result - result_value / xirr_part2(values, dates, result)
+    let eps_rate = Double::abs(new_rate - result)
+    result = new_rate
+    count = count + 1
+    if eps_rate <= xirr_precision || Double::abs(result_value) <= xirr_precision {
+      break
+    }
+    if count > xirr_max_iterations {
+      failed = true
+      break
+    }
+  }
+  if failed || Double::is_nan(result) || Double::is_inf(result) {
+    return FormulaValue::Error(formula_error_num)
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn xirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 && values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let raw_values = flatten_values([values[0]])
+  let raw_dates = flatten_values([values[1]])
+  let (value_args, date_args) = match prepare_x_args(raw_values, raw_dates) {
+    Ok(result) => result
+    Err(err) => return err
+  }
+  let mut guess = 0.0
+  if values.length() == 3 {
+    match value_as_number(values[2]) {
+      Ok(num) => {
+        if num <= -1.0 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        guess = num
+      }
+      Err(_) => return FormulaValue::Error(formula_error_num)
+    }
+  }
+  xirr_compute(value_args, date_args, guess)
+}
+
+///|
+fn xnpv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if rate <= 0.0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let raw_values = flatten_values([values[1]])
+  let raw_dates = flatten_values([values[2]])
+  let (value_args, date_args) = match prepare_x_args(raw_values, raw_dates) {
+    Ok(result) => result
+    Err(err) => return err
+  }
+  let date1 = date_args[0]
+  let mut result = 0.0
+  for idx in 0..<value_args.length() {
+    result = result +
+      value_args[idx] / @math.pow(1.0 + rate, (date_args[idx] - date1) / 365.0)
+  }
+  number_or_num_error(round_significant_digits(result, 15))
 }
 
 ///|

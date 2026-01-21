@@ -3938,6 +3938,273 @@ test "calc quoted sheet refs" {
 }
 
 ///|
+test "calc financial functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_formula("B1", "FV(0.05/12,60,-1000)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="68006.0828408429")
+  sheet.set_cell_formula("B2", "FV(0.1/4,16,-2000,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="39729.4608941661")
+  sheet.set_cell_formula("B3", "FV(0,16,-2000)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="32000")
+  sheet.set_cell_formula("B4", "FVSCHEDULE(10000,A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="240000")
+  sheet.set_cell_formula("B5", "FVSCHEDULE(10000,0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="15000")
+  sheet.set_cell_formula("B6", "NPV(0.02,-5000,\"\",800)")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="-4133.02575932334")
+  sheet.set_cell_formula("B7", "PV(0,60,1000)")
+  inspect(workbook.calc_cell_value("Sheet1", "B7"), content="-60000")
+  sheet.set_cell_formula("B8", "PV(5%/12,60,1000)")
+  inspect(workbook.calc_cell_value("Sheet1", "B8"), content="-52990.7063239272")
+  sheet.set_cell_formula("B9", "PV(10%/4,16,2000,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B9"), content="-26762.7554528811")
+  sheet.set_cell_formula("B10", "RATE(60,-1000,50000)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B10"),
+    content="0.00618341316212867",
+  )
+  sheet.set_cell_formula("B11", "RATE(24,-800,0,20000,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B11"),
+    content="0.00325084350160377",
+  )
+  sheet.set_cell_formula("B12", "RATE(48,-200,8000,3,1,0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B12"),
+    content="0.00804126658316361",
+  )
+}
+
+///|
+test "calc irr and mirr functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let irr_values : Array[Double] = [-1.0, 0.2, 0.24, 0.288, 0.3456, 0.4147]
+  for idx, value in irr_values {
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  let mirr_values : Array[Double] = [-100.0, 18.0, 22.5, 28.0, 35.5, 45.0]
+  for idx, value in mirr_values {
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  sheet.set_cell_formula("B1", "IRR(A1:A4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B1"),
+    content="-0.136189509034157",
+  )
+  sheet.set_cell_formula("B2", "IRR(A1:A6)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="0.130575760006905")
+  sheet.set_cell_formula("B3", "IRR(A1:A4,-0.1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B3"),
+    content="-0.136189514994621",
+  )
+  sheet.set_cell_formula("D1", "MIRR(C1:C6,0.055,0.05)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="0.1000268752662")
+}
+
+///|
+test "calc xirr and xnpv functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let xirr_values : Array[Double] = [
+    -100.0, 20.0, 40.0, 25.0, 8.0, 15.0, -1.0e-10,
+  ]
+  let xirr_dates : Array[Double] = [
+    42370.0, 42461.0, 42644.0, 42767.0, 42795.0, 42887.0, 42979.0,
+  ]
+  for idx, value in xirr_values {
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  for idx, value in xirr_dates {
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  sheet.set_cell_formula("C1", "XIRR(A1:A4,B1:B4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C1"),
+    content="-0.196743861298328",
+  )
+  sheet.set_cell_formula("C2", "XIRR(A1:A6,B1:B6,0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C2"),
+    content="0.0944390744445203",
+  )
+  sheet.set_cell_value("E1", CellValue::Numeric(0.05))
+  let xnpv_dates : Array[Double] = [
+    42370.0, 42401.0, 42491.0, 42552.0, 42675.0, 42736.0,
+  ]
+  let xnpv_values : Array[Double] = [
+    -10000.0, 2000.0, 2400.0, 2900.0, 3500.0, 4100.0,
+  ]
+  for idx, value in xnpv_dates {
+    let cell = "D\{idx + 2}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  for idx, value in xnpv_values {
+    let cell = "E\{idx + 2}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  sheet.set_cell_formula("F1", "XNPV(E1,E2:E7,D2:D7)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="4447.93800944052")
+}
+
+///|
+test "calc financial function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("FV()", "#VALUE!"),
+    ("FV(0,0,0,0,0,0,0)", "#VALUE!"),
+    ("FV(0,0,0,0,2)", "#N/A"),
+    ("FV(\"\",0,0,0,0)", "#VALUE!"),
+    ("FV(0,\"\",0,0,0)", "#VALUE!"),
+    ("FV(0,0,\"\",0,0)", "#VALUE!"),
+    ("FV(0,0,0,\"\",0)", "#VALUE!"),
+    ("FV(0,0,0,0,\"\")", "#VALUE!"),
+    ("FVSCHEDULE()", "#VALUE!"),
+    ("FVSCHEDULE(\"\",0)", "#VALUE!"),
+    ("FVSCHEDULE(0,\"x\")", "#VALUE!"),
+    ("NPV()", "#VALUE!"),
+    ("NPV(\"\",0)", "#VALUE!"),
+    ("PV()", "#VALUE!"),
+    ("PV(10%/4,16,2000,0,1,0)", "#VALUE!"),
+    ("PV(\"\",16,2000,0,1)", "#VALUE!"),
+    ("PV(10%/4,\"\",2000,0,1)", "#VALUE!"),
+    ("PV(10%/4,16,\"\",0,1)", "#VALUE!"),
+    ("PV(10%/4,16,2000,\"\",1)", "#VALUE!"),
+    ("PV(10%/4,16,2000,0,\"\")", "#VALUE!"),
+    ("RATE()", "#VALUE!"),
+    ("RATE(48,-200,8000,3,1,0.5,0)", "#VALUE!"),
+    ("RATE(\"\",-200,8000,3,1,0.5)", "#VALUE!"),
+    ("RATE(48,\"\",8000,3,1,0.5)", "#VALUE!"),
+    ("RATE(48,-200,\"\",3,1,0.5)", "#VALUE!"),
+    ("RATE(48,-200,8000,\"\",1,0.5)", "#VALUE!"),
+    ("RATE(48,-200,8000,3,\"\",0.5)", "#VALUE!"),
+    ("RATE(48,-200,8000,3,1,\"\")", "#VALUE!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc irr and mirr errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let irr_values : Array[Double] = [-1.0, 0.2, 0.24, 0.288, 0.3456, 0.4147]
+  for idx, value in irr_values {
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  let mirr_values : Array[Double] = [-100.0, 18.0, 22.5, 28.0, 35.5, 45.0]
+  for idx, value in mirr_values {
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  let cases : Array[(String, String)] = [
+    ("IRR()", "#VALUE!"),
+    ("IRR(0,0,0)", "#VALUE!"),
+    ("IRR(0,\"\")", "#VALUE!"),
+    ("IRR(A2:A3)", "#NUM!"),
+    ("MIRR()", "#VALUE!"),
+    ("MIRR(C1:C5,\"\",0)", "#VALUE!"),
+    ("MIRR(C1:C5,0,\"\")", "#VALUE!"),
+    ("MIRR(B1:B5,0,0)", "#DIV/0!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "D\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc xirr errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let xirr_values : Array[Double] = [
+    -100.0, 20.0, 40.0, 25.0, 8.0, 15.0, -1.0e-10,
+  ]
+  let xirr_dates : Array[Double] = [
+    42370.0, 42461.0, 42644.0, 42767.0, 42795.0, 42887.0, 42979.0,
+  ]
+  for idx, value in xirr_values {
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  for idx, value in xirr_dates {
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_value(cell, CellValue::Numeric(value))
+  }
+  let cases : Array[(String, String)] = [
+    ("XIRR()", "#VALUE!"),
+    ("XIRR(A1:A4,B1:B4,-1)", "#VALUE!"),
+    ("XIRR(\"\",B1:B4)", "#VALUE!"),
+    ("XIRR(A1:A4,\"\")", "#VALUE!"),
+    ("XIRR(A1:A4,B1:B4,\"\")", "#NUM!"),
+    ("XIRR(A2:A6,B2:B6)", "#NUM!"),
+    ("XIRR(A2:A7,B2:B7)", "#NUM!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc xnpv errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("B1", CellValue::Numeric(0.05))
+  sheet.set_cell_value("A2", CellValue::Numeric(42370.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(-10000.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(42401.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(2000.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(42491.0))
+  sheet.set_cell_value("B4", CellValue::Numeric(2400.0))
+  sheet.set_cell_value("A5", CellValue::Numeric(42552.0))
+  sheet.set_cell_value("B5", CellValue::Numeric(2900.0))
+  sheet.set_cell_value("A6", CellValue::Numeric(42675.0))
+  sheet.set_cell_value("B6", CellValue::Numeric(3500.0))
+  sheet.set_cell_value("A7", CellValue::Numeric(42736.0))
+  sheet.set_cell_value("B7", CellValue::Numeric(4100.0))
+  sheet.set_cell_value("A9", CellValue::Numeric(42401.0))
+  sheet.set_cell_value("A10", CellValue::Numeric(42370.0))
+  let cases : Array[(String, String)] = [
+    ("XNPV()", "#VALUE!"),
+    ("XNPV(\"\",B2:B7,A2:A7)", "#VALUE!"),
+    ("XNPV(0,B2:B7,A2:A7)", "#VALUE!"),
+    ("XNPV(B1,\"\",A2:A7)", "#VALUE!"),
+    ("XNPV(B1,B2:B7,\"\")", "#VALUE!"),
+    ("XNPV(B1,B2:B7,C2:C7)", "#VALUE!"),
+    ("XNPV(B1,B2,A2)", "#NUM!"),
+    ("XNPV(B1,B2:B3,A2:A5)", "#NUM!"),
+    ("XNPV(B1,B2:B3,A9:A10)", "#VALUE!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
 fn split_complex_body_test(body : String) -> (String, String) {
   let chars = body.to_array()
   let mut split = -1
