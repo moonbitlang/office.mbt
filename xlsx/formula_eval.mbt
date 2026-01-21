@@ -11,6 +11,9 @@ let formula_error_value = "#VALUE!"
 let formula_error_ref = "#REF!"
 
 ///|
+let formula_error_num = "#NUM!"
+
+///|
 let formula_error_calc = "#CALC!"
 
 ///|
@@ -298,6 +301,7 @@ fn FormulaParser::parse_postfix(self : FormulaParser) -> Expr raise XlsxError {
 fn FormulaParser::parse_primary(self : FormulaParser) -> Expr raise XlsxError {
   self.skip_spaces()
   match self.peek() {
+    Some('\'') => self.parse_quoted_sheet_ref()
     Some('(') => {
       self.consume()
       let expr = self.parse_expression()
@@ -317,6 +321,56 @@ fn FormulaParser::parse_primary(self : FormulaParser) -> Expr raise XlsxError {
       }
     None => raise XlsxError::InvalidXml(msg="formula empty")
   }
+}
+
+///|
+fn FormulaParser::parse_quoted_sheet_ref(
+  self : FormulaParser,
+) -> Expr raise XlsxError {
+  let sheet = self.parse_quoted_sheet_name()
+  self.skip_spaces()
+  if self.peek() != Some('!') {
+    raise XlsxError::InvalidXml(msg="formula sheet reference missing !")
+  }
+  self.consume()
+  let cell_token = self.parse_identifier_token()
+  let cell_ref = match parse_cell_ref_token(cell_token) {
+    Some(value) => value
+    None => raise XlsxError::InvalidCellRef(value=cell_token)
+  }
+  if self.peek() == Some(':') {
+    self.consume()
+    let end_token = self.parse_identifier_token()
+    let end_ref = match parse_cell_ref_token(end_token) {
+      Some(value) => value
+      None => raise XlsxError::InvalidCellRef(value=end_token)
+    }
+    return Expr::Range(sheet, cell_ref, end_ref)
+  }
+  Expr::Cell(sheet, cell_ref)
+}
+
+///|
+fn FormulaParser::parse_quoted_sheet_name(
+  self : FormulaParser,
+) -> String raise XlsxError {
+  self.consume()
+  let sb = StringBuilder::new()
+  while self.pos < self.chars.length() {
+    let ch = self.chars[self.pos]
+    self.consume()
+    if ch == '\'' {
+      if self.peek() == Some('\'') {
+        sb.write_char('\'')
+        self.consume()
+      } else {
+        return sb.to_string()
+      }
+    } else {
+      sb.write_char(ch)
+    }
+  }
+  raise XlsxError::InvalidXml(msg="formula sheet name not closed")
 }
 
 ///|
@@ -590,6 +644,26 @@ fn formula_value_string(value : FormulaValue) -> String {
 }
 
 ///|
+fn value_as_string(value : FormulaValue) -> Result[String, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    _ => Ok(formula_value_string(value))
+  }
+}
+
+///|
+fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let sb = StringBuilder::new()
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      _ => sb.write_view(formula_value_string(value))
+    }
+  }
+  FormulaValue::String(sb.to_string())
+}
+
+///|
 fn compare_strings(left : String, right : String) -> Int {
   let l = left.to_array()
   let r = right.to_array()
@@ -671,6 +745,129 @@ fn value_as_number(value : FormulaValue) -> Result[Double, FormulaValue] {
     FormulaValue::Error(err) => Err(FormulaValue::Error(err))
     FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
   }
+}
+
+///|
+fn parse_double_opt(text : StringView) -> Double? {
+  let parsed = @strconv.parse_double(text) catch { _ => return None }
+  Some(parsed)
+}
+
+///|
+fn value_as_bool(value : FormulaValue) -> Result[Bool, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Bool(flag) => Ok(flag)
+    FormulaValue::Number(num) => Ok(num == 1.0)
+    FormulaValue::Empty => Ok(false)
+    FormulaValue::String(text) => {
+      let parsed = @strconv.parse_bool(text) catch {
+        _ => return Err(FormulaValue::Error(formula_error_value))
+      }
+      Ok(parsed)
+    }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+  }
+}
+
+///|
+fn abs_double(value : Double) -> Double {
+  if value < 0.0 {
+    -value
+  } else {
+    value
+  }
+}
+
+///|
+fn trunc_double(value : Double) -> Double {
+  if value < 0.0 {
+    -Double::floor(-value)
+  } else {
+    Double::floor(value)
+  }
+}
+
+///|
+fn round_half_away_from_zero(value : Double) -> Double {
+  if value < 0.0 {
+    -Double::floor(-value + 0.5)
+  } else {
+    Double::floor(value + 0.5)
+  }
+}
+
+///|
+fn round_with_digits(value : Double, digits : Int) -> Double {
+  if digits >= 0 {
+    let scale = Double::from_int(pow10_int(digits))
+    round_half_away_from_zero(value * scale) / scale
+  } else {
+    let scale = Double::from_int(pow10_int(-digits))
+    round_half_away_from_zero(value / scale) * scale
+  }
+}
+
+///|
+fn round_down_with_digits(value : Double, digits : Int) -> Double {
+  if digits >= 0 {
+    let scale = Double::from_int(pow10_int(digits))
+    trunc_double(value * scale) / scale
+  } else {
+    let scale = Double::from_int(pow10_int(-digits))
+    trunc_double(value / scale) * scale
+  }
+}
+
+///|
+fn round_up_with_digits(value : Double, digits : Int) -> Double {
+  if digits >= 0 {
+    let scale = Double::from_int(pow10_int(digits))
+    let scaled = value * scale
+    let truncated = trunc_double(scaled)
+    let adjusted = if scaled == truncated {
+      truncated
+    } else if scaled > 0.0 {
+      truncated + 1.0
+    } else {
+      truncated - 1.0
+    }
+    adjusted / scale
+  } else {
+    let scale = Double::from_int(pow10_int(-digits))
+    let scaled = value / scale
+    let truncated = trunc_double(scaled)
+    let adjusted = if scaled == truncated {
+      truncated
+    } else if scaled > 0.0 {
+      truncated + 1.0
+    } else {
+      truncated - 1.0
+    }
+    adjusted * scale
+  }
+}
+
+///|
+fn trim_excel_text(text : StringView) -> String {
+  let sb = StringBuilder::new()
+  let mut seen_text = false
+  let mut pending_space = false
+  for ch in text {
+    if ch.is_ascii_whitespace() {
+      if seen_text {
+        pending_space = true
+      }
+    } else {
+      if pending_space {
+        sb.write_char(' ')
+        pending_space = false
+      }
+      sb.write_char(ch)
+      seen_text = true
+    }
+  }
+  sb.to_string()
 }
 
 ///|
@@ -820,15 +1017,186 @@ fn eval_function(
     "MIN" => min_values(values)
     "MAX" => max_values(values)
     "COUNT" => count_values(values)
+    "ABS" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(abs_double(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "INT" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(Double::floor(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TRUNC" =>
+      if values.length() == 1 || values.length() == 2 {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let digits = if values.length() == 2 {
+              match value_as_number(values[1]) {
+                Ok(value) => Double::to_int(value)
+                Err(err) => return err
+              }
+            } else {
+              0
+            }
+            FormulaValue::Number(round_down_with_digits(num, digits))
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ROUND" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(digits)) =>
+            FormulaValue::Number(round_with_digits(num, Double::to_int(digits)))
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ROUNDUP" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(digits)) =>
+            FormulaValue::Number(
+              round_up_with_digits(num, Double::to_int(digits)),
+            )
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ROUNDDOWN" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(digits)) =>
+            FormulaValue::Number(
+              round_down_with_digits(num, Double::to_int(digits)),
+            )
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SQRT" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num < 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::Number(@math.pow(num, 0.5))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "POWER" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(lhs), Ok(rhs)) => FormulaValue::Number(@math.pow(lhs, rhs))
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "AND" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        for value in flatten_values(values) {
+          match value_as_bool(value) {
+            Ok(flag) => if !flag { return FormulaValue::Bool(false) }
+            Err(err) => return err
+          }
+        }
+        FormulaValue::Bool(true)
+      }
+    "OR" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        for value in flatten_values(values) {
+          match value_as_bool(value) {
+            Ok(flag) => if flag { return FormulaValue::Bool(true) }
+            Err(err) => return err
+          }
+        }
+        FormulaValue::Bool(false)
+      }
+    "NOT" =>
+      if values.length() == 1 {
+        match value_as_bool(values[0]) {
+          Ok(flag) => FormulaValue::Bool(!flag)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "LEN" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => FormulaValue::Number(Double::from_int(text.length()))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "LOWER" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => FormulaValue::String(text.to_lower())
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "UPPER" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => FormulaValue::String(text.to_upper())
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TRIM" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => FormulaValue::String(trim_excel_text(text))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CONCAT" | "CONCATENATE" => concat_values(values)
     "IF" =>
       if values.length() >= 2 {
-        let cond = formula_value_truthy(values[0])
-        if cond {
-          values[1]
-        } else if values.length() >= 3 {
-          values[2]
-        } else {
-          FormulaValue::Bool(false)
+        match value_as_bool(values[0]) {
+          Ok(cond) =>
+            if cond {
+              values[1]
+            } else if values.length() >= 3 {
+              values[2]
+            } else {
+              FormulaValue::Bool(false)
+            }
+          Err(err) => err
         }
       } else {
         FormulaValue::Error(formula_error_value)
@@ -840,106 +1208,169 @@ fn eval_function(
 ///|
 fn sum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut sum = 0.0
-  let mut has_error = None
   for value in flatten_values(values) {
-    match value_as_number(value) {
-      Ok(num) => sum = sum + num
-      Err(err) => has_error = Some(err)
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) => sum = sum + num
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        sum = sum + num
+      }
+      FormulaValue::String(text) =>
+        match parse_double_opt(text) {
+          Some(num) => sum = sum + num
+          None => ()
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
     }
   }
-  match has_error {
-    Some(err) => err
-    None => FormulaValue::Number(sum)
-  }
+  FormulaValue::Number(sum)
 }
 
 ///|
 fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut sum = 0.0
   let mut count = 0
-  let mut has_error = None
   for value in flatten_values(values) {
-    match value_as_number(value) {
-      Ok(num) => {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) => {
         sum = sum + num
         count = count + 1
       }
-      Err(err) => has_error = Some(err)
+      FormulaValue::String(text) =>
+        match parse_double_opt(text) {
+          Some(num) => {
+            sum = sum + num
+            count = count + 1
+          }
+          None => ()
+        }
+      FormulaValue::Bool(_) => ()
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
     }
   }
-  match has_error {
-    Some(err) => err
-    None =>
-      if count == 0 {
-        FormulaValue::Error(formula_error_div)
-      } else {
-        FormulaValue::Number(sum / Double::from_int(count))
-      }
+  if count == 0 {
+    FormulaValue::Error(formula_error_div)
+  } else {
+    FormulaValue::Number(sum / Double::from_int(count))
   }
 }
 
 ///|
 fn min_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut min = None
-  let mut has_error = None
   for value in flatten_values(values) {
-    match value_as_number(value) {
-      Ok(num) =>
-        match min {
-          Some(current) => if num < current { min = Some(num) }
-          None => min = Some(num)
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) =>
+        min = Some(
+          match min {
+            Some(current) => if num < current { num } else { current }
+            None => num
+          },
+        )
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        min = Some(
+          match min {
+            Some(current) => if num < current { num } else { current }
+            None => num
+          },
+        )
+      }
+      FormulaValue::String(text) =>
+        if text == "TRUE" || text == "FALSE" {
+          ()
+        } else {
+          match parse_double_opt(text) {
+            Some(num) =>
+              min = Some(
+                match min {
+                  Some(current) => if num < current { num } else { current }
+                  None => num
+                },
+              )
+            None => ()
+          }
         }
-      Err(err) => has_error = Some(err)
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
     }
   }
-  match has_error {
-    Some(err) => err
-    None =>
-      match min {
-        Some(value) => FormulaValue::Number(value)
-        None => FormulaValue::Error(formula_error_value)
-      }
+  match min {
+    Some(value) => FormulaValue::Number(value)
+    None => FormulaValue::Number(0.0)
   }
 }
 
 ///|
 fn max_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut max = None
-  let mut has_error = None
   for value in flatten_values(values) {
-    match value_as_number(value) {
-      Ok(num) =>
-        match max {
-          Some(current) => if num > current { max = Some(num) }
-          None => max = Some(num)
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) =>
+        max = Some(
+          match max {
+            Some(current) => if num > current { num } else { current }
+            None => num
+          },
+        )
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        max = Some(
+          match max {
+            Some(current) => if num > current { num } else { current }
+            None => num
+          },
+        )
+      }
+      FormulaValue::String(text) =>
+        if text == "TRUE" || text == "FALSE" {
+          ()
+        } else {
+          match parse_double_opt(text) {
+            Some(num) =>
+              max = Some(
+                match max {
+                  Some(current) => if num > current { num } else { current }
+                  None => num
+                },
+              )
+            None => ()
+          }
         }
-      Err(err) => has_error = Some(err)
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
     }
   }
-  match has_error {
-    Some(err) => err
-    None =>
-      match max {
-        Some(value) => FormulaValue::Number(value)
-        None => FormulaValue::Error(formula_error_value)
-      }
+  match max {
+    Some(value) => FormulaValue::Number(value)
+    None => FormulaValue::Number(0.0)
   }
 }
 
 ///|
 fn count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
-  let mut has_error = None
   for value in flatten_values(values) {
-    match value_as_number(value) {
-      Ok(_) => count = count + 1
-      Err(err) => has_error = Some(err)
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(_) => count = count + 1
+      FormulaValue::Bool(_) => count = count + 1
+      FormulaValue::String(text) =>
+        match parse_double_opt(text) {
+          Some(_) => count = count + 1
+          None => ()
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
     }
   }
-  match has_error {
-    Some(err) => err
-    None => FormulaValue::Number(Double::from_int(count))
-  }
+  FormulaValue::Number(Double::from_int(count))
 }
 
 ///|
@@ -955,16 +1386,6 @@ fn flatten_values(values : ArrayView[FormulaValue]) -> Array[FormulaValue] {
 }
 
 ///|
-fn formula_value_truthy(value : FormulaValue) -> Bool {
-  match normalize_scalar(value) {
-    FormulaValue::Bool(flag) => flag
-    FormulaValue::Number(num) => num != 0.0
-    FormulaValue::String(text) => text != ""
-    FormulaValue::Empty => false
-    FormulaValue::Error(_) => false
-    FormulaValue::List(_) => false
-  }
-}
 
 ///|
 fn resolve_cell_value(
