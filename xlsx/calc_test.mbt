@@ -422,6 +422,40 @@ test "calc decimal function" {
 }
 
 ///|
+test "calc roman function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "ROMAN(499,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="CDXCIX")
+  sheet.set_cell_formula("A2", "ROMAN(1999,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="MCMXCIX")
+  sheet.set_cell_formula("A3", "ROMAN(1999,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="MLMVLIV")
+  sheet.set_cell_formula("A4", "ROMAN(1999,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="MXMIX")
+  sheet.set_cell_formula("A5", "ROMAN(1999,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="MVMIV")
+  sheet.set_cell_formula("A6", "ROMAN(1999,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="MIM")
+  sheet.set_cell_formula("A7", "ROMAN(1999,-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="MCMXCIX")
+  sheet.set_cell_formula("A8", "ROMAN(1999,5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="MIM")
+  sheet.set_cell_formula("A9", "ROMAN(1999,ODD(1))")
+  inspect(workbook.calc_cell_value("Sheet1", "A9"), content="MLMVLIV")
+  sheet.set_cell_formula("B1", "ROMAN()")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "ROMAN(1,2,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("B3", "ROMAN(1,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#VALUE!")
+  sheet.set_cell_formula("B4", "ROMAN(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+  sheet.set_cell_formula("B5", "ROMAN(\"\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="#VALUE!")
+}
+
+///|
 test "calc permutation functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

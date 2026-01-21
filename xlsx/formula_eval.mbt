@@ -110,6 +110,12 @@ priv struct RangeValues {
 }
 
 ///|
+priv struct RomanNumeral {
+  n : Double
+  s : String
+}
+
+///|
 priv struct CellIndex {
   row : Int
   col : Int
@@ -1766,6 +1772,34 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "ROMAN" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let mut form = 0
+            if values.length() == 2 {
+              match value_as_number(values[1]) {
+                Ok(raw) => {
+                  let mut mode = Double::to_int(trunc_double(raw))
+                  if mode < 0 {
+                    mode = 0
+                  } else if mode > 4 {
+                    mode = 4
+                  }
+                  form = mode
+                }
+                Err(err) => return err
+              }
+            }
+            FormulaValue::String(roman_string(num, form))
+          }
+          Err(err) => err
+        }
+      }
     "DEGREES" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -2795,6 +2829,127 @@ fn lcm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     result = lcm_double(result, numbers[i])
   }
   FormulaValue::Number(result)
+}
+
+///|
+let roman_table : Array[Array[RomanNumeral]] = [
+  [
+    { n: 1000.0, s: "M" },
+    { n: 900.0, s: "CM" },
+    { n: 500.0, s: "D" },
+    { n: 400.0, s: "CD" },
+    { n: 100.0, s: "C" },
+    { n: 90.0, s: "XC" },
+    { n: 50.0, s: "L" },
+    { n: 40.0, s: "XL" },
+    { n: 10.0, s: "X" },
+    { n: 9.0, s: "IX" },
+    { n: 5.0, s: "V" },
+    { n: 4.0, s: "IV" },
+    { n: 1.0, s: "I" },
+  ],
+  [
+    { n: 1000.0, s: "M" },
+    { n: 950.0, s: "LM" },
+    { n: 900.0, s: "CM" },
+    { n: 500.0, s: "D" },
+    { n: 450.0, s: "LD" },
+    { n: 400.0, s: "CD" },
+    { n: 100.0, s: "C" },
+    { n: 95.0, s: "VC" },
+    { n: 90.0, s: "XC" },
+    { n: 50.0, s: "L" },
+    { n: 45.0, s: "VL" },
+    { n: 40.0, s: "XL" },
+    { n: 10.0, s: "X" },
+    { n: 9.0, s: "IX" },
+    { n: 5.0, s: "V" },
+    { n: 4.0, s: "IV" },
+    { n: 1.0, s: "I" },
+  ],
+  [
+    { n: 1000.0, s: "M" },
+    { n: 990.0, s: "XM" },
+    { n: 950.0, s: "LM" },
+    { n: 900.0, s: "CM" },
+    { n: 500.0, s: "D" },
+    { n: 490.0, s: "XD" },
+    { n: 450.0, s: "LD" },
+    { n: 400.0, s: "CD" },
+    { n: 100.0, s: "C" },
+    { n: 99.0, s: "IC" },
+    { n: 90.0, s: "XC" },
+    { n: 50.0, s: "L" },
+    { n: 45.0, s: "VL" },
+    { n: 40.0, s: "XL" },
+    { n: 10.0, s: "X" },
+    { n: 9.0, s: "IX" },
+    { n: 5.0, s: "V" },
+    { n: 4.0, s: "IV" },
+    { n: 1.0, s: "I" },
+  ],
+  [
+    { n: 1000.0, s: "M" },
+    { n: 995.0, s: "VM" },
+    { n: 990.0, s: "XM" },
+    { n: 950.0, s: "LM" },
+    { n: 900.0, s: "CM" },
+    { n: 500.0, s: "D" },
+    { n: 495.0, s: "VD" },
+    { n: 490.0, s: "XD" },
+    { n: 450.0, s: "LD" },
+    { n: 400.0, s: "CD" },
+    { n: 100.0, s: "C" },
+    { n: 99.0, s: "IC" },
+    { n: 90.0, s: "XC" },
+    { n: 50.0, s: "L" },
+    { n: 45.0, s: "VL" },
+    { n: 40.0, s: "XL" },
+    { n: 10.0, s: "X" },
+    { n: 9.0, s: "IX" },
+    { n: 5.0, s: "V" },
+    { n: 4.0, s: "IV" },
+    { n: 1.0, s: "I" },
+  ],
+  [
+    { n: 1000.0, s: "M" },
+    { n: 999.0, s: "IM" },
+    { n: 995.0, s: "VM" },
+    { n: 990.0, s: "XM" },
+    { n: 950.0, s: "LM" },
+    { n: 900.0, s: "CM" },
+    { n: 500.0, s: "D" },
+    { n: 499.0, s: "ID" },
+    { n: 495.0, s: "VD" },
+    { n: 490.0, s: "XD" },
+    { n: 450.0, s: "LD" },
+    { n: 400.0, s: "CD" },
+    { n: 100.0, s: "C" },
+    { n: 99.0, s: "IC" },
+    { n: 90.0, s: "XC" },
+    { n: 50.0, s: "L" },
+    { n: 45.0, s: "VL" },
+    { n: 40.0, s: "XL" },
+    { n: 10.0, s: "X" },
+    { n: 9.0, s: "IX" },
+    { n: 5.0, s: "V" },
+    { n: 4.0, s: "IV" },
+    { n: 1.0, s: "I" },
+  ],
+]
+
+///|
+fn roman_string(value : Double, form : Int) -> String {
+  let table = roman_table[form]
+  let sb = StringBuilder::new()
+  let mut remaining = trunc_double(value)
+  for numeral in table {
+    while remaining >= numeral.n {
+      sb.write_view(numeral.s)
+      remaining = remaining - numeral.n
+    }
+  }
+  sb.to_string()
 }
 
 ///|
