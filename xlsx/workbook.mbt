@@ -477,6 +477,10 @@ fn clone_worksheet(
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
     comments: clone_comments(sheet.comments),
+    auto_filter: match sheet.auto_filter {
+      Some(filter) => Some(clone_auto_filter(filter))
+      None => None
+    },
     row_dimensions: clone_row_dimensions(sheet.row_dimensions),
     col_dimensions: clone_col_dimensions(sheet.col_dimensions),
     state,
@@ -746,6 +750,44 @@ pub fn Workbook::add_image(
 }
 
 ///|
+pub fn Workbook::get_pictures(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Array[Image] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_pictures(cell)
+}
+
+///|
+pub fn Workbook::get_picture_cells(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[String] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_picture_cells()
+}
+
+///|
+pub fn Workbook::delete_picture(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.delete_picture(cell)
+}
+
+///|
 pub fn Workbook::add_chart(
   self : Workbook,
   sheet_name : StringView,
@@ -825,6 +867,44 @@ pub fn Workbook::get_comments(
     comments.push(comment)
   }
   comments
+}
+
+///|
+pub fn Workbook::set_auto_filter(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+  options : ArrayView[AutoFilterOption],
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_auto_filter(range_ref, options)
+}
+
+///|
+pub fn Workbook::clear_auto_filter(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.clear_auto_filter()
+}
+
+///|
+pub fn Workbook::get_auto_filter(
+  self : Workbook,
+  sheet_name : StringView,
+) -> AutoFilter? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.auto_filter()
 }
 
 ///|
@@ -909,6 +989,44 @@ pub fn Workbook::add_table(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_table(range_ref, name, columns, display_name~, style_name~)
+}
+
+///|
+pub fn Workbook::get_tables(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[Table] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let tables : Array[Table] = []
+  for table in sheet.tables() {
+    tables.push(table)
+  }
+  tables
+}
+
+///|
+pub fn Workbook::delete_table(
+  self : Workbook,
+  name : StringView,
+) -> Unit raise XlsxError {
+  let target = name.to_string()
+  for sheet in self.sheets {
+    let mut found = false
+    for table in sheet.tables {
+      if table.name == target || table.display_name == target {
+        found = true
+        break
+      }
+    }
+    if found {
+      sheet.delete_table(target)
+      return
+    }
+  }
+  raise XlsxError::TableNotFound(name=target)
 }
 
 ///|

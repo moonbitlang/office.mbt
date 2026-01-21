@@ -511,6 +511,154 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+fn parse_auto_filter_columns(
+  body : StringView,
+  min_col : Int,
+) -> Array[AutoFilterColumn] raise XlsxError {
+  let columns : Array[AutoFilterColumn] = []
+  let mut first = true
+  for chunk in body.split("<filterColumn ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="filterColumn tag not closed")
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="filterColumn tag invalid")
+      }
+    let col_id = match attr_value(tag, "colId") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="filterColumn colId invalid")
+        }
+      None => raise XlsxError::InvalidXml(msg="filterColumn colId missing")
+    }
+    let col = min_col + col_id
+    let mut filters : Array[String]? = None
+    let mut custom_filters : AutoFilterCustomFilters? = None
+    if !tag.has_suffix("/") {
+      let rest = text[end + 1:] catch {
+          _ => raise XlsxError::InvalidXml(msg="filterColumn body invalid")
+        }
+      let body_end = match rest.find("</filterColumn>") {
+        Some(pos) => pos
+        None => 0
+      }
+      let column_body = if body_end > 0 {
+        rest[:body_end] catch {
+          _ => raise XlsxError::InvalidXml(msg="filterColumn body invalid")
+        }
+      } else {
+        ""
+      }
+      match extract_tag_body_from(column_body, "filters") {
+        Some(filters_body) => {
+          let values : Array[String] = []
+          let mut first_filter = true
+          for part in filters_body.split("<filter ") {
+            if first_filter {
+              first_filter = false
+              continue
+            }
+            let filter_text = part.to_string()
+            let filter_end = match filter_text.find("/>") {
+              Some(pos) => pos
+              None =>
+                match filter_text.find(">") {
+                  Some(pos) => pos
+                  None =>
+                    raise XlsxError::InvalidXml(msg="filter tag not closed")
+                }
+            }
+            let filter_tag = filter_text[:filter_end] catch {
+                _ => raise XlsxError::InvalidXml(msg="filter tag invalid")
+              }
+            match attr_value(filter_tag, "val") {
+              Some(value) => values.push(unescape_xml_text(value))
+              None => values.push("")
+            }
+          }
+          filters = Some(values)
+        }
+        None => ()
+      }
+      match extract_tag_body_from(column_body, "customFilters") {
+        Some(custom_body) => {
+          let and_value = match
+            tag_attributes_in(column_body, "customFilters") {
+            Some(custom_tag) =>
+              match attr_value(custom_tag, "and") {
+                Some(value) => parse_bool_attr(value)
+                None => false
+              }
+            None => false
+          }
+          let entries : Array[AutoFilterCustomFilter] = []
+          let mut first_custom = true
+          for part in custom_body.split("<customFilter ") {
+            if first_custom {
+              first_custom = false
+              continue
+            }
+            let custom_text = part.to_string()
+            let custom_end = match custom_text.find("/>") {
+              Some(pos) => pos
+              None =>
+                match custom_text.find(">") {
+                  Some(pos) => pos
+                  None =>
+                    raise XlsxError::InvalidXml(
+                      msg="customFilter tag not closed",
+                    )
+                }
+            }
+            let custom_tag = custom_text[:custom_end] catch {
+                _ => raise XlsxError::InvalidXml(msg="customFilter tag invalid")
+              }
+            let operator = match attr_value(custom_tag, "operator") {
+              Some(value) => value
+              None => "equal"
+            }
+            let val = match attr_value(custom_tag, "val") {
+              Some(value) => unescape_xml_text(value)
+              None => ""
+            }
+            entries.push({ operator, value: val })
+          }
+          custom_filters = Some({ and_filter: and_value, filters: entries })
+        }
+        None => ()
+      }
+    }
+    columns.push({ col, filters, custom_filters })
+  }
+  columns
+}
+
+///|
+fn parse_auto_filter(xml : StringView) -> AutoFilter? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "autoFilter") {
+    Some(value) => value
+    None => return None
+  }
+  let ref_value = match attr_value(tag, "ref") {
+    Some(value) => value
+    None => raise XlsxError::InvalidXml(msg="autoFilter ref missing")
+  }
+  let range_ref = normalize_range_ref(ref_value)
+  let (_min_row, min_col, _max_row, _max_col) = parse_range_ref(range_ref)
+  let columns = match extract_tag_body(xml, "autoFilter") {
+    Some(body) => parse_auto_filter_columns(body, min_col)
+    None => []
+  }
+  Some({ range_ref, columns })
+}
+
+///|
 priv struct HyperlinkElement {
   reference : String
   r_id : String?
@@ -1059,6 +1207,7 @@ fn parse_worksheet(
 ) -> (
   Array[Cell],
   Array[String],
+  AutoFilter?,
   Map[Int, RowDimension],
   Map[Int, ColDimension],
 ) raise XlsxError {
@@ -1218,9 +1367,10 @@ fn parse_worksheet(
     })
   }
   let merged_cells = parse_merge_cells(xml)
+  let auto_filter = parse_auto_filter(xml)
   let row_dimensions = parse_row_dimensions(xml, style_count)
   let col_dimensions = parse_col_dimensions(xml, style_count)
-  (cells, merged_cells, row_dimensions, col_dimensions)
+  (cells, merged_cells, auto_filter, row_dimensions, col_dimensions)
 }
 
 ///|
@@ -1275,7 +1425,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       None => raise XlsxError::MissingPart(path=sheet_path)
     }
     let sheet_xml = decode_utf8(sheet_bytes)
-    let (cells, merged_cells, row_dimensions, col_dimensions) = parse_worksheet(
+    let (cells, merged_cells, auto_filter, row_dimensions, col_dimensions) = parse_worksheet(
       sheet_xml, shared_strings, style_count,
     )
     let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
@@ -1511,6 +1661,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       name,
       cells,
       merged_cells,
+      auto_filter,
       hyperlinks,
       tables,
       sparkline_groups,

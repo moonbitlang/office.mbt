@@ -540,6 +540,32 @@ fn worksheet_dimension(sheet : Worksheet) -> String? raise XlsxError {
       }
     }
   }
+  match sheet.auto_filter() {
+    Some(filter) => {
+      let (row1, col1, row2, col2) = parse_range_ref(filter.range_ref)
+      if !has_any {
+        has_any = true
+        min_row = row1
+        max_row = row2
+        min_col = col1
+        max_col = col2
+      } else {
+        if row1 < min_row {
+          min_row = row1
+        }
+        if row2 > max_row {
+          max_row = row2
+        }
+        if col1 < min_col {
+          min_col = col1
+        }
+        if col2 > max_col {
+          max_col = col2
+        }
+      }
+    }
+    None => ()
+  }
   if !has_any {
     return None
   }
@@ -596,6 +622,64 @@ fn write_col_attributes(
     None => ()
   }
   sb.write_view("/>\n")
+}
+
+///|
+fn write_auto_filter_xml(filter : AutoFilter) -> String raise XlsxError {
+  let sb = StringBuilder::new()
+  let (min_row, min_col, max_row, max_col) = parse_range_ref(filter.range_ref)
+  let start_ref = cell_ref_from(min_row, min_col)
+  let end_ref = cell_ref_from(max_row, max_col)
+  let range_ref = "\{start_ref}:\{end_ref}"
+  if filter.columns.length() == 0 {
+    sb.write_view("  <autoFilter ref=\"")
+    sb.write_view(escape_xml_attr(range_ref))
+    sb.write_view("\"/>\n")
+    return sb.to_string()
+  }
+  sb.write_view("  <autoFilter ref=\"")
+  sb.write_view(escape_xml_attr(range_ref))
+  sb.write_view("\">\n")
+  for column in filter.columns {
+    if column.col < min_col || column.col > max_col {
+      raise XlsxError::InvalidAutoFilter(msg="auto filter column out of range")
+    }
+    let col_id = column.col - min_col
+    sb.write_view("    <filterColumn colId=\"\{col_id}\">\n")
+    match column.filters {
+      Some(values) => {
+        sb.write_view("      <filters>\n")
+        for value in values {
+          sb.write_view("        <filter val=\"")
+          sb.write_view(escape_xml_attr(value))
+          sb.write_view("\"/>\n")
+        }
+        sb.write_view("      </filters>\n")
+      }
+      None => ()
+    }
+    match column.custom_filters {
+      Some(custom) => {
+        sb.write_view("      <customFilters")
+        if custom.and_filter {
+          sb.write_view(" and=\"1\"")
+        }
+        sb.write_view(">\n")
+        for entry in custom.filters {
+          sb.write_view("        <customFilter operator=\"")
+          sb.write_view(escape_xml_attr(entry.operator))
+          sb.write_view("\" val=\"")
+          sb.write_view(escape_xml_attr(entry.value))
+          sb.write_view("\"/>\n")
+        }
+        sb.write_view("      </customFilters>\n")
+      }
+      None => ()
+    }
+    sb.write_view("    </filterColumn>\n")
+  }
+  sb.write_view("  </autoFilter>\n")
+  sb.to_string()
 }
 
 ///|
@@ -761,6 +845,10 @@ fn write_worksheet_xml(
     sb.write_view("    </row>\n")
   }
   sb.write_view("  </sheetData>\n")
+  match sheet.auto_filter() {
+    Some(filter) => sb.write_view(write_auto_filter_xml(filter))
+    None => ()
+  }
   if sheet.merged_cells().length() > 0 {
     sb.write_view("  <mergeCells count=\"\{sheet.merged_cells().length()}\">\n")
     for range_ref in sheet.merged_cells() {

@@ -31,10 +31,12 @@ pub suberror XlsxError {
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
+  InvalidAutoFilter(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)
   CellTextTooLong(len~ : Int)
   CommentAlreadyExists(cell~ : String)
+  TableNotFound(name~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed
@@ -61,6 +63,42 @@ pub struct AppProperties {
 }
 pub fn AppProperties::new() -> Self
 pub fn AppProperties::with_values(application? : String, doc_security? : Int, scale_crop? : Bool, company? : String, links_up_to_date? : Bool, hyperlinks_changed? : Bool, app_version? : String) -> Self
+
+pub struct AutoFilter {
+  range_ref : String
+  columns : Array[AutoFilterColumn]
+}
+pub impl Eq for AutoFilter
+pub impl Show for AutoFilter
+
+pub struct AutoFilterColumn {
+  col : Int
+  filters : Array[String]?
+  custom_filters : AutoFilterCustomFilters?
+}
+pub impl Eq for AutoFilterColumn
+pub impl Show for AutoFilterColumn
+
+pub struct AutoFilterCustomFilter {
+  operator : String
+  value : String
+}
+pub impl Eq for AutoFilterCustomFilter
+pub impl Show for AutoFilterCustomFilter
+
+pub struct AutoFilterCustomFilters {
+  and_filter : Bool
+  filters : Array[AutoFilterCustomFilter]
+}
+pub impl Eq for AutoFilterCustomFilters
+pub impl Show for AutoFilterCustomFilters
+
+pub(all) struct AutoFilterOption {
+  column : String
+  expression : String
+}
+pub impl Eq for AutoFilterOption
+pub impl Show for AutoFilterOption
 
 pub struct Cell {
   reference : String
@@ -296,12 +334,16 @@ pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], 
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties
+pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn Workbook::delete_picture(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
+pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
+pub fn Workbook::get_auto_filter(Self, StringView) -> AutoFilter? raise XlsxError
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_hyperlink(Self, StringView, StringView) -> Hyperlink? raise XlsxError
@@ -317,9 +359,12 @@ pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
+pub fn Workbook::get_picture_cells(Self, StringView) -> Array[String] raise XlsxError
+pub fn Workbook::get_pictures(Self, StringView, StringView) -> Array[Image] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
+pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
 pub fn Workbook::insert_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::insert_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
@@ -334,6 +379,7 @@ pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
+pub fn Workbook::set_auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
@@ -378,6 +424,7 @@ pub struct Worksheet {
   data_validations : Array[String]
   conditional_formats : Array[String]
   comments : Array[Comment]
+  mut auto_filter : AutoFilter?
   row_dimensions : Map[Int, RowDimension]
   col_dimensions : Map[Int, ColDimension]
   mut state : SheetState
@@ -397,14 +444,18 @@ pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String]
 pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Worksheet::add_vml_drawing_hf_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::add_vml_drawing_xml(Self, String) -> Unit raise XlsxError
+pub fn Worksheet::auto_filter(Self) -> AutoFilter?
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
+pub fn Worksheet::clear_auto_filter(Self) -> Unit raise XlsxError
 pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::comments(Self) -> ArrayView[Comment]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::delete_picture(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_hyperlink(Self, StringView) -> Hyperlink? raise XlsxError
@@ -417,6 +468,8 @@ pub fn Worksheet::get_cell_value_raw_rc(Self, Int, Int) -> CellValue? raise Xlsx
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
+pub fn Worksheet::get_picture_cells(Self) -> Array[String] raise XlsxError
+pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_row_style(Self, Int) -> Int? raise XlsxError
@@ -437,6 +490,7 @@ pub fn Worksheet::remove_rows(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::row_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
+pub fn Worksheet::set_auto_filter(Self, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError

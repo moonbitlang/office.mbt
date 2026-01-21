@@ -61,6 +61,7 @@ pub struct Worksheet {
   data_validations : Array[String]
   conditional_formats : Array[String]
   comments : Array[Comment]
+  mut auto_filter : AutoFilter?
   row_dimensions : Map[Int, RowDimension]
   col_dimensions : Map[Int, ColDimension]
   mut state : SheetState
@@ -84,6 +85,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     data_validations: [],
     conditional_formats: [],
     comments: [],
+    auto_filter: None,
     row_dimensions: {},
     col_dimensions: {},
     state: SheetState::Visible,
@@ -163,6 +165,14 @@ pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
 ///|
 pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
   self.comments[:]
+}
+
+///|
+pub fn Worksheet::auto_filter(self : Worksheet) -> AutoFilter? {
+  match self.auto_filter {
+    Some(filter) => Some(clone_auto_filter(filter))
+    None => None
+  }
 }
 
 ///|
@@ -376,6 +386,23 @@ pub fn Worksheet::get_cell_value_raw(
     }
   }
   None
+}
+
+///|
+pub fn Worksheet::set_auto_filter(
+  self : Worksheet,
+  range_ref : String,
+  options : ArrayView[AutoFilterOption],
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let filter = auto_filter_from_options(range_ref, options)
+  self.auto_filter = Some(filter)
+}
+
+///|
+pub fn Worksheet::clear_auto_filter(self : Worksheet) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  self.auto_filter = None
 }
 
 ///|
@@ -790,6 +817,29 @@ pub fn Worksheet::add_table(
 }
 
 ///|
+pub fn Worksheet::delete_table(
+  self : Worksheet,
+  name : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let updated : Array[Table] = []
+  let mut removed = false
+  let target = name.to_string()
+  for table in self.tables {
+    if table.name == target || table.display_name == target {
+      removed = true
+      continue
+    }
+    updated.push(table)
+  }
+  if !removed {
+    raise XlsxError::TableNotFound(name=target)
+  }
+  self.tables.clear()
+  self.tables.append(updated[:])
+}
+
+///|
 pub fn Worksheet::add_sparkline(
   self : Worksheet,
   location : String,
@@ -869,6 +919,58 @@ pub fn Worksheet::add_image(
   let (_row, _col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
   self.images.push({ reference, data, extension: ext, content_type })
+}
+
+///|
+pub fn Worksheet::get_pictures(
+  self : Worksheet,
+  cell : StringView,
+) -> Array[Image] raise XlsxError {
+  let (row, col) = cell_ref_to_rc(cell)
+  let images : Array[Image] = []
+  for image in self.images {
+    let (img_row, img_col) = cell_ref_to_rc(image.reference)
+    if img_row == row && img_col == col {
+      images.push(image)
+    }
+  }
+  images
+}
+
+///|
+pub fn Worksheet::get_picture_cells(
+  self : Worksheet,
+) -> Array[String] raise XlsxError {
+  let cells : Array[String] = []
+  let seen : Map[String, Bool] = {}
+  for image in self.images {
+    let (row, col) = cell_ref_to_rc(image.reference)
+    let reference = cell_ref_from(row, col)
+    if !seen.contains(reference) {
+      seen[reference] = true
+      cells.push(reference)
+    }
+  }
+  cells
+}
+
+///|
+pub fn Worksheet::delete_picture(
+  self : Worksheet,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (row, col) = cell_ref_to_rc(cell)
+  let updated : Array[Image] = []
+  for image in self.images {
+    let (img_row, img_col) = cell_ref_to_rc(image.reference)
+    if img_row == row && img_col == col {
+      continue
+    }
+    updated.push(image)
+  }
+  self.images.clear()
+  self.images.append(updated[:])
 }
 
 ///|
@@ -1598,6 +1700,13 @@ pub fn Worksheet::insert_rows(
   }
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links[:])
+  match self.auto_filter {
+    Some(filter) =>
+      self.auto_filter = Some(
+        adjust_auto_filter_after_row_insert(filter, row, count),
+      )
+    None => ()
+  }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_row_insert(table, row, count))
@@ -1706,6 +1815,14 @@ pub fn Worksheet::remove_rows(
   }
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links[:])
+  match self.auto_filter {
+    Some(filter) =>
+      match adjust_auto_filter_after_row_remove(filter, row, count) {
+        Some(updated) => self.auto_filter = Some(updated)
+        None => self.auto_filter = None
+      }
+    None => ()
+  }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     match adjust_table_after_row_remove(table, row, count) {
@@ -1814,6 +1931,13 @@ pub fn Worksheet::insert_cols(
   }
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links[:])
+  match self.auto_filter {
+    Some(filter) =>
+      self.auto_filter = Some(
+        adjust_auto_filter_after_col_insert(filter, col, count),
+      )
+    None => ()
+  }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_col_insert(table, col, count))
@@ -1922,6 +2046,14 @@ pub fn Worksheet::remove_cols(
   }
   self.hyperlinks.clear()
   self.hyperlinks.append(updated_links[:])
+  match self.auto_filter {
+    Some(filter) =>
+      match adjust_auto_filter_after_col_remove(filter, col, count) {
+        Some(updated) => self.auto_filter = Some(updated)
+        None => self.auto_filter = None
+      }
+    None => ()
+  }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     match adjust_table_after_col_remove(table, col, count) {
@@ -2080,6 +2212,86 @@ fn adjust_range_after_col_remove(
       let start_ref = cell_ref_from(min_row, new_min_col)
       let end_ref = cell_ref_from(max_row, new_max_col)
       Some("\{start_ref}:\{end_ref}")
+    }
+    None => None
+  }
+}
+
+///|
+fn adjust_auto_filter_after_row_insert(
+  filter : AutoFilter,
+  row : Int,
+  count : Int,
+) -> AutoFilter raise XlsxError {
+  let range_ref = adjust_range_after_row_insert(filter.range_ref, row, count)
+  let copied = clone_auto_filter(filter)
+  { range_ref, columns: copied.columns }
+}
+
+///|
+fn adjust_auto_filter_after_row_remove(
+  filter : AutoFilter,
+  row : Int,
+  count : Int,
+) -> AutoFilter? raise XlsxError {
+  match adjust_range_after_row_remove(filter.range_ref, row, count) {
+    Some(range_ref) => {
+      let copied = clone_auto_filter(filter)
+      Some({ range_ref, columns: copied.columns })
+    }
+    None => None
+  }
+}
+
+///|
+fn adjust_auto_filter_after_col_insert(
+  filter : AutoFilter,
+  col : Int,
+  count : Int,
+) -> AutoFilter raise XlsxError {
+  let range_ref = adjust_range_after_col_insert(filter.range_ref, col, count)
+  let columns : Array[AutoFilterColumn] = []
+  for entry in filter.columns {
+    let updated_col = if entry.col >= col {
+      entry.col + count
+    } else {
+      entry.col
+    }
+    columns.push({
+      col: updated_col,
+      filters: entry.filters,
+      custom_filters: entry.custom_filters,
+    })
+  }
+  { range_ref, columns }
+}
+
+///|
+fn adjust_auto_filter_after_col_remove(
+  filter : AutoFilter,
+  col : Int,
+  count : Int,
+) -> AutoFilter? raise XlsxError {
+  let end = col + count - 1
+  match adjust_range_after_col_remove(filter.range_ref, col, count) {
+    Some(range_ref) => {
+      let columns : Array[AutoFilterColumn] = []
+      for entry in filter.columns {
+        if entry.col >= col && entry.col <= end {
+          continue
+        }
+        let updated_col = if entry.col > end {
+          entry.col - count
+        } else {
+          entry.col
+        }
+        columns.push({
+          col: updated_col,
+          filters: entry.filters,
+          custom_filters: entry.custom_filters,
+        })
+      }
+      Some({ range_ref, columns })
     }
     None => None
   }
