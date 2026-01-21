@@ -1392,6 +1392,31 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "SUMSQ" => sumsq_values(values)
+    "SUMX2MY2" =>
+      if args.length() == 2 {
+        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
+        sumx_values("SUMX2MY2", left, right)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SUMX2PY2" =>
+      if args.length() == 2 {
+        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
+        sumx_values("SUMX2PY2", left, right)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SUMXMY2" =>
+      if args.length() == 2 {
+        let left = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
+        sumx_values("SUMXMY2", left, right)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "SUMIFS" =>
       if args.length() >= 3 {
         if args.length() % 2 != 1 {
@@ -2012,6 +2037,57 @@ fn sum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn sumsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut sum = 0.0
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match cell {
+            FormulaValue::Number(num) => sum = sum + num * num
+            FormulaValue::String(text) =>
+              if text == "" {
+                ()
+              } else {
+                match parse_double_opt(text) {
+                  Some(num) => sum = sum + num * num
+                  None => return FormulaValue::Error(formula_error_value)
+                }
+              }
+            FormulaValue::Bool(_) =>
+              return FormulaValue::Error(formula_error_value)
+            FormulaValue::Error(_) =>
+              return FormulaValue::Error(formula_error_value)
+            FormulaValue::Empty => ()
+            FormulaValue::List(_) => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => sum = sum + num * num
+          FormulaValue::Bool(flag) => {
+            let num = if flag { 1.0 } else { 0.0 }
+            sum = sum + num * num
+          }
+          FormulaValue::String(text) =>
+            if text == "" {
+              ()
+            } else {
+              match parse_double_opt(text) {
+                Some(num) => sum = sum + num * num
+                None => return FormulaValue::Error(formula_error_value)
+              }
+            }
+          FormulaValue::Error(_) => ()
+          FormulaValue::Empty => ()
+          FormulaValue::List(_) => ()
+        }
+    }
+  }
+  FormulaValue::Number(sum)
+}
+
+///|
 fn product_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut product = 1.0
   for value in values {
@@ -2458,6 +2534,48 @@ fn sumproduct_values(ranges : Array[RangeValues]) -> FormulaValue {
       }
     }
     sum = sum + product
+  }
+  FormulaValue::Number(sum)
+}
+
+///|
+fn sumx_number(value : FormulaValue) -> Double {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) => num
+    FormulaValue::Bool(flag) => if flag { 1.0 } else { 0.0 }
+    FormulaValue::String(text) =>
+      match parse_double_opt(text) {
+        Some(num) => num
+        None => 0.0
+      }
+    FormulaValue::Empty => 0.0
+    FormulaValue::Error(_) => 0.0
+    FormulaValue::List(_) => 0.0
+  }
+}
+
+///|
+fn sumx_values(
+  name : String,
+  left : RangeValues,
+  right : RangeValues,
+) -> FormulaValue {
+  if left.rows != right.rows || left.cols != right.cols {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut sum = 0.0
+  let count = left.rows * left.cols
+  for idx in 0..<count {
+    let lhs = sumx_number(left.values[idx])
+    let rhs = sumx_number(right.values[idx])
+    if lhs != 0.0 && rhs != 0.0 {
+      let term = match name {
+        "SUMX2MY2" => lhs * lhs - rhs * rhs
+        "SUMX2PY2" => lhs * lhs + rhs * rhs
+        _ => (lhs - rhs) * (lhs - rhs)
+      }
+      sum = sum + term
+    }
   }
   FormulaValue::Number(sum)
 }
