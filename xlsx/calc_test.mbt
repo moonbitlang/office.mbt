@@ -2967,6 +2967,28 @@ test "calc filter error functions" {
 }
 
 ///|
+test "calc randarray functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "TEXTJOIN(\",\",TRUE(),RANDARRAY(2,3,5,5,TRUE))")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="5,5,5,5,5,5")
+  sheet.set_cell_formula("A2", "TEXTJOIN(\",\",TRUE(),RANDARRAY(1,4,0,0,TRUE))")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="0,0,0,0")
+}
+
+///|
+test "calc randarray error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "RANDARRAY(0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "RANDARRAY(1,1,2,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "RANDARRAY(1,1,0,1,\"no\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+}
+
+///|
 test "calc row and column functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

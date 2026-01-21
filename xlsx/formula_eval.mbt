@@ -1291,6 +1291,79 @@ fn sequence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rows = if values.length() >= 1 {
+    match value_as_int(values[0]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1
+  }
+  let cols = if values.length() >= 2 {
+    match value_as_int(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1
+  }
+  if rows <= 0 || cols <= 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let min = if values.length() >= 3 {
+    match value_as_number(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let max = if values.length() >= 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1.0
+  }
+  let whole_number = if values.length() == 5 {
+    match value_as_bool(values[4]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+  } else {
+    false
+  }
+  if min > max {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let out : Array[FormulaValue] = []
+  if whole_number {
+    let min_int = Double::to_int(trunc_double(min))
+    let max_int = Double::to_int(trunc_double(max))
+    if min_int > max_int {
+      return FormulaValue::Error(formula_error_value)
+    }
+    let range = max_int - min_int + 1
+    for _i in 0..<(rows * cols) {
+      let rand_value = if range > 0 { rand_state.int(limit=range) } else { 0 }
+      out.push(FormulaValue::Number(Double::from_int(rand_value + min_int)))
+    }
+  } else {
+    let span = max - min
+    for _i in 0..<(rows * cols) {
+      let value = min + rand_state.double() * span
+      out.push(FormulaValue::Number(value))
+    }
+  }
+  FormulaValue::List(out)
+}
+
+///|
 fn sort_range_values(
   range : RangeValues,
   sort_index : Int,
@@ -6865,6 +6938,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "RANDARRAY" => randarray_values(values)
     "RANDBETWEEN" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
