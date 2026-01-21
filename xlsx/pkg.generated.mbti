@@ -32,6 +32,13 @@ pub suberror XlsxError {
   InvalidPivotTable(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
   InvalidAutoFilter(msg~ : String)
+  InvalidDefinedName(msg~ : String)
+  DefinedNameDuplicate(name~ : String)
+  DefinedNameScope(name~ : String)
+  InvalidPageLayout(msg~ : String)
+  InvalidHeaderFooter(msg~ : String)
+  InvalidSheetProtection(msg~ : String)
+  InvalidSheetBackground(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)
   CellTextTooLong(len~ : Int)
@@ -171,6 +178,33 @@ pub struct CoreProperties {
 pub fn CoreProperties::new() -> Self
 pub fn CoreProperties::with_values(title? : String, subject? : String, creator? : String, keywords? : String, description? : String, last_modified_by? : String, language? : String, identifier? : String, revision? : String, content_status? : String, category? : String, version? : String, created? : String, modified? : String) -> Self
 
+pub struct DefinedName {
+  name : String
+  refers_to : String
+  scope : String
+  comment : String
+}
+pub fn DefinedName::new(String, String, scope? : String, comment? : String) -> Self
+pub impl Eq for DefinedName
+pub impl Show for DefinedName
+
+pub struct HeaderFooterOptions {
+  mut align_with_margins : Bool?
+  mut different_first : Bool
+  mut different_odd_even : Bool
+  mut scale_with_doc : Bool?
+  mut odd_header : String
+  mut odd_footer : String
+  mut even_header : String
+  mut even_footer : String
+  mut first_header : String
+  mut first_footer : String
+}
+pub fn HeaderFooterOptions::new() -> Self
+pub fn HeaderFooterOptions::with_values(align_with_margins? : Bool, different_first? : Bool, different_odd_even? : Bool, scale_with_doc? : Bool, odd_header? : String, odd_footer? : String, even_header? : String, even_footer? : String, first_header? : String, first_footer? : String) -> Self
+pub impl Eq for HeaderFooterOptions
+pub impl Show for HeaderFooterOptions
+
 pub struct Hyperlink {
   reference : String
   target : String
@@ -200,6 +234,45 @@ pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
 }
+
+pub struct PageBreak {
+  id : Int
+  min : Int
+  max : Int
+  manual : Bool
+}
+pub impl Eq for PageBreak
+pub impl Show for PageBreak
+
+pub struct PageLayoutMarginsOptions {
+  mut top : Double?
+  mut bottom : Double?
+  mut left : Double?
+  mut right : Double?
+  mut header : Double?
+  mut footer : Double?
+  mut horizontally : Bool?
+  mut vertically : Bool?
+}
+pub fn PageLayoutMarginsOptions::new() -> Self
+pub fn PageLayoutMarginsOptions::with_values(top? : Double, bottom? : Double, left? : Double, right? : Double, header? : Double, footer? : Double, horizontally? : Bool, vertically? : Bool) -> Self
+pub impl Eq for PageLayoutMarginsOptions
+pub impl Show for PageLayoutMarginsOptions
+
+pub struct PageLayoutOptions {
+  mut size : Int?
+  mut orientation : String?
+  mut first_page_number : Int?
+  mut adjust_to : Int?
+  mut fit_to_height : Int?
+  mut fit_to_width : Int?
+  mut black_and_white : Bool?
+  mut page_order : String?
+}
+pub fn PageLayoutOptions::new() -> Self
+pub fn PageLayoutOptions::with_values(size? : Int, orientation? : String, first_page_number? : Int, adjust_to? : Int, fit_to_height? : Int, fit_to_width? : Int, black_and_white? : Bool, page_order? : String) -> Self
+pub impl Eq for PageLayoutOptions
+pub impl Show for PageLayoutOptions
 
 pub struct PivotTable {
   table_id : Int
@@ -241,6 +314,64 @@ pub struct RowStream {
 }
 pub fn RowStream::new(Worksheet) -> Self
 pub fn RowStream::next(Self) -> Array[String]?
+
+pub struct SheetBackground {
+  data : Bytes
+  extension : String
+  content_type : String
+}
+pub impl Eq for SheetBackground
+pub impl Show for SheetBackground
+
+pub struct SheetProtection {
+  mut algorithm_name : String
+  mut password : String
+  mut hash_value : String
+  mut salt_value : String
+  mut spin_count : Int
+  sheet : Bool
+  objects : Bool
+  scenarios : Bool
+  format_cells : Bool
+  format_columns : Bool
+  format_rows : Bool
+  insert_columns : Bool
+  insert_rows : Bool
+  insert_hyperlinks : Bool
+  delete_columns : Bool
+  delete_rows : Bool
+  select_locked_cells : Bool
+  sort : Bool
+  auto_filter : Bool
+  pivot_tables : Bool
+  select_unlocked_cells : Bool
+}
+pub impl Eq for SheetProtection
+pub impl Show for SheetProtection
+
+pub struct SheetProtectionOptions {
+  mut algorithm_name : String
+  mut password : String
+  mut auto_filter : Bool
+  mut delete_columns : Bool
+  mut delete_rows : Bool
+  mut edit_objects : Bool
+  mut edit_scenarios : Bool
+  mut format_cells : Bool
+  mut format_columns : Bool
+  mut format_rows : Bool
+  mut insert_columns : Bool
+  mut insert_hyperlinks : Bool
+  mut insert_rows : Bool
+  mut pivot_tables : Bool
+  mut select_locked_cells : Bool
+  mut select_unlocked_cells : Bool
+  mut sort : Bool
+}
+pub fn SheetProtectionOptions::new() -> Self
+pub fn SheetProtectionOptions::with_values(algorithm_name? : String, password? : String, auto_filter? : Bool, delete_columns? : Bool, delete_rows? : Bool, edit_objects? : Bool, edit_scenarios? : Bool, format_cells? : Bool, format_columns? : Bool, format_rows? : Bool, insert_columns? : Bool, insert_hyperlinks? : Bool, insert_rows? : Bool, pivot_tables? : Bool, select_locked_cells? : Bool, select_unlocked_cells? : Bool, sort? : Bool) -> Self
+pub impl Eq for SheetProtectionOptions
+pub impl Show for SheetProtectionOptions
 
 pub enum SheetState {
   Visible
@@ -291,6 +422,7 @@ pub struct StreamWriter {
   mut closed : Bool
 }
 pub fn StreamWriter::flush(Self) -> Unit raise XlsxError
+pub fn StreamWriter::insert_page_break(Self, StringView) -> Unit raise XlsxError
 pub fn StreamWriter::set_row(Self, String, ArrayView[String]) -> Unit raise XlsxError
 pub fn StreamWriter::set_row_cells(Self, String, ArrayView[StreamCell]) -> Unit raise XlsxError
 
@@ -314,6 +446,7 @@ pub fn Table::new(String, String, ArrayView[String], display_name? : String, sty
 pub struct Workbook {
   sheets : Array[Worksheet]
   styles : Array[Style]
+  defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
   mut active_sheet_index : Int
@@ -335,11 +468,14 @@ pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise 
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties
 pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
+pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
+pub fn Workbook::defined_names(Self) -> ArrayView[DefinedName]
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn Workbook::delete_defined_name(Self, DefinedName) -> Unit raise XlsxError
 pub fn Workbook::delete_picture(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
@@ -359,6 +495,10 @@ pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
+pub fn Workbook::get_defined_names(Self) -> Array[DefinedName]
+pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
+pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
+pub fn Workbook::get_page_margins(Self, StringView) -> PageLayoutMarginsOptions raise XlsxError
 pub fn Workbook::get_picture_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_pictures(Self, StringView, StringView) -> Array[Image] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
@@ -366,13 +506,16 @@ pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxErro
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
 pub fn Workbook::insert_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::insert_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::insert_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
+pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::remove_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
@@ -396,11 +539,16 @@ pub fn Workbook::set_col_style(Self, StringView, Int, Int) -> Unit raise XlsxErr
 pub fn Workbook::set_col_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_col_width(Self, StringView, Int, Double) -> Unit raise XlsxError
 pub fn Workbook::set_core_properties(Self, CoreProperties) -> Unit
+pub fn Workbook::set_defined_name(Self, DefinedName) -> Unit raise XlsxError
+pub fn Workbook::set_header_footer(Self, StringView, HeaderFooterOptions?) -> Unit raise XlsxError
+pub fn Workbook::set_page_layout(Self, StringView, PageLayoutOptions?) -> Unit raise XlsxError
+pub fn Workbook::set_page_margins(Self, StringView, PageLayoutMarginsOptions?) -> Unit raise XlsxError
 pub fn Workbook::set_row(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::set_row_height(Self, StringView, Int, Double) -> Unit raise XlsxError
 pub fn Workbook::set_row_outline_level(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_row_style(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_row_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
+pub fn Workbook::set_sheet_background(Self, StringView, Bytes, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_name(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_visible(Self, StringView, Bool, very_hidden? : Bool) -> Unit raise XlsxError
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
@@ -410,6 +558,7 @@ pub fn Workbook::sheet_visible(Self, StringView) -> Bool raise XlsxError
 pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
 pub fn Workbook::styles(Self) -> ArrayView[Style]
 pub fn Workbook::unmerge_cells(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::unprotect_sheet(Self, StringView, password? : String) -> Unit raise XlsxError
 
 pub struct Worksheet {
   mut name : String
@@ -425,6 +574,13 @@ pub struct Worksheet {
   conditional_formats : Array[String]
   comments : Array[Comment]
   mut auto_filter : AutoFilter?
+  mut page_margins : PageLayoutMarginsOptions?
+  mut page_layout : PageLayoutOptions?
+  mut header_footer : HeaderFooterOptions?
+  mut sheet_protection : SheetProtection?
+  mut sheet_background : SheetBackground?
+  row_breaks : Array[PageBreak]
+  col_breaks : Array[PageBreak]
   row_dimensions : Map[Int, RowDimension]
   col_dimensions : Map[Int, ColDimension]
   mut state : SheetState
@@ -448,6 +604,8 @@ pub fn Worksheet::auto_filter(Self) -> AutoFilter?
 pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::clear_auto_filter(Self) -> Unit raise XlsxError
+pub fn Worksheet::clear_sheet_background(Self) -> Unit raise XlsxError
+pub fn Worksheet::col_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::comments(Self) -> ArrayView[Comment]
@@ -473,9 +631,11 @@ pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_row_style(Self, Int) -> Int? raise XlsxError
+pub fn Worksheet::header_footer(Self) -> HeaderFooterOptions?
 pub fn Worksheet::hyperlinks(Self) -> ArrayView[Hyperlink]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::insert_cols(Self, Int, Int) -> Unit raise XlsxError
+pub fn Worksheet::insert_page_break(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::insert_rows(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::max_col(Self) -> Int
 pub fn Worksheet::max_row(Self) -> Int
@@ -483,10 +643,15 @@ pub fn Worksheet::merge_cells(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::merged_cells(Self) -> ArrayView[String]
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
+pub fn Worksheet::page_layout(Self) -> PageLayoutOptions
+pub fn Worksheet::page_margins(Self) -> PageLayoutMarginsOptions
 pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
+pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::remove_cols(Self, Int, Int) -> Unit raise XlsxError
+pub fn Worksheet::remove_page_break(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::remove_rows(Self, Int, Int) -> Unit raise XlsxError
+pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::row_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
@@ -506,16 +671,23 @@ pub fn Worksheet::set_col_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_col_width(Self, Int, Double) -> Unit raise XlsxError
+pub fn Worksheet::set_header_footer(Self, HeaderFooterOptions?) -> Unit raise XlsxError
+pub fn Worksheet::set_page_layout(Self, PageLayoutOptions?) -> Unit raise XlsxError
+pub fn Worksheet::set_page_margins(Self, PageLayoutMarginsOptions?) -> Unit raise XlsxError
 pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row_height(Self, Int, Double) -> Unit raise XlsxError
 pub fn Worksheet::set_row_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_visible(Self, Int, Bool) -> Unit raise XlsxError
+pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxError
 pub fn Worksheet::set_state(Self, SheetState) -> Unit
+pub fn Worksheet::sheet_background(Self) -> SheetBackground?
+pub fn Worksheet::sheet_protection(Self) -> SheetProtection?
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::state(Self) -> SheetState
 pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
+pub fn Worksheet::unprotect_sheet(Self, password? : String) -> Unit raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
 

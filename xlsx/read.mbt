@@ -71,6 +71,74 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
 }
 
 ///|
+fn parse_defined_names(
+  xml : StringView,
+  sheet_names : Array[String],
+) -> Array[DefinedName] raise XlsxError {
+  let names : Array[DefinedName] = []
+  let body = match extract_tag_body(xml, "definedNames") {
+    Some(value) => value
+    None => return names
+  }
+  let mut first = true
+  for chunk in body.split("<definedName ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="definedName tag not closed")
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="definedName tag invalid")
+      }
+    let name = match attr_value(tag, "name") {
+      Some(value) => unescape_xml_text(value)
+      None => raise XlsxError::InvalidXml(msg="definedName name missing")
+    }
+    let comment = match attr_value(tag, "comment") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let local_id = match attr_value(tag, "localSheetId") {
+      Some(value) =>
+        Some(
+          @strconv.parse_int(value, base=10) catch {
+            _ =>
+              raise XlsxError::InvalidXml(
+                msg="definedName localSheetId invalid",
+              )
+          },
+        )
+      None => None
+    }
+    let rest = text[end + 1:] catch {
+        _ => raise XlsxError::InvalidXml(msg="definedName body invalid")
+      }
+    let data_end = match rest.find("</definedName>") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="definedName close missing")
+    }
+    let data = rest[:data_end] catch {
+        _ => raise XlsxError::InvalidXml(msg="definedName data invalid")
+      }
+    let scope = match local_id {
+      Some(id) =>
+        if id >= 0 && id < sheet_names.length() {
+          sheet_names[id]
+        } else {
+          raise XlsxError::InvalidXml(msg="definedName localSheetId missing")
+        }
+      None => "Workbook"
+    }
+    names.push({ name, refers_to: unescape_xml_text(data), scope, comment })
+  }
+  names
+}
+
+///|
 priv struct SharedStringEntry {
   text : String
   runs : Array[RichTextRun]?
@@ -508,6 +576,387 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
     merged.push(normalized)
   }
   merged
+}
+
+///|
+fn parse_page_margins(
+  xml : StringView,
+) -> PageLayoutMarginsOptions? raise XlsxError {
+  let mut options : PageLayoutMarginsOptions? = None
+  match tag_attributes_in(xml, "pageMargins") {
+    Some(tag) => {
+      let opts = PageLayoutMarginsOptions::new()
+      match attr_value(tag, "left") {
+        Some(value) =>
+          opts.left = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="pageMargins left invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "right") {
+        Some(value) =>
+          opts.right = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="pageMargins right invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "top") {
+        Some(value) =>
+          opts.top = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="pageMargins top invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "bottom") {
+        Some(value) =>
+          opts.bottom = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="pageMargins bottom invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "header") {
+        Some(value) =>
+          opts.header = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="pageMargins header invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "footer") {
+        Some(value) =>
+          opts.footer = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="pageMargins footer invalid")
+            },
+          )
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  match tag_attributes_in(xml, "printOptions") {
+    Some(tag) => {
+      let opts = match options {
+        Some(value) => value
+        None => PageLayoutMarginsOptions::new()
+      }
+      match attr_value(tag, "horizontalCentered") {
+        Some(value) => opts.horizontally = Some(parse_bool_attr(value))
+        None => ()
+      }
+      match attr_value(tag, "verticalCentered") {
+        Some(value) => opts.vertically = Some(parse_bool_attr(value))
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  options
+}
+
+///|
+fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "pageSetup") {
+    Some(value) => value
+    None => return None
+  }
+  let opts = PageLayoutOptions::new()
+  match attr_value(tag, "paperSize") {
+    Some(value) =>
+      opts.size = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="pageSetup paperSize invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "orientation") {
+    Some(value) => opts.orientation = Some(value.to_string())
+    None => ()
+  }
+  match attr_value(tag, "firstPageNumber") {
+    Some(value) =>
+      opts.first_page_number = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ =>
+            raise XlsxError::InvalidXml(msg="pageSetup firstPageNumber invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "scale") {
+    Some(value) =>
+      opts.adjust_to = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="pageSetup scale invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "fitToHeight") {
+    Some(value) =>
+      opts.fit_to_height = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="pageSetup fitToHeight invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "fitToWidth") {
+    Some(value) =>
+      opts.fit_to_width = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="pageSetup fitToWidth invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "blackAndWhite") {
+    Some(value) => opts.black_and_white = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match attr_value(tag, "pageOrder") {
+    Some(value) => opts.page_order = Some(value.to_string())
+    None => ()
+  }
+  Some(opts)
+}
+
+///|
+fn parse_header_footer(
+  xml : StringView,
+) -> HeaderFooterOptions? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "headerFooter") {
+    Some(value) => value
+    None => return None
+  }
+  let options = HeaderFooterOptions::new()
+  match attr_value(tag, "differentOddEven") {
+    Some(value) => options.different_odd_even = parse_bool_attr(value)
+    None => ()
+  }
+  match attr_value(tag, "differentFirst") {
+    Some(value) => options.different_first = parse_bool_attr(value)
+    None => ()
+  }
+  match attr_value(tag, "scaleWithDoc") {
+    Some(value) => options.scale_with_doc = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match attr_value(tag, "alignWithMargins") {
+    Some(value) => options.align_with_margins = Some(parse_bool_attr(value))
+    None => ()
+  }
+  let body = match extract_tag_body(xml, "headerFooter") {
+    Some(value) => value
+    None => ""
+  }
+  match extract_tag_body_from(body, "oddHeader") {
+    Some(value) => options.odd_header = unescape_xml_text(value)
+    None => ()
+  }
+  match extract_tag_body_from(body, "oddFooter") {
+    Some(value) => options.odd_footer = unescape_xml_text(value)
+    None => ()
+  }
+  match extract_tag_body_from(body, "evenHeader") {
+    Some(value) => options.even_header = unescape_xml_text(value)
+    None => ()
+  }
+  match extract_tag_body_from(body, "evenFooter") {
+    Some(value) => options.even_footer = unescape_xml_text(value)
+    None => ()
+  }
+  match extract_tag_body_from(body, "firstHeader") {
+    Some(value) => options.first_header = unescape_xml_text(value)
+    None => ()
+  }
+  match extract_tag_body_from(body, "firstFooter") {
+    Some(value) => options.first_footer = unescape_xml_text(value)
+    None => ()
+  }
+  Some(options)
+}
+
+///|
+fn parse_sheet_protection(xml : StringView) -> SheetProtection? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "sheetProtection") {
+    Some(value) => value
+    None => return None
+  }
+  let mut spin_count = 0
+  match attr_value(tag, "spinCount") {
+    Some(value) =>
+      spin_count = @strconv.parse_int(value, base=10) catch {
+        _ =>
+          raise XlsxError::InvalidXml(msg="sheetProtection spinCount invalid")
+      }
+    None => ()
+  }
+  Some({
+    algorithm_name: match attr_value(tag, "algorithmName") {
+      Some(value) => value.to_string()
+      None => ""
+    },
+    password: match attr_value(tag, "password") {
+      Some(value) => value.to_string()
+      None => ""
+    },
+    hash_value: match attr_value(tag, "hashValue") {
+      Some(value) => value.to_string()
+      None => ""
+    },
+    salt_value: match attr_value(tag, "saltValue") {
+      Some(value) => value.to_string()
+      None => ""
+    },
+    spin_count,
+    sheet: match attr_value(tag, "sheet") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    objects: match attr_value(tag, "objects") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    scenarios: match attr_value(tag, "scenarios") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    format_cells: match attr_value(tag, "formatCells") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    format_columns: match attr_value(tag, "formatColumns") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    format_rows: match attr_value(tag, "formatRows") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    insert_columns: match attr_value(tag, "insertColumns") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    insert_rows: match attr_value(tag, "insertRows") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    insert_hyperlinks: match attr_value(tag, "insertHyperlinks") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    delete_columns: match attr_value(tag, "deleteColumns") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    delete_rows: match attr_value(tag, "deleteRows") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    select_locked_cells: match attr_value(tag, "selectLockedCells") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    sort: match attr_value(tag, "sort") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    auto_filter: match attr_value(tag, "autoFilter") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    pivot_tables: match attr_value(tag, "pivotTables") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+    select_unlocked_cells: match attr_value(tag, "selectUnlockedCells") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    },
+  })
+}
+
+///|
+fn parse_page_breaks(
+  xml : StringView,
+  tag_name : StringView,
+) -> Array[PageBreak] raise XlsxError {
+  let breaks : Array[PageBreak] = []
+  let body = match extract_tag_body(xml, tag_name) {
+    Some(value) => value
+    None => return breaks
+  }
+  let mut first = true
+  for chunk in body.split("<brk ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="brk tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="brk tag invalid")
+      }
+    let id = match attr_value(tag, "id") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="brk id invalid")
+        }
+      None => raise XlsxError::InvalidXml(msg="brk id missing")
+    }
+    let min = match attr_value(tag, "min") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="brk min invalid")
+        }
+      None => 0
+    }
+    let max = match attr_value(tag, "max") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="brk max invalid")
+        }
+      None => 0
+    }
+    let manual = match attr_value(tag, "man") {
+      Some(value) => parse_bool_attr(value)
+      None => false
+    }
+    breaks.push({ id, min, max, manual })
+  }
+  breaks
+}
+
+///|
+fn parse_picture_rel_id(xml : StringView) -> String? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "picture") {
+    Some(value) => value
+    None => return None
+  }
+  match attr_value(tag, "r:id") {
+    Some(value) => Some(value.to_string())
+    None => raise XlsxError::InvalidXml(msg="picture relationship missing")
+  }
 }
 
 ///|
@@ -1210,6 +1659,13 @@ fn parse_worksheet(
   AutoFilter?,
   Map[Int, RowDimension],
   Map[Int, ColDimension],
+  PageLayoutMarginsOptions?,
+  PageLayoutOptions?,
+  HeaderFooterOptions?,
+  SheetProtection?,
+  Array[PageBreak],
+  Array[PageBreak],
+  String?,
 ) raise XlsxError {
   let cells : Array[Cell] = []
   let mut first = true
@@ -1370,7 +1826,17 @@ fn parse_worksheet(
   let auto_filter = parse_auto_filter(xml)
   let row_dimensions = parse_row_dimensions(xml, style_count)
   let col_dimensions = parse_col_dimensions(xml, style_count)
-  (cells, merged_cells, auto_filter, row_dimensions, col_dimensions)
+  let page_margins = parse_page_margins(xml)
+  let page_layout = parse_page_layout(xml)
+  let header_footer = parse_header_footer(xml)
+  let sheet_protection = parse_sheet_protection(xml)
+  let row_breaks = parse_page_breaks(xml, "rowBreaks")
+  let col_breaks = parse_page_breaks(xml, "colBreaks")
+  let picture_rel_id = parse_picture_rel_id(xml)
+  (
+    cells, merged_cells, auto_filter, row_dimensions, col_dimensions, page_margins,
+    page_layout, header_footer, sheet_protection, row_breaks, col_breaks, picture_rel_id,
+  )
 }
 
 ///|
@@ -1384,6 +1850,12 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
   }
   let workbook_xml = decode_utf8(workbook_bytes)
   let sheets = parse_workbook_sheets(workbook_xml)
+  let sheet_names : Array[String] = []
+  for entry in sheets {
+    let (name, _state) = entry
+    sheet_names.push(name)
+  }
+  let defined_names = parse_defined_names(workbook_xml, sheet_names)
   let active_index = match parse_active_sheet_index(workbook_xml) {
     Some(value) => value
     None => 0
@@ -1413,6 +1885,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
   let workbook : Workbook = {
     sheets: [],
     styles,
+    defined_names,
     core_properties,
     app_properties,
     active_sheet_index: safe_active_index,
@@ -1425,9 +1898,20 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       None => raise XlsxError::MissingPart(path=sheet_path)
     }
     let sheet_xml = decode_utf8(sheet_bytes)
-    let (cells, merged_cells, auto_filter, row_dimensions, col_dimensions) = parse_worksheet(
-      sheet_xml, shared_strings, style_count,
-    )
+    let (
+      cells,
+      merged_cells,
+      auto_filter,
+      row_dimensions,
+      col_dimensions,
+      page_margins,
+      page_layout,
+      header_footer,
+      sheet_protection,
+      row_breaks,
+      col_breaks,
+      picture_rel_id,
+    ) = parse_worksheet(sheet_xml, shared_strings, style_count)
     let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
     let table_part_ids = parse_table_part_ids(sheet_xml)
     let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
@@ -1449,7 +1933,8 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       pivot_part_ids.length() > 0 ||
       needs_hyperlink_rels ||
       legacy_drawing_rel_id is Some(_) ||
-      legacy_drawing_hf_rel_id is Some(_)
+      legacy_drawing_hf_rel_id is Some(_) ||
+      picture_rel_id is Some(_)
     let rels_xml = if needs_rels {
       let rels_path = "xl/worksheets/_rels/sheet\{i + 1}.xml.rels"
       let rels_bytes = match archive.get(rels_path) {
@@ -1459,6 +1944,53 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       decode_utf8(rels_bytes)
     } else {
       ""
+    }
+    let sheet_background = match picture_rel_id {
+      Some(rel_id) => {
+        if rels_xml == "" {
+          raise XlsxError::InvalidXml(msg="picture relationship missing")
+        }
+        let image_targets = parse_relationship_targets(rels_xml, rel_image)
+        let target = match image_targets.get(rel_id) {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="picture target missing")
+        }
+        let image_path = resolve_rel_target(target, "worksheets")
+        let image_bytes = match archive.get(image_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=image_path)
+        }
+        let path_text = target.to_string()
+        let extension = match path_text.rev_find(".") {
+          Some(pos) =>
+            if pos + 1 < path_text.length() {
+              let view = path_text[pos + 1:] catch {
+                  _ =>
+                    raise XlsxError::InvalidSheetBackground(
+                      msg="image extension missing",
+                    )
+                }
+              view.to_string().to_lower()
+            } else {
+              raise XlsxError::InvalidSheetBackground(
+                msg="image extension missing",
+              )
+            }
+          None =>
+            raise XlsxError::InvalidSheetBackground(
+              msg="image extension missing",
+            )
+        }
+        let content_type = match image_content_type(extension) {
+          Some(value) => value
+          None =>
+            raise XlsxError::InvalidSheetBackground(
+              msg="unsupported image extension",
+            )
+        }
+        Some({ data: image_bytes, extension, content_type })
+      }
+      None => None
     }
     let hyperlinks = if hyperlink_elements.length() == 0 {
       []
@@ -1662,6 +2194,13 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       cells,
       merged_cells,
       auto_filter,
+      page_margins,
+      page_layout,
+      header_footer,
+      sheet_protection,
+      sheet_background,
+      row_breaks,
+      col_breaks,
       hyperlinks,
       tables,
       sparkline_groups,

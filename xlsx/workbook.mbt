@@ -2,6 +2,7 @@
 pub struct Workbook {
   sheets : Array[Worksheet]
   styles : Array[Style]
+  defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
   mut active_sheet_index : Int
@@ -46,10 +47,21 @@ fn sheet_name_equal(a : StringView, b : StringView) -> Bool {
 }
 
 ///|
+fn defined_name_scope_key(scope : StringView) -> String {
+  let normalized = normalize_defined_name_scope(scope)
+  if normalized == "Workbook" {
+    "workbook"
+  } else {
+    normalize_sheet_name(normalized)
+  }
+}
+
+///|
 pub fn Workbook::new() -> Workbook {
   {
     sheets: [],
     styles: [Style::new()],
+    defined_names: [],
     core_properties: CoreProperties::new(),
     app_properties: AppProperties::new(),
     active_sheet_index: 0,
@@ -139,6 +151,11 @@ pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
 }
 
 ///|
+pub fn Workbook::defined_names(self : Workbook) -> ArrayView[DefinedName] {
+  self.defined_names[:]
+}
+
+///|
 pub fn Workbook::core_properties(self : Workbook) -> CoreProperties {
   self.core_properties
 }
@@ -200,7 +217,26 @@ pub fn Workbook::set_sheet_name(
     }
   }
   let index = self.sheet_index(source)
+  let old_name = self.sheets[index].name
   self.sheets[index].name = target
+  if self.defined_names.length() > 0 {
+    let updated : Array[DefinedName] = []
+    for dn in self.defined_names {
+      let scope = if sheet_name_equal(dn.scope, old_name) {
+        target
+      } else {
+        dn.scope
+      }
+      let refers_to = replace_sheet_name_in_refers_to(
+        dn.refers_to,
+        old_name,
+        target,
+      )
+      updated.push({ name: dn.name, refers_to, scope, comment: dn.comment })
+    }
+    self.defined_names.clear()
+    self.defined_names.append(updated[:])
+  }
 }
 
 ///|
@@ -210,12 +246,25 @@ pub fn Workbook::delete_sheet(
 ) -> Unit raise XlsxError {
   check_sheet_name(name)
   let index = self.sheet_index(name)
+  let deleted_name = self.sheets[index].name
   if self.sheets.length() <= 1 {
     raise XlsxError::InvalidSheetOperation(
       msg="workbook must contain at least one sheet",
     )
   }
   ignore(self.sheets.remove(index))
+  if self.defined_names.length() > 0 {
+    let deleted_key = defined_name_scope_key(deleted_name)
+    let updated : Array[DefinedName] = []
+    for dn in self.defined_names {
+      if defined_name_scope_key(dn.scope) == deleted_key {
+        continue
+      }
+      updated.push(dn)
+    }
+    self.defined_names.clear()
+    self.defined_names.append(updated[:])
+  }
   if self.active_sheet_index == index {
     let fallback = if index >= self.sheets.length() {
       self.sheets.length() - 1
@@ -319,6 +368,253 @@ pub fn Workbook::sheet_visible(
   check_sheet_name(name)
   let index = self.sheet_index(name)
   self.sheets[index].state() == SheetState::Visible
+}
+
+///|
+pub fn Workbook::set_page_margins(
+  self : Workbook,
+  sheet_name : StringView,
+  options : PageLayoutMarginsOptions?,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_page_margins(options)
+}
+
+///|
+pub fn Workbook::get_page_margins(
+  self : Workbook,
+  sheet_name : StringView,
+) -> PageLayoutMarginsOptions raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.page_margins()
+}
+
+///|
+pub fn Workbook::set_page_layout(
+  self : Workbook,
+  sheet_name : StringView,
+  options : PageLayoutOptions?,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_page_layout(options)
+}
+
+///|
+pub fn Workbook::get_page_layout(
+  self : Workbook,
+  sheet_name : StringView,
+) -> PageLayoutOptions raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.page_layout()
+}
+
+///|
+pub fn Workbook::set_header_footer(
+  self : Workbook,
+  sheet_name : StringView,
+  options : HeaderFooterOptions?,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_header_footer(options)
+}
+
+///|
+pub fn Workbook::get_header_footer(
+  self : Workbook,
+  sheet_name : StringView,
+) -> HeaderFooterOptions? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.header_footer()
+}
+
+///|
+pub fn Workbook::protect_sheet(
+  self : Workbook,
+  sheet_name : StringView,
+  options : SheetProtectionOptions,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.protect_sheet(options)
+}
+
+///|
+pub fn Workbook::unprotect_sheet(
+  self : Workbook,
+  sheet_name : StringView,
+  password? : String = "",
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.unprotect_sheet(password~)
+}
+
+///|
+pub fn Workbook::set_sheet_background(
+  self : Workbook,
+  sheet_name : StringView,
+  data : Bytes,
+  extension : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_sheet_background(data, extension)
+}
+
+///|
+pub fn Workbook::clear_sheet_background(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.clear_sheet_background()
+}
+
+///|
+pub fn Workbook::insert_page_break(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.insert_page_break(cell)
+}
+
+///|
+pub fn Workbook::remove_page_break(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.remove_page_break(cell)
+}
+
+///|
+pub fn Workbook::set_defined_name(
+  self : Workbook,
+  defined_name : DefinedName,
+) -> Unit raise XlsxError {
+  if defined_name.name == "" || defined_name.refers_to == "" {
+    raise XlsxError::InvalidDefinedName(msg="defined name missing")
+  }
+  if !is_builtin_defined_name(defined_name.name) {
+    check_defined_name(defined_name.name)
+  }
+  let scope = normalize_defined_name_scope(defined_name.scope)
+  let normalized_scope = if scope != "Workbook" {
+    match self.sheet(scope) {
+      Some(_) => scope
+      None => "Workbook"
+    }
+  } else {
+    scope
+  }
+  let scope_key = defined_name_scope_key(normalized_scope)
+  for existing in self.defined_names {
+    if existing.name == defined_name.name &&
+      defined_name_scope_key(existing.scope) == scope_key {
+      raise XlsxError::DefinedNameDuplicate(name=defined_name.name)
+    }
+  }
+  self.defined_names.push({
+    name: defined_name.name,
+    refers_to: defined_name.refers_to,
+    scope: normalized_scope,
+    comment: defined_name.comment,
+  })
+}
+
+///|
+pub fn Workbook::delete_defined_name(
+  self : Workbook,
+  defined_name : DefinedName,
+) -> Unit raise XlsxError {
+  let scope_key = defined_name_scope_key(defined_name.scope)
+  let updated : Array[DefinedName] = []
+  let mut removed = false
+  for dn in self.defined_names {
+    if dn.name == defined_name.name &&
+      defined_name_scope_key(dn.scope) == scope_key {
+      removed = true
+      continue
+    }
+    updated.push(dn)
+  }
+  if !removed {
+    raise XlsxError::DefinedNameScope(name=defined_name.name)
+  }
+  self.defined_names.clear()
+  self.defined_names.append(updated[:])
+}
+
+///|
+pub fn Workbook::get_defined_names(self : Workbook) -> Array[DefinedName] {
+  let names : Array[DefinedName] = []
+  for dn in self.defined_names {
+    names.push(dn)
+  }
+  names
+}
+
+///|
+fn Workbook::adjust_defined_names_for_sheet(
+  self : Workbook,
+  sheet_name : String,
+  adjust_fn : (StringView) -> String? raise XlsxError,
+) -> Unit raise XlsxError {
+  if self.defined_names.length() == 0 {
+    return
+  }
+  let updated : Array[DefinedName] = []
+  for dn in self.defined_names {
+    let refers_to = adjust_defined_name_refers_to_for_sheet(
+      dn.refers_to,
+      sheet_name,
+      adjust_fn,
+    )
+    updated.push({
+      name: dn.name,
+      refers_to,
+      scope: dn.scope,
+      comment: dn.comment,
+    })
+  }
+  self.defined_names.clear()
+  self.defined_names.append(updated[:])
 }
 
 ///|
@@ -480,6 +776,25 @@ fn clone_worksheet(
     auto_filter: match sheet.auto_filter {
       Some(filter) => Some(clone_auto_filter(filter))
       None => None
+    },
+    page_margins: sheet.page_margins,
+    page_layout: sheet.page_layout,
+    header_footer: sheet.header_footer,
+    sheet_protection: sheet.sheet_protection,
+    sheet_background: sheet.sheet_background,
+    row_breaks: {
+      let breaks : Array[PageBreak] = []
+      for brk in sheet.row_breaks {
+        breaks.push(brk)
+      }
+      breaks
+    },
+    col_breaks: {
+      let breaks : Array[PageBreak] = []
+      for brk in sheet.col_breaks {
+        breaks.push(brk)
+      }
+      breaks
     },
     row_dimensions: clone_row_dimensions(sheet.row_dimensions),
     col_dimensions: clone_col_dimensions(sheet.col_dimensions),
@@ -1482,6 +1797,11 @@ pub fn Workbook::insert_rows(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.insert_rows(row, count)
+  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+    ref_text : StringView,
+  ) -> String? raise XlsxError {
+    adjust_ref_after_row_insert(ref_text, row, count)
+  })
 }
 
 ///|
@@ -1496,6 +1816,11 @@ pub fn Workbook::remove_rows(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.remove_rows(row, count)
+  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+    ref_text : StringView,
+  ) -> String? raise XlsxError {
+    adjust_ref_after_row_remove(ref_text, row, count)
+  })
 }
 
 ///|
@@ -1510,6 +1835,11 @@ pub fn Workbook::insert_cols(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.insert_cols(col, count)
+  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+    ref_text : StringView,
+  ) -> String? raise XlsxError {
+    adjust_ref_after_col_insert(ref_text, col, count)
+  })
 }
 
 ///|
@@ -1524,4 +1854,9 @@ pub fn Workbook::remove_cols(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.remove_cols(col, count)
+  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+    ref_text : StringView,
+  ) -> String? raise XlsxError {
+    adjust_ref_after_col_remove(ref_text, col, count)
+  })
 }

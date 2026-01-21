@@ -62,6 +62,13 @@ pub struct Worksheet {
   conditional_formats : Array[String]
   comments : Array[Comment]
   mut auto_filter : AutoFilter?
+  mut page_margins : PageLayoutMarginsOptions?
+  mut page_layout : PageLayoutOptions?
+  mut header_footer : HeaderFooterOptions?
+  mut sheet_protection : SheetProtection?
+  mut sheet_background : SheetBackground?
+  row_breaks : Array[PageBreak]
+  col_breaks : Array[PageBreak]
   row_dimensions : Map[Int, RowDimension]
   col_dimensions : Map[Int, ColDimension]
   mut state : SheetState
@@ -86,6 +93,13 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     conditional_formats: [],
     comments: [],
     auto_filter: None,
+    page_margins: None,
+    page_layout: None,
+    header_footer: None,
+    sheet_protection: None,
+    sheet_background: None,
+    row_breaks: [],
+    col_breaks: [],
     row_dimensions: {},
     col_dimensions: {},
     state: SheetState::Visible,
@@ -173,6 +187,41 @@ pub fn Worksheet::auto_filter(self : Worksheet) -> AutoFilter? {
     Some(filter) => Some(clone_auto_filter(filter))
     None => None
   }
+}
+
+///|
+pub fn Worksheet::page_margins(self : Worksheet) -> PageLayoutMarginsOptions {
+  page_margins_with_defaults(self.page_margins)
+}
+
+///|
+pub fn Worksheet::page_layout(self : Worksheet) -> PageLayoutOptions {
+  page_layout_with_defaults(self.page_layout)
+}
+
+///|
+pub fn Worksheet::header_footer(self : Worksheet) -> HeaderFooterOptions? {
+  self.header_footer
+}
+
+///|
+pub fn Worksheet::sheet_protection(self : Worksheet) -> SheetProtection? {
+  self.sheet_protection
+}
+
+///|
+pub fn Worksheet::sheet_background(self : Worksheet) -> SheetBackground? {
+  self.sheet_background
+}
+
+///|
+pub fn Worksheet::row_breaks(self : Worksheet) -> ArrayView[PageBreak] {
+  self.row_breaks[:]
+}
+
+///|
+pub fn Worksheet::col_breaks(self : Worksheet) -> ArrayView[PageBreak] {
+  self.col_breaks[:]
 }
 
 ///|
@@ -1750,6 +1799,14 @@ pub fn Worksheet::insert_rows(
   for row_index, dim in updated_rows {
     self.row_dimensions[row_index] = dim
   }
+  let break_start = row - 1
+  let updated_breaks = adjust_page_breaks_after_insert(
+    self.row_breaks,
+    break_start,
+    count,
+  )
+  self.row_breaks.clear()
+  self.row_breaks.append(updated_breaks[:])
 }
 
 ///|
@@ -1877,6 +1934,14 @@ pub fn Worksheet::remove_rows(
   for row_index, dim in updated_rows {
     self.row_dimensions[row_index] = dim
   }
+  let break_start = row - 1
+  let updated_breaks = adjust_page_breaks_after_remove(
+    self.row_breaks,
+    break_start,
+    count,
+  )
+  self.row_breaks.clear()
+  self.row_breaks.append(updated_breaks[:])
 }
 
 ///|
@@ -1981,6 +2046,14 @@ pub fn Worksheet::insert_cols(
   for col_index, dim in updated_cols {
     self.col_dimensions[col_index] = dim
   }
+  let break_start = col - 1
+  let updated_breaks = adjust_page_breaks_after_insert(
+    self.col_breaks,
+    break_start,
+    count,
+  )
+  self.col_breaks.clear()
+  self.col_breaks.append(updated_breaks[:])
 }
 
 ///|
@@ -2108,6 +2181,14 @@ pub fn Worksheet::remove_cols(
   for col_index, dim in updated_cols {
     self.col_dimensions[col_index] = dim
   }
+  let break_start = col - 1
+  let updated_breaks = adjust_page_breaks_after_remove(
+    self.col_breaks,
+    break_start,
+    count,
+  )
+  self.col_breaks.clear()
+  self.col_breaks.append(updated_breaks[:])
 }
 
 ///|
@@ -2151,6 +2232,45 @@ fn adjust_bounds_for_remove(
   } else {
     Some((new_min, new_max))
   }
+}
+
+///|
+fn adjust_page_breaks_after_insert(
+  breaks : Array[PageBreak],
+  start : Int,
+  count : Int,
+) -> Array[PageBreak] {
+  let updated : Array[PageBreak] = []
+  for brk in breaks {
+    let new_id = if brk.id >= start { brk.id + count } else { brk.id }
+    updated.push({ id: new_id, min: brk.min, max: brk.max, manual: brk.manual })
+  }
+  updated
+}
+
+///|
+fn adjust_page_breaks_after_remove(
+  breaks : Array[PageBreak],
+  start : Int,
+  count : Int,
+) -> Array[PageBreak] {
+  let updated : Array[PageBreak] = []
+  let end = start + count - 1
+  for brk in breaks {
+    if brk.id < start {
+      updated.push(brk)
+      continue
+    }
+    if brk.id > end {
+      updated.push({
+        id: brk.id - count,
+        min: brk.min,
+        max: brk.max,
+        manual: brk.manual,
+      })
+    }
+  }
+  updated
 }
 
 ///|

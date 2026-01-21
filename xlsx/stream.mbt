@@ -143,6 +143,15 @@ pub fn StreamWriter::flush(self : StreamWriter) -> Unit raise XlsxError {
 }
 
 ///|
+pub fn StreamWriter::insert_page_break(
+  self : StreamWriter,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_open()
+  self.sheet.insert_page_break(cell)
+}
+
+///|
 pub struct RowStream {
   cells : Array[Cell]
   mut index : Int
