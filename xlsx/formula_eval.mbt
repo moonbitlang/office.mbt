@@ -1301,6 +1301,7 @@ fn eval_function(
     "TRUE" => FormulaValue::Bool(true)
     "FALSE" => FormulaValue::Bool(false)
     "SUM" => sum_values(values)
+    "PRODUCT" => product_values(values)
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
     "MEDIAN" => median_values(values)
@@ -1356,6 +1357,38 @@ fn eval_function(
           None
         }
         sumif_values(range_values, values[1], sum_range)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SUMPRODUCT" =>
+      if args.length() >= 1 {
+        let ranges : Array[RangeValues] = []
+        let scalars : Array[FormulaValue] = []
+        let mut has_range = false
+        let mut has_scalar = false
+        for i in 0..<args.length() {
+          match args[i] {
+            Expr::Range(_, _, _) | Expr::Cell(_, _) => {
+              has_range = true
+              ranges.push(eval_range_expr(workbook, sheet_name, args[i], ctx))
+            }
+            _ =>
+              match values[i] {
+                FormulaValue::Error(err) => return FormulaValue::Error(err)
+                _ => {
+                  has_scalar = true
+                  scalars.push(values[i])
+                }
+              }
+          }
+        }
+        if has_range && has_scalar {
+          FormulaValue::Error(formula_error_value)
+        } else if has_range {
+          sumproduct_values(ranges)
+        } else {
+          sumproduct_scalars(scalars)
+        }
       } else {
         FormulaValue::Error(formula_error_value)
       }
@@ -1979,6 +2012,43 @@ fn sum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn product_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut product = 1.0
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            FormulaValue::Number(num) => product = product * num
+            FormulaValue::Bool(_) => ()
+            FormulaValue::String(_) => ()
+            FormulaValue::Empty => ()
+            FormulaValue::List(_) => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          FormulaValue::Number(num) => product = product * num
+          FormulaValue::Bool(flag) => {
+            let num = if flag { 1.0 } else { 0.0 }
+            product = product * num
+          }
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(num) => product = product * num
+              None => return FormulaValue::Error(formula_error_value)
+            }
+          FormulaValue::Empty => ()
+          FormulaValue::List(_) => ()
+        }
+    }
+  }
+  FormulaValue::Number(product)
+}
+
+///|
 fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut sum = 0.0
   let mut count = 0
@@ -2321,6 +2391,75 @@ fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn sumproduct_scalars(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut product = 1.0
+  for value in values {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) => product = product * num
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        product = product * num
+      }
+      FormulaValue::String(text) =>
+        match parse_double_opt(text) {
+          Some(num) => product = product * num
+          None => return FormulaValue::Error(formula_error_value)
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+    }
+  }
+  FormulaValue::Number(product)
+}
+
+///|
+fn sumproduct_number(value : FormulaValue) -> Result[Double, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::Number(num) => Ok(num)
+    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    FormulaValue::String(text) =>
+      if text == "" {
+        Ok(0.0)
+      } else {
+        match parse_double_opt(text) {
+          Some(num) => Ok(num)
+          None => Err(FormulaValue::Error(formula_error_value))
+        }
+      }
+    FormulaValue::Empty => Ok(0.0)
+    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+  }
+}
+
+///|
+fn sumproduct_values(ranges : Array[RangeValues]) -> FormulaValue {
+  if ranges.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let base = ranges[0]
+  for range in ranges {
+    if range.rows != base.rows || range.cols != base.cols {
+      return FormulaValue::Error(formula_error_value)
+    }
+  }
+  let mut sum = 0.0
+  let count = base.rows * base.cols
+  for idx in 0..<count {
+    let mut product = 1.0
+    for range in ranges {
+      match sumproduct_number(range.values[idx]) {
+        Ok(num) => product = product * num
+        Err(err) => return err
+      }
+    }
+    sum = sum + product
+  }
+  FormulaValue::Number(sum)
 }
 
 ///|
