@@ -2235,6 +2235,115 @@ test "calc math and text functions" {
     workbook.calc_cell_value("Sheet1", "B67"),
     content="{1,\"a\";2,\"b\"}",
   )
+  let dbcs_text = String::from_array([
+    Int::unsafe_to_char(0x00e9),
+    Int::unsafe_to_char('a'.to_int()),
+    Int::unsafe_to_char('b'.to_int()),
+  ])
+  let cn_text = String::from_array([
+    Int::unsafe_to_char(0x4f60),
+    Int::unsafe_to_char(0x597d),
+    Int::unsafe_to_char('W'.to_int()),
+    Int::unsafe_to_char('o'.to_int()),
+    Int::unsafe_to_char('r'.to_int()),
+    Int::unsafe_to_char('l'.to_int()),
+    Int::unsafe_to_char('d'.to_int()),
+  ])
+  sheet.set_cell_value("C68", CellValue::String(dbcs_text))
+  sheet.set_cell_value("C69", CellValue::String(cn_text))
+  sheet.set_cell_formula("B68", "LENB(C68)")
+  inspect(workbook.calc_cell_value("Sheet1", "B68"), content="4")
+  sheet.set_cell_formula("B69", "FINDB(\"a\",C68)")
+  inspect(workbook.calc_cell_value("Sheet1", "B69"), content="3")
+  sheet.set_cell_formula("B70", "SEARCHB(\"?\",C68)")
+  inspect(workbook.calc_cell_value("Sheet1", "B70"), content="3")
+  sheet.set_cell_formula("B71", "LEFTB(\"Original Text\",4)")
+  inspect(workbook.calc_cell_value("Sheet1", "B71"), content="Orig")
+  sheet.set_cell_formula("B72", "RIGHTB(\"Original Text\",4)")
+  inspect(workbook.calc_cell_value("Sheet1", "B72"), content="Text")
+  sheet.set_cell_formula("B73", "MIDB(\"Original Text\",4,7)")
+  inspect(workbook.calc_cell_value("Sheet1", "B73"), content="ginal T")
+  sheet.set_cell_formula("B74", "MIDB(C69,5,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B74"), content="W")
+  sheet.set_cell_formula("B75", "REPLACEB(\"test string\",7,3,\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B75"), content="test sXng")
+  sheet.set_cell_formula("B76", "DBCS(123.456)")
+  inspect(workbook.calc_cell_value("Sheet1", "B76"), content="123.456")
+}
+
+///|
+test "calc text b error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "LEFTB(\"\",-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "RIGHTB(\"\",-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "LENB()")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "MIDB(\"\",0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "REPLACEB(\"text\",0,1,\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "FINDB(\"x\",\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "SEARCHB(\"x\",\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#VALUE!")
+}
+
+///|
+test "calc unique functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("Jan"))
+  sheet.set_cell_value("A2", CellValue::String("Feb"))
+  sheet.set_cell_value("A3", CellValue::String("Jan"))
+  sheet.set_cell_value("A4", CellValue::String("Feb"))
+  sheet.set_cell_formula("B1", "TEXTJOIN(\",\",TRUE(),UNIQUE(A1:A4))")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="Jan,Feb")
+  sheet.set_cell_formula(
+    "B2", "TEXTJOIN(\",\",TRUE(),UNIQUE(A1:A4,FALSE(),TRUE()))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="")
+  sheet.set_cell_value("C1", CellValue::String("North 1"))
+  sheet.set_cell_value("D1", CellValue::String("North 2"))
+  sheet.set_cell_value("C2", CellValue::String("South 1"))
+  sheet.set_cell_value("D2", CellValue::String("South 2"))
+  sheet.set_cell_value("C3", CellValue::String("North 1"))
+  sheet.set_cell_value("D3", CellValue::String("North 2"))
+  sheet.set_cell_formula("B3", "TEXTJOIN(\",\",TRUE(),UNIQUE(C1:D3))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B3"),
+    content="North 1,North 2,South 1,South 2",
+  )
+  sheet.set_cell_value("E1", CellValue::String("A"))
+  sheet.set_cell_value("F1", CellValue::String("B"))
+  sheet.set_cell_value("G1", CellValue::String("A"))
+  sheet.set_cell_value("E2", CellValue::String("1"))
+  sheet.set_cell_value("F2", CellValue::String("2"))
+  sheet.set_cell_value("G2", CellValue::String("1"))
+  sheet.set_cell_formula("B4", "TEXTJOIN(\":\",TRUE(),UNIQUE(E1:G2,TRUE()))")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="A:B:1:2")
+  sheet.set_cell_formula(
+    "B5", "TEXTJOIN(\":\",TRUE(),UNIQUE(E1:G2,TRUE(),TRUE()))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="B:2")
+}
+
+///|
+test "calc unique error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("B1", CellValue::String("A"))
+  sheet.set_cell_value("B2", CellValue::String("B"))
+  sheet.set_cell_formula("A1", "UNIQUE()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "UNIQUE(1,2,3,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "UNIQUE(B1:B2,\"Hello\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "UNIQUE(B1:B2,TRUE(),\"Hello\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
 }
 
 ///|

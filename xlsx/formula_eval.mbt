@@ -923,6 +923,80 @@ fn range_row(range : RangeValues, index : Int) -> Array[FormulaValue]? {
 }
 
 ///|
+fn transpose_range_values(range : RangeValues) -> RangeValues {
+  let out : Array[FormulaValue] = []
+  for col in 0..<range.cols {
+    for row in 0..<range.rows {
+      out.push(range.values[row * range.cols + col])
+    }
+  }
+  { values: out, rows: range.cols, cols: range.rows }
+}
+
+///|
+fn unique_row_key(
+  range : RangeValues,
+  row : Int,
+) -> Result[String, FormulaValue] {
+  let sb = StringBuilder::new()
+  let start = row * range.cols
+  for col in 0..<range.cols {
+    let value = range.values[start + col]
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+      _ => sb.write_view(formula_value_string(value))
+    }
+  }
+  Ok(sb.to_string())
+}
+
+///|
+fn unique_range_values(
+  range : RangeValues,
+  by_col : Bool,
+  exactly_once : Bool,
+) -> Result[RangeValues, FormulaValue] {
+  let base = if by_col { transpose_range_values(range) } else { range }
+  let counts : Map[String, Int] = {}
+  for row in 0..<base.rows {
+    let key = match unique_row_key(base, row) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    match counts.get(key) {
+      Some(count) => counts[key] = count + 1
+      None => counts[key] = 1
+    }
+  }
+  let out : Array[FormulaValue] = []
+  let mut kept_rows = 0
+  for row in 0..<base.rows {
+    let key = match unique_row_key(base, row) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    let count = match counts.get(key) {
+      Some(value) => value
+      None => 0
+    }
+    let keep = if exactly_once { count == 1 } else { count >= 1 }
+    if keep {
+      let start = row * base.cols
+      for col in 0..<base.cols {
+        out.push(base.values[start + col])
+      }
+      kept_rows = kept_rows + 1
+    }
+    ignore(counts.remove(key))
+  }
+  let mut result = { values: out, rows: kept_rows, cols: base.cols }
+  if by_col {
+    result = transpose_range_values(result)
+  }
+  Ok(result)
+}
+
+///|
 fn range_from_expr_or_value(
   workbook : Workbook,
   sheet_name : String,
@@ -1283,6 +1357,203 @@ fn wildcard_find(text : String, pattern : String, start : Int) -> Int? {
     }
   }
   None
+}
+
+///|
+fn bytes_to_string(bytes : BytesView) -> String {
+  let sb = StringBuilder::new()
+  for b in bytes {
+    sb.write_char(Int::unsafe_to_char(b.to_int()))
+  }
+  sb.to_string()
+}
+
+///|
+fn dbcs_byte_len_char(ch : Char) -> Int {
+  if ch.to_int() <= 0x7f {
+    1
+  } else {
+    2
+  }
+}
+
+///|
+fn dbcs_byte_length(text : String) -> Int {
+  let mut total = 0
+  for ch in text {
+    total = total + dbcs_byte_len_char(ch)
+  }
+  total
+}
+
+///|
+fn dbcs_index_from_offset(text : String, start_num : Int) -> Int? {
+  if start_num <= 0 {
+    return None
+  }
+  let chars = text.to_array()
+  let mut offset = 1
+  for i in 0..<chars.length() {
+    let len = dbcs_byte_len_char(chars[i])
+    let end = offset + len - 1
+    if start_num <= end {
+      return Some(i)
+    }
+    offset = offset + len
+  }
+  None
+}
+
+///|
+fn dbcs_byte_offset_for_index(text : String, index : Int) -> Int {
+  let chars = text.to_array()
+  let mut offset = 1
+  let mut i = 0
+  while i < index && i < chars.length() {
+    offset = offset + dbcs_byte_len_char(chars[i])
+    i = i + 1
+  }
+  offset
+}
+
+///|
+fn wildcard_match_prefix_dbcs(
+  text : String,
+  pattern : String,
+  text_idx : Int,
+  pattern_idx : Int,
+  memo : Map[(Int, Int), Bool],
+) -> Bool {
+  match memo.get((text_idx, pattern_idx)) {
+    Some(result) => return result
+    None => ()
+  }
+  let text_len = text.length()
+  let pattern_len = pattern.length()
+  let result = if pattern_idx == pattern_len {
+    true
+  } else {
+    let token = pattern[pattern_idx]
+    if token == '~' {
+      if pattern_idx + 1 >= pattern_len {
+        if text_idx < text_len && text[text_idx] == '~' {
+          wildcard_match_prefix_dbcs(
+            text,
+            pattern,
+            text_idx + 1,
+            pattern_idx + 1,
+            memo,
+          )
+        } else {
+          false
+        }
+      } else {
+        let next = pattern[pattern_idx + 1]
+        if text_idx < text_len && text[text_idx] == next {
+          wildcard_match_prefix_dbcs(
+            text,
+            pattern,
+            text_idx + 1,
+            pattern_idx + 2,
+            memo,
+          )
+        } else {
+          false
+        }
+      }
+    } else if token == '*' {
+      if wildcard_match_prefix_dbcs(
+          text,
+          pattern,
+          text_idx,
+          pattern_idx + 1,
+          memo,
+        ) {
+        true
+      } else if text_idx < text_len {
+        wildcard_match_prefix_dbcs(
+          text,
+          pattern,
+          text_idx + 1,
+          pattern_idx,
+          memo,
+        )
+      } else {
+        false
+      }
+    } else if token == '?' {
+      if text_idx < text_len && text[text_idx].to_int() <= 0x7f {
+        wildcard_match_prefix_dbcs(
+          text,
+          pattern,
+          text_idx + 1,
+          pattern_idx + 1,
+          memo,
+        )
+      } else {
+        false
+      }
+    } else if text_idx < text_len && text[text_idx] == token {
+      wildcard_match_prefix_dbcs(
+        text,
+        pattern,
+        text_idx + 1,
+        pattern_idx + 1,
+        memo,
+      )
+    } else {
+      false
+    }
+  }
+  memo[(text_idx, pattern_idx)] = result
+  result
+}
+
+///|
+fn wildcard_find_dbcs(text : String, pattern : String, start : Int) -> Int? {
+  let len = text.length()
+  if start < 0 || start > len {
+    return None
+  }
+  for idx in start..<=len {
+    let memo : Map[(Int, Int), Bool] = {}
+    if wildcard_match_prefix_dbcs(text, pattern, idx, 0, memo) {
+      return Some(idx)
+    }
+  }
+  None
+}
+
+///|
+fn find_dbcs(
+  text : String,
+  pattern : String,
+  start_num : Int,
+  wildcard : Bool,
+) -> Int? {
+  if start_num <= 0 {
+    return None
+  }
+  let total = dbcs_byte_length(text)
+  if start_num > total {
+    return None
+  }
+  if pattern.length() == 0 {
+    return Some(start_num)
+  }
+  let start_idx = match dbcs_index_from_offset(text, start_num) {
+    Some(idx) => idx
+    None => return None
+  }
+  let found_idx = if wildcard {
+    wildcard_find_dbcs(text, pattern, start_idx)
+  } else {
+    find_substring_from(text, pattern, start_idx)
+  }
+  match found_idx {
+    Some(idx) => Some(dbcs_byte_offset_for_index(text, idx))
+    None => None
+  }
 }
 
 ///|
@@ -5017,6 +5288,16 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "LENB" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) =>
+            FormulaValue::Number(Double::from_int(dbcs_byte_length(text)))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "LOWER" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
@@ -5039,6 +5320,15 @@ fn eval_function(
       if values.length() == 1 {
         match value_as_string(values[0]) {
           Ok(text) => FormulaValue::String(proper_case(text))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DBCS" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => FormulaValue::String(text)
           Err(err) => err
         }
       } else {
@@ -5078,6 +5368,34 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "LEFTB" =>
+      if values.length() == 1 || values.length() == 2 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let count = if values.length() == 2 {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let bytes = @encoding/utf8.encode(text)
+          let len = bytes.length()
+          if count >= len {
+            FormulaValue::String(text)
+          } else {
+            FormulaValue::String(bytes_to_string(bytes[0:count]))
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "RIGHT" =>
       if values.length() == 1 || values.length() == 2 {
         let text = match value_as_string(values[0]) {
@@ -5099,6 +5417,35 @@ fn eval_function(
           let start = if count >= len { 0 } else { len - count }
           let end = len
           FormulaValue::String(text.unsafe_substring(start~, end~))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RIGHTB" =>
+      if values.length() == 1 || values.length() == 2 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let count = if values.length() == 2 {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let bytes = @encoding/utf8.encode(text)
+          let len = bytes.length()
+          if count >= len {
+            FormulaValue::String(text)
+          } else {
+            let start = len - count
+            FormulaValue::String(bytes_to_string(bytes[start:len]))
+          }
         }
       } else {
         FormulaValue::Error(formula_error_value)
@@ -5131,6 +5478,62 @@ fn eval_function(
             }
             FormulaValue::String(text.unsafe_substring(start~, end~))
           }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MIDB" =>
+      if values.length() == 3 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let count = match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        if start_num <= 0 || count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else if count == 0 {
+          FormulaValue::String("")
+        } else if start_num > dbcs_byte_length(text) {
+          FormulaValue::String("")
+        } else {
+          let sb = StringBuilder::new()
+          let mut offset = 0
+          let mut taken = 0
+          for ch in text {
+            if taken == count {
+              break
+            }
+            offset = offset + 1
+            let mut dbcs = false
+            if dbcs_byte_len_char(ch) == 2 {
+              dbcs = true
+              offset = offset + 1
+            }
+            if offset + 1 > start_num {
+              if dbcs {
+                if taken + 2 > count {
+                  let bytes = @encoding/utf8.encode(String::from_array([ch]))
+                  if bytes.length() > 0 {
+                    sb.write_char(Int::unsafe_to_char(bytes[0].to_int()))
+                  }
+                  break
+                }
+                sb.write_char(ch)
+                taken = taken + 2
+              } else {
+                sb.write_char(ch)
+                taken = taken + 1
+              }
+            }
+          }
+          FormulaValue::String(sb.to_string())
         }
       } else {
         FormulaValue::Error(formula_error_value)
@@ -5191,6 +5594,46 @@ fn eval_function(
           sb.write_view(text.unsafe_substring(start=0, end=start))
           sb.write_view(new_text)
           sb.write_view(text.unsafe_substring(start=end, end=len))
+          FormulaValue::String(sb.to_string())
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "REPLACEB" =>
+      if values.length() == 4 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let count = match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let new_text = match value_as_string(values[3]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        if start_num <= 0 || count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let bytes = @encoding/utf8.encode(text)
+          let len = bytes.length()
+          let mut start = start_num - 1
+          if start > len {
+            start = len
+          }
+          let mut end = start + count
+          if end > len {
+            end = len
+          }
+          let sb = StringBuilder::new()
+          sb.write_view(bytes_to_string(bytes[0:start]))
+          sb.write_view(new_text)
+          sb.write_view(bytes_to_string(bytes[end:len]))
           FormulaValue::String(sb.to_string())
         }
       } else {
@@ -5305,6 +5748,31 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "FINDB" =>
+      if values.length() == 2 || values.length() == 3 {
+        let find_text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let within_text = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = if values.length() == 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        match find_dbcs(within_text, find_text, start_num, false) {
+          Some(value) => FormulaValue::Number(Double::from_int(value))
+          None => FormulaValue::Error(formula_error_value)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "SEARCH" =>
       if values.length() == 2 || values.length() == 3 {
         let find_text = match value_as_string(values[0]) {
@@ -5340,6 +5808,33 @@ fn eval_function(
               None => FormulaValue::Error(formula_error_value)
             }
           }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SEARCHB" =>
+      if values.length() == 2 || values.length() == 3 {
+        let find_text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let within_text = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = if values.length() == 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        let lower_find = find_text.to_lower()
+        let lower_text = within_text.to_lower()
+        match find_dbcs(lower_text, lower_find, start_num, true) {
+          Some(value) => FormulaValue::Number(Double::from_int(value))
+          None => FormulaValue::Error(formula_error_value)
         }
       } else {
         FormulaValue::Error(formula_error_value)
@@ -5592,6 +6087,46 @@ fn eval_function(
           FormulaValue::Error(formula_error_value)
         } else {
           FormulaValue::String(result)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "UNIQUE" =>
+      if args.length() >= 1 && args.length() <= 3 {
+        let by_col = if args.length() >= 2 {
+          match value_as_bool(values[1]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          false
+        }
+        let exactly_once = if args.length() == 3 {
+          match value_as_bool(values[2]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          false
+        }
+        let range = match args[0] {
+          Expr::Range(_, _, _) | Expr::Cell(_, _) =>
+            eval_range_expr(workbook, sheet_name, args[0], ctx)
+          _ =>
+            match values[0] {
+              FormulaValue::Error(err) => return FormulaValue::Error(err)
+              FormulaValue::List(list) =>
+                if list.length() == 0 {
+                  return FormulaValue::Error(formula_error_value)
+                } else {
+                  { rows: 1, cols: list.length(), values: list }
+                }
+              _ => { rows: 1, cols: 1, values: [values[0]] }
+            }
+        }
+        match unique_range_values(range, by_col, exactly_once) {
+          Ok(result) => FormulaValue::List(result.values)
+          Err(err) => err
         }
       } else {
         FormulaValue::Error(formula_error_value)
