@@ -3028,6 +3028,45 @@ test "calc drop error functions" {
 }
 
 ///|
+test "calc tocol torow functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_formula("D1", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1,3,,2,4,")
+  sheet.set_cell_formula("D2", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2,1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="1,3,2,4")
+  sheet.set_cell_formula("D3", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2,0,TRUE()))")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1,2,3,4,,")
+  sheet.set_cell_formula("D4", "TEXTJOIN(\",\",FALSE(),TOROW(A1:C2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="1,3,,2,4,")
+}
+
+///|
+test "calc tocol torow error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_formula("C1", "1/0")
+  sheet.set_cell_formula("D1", "TOCOL(A1:C2)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#DIV/0!")
+  sheet.set_cell_formula("D2", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="1,3,2,4,")
+  sheet.set_cell_formula("D3", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2,3))")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1,3,2,4")
+  sheet.set_cell_formula("D4", "TOCOL(A1:B1,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="#VALUE!")
+  sheet.set_cell_formula("D5", "TOROW(A1:B1,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "D5"), content="#VALUE!")
+}
+
+///|
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

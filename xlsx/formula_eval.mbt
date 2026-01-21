@@ -1492,6 +1492,105 @@ fn drop_values(
 }
 
 ///|
+fn flatten_range_values(
+  range : RangeValues,
+  scan_by_column : Bool,
+  ignore : Int,
+) -> Result[Array[FormulaValue], FormulaValue] {
+  let out : Array[FormulaValue] = []
+  let keep_value = fn(value : FormulaValue) -> Result[Bool, FormulaValue] {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) =>
+        if ignore == 2 || ignore == 3 {
+          Ok(false)
+        } else {
+          Err(FormulaValue::Error(err))
+        }
+      FormulaValue::Empty =>
+        if ignore == 1 || ignore == 3 {
+          Ok(false)
+        } else {
+          Ok(true)
+        }
+      _ => Ok(true)
+    }
+  }
+  if scan_by_column {
+    for col in 0..<range.cols {
+      for row in 0..<range.rows {
+        let value = range.values[row * range.cols + col]
+        match keep_value(value) {
+          Ok(true) => out.push(value)
+          Ok(false) => ()
+          Err(err) => return Err(err)
+        }
+      }
+    }
+  } else {
+    for row in 0..<range.rows {
+      let offset = row * range.cols
+      for col in 0..<range.cols {
+        let value = range.values[offset + col]
+        match keep_value(value) {
+          Ok(true) => out.push(value)
+          Ok(false) => ()
+          Err(err) => return Err(err)
+        }
+      }
+    }
+  }
+  if out.length() == 0 {
+    Err(FormulaValue::Error(formula_error_calc))
+  } else {
+    Ok(out)
+  }
+}
+
+///|
+fn tocol_torow_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+  scan_by_column_default : Bool,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 1 || values.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let ignore = if values.length() >= 2 {
+    match value_as_int(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0
+  }
+  if ignore < 0 || ignore > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let scan_by_column = if values.length() == 3 {
+    match value_as_bool(values[2]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+  } else {
+    scan_by_column_default
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  match flatten_range_values(range, scan_by_column, ignore) {
+    Ok(list) => FormulaValue::List(list)
+    Err(err) => err
+  }
+}
+
+///|
 fn sort_range_values(
   range : RangeValues,
   sort_index : Int,
@@ -8885,6 +8984,10 @@ fn eval_function(
     "SEQUENCE" => sequence_values(values)
     "TAKE" => take_values(workbook, sheet_name, args, values, ctx)
     "DROP" => drop_values(workbook, sheet_name, args, values, ctx)
+    "TOCOL" =>
+      tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
+    "TOROW" =>
+      tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
     "SORT" => sort_values(workbook, sheet_name, args, values, ctx)
     "SORTBY" | "_XLFN.SORTBY" =>
       sortby_values(workbook, sheet_name, args, values, ctx)
