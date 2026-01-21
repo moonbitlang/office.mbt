@@ -1722,6 +1722,120 @@ fn chooserows_values(
 }
 
 ///|
+fn expand_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 2 || values.length() > 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let rows = match value_as_int(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cols = if values.length() >= 3 {
+    match value_as_int(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    range.cols
+  }
+  if rows < range.rows || cols < range.cols || rows <= 0 || cols <= 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let pad_value = if values.length() == 4 {
+    match normalize_scalar(values[3]) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      value => value
+    }
+  } else {
+    FormulaValue::Error(formula_error_na)
+  }
+  let out : Array[FormulaValue] = Array::make(rows * cols, pad_value)
+  for row in 0..<range.rows {
+    let in_offset = row * range.cols
+    let out_offset = row * cols
+    for col in 0..<range.cols {
+      out[out_offset + col] = range.values[in_offset + col]
+    }
+  }
+  FormulaValue::List(out)
+}
+
+///|
+fn wrap_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+  by_rows : Bool,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 2 || values.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let vector = match range_vector(range) {
+    Some(list) => list
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  let count = match value_as_int(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if count <= 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let pad_value = if values.length() == 3 {
+    match normalize_scalar(values[2]) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      value => value
+    }
+  } else {
+    FormulaValue::Error(formula_error_na)
+  }
+  let total = vector.length()
+  let rows = if by_rows {
+    let full = (total + count - 1) / count
+    full
+  } else {
+    count
+  }
+  let cols = if by_rows {
+    count
+  } else {
+    let full = (total + count - 1) / count
+    full
+  }
+  let out : Array[FormulaValue] = Array::make(rows * cols, pad_value)
+  for i in 0..<total {
+    let row = if by_rows { i / count } else { i % count }
+    let col = if by_rows { i % count } else { i / count }
+    out[row * cols + col] = vector[i]
+  }
+  FormulaValue::List(out)
+}
+
+///|
 fn tocol_torow_values(
   workbook : Workbook,
   sheet_name : String,
@@ -9164,6 +9278,9 @@ fn eval_function(
     "HSTACK" => stack_from_values(workbook, sheet_name, args, values, ctx, true)
     "VSTACK" =>
       stack_from_values(workbook, sheet_name, args, values, ctx, false)
+    "EXPAND" => expand_values(workbook, sheet_name, args, values, ctx)
+    "WRAPROWS" => wrap_values(workbook, sheet_name, args, values, ctx, true)
+    "WRAPCOLS" => wrap_values(workbook, sheet_name, args, values, ctx, false)
     "TOCOL" =>
       tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
     "TOROW" =>

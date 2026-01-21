@@ -3135,6 +3135,63 @@ test "calc stack error functions" {
 }
 
 ///|
+test "calc expand functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("C1", "TEXTJOIN(\",\",FALSE(),EXPAND(A1:B1,2,3,0))")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,2,0,0,0,0")
+  sheet.set_cell_formula(
+    "C2", "TEXTJOIN(\",\",FALSE(),TOCOL(EXPAND(A1:B1,2),2))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1,2")
+}
+
+///|
+test "calc expand error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("C1", "EXPAND(A1:B1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
+  sheet.set_cell_formula("C2", "EXPAND(A1:B1,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+}
+
+///|
+test "calc wrap functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A5", CellValue::Numeric(5.0))
+  sheet.set_cell_formula("B1", "TEXTJOIN(\",\",FALSE(),WRAPROWS(A1:A5,2,0))")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1,2,3,4,5,0")
+  sheet.set_cell_formula("B2", "TEXTJOIN(\",\",FALSE(),WRAPCOLS(A1:A5,2,0))")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="1,3,5,2,4,0")
+  sheet.set_cell_formula("B3", "TEXTJOIN(\",\",FALSE(),WRAPROWS(A1:A5,4,0))")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="1,2,3,4,5,0,0,0")
+}
+
+///|
+test "calc wrap error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("B1", "WRAPROWS(A1:A2,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "WRAPCOLS(A1:A2,-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("B3", "WRAPROWS(A1:B2,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#VALUE!")
+}
+
+///|
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
