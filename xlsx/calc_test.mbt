@@ -398,6 +398,80 @@ test "calc floor and iso ceiling functions" {
 }
 
 ///|
+test "calc log and ln functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "LN(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0")
+  sheet.set_cell_formula("A2", "LN(100)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="4.605170185988092")
+  sheet.set_cell_formula("A3", "LN(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A3"),
+    content="-0.6931471805599453",
+  )
+  sheet.set_cell_formula("A4", "LN(LN(100))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A4"),
+    content="1.5271796258079011",
+  )
+  sheet.set_cell_formula("A5", "LN()")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "LN(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("B1", "LOG(64,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="6")
+  sheet.set_cell_formula("B2", "LOG(100)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="2")
+  sheet.set_cell_formula("B3", "LOG(4,0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="-2")
+  sheet.set_cell_formula("B4", "LOG(500)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B4"),
+    content="2.6989700043360183",
+  )
+  sheet.set_cell_formula("B5", "LOG(LOG(100))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B5"),
+    content="0.30102999566398114",
+  )
+  sheet.set_cell_formula("B6", "LOG()")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="#VALUE!")
+  sheet.set_cell_formula("B7", "LOG(1,2,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B7"), content="#VALUE!")
+  sheet.set_cell_formula("B8", "LOG(\"X\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B8"), content="#VALUE!")
+  sheet.set_cell_formula("B9", "LOG(1,\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B9"), content="#VALUE!")
+  sheet.set_cell_formula("B10", "LOG(0,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B10"), content="#NUM!")
+  sheet.set_cell_formula("B11", "LOG(1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B11"), content="#NUM!")
+  sheet.set_cell_formula("B12", "LOG(1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B12"), content="#DIV/0!")
+  sheet.set_cell_formula("C1", "LOG10(100)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
+  sheet.set_cell_formula("C2", "LOG10(1000)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="3")
+  sheet.set_cell_formula("C3", "LOG10(0.001)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="-3")
+  sheet.set_cell_formula("C4", "LOG10(25)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C4"),
+    content="1.3979400086720377",
+  )
+  sheet.set_cell_formula("C5", "LOG10(LOG10(100))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C5"),
+    content="0.3010299956639812",
+  )
+  sheet.set_cell_formula("C6", "LOG10()")
+  inspect(workbook.calc_cell_value("Sheet1", "C6"), content="#VALUE!")
+  sheet.set_cell_formula("C7", "LOG10(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C7"), content="#VALUE!")
+}
+
+///|
 test "calc string coercion" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

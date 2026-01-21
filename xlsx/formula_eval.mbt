@@ -1620,6 +1620,50 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "LN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(@math.ln(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "LOG" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let mut base = 10.0
+            if values.length() == 2 {
+              match value_as_number(values[1]) {
+                Ok(value) => base = value
+                Err(err) => return err
+              }
+            }
+            if num == 0.0 || base == 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else if base == 1.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              FormulaValue::Number(@math.ln(num) / @math.ln(base))
+            }
+          }
+          Err(err) => err
+        }
+      }
+    "LOG10" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(@math.log10(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "FLOOR" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
