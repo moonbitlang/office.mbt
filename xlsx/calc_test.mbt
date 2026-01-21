@@ -265,6 +265,30 @@ test "calc iseven isodd and n functions" {
 }
 
 ///|
+test "calc ref functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let other = workbook.add_sheet("Other")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_formula("B1", "A1+1")
+  other.set_cell_formula("A1", "1+1")
+  sheet.set_cell_formula("C1", "ISFORMULA(B1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="TRUE")
+  sheet.set_cell_formula("C2", "ISFORMULA(A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="FALSE")
+  sheet.set_cell_formula("C3", "ISFORMULA(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="FALSE")
+  sheet.set_cell_formula("C4", "ISFORMULA(Other!A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="TRUE")
+  sheet.set_cell_formula("C5", "ISREF(A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C5"), content="TRUE")
+  sheet.set_cell_formula("C6", "ISREF(A1:B2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C6"), content="TRUE")
+  sheet.set_cell_formula("C7", "ISREF(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C7"), content="FALSE")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

@@ -1829,6 +1829,26 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "ISREF" =>
+      if args.length() == 1 {
+        FormulaValue::Bool(is_ref_expr(args[0]))
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISFORMULA" =>
+      if args.length() == 1 {
+        match args[0] {
+          Expr::Cell(sheet, reference) => {
+            let target_sheet = if sheet == "" { sheet_name } else { sheet }
+            FormulaValue::Bool(
+              cell_has_formula(workbook, target_sheet, reference),
+            )
+          }
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "N" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
@@ -2222,6 +2242,42 @@ fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn is_ref_expr(expr : Expr) -> Bool {
+  match expr {
+    Expr::Cell(_, _) => true
+    Expr::Range(_, _, _) => true
+    _ => false
+  }
+}
+
+///|
+fn cell_has_formula(
+  workbook : Workbook,
+  sheet_name : String,
+  reference : String,
+) -> Bool {
+  match workbook.sheet(sheet_name) {
+    Some(sheet) => {
+      let (row, col) = try cell_ref_to_rc(reference) catch {
+        _ => return false
+      } noraise {
+        value => value
+      }
+      for cell in sheet.cells() {
+        if cell.row == row && cell.col == col {
+          match cell.formula {
+            Some(formula) => return formula != ""
+            None => return false
+          }
+        }
+      }
+      false
+    }
+    None => false
+  }
 }
 
 ///|
