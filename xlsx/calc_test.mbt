@@ -465,6 +465,207 @@ test "calc t distribution functions" {
 }
 
 ///|
+test "calc chi-square functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "CHIDIST(0.5,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.918891411654676")
+  sheet.set_cell_formula("A2", "CHIDIST(8,3)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A2"),
+    content="0.04601170568923095",
+  )
+  sheet.set_cell_formula("A3", "CHIDIST(40,4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A3"),
+    content="4.32842260712097e-8",
+  )
+  sheet.set_cell_formula("A4", "CHIDIST(42,4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A4"),
+    content="1.66816329414062e-8",
+  )
+  sheet.set_cell_formula("B1", "CHIINV(0.5,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B1"),
+    content="0.4549364231195724",
+  )
+  sheet.set_cell_formula("B2", "CHIINV(0.75,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B2"),
+    content="0.10153104426762156",
+  )
+  sheet.set_cell_formula("B3", "CHIINV(0.1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="4.605170185988092")
+  sheet.set_cell_formula("B4", "CHIINV(0.8,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B4"),
+    content="0.4462871026284193",
+  )
+  sheet.set_cell_formula("C1", "CHISQ.DIST(0,2,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0")
+  sheet.set_cell_formula("C2", "CHISQ.DIST(4,1,TRUE)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C2"),
+    content="0.9544997361036418",
+  )
+  sheet.set_cell_formula("C3", "CHISQ.DIST(1180,1180,FALSE)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C3"),
+    content="0.008210937063879672",
+  )
+  sheet.set_cell_formula("C4", "CHISQ.DIST(2,1,FALSE)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C4"),
+    content="0.10377687435514868",
+  )
+  sheet.set_cell_formula("C5", "CHISQ.DIST(3,2,FALSE)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C5"),
+    content="0.11156508007421491",
+  )
+  sheet.set_cell_formula("C6", "CHISQ.DIST(2,3,FALSE)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C6"),
+    content="0.20755374871029736",
+  )
+  sheet.set_cell_formula("C7", "CHISQ.DIST(1425,1,FALSE)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C7"),
+    content="3.88315098887e-312",
+  )
+  sheet.set_cell_formula("C8", "CHISQ.DIST(3,2,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "C8"), content="0.77686983985157")
+  sheet.set_cell_formula("D1", "CHISQ.DIST.RT(0.5,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="0.918891411654676")
+  sheet.set_cell_formula("D2", "CHISQ.DIST.RT(8,3)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D2"),
+    content="0.04601170568923095",
+  )
+  sheet.set_cell_formula("D3", "CHISQ.DIST.RT(40,4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D3"),
+    content="4.32842260712097e-8",
+  )
+  sheet.set_cell_formula("D4", "CHISQ.DIST.RT(42,4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D4"),
+    content="1.66816329414062e-8",
+  )
+  sheet.set_cell_formula("E1", "CHISQ.INV(0,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="0")
+  sheet.set_cell_formula("E2", "CHISQ.INV(0.75,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "E2"),
+    content="1.3233036969314655",
+  )
+  sheet.set_cell_formula("E3", "CHISQ.INV(0.1,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "E3"),
+    content="0.2107210313156527",
+  )
+  sheet.set_cell_formula("E4", "CHISQ.INV(0.8,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "E4"),
+    content="3.2188758248682015",
+  )
+  sheet.set_cell_formula("E5", "CHISQ.INV(0.25,3)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "E5"),
+    content="1.2125329030456695",
+  )
+  sheet.set_cell_formula("F1", "CHISQ.INV.RT(0.75,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "F1"),
+    content="0.10153104426762156",
+  )
+  sheet.set_cell_formula("F2", "CHISQ.INV.RT(0.1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "F2"), content="4.605170185988092")
+  sheet.set_cell_formula("F3", "CHISQ.INV.RT(0.8,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "F3"),
+    content="0.4462871026284193",
+  )
+}
+
+///|
+test "calc chi-square test functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("B3", CellValue::Numeric(33.0))
+  sheet.set_cell_value("C3", CellValue::Numeric(39.0))
+  sheet.set_cell_value("B4", CellValue::Numeric(62.0))
+  sheet.set_cell_value("C4", CellValue::Numeric(62.0))
+  sheet.set_cell_value("B5", CellValue::Numeric(10.0))
+  sheet.set_cell_value("C5", CellValue::Numeric(4.0))
+  sheet.set_cell_value("B6", CellValue::Numeric(-1.0))
+  sheet.set_cell_value("C6", CellValue::Numeric(0.0))
+  sheet.set_cell_value("F3", CellValue::Numeric(26.25))
+  sheet.set_cell_value("G3", CellValue::Numeric(31.5))
+  sheet.set_cell_value("F4", CellValue::Numeric(57.75))
+  sheet.set_cell_value("G4", CellValue::Numeric(61.95))
+  sheet.set_cell_value("F5", CellValue::Numeric(21.0))
+  sheet.set_cell_value("G5", CellValue::Numeric(11.55))
+  sheet.set_cell_formula("H1", "CHITEST(B3:C5,F3:G5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H1"),
+    content="0.000699102758787672",
+  )
+  sheet.set_cell_formula("H2", "CHITEST(B3:C3,F3:G3)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H2"),
+    content="0.06058020986551782",
+  )
+  sheet.set_cell_formula("H3", "CHITEST(B3:B4,F3:F4)")
+  inspect(workbook.calc_cell_value("Sheet1", "H3"), content="0.152357748933542")
+  sheet.set_cell_formula("H4", "CHITEST(B4:B6,F3:F5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H4"),
+    content="7.070769514407259e-25",
+  )
+  sheet.set_cell_formula("H5", "CHISQ.TEST(B3:C5,F3:G5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H5"),
+    content="0.000699102758787672",
+  )
+  sheet.set_cell_formula("H6", "CHISQ.TEST(B3:C3,F3:G3)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H6"),
+    content="0.06058020986551782",
+  )
+  sheet.set_cell_formula("H7", "CHISQ.TEST(B3:B4,F3:F4)")
+  inspect(workbook.calc_cell_value("Sheet1", "H7"), content="0.152357748933542")
+  sheet.set_cell_formula("H8", "CHISQ.TEST(B4:B6,F3:F5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H8"),
+    content="7.070769514407259e-25",
+  )
+  sheet.set_cell_formula("H9", "CHITEST()")
+  inspect(workbook.calc_cell_value("Sheet1", "H9"), content="#VALUE!")
+  sheet.set_cell_formula("H10", "CHITEST(MUNIT(0),MUNIT(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "H10"), content="#VALUE!")
+  sheet.set_cell_formula("H11", "CHITEST(B3:C5,F3:F4)")
+  inspect(workbook.calc_cell_value("Sheet1", "H11"), content="#N/A")
+  sheet.set_cell_formula("H12", "CHITEST(B3:B3,F3:F3)")
+  inspect(workbook.calc_cell_value("Sheet1", "H12"), content="#N/A")
+  sheet.set_cell_formula("H13", "CHITEST(F3:F5,B4:B6)")
+  inspect(workbook.calc_cell_value("Sheet1", "H13"), content="#NUM!")
+  sheet.set_cell_formula("H14", "CHITEST(F3:F5,C4:C6)")
+  inspect(workbook.calc_cell_value("Sheet1", "H14"), content="#DIV/0!")
+  sheet.set_cell_formula("H15", "CHISQ.TEST()")
+  inspect(workbook.calc_cell_value("Sheet1", "H15"), content="#VALUE!")
+  sheet.set_cell_formula("H16", "CHISQ.TEST(B3:C5,F3:F4)")
+  inspect(workbook.calc_cell_value("Sheet1", "H16"), content="#N/A")
+  sheet.set_cell_formula("H17", "CHISQ.TEST(B3:B3,F3:F3)")
+  inspect(workbook.calc_cell_value("Sheet1", "H17"), content="#N/A")
+  sheet.set_cell_formula("H18", "CHISQ.TEST(F3:F5,B4:B6)")
+  inspect(workbook.calc_cell_value("Sheet1", "H18"), content="#NUM!")
+  sheet.set_cell_formula("H19", "CHISQ.TEST(F3:F5,C4:C6)")
+  inspect(workbook.calc_cell_value("Sheet1", "H19"), content="#DIV/0!")
+}
+
+///|
 test "calc gcd and lcm functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -3208,6 +3409,74 @@ test "calc t distribution function errors" {
   inspect(workbook.calc_cell_value("Sheet1", "A38"), content="#NUM!")
   sheet.set_cell_formula("A39", "TINV(0.25,0.5)")
   inspect(workbook.calc_cell_value("Sheet1", "A39"), content="#NUM!")
+}
+
+///|
+test "calc chi-square function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "CHIDIST()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "CHIDIST(\"\",3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "CHIDIST(0.5,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "CHIINV()")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "CHIINV(\"\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "CHIINV(0.5,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "CHIINV(0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#NUM!")
+  sheet.set_cell_formula("A8", "CHIINV(2,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#NUM!")
+  sheet.set_cell_formula("A9", "CHIINV(0.5,0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A9"), content="#NUM!")
+  sheet.set_cell_formula("B1", "CHISQ.DIST()")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "CHISQ.DIST(\"\",2,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("B3", "CHISQ.DIST(3,\"\",TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#VALUE!")
+  sheet.set_cell_formula("B4", "CHISQ.DIST(3,2,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+  sheet.set_cell_formula("B5", "CHISQ.DIST(-1,2,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="#NUM!")
+  sheet.set_cell_formula("B6", "CHISQ.DIST(3,0,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="#NUM!")
+  sheet.set_cell_formula("C1", "CHISQ.DIST.RT()")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
+  sheet.set_cell_formula("C2", "CHISQ.DIST.RT(\"\",3)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+  sheet.set_cell_formula("C3", "CHISQ.DIST.RT(0.5,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#VALUE!")
+  sheet.set_cell_formula("D1", "CHISQ.INV()")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
+  sheet.set_cell_formula("D2", "CHISQ.INV(\"\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="#VALUE!")
+  sheet.set_cell_formula("D3", "CHISQ.INV(0.5,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="#VALUE!")
+  sheet.set_cell_formula("D4", "CHISQ.INV(-1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="#NUM!")
+  sheet.set_cell_formula("D5", "CHISQ.INV(1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D5"), content="#NUM!")
+  sheet.set_cell_formula("D6", "CHISQ.INV(0.5,0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "D6"), content="#NUM!")
+  sheet.set_cell_formula("D7", "CHISQ.INV(0.5,10000000001)")
+  inspect(workbook.calc_cell_value("Sheet1", "D7"), content="#NUM!")
+  sheet.set_cell_formula("E1", "CHISQ.INV.RT()")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="#VALUE!")
+  sheet.set_cell_formula("E2", "CHISQ.INV.RT(\"\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "E2"), content="#VALUE!")
+  sheet.set_cell_formula("E3", "CHISQ.INV.RT(0.5,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "E3"), content="#VALUE!")
+  sheet.set_cell_formula("E4", "CHISQ.INV.RT(0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "E4"), content="#NUM!")
+  sheet.set_cell_formula("E5", "CHISQ.INV.RT(2,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "E5"), content="#NUM!")
+  sheet.set_cell_formula("E6", "CHISQ.INV.RT(0.5,0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "E6"), content="#NUM!")
 }
 
 ///|

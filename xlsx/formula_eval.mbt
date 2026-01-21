@@ -3698,6 +3698,16 @@ fn round_significant_digits(value : Double, digits : Int) -> Double {
 }
 
 ///|
+fn round_chisq_result(value : Double) -> Double {
+  let abs_value = Double::abs(value)
+  if abs_value >= 0.1 || abs_value < 0.01 {
+    round_significant_digits(value, 15)
+  } else {
+    value
+  }
+}
+
+///|
 fn number_or_num_error(value : Double) -> FormulaValue {
   if Double::is_nan(value) || Double::is_inf(value) {
     FormulaValue::Error(formula_error_num)
@@ -3951,8 +3961,210 @@ fn get_t_dist(t : Double, df : Double, ntype : Double) -> Double {
 }
 
 ///|
+fn get_gamma_series(fa : Double, fx : Double) -> Double {
+  let half_eps = 2.22045e-016 / 2.0
+  let mut denom = fa
+  let mut summand = 1.0 / fa
+  let mut sum = summand
+  let mut count = 1
+  while summand / sum > half_eps && count <= 10000 {
+    denom = denom + 1.0
+    summand = summand * fx / denom
+    sum = sum + summand
+    count = count + 1
+  }
+  sum
+}
+
+///|
+fn get_gamma_cont_fraction(fa : Double, fx : Double) -> Double {
+  let big_inv = 2.22045e-016
+  let half_eps = big_inv / 2.0
+  let big = 1.0 / big_inv
+  let mut count = 0.0
+  let mut y = 1.0 - fa
+  let mut denom = fx + 2.0 - fa
+  let mut pkm1 = fx + 1.0
+  let mut pkm2 = 1.0
+  let mut qkm1 = denom * fx
+  let mut qkm2 = fx
+  let mut approx = pkm1 / qkm1
+  let mut finished = false
+  while !finished && count < 10000.0 {
+    count = count + 1.0
+    y = y + 1.0
+    denom = denom + 2.0
+    let num = y * count
+    let f1 = pkm1 * denom
+    let f2 = pkm2 * num
+    let pk = f1 - f2
+    let f3 = qkm1 * denom
+    let f4 = qkm2 * num
+    let qk = f3 - f4
+    if qk != 0.0 {
+      let r = pk / qk
+      finished = Double::abs((approx - r) / r) <= half_eps
+      approx = r
+    }
+    pkm2 = pkm1
+    pkm1 = pk
+    qkm2 = qkm1
+    qkm1 = qk
+    if Double::abs(pk) > big {
+      pkm2 = pkm2 * big_inv
+      pkm1 = pkm1 * big_inv
+      qkm2 = qkm2 * big_inv
+      qkm1 = qkm1 * big_inv
+    }
+  }
+  approx
+}
+
+///|
+fn get_log_gamma_helper(fz : Double) -> Double {
+  let fg = 6.024680040776729583740234375
+  let zg_help = fz + fg - 0.5
+  @math.ln(get_lanczos_sum(fz)) + (fz - 0.5) * @math.ln(zg_help) - zg_help
+}
+
+///|
+fn get_gamma_helper(fz : Double) -> Double {
+  let fg = 6.024680040776729583740234375
+  let zg_help = fz + fg - 0.5
+  let half_power = @math.pow(zg_help, fz / 2.0 - 0.25)
+  let mut gamma = get_lanczos_sum(fz)
+  gamma = gamma * half_power
+  gamma = gamma / @math.exp(zg_help)
+  gamma = gamma * half_power
+  if fz <= 20.0 && fz == Double::floor(fz) {
+    gamma = round_half_away_from_zero(gamma)
+  }
+  gamma
+}
+
+///|
+fn get_log_gamma(fz : Double) -> Double {
+  let max_gamma_argument = 171.624376956302
+  if fz >= max_gamma_argument {
+    return get_log_gamma_helper(fz)
+  }
+  if fz >= 1.0 {
+    return @math.ln(get_gamma_helper(fz))
+  }
+  if fz >= 0.5 {
+    return @math.ln(get_gamma_helper(fz + 1.0) / fz)
+  }
+  get_log_gamma_helper(fz + 2.0) - @math.ln(fz + 1.0) - @math.ln(fz)
+}
+
+///|
+fn get_low_reg_igamma(fa : Double, fx : Double) -> Double {
+  let ln_factor = fa * @math.ln(fx) - fx - get_log_gamma(fa)
+  let factor = @math.exp(ln_factor)
+  if fx > fa + 1.0 {
+    1.0 - factor * get_gamma_cont_fraction(fa, fx)
+  } else {
+    factor * get_gamma_series(fa, fx)
+  }
+}
+
+///|
+fn get_chisq_dist_cdf(fx : Double, fdf : Double) -> Double {
+  if fx <= 0.0 {
+    return 0.0
+  }
+  get_low_reg_igamma(fdf / 2.0, fx / 2.0)
+}
+
+///|
+fn get_chisq_dist_pdf(fx : Double, fdf : Double) -> Double {
+  if fdf * fx > 1391000.0 {
+    return @math.exp(
+      (0.5 * fdf - 1.0) * @math.ln(fx * 0.5) -
+      0.5 * fx -
+      @math.ln(2.0) -
+      get_log_gamma(0.5 * fdf),
+    )
+  }
+  let mut count = 0.0
+  let mut value = 0.0
+  let fdf_mod = fdf - Double::floor(fdf / 2.0) * 2.0
+  if fdf_mod < 0.5 {
+    value = 0.5
+    count = 2.0
+  } else {
+    value = 1.0 / Double::sqrt(fx * 2.0 * @math.PI)
+    count = 1.0
+  }
+  while count < fdf {
+    value = value * fx / count
+    count = count + 2.0
+  }
+  if fx >= 1425.0 {
+    @math.exp(@math.ln(value) - fx / 2.0)
+  } else {
+    value * @math.exp(-fx / 2.0)
+  }
+}
+
+///|
+fn get_norm_s_dist(value : Double) -> Double {
+  0.5 * erfc_double(-value / Double::sqrt(2.0))
+}
+
+///|
+fn get_chidist(x : Double, degrees : Double) -> Double {
+  let log_sqrt_pi = @math.ln(Double::sqrt(@math.PI))
+  let sqrt_pi = 1.0 / Double::sqrt(@math.PI)
+  let mut e = 0.0
+  let mut s = 0.0
+  let mut z = 0.0
+  let mut c = 0.0
+  let mut y = 0.0
+  let a = x / 2.0
+  let mut x1 = x
+  let even = Double::to_int(trunc_double(degrees)) % 2 == 0
+  if degrees > 1.0 {
+    y = @math.exp(-a)
+  }
+  s = 2.0 * get_norm_s_dist(-Double::sqrt(x1))
+  if even {
+    s = y
+  }
+  if degrees > 2.0 {
+    x1 = (degrees - 1.0) / 2.0
+    z = if even { 1.0 } else { 0.5 }
+    if a > 20.0 {
+      e = if even { 0.0 } else { log_sqrt_pi }
+      c = @math.ln(a)
+      while z <= x1 {
+        e = @math.ln(z) + e
+        s = s + @math.exp(c * z - a - e)
+        z = z + 1.0
+      }
+      return s
+    }
+    e = if even { 1.0 } else { sqrt_pi / Double::sqrt(a) }
+    c = 0.0
+    while z <= x1 {
+      e = e * (a / z)
+      c = c + e
+      z = z + 1.0
+    }
+    return c * y + s
+  }
+  s
+}
+
+///|
 fn has_change_of_sign(u : Double, w : Double) -> Bool {
   (u < 0.0 && w > 0.0) || (u > 0.0 && w < 0.0)
+}
+
+///|
+priv enum InverseKind {
+  TDist
+  ChiSq
 }
 
 ///|
@@ -3960,11 +4172,15 @@ priv struct InverseIterator {
   fp : Double
   fdf : Double
   nt : Double
+  kind : InverseKind
 }
 
 ///|
 fn InverseIterator::call(self : InverseIterator, x : Double) -> Double {
-  self.fp - get_t_dist(x, self.fdf, self.nt)
+  match self.kind {
+    InverseKind::ChiSq => self.fp - get_chisq_dist_cdf(x, self.fdf)
+    InverseKind::TDist => self.fp - get_t_dist(x, self.fdf, self.nt)
+  }
 }
 
 ///|
@@ -5597,6 +5813,18 @@ fn eval_function(
     "BETADIST" => betadist_values(values)
     "BETAINV" => betainv_values(values)
     "BETAdotINV" | "BETA.INV" | "_XLFN.BETA.INV" => betainv_values(values)
+    "CHIDIST" => chidist_values(values)
+    "CHIINV" => chiinv_values(values)
+    "CHISQdotDIST" | "CHISQ.DIST" | "_XLFN.CHISQ.DIST" =>
+      chisq_dist_values(values)
+    "CHISQdotDISTdotRT" | "CHISQ.DIST.RT" | "_XLFN.CHISQ.DIST.RT" =>
+      chidist_values(values)
+    "CHISQdotINV" | "CHISQ.INV" | "_XLFN.CHISQ.INV" => chisq_inv_values(values)
+    "CHISQdotINVdotRT" | "CHISQ.INV.RT" | "_XLFN.CHISQ.INV.RT" =>
+      chiinv_values(values)
+    "CHITEST" => chitest_values(workbook, sheet_name, args, values, ctx)
+    "CHISQdotTEST" | "CHISQ.TEST" | "_XLFN.CHISQ.TEST" =>
+      chitest_values(workbook, sheet_name, args, values, ctx)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
     "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
     "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
@@ -10256,9 +10484,19 @@ fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     return FormulaValue::Error(formula_error_num)
   }
   let iterator = if probability < 0.5 {
-    InverseIterator::{ fp: 1.0 - probability, fdf: degrees, nt: 4.0 }
+    InverseIterator::{
+      fp: 1.0 - probability,
+      fdf: degrees,
+      nt: 4.0,
+      kind: InverseKind::TDist,
+    }
   } else {
-    InverseIterator::{ fp: probability, fdf: degrees, nt: 4.0 }
+    InverseIterator::{
+      fp: probability,
+      fdf: degrees,
+      nt: 4.0,
+      kind: InverseKind::TDist,
+    }
   }
   let mut result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   if probability < 0.5 {
@@ -10283,9 +10521,192 @@ fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if probability <= 0.0 || probability > 1.0 || degrees < 1.0 {
     return FormulaValue::Error(formula_error_num)
   }
-  let iterator = InverseIterator::{ fp: probability, fdf: degrees, nt: 2.0 }
+  let iterator = InverseIterator::{
+    fp: probability,
+    fdf: degrees,
+    nt: 2.0,
+    kind: InverseKind::TDist,
+  }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let result = round_chisq_result(get_chidist(x, degrees))
+  number_or_num_error(result)
+}
+
+///|
+fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability > 1.0 || degrees < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if probability == 1.0 {
+    return FormulaValue::Number(0.0)
+  }
+  let iterator = InverseIterator::{
+    fp: 1.0 - probability,
+    fdf: degrees,
+    nt: 0.0,
+    kind: InverseKind::ChiSq,
+  }
+  let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
+  number_or_num_error(result)
+}
+
+///|
+fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[2]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if x < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let max_deg = @math.pow(10.0, 10.0)
+  if degrees < 1.0 || degrees >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if cumulative {
+    number_or_num_error(get_chisq_dist_cdf(x, degrees))
+  } else {
+    number_or_num_error(get_chisq_dist_pdf(x, degrees))
+  }
+}
+
+///|
+fn chisq_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability < 0.0 || probability >= 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let max_deg = @math.pow(10.0, 10.0)
+  if degrees < 1.0 || degrees > max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if probability == 0.0 {
+    return FormulaValue::Number(0.0)
+  }
+  let iterator = InverseIterator::{
+    fp: probability,
+    fdf: degrees,
+    nt: 0.0,
+    kind: InverseKind::ChiSq,
+  }
+  let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
+  number_or_num_error(result)
+}
+
+///|
+fn chitest_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let actual_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let expected_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[1],
+    values[1],
+    ctx,
+  )
+  if actual_range.rows == 0 || actual_range.cols == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if actual_range.rows != expected_range.rows ||
+    actual_range.cols != expected_range.cols {
+    return FormulaValue::Error(formula_error_na)
+  }
+  if actual_range.rows * actual_range.cols == 1 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut result = 0.0
+  for idx in 0..<actual_range.values.length() {
+    let actual = match value_as_number(actual_range.values[idx]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    let expected = match value_as_number(expected_range.values[idx]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    if expected == 0.0 {
+      return FormulaValue::Error(formula_error_div)
+    }
+    if expected < 0.0 {
+      return FormulaValue::Error(formula_error_num)
+    }
+    let diff = actual - expected
+    result = result + diff * diff / expected
+  }
+  let degrees = if actual_range.rows == 1 {
+    actual_range.cols - 1
+  } else if actual_range.cols == 1 {
+    actual_range.rows - 1
+  } else {
+    (actual_range.cols - 1) * (actual_range.rows - 1)
+  }
+  if degrees <= 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let value = round_chisq_result(get_chidist(result, Double::from_int(degrees)))
+  number_or_num_error(value)
 }
 
 ///|
