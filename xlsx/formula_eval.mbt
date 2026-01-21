@@ -1902,6 +1902,26 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "TYPE" =>
+      if values.length() == 1 {
+        type_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "T" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(err) => FormulaValue::Error(err)
+          FormulaValue::Number(_) => FormulaValue::String("")
+          FormulaValue::String(text) => FormulaValue::String(text)
+          FormulaValue::Bool(flag) =>
+            FormulaValue::String(if flag { "TRUE" } else { "FALSE" })
+          FormulaValue::Empty => FormulaValue::String("")
+          FormulaValue::List(_) => FormulaValue::String("")
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "NA" =>
       if values.length() == 0 {
         FormulaValue::Error(formula_error_na)
@@ -2325,6 +2345,18 @@ fn error_type_value(value : FormulaValue) -> FormulaValue {
         FormulaValue::Error(formula_error_na)
       }
     _ => FormulaValue::Error(formula_error_na)
+  }
+}
+
+///|
+fn type_value(value : FormulaValue) -> FormulaValue {
+  match normalize_scalar(value) {
+    FormulaValue::Error(_) => FormulaValue::Number(16.0)
+    FormulaValue::List(_) => FormulaValue::Number(64.0)
+    FormulaValue::Number(_) => FormulaValue::Number(1.0)
+    FormulaValue::Bool(_) => FormulaValue::Number(4.0)
+    FormulaValue::Empty => FormulaValue::Number(1.0)
+    FormulaValue::String(_) => FormulaValue::Number(2.0)
   }
 }
 

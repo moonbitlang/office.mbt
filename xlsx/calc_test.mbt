@@ -348,6 +348,28 @@ test "calc sheet functions" {
 }
 
 ///|
+test "calc type and t functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "TYPE(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
+  sheet.set_cell_formula("A2", "TYPE(\"text\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="2")
+  sheet.set_cell_formula("A3", "TYPE(TRUE())")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="4")
+  sheet.set_cell_formula("A4", "TYPE(1/0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="16")
+  sheet.set_cell_formula("A5", "T(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="")
+  sheet.set_cell_formula("A6", "T(\"text\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="text")
+  sheet.set_cell_formula("A7", "T(TRUE())")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="TRUE")
+  sheet.set_cell_formula("A8", "T(1/0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#DIV/0!")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
