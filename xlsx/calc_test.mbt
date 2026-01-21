@@ -196,6 +196,37 @@ test "calc ifs function" {
 }
 
 ///|
+test "calc is functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::String("text"))
+  sheet.set_cell_value("A3", CellValue::String("1"))
+  sheet.set_cell_value("A4", CellValue::Bool(true))
+  sheet.set_cell_value("A5", CellValue::Error("#DIV/0!"))
+  sheet.set_cell_formula("B1", "ISBLANK(B2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="TRUE")
+  sheet.set_cell_formula("B2", "ISNUMBER(A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="TRUE")
+  sheet.set_cell_formula("B3", "ISNUMBER(A3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="FALSE")
+  sheet.set_cell_formula("B4", "ISTEXT(A2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="TRUE")
+  sheet.set_cell_formula("B5", "ISTEXT(A3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="FALSE")
+  sheet.set_cell_formula("B6", "ISLOGICAL(A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="TRUE")
+  sheet.set_cell_formula("B7", "ISNONTEXT(A2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B7"), content="FALSE")
+  sheet.set_cell_formula("B8", "ISERROR(A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B8"), content="TRUE")
+  sheet.set_cell_formula("B9", "ISNA(A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B9"), content="FALSE")
+  sheet.set_cell_formula("B10", "ISNA(COUNTIFS(A1,1,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "B10"), content="TRUE")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

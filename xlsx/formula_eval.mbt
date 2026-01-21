@@ -1717,6 +1717,76 @@ fn eval_function(
         }
         FormulaValue::Error(formula_error_na)
       }
+    "ISBLANK" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Empty => FormulaValue::Bool(true)
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISERROR" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(_) => FormulaValue::Bool(true)
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISLOGICAL" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Bool(_) => FormulaValue::Bool(true)
+          FormulaValue::String(text) =>
+            FormulaValue::Bool(text == "TRUE" || text == "FALSE")
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISNA" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(err) =>
+            FormulaValue::Bool(err == formula_error_na)
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISNUMBER" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Number(_) => FormulaValue::Bool(true)
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISTEXT" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(_) => FormulaValue::Bool(false)
+              None => FormulaValue::Bool(true)
+            }
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISNONTEXT" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::String(_) => FormulaValue::Bool(false)
+          _ => FormulaValue::Bool(true)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     _ => FormulaValue::Error(formula_error_name)
   }
 }
