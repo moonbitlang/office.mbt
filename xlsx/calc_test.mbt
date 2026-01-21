@@ -132,6 +132,23 @@ test "calc a functions" {
 }
 
 ///|
+test "calc counta function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::String("text"))
+  sheet.set_cell_value("A3", CellValue::String(""))
+  sheet.set_cell_value("A4", CellValue::Bool(true))
+  sheet.set_cell_value("A5", CellValue::Error("#DIV/0!"))
+  sheet.set_cell_formula("B1", "COUNTA(A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="3")
+  sheet.set_cell_formula("B2", "COUNTA(A1:A5,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="4")
+  sheet.set_cell_formula("B3", "COUNTA(\"text\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="1")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

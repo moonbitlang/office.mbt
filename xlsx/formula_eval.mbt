@@ -1275,6 +1275,7 @@ fn eval_function(
     "MINA" => mina_values(values)
     "MAXA" => maxa_values(values)
     "COUNT" => count_values(values)
+    "COUNTA" => counta_values(values)
     "COUNTBLANK" =>
       if args.length() == 1 {
         let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
@@ -1973,6 +1974,22 @@ fn count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           Some(_) => count = count + 1
           None => ()
         }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut count = 0
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Number(_) => count = count + 1
+      FormulaValue::Bool(_) => count = count + 1
+      FormulaValue::String(text) => if text != "" { count = count + 1 }
+      FormulaValue::Error(_) => ()
       FormulaValue::Empty => ()
       FormulaValue::List(_) => ()
     }
