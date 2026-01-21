@@ -1605,6 +1605,36 @@ fn eval_function(
       }
     "GCD" => gcd_values(values)
     "LCM" => lcm_values(values)
+    "COMBIN" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(chosen)) => combin_values(num, chosen)
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COMBINA" | "_XLFN.COMBINA" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(chosen)) => {
+            let n = trunc_double(num)
+            let k = trunc_double(chosen)
+            if n < k {
+              FormulaValue::Error(formula_error_value)
+            } else if n == 0.0 {
+              FormulaValue::Number(n)
+            } else {
+              combin_values(n + k - 1.0, n - 1.0)
+            }
+          }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "ABS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -2670,6 +2700,25 @@ fn lcm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     result = lcm_double(result, numbers[i])
   }
   FormulaValue::Number(result)
+}
+
+///|
+fn combin_values(number : Double, chosen : Double) -> FormulaValue {
+  let n = trunc_double(number)
+  let k = trunc_double(chosen)
+  if k > n {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if k == n || k == 0.0 {
+    return FormulaValue::Number(1.0)
+  }
+  let mut val = 1.0
+  let k_int = Double::to_int(k)
+  for i in 1..<=k_int {
+    let c = Double::from_int(i)
+    val = val * (n + 1.0 - c) / c
+  }
+  FormulaValue::Number(Double::ceil(val))
 }
 
 ///|
