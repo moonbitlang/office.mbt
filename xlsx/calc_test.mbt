@@ -2257,6 +2257,41 @@ test "calc date and time functions" {
 }
 
 ///|
+test "calc lookup functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(10.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(20.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(30.0))
+  sheet.set_cell_formula("C1", "INDEX(A1:A3,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
+  sheet.set_cell_formula("C2", "INDEX(A1:B3,2,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="20")
+  sheet.set_cell_formula("C3", "INDEX(A1:B3,4,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#REF!")
+  sheet.set_cell_formula("C4", "INDEX(A1:B3,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="#VALUE!")
+  sheet.set_cell_formula("D1", "MATCH(2,A1:A3,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="2")
+  sheet.set_cell_formula("D2", "MATCH(2.5,A1:A3,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="2")
+  sheet.set_cell_value("E1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("E2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("E3", CellValue::Numeric(1.0))
+  sheet.set_cell_formula("D3", "MATCH(2.5,E1:E3,-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1")
+  sheet.set_cell_formula("D4", "MATCH(4,A1:A3,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="#N/A")
+  sheet.set_cell_formula("D5", "MATCH(2,A1:B2,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "D5"), content="#N/A")
+  sheet.set_cell_formula("D6", "MATCH(2,A1:A3,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "D6"), content="#N/A")
+}
+
+///|
 test "calc a functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

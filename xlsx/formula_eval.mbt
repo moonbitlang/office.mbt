@@ -783,6 +783,25 @@ fn current_cell_rc(ctx : CalcContext) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
+fn range_vector(range : RangeValues) -> Array[FormulaValue]? {
+  if range.rows == 1 {
+    let out : Array[FormulaValue] = []
+    for col in 0..<range.cols {
+      out.push(range.values[col])
+    }
+    Some(out)
+  } else if range.cols == 1 {
+    let out : Array[FormulaValue] = []
+    for row in 0..<range.rows {
+      out.push(range.values[row * range.cols])
+    }
+    Some(out)
+  } else {
+    None
+  }
+}
+
+///|
 fn formula_value_from_cell_value(value : CellValue) -> FormulaValue {
   match value {
     CellValue::Numeric(num) => FormulaValue::Number(num)
@@ -1085,6 +1104,53 @@ fn compare_values(
         _ => Ok(0)
       }
     }
+  }
+}
+
+///|
+fn match_range_value(
+  lookup : FormulaValue,
+  range : RangeValues,
+  match_type : Int,
+) -> FormulaValue {
+  let values = match range_vector(range) {
+    Some(list) => list
+    None => return FormulaValue::Error(formula_error_na)
+  }
+  if match_type != 0 && match_type != 1 && match_type != -1 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  match lookup {
+    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    _ => ()
+  }
+  if match_type == 0 {
+    for i in 0..<values.length() {
+      match compare_values(values[i], lookup) {
+        Ok(0) => return FormulaValue::Number(Double::from_int(i + 1))
+        Ok(_) => ()
+        Err(err) => return err
+      }
+    }
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut best_idx : Int? = None
+  for i in 0..<values.length() {
+    match compare_values(values[i], lookup) {
+      Ok(cmp) =>
+        if match_type == 1 {
+          if cmp <= 0 {
+            best_idx = Some(i)
+          }
+        } else if cmp >= 0 {
+          best_idx = Some(i)
+        }
+      Err(err) => return err
+    }
+  }
+  match best_idx {
+    Some(idx) => FormulaValue::Number(Double::from_int(idx + 1))
+    None => FormulaValue::Error(formula_error_na)
   }
 }
 
@@ -4175,6 +4241,48 @@ fn eval_function(
             FormulaValue::Number(Double::from_int(second))
           Err(err) => err
         }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "INDEX" =>
+      if args.length() == 2 || args.length() == 3 {
+        let range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let row_num = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let col_num = if args.length() == 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if row_num <= 0 || col_num <= 0 {
+          FormulaValue::Error(formula_error_value)
+        } else if row_num > range.rows || col_num > range.cols {
+          FormulaValue::Error(formula_error_ref)
+        } else {
+          let index = (row_num - 1) * range.cols + (col_num - 1)
+          range.values[index]
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MATCH" =>
+      if args.length() == 2 || args.length() == 3 {
+        let lookup = values[0]
+        let range = eval_range_expr(workbook, sheet_name, args[1], ctx)
+        let match_type = if args.length() == 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        match_range_value(lookup, range, match_type)
       } else {
         FormulaValue::Error(formula_error_value)
       }
