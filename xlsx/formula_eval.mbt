@@ -1269,8 +1269,11 @@ fn eval_function(
     "FALSE" => FormulaValue::Bool(false)
     "SUM" => sum_values(values)
     "AVERAGE" => average_values(values)
+    "AVERAGEA" => averagea_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
+    "MINA" => mina_values(values)
+    "MAXA" => maxa_values(values)
     "COUNT" => count_values(values)
     "COUNTBLANK" =>
       if args.length() == 1 {
@@ -1711,6 +1714,49 @@ fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut sum = 0.0
+  let mut count = 0
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) => {
+        sum = sum + num
+        count = count + 1
+      }
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        sum = sum + num
+        count = count + 1
+      }
+      FormulaValue::String(text) =>
+        if text == "" {
+          ()
+        } else if text == "TRUE" || text == "FALSE" {
+          let num = if text == "TRUE" { 1.0 } else { 0.0 }
+          sum = sum + num
+          count = count + 1
+        } else {
+          match parse_double_opt(text) {
+            Some(num) => {
+              sum = sum + num
+              count = count + 1
+            }
+            None => count = count + 1
+          }
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  if count == 0 {
+    FormulaValue::Error(formula_error_div)
+  } else {
+    FormulaValue::Number(sum / Double::from_int(count))
+  }
+}
+
+///|
 fn min_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut min = None
   for value in flatten_values(values) {
@@ -1758,6 +1804,61 @@ fn min_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn mina_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut min : Double? = None
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) =>
+        min = Some(
+          match min {
+            Some(current) => if num < current { num } else { current }
+            None => num
+          },
+        )
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        min = Some(
+          match min {
+            Some(current) => if num < current { num } else { current }
+            None => num
+          },
+        )
+      }
+      FormulaValue::String(text) =>
+        if text == "" {
+          ()
+        } else if text == "TRUE" || text == "FALSE" {
+          let num = if text == "TRUE" { 1.0 } else { 0.0 }
+          min = Some(
+            match min {
+              Some(current) => if num < current { num } else { current }
+              None => num
+            },
+          )
+        } else {
+          match parse_double_opt(text) {
+            Some(num) =>
+              min = Some(
+                match min {
+                  Some(current) => if num < current { num } else { current }
+                  None => num
+                },
+              )
+            None => ()
+          }
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  match min {
+    Some(value) => FormulaValue::Number(value)
+    None => FormulaValue::Number(0.0)
+  }
+}
+
+///|
 fn max_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut max = None
   for value in flatten_values(values) {
@@ -1782,6 +1883,61 @@ fn max_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       FormulaValue::String(text) =>
         if text == "TRUE" || text == "FALSE" {
           ()
+        } else {
+          match parse_double_opt(text) {
+            Some(num) =>
+              max = Some(
+                match max {
+                  Some(current) => if num > current { num } else { current }
+                  None => num
+                },
+              )
+            None => ()
+          }
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  match max {
+    Some(value) => FormulaValue::Number(value)
+    None => FormulaValue::Number(0.0)
+  }
+}
+
+///|
+fn maxa_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut max : Double? = None
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) =>
+        max = Some(
+          match max {
+            Some(current) => if num > current { num } else { current }
+            None => num
+          },
+        )
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        max = Some(
+          match max {
+            Some(current) => if num > current { num } else { current }
+            None => num
+          },
+        )
+      }
+      FormulaValue::String(text) =>
+        if text == "" {
+          ()
+        } else if text == "TRUE" || text == "FALSE" {
+          let num = if text == "TRUE" { 1.0 } else { 0.0 }
+          max = Some(
+            match max {
+              Some(current) => if num > current { num } else { current }
+              None => num
+            },
+          )
         } else {
           match parse_double_opt(text) {
             Some(num) =>

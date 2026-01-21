@@ -110,6 +110,28 @@ test "calc math and text functions" {
 }
 
 ///|
+test "calc a functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "AVERAGEA(TRUE(),FALSE(),2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
+  sheet.set_cell_formula("A2", "AVERAGEA(\"text\",2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="1")
+  sheet.set_cell_formula("A3", "AVERAGEA(\"\",2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="2")
+  sheet.set_cell_formula("A4", "AVERAGEA(\"TRUE\",\"FALSE\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="0.5")
+  sheet.set_cell_formula("A5", "MAXA(TRUE(),FALSE(),-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="1")
+  sheet.set_cell_formula("A6", "MINA(TRUE(),FALSE(),2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="0")
+  sheet.set_cell_formula("A7", "MAXA(\"text\",-2,\"3\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="3")
+  sheet.set_cell_formula("A8", "MINA(\"text\",-2,\"3\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="-2")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
