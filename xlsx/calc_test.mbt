@@ -5953,3 +5953,62 @@ test "calc fisher functions" {
   sheet.set_cell_formula("A4", "FISHERINV(\"bad\")")
   inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
 }
+
+///|
+test "calc normal and lognormal distribution functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("GAUSS(-5)", "-0.499999713348562"),
+    ("GAUSS(0)", "0"),
+    ("GAUSS(0.1)", "0.039827837277029"),
+    ("GAUSS(2.5)", "0.493790334674224"),
+    ("PHI(-1.5)", "0.129517595665892"),
+    ("PHI(0)", "0.398942280401433"),
+    ("PHI(0.1)", "0.396952547477012"),
+    ("PHI(1)", "0.241970724519143"),
+    ("NORM.DIST(0.8,1,0.3,TRUE)", "0.252492537546923"),
+    ("NORM.DIST(50,40,20,FALSE)", "0.017603266338215"),
+    ("NORMDIST(0.8,1,0.3,TRUE)", "0.252492537546923"),
+    ("NORMDIST(50,40,20,FALSE)", "0.017603266338215"),
+    ("NORM.INV(0.6,5,2)", "5.50669420572"),
+    ("NORMINV(0.6,5,2)", "5.50669420572"),
+    ("NORMINV(0.99,40,1.5)", "43.489521811582"),
+    ("NORMINV(0.02,40,1.5)", "36.9193766364955"),
+    ("NORM.S.DIST(0.8,TRUE)", "0.788144601416603"),
+    ("NORMSDIST(1.333333)", "0.908788725604095"),
+    ("NORMSDIST(0)", "0.5"),
+    ("NORM.S.INV(0.25)", "-0.674489750223423"),
+    ("NORMSINV(0.25)", "-0.674489750223423"),
+    ("LOGNORM.INV(0.3,2,0.2)", "6.6533460753367"),
+    ("LOGNORM.DIST(0.5,10,5,FALSE)", "0.0162104821842127"),
+    ("LOGNORM.DIST(12,10,5,TRUE)", "0.0664171147992079"),
+    ("LOGNORMDIST(12,10,5)", "0.0664171147992079"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("GAUSS()", "#VALUE!"),
+    ("PHI()", "#VALUE!"),
+    ("NORM.DIST()", "#VALUE!"),
+    ("NORMDIST()", "#VALUE!"),
+    ("NORMINV(0,5,2)", "#NUM!"),
+    ("NORMINV(1,5,2)", "#NUM!"),
+    ("NORMINV(-0.1,5,2)", "#N/A"),
+    ("NORM.S.DIST(0.8)", "#VALUE!"),
+    ("NORMSINV()", "#VALUE!"),
+    ("LOGNORM.INV(0,2,0.2)", "#NUM!"),
+    ("LOGNORM.DIST(0,10,5,FALSE)", "#NUM!"),
+    ("LOGNORMDIST(0,10,5)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}

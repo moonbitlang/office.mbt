@@ -5314,6 +5314,114 @@ fn get_norm_s_dist(value : Double) -> Double {
 }
 
 ///|
+fn norm_pdf(value : Double, mean : Double, std_dev : Double) -> Double {
+  let z = (value - mean) / std_dev
+  let denom = Double::sqrt(2.0 * @math.PI) * std_dev
+  @math.exp(-0.5 * z * z) / denom
+}
+
+///|
+fn norm_cdf(value : Double, mean : Double, std_dev : Double) -> Double {
+  get_norm_s_dist((value - mean) / std_dev)
+}
+
+///|
+let norminv_a : Array[Double] = [
+  -39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716,
+  2.506628277459239,
+]
+
+///|
+let norminv_b : Array[Double] = [
+  -54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572,
+]
+
+///|
+let norminv_c : Array[Double] = [
+  -0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734,
+  4.374664141464968, 2.938163982698783,
+]
+
+///|
+let norminv_d : Array[Double] = [
+  0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416,
+]
+
+///|
+fn norminv_double(prob : Double) -> Result[Double, FormulaValue] {
+  let p_low = 0.02425
+  let p_high = 1.0 - p_low
+  if prob > 0.0 && prob < p_low {
+    let q = Double::sqrt(-2.0 * @math.ln(prob))
+    let numerator = (
+        (
+          ((norminv_c[0] * q + norminv_c[1]) * q + norminv_c[2]) * q +
+          norminv_c[3]
+        ) *
+        q +
+        norminv_c[4]
+      ) *
+      q +
+      norminv_c[5]
+    let denominator = (
+        ((norminv_d[0] * q + norminv_d[1]) * q + norminv_d[2]) * q +
+        norminv_d[3]
+      ) *
+      q +
+      1.0
+    Ok(numerator / denominator)
+  } else if prob >= p_low && prob <= p_high {
+    let q = prob - 0.5
+    let r = q * q
+    let numerator = (
+        (
+          (
+            ((norminv_a[0] * r + norminv_a[1]) * r + norminv_a[2]) * r +
+            norminv_a[3]
+          ) *
+          r +
+          norminv_a[4]
+        ) *
+        r +
+        norminv_a[5]
+      ) *
+      q
+    let denominator = (
+        (
+          ((norminv_b[0] * r + norminv_b[1]) * r + norminv_b[2]) * r +
+          norminv_b[3]
+        ) *
+        r +
+        norminv_b[4]
+      ) *
+      r +
+      1.0
+    Ok(numerator / denominator)
+  } else if prob > p_high && prob < 1.0 {
+    let q = Double::sqrt(-2.0 * @math.ln(1.0 - prob))
+    let numerator = (
+        (
+          ((norminv_c[0] * q + norminv_c[1]) * q + norminv_c[2]) * q +
+          norminv_c[3]
+        ) *
+        q +
+        norminv_c[4]
+      ) *
+      q +
+      norminv_c[5]
+    let denominator = (
+        ((norminv_d[0] * q + norminv_d[1]) * q + norminv_d[2]) * q +
+        norminv_d[3]
+      ) *
+      q +
+      1.0
+    Ok(-numerator / denominator)
+  } else {
+    Err(FormulaValue::Error(formula_error_num))
+  }
+}
+
+///|
 fn get_chidist(x : Double, degrees : Double) -> Double {
   let log_sqrt_pi = @math.ln(Double::sqrt(@math.PI))
   let sqrt_pi = 1.0 / Double::sqrt(@math.PI)
@@ -7414,6 +7522,24 @@ fn eval_function(
     "BETADIST" => betadist_values(values)
     "BETAINV" => betainv_values(values)
     "BETAdotINV" | "BETA.INV" | "_XLFN.BETA.INV" => betainv_values(values)
+    "NORMdotDIST" | "NORM.DIST" | "_XLFN.NORM.DIST" => normdist_values(values)
+    "NORMDIST" => normdist_values(values)
+    "NORMdotINV" | "NORM.INV" | "_XLFN.NORM.INV" => norminv_values(values)
+    "NORMINV" => norminv_values(values)
+    "NORMdotSdotDIST" | "NORM.S.DIST" | "_XLFN.NORM.S.DIST" =>
+      norm_s_dist_values(values)
+    "NORMSDIST" => norms_dist_values(values)
+    "NORMdotSdotINV" | "NORM.S.INV" | "_XLFN.NORM.S.INV" =>
+      norm_s_inv_values(values)
+    "NORMSINV" => norms_inv_values(values)
+    "LOGNORMdotDIST" | "LOGNORM.DIST" | "_XLFN.LOGNORM.DIST" =>
+      lognorm_dist_values(values)
+    "LOGNORMDIST" => lognormdist_values(values)
+    "LOGINV" => loginv_values(values)
+    "LOGNORMdotINV" | "LOGNORM.INV" | "_XLFN.LOGNORM.INV" =>
+      loginv_values(values)
+    "GAUSS" => gauss_value(values)
+    "PHI" => phi_value(values)
     "CHIDIST" => chidist_values(values)
     "CHIINV" => chiinv_values(values)
     "CHISQdotDIST" | "CHISQ.DIST" | "_XLFN.CHISQ.DIST" =>
@@ -12075,6 +12201,235 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mid = get_beta_inv(probability, alpha, beta)
   let scaled = a + mid * (b - a)
   number_or_num_error(round_significant_digits(scaled, 15))
+}
+
+///|
+fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if std_dev < 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let raw = if cumulative {
+    norm_cdf(x, mean, std_dev)
+  } else {
+    norm_pdf(x, mean, std_dev)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability < 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  if std_dev < 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let inv = match norminv_double(probability) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let raw = inv * std_dev + mean
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[1]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  let raw = if cumulative { get_norm_s_dist(x) } else { norm_pdf(x, 0.0, 1.0) }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  number_or_num_error(round_significant_digits(get_norm_s_dist(x), 15))
+}
+
+///|
+fn norm_s_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability < 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let inv = match norminv_double(probability) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  number_or_num_error(round_significant_digits(inv, 15))
+}
+
+///|
+fn norms_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  norm_s_inv_values(values)
+}
+
+///|
+fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability >= 1.0 || std_dev <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let inv = match norminv_double(probability) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let raw = @math.exp(mean + std_dev * inv)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if x <= 0.0 || std_dev <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if cumulative {
+    let z = (@math.ln(x) - mean) / std_dev
+    return number_or_num_error(round_significant_digits(get_norm_s_dist(z), 15))
+  }
+  let denom = Double::sqrt(2.0 * @math.PI) * std_dev * x
+  let exponent = -(@math.pow(@math.ln(x) - mean, 2.0) /
+    (2.0 * std_dev * std_dev))
+  let raw = @math.exp(exponent) / denom
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if x <= 0.0 || std_dev <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let z = (@math.ln(x) - mean) / std_dev
+  number_or_num_error(round_significant_digits(get_norm_s_dist(z), 15))
+}
+
+///|
+fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let raw = get_norm_s_dist(x) - 0.5
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let raw = 0.39894228040143268 * @math.exp(-(x * x) / 2.0)
+  number_or_num_error(round_significant_digits(raw, 15))
 }
 
 ///|
