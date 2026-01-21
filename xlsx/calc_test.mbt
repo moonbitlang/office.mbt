@@ -132,6 +132,22 @@ test "calc a functions" {
 }
 
 ///|
+test "calc median function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "MEDIAN(1,2,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
+  sheet.set_cell_formula("A2", "MEDIAN(1,2,4,6)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="3")
+  sheet.set_cell_formula("A3", "MEDIAN(1,\"2\",3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="2")
+  sheet.set_cell_formula("A4", "MEDIAN(1,TRUE(),2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="1")
+  sheet.set_cell_formula("A5", "MEDIAN(\"text\",2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+}
+
+///|
 test "calc counta function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

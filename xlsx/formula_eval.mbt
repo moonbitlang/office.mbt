@@ -1270,6 +1270,7 @@ fn eval_function(
     "SUM" => sum_values(values)
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
+    "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
     "MINA" => mina_values(values)
@@ -1754,6 +1755,37 @@ fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     FormulaValue::Error(formula_error_div)
   } else {
     FormulaValue::Number(sum / Double::from_int(count))
+  }
+}
+
+///|
+fn median_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) => numbers.push(num)
+      FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+      FormulaValue::String(text) =>
+        match parse_double_opt(text) {
+          Some(num) => numbers.push(num)
+          None => return FormulaValue::Error(formula_error_value)
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  numbers.sort()
+  let count = numbers.length()
+  if count % 2 == 0 {
+    let left = numbers[count / 2 - 1]
+    let right = numbers[count / 2]
+    FormulaValue::Number((left + right) / 2.0)
+  } else {
+    FormulaValue::Number(numbers[count / 2])
   }
 }
 
