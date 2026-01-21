@@ -2775,6 +2775,44 @@ test "calc text b error functions" {
 }
 
 ///|
+test "calc textsplit functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula(
+    "A1", "TEXTJOIN(\",\",TRUE(),TEXTSPLIT(\"a,b,c\",\",\"))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="a,b,c")
+  sheet.set_cell_formula(
+    "A2", "TEXTJOIN(\",\",TRUE(),TEXTSPLIT(\"a,b;c,d\",\",\",\";\"))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="a,b,c,d")
+  sheet.set_cell_formula(
+    "A3", "TEXTJOIN(\",\",TRUE(),TEXTSPLIT(\"a,,b\",\",\",\"\",TRUE()))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="a,b")
+  sheet.set_cell_formula(
+    "A4", "TEXTJOIN(\",\",TRUE(),TEXTSPLIT(\"a,b;c\",\",\",\";\",FALSE(),0,\"x\"))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="a,b,c,x")
+  sheet.set_cell_formula(
+    "A5", "TEXTJOIN(\",\",TRUE(),TEXTSPLIT(\"aXb\",\"x\",\"\",FALSE(),1))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="a,b")
+}
+
+///|
+test "calc textsplit error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "TEXTSPLIT()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "TEXTSPLIT(\"a,b\",\"\",\",\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "TEXTSPLIT(\"a,b\",\",\",\";\",TRUE(),2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+}
+
+///|
 test "calc unique functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

@@ -1845,6 +1845,40 @@ fn find_substring_from(text : String, pattern : String, start : Int) -> Int? {
 }
 
 ///|
+fn split_text_parts(
+  text : String,
+  delimiter : String,
+  ignore_empty : Bool,
+  ignore_case : Bool,
+) -> Array[String] {
+  let parts : Array[String] = []
+  if delimiter.length() == 0 {
+    return parts
+  }
+  let search_text = if ignore_case { text.to_lower() } else { text }
+  let search_delim = if ignore_case { delimiter.to_lower() } else { delimiter }
+  let delim_len = delimiter.length()
+  let mut pos = 0
+  while true {
+    match find_substring_from(search_text, search_delim, pos) {
+      Some(idx) => {
+        let part = text.unsafe_substring(start=pos, end=idx)
+        if !ignore_empty || part != "" {
+          parts.push(part)
+        }
+        pos = idx + delim_len
+      }
+      None => break
+    }
+  }
+  let tail = text.unsafe_substring(start=pos, end=text.length())
+  if !ignore_empty || tail != "" {
+    parts.push(tail)
+  }
+  parts
+}
+
+///|
 fn wildcard_match_prefix(
   text : String,
   pattern : String,
@@ -2317,6 +2351,88 @@ fn textjoin_collect_value(
         FormulaValue::List(_) => Ok(())
       }
   }
+}
+
+///|
+fn textsplit_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 2 || values.length() > 6 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let text = match value_as_string(values[0]) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let col_delimiter = match value_as_string(values[1]) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  if col_delimiter == "" {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let row_delimiter = if values.length() >= 3 {
+    match value_as_string(values[2]) {
+      Ok(value) => value
+      Err(err) => return err
+    }
+  } else {
+    ""
+  }
+  let ignore_empty = if values.length() >= 4 {
+    match value_as_bool(values[3]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+  } else {
+    false
+  }
+  let match_mode = if values.length() >= 5 {
+    match value_as_int(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0
+  }
+  if match_mode != 0 && match_mode != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let ignore_case = match_mode == 1
+  let pad_value = if values.length() == 6 {
+    match normalize_scalar(values[5]) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      value => value
+    }
+  } else {
+    FormulaValue::Error(formula_error_na)
+  }
+  let row_texts = if row_delimiter == "" {
+    [text]
+  } else {
+    split_text_parts(text, row_delimiter, ignore_empty, ignore_case)
+  }
+  let rows : Array[Array[String]] = []
+  let mut max_cols = 0
+  for row_text in row_texts {
+    let cols = split_text_parts(
+      row_text, col_delimiter, ignore_empty, ignore_case,
+    )
+    if cols.length() > max_cols {
+      max_cols = cols.length()
+    }
+    rows.push(cols)
+  }
+  let out : Array[FormulaValue] = []
+  for row in rows {
+    for col in 0..<max_cols {
+      if col < row.length() {
+        out.push(FormulaValue::String(row[col]))
+      } else {
+        out.push(pad_value)
+      }
+    }
+  }
+  FormulaValue::List(out)
 }
 
 ///|
@@ -8603,6 +8719,12 @@ fn eval_function(
         } else {
           FormulaValue::String(text.unsafe_substring(start=0, end=idx))
         }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TEXTSPLIT" =>
+      if values.length() >= 2 && values.length() <= 6 {
+        textsplit_values(values)
       } else {
         FormulaValue::Error(formula_error_value)
       }
