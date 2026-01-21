@@ -6274,3 +6274,134 @@ test "calc hypergeometric distribution functions" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+test "calc confidence functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("CONFIDENCE(0.05,0.07,100)", "0.0137197479028414"),
+    ("CONFIDENCE.NORM(0.05,0.07,100)", "0.0137197479028414"),
+    ("CONFIDENCE.T(0.05,0.07,100)", "0.0138895186611049"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("CONFIDENCE()", "#VALUE!"),
+    ("CONFIDENCE(\"\",0.07,100)", "#VALUE!"),
+    ("CONFIDENCE(0.05,\"\",100)", "#VALUE!"),
+    ("CONFIDENCE(0.05,0.07,\"\")", "#VALUE!"),
+    ("CONFIDENCE(0,0.07,100)", "#NUM!"),
+    ("CONFIDENCE(1,0.07,100)", "#NUM!"),
+    ("CONFIDENCE(0.05,0,100)", "#NUM!"),
+    ("CONFIDENCE(0.05,0.07,0.5)", "#NUM!"),
+    ("CONFIDENCE.NORM()", "#VALUE!"),
+    ("CONFIDENCE.NORM(\"\",0.07,100)", "#VALUE!"),
+    ("CONFIDENCE.NORM(0.05,\"\",100)", "#VALUE!"),
+    ("CONFIDENCE.NORM(0.05,0.07,\"\")", "#VALUE!"),
+    ("CONFIDENCE.NORM(0,0.07,100)", "#NUM!"),
+    ("CONFIDENCE.NORM(1,0.07,100)", "#NUM!"),
+    ("CONFIDENCE.NORM(0.05,0,100)", "#NUM!"),
+    ("CONFIDENCE.NORM(0.05,0.07,0.5)", "#NUM!"),
+    ("CONFIDENCE.T()", "#VALUE!"),
+    ("CONFIDENCE.T(\"\",0.07,100)", "#VALUE!"),
+    ("CONFIDENCE.T(0.05,\"\",100)", "#VALUE!"),
+    ("CONFIDENCE.T(0.05,0.07,\"\")", "#VALUE!"),
+    ("CONFIDENCE.T(0,0.07,100)", "#NUM!"),
+    ("CONFIDENCE.T(1,0.07,100)", "#NUM!"),
+    ("CONFIDENCE.T(0.05,0,100)", "#NUM!"),
+    ("CONFIDENCE.T(0.05,0.07,0)", "#NUM!"),
+    ("CONFIDENCE.T(0.05,0.07,1)", "#DIV/0!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc gamma functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("GAMMA(0.1)", "9.51350769866873"),
+    ("GAMMA(INT(1))", "1"),
+    ("GAMMA(1.5)", "0.886226925452758"),
+    ("GAMMA(5.5)", "52.3427777845535"),
+    ("GAMMA(\"5.5\")", "52.3427777845535"),
+    ("GAMMA.DIST(6,3,2,FALSE)", "0.112020903827694"),
+    ("GAMMA.DIST(6,3,2,TRUE)", "0.576809918873156"),
+    ("GAMMADIST(6,3,2,FALSE)", "0.112020903827694"),
+    ("GAMMADIST(6,3,2,TRUE)", "0.576809918873156"),
+    ("GAMMA.INV(0.5,3,2)", "5.34812062744712"),
+    ("GAMMA.INV(0.5,0.5,1)", "0.227468211559786"),
+    ("GAMMAINV(0.5,3,2)", "5.34812062744712"),
+    ("GAMMAINV(0.5,0.5,1)", "0.227468211559786"),
+    ("GAMMALN(4.5)", "2.45373657084244"),
+    ("GAMMALN(INT(1))", "0"),
+    ("GAMMALN.PRECISE(0.4)", "0.796677817701784"),
+    ("GAMMALN.PRECISE(4.5)", "2.45373657084244"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("GAMMA()", "#VALUE!"),
+    ("GAMMA(0)", "#N/A"),
+    ("GAMMA(\"0\")", "#N/A"),
+    ("GAMMA(INT(0))", "#N/A"),
+    ("GAMMA.DIST()", "#VALUE!"),
+    ("GAMMA.DIST(\"\",3,2,FALSE)", "#VALUE!"),
+    ("GAMMA.DIST(6,\"\",2,FALSE)", "#VALUE!"),
+    ("GAMMA.DIST(6,3,\"\",FALSE)", "#VALUE!"),
+    ("GAMMA.DIST(6,3,2,\"\")", "#VALUE!"),
+    ("GAMMA.DIST(-1,3,2,FALSE)", "#NUM!"),
+    ("GAMMA.DIST(6,0,2,FALSE)", "#NUM!"),
+    ("GAMMA.DIST(6,3,0,FALSE)", "#NUM!"),
+    ("GAMMADIST()", "#VALUE!"),
+    ("GAMMADIST(\"\",3,2,FALSE)", "#VALUE!"),
+    ("GAMMADIST(6,\"\",2,FALSE)", "#VALUE!"),
+    ("GAMMADIST(6,3,\"\",FALSE)", "#VALUE!"),
+    ("GAMMADIST(6,3,2,\"\")", "#VALUE!"),
+    ("GAMMADIST(-1,3,2,FALSE)", "#NUM!"),
+    ("GAMMADIST(6,0,2,FALSE)", "#NUM!"),
+    ("GAMMADIST(6,3,0,FALSE)", "#NUM!"),
+    ("GAMMA.INV()", "#VALUE!"),
+    ("GAMMA.INV(\"\",3,2)", "#VALUE!"),
+    ("GAMMA.INV(0.5,\"\",2)", "#VALUE!"),
+    ("GAMMA.INV(0.5,3,\"\")", "#VALUE!"),
+    ("GAMMA.INV(-1,3,2)", "#NUM!"),
+    ("GAMMA.INV(2,3,2)", "#NUM!"),
+    ("GAMMA.INV(0.5,0,2)", "#NUM!"),
+    ("GAMMA.INV(0.5,3,0)", "#NUM!"),
+    ("GAMMAINV()", "#VALUE!"),
+    ("GAMMAINV(\"\",3,2)", "#VALUE!"),
+    ("GAMMAINV(0.5,\"\",2)", "#VALUE!"),
+    ("GAMMAINV(0.5,3,\"\")", "#VALUE!"),
+    ("GAMMAINV(-1,3,2)", "#NUM!"),
+    ("GAMMAINV(2,3,2)", "#NUM!"),
+    ("GAMMAINV(0.5,0,2)", "#NUM!"),
+    ("GAMMAINV(0.5,3,0)", "#NUM!"),
+    ("GAMMALN()", "#VALUE!"),
+    ("GAMMALN(0)", "#N/A"),
+    ("GAMMALN(INT(0))", "#N/A"),
+    ("GAMMALN.PRECISE()", "#VALUE!"),
+    ("GAMMALN.PRECISE(\"\")", "#VALUE!"),
+    ("GAMMALN.PRECISE(0)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}

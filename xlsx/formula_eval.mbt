@@ -7522,6 +7522,11 @@ fn eval_function(
     "BETADIST" => betadist_values(values)
     "BETAINV" => betainv_values(values)
     "BETAdotINV" | "BETA.INV" | "_XLFN.BETA.INV" => betainv_values(values)
+    "CONFIDENCE" => confidence_values(values)
+    "CONFIDENCEdotNORM" | "CONFIDENCE.NORM" | "_XLFN.CONFIDENCE.NORM" =>
+      confidence_values(values)
+    "CONFIDENCEdotT" | "CONFIDENCE.T" | "_XLFN.CONFIDENCE.T" =>
+      confidence_t_values(values)
     "NORMdotDIST" | "NORM.DIST" | "_XLFN.NORM.DIST" => normdist_values(values)
     "NORMDIST" => normdist_values(values)
     "NORMdotINV" | "NORM.INV" | "_XLFN.NORM.INV" => norminv_values(values)
@@ -7538,6 +7543,15 @@ fn eval_function(
     "LOGINV" => loginv_values(values)
     "LOGNORMdotINV" | "LOGNORM.INV" | "_XLFN.LOGNORM.INV" =>
       loginv_values(values)
+    "GAMMA" => gamma_value(values)
+    "GAMMAdotDIST" | "GAMMA.DIST" | "_XLFN.GAMMA.DIST" =>
+      gamma_dist_values(values)
+    "GAMMADIST" => gamma_dist_values(values)
+    "GAMMAdotINV" | "GAMMA.INV" | "_XLFN.GAMMA.INV" => gamma_inv_values(values)
+    "GAMMAINV" => gamma_inv_values(values)
+    "GAMMALN" => gammaln_values(values)
+    "GAMMALNdotPRECISE" | "GAMMALN.PRECISE" | "_XLFN.GAMMALN.PRECISE" =>
+      gammaln_precise_values(values)
     "EXPONdotDIST" | "EXPON.DIST" | "_XLFN.EXPON.DIST" =>
       expon_dist_values(values)
     "EXPONDIST" => expon_dist_values(values)
@@ -12344,6 +12358,68 @@ fn norms_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let alpha = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let size = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || alpha >= 1.0 || std_dev <= 0.0 || size < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let inv = match norminv_double(alpha / 2.0) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let raw = -inv * (std_dev / Double::sqrt(size))
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let alpha = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let std_dev = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let size = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || alpha >= 1.0 || std_dev <= 0.0 || size < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if size == 1.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let iterator = InverseIterator::{
+    fp: alpha,
+    fdf: size - 1.0,
+    nt: 2.0,
+    kind: InverseKind::TDist,
+  }
+  let result = calc_iterate_inverse(iterator, size / 2.0, size)
+  let raw = std_dev * result / Double::sqrt(size)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
 fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
     return FormulaValue::Error(formula_error_value)
@@ -12368,6 +12444,165 @@ fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   let raw = @math.exp(mean + std_dev * inv)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn gamma_value(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let number = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if number <= 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let raw = get_gamma(number)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn gamma_pdf(x : Double, alpha : Double, beta : Double) -> Double {
+  let denom = @math.pow(beta, alpha) * get_gamma(alpha)
+  @math.pow(x, alpha - 1.0) * @math.exp(-x / beta) / denom
+}
+
+///|
+fn gamma_cdf(x : Double, alpha : Double, beta : Double) -> Double {
+  get_low_reg_igamma(alpha, x / beta)
+}
+
+///|
+fn gamma_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let alpha = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let beta = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if x < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if alpha <= 0.0 || beta <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = if cumulative {
+    gamma_cdf(x, alpha, beta)
+  } else {
+    gamma_pdf(x, alpha, beta)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn gammainv_double(
+  probability : Double,
+  alpha : Double,
+  beta : Double,
+) -> Double {
+  let mut x_lo = 0.0
+  let mut x_hi = alpha * beta * 5.0
+  let mut dx = 1024.0
+  let mut x = 1.0
+  let mut x_new = 1.0
+  let mut result = 0.0
+  let mut count = 0
+  while Double::abs(dx) > 8.88e-016 && count <= 256 {
+    result = gamma_cdf(x, alpha, beta)
+    let diff = result - probability
+    if diff == 0.0 {
+      dx = 0.0
+    } else if diff < 0.0 {
+      x_lo = x
+    } else {
+      x_hi = x
+    }
+    let pdf = gamma_pdf(x, alpha, beta)
+    if pdf != 0.0 {
+      dx = diff / pdf
+      x_new = x - dx
+    }
+    if x_new < x_lo || x_new > x_hi || pdf == 0.0 {
+      x_new = (x_lo + x_hi) / 2.0
+      dx = x_new - x
+    }
+    x = x_new
+    count = count + 1
+  }
+  x
+}
+
+///|
+fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let alpha = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let beta = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability < 0.0 || probability >= 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if alpha <= 0.0 || beta <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = gammainv_double(probability, alpha, beta)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if x <= 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let raw = get_log_gamma(x)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if x <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = get_log_gamma(x)
   number_or_num_error(round_significant_digits(raw, 15))
 }
 
