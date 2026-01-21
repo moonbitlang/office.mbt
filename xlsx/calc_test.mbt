@@ -3104,6 +3104,37 @@ test "calc choosecols chooserows error functions" {
 }
 
 ///|
+test "calc stack functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("C1", CellValue::Numeric(9.0))
+  sheet.set_cell_value("C2", CellValue::Numeric(10.0))
+  sheet.set_cell_value("C3", CellValue::Numeric(11.0))
+  sheet.set_cell_formula(
+    "D1", "TEXTJOIN(\",\",FALSE(),TOCOL(HSTACK(A1:B2,C1:C3),2))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1,2,9,3,4,10,11")
+  sheet.set_cell_formula(
+    "D2", "TEXTJOIN(\",\",FALSE(),TOCOL(VSTACK(A1:B2,C1:C3),2))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="1,2,3,4,9,10,11")
+}
+
+///|
+test "calc stack error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "HSTACK()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "VSTACK()")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+}
+
+///|
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

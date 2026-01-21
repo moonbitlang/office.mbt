@@ -1574,6 +1574,90 @@ fn choose_indices(
 }
 
 ///|
+fn stack_from_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+  horizontal : Bool,
+) -> FormulaValue raise XlsxError {
+  if values.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let ranges : Array[RangeValues] = []
+  let mut max_rows = 0
+  let mut max_cols = 0
+  for i in 0..<values.length() {
+    let range = range_from_expr_or_value(
+      workbook,
+      sheet_name,
+      args[i],
+      values[i],
+      ctx,
+    )
+    if range.rows > max_rows {
+      max_rows = range.rows
+    }
+    if range.cols > max_cols {
+      max_cols = range.cols
+    }
+    ranges.push(range)
+  }
+  let mut total_rows = if horizontal { max_rows } else { 0 }
+  let mut total_cols = if horizontal { 0 } else { max_cols }
+  for range in ranges {
+    if horizontal {
+      total_cols = total_cols + range.cols
+    } else {
+      total_rows = total_rows + range.rows
+    }
+  }
+  if total_rows == 0 || total_cols == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let out : Array[FormulaValue] = Array::make(
+    total_rows * total_cols,
+    FormulaValue::Empty,
+  )
+  if horizontal {
+    let mut col_offset = 0
+    for range in ranges {
+      for row in 0..<total_rows {
+        for col in 0..<range.cols {
+          let value = if row < range.rows {
+            range.values[row * range.cols + col]
+          } else {
+            FormulaValue::Error(formula_error_na)
+          }
+          let idx = row * total_cols + col_offset + col
+          out[idx] = value
+        }
+      }
+      col_offset = col_offset + range.cols
+    }
+  } else {
+    let mut row_offset = 0
+    for range in ranges {
+      for row in 0..<range.rows {
+        let out_row = row_offset + row
+        for col in 0..<total_cols {
+          let value = if col < range.cols {
+            range.values[row * range.cols + col]
+          } else {
+            FormulaValue::Error(formula_error_na)
+          }
+          let idx = out_row * total_cols + col
+          out[idx] = value
+        }
+      }
+      row_offset = row_offset + range.rows
+    }
+  }
+  FormulaValue::List(out)
+}
+
+///|
 fn choosecols_values(
   workbook : Workbook,
   sheet_name : String,
@@ -9077,6 +9161,9 @@ fn eval_function(
     "DROP" => drop_values(workbook, sheet_name, args, values, ctx)
     "CHOOSECOLS" => choosecols_values(workbook, sheet_name, args, values, ctx)
     "CHOOSEROWS" => chooserows_values(workbook, sheet_name, args, values, ctx)
+    "HSTACK" => stack_from_values(workbook, sheet_name, args, values, ctx, true)
+    "VSTACK" =>
+      stack_from_values(workbook, sheet_name, args, values, ctx, false)
     "TOCOL" =>
       tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
     "TOROW" =>
