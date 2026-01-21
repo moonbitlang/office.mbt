@@ -6012,3 +6012,80 @@ test "calc normal and lognormal distribution functions" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+test "calc poisson and exponential distribution functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("POISSON.DIST(20,25,FALSE)", "0.0519174686084913"),
+    ("POISSON.DIST(35,40,TRUE)", "0.242414197690103"),
+    ("POISSON(20,25,FALSE)", "0.0519174686084913"),
+    ("POISSON(35,40,TRUE)", "0.242414197690103"),
+    ("EXPON.DIST(0.5,1,TRUE)", "0.393469340287367"),
+    ("EXPON.DIST(0.5,1,FALSE)", "0.606530659712633"),
+    ("EXPON.DIST(2,1,TRUE)", "0.864664716763387"),
+    ("EXPONDIST(0.5,1,TRUE)", "0.393469340287367"),
+    ("EXPONDIST(0.5,1,FALSE)", "0.606530659712633"),
+    ("EXPONDIST(2,1,TRUE)", "0.864664716763387"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("POISSON()", "#VALUE!"),
+    ("POISSON(0,-1,TRUE)", "#N/A"),
+    ("POISSON.DIST()", "#VALUE!"),
+    ("EXPON.DIST()", "#VALUE!"),
+    ("EXPON.DIST(-1,1,TRUE)", "#NUM!"),
+    ("EXPON.DIST(1,0,TRUE)", "#NUM!"),
+    ("EXPONDIST()", "#VALUE!"),
+    ("EXPONDIST(-1,1,TRUE)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc negbinom distribution functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("NEGBINOM.DIST(6,12,0.5,FALSE)", "0.047210693359375"),
+    ("NEGBINOM.DIST(12,12,0.5,FALSE)", "0.0805901288986206"),
+    ("NEGBINOM.DIST(15,12,0.5,FALSE)", "0.057564377784729"),
+    ("NEGBINOM.DIST(12,12,0.5,TRUE)", "0.580590128898621"),
+    ("NEGBINOM.DIST(15,12,0.5,TRUE)", "0.778965830802917"),
+    ("NEGBINOMDIST(6,12,0.5)", "0.047210693359375"),
+    ("NEGBINOMDIST(12,12,0.5)", "0.0805901288986206"),
+    ("NEGBINOMDIST(15,12,0.5)", "0.057564377784729"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("NEGBINOM.DIST()", "#VALUE!"),
+    ("NEGBINOM.DIST(-1,12,0.5,TRUE)", "#NUM!"),
+    ("NEGBINOM.DIST(6,0,0.5,TRUE)", "#NUM!"),
+    ("NEGBINOM.DIST(6,12,2,TRUE)", "#NUM!"),
+    ("NEGBINOMDIST()", "#VALUE!"),
+    ("NEGBINOMDIST(-1,12,0.5)", "#NUM!"),
+    ("NEGBINOMDIST(6,0,0.5)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}

@@ -7538,6 +7538,15 @@ fn eval_function(
     "LOGINV" => loginv_values(values)
     "LOGNORMdotINV" | "LOGNORM.INV" | "_XLFN.LOGNORM.INV" =>
       loginv_values(values)
+    "EXPONdotDIST" | "EXPON.DIST" | "_XLFN.EXPON.DIST" =>
+      expon_dist_values(values)
+    "EXPONDIST" => expon_dist_values(values)
+    "POISSONdotDIST" | "POISSON.DIST" | "_XLFN.POISSON.DIST" =>
+      poisson_values(values)
+    "POISSON" => poisson_values(values)
+    "NEGBINOMdotDIST" | "NEGBINOM.DIST" | "_XLFN.NEGBINOM.DIST" =>
+      negbinom_dist_values(values)
+    "NEGBINOMDIST" => negbinomdist_values(values)
     "GAUSS" => gauss_value(values)
     "PHI" => phi_value(values)
     "CHIDIST" => chidist_values(values)
@@ -11677,6 +11686,11 @@ fn factorial_double(number : Double) -> Double {
 }
 
 ///|
+fn binom_coeff_double(n : Double, k : Double) -> Double {
+  factorial_double(n) / (factorial_double(k) * factorial_double(n - k))
+}
+
+///|
 fn double_factorial_double(number : Double) -> Double {
   let n = trunc_double(number)
   if n < 2.0 {
@@ -12404,6 +12418,128 @@ fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let z = (@math.ln(x) - mean) / std_dev
   number_or_num_error(round_significant_digits(get_norm_s_dist(z), 15))
+}
+
+///|
+fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let lambda = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[2]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if x < 0.0 || lambda <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = if cumulative {
+    1.0 - @math.exp(-lambda * x)
+  } else {
+    lambda * @math.exp(-lambda * x)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[2]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if x < 0.0 || mean <= 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let raw = if cumulative {
+    let mut sum = 0.0
+    let limit = Double::to_int(Double::floor(x))
+    for i in 0..<=limit {
+      let i_double = Double::from_int(i)
+      sum = sum + @math.pow(mean, i_double) / factorial_double(i_double)
+    }
+    @math.exp(-mean) * sum
+  } else {
+    @math.exp(-mean) * @math.pow(mean, x) / factorial_double(x)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let failures = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let successes = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let probability = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if failures < 0.0 || successes < 1.0 || probability < 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = if cumulative {
+    1.0 - get_beta_dist(1.0 - probability, failures + 1.0, successes)
+  } else {
+    binom_coeff_double(failures + successes - 1.0, successes - 1.0) *
+    @math.pow(probability, successes) *
+    @math.pow(1.0 - probability, failures)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let failures = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let successes = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let probability = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if failures < 0.0 || successes < 1.0 || probability < 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = binom_coeff_double(failures + successes - 1.0, successes - 1.0) *
+    @math.pow(probability, successes) *
+    @math.pow(1.0 - probability, failures)
+  number_or_num_error(round_significant_digits(raw, 15))
 }
 
 ///|
