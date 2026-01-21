@@ -758,6 +758,102 @@ fn parse_range_ref_token(
 }
 
 ///|
+
+///|
+fn address_a1(row : Int, col : Int, abs_num : Int) -> String raise XlsxError {
+  let col_name = column_name_from_number(col)
+  match abs_num {
+    1 => "$\{col_name}$\{row}"
+    2 => "\{col_name}$\{row}"
+    3 => "$\{col_name}\{row}"
+    4 => "\{col_name}\{row}"
+    _ => raise XlsxError::InvalidCellRef(value="address")
+  }
+}
+
+///|
+fn address_r1c1(row : Int, col : Int, abs_num : Int) -> String {
+  match abs_num {
+    1 => "R\{row}C\{col}"
+    2 => "R\{row}C[\{col}]"
+    3 => "R[\{row}]C\{col}"
+    4 => "R[\{row}]C[\{col}]"
+    _ => "R\{row}C\{col}"
+  }
+}
+
+///|
+fn parse_r1c1_token(text : StringView) -> (Int, Int)? {
+  let chars = text.to_array()
+  if chars.length() < 3 || chars[0] != 'R' {
+    return None
+  }
+  let row_sb = StringBuilder::new()
+  let mut idx = 1
+  while idx < chars.length() && chars[idx].is_ascii_digit() {
+    row_sb.write_char(chars[idx])
+    idx = idx + 1
+  }
+  let row_text = row_sb.to_string()
+  if row_text == "" {
+    return None
+  }
+  if idx >= chars.length() || chars[idx] != 'C' {
+    return None
+  }
+  idx = idx + 1
+  let col_sb = StringBuilder::new()
+  while idx < chars.length() && chars[idx].is_ascii_digit() {
+    col_sb.write_char(chars[idx])
+    idx = idx + 1
+  }
+  let col_text = col_sb.to_string()
+  if col_text == "" || idx != chars.length() {
+    return None
+  }
+  let row = @strconv.parse_int(row_text, base=10) catch { _ => return None }
+  let col = @strconv.parse_int(col_text, base=10) catch { _ => return None }
+  Some((row, col))
+}
+
+///|
+fn unquote_sheet_name(text : String) -> String {
+  if text.length() < 2 {
+    return text
+  }
+  if !text.has_prefix("'") || !text.has_suffix("'") {
+    return text
+  }
+  let inner = text.unsafe_substring(start=1, end=text.length() - 1)
+  let sb = StringBuilder::new()
+  let chars = inner.to_array()
+  let mut idx = 0
+  while idx < chars.length() {
+    let ch = chars[idx]
+    if ch == '\'' && idx + 1 < chars.length() && chars[idx + 1] == '\'' {
+      sb.write_char('\'')
+      idx = idx + 2
+    } else {
+      sb.write_char(ch)
+      idx = idx + 1
+    }
+  }
+  sb.to_string()
+}
+
+///|
+fn split_sheet_ref(text : String) -> (String, String) {
+  match text.rev_find("!") {
+    Some(idx) => {
+      let sheet = text.unsafe_substring(start=0, end=idx)
+      let ref_text = text.unsafe_substring(start=idx + 1, end=text.length())
+      (unquote_sheet_name(sheet), ref_text)
+    }
+    None => ("", text)
+  }
+}
+
+///|
 fn ref_bounds_opt(expr : Expr) -> (Int, Int, Int, Int)? raise XlsxError {
   match expr {
     Expr::Cell(_, reference) => {
@@ -798,6 +894,55 @@ fn range_vector(range : RangeValues) -> Array[FormulaValue]? {
     Some(out)
   } else {
     None
+  }
+}
+
+///|
+fn range_column(range : RangeValues, index : Int) -> Array[FormulaValue]? {
+  if index < 0 || index >= range.cols {
+    return None
+  }
+  let out : Array[FormulaValue] = []
+  for row in 0..<range.rows {
+    out.push(range.values[row * range.cols + index])
+  }
+  Some(out)
+}
+
+///|
+fn range_row(range : RangeValues, index : Int) -> Array[FormulaValue]? {
+  if index < 0 || index >= range.rows {
+    return None
+  }
+  let out : Array[FormulaValue] = []
+  let offset = index * range.cols
+  for col in 0..<range.cols {
+    out.push(range.values[offset + col])
+  }
+  Some(out)
+}
+
+///|
+fn range_from_expr_or_value(
+  workbook : Workbook,
+  sheet_name : String,
+  expr : Expr,
+  value : FormulaValue,
+  ctx : CalcContext,
+) -> RangeValues raise XlsxError {
+  match expr {
+    Expr::Range(_, _, _) | Expr::Cell(_, _) =>
+      eval_range_expr(workbook, sheet_name, expr, ctx)
+    _ =>
+      match value {
+        FormulaValue::List(list) =>
+          if list.length() == 0 {
+            { rows: 1, cols: 1, values: [FormulaValue::Empty] }
+          } else {
+            { rows: 1, cols: list.length(), values: list }
+          }
+        _ => { rows: 1, cols: 1, values: [value] }
+      }
   }
 }
 
@@ -1024,6 +1169,105 @@ fn wildcard_match_prefix(
   }
   memo[(text_idx, pattern_idx)] = result
   result
+}
+
+///|
+fn wildcard_match_full_prefix(
+  text : String,
+  pattern : String,
+  text_idx : Int,
+  pattern_idx : Int,
+  memo : Map[(Int, Int), Bool],
+) -> Bool {
+  match memo.get((text_idx, pattern_idx)) {
+    Some(result) => return result
+    None => ()
+  }
+  let text_len = text.length()
+  let pattern_len = pattern.length()
+  let result = if pattern_idx == pattern_len {
+    text_idx == text_len
+  } else {
+    let token = pattern[pattern_idx]
+    if token == '~' {
+      if pattern_idx + 1 >= pattern_len {
+        if text_idx < text_len && text[text_idx] == '~' {
+          wildcard_match_full_prefix(
+            text,
+            pattern,
+            text_idx + 1,
+            pattern_idx + 1,
+            memo,
+          )
+        } else {
+          false
+        }
+      } else {
+        let next = pattern[pattern_idx + 1]
+        if text_idx < text_len && text[text_idx] == next {
+          wildcard_match_full_prefix(
+            text,
+            pattern,
+            text_idx + 1,
+            pattern_idx + 2,
+            memo,
+          )
+        } else {
+          false
+        }
+      }
+    } else if token == '*' {
+      if wildcard_match_full_prefix(
+          text,
+          pattern,
+          text_idx,
+          pattern_idx + 1,
+          memo,
+        ) {
+        true
+      } else if text_idx < text_len {
+        wildcard_match_full_prefix(
+          text,
+          pattern,
+          text_idx + 1,
+          pattern_idx,
+          memo,
+        )
+      } else {
+        false
+      }
+    } else if token == '?' {
+      if text_idx < text_len {
+        wildcard_match_full_prefix(
+          text,
+          pattern,
+          text_idx + 1,
+          pattern_idx + 1,
+          memo,
+        )
+      } else {
+        false
+      }
+    } else if text_idx < text_len && text[text_idx] == token {
+      wildcard_match_full_prefix(
+        text,
+        pattern,
+        text_idx + 1,
+        pattern_idx + 1,
+        memo,
+      )
+    } else {
+      false
+    }
+  }
+  memo[(text_idx, pattern_idx)] = result
+  result
+}
+
+///|
+fn wildcard_match_full(text : String, pattern : String) -> Bool {
+  let memo : Map[(Int, Int), Bool] = {}
+  wildcard_match_full_prefix(text, pattern, 0, 0, memo)
 }
 
 ///|
@@ -1385,6 +1629,128 @@ fn hlookup_value(
     }
     FormulaValue::Error(formula_error_na)
   }
+}
+
+///|
+fn lookup_best_index(
+  lookup : FormulaValue,
+  values : Array[FormulaValue],
+) -> Result[Int?, FormulaValue] {
+  let mut best_idx : Int? = None
+  for i in 0..<values.length() {
+    match compare_values(values[i], lookup) {
+      Ok(cmp) =>
+        if cmp <= 0 {
+          match best_idx {
+            None => best_idx = Some(i)
+            Some(best) =>
+              match compare_values(values[i], values[best]) {
+                Ok(order) => if order > 0 { best_idx = Some(i) }
+                Err(err) => return Err(err)
+              }
+          }
+        }
+      Err(err) => return Err(err)
+    }
+  }
+  Ok(best_idx)
+}
+
+///|
+fn xlookup_find_index(
+  lookup : FormulaValue,
+  values : Array[FormulaValue],
+  match_mode : Int,
+  search_mode : Int,
+) -> Result[Int?, FormulaValue] {
+  match lookup {
+    FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+    _ => ()
+  }
+  if values.length() == 0 {
+    return Ok(None)
+  }
+  if match_mode == 2 {
+    let pattern_text = match value_as_string(lookup) {
+      Ok(text) => text.to_lower()
+      Err(err) => return Err(err)
+    }
+    let mut idx = if search_mode == -1 || search_mode == -2 {
+      values.length() - 1
+    } else {
+      0
+    }
+    let end = if search_mode == -1 || search_mode == -2 {
+      -1
+    } else {
+      values.length()
+    }
+    while idx != end {
+      let target_text = match value_as_string(values[idx]) {
+        Ok(text) => text.to_lower()
+        Err(err) => return Err(err)
+      }
+      if wildcard_match_full(target_text, pattern_text) {
+        return Ok(Some(idx))
+      }
+      idx = if search_mode == -1 || search_mode == -2 {
+        idx - 1
+      } else {
+        idx + 1
+      }
+    }
+    return Ok(None)
+  }
+  if match_mode == 0 {
+    let mut idx = if search_mode == -1 || search_mode == -2 {
+      values.length() - 1
+    } else {
+      0
+    }
+    let end = if search_mode == -1 || search_mode == -2 {
+      -1
+    } else {
+      values.length()
+    }
+    while idx != end {
+      match compare_values(values[idx], lookup) {
+        Ok(0) => return Ok(Some(idx))
+        Ok(_) => ()
+        Err(err) => return Err(err)
+      }
+      idx = if search_mode == -1 || search_mode == -2 {
+        idx - 1
+      } else {
+        idx + 1
+      }
+    }
+    return Ok(None)
+  }
+  if match_mode != -1 && match_mode != 1 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let mut best_idx : Int? = None
+  for i in 0..<values.length() {
+    match compare_values(values[i], lookup) {
+      Ok(cmp) =>
+        if (match_mode == -1 && cmp <= 0) || (match_mode == 1 && cmp >= 0) {
+          match best_idx {
+            None => best_idx = Some(i)
+            Some(best) =>
+              match compare_values(values[i], values[best]) {
+                Ok(order) =>
+                  if (match_mode == -1 && order > 0) ||
+                    (match_mode == 1 && order < 0) {
+                    best_idx = Some(i)
+                  }
+                Err(err) => return Err(err)
+              }
+          }
+        }
+      Err(err) => return Err(err)
+    }
+  }
+  Ok(best_idx)
 }
 
 ///|
@@ -5869,6 +6235,358 @@ fn eval_function(
           true
         }
         hlookup_value(lookup, table, row_index, range_lookup)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "LOOKUP" =>
+      if args.length() == 2 || args.length() == 3 {
+        let lookup = values[0]
+        if args.length() == 2 {
+          let array_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[1],
+            values[1],
+            ctx,
+          )
+          if array_range.rows == 1 || array_range.cols == 1 {
+            let lookup_vec = match range_vector(array_range) {
+              Some(list) => list
+              None => return FormulaValue::Error(formula_error_na)
+            }
+            let idx = match lookup_best_index(lookup, lookup_vec) {
+              Ok(value) => value
+              Err(err) => return err
+            }
+            match idx {
+              Some(i) => lookup_vec[i]
+              None => FormulaValue::Error(formula_error_na)
+            }
+          } else {
+            let use_cols = array_range.rows >= array_range.cols
+            let lookup_vec = if use_cols {
+              range_column(array_range, 0)
+            } else {
+              range_row(array_range, 0)
+            }
+            let result_vec = if use_cols {
+              range_column(array_range, array_range.cols - 1)
+            } else {
+              range_row(array_range, array_range.rows - 1)
+            }
+            let lookup_list = match lookup_vec {
+              Some(list) => list
+              None => return FormulaValue::Error(formula_error_na)
+            }
+            let result_list = match result_vec {
+              Some(list) => list
+              None => return FormulaValue::Error(formula_error_na)
+            }
+            let idx = match lookup_best_index(lookup, lookup_list) {
+              Ok(value) => value
+              Err(err) => return err
+            }
+            match idx {
+              Some(i) =>
+                if i >= result_list.length() {
+                  FormulaValue::Error(formula_error_na)
+                } else {
+                  result_list[i]
+                }
+              None => FormulaValue::Error(formula_error_na)
+            }
+          }
+        } else {
+          let lookup_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[1],
+            values[1],
+            ctx,
+          )
+          let result_range = range_from_expr_or_value(
+            workbook,
+            sheet_name,
+            args[2],
+            values[2],
+            ctx,
+          )
+          let lookup_list = match range_vector(lookup_range) {
+            Some(list) => list
+            None => return FormulaValue::Error(formula_error_na)
+          }
+          let result_list = match range_vector(result_range) {
+            Some(list) => list
+            None => return FormulaValue::Error(formula_error_na)
+          }
+          if lookup_list.length() != result_list.length() {
+            return FormulaValue::Error(formula_error_na)
+          }
+          let idx = match lookup_best_index(lookup, lookup_list) {
+            Ok(value) => value
+            Err(err) => return err
+          }
+          match idx {
+            Some(i) => result_list[i]
+            None => FormulaValue::Error(formula_error_na)
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "XLOOKUP" =>
+      if args.length() >= 3 && args.length() <= 6 {
+        let lookup = values[0]
+        let lookup_range = range_from_expr_or_value(
+          workbook,
+          sheet_name,
+          args[1],
+          values[1],
+          ctx,
+        )
+        let return_range = range_from_expr_or_value(
+          workbook,
+          sheet_name,
+          args[2],
+          values[2],
+          ctx,
+        )
+        let if_not_found = if args.length() >= 4 {
+          values[3]
+        } else {
+          FormulaValue::Error(formula_error_na)
+        }
+        let match_mode = if args.length() >= 5 {
+          match value_as_int(values[4]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          0
+        }
+        let search_mode = if args.length() >= 6 {
+          match value_as_int(values[5]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if match_mode != -1 &&
+          match_mode != 0 &&
+          match_mode != 1 &&
+          match_mode != 2 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        if search_mode != 1 &&
+          search_mode != -1 &&
+          search_mode != 2 &&
+          search_mode != -2 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let is_row = lookup_range.rows == 1
+        let is_col = lookup_range.cols == 1
+        if !is_row && !is_col {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let lookup_list = if is_row {
+          range_row(lookup_range, 0)
+        } else {
+          range_column(lookup_range, 0)
+        }
+        let lookup_values = match lookup_list {
+          Some(list) => list
+          None => return FormulaValue::Error(formula_error_value)
+        }
+        let match_idx = match
+          xlookup_find_index(lookup, lookup_values, match_mode, search_mode) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let idx = match match_idx {
+          Some(value) => value
+          None => return if_not_found
+        }
+        if is_row {
+          if return_range.cols != lookup_range.cols {
+            return FormulaValue::Error(formula_error_value)
+          }
+          if return_range.rows == 1 {
+            return_range.values[idx]
+          } else {
+            match range_column(return_range, idx) {
+              Some(list) => FormulaValue::List(list)
+              None => FormulaValue::Error(formula_error_value)
+            }
+          }
+        } else {
+          if return_range.rows != lookup_range.rows {
+            return FormulaValue::Error(formula_error_value)
+          }
+          if return_range.cols == 1 {
+            return_range.values[idx * return_range.cols]
+          } else {
+            match range_row(return_range, idx) {
+              Some(list) => FormulaValue::List(list)
+              None => FormulaValue::Error(formula_error_value)
+            }
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ADDRESS" =>
+      if values.length() >= 2 && values.length() <= 5 {
+        let row_num = match value_as_int(values[0]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let col_num = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        if row_num <= 0 || col_num <= 0 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let abs_num = if values.length() >= 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if abs_num < 1 || abs_num > 4 {
+          return FormulaValue::Error(formula_error_value)
+        }
+        let a1 = if values.length() >= 4 {
+          match value_as_bool(values[3]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          true
+        }
+        let sheet_text = if values.length() == 5 {
+          match value_as_string(values[4]) {
+            Ok(text) => text
+            Err(err) => return err
+          }
+        } else {
+          ""
+        }
+        let address = if a1 {
+          address_a1(row_num, col_num, abs_num) catch {
+            _ => return FormulaValue::Error(formula_error_value)
+          }
+        } else {
+          address_r1c1(row_num, col_num, abs_num)
+        }
+        let text = if sheet_text == "" {
+          address
+        } else {
+          sheet_text + "!" + address
+        }
+        FormulaValue::String(text)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "INDIRECT" =>
+      if values.length() == 1 || values.length() == 2 {
+        let ref_text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let a1 = if values.length() == 2 {
+          match value_as_bool(values[1]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          true
+        }
+        let (sheet_text, ref_part) = split_sheet_ref(ref_text)
+        let target_sheet = if sheet_text == "" {
+          sheet_name
+        } else {
+          sheet_text
+        }
+        if a1 {
+          match ref_part.find(":") {
+            Some(idx) => {
+              let start_token = ref_part.unsafe_substring(start=0, end=idx)
+              let end_token = ref_part.unsafe_substring(
+                start=idx + 1,
+                end=ref_part.length(),
+              )
+              let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
+                _ => return FormulaValue::Error(formula_error_ref)
+              }
+              let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
+                _ => return FormulaValue::Error(formula_error_ref)
+              }
+              FormulaValue::List(
+                collect_range_values(
+                  workbook, target_sheet, start_ref, end_ref, ctx,
+                ),
+              )
+            }
+            None =>
+              match parse_cell_ref_token(ref_part) {
+                Some(reference) =>
+                  resolve_cell_value(workbook, target_sheet, reference, ctx)
+                None => {
+                  let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
+                    _ => return FormulaValue::Error(formula_error_ref)
+                  }
+                  FormulaValue::List(
+                    collect_range_values(
+                      workbook, target_sheet, start_ref, end_ref, ctx,
+                    ),
+                  )
+                }
+              }
+          }
+        } else {
+          match ref_part.find(":") {
+            Some(idx) => {
+              let start_token = ref_part.unsafe_substring(start=0, end=idx)
+              let end_token = ref_part.unsafe_substring(
+                start=idx + 1,
+                end=ref_part.length(),
+              )
+              let (row1, col1) = match parse_r1c1_token(start_token) {
+                Some(value) => value
+                None => return FormulaValue::Error(formula_error_ref)
+              }
+              let (row2, col2) = match parse_r1c1_token(end_token) {
+                Some(value) => value
+                None => return FormulaValue::Error(formula_error_ref)
+              }
+              let start_ref = cell_ref_from(row1, col1) catch {
+                _ => return FormulaValue::Error(formula_error_ref)
+              }
+              let end_ref = cell_ref_from(row2, col2) catch {
+                _ => return FormulaValue::Error(formula_error_ref)
+              }
+              FormulaValue::List(
+                collect_range_values(
+                  workbook, target_sheet, start_ref, end_ref, ctx,
+                ),
+              )
+            }
+            None =>
+              match parse_r1c1_token(ref_part) {
+                Some((row, col)) => {
+                  let reference = cell_ref_from(row, col) catch {
+                    _ => return FormulaValue::Error(formula_error_ref)
+                  }
+                  resolve_cell_value(workbook, target_sheet, reference, ctx)
+                }
+                None => FormulaValue::Error(formula_error_ref)
+              }
+          }
+        }
       } else {
         FormulaValue::Error(formula_error_value)
       }
