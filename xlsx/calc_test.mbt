@@ -213,6 +213,9 @@ test "calc criteria functions" {
   sheet.set_cell_value("C3", CellValue::String("alpha"))
   sheet.set_cell_value("C4", CellValue::String("delta"))
   sheet.set_cell_value("C5", CellValue::String("1"))
+  sheet.set_cell_value("E1", CellValue::String("a*b"))
+  sheet.set_cell_value("E2", CellValue::String("a?b"))
+  sheet.set_cell_value("E3", CellValue::String("a~b"))
   sheet.set_cell_formula("D1", "COUNTIF(A1:A5,\"2\")")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1")
   sheet.set_cell_formula("D2", "COUNTIF(A1:A5,\">=2\")")
@@ -243,6 +246,14 @@ test "calc criteria functions" {
   inspect(workbook.calc_cell_value("Sheet1", "D14"), content="20")
   sheet.set_cell_formula("D15", "MAXIFS(B1:B5,B1:B5,\">=100\")")
   inspect(workbook.calc_cell_value("Sheet1", "D15"), content="0")
+  sheet.set_cell_formula("F1", "COUNTIF(E1:E3,\"~*\")")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="1")
+  sheet.set_cell_formula("F2", "COUNTIF(E1:E3,\"~?\")")
+  inspect(workbook.calc_cell_value("Sheet1", "F2"), content="1")
+  sheet.set_cell_formula("F3", "COUNTIF(E1:E3,\"~~\")")
+  inspect(workbook.calc_cell_value("Sheet1", "F3"), content="1")
+  sheet.set_cell_formula("F4", "COUNTIF(E1:E3,\"a*b\")")
+  inspect(workbook.calc_cell_value("Sheet1", "F4"), content="3")
 }
 
 ///|

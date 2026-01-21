@@ -849,6 +849,37 @@ fn parse_criteria_number(text : StringView) -> Double? {
 }
 
 ///|
+fn build_criteria_pattern(text : StringView) -> String {
+  let chars = text.to_array()
+  let sb = StringBuilder::new()
+  let mut idx = 0
+  while idx < chars.length() {
+    let ch = chars[idx]
+    if ch == '~' {
+      if idx + 1 < chars.length() {
+        let next = chars[idx + 1]
+        sb.write_char(next)
+        idx = idx + 2
+      } else {
+        sb.write_char('~')
+        idx = idx + 1
+      }
+    } else if ch == '*' {
+      sb.write_char('.')
+      sb.write_char('*')
+      idx = idx + 1
+    } else if ch == '?' {
+      sb.write_char('.')
+      idx = idx + 1
+    } else {
+      sb.write_char(ch)
+      idx = idx + 1
+    }
+  }
+  sb.to_string()
+}
+
+///|
 fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
   let text = formula_value_string(value)
   if text == "" {
@@ -896,14 +927,7 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
         },
       }
   }
-  let mut pattern = condition_text
-  if pattern.contains("?") {
-    pattern = pattern.replace_all(old="?", new=".")
-  }
-  if pattern.contains("*") {
-    pattern = pattern.replace_all(old="*", new=".*")
-  }
-  pattern = ".*" + pattern + ".*"
+  let pattern = ".*" + build_criteria_pattern(condition_text) + ".*"
   let mut condition : FormulaValue = FormulaValue::String(pattern)
   match parse_double_opt(pattern) {
     Some(num) => condition = FormulaValue::Number(num)
