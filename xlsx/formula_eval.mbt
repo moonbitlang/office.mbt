@@ -1272,6 +1272,13 @@ fn eval_function(
     "MIN" => min_values(values)
     "MAX" => max_values(values)
     "COUNT" => count_values(values)
+    "COUNTBLANK" =>
+      if args.length() == 1 {
+        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        countblank_values(range_values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "COUNTIF" =>
       if args.length() == 2 {
         let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
@@ -1407,6 +1414,56 @@ fn eval_function(
           } else {
             FormulaValue::Number(sum / Double::from_int(count))
           }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MAXIFS" =>
+      if args.length() >= 3 {
+        if args.length() % 2 != 1 {
+          FormulaValue::Error(formula_error_na)
+        } else {
+          let max_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+          let ranges : Array[RangeValues] = []
+          let criterias : Array[FormulaCriteria] = []
+          for i in 0..<((args.length() - 1) / 2) {
+            let offset = 1 + i * 2
+            let range_values = eval_range_expr(
+              workbook,
+              sheet_name,
+              args[offset],
+              ctx,
+            )
+            ranges.push(range_values)
+            criterias.push(parse_formula_criteria(values[offset + 1]))
+          }
+          let matches = ifs_match(ranges, criterias)
+          maxifs_values(max_range, matches)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MINIFS" =>
+      if args.length() >= 3 {
+        if args.length() % 2 != 1 {
+          FormulaValue::Error(formula_error_na)
+        } else {
+          let min_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+          let ranges : Array[RangeValues] = []
+          let criterias : Array[FormulaCriteria] = []
+          for i in 0..<((args.length() - 1) / 2) {
+            let offset = 1 + i * 2
+            let range_values = eval_range_expr(
+              workbook,
+              sheet_name,
+              args[offset],
+              ctx,
+            )
+            ranges.push(range_values)
+            criterias.push(parse_formula_criteria(values[offset + 1]))
+          }
+          let matches = ifs_match(ranges, criterias)
+          minifs_values(min_range, matches)
         }
       } else {
         FormulaValue::Error(formula_error_value)
@@ -1768,6 +1825,18 @@ fn count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn countblank_values(range_values : RangeValues) -> FormulaValue {
+  let mut count = 0
+  for value in range_values.values {
+    match normalize_scalar(value) {
+      FormulaValue::Empty => count = count + 1
+      _ => ()
+    }
+  }
+  FormulaValue::Number(Double::from_int(count))
+}
+
+///|
 fn countif_values(
   range_values : RangeValues,
   criteria_value : FormulaValue,
@@ -1869,6 +1938,58 @@ fn averageif_values(
     FormulaValue::Error(formula_error_div)
   } else {
     FormulaValue::Number(sum / Double::from_int(count))
+  }
+}
+
+///|
+fn maxifs_values(
+  max_range : RangeValues,
+  matches : Array[CellIndex],
+) -> FormulaValue {
+  let mut best : Double? = None
+  for cell in matches {
+    match max_range.get(cell.row, cell.col) {
+      Some(value) =>
+        match value_as_number_opt(value) {
+          Some(num) =>
+            match best {
+              Some(current) => if num > current { best = Some(num) }
+              None => best = Some(num)
+            }
+          None => ()
+        }
+      None => return FormulaValue::Error(formula_error_value)
+    }
+  }
+  match best {
+    Some(value) => FormulaValue::Number(value)
+    None => FormulaValue::Number(0.0)
+  }
+}
+
+///|
+fn minifs_values(
+  min_range : RangeValues,
+  matches : Array[CellIndex],
+) -> FormulaValue {
+  let mut best : Double? = None
+  for cell in matches {
+    match min_range.get(cell.row, cell.col) {
+      Some(value) =>
+        match value_as_number_opt(value) {
+          Some(num) =>
+            match best {
+              Some(current) => if num < current { best = Some(num) }
+              None => best = Some(num)
+            }
+          None => ()
+        }
+      None => return FormulaValue::Error(formula_error_value)
+    }
+  }
+  match best {
+    Some(value) => FormulaValue::Number(value)
+    None => FormulaValue::Number(0.0)
   }
 }
 

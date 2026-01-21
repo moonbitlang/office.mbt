@@ -149,6 +149,14 @@ test "calc criteria functions" {
   inspect(workbook.calc_cell_value("Sheet1", "D10"), content="30")
   sheet.set_cell_formula("D11", "COUNTIFS(A1:A5,\">=2\",B1:B5)")
   inspect(workbook.calc_cell_value("Sheet1", "D11"), content="#N/A")
+  sheet.set_cell_formula("D12", "COUNTBLANK(A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "D12"), content="1")
+  sheet.set_cell_formula("D13", "MAXIFS(B1:B5,A1:A5,\">=2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D13"), content="40")
+  sheet.set_cell_formula("D14", "MINIFS(B1:B5,A1:A5,\">=2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D14"), content="20")
+  sheet.set_cell_formula("D15", "MAXIFS(B1:B5,B1:B5,\">=100\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D15"), content="0")
 }
 
 ///|
