@@ -7544,6 +7544,16 @@ fn eval_function(
     "POISSONdotDIST" | "POISSON.DIST" | "_XLFN.POISSON.DIST" =>
       poisson_values(values)
     "POISSON" => poisson_values(values)
+    "BINOMdotDIST" | "BINOM.DIST" | "_XLFN.BINOM.DIST" =>
+      binomdist_values(values)
+    "BINOMDIST" => binomdist_values(values)
+    "BINOMdotDISTdotRANGE" | "BINOM.DIST.RANGE" | "_XLFN.BINOM.DIST.RANGE" =>
+      binom_dist_range_values(values)
+    "BINOMdotINV" | "BINOM.INV" | "_XLFN.BINOM.INV" => binom_inv_values(values)
+    "CRITBINOM" => binom_inv_values(values)
+    "HYPGEOMdotDIST" | "HYPGEOM.DIST" | "_XLFN.HYPGEOM.DIST" =>
+      hypgeom_dist_values(values)
+    "HYPGEOMDIST" => hypgeomdist_values(values)
     "NEGBINOMdotDIST" | "NEGBINOM.DIST" | "_XLFN.NEGBINOM.DIST" =>
       negbinom_dist_values(values)
     "NEGBINOMDIST" => negbinomdist_values(values)
@@ -12479,6 +12489,260 @@ fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     @math.exp(-mean) * @math.pow(mean, x) / factorial_double(x)
   }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn binomdist_double(x : Double, n : Double, p : Double) -> Double {
+  binom_coeff_double(n, x) * @math.pow(p, x) * @math.pow(1.0 - p, n - x)
+}
+
+///|
+fn binominv_double(n : Double, p : Double, alpha : Double) -> Double {
+  let q = 1.0 - p
+  let mut i = 0.0
+  let mut sum = 0.0
+  let n = Double::floor(n)
+  if q > p {
+    let mut factor = @math.pow(q, n)
+    sum = factor
+    while i < n && sum < alpha {
+      factor = factor * (n - i) / (i + 1.0) * p / q
+      sum = sum + factor
+      i = i + 1.0
+    }
+    return i
+  }
+  let mut factor = @math.pow(p, n)
+  sum = 1.0 - factor
+  while i < n && sum >= alpha {
+    factor = factor * (n - i) / (i + 1.0) * q / p
+    sum = sum - factor
+    i = i + 1.0
+  }
+  n - i
+}
+
+///|
+fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let successes = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let trials = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if successes < 0.0 || successes > trials {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let probability = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability < 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  let raw = if cumulative {
+    let mut sum = 0.0
+    let limit = Double::to_int(Double::floor(successes))
+    for i in 0..<=limit {
+      let i_double = Double::from_int(i)
+      sum = sum + binomdist_double(i_double, trials, probability)
+    }
+    sum
+  } else {
+    binomdist_double(successes, trials, probability)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let trials = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let probability = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability < 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let number_s = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if number_s < 0.0 || number_s > trials {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let number_s2 = if values.length() == 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    number_s
+  }
+  if number_s2 < 0.0 || number_s2 > trials {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let mut sum = 0.0
+  let mut i = number_s
+  while i <= number_s2 {
+    sum = sum + binomdist_double(i, trials, probability)
+    i = i + 1.0
+  }
+  number_or_num_error(round_significant_digits(sum, 15))
+}
+
+///|
+fn binom_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let trials = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if trials < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let probability = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability >= 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let alpha = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || alpha >= 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = binominv_double(trials, probability, alpha)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn hypgeom_args_invalid(
+  sample_s : Double,
+  number_sample : Double,
+  population_s : Double,
+  number_pop : Double,
+) -> Bool {
+  let upper = if number_sample < population_s {
+    number_sample
+  } else {
+    population_s
+  }
+  let lower_raw = number_sample - number_pop + population_s
+  let lower = if lower_raw > 0.0 { lower_raw } else { 0.0 }
+  sample_s < 0.0 ||
+  sample_s > upper ||
+  sample_s < lower ||
+  number_sample <= 0.0 ||
+  number_sample > number_pop ||
+  population_s <= 0.0 ||
+  population_s > number_pop ||
+  number_pop <= 0.0
+}
+
+///|
+fn hypgeom_raw(
+  sample_s : Double,
+  number_sample : Double,
+  population_s : Double,
+  number_pop : Double,
+) -> Double {
+  binom_coeff_double(population_s, sample_s) *
+  binom_coeff_double(number_pop - population_s, number_sample - sample_s) /
+  binom_coeff_double(number_pop, number_sample)
+}
+
+///|
+fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let sample_s = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let number_sample = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let population_s = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let number_pop = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if hypgeom_args_invalid(sample_s, number_sample, population_s, number_pop) {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let cumulative = match value_as_bool(values[4]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  let raw = if cumulative {
+    let mut sum = 0.0
+    let limit = Double::to_int(Double::floor(sample_s))
+    for i in 0..<=limit {
+      let i_double = Double::from_int(i)
+      sum = sum + hypgeom_raw(i_double, number_sample, population_s, number_pop)
+    }
+    sum
+  } else {
+    hypgeom_raw(sample_s, number_sample, population_s, number_pop)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let sample_s = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let number_sample = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let population_s = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let number_pop = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if hypgeom_args_invalid(sample_s, number_sample, population_s, number_pop) {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = hypgeom_raw(sample_s, number_sample, population_s, number_pop)
   number_or_num_error(round_significant_digits(raw, 15))
 }
 

@@ -6089,3 +6089,188 @@ test "calc negbinom distribution functions" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+test "calc binomial distribution functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("BINOMDIST(10,100,0.5,FALSE)", "1.36554263874631e-17"),
+    ("BINOMDIST(50,100,0.5,FALSE)", "0.0795892373871787"),
+    ("BINOMDIST(65,100,0.5,FALSE)", "0.000863855665741652"),
+    ("BINOMDIST(10,100,0.5,TRUE)", "1.53164508771899e-17"),
+    ("BINOMDIST(50,100,0.5,TRUE)", "0.539794618693589"),
+    ("BINOMDIST(65,100,0.5,TRUE)", "0.999105034804256"),
+    ("BINOM.DIST(10,100,0.5,FALSE)", "1.36554263874631e-17"),
+    ("BINOM.DIST(50,100,0.5,FALSE)", "0.0795892373871787"),
+    ("BINOM.DIST(65,100,0.5,FALSE)", "0.000863855665741652"),
+    ("BINOM.DIST(10,100,0.5,TRUE)", "1.53164508771899e-17"),
+    ("BINOM.DIST(50,100,0.5,TRUE)", "0.539794618693589"),
+    ("BINOM.DIST(65,100,0.5,TRUE)", "0.999105034804256"),
+    ("BINOM.DIST.RANGE(100,0.5,0,40)", "0.0284439668204904"),
+    ("BINOM.DIST.RANGE(100,0.5,45,55)", "0.728746975926165"),
+    ("BINOM.DIST.RANGE(100,0.5,50,100)", "0.539794618693589"),
+    ("BINOM.DIST.RANGE(100,0.5,50)", "0.0795892373871787"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("BINOMDIST()", "#VALUE!"),
+    ("BINOMDIST(\"\",100,0.5,FALSE)", "#VALUE!"),
+    ("BINOMDIST(10,\"\",0.5,FALSE)", "#VALUE!"),
+    ("BINOMDIST(10,100,\"\",FALSE)", "#VALUE!"),
+    ("BINOMDIST(10,100,0.5,\"\")", "#VALUE!"),
+    ("BINOMDIST(-1,100,0.5,FALSE)", "#NUM!"),
+    ("BINOMDIST(110,100,0.5,FALSE)", "#NUM!"),
+    ("BINOMDIST(10,100,-1,FALSE)", "#NUM!"),
+    ("BINOMDIST(10,100,2,FALSE)", "#NUM!"),
+    ("BINOM.DIST()", "#VALUE!"),
+    ("BINOM.DIST(\"\",100,0.5,FALSE)", "#VALUE!"),
+    ("BINOM.DIST(10,\"\",0.5,FALSE)", "#VALUE!"),
+    ("BINOM.DIST(10,100,\"\",FALSE)", "#VALUE!"),
+    ("BINOM.DIST(10,100,0.5,\"\")", "#VALUE!"),
+    ("BINOM.DIST(-1,100,0.5,FALSE)", "#NUM!"),
+    ("BINOM.DIST(110,100,0.5,FALSE)", "#NUM!"),
+    ("BINOM.DIST(10,100,-1,FALSE)", "#NUM!"),
+    ("BINOM.DIST(10,100,2,FALSE)", "#NUM!"),
+    ("BINOM.DIST.RANGE()", "#VALUE!"),
+    ("BINOM.DIST.RANGE(100,0.5,0,40,0)", "#VALUE!"),
+    ("BINOM.DIST.RANGE(\"\",0.5,0,40)", "#VALUE!"),
+    ("BINOM.DIST.RANGE(100,\"\",0,40)", "#VALUE!"),
+    ("BINOM.DIST.RANGE(100,0.5,\"\",40)", "#VALUE!"),
+    ("BINOM.DIST.RANGE(100,0.5,0,\"\")", "#VALUE!"),
+    ("BINOM.DIST.RANGE(100,-1,0,40)", "#NUM!"),
+    ("BINOM.DIST.RANGE(100,2,0,40)", "#NUM!"),
+    ("BINOM.DIST.RANGE(100,0.5,-1,40)", "#NUM!"),
+    ("BINOM.DIST.RANGE(100,0.5,110,40)", "#NUM!"),
+    ("BINOM.DIST.RANGE(100,0.5,0,-1)", "#NUM!"),
+    ("BINOM.DIST.RANGE(100,0.5,0,110)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc binomial inverse functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("BINOM.INV(0,0.5,0.75)", "0"),
+    ("BINOM.INV(0.1,0.1,0.75)", "0"),
+    ("BINOM.INV(0.6,0.4,0.75)", "0"),
+    ("BINOM.INV(2,0.4,0.75)", "1"),
+    ("BINOM.INV(100,0.5,20%)", "46"),
+    ("BINOM.INV(100,0.5,50%)", "50"),
+    ("BINOM.INV(100,0.5,90%)", "56"),
+    ("CRITBINOM(0,0.5,0.75)", "0"),
+    ("CRITBINOM(0.1,0.1,0.75)", "0"),
+    ("CRITBINOM(0.6,0.4,0.75)", "0"),
+    ("CRITBINOM(2,0.4,0.75)", "1"),
+    ("CRITBINOM(100,0.5,20%)", "46"),
+    ("CRITBINOM(100,0.5,50%)", "50"),
+    ("CRITBINOM(100,0.5,90%)", "56"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("BINOM.INV()", "#VALUE!"),
+    ("BINOM.INV(\"\",0.5,20%)", "#VALUE!"),
+    ("BINOM.INV(100,\"\",20%)", "#VALUE!"),
+    ("BINOM.INV(100,0.5,\"\")", "#VALUE!"),
+    ("BINOM.INV(-1,0.5,20%)", "#NUM!"),
+    ("BINOM.INV(100,-1,20%)", "#NUM!"),
+    ("BINOM.INV(100,2,20%)", "#NUM!"),
+    ("BINOM.INV(100,0.5,-1)", "#NUM!"),
+    ("BINOM.INV(100,0.5,2)", "#NUM!"),
+    ("BINOM.INV(1,1,20%)", "#NUM!"),
+    ("CRITBINOM()", "#VALUE!"),
+    ("CRITBINOM(\"\",0.5,20%)", "#VALUE!"),
+    ("CRITBINOM(100,\"\",20%)", "#VALUE!"),
+    ("CRITBINOM(100,0.5,\"\")", "#VALUE!"),
+    ("CRITBINOM(-1,0.5,20%)", "#NUM!"),
+    ("CRITBINOM(100,-1,20%)", "#NUM!"),
+    ("CRITBINOM(100,2,20%)", "#NUM!"),
+    ("CRITBINOM(100,0.5,-1)", "#NUM!"),
+    ("CRITBINOM(100,0.5,2)", "#NUM!"),
+    ("CRITBINOM(1,1,20%)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc hypergeometric distribution functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("HYPGEOM.DIST(0,3,3,9,TRUE)", "0.238095238095238"),
+    ("HYPGEOM.DIST(1,3,3,9,TRUE)", "0.773809523809524"),
+    ("HYPGEOM.DIST(2,3,3,9,TRUE)", "0.988095238095238"),
+    ("HYPGEOM.DIST(3,3,3,9,TRUE)", "1"),
+    ("HYPGEOM.DIST(1,4,4,12,FALSE)", "0.452525252525253"),
+    ("HYPGEOM.DIST(2,4,4,12,FALSE)", "0.339393939393939"),
+    ("HYPGEOM.DIST(3,4,4,12,FALSE)", "0.0646464646464647"),
+    ("HYPGEOM.DIST(4,4,4,12,FALSE)", "0.00202020202020202"),
+    ("HYPGEOMDIST(1,4,4,12)", "0.452525252525253"),
+    ("HYPGEOMDIST(2,4,4,12)", "0.339393939393939"),
+    ("HYPGEOMDIST(3,4,4,12)", "0.0646464646464647"),
+    ("HYPGEOMDIST(4,4,4,12)", "0.00202020202020202"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("HYPGEOM.DIST()", "#VALUE!"),
+    ("HYPGEOM.DIST(\"\",4,4,12,FALSE)", "#VALUE!"),
+    ("HYPGEOM.DIST(1,\"\",4,12,FALSE)", "#VALUE!"),
+    ("HYPGEOM.DIST(1,4,\"\",12,FALSE)", "#VALUE!"),
+    ("HYPGEOM.DIST(1,4,4,\"\",FALSE)", "#VALUE!"),
+    ("HYPGEOM.DIST(1,4,4,12,\"\")", "#VALUE!"),
+    ("HYPGEOM.DIST(-1,4,4,12,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(2,1,4,12,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(2,4,1,12,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(2,2,2,1,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(1,0,4,12,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(1,4,4,2,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(1,4,0,12,FALSE)", "#NUM!"),
+    ("HYPGEOM.DIST(1,4,4,0,FALSE)", "#NUM!"),
+    ("HYPGEOMDIST()", "#VALUE!"),
+    ("HYPGEOMDIST(\"\",4,4,12)", "#VALUE!"),
+    ("HYPGEOMDIST(1,\"\",4,12)", "#VALUE!"),
+    ("HYPGEOMDIST(1,4,\"\",12)", "#VALUE!"),
+    ("HYPGEOMDIST(1,4,4,\"\")", "#VALUE!"),
+    ("HYPGEOMDIST(-1,4,4,12)", "#NUM!"),
+    ("HYPGEOMDIST(2,1,4,12)", "#NUM!"),
+    ("HYPGEOMDIST(2,4,1,12)", "#NUM!"),
+    ("HYPGEOMDIST(2,2,2,1)", "#NUM!"),
+    ("HYPGEOMDIST(1,0,4,12)", "#NUM!"),
+    ("HYPGEOMDIST(1,4,4,2)", "#NUM!"),
+    ("HYPGEOMDIST(1,4,0,12)", "#NUM!"),
+    ("HYPGEOMDIST(1,4,4,0)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
