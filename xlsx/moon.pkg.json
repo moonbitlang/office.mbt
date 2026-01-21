@@ -12,6 +12,7 @@
     },
     "moonbitlang/core/random",
     "moonbitlang/core/buffer",
-    "moonbitlang/core/strconv"
+    "moonbitlang/core/strconv",
+    "moonbitlang/core/math"
   ]
 }

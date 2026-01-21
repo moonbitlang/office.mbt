@@ -993,6 +993,50 @@ pub fn Workbook::get_cell_value(
 }
 
 ///|
+pub fn Workbook::calc_cell_value(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+  raw? : Bool = false,
+) -> String raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  let ctx = CalcContext::new()
+  let value = resolve_cell_value(self, sheet.name(), canonical, ctx)
+  let (value_type, raw_value) = formula_value_to_cell(value)
+  if raw {
+    return raw_value
+  }
+  let mut style_id = 0
+  for cell in sheet.cells() {
+    if cell.row == row && cell.col == col {
+      style_id = cell.style_id
+      break
+    }
+  }
+  if style_id < 0 || style_id >= self.styles.length() {
+    raise XlsxError::InvalidStyleId(index=style_id)
+  }
+  format_cell_value(value_type, raw_value, Some(self.styles[style_id]))
+}
+
+///|
+pub fn Workbook::calc_cell_value_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+  raw? : Bool = false,
+) -> String raise XlsxError {
+  let reference = cell_ref_from(row, col)
+  self.calc_cell_value(sheet_name, reference, raw~)
+}
+
+///|
 pub fn Workbook::set_cell_formula(
   self : Workbook,
   sheet_name : StringView,

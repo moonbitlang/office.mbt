@@ -467,6 +467,8 @@ pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], 
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties
+pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool) -> String raise XlsxError
+pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> String raise XlsxError
 pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
