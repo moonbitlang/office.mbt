@@ -934,6 +934,235 @@ fn transpose_range_values(range : RangeValues) -> RangeValues {
 }
 
 ///|
+fn is_munit_func(name : String) -> Bool {
+  name == "MUNIT" || name == "_XLFN.MUNIT"
+}
+
+///|
+fn munit_dimension(value : FormulaValue) -> Result[Int, FormulaValue] {
+  match value_as_number(value) {
+    Ok(num) =>
+      if num < 0.0 {
+        Err(FormulaValue::Error(formula_error_value))
+      } else {
+        Ok(Double::to_int(trunc_double(num)))
+      }
+    Err(err) => Err(err)
+  }
+}
+
+///|
+fn munit_range_values(dimension : Int) -> RangeValues {
+  let out : Array[FormulaValue] = []
+  for row in 0..<dimension {
+    for col in 0..<dimension {
+      let value = if row == col { 1.0 } else { 0.0 }
+      out.push(FormulaValue::Number(value))
+    }
+  }
+  { values: out, rows: dimension, cols: dimension }
+}
+
+///|
+fn munit_range_values_from_expr(
+  workbook : Workbook,
+  sheet_name : String,
+  args : Array[Expr],
+  ctx : CalcContext,
+) -> RangeValues raise XlsxError {
+  if args.length() != 1 {
+    return {
+      values: [FormulaValue::Error(formula_error_value)],
+      rows: 1,
+      cols: 1,
+    }
+  }
+  let dimension_value = eval_expr(workbook, sheet_name, args[0], ctx)
+  match munit_dimension(dimension_value) {
+    Ok(dimension) => munit_range_values(dimension)
+    Err(err) => { values: [err], rows: 1, cols: 1 }
+  }
+}
+
+///|
+fn transpose_range_values_from_expr(
+  workbook : Workbook,
+  sheet_name : String,
+  args : Array[Expr],
+  ctx : CalcContext,
+) -> RangeValues raise XlsxError {
+  if args.length() != 1 {
+    return {
+      values: [FormulaValue::Error(formula_error_value)],
+      rows: 1,
+      cols: 1,
+    }
+  }
+  let arg_expr = args[0]
+  let arg_value = eval_expr(workbook, sheet_name, arg_expr, ctx)
+  let base_range = range_from_expr_or_value(
+    workbook, sheet_name, arg_expr, arg_value, ctx,
+  )
+  transpose_range_values(base_range)
+}
+
+///|
+fn number_matrix_from_range(
+  range : RangeValues,
+  require_square : Bool,
+) -> Result[Array[Array[Double]], FormulaValue] {
+  if range.rows <= 0 || range.cols <= 0 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  if require_square && range.rows != range.cols {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let out : Array[Array[Double]] = []
+  for row in 0..<range.rows {
+    let row_values : Array[Double] = []
+    let offset = row * range.cols
+    for col in 0..<range.cols {
+      let value = range.values[offset + col]
+      match value {
+        FormulaValue::Number(num) => row_values.push(num)
+        FormulaValue::Bool(flag) =>
+          row_values.push(if flag { 1.0 } else { 0.0 })
+        _ => return Err(FormulaValue::Error(formula_error_value))
+      }
+    }
+    out.push(row_values)
+  }
+  Ok(out)
+}
+
+///|
+fn matrix_minor(
+  matrix : Array[Array[Double]],
+  index : Int,
+) -> Array[Array[Double]] {
+  let out : Array[Array[Double]] = []
+  for row in 0..<matrix.length() {
+    if row == 0 {
+      continue
+    }
+    let values : Array[Double] = []
+    for col in 0..<matrix[row].length() {
+      if col == index {
+        continue
+      }
+      values.push(matrix[row][col])
+    }
+    out.push(values)
+  }
+  out
+}
+
+///|
+fn matrix_det(matrix : Array[Array[Double]]) -> Double {
+  if matrix.length() == 2 {
+    let m00 = matrix[0][0]
+    let m01 = matrix[0][1]
+    let m10 = matrix[1][0]
+    let m11 = matrix[1][1]
+    return m00 * m11 - m10 * m01
+  }
+  let mut result = 0.0
+  let mut sign = 1.0
+  for col in 0..<matrix.length() {
+    result = result +
+      sign * matrix[0][col] * matrix_det(matrix_minor(matrix, col))
+    sign = sign * -1.0
+  }
+  result
+}
+
+///|
+fn matrix_minor_at(
+  matrix : Array[Array[Double]],
+  remove_row : Int,
+  remove_col : Int,
+) -> Array[Array[Double]] {
+  let out : Array[Array[Double]] = []
+  for row in 0..<matrix.length() {
+    if row == remove_row {
+      continue
+    }
+    let values : Array[Double] = []
+    for col in 0..<matrix[row].length() {
+      if col == remove_col {
+        continue
+      }
+      values.push(matrix[row][col])
+    }
+    out.push(values)
+  }
+  out
+}
+
+///|
+fn matrix_cofactor(
+  matrix : Array[Array[Double]],
+  row : Int,
+  col : Int,
+) -> Double {
+  let sign = if (row + col) % 2 == 0 { 1.0 } else { -1.0 }
+  sign * matrix_det(matrix_minor_at(matrix, row, col))
+}
+
+///|
+fn matrix_adjugate(matrix : Array[Array[Double]]) -> Array[Array[Double]] {
+  let size = matrix.length()
+  let out : Array[Array[Double]] = []
+  for _ in 0..<size {
+    out.push(Array::make(size, 0.0))
+  }
+  for row in 0..<size {
+    for col in 0..<size {
+      out[row][col] = matrix_cofactor(matrix, col, row)
+    }
+  }
+  out
+}
+
+///|
+fn matrix_values(matrix : Array[Array[Double]]) -> Array[FormulaValue] {
+  let out : Array[FormulaValue] = []
+  for row in 0..<matrix.length() {
+    for col in 0..<matrix[row].length() {
+      out.push(FormulaValue::Number(matrix[row][col]))
+    }
+  }
+  out
+}
+
+///|
+fn matrix_multiply(
+  left : Array[Array[Double]],
+  right : Array[Array[Double]],
+) -> Result[Array[Array[Double]], FormulaValue] {
+  let rows = left.length()
+  let cols = left[0].length()
+  let right_rows = right.length()
+  let right_cols = right[0].length()
+  if cols != right_rows {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let out : Array[Array[Double]] = []
+  for row in 0..<rows {
+    let values = Array::make(right_cols, 0.0)
+    for col in 0..<right_cols {
+      let mut sum = 0.0
+      for idx in 0..<right_rows {
+        sum = sum + left[row][idx] * right[idx][col]
+      }
+      values[col] = sum
+    }
+    out.push(values)
+  }
+  Ok(out)
+}
+
+///|
 fn unique_row_key(
   range : RangeValues,
   row : Int,
@@ -1004,19 +1233,29 @@ fn range_from_expr_or_value(
   value : FormulaValue,
   ctx : CalcContext,
 ) -> RangeValues raise XlsxError {
+  let range_from_value = fn(value : FormulaValue) -> RangeValues {
+    match value {
+      FormulaValue::List(list) =>
+        if list.length() == 0 {
+          { rows: 1, cols: 1, values: [FormulaValue::Empty] }
+        } else {
+          { rows: 1, cols: list.length(), values: list }
+        }
+      _ => { rows: 1, cols: 1, values: [value] }
+    }
+  }
   match expr {
     Expr::Range(_, _, _) | Expr::Cell(_, _) =>
       eval_range_expr(workbook, sheet_name, expr, ctx)
-    _ =>
-      match value {
-        FormulaValue::List(list) =>
-          if list.length() == 0 {
-            { rows: 1, cols: 1, values: [FormulaValue::Empty] }
-          } else {
-            { rows: 1, cols: list.length(), values: list }
-          }
-        _ => { rows: 1, cols: 1, values: [value] }
+    Expr::FuncCall(name, args) =>
+      if is_munit_func(name) {
+        munit_range_values_from_expr(workbook, sheet_name, args, ctx)
+      } else if name == "TRANSPOSE" {
+        transpose_range_values_from_expr(workbook, sheet_name, args, ctx)
+      } else {
+        range_from_value(value)
       }
+    _ => range_from_value(value)
   }
 }
 
@@ -1049,7 +1288,19 @@ fn formula_value_to_cell(value : FormulaValue) -> (CellValueType, String) {
 }
 
 ///|
+fn is_negative_zero(value : Double) -> Bool {
+  if value != 0.0 {
+    return false
+  }
+  let inv = 1.0 / value
+  inv.is_inf() && inv < 0.0
+}
+
+///|
 fn format_number(value : Double) -> String {
+  if is_negative_zero(value) {
+    return "-0"
+  }
   let text = value.to_string()
   if text.contains("e") || text.contains("E") {
     return text
@@ -1753,6 +2004,35 @@ fn compare_values(
 }
 
 ///|
+fn compare_lookup_values(
+  lhs : FormulaValue,
+  rhs : FormulaValue,
+) -> Result[Int?, FormulaValue] {
+  match (lhs, rhs) {
+    (FormulaValue::Error(err), _) => Err(FormulaValue::Error(err))
+    (_, FormulaValue::Error(err)) => Err(FormulaValue::Error(err))
+    _ => {
+      let left = normalize_scalar(lhs)
+      let right = normalize_scalar(rhs)
+      let lrank = value_rank(left)
+      let rrank = value_rank(right)
+      if lrank != rrank {
+        return Ok(None)
+      }
+      match (left, right) {
+        (FormulaValue::Number(a), FormulaValue::Number(b)) =>
+          Ok(Some(if a < b { -1 } else if a > b { 1 } else { 0 }))
+        (FormulaValue::String(a), FormulaValue::String(b)) =>
+          Ok(Some(compare_strings(a, b)))
+        (FormulaValue::Bool(a), FormulaValue::Bool(b)) =>
+          Ok(Some(if a == b { 0 } else if !a && b { -1 } else { 1 }))
+        _ => Ok(None)
+      }
+    }
+  }
+}
+
+///|
 fn match_range_value(
   lookup : FormulaValue,
   range : RangeValues,
@@ -1870,6 +2150,13 @@ fn hlookup_value(
     FormulaValue::Error(err) => return FormulaValue::Error(err)
     _ => ()
   }
+  match lookup {
+    FormulaValue::List(list) =>
+      if list.length() > 1 {
+        return FormulaValue::Error(formula_error_na)
+      }
+    _ => ()
+  }
   if row_index <= 0 {
     return FormulaValue::Error(formula_error_value)
   }
@@ -1909,8 +2196,8 @@ fn lookup_best_index(
 ) -> Result[Int?, FormulaValue] {
   let mut best_idx : Int? = None
   for i in 0..<values.length() {
-    match compare_values(values[i], lookup) {
-      Ok(cmp) =>
+    match compare_lookup_values(values[i], lookup) {
+      Ok(Some(cmp)) =>
         if cmp <= 0 {
           match best_idx {
             None => best_idx = Some(i)
@@ -1921,6 +2208,7 @@ fn lookup_best_index(
               }
           }
         }
+      Ok(None) => ()
       Err(err) => return Err(err)
     }
   }
@@ -3970,6 +4258,44 @@ fn eval_function(
     "PRODUCT" => product_values(values)
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
+    "STDEV" | "STDEV.S" =>
+      if values.length() >= 1 {
+        stdev_values(false, values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "STDEVA" =>
+      if values.length() >= 1 {
+        stdev_values(true, values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "STDEVP" | "STDEV.P" =>
+      if values.length() >= 1 {
+        match variance_values(values, false, false) {
+          FormulaValue::Number(variance) => {
+            let result = @math.pow(variance, 0.5)
+            FormulaValue::Number(round_significant_digits(result, 15))
+          }
+          FormulaValue::Error(err) => FormulaValue::Error(err)
+          _ => FormulaValue::Error(formula_error_value)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "STDEVPA" =>
+      if values.length() >= 1 {
+        match variance_values(values, false, true) {
+          FormulaValue::Number(variance) => {
+            let result = @math.pow(variance, 0.5)
+            FormulaValue::Number(round_significant_digits(result, 15))
+          }
+          FormulaValue::Error(err) => FormulaValue::Error(err)
+          _ => FormulaValue::Error(formula_error_value)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
@@ -4320,6 +4646,118 @@ fn eval_function(
         FormulaValue::Error(formula_error_value)
       }
     "MULTINOMIAL" => multinomial_values(values)
+    "MDETERM" =>
+      if values.length() == 1 {
+        let range = range_from_expr_or_value(
+          workbook,
+          sheet_name,
+          args[0],
+          values[0],
+          ctx,
+        )
+        match number_matrix_from_range(range, true) {
+          Ok(matrix) => FormulaValue::Number(matrix_det(matrix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MINVERSE" =>
+      if values.length() == 1 {
+        let range = range_from_expr_or_value(
+          workbook,
+          sheet_name,
+          args[0],
+          values[0],
+          ctx,
+        )
+        match number_matrix_from_range(range, true) {
+          Ok(matrix) => {
+            let det_value = matrix_det(matrix)
+            if det_value == 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              let adj = matrix_adjugate(matrix)
+              let scale = 1.0 / det_value
+              for row in 0..<adj.length() {
+                for col in 0..<adj[row].length() {
+                  let value = adj[row][col]
+                  if value == 0.0 && scale < 0.0 {
+                    adj[row][col] = -0.0
+                  } else {
+                    adj[row][col] = value * scale
+                  }
+                }
+              }
+              FormulaValue::List(matrix_values(adj))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MMULT" =>
+      if values.length() == 2 {
+        match (values[0], values[1]) {
+          (FormulaValue::Number(lhs), FormulaValue::Number(rhs)) =>
+            FormulaValue::Number(lhs * rhs)
+          _ => {
+            let left_range = range_from_expr_or_value(
+              workbook,
+              sheet_name,
+              args[0],
+              values[0],
+              ctx,
+            )
+            let right_range = range_from_expr_or_value(
+              workbook,
+              sheet_name,
+              args[1],
+              values[1],
+              ctx,
+            )
+            match
+              (
+                number_matrix_from_range(left_range, false),
+                number_matrix_from_range(right_range, false),
+              ) {
+              (Ok(left), Ok(right)) =>
+                match matrix_multiply(left, right) {
+                  Ok(matrix) => FormulaValue::List(matrix_values(matrix))
+                  Err(err) => err
+                }
+              (Err(err), _) => err
+              (_, Err(err)) => err
+            }
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MUNIT" | "_XLFN.MUNIT" =>
+      if values.length() == 1 {
+        match munit_dimension(values[0]) {
+          Ok(dimension) =>
+            FormulaValue::List(munit_range_values(dimension).values)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TRANSPOSE" =>
+      if args.length() == 1 {
+        let base_range = range_from_expr_or_value(
+          workbook,
+          sheet_name,
+          args[0],
+          values[0],
+          ctx,
+        )
+        FormulaValue::List(transpose_range_values(base_range).values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "PERMUT" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
@@ -7413,6 +7851,9 @@ fn eval_function(
             values[1],
             ctx,
           )
+          if array_range.rows == 0 || array_range.cols == 0 {
+            return FormulaValue::Error(formula_error_value)
+          }
           if array_range.rows == 1 || array_range.cols == 1 {
             let lookup_vec = match range_vector(array_range) {
               Some(list) => list
@@ -7475,6 +7916,12 @@ fn eval_function(
             values[2],
             ctx,
           )
+          if lookup_range.rows == 0 ||
+            lookup_range.cols == 0 ||
+            result_range.rows == 0 ||
+            result_range.cols == 0 {
+            return FormulaValue::Error(formula_error_value)
+          }
           let lookup_list = match range_vector(lookup_range) {
             Some(list) => list
             None => return FormulaValue::Error(formula_error_na)
@@ -8956,6 +9403,137 @@ fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn stdev_add(
+  sum : Double,
+  count : Int,
+  value : Double,
+  mean : Double,
+) -> (Double, Int) {
+  let delta = value - mean
+  let next_sum = if sum < 0.0 { delta * delta } else { sum + delta * delta }
+  (next_sum, count + 1)
+}
+
+///|
+fn stdev_values(
+  stdeva : Bool,
+  values : ArrayView[FormulaValue],
+) -> FormulaValue {
+  let mean_value = if stdeva {
+    averagea_values(values)
+  } else {
+    average_values(values)
+  }
+  let mean = match mean_value {
+    FormulaValue::Number(num) => num
+    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let mut sum = -1.0
+  let mut count = -1
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Number(num) => {
+        let (next_sum, next_count) = stdev_add(sum, count, num, mean)
+        sum = next_sum
+        count = next_count
+      }
+      FormulaValue::Bool(flag) =>
+        if stdeva {
+          let num = if flag { 1.0 } else { 0.0 }
+          let (next_sum, next_count) = stdev_add(sum, count, num, mean)
+          sum = next_sum
+          count = next_count
+        }
+      FormulaValue::String(text) =>
+        if text == "TRUE" || text == "FALSE" {
+          if stdeva {
+            let num = if text == "TRUE" { 1.0 } else { 0.0 }
+            let (next_sum, next_count) = stdev_add(sum, count, num, mean)
+            sum = next_sum
+            count = next_count
+          }
+        } else {
+          match parse_double_opt(text) {
+            Some(num) => {
+              let (next_sum, next_count) = stdev_add(sum, count, num, mean)
+              sum = next_sum
+              count = next_count
+            }
+            None => ()
+          }
+        }
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  if count > 0 && sum >= 0.0 {
+    let result = @math.pow(sum / Double::from_int(count), 0.5)
+    FormulaValue::Number(round_significant_digits(result, 15))
+  } else {
+    FormulaValue::Error(formula_error_div)
+  }
+}
+
+///|
+fn variance_values(
+  values : ArrayView[FormulaValue],
+  sample : Bool,
+  count_text_zero : Bool,
+) -> FormulaValue {
+  let mut sum = 0.0
+  let mut sum_sq = 0.0
+  let mut count = 0
+  let minimum = if sample { 1 } else { 0 }
+  for value in flatten_values(values) {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::Empty => ()
+      FormulaValue::Number(num) => {
+        sum = sum + num
+        sum_sq = sum_sq + num * num
+        count = count + 1
+      }
+      FormulaValue::Bool(flag) => {
+        let num = if flag { 1.0 } else { 0.0 }
+        sum = sum + num
+        sum_sq = sum_sq + num * num
+        count = count + 1
+      }
+      FormulaValue::String(text) =>
+        if text == "" {
+          ()
+        } else if text == "TRUE" || text == "FALSE" {
+          let num = if text == "TRUE" { 1.0 } else { 0.0 }
+          sum = sum + num
+          sum_sq = sum_sq + num * num
+          count = count + 1
+        } else {
+          match parse_double_opt(text) {
+            Some(num) => {
+              sum = sum + num
+              sum_sq = sum_sq + num * num
+              count = count + 1
+            }
+            None => if count_text_zero { count = count + 1 } else { () }
+          }
+        }
+      FormulaValue::List(_) => ()
+    }
+  }
+  if count > minimum {
+    let count_d = Double::from_int(count)
+    let min_d = Double::from_int(minimum)
+    FormulaValue::Number(
+      (sum_sq * count_d - sum * sum) / (count_d * (count_d - min_d)),
+    )
+  } else {
+    FormulaValue::Error(formula_error_div)
+  }
+}
+
+///|
 fn median_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let numbers : Array[Double] = []
   for value in flatten_values(values) {
@@ -9364,7 +9942,7 @@ fn error_type_value(value : FormulaValue) -> FormulaValue {
 
 ///|
 fn type_value(value : FormulaValue) -> FormulaValue {
-  match normalize_scalar(value) {
+  match value {
     FormulaValue::Error(_) => FormulaValue::Number(16.0)
     FormulaValue::List(_) => FormulaValue::Number(64.0)
     FormulaValue::Number(_) => FormulaValue::Number(1.0)
@@ -9767,6 +10345,15 @@ fn eval_range_expr(
       let value = resolve_cell_value(workbook, target_sheet, reference, ctx)
       { values: [value], rows: 1, cols: 1 }
     }
+    Expr::FuncCall(name, args) =>
+      if is_munit_func(name) {
+        munit_range_values_from_expr(workbook, sheet_name, args, ctx)
+      } else if name == "TRANSPOSE" {
+        transpose_range_values_from_expr(workbook, sheet_name, args, ctx)
+      } else {
+        let value = eval_expr(workbook, sheet_name, expr, ctx)
+        { values: [value], rows: 1, cols: 1 }
+      }
     _ => {
       let value = eval_expr(workbook, sheet_name, expr, ctx)
       { values: [value], rows: 1, cols: 1 }
