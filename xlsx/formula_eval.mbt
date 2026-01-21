@@ -1726,6 +1726,48 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "ISERR" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(err) =>
+            FormulaValue::Bool(err != formula_error_na)
+          _ => FormulaValue::Bool(false)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISEVEN" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Empty => FormulaValue::Bool(true)
+          _ =>
+            match value_as_number(values[0]) {
+              Ok(num) => {
+                let even = if num == 1.0 {
+                  false
+                } else {
+                  num == num / 2.0 * 2.0
+                }
+                FormulaValue::Bool(even)
+              }
+              Err(err) => err
+            }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISODD" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let n = Double::to_int(num)
+            FormulaValue::Bool(n != n / 2 * 2)
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "ISERROR" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
@@ -1783,6 +1825,29 @@ fn eval_function(
         match normalize_scalar(values[0]) {
           FormulaValue::String(_) => FormulaValue::Bool(false)
           _ => FormulaValue::Bool(true)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "N" =>
+      if values.length() == 1 {
+        match normalize_scalar(values[0]) {
+          FormulaValue::Error(err) => FormulaValue::Error(err)
+          FormulaValue::Number(num) => FormulaValue::Number(num)
+          FormulaValue::Bool(flag) =>
+            FormulaValue::Number(if flag { 1.0 } else { 0.0 })
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(num) => FormulaValue::Number(num)
+              None =>
+                if text == "TRUE" {
+                  FormulaValue::Number(1.0)
+                } else {
+                  FormulaValue::Number(0.0)
+                }
+            }
+          FormulaValue::Empty => FormulaValue::Number(0.0)
+          FormulaValue::List(_) => FormulaValue::Number(0.0)
         }
       } else {
         FormulaValue::Error(formula_error_value)

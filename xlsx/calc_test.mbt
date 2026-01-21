@@ -227,6 +227,44 @@ test "calc is functions" {
 }
 
 ///|
+test "calc iseven isodd and n functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "ISEVEN(2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="TRUE")
+  sheet.set_cell_formula("A2", "ISEVEN(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="FALSE")
+  sheet.set_cell_formula("A3", "ISEVEN(\"2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="TRUE")
+  sheet.set_cell_formula("A4", "ISEVEN(\"x\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "ISEVEN(B1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="TRUE")
+  sheet.set_cell_formula("B1", "ISODD(3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="TRUE")
+  sheet.set_cell_formula("B2", "ISODD(2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="FALSE")
+  sheet.set_cell_formula("B3", "ISODD(\"3\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="TRUE")
+  sheet.set_cell_formula("B4", "ISODD(\"x\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+  sheet.set_cell_formula("C1", "N(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
+  sheet.set_cell_formula("C2", "N(TRUE())")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1")
+  sheet.set_cell_formula("C3", "N(FALSE())")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="0")
+  sheet.set_cell_formula("C4", "N(\"2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="2")
+  sheet.set_cell_formula("C5", "N(\"text\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C5"), content="0")
+  sheet.set_cell_formula("C6", "N(1/0)")
+  inspect(workbook.calc_cell_value("Sheet1", "C6"), content="#DIV/0!")
+  sheet.set_cell_formula("C7", "N(D1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C7"), content="0")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
