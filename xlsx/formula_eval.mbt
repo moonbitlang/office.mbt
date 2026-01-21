@@ -1339,6 +1339,122 @@ fn sort_range_values(
 }
 
 ///|
+fn sortby_vector(
+  range : RangeValues,
+  expected_len : Int,
+) -> Result[Array[FormulaValue], FormulaValue] {
+  let vector = match range_vector(range) {
+    Some(list) => list
+    None => return Err(FormulaValue::Error(formula_error_value))
+  }
+  if vector.length() != expected_len {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  for value in vector {
+    match value {
+      FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+      _ => ()
+    }
+  }
+  Ok(vector)
+}
+
+///|
+fn sortby_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let sort_by_rows = range.rows > 1 || range.cols == 1
+  let expected_len = if sort_by_rows { range.rows } else { range.cols }
+  let key_sets : Array[(Array[FormulaValue], Int)] = []
+  let mut idx = 1
+  while idx < args.length() {
+    let key_range = range_from_expr_or_value(
+      workbook,
+      sheet_name,
+      args[idx],
+      values[idx],
+      ctx,
+    )
+    let key_vector = match sortby_vector(key_range, expected_len) {
+      Ok(list) => list
+      Err(err) => return err
+    }
+    let sort_order = if idx + 1 < values.length() {
+      match value_as_int(values[idx + 1]) {
+        Ok(num) => num
+        Err(err) => return err
+      }
+    } else {
+      1
+    }
+    if sort_order != 1 && sort_order != -1 {
+      return FormulaValue::Error(formula_error_value)
+    }
+    key_sets.push((key_vector, sort_order))
+    idx = idx + 2
+  }
+  if key_sets.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let entries : Array[Int] = []
+  for i in 0..<expected_len {
+    entries.push(i)
+  }
+  entries.sort_by((left, right) => {
+    let mut cmp = 0
+    for item in key_sets {
+      let (keys, order) = item
+      let left_key = keys[left]
+      let right_key = keys[right]
+      let key_cmp = match compare_values(left_key, right_key) {
+        Ok(value) => value
+        Err(_) => 0
+      }
+      if key_cmp != 0 {
+        cmp = order * key_cmp
+        break
+      }
+    }
+    if cmp == 0 {
+      left - right
+    } else {
+      cmp
+    }
+  })
+  let out : Array[FormulaValue] = []
+  if sort_by_rows {
+    for row in entries {
+      let offset = row * range.cols
+      for col in 0..<range.cols {
+        out.push(range.values[offset + col])
+      }
+    }
+    FormulaValue::List(out)
+  } else {
+    for col in entries {
+      for row in 0..<range.rows {
+        out.push(range.values[row * range.cols + col])
+      }
+    }
+    FormulaValue::List(out)
+  }
+}
+
+///|
 fn sort_values(
   workbook : Workbook,
   sheet_name : String,
@@ -8444,6 +8560,8 @@ fn eval_function(
       }
     "SEQUENCE" => sequence_values(values)
     "SORT" => sort_values(workbook, sheet_name, args, values, ctx)
+    "SORTBY" | "_XLFN.SORTBY" =>
+      sortby_values(workbook, sheet_name, args, values, ctx)
     "FILTER" => filter_values(workbook, sheet_name, args, values, ctx)
     "UNIQUE" =>
       if args.length() >= 1 && args.length() <= 3 {

@@ -2892,6 +2892,40 @@ test "calc sort error functions" {
 }
 
 ///|
+test "calc sortby functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("A"))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A2", CellValue::String("C"))
+  sheet.set_cell_value("B2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A3", CellValue::String("B"))
+  sheet.set_cell_value("B3", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A4", CellValue::String("D"))
+  sheet.set_cell_value("B4", CellValue::Numeric(1.0))
+  sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),SORTBY(A1:B4,B1:B4))")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="C,1,D,1,A,2,B,2")
+  sheet.set_cell_formula(
+    "C2", "TEXTJOIN(\",\",TRUE(),SORTBY(A1:B4,B1:B4,1,A1:A4,-1))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="D,1,C,1,B,2,A,2")
+}
+
+///|
+test "calc sortby error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("B1", "SORTBY(A1:A2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "SORTBY(A1:A2,A1:A2,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("B3", "SORTBY(A1:A2,A1:A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#VALUE!")
+}
+
+///|
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
