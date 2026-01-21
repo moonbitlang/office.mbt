@@ -1083,6 +1083,36 @@ fn modf_double(value : Double) -> (Double, Double) {
 }
 
 ///|
+fn gcd_double(left : Double, right : Double) -> Double {
+  let mut x = trunc_double(left)
+  let mut y = trunc_double(right)
+  if x == 0.0 {
+    return y
+  }
+  if y == 0.0 {
+    return x
+  }
+  while x != y {
+    if x > y {
+      x = x - y
+    } else {
+      y = y - x
+    }
+  }
+  x
+}
+
+///|
+fn lcm_double(left : Double, right : Double) -> Double {
+  let x = trunc_double(left)
+  let y = trunc_double(right)
+  if x == 0.0 && y == 0.0 {
+    return 0.0
+  }
+  x * y / gcd_double(x, y)
+}
+
+///|
 fn round_half_away_from_zero(value : Double) -> Double {
   if value < 0.0 {
     -Double::floor(-value + 0.5)
@@ -1570,6 +1600,8 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "GCD" => gcd_values(values)
+    "LCM" => lcm_values(values)
     "ABS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -2191,6 +2223,116 @@ fn sumsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   FormulaValue::Number(sum)
+}
+
+///|
+fn gcd_lcm_collect(
+  value : FormulaValue,
+  numbers : Array[Double],
+  allow_empty_string : Bool,
+) -> Result[Unit, FormulaValue] {
+  match value {
+    FormulaValue::List(list) => {
+      for item in list {
+        match gcd_lcm_collect(item, numbers, allow_empty_string) {
+          Ok(_) => ()
+          Err(err) => return Err(err)
+        }
+      }
+      Ok(())
+    }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::Number(num) => {
+      numbers.push(num)
+      Ok(())
+    }
+    FormulaValue::Bool(flag) => {
+      numbers.push(if flag { 1.0 } else { 0.0 })
+      Ok(())
+    }
+    FormulaValue::String(text) =>
+      if text == "" {
+        if allow_empty_string {
+          Ok(())
+        } else {
+          Err(FormulaValue::Error(formula_error_value))
+        }
+      } else {
+        match parse_double_opt(text) {
+          Some(num) => {
+            numbers.push(num)
+            Ok(())
+          }
+          None => Err(FormulaValue::Error(formula_error_value))
+        }
+      }
+    FormulaValue::Empty => {
+      numbers.push(0.0)
+      Ok(())
+    }
+  }
+}
+
+///|
+fn gcd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let numbers : Array[Double] = []
+  for value in values {
+    match gcd_lcm_collect(value, numbers, false) {
+      Ok(_) => ()
+      Err(err) => return err
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if numbers[0] < 0.0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if numbers.length() == 1 {
+    return FormulaValue::Number(numbers[0])
+  }
+  let mut result = numbers[0]
+  for i in 1..<numbers.length() {
+    if numbers[i] < 0.0 {
+      return FormulaValue::Error(formula_error_value)
+    }
+    result = gcd_double(result, numbers[i])
+  }
+  FormulaValue::Number(result)
+}
+
+///|
+fn lcm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let numbers : Array[Double] = []
+  for value in values {
+    match gcd_lcm_collect(value, numbers, true) {
+      Ok(_) => ()
+      Err(err) => return err
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if numbers[0] < 0.0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if numbers.length() == 1 {
+    return FormulaValue::Number(numbers[0])
+  }
+  let mut result = numbers[0]
+  for i in 1..<numbers.length() {
+    if numbers[i] < 0.0 {
+      return FormulaValue::Error(formula_error_value)
+    }
+    result = lcm_double(result, numbers[i])
+  }
+  FormulaValue::Number(result)
 }
 
 ///|
