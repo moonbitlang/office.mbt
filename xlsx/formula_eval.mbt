@@ -1809,6 +1809,21 @@ fn eval_function(
           Err(err) => err
         }
       }
+    "ARABIC" | "_XLFN.ARABIC" =>
+      if values.length() == 1 {
+        match value_as_string(values[0]) {
+          Ok(text) => arabic_string_value(text)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "BASE" => base_values(values)
+    "BITAND" => bitwise_values("BITAND", values)
+    "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
+    "BITOR" => bitwise_values("BITOR", values)
+    "BITRSHIFT" => bitwise_values("BITRSHIFT", values)
+    "BITXOR" => bitwise_values("BITXOR", values)
     "ACOS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -3171,6 +3186,166 @@ fn roman_string(value : Double, form : Int) -> String {
     }
   }
   sb.to_string()
+}
+
+///|
+let bitwise_max_value : Double = @math.pow(2.0, 48.0) - 1.0
+
+///|
+fn bitwise_number(value : FormulaValue) -> Result[Double, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) => Ok(num)
+    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    FormulaValue::Empty => Ok(0.0)
+    FormulaValue::String(text) =>
+      match parse_double_opt(text) {
+        Some(num) => Ok(num)
+        None => Err(FormulaValue::Error(formula_error_num))
+      }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_num))
+  }
+}
+
+///|
+fn bitwise_values(
+  name : String,
+  values : ArrayView[FormulaValue],
+) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  match (bitwise_number(values[0]), bitwise_number(values[1])) {
+    (Ok(num1), Ok(num2)) =>
+      if num1 < 0.0 ||
+        num1 > bitwise_max_value ||
+        num2 < 0.0 ||
+        num2 > bitwise_max_value {
+        FormulaValue::Error(formula_error_num)
+      } else {
+        let a = Double::to_int(trunc_double(num1))
+        let b = Double::to_int(trunc_double(num2))
+        let result = match name {
+          "BITAND" => Int::land(a, b)
+          "BITOR" => Int::lor(a, b)
+          "BITXOR" => Int::lxor(a, b)
+          "BITLSHIFT" => a << b
+          "BITRSHIFT" => a >> b
+          _ => 0
+        }
+        FormulaValue::Number(Double::from_int(result))
+      }
+    (Err(err), _) => err
+    (_, Err(err)) => err
+  }
+}
+
+///|
+fn arabic_char_value(ch : Char) -> Int {
+  match ch {
+    'I' => 1
+    'V' => 5
+    'X' => 10
+    'L' => 50
+    'C' => 100
+    'D' => 500
+    'M' => 1000
+    _ => 0
+  }
+}
+
+///|
+fn arabic_string_value(text : String) -> FormulaValue {
+  if count_utf16_units(text) > 255 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let upper = text.to_upper()
+  let chars = upper.to_array()
+  if chars.length() == 0 {
+    return FormulaValue::Number(0.0)
+  }
+  let mut index = chars.length() - 1
+  let mut actual_start = 0
+  while index >= 0 && chars[index] == ' ' {
+    index = index - 1
+  }
+  while actual_start <= index && chars[actual_start] == ' ' {
+    actual_start = actual_start + 1
+  }
+  let mut is_negative = false
+  if actual_start <= index && chars[actual_start] == '-' {
+    is_negative = true
+    actual_start = actual_start + 1
+  }
+  if actual_start > index {
+    return FormulaValue::Number(0.0)
+  }
+  let mut number = 0
+  let mut subtract_number = 0
+  let mut prev_char_value = -1
+  while index >= actual_start {
+    let start_index = index
+    let start_char = chars[start_index]
+    index = index - 1
+    while index >= actual_start && chars[index] == start_char {
+      index = index - 1
+    }
+    let current_char_value = arabic_char_value(start_char)
+    let current_part_value = (start_index - index) * current_char_value
+    if current_char_value >= prev_char_value {
+      number = number + current_part_value - subtract_number
+      prev_char_value = current_char_value
+      subtract_number = 0
+    } else {
+      subtract_number = subtract_number + current_part_value
+    }
+  }
+  if subtract_number != 0 {
+    number = number - subtract_number
+  }
+  if is_negative {
+    number = -number
+  }
+  FormulaValue::Number(Double::from_int(number))
+}
+
+///|
+fn base_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let number = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let radix = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let base = Double::to_int(trunc_double(radix))
+  if base < 2 || base > 36 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let mut min_length = 0
+  if values.length() == 3 {
+    match value_as_string(values[2]) {
+      Ok(text) =>
+        min_length = @strconv.parse_int(text, base=10) catch {
+          _ => return FormulaValue::Error(formula_error_value)
+        }
+      Err(err) => return err
+    }
+  }
+  let number_int = Double::to_int(trunc_double(number))
+  let mut text = Int::to_string(number_int, radix=base).to_upper()
+  if min_length > text.length() {
+    let pad = "0".repeat(min_length - text.length())
+    text = pad + text
+  }
+  FormulaValue::String(text)
 }
 
 ///|
