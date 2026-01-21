@@ -40,25 +40,73 @@ fn unescape_xml_text(value : StringView) -> String {
 }
 
 ///|
+fn is_attr_space(ch : Char) -> Bool {
+  match ch {
+    ' ' | '\t' | '\n' | '\r' => true
+    _ => false
+  }
+}
+
+///|
 fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
-  let needle = name.to_string() + "=\""
-  let tag_str = tag.to_string()
-  match tag_str.find(needle) {
-    Some(start) => {
-      let value_start = start + needle.length()
-      let rest = tag_str[value_start:] catch {
-          _ => raise XlsxError::InvalidXml(msg="attribute out of range")
+  let chars = tag.to_array()
+  let name_chars = name.to_array()
+  let mut i = 0
+  while i < chars.length() {
+    while i < chars.length() && is_attr_space(chars[i]) {
+      i = i + 1
+    }
+    if i >= chars.length() {
+      break
+    }
+    let name_start = i
+    while i < chars.length() && !is_attr_space(chars[i]) && chars[i] != '=' {
+      i = i + 1
+    }
+    let name_end = i
+    if name_end == name_start {
+      i = i + 1
+      continue
+    }
+    while i < chars.length() && is_attr_space(chars[i]) {
+      i = i + 1
+    }
+    if i >= chars.length() || chars[i] != '=' {
+      i = name_end
+      continue
+    }
+    i = i + 1
+    while i < chars.length() && is_attr_space(chars[i]) {
+      i = i + 1
+    }
+    if i >= chars.length() || chars[i] != '"' {
+      continue
+    }
+    i = i + 1
+    let value_start = i
+    while i < chars.length() && chars[i] != '"' {
+      i = i + 1
+    }
+    if i >= chars.length() {
+      raise XlsxError::InvalidXml(msg="attribute out of range")
+    }
+    if name_end - name_start == name_chars.length() {
+      let mut matched = true
+      for j in 0..<name_chars.length() {
+        if chars[name_start + j] != name_chars[j] {
+          matched = false
+          break
         }
-      match rest.find("\"") {
-        Some(end) => {
-          let value = rest[:end] catch {
-              _ => raise XlsxError::InvalidXml(msg="attribute slice invalid")
-            }
-          Some(value.to_string())
+      }
+      if matched {
+        let sb = StringBuilder::new()
+        for j in value_start..<i {
+          sb.write_char(chars[j])
         }
-        None => None
+        return Some(sb.to_string())
       }
     }
-    None => None
+    i = i + 1
   }
+  None
 }
