@@ -1763,6 +1763,105 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "CEILING" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+            if values.length() > 1 {
+              match value_as_number(values[1]) {
+                Ok(value) => significance = value
+                Err(err) => return err
+              }
+            }
+            if significance < 0.0 && num > 0.0 {
+              FormulaValue::Error(formula_error_value)
+            } else if values.length() == 1 {
+              FormulaValue::Number(Double::ceil(num))
+            } else {
+              let (whole, frac) = modf_double(num / significance)
+              let mut val = whole
+              if frac > 0.0 {
+                val = val + 1.0
+              }
+              FormulaValue::Number(val * significance)
+            }
+          }
+          Err(err) => err
+        }
+      }
+    "CEILINGdotMATH" | "CEILING.MATH" | "_XLFN.CEILING.MATH" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 3 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if values.length() == 1 {
+              FormulaValue::Number(Double::ceil(num))
+            } else {
+              let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
+              let mut mode = 1.0
+              match value_as_number(values[1]) {
+                Ok(value) => significance = value
+                Err(err) => return err
+              }
+              if values.length() > 2 {
+                match value_as_number(values[2]) {
+                  Ok(value) => mode = value
+                  Err(err) => return err
+                }
+              }
+              let (whole, frac) = modf_double(num / significance)
+              let mut val = whole
+              if frac != 0.0 {
+                if num > 0.0 {
+                  val = val + 1.0
+                } else if mode < 0.0 {
+                  val = val - 1.0
+                }
+              }
+              FormulaValue::Number(val * significance)
+            }
+          Err(err) => err
+        }
+      }
+    "CEILINGdotPRECISE" | "CEILING.PRECISE" | "_XLFN.CEILING.PRECISE" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if values.length() == 1 {
+              FormulaValue::Number(Double::ceil(num))
+            } else {
+              match value_as_number(values[1]) {
+                Ok(significance) => {
+                  let abs_significance = abs_double(significance)
+                  if abs_significance == 0.0 {
+                    FormulaValue::Number(0.0)
+                  } else {
+                    let (whole, frac) = modf_double(num / abs_significance)
+                    let mut val = whole
+                    if frac != 0.0 && num > 0.0 {
+                      val = val + 1.0
+                    }
+                    FormulaValue::Number(val * abs_significance)
+                  }
+                }
+                Err(err) => err
+              }
+            }
+          Err(err) => err
+        }
+      }
     "FLOORdotMATH" | "FLOOR.MATH" | "_XLFN.FLOOR.MATH" =>
       if values.length() == 0 {
         FormulaValue::Error(formula_error_value)
