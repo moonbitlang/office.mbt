@@ -757,6 +757,120 @@ fn clean_text_value(value : FormulaValue) -> FormulaValue {
 }
 
 ///|
+fn value_as_int(value : FormulaValue) -> Result[Int, FormulaValue] {
+  match value_as_number(value) {
+    Ok(num) => Ok(Double::to_int(trunc_double(num)))
+    Err(err) => Err(err)
+  }
+}
+
+///|
+fn find_substring_from(text : String, pattern : String, start : Int) -> Int? {
+  let len = text.length()
+  if start < 0 || start > len {
+    return None
+  }
+  if pattern.length() == 0 {
+    return Some(start)
+  }
+  let tail = text.unsafe_substring(start~, end=len)
+  match tail.find(pattern) {
+    Some(idx) => Some(start + idx)
+    None => None
+  }
+}
+
+///|
+fn wildcard_match_prefix(
+  text : String,
+  pattern : String,
+  text_idx : Int,
+  pattern_idx : Int,
+  memo : Map[(Int, Int), Bool],
+) -> Bool {
+  match memo.get((text_idx, pattern_idx)) {
+    Some(result) => return result
+    None => ()
+  }
+  let text_len = text.length()
+  let pattern_len = pattern.length()
+  let result = if pattern_idx == pattern_len {
+    true
+  } else {
+    let token = pattern[pattern_idx]
+    if token == '~' {
+      if pattern_idx + 1 >= pattern_len {
+        if text_idx < text_len && text[text_idx] == '~' {
+          wildcard_match_prefix(
+            text,
+            pattern,
+            text_idx + 1,
+            pattern_idx + 1,
+            memo,
+          )
+        } else {
+          false
+        }
+      } else {
+        let next = pattern[pattern_idx + 1]
+        if text_idx < text_len && text[text_idx] == next {
+          wildcard_match_prefix(
+            text,
+            pattern,
+            text_idx + 1,
+            pattern_idx + 2,
+            memo,
+          )
+        } else {
+          false
+        }
+      }
+    } else if token == '*' {
+      if wildcard_match_prefix(text, pattern, text_idx, pattern_idx + 1, memo) {
+        true
+      } else if text_idx < text_len {
+        wildcard_match_prefix(text, pattern, text_idx + 1, pattern_idx, memo)
+      } else {
+        false
+      }
+    } else if token == '?' {
+      if text_idx < text_len {
+        wildcard_match_prefix(
+          text,
+          pattern,
+          text_idx + 1,
+          pattern_idx + 1,
+          memo,
+        )
+      } else {
+        false
+      }
+    } else if text_idx < text_len && text[text_idx] == token {
+      wildcard_match_prefix(text, pattern, text_idx + 1, pattern_idx + 1, memo)
+    } else {
+      false
+    }
+  }
+  memo[(text_idx, pattern_idx)] = result
+  result
+}
+
+///|
+fn wildcard_find(text : String, pattern : String, start : Int) -> Int? {
+  let len = text.length()
+  if start < 0 || start > len {
+    return None
+  }
+  for idx in start..<=len {
+    let memo : Map[(Int, Int), Bool] = {}
+    if wildcard_match_prefix(text, pattern, idx, 0, memo) {
+      return Some(idx)
+    }
+  }
+  None
+}
+
+///|
 fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let sb = StringBuilder::new()
   for value in flatten_values(values) {
@@ -3246,6 +3360,311 @@ fn eval_function(
           Ok(text) => FormulaValue::String(trim_excel_text(text))
           Err(err) => err
         }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "LEFT" =>
+      if values.length() == 1 || values.length() == 2 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let count = if values.length() == 2 {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let len = text.length()
+          let end = if count > len { len } else { count }
+          let start = 0
+          FormulaValue::String(text.unsafe_substring(start~, end~))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RIGHT" =>
+      if values.length() == 1 || values.length() == 2 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let count = if values.length() == 2 {
+          match value_as_int(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let len = text.length()
+          let start = if count >= len { 0 } else { len - count }
+          let end = len
+          FormulaValue::String(text.unsafe_substring(start~, end~))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MID" =>
+      if values.length() == 3 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let count = match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        if start_num <= 0 || count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let len = text.length()
+          if start_num > len {
+            FormulaValue::String("")
+          } else {
+            let start = start_num - 1
+            let mut end = start + count
+            if end > len {
+              end = len
+            }
+            FormulaValue::String(text.unsafe_substring(start~, end~))
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "REPT" =>
+      if values.length() == 2 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let times = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        if times < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else if times == 0 || text.length() == 0 {
+          FormulaValue::String("")
+        } else if text.length() > max_cell_chars / times {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          FormulaValue::String(text.repeat(times))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "REPLACE" =>
+      if values.length() == 4 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = match value_as_int(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let count = match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let new_text = match value_as_string(values[3]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        if start_num <= 0 || count < 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let len = text.length()
+          let mut start = start_num - 1
+          if start > len {
+            start = len
+          }
+          let mut end = start + count
+          if end > len {
+            end = len
+          }
+          let sb = StringBuilder::new()
+          sb.write_view(text.unsafe_substring(start=0, end=start))
+          sb.write_view(new_text)
+          sb.write_view(text.unsafe_substring(start=end, end=len))
+          FormulaValue::String(sb.to_string())
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SUBSTITUTE" =>
+      if values.length() == 3 || values.length() == 4 {
+        let text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let old_text = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let new_text = match value_as_string(values[2]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        if old_text.length() == 0 {
+          FormulaValue::Error(formula_error_value)
+        } else if values.length() == 4 {
+          let instance = match value_as_int(values[3]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          if instance <= 0 {
+            FormulaValue::Error(formula_error_value)
+          } else {
+            let mut index = 0
+            let mut count = 0
+            let len = text.length()
+            let pattern_len = old_text.length()
+            while true {
+              match find_substring_from(text, old_text, index) {
+                Some(found) => {
+                  count = count + 1
+                  if count == instance {
+                    let sb = StringBuilder::new()
+                    sb.write_view(text.unsafe_substring(start=0, end=found))
+                    sb.write_view(new_text)
+                    let tail_start = found + pattern_len
+                    sb.write_view(
+                      text.unsafe_substring(start=tail_start, end=len),
+                    )
+                    return FormulaValue::String(sb.to_string())
+                  }
+                  index = found + pattern_len
+                }
+                None => break
+              }
+            }
+            FormulaValue::String(text)
+          }
+        } else {
+          let mut index = 0
+          let len = text.length()
+          let pattern_len = old_text.length()
+          let sb = StringBuilder::new()
+          while true {
+            match find_substring_from(text, old_text, index) {
+              Some(found) => {
+                sb.write_view(text.unsafe_substring(start=index, end=found))
+                sb.write_view(new_text)
+                index = found + pattern_len
+              }
+              None => {
+                sb.write_view(text.unsafe_substring(start=index, end=len))
+                break
+              }
+            }
+          }
+          FormulaValue::String(sb.to_string())
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "FIND" =>
+      if values.length() == 2 || values.length() == 3 {
+        let find_text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let within_text = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = if values.length() == 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if start_num <= 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let start = start_num - 1
+          let len = within_text.length()
+          if start > len {
+            FormulaValue::Error(formula_error_value)
+          } else if find_text.length() == 0 {
+            FormulaValue::Number(Double::from_int(start_num))
+          } else {
+            match find_substring_from(within_text, find_text, start) {
+              Some(idx) => FormulaValue::Number(Double::from_int(idx + 1))
+              None => FormulaValue::Error(formula_error_value)
+            }
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SEARCH" =>
+      if values.length() == 2 || values.length() == 3 {
+        let find_text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let within_text = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let start_num = if values.length() == 3 {
+          match value_as_int(values[2]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          1
+        }
+        if start_num <= 0 {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          let start = start_num - 1
+          let lower_text = within_text.to_lower()
+          let lower_find = find_text.to_lower()
+          let len = lower_text.length()
+          if start > len {
+            FormulaValue::Error(formula_error_value)
+          } else if lower_find.length() == 0 {
+            FormulaValue::Number(Double::from_int(start_num))
+          } else {
+            match wildcard_find(lower_text, lower_find, start) {
+              Some(idx) => FormulaValue::Number(Double::from_int(idx + 1))
+              None => FormulaValue::Error(formula_error_value)
+            }
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "EXACT" =>
+      if values.length() == 2 {
+        let left = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let right = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        FormulaValue::Bool(left == right)
       } else {
         FormulaValue::Error(formula_error_value)
       }
