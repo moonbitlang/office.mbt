@@ -5,6 +5,7 @@ pub struct Cell {
   col : Int
   value : String
   value_type : CellValueType
+  rich_text : Array[RichTextRun]?
   formula : String?
   style_id : Int
 }
@@ -51,6 +52,7 @@ pub struct Worksheet {
   mut name : String
   cells : Array[Cell]
   merged_cells : Array[String]
+  hyperlinks : Array[Hyperlink]
   tables : Array[Table]
   sparkline_groups : Array[SparklineGroup]
   pivot_tables : Array[PivotTable]
@@ -58,6 +60,7 @@ pub struct Worksheet {
   charts : Array[Chart]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  comments : Array[Comment]
   row_dimensions : Map[Int, RowDimension]
   col_dimensions : Map[Int, ColDimension]
   mut state : SheetState
@@ -72,6 +75,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     name,
     cells: [],
     merged_cells: [],
+    hyperlinks: [],
     tables: [],
     sparkline_groups: [],
     pivot_tables: [],
@@ -79,6 +83,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     charts: [],
     data_validations: [],
     conditional_formats: [],
+    comments: [],
     row_dimensions: {},
     col_dimensions: {},
     state: SheetState::Visible,
@@ -111,6 +116,11 @@ pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
 ///|
 pub fn Worksheet::merged_cells(self : Worksheet) -> ArrayView[String] {
   self.merged_cells[:]
+}
+
+///|
+pub fn Worksheet::hyperlinks(self : Worksheet) -> ArrayView[Hyperlink] {
+  self.hyperlinks[:]
 }
 
 ///|
@@ -148,6 +158,11 @@ pub fn Worksheet::data_validations(self : Worksheet) -> ArrayView[String] {
 ///|
 pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
   self.conditional_formats[:]
+}
+
+///|
+pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
+  self.comments[:]
 }
 
 ///|
@@ -208,6 +223,60 @@ fn normalize_range_ref(range_ref : StringView) -> String raise XlsxError {
 }
 
 ///|
+fn cell_in_bounds(
+  row : Int,
+  col : Int,
+  min_row : Int,
+  min_col : Int,
+  max_row : Int,
+  max_col : Int,
+) -> Bool {
+  row >= min_row && row <= max_row && col >= min_col && col <= max_col
+}
+
+///|
+fn normalize_cell_or_range_ref(
+  reference : StringView,
+) -> String raise XlsxError {
+  if reference.to_string().contains(":") {
+    normalize_range_ref(reference)
+  } else {
+    let (row, col) = cell_ref_to_rc(reference)
+    cell_ref_from(row, col)
+  }
+}
+
+///|
+fn cell_in_reference(
+  reference : StringView,
+  row : Int,
+  col : Int,
+) -> Bool raise XlsxError {
+  if reference.to_string().contains(":") {
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(reference)
+    cell_in_bounds(row, col, min_row, min_col, max_row, max_col)
+  } else {
+    let (target_row, target_col) = cell_ref_to_rc(reference)
+    target_row == row && target_col == col
+  }
+}
+
+///|
+fn Worksheet::merged_anchor_for_cell(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> String? raise XlsxError {
+  for range_ref in self.merged_cells {
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    if cell_in_bounds(row, col, min_row, min_col, max_row, max_col) {
+      return Some(cell_ref_from(min_row, min_col))
+    }
+  }
+  None
+}
+
+///|
 pub fn Worksheet::set_cell(
   self : Worksheet,
   reference : String,
@@ -224,6 +293,7 @@ pub fn Worksheet::set_cell(
         col,
         value,
         value_type: CellValueType::String,
+        rich_text: None,
         formula: None,
         style_id: cell.style_id,
       }
@@ -236,6 +306,7 @@ pub fn Worksheet::set_cell(
     col,
     value,
     value_type: CellValueType::String,
+    rich_text: None,
     formula: None,
     style_id: 0,
   })
@@ -274,6 +345,7 @@ pub fn Worksheet::set_cell_value(
         col,
         value: raw_value,
         value_type,
+        rich_text: None,
         formula: None,
         style_id: cell.style_id,
       }
@@ -286,6 +358,7 @@ pub fn Worksheet::set_cell_value(
     col,
     value: raw_value,
     value_type,
+    rich_text: None,
     formula: None,
     style_id: 0,
   })
@@ -300,6 +373,81 @@ pub fn Worksheet::get_cell_value_raw(
   for cell in self.cells {
     if cell.row == row && cell.col == col {
       return Some(cell_value_from_raw(cell.value_type, cell.value))
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::set_cell_rich_text(
+  self : Worksheet,
+  reference : String,
+  runs : ArrayView[RichTextRun],
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let total = rich_text_total_units(runs)
+  if total > max_cell_chars {
+    raise XlsxError::CellTextTooLong(len=total)
+  }
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  let stored_runs : Array[RichTextRun] = []
+  for run in runs {
+    stored_runs.push(run)
+  }
+  let value = rich_text_plain_text(runs)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = {
+        reference: canonical,
+        row,
+        col,
+        value,
+        value_type: CellValueType::String,
+        rich_text: Some(stored_runs),
+        formula: None,
+        style_id: cell.style_id,
+      }
+      return
+    }
+  }
+  self.cells.push({
+    reference: canonical,
+    row,
+    col,
+    value,
+    value_type: CellValueType::String,
+    rich_text: Some(stored_runs),
+    formula: None,
+    style_id: 0,
+  })
+}
+
+///|
+pub fn Worksheet::get_cell_rich_text(
+  self : Worksheet,
+  reference : StringView,
+) -> Array[RichTextRun]? raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      if cell.value_type != CellValueType::String {
+        return None
+      }
+      match cell.rich_text {
+        Some(runs) => {
+          let copied : Array[RichTextRun] = []
+          for run in runs {
+            copied.push(run)
+          }
+          return Some(copied)
+        }
+        None => {
+          let runs : Array[RichTextRun] = []
+          runs.push({ text: cell.value, font: None })
+          return Some(runs)
+        }
+      }
     }
   }
   None
@@ -323,6 +471,7 @@ pub fn Worksheet::set_cell_formula(
         col,
         value,
         value_type: CellValueType::String,
+        rich_text: None,
         formula: Some(formula),
         style_id: cell.style_id,
       }
@@ -335,6 +484,7 @@ pub fn Worksheet::set_cell_formula(
     col,
     value,
     value_type: CellValueType::String,
+    rich_text: None,
     formula: Some(formula),
     style_id: 0,
   })
@@ -352,6 +502,140 @@ pub fn Worksheet::get_cell_formula(
     }
   }
   None
+}
+
+///|
+pub fn Worksheet::set_cell_hyperlink(
+  self : Worksheet,
+  reference : String,
+  target : String,
+  link_type : HyperlinkType,
+  display? : String = "",
+  tooltip? : String = "",
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  let resolved = match self.merged_anchor_for_cell(row, col) {
+    Some(value) => value
+    None => canonical
+  }
+  if link_type == HyperlinkType::Unset {
+    self.remove_cell_hyperlink(resolved)
+    return
+  }
+  let display_value = if display == "" { None } else { Some(display) }
+  let tooltip_value = if tooltip == "" { None } else { Some(tooltip) }
+  let normalized_ref = normalize_cell_or_range_ref(resolved)
+  let mut updated = false
+  for i, link in self.hyperlinks {
+    if link.reference == normalized_ref {
+      self.hyperlinks[i] = {
+        reference: normalized_ref,
+        target,
+        link_type,
+        display: display_value,
+        tooltip: tooltip_value,
+      }
+      updated = true
+      break
+    }
+  }
+  if !updated {
+    if self.hyperlinks.length() > max_sheet_hyperlinks {
+      raise XlsxError::HyperlinkLimitExceeded(limit=max_sheet_hyperlinks)
+    }
+    self.hyperlinks.push({
+      reference: normalized_ref,
+      target,
+      link_type,
+      display: display_value,
+      tooltip: tooltip_value,
+    })
+  }
+}
+
+///|
+pub fn Worksheet::get_cell_hyperlink(
+  self : Worksheet,
+  reference : StringView,
+) -> Hyperlink? raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  for link in self.hyperlinks {
+    if cell_in_reference(link.reference, row, col) {
+      return Some(link)
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::remove_cell_hyperlink(
+  self : Worksheet,
+  reference : StringView,
+) -> Unit raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  let updated : Array[Hyperlink] = []
+  for link in self.hyperlinks {
+    if cell_in_reference(link.reference, row, col) {
+      continue
+    }
+    updated.push(link)
+  }
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated[:])
+}
+
+///|
+pub fn Worksheet::add_comment(
+  self : Worksheet,
+  comment : Comment,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (row, col) = cell_ref_to_rc(comment.cell)
+  let canonical = cell_ref_from(row, col)
+  for entry in self.comments {
+    if entry.cell == canonical {
+      raise XlsxError::CommentAlreadyExists(cell=canonical)
+    }
+  }
+  let author_name = if comment.author == "" { "Author" } else { comment.author }
+  let author = if count_utf16_units(author_name) > max_comment_author_chars {
+    truncate_utf16_units(author_name, max_comment_author_chars)
+  } else {
+    author_name
+  }
+  let paragraph : Array[RichTextRun] = []
+  for run in comment.paragraph {
+    paragraph.push(run)
+  }
+  self.comments.push({
+    cell: canonical,
+    author,
+    text: comment.text,
+    paragraph,
+    width: comment.width,
+    height: comment.height,
+  })
+}
+
+///|
+pub fn Worksheet::delete_comment(
+  self : Worksheet,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (row, col) = cell_ref_to_rc(cell)
+  let canonical = cell_ref_from(row, col)
+  let updated : Array[Comment] = []
+  for entry in self.comments {
+    if entry.cell == canonical {
+      continue
+    }
+    updated.push(entry)
+  }
+  self.comments.clear()
+  self.comments.append(updated[:])
 }
 
 ///|
@@ -374,6 +658,7 @@ pub fn Worksheet::set_cell_style(
         col,
         value: cell.value,
         value_type: cell.value_type,
+        rich_text: cell.rich_text,
         formula: cell.formula,
         style_id,
       }
@@ -386,6 +671,7 @@ pub fn Worksheet::set_cell_style(
     col,
     value: "",
     value_type: CellValueType::String,
+    rich_text: None,
     formula: None,
     style_id,
   })
@@ -425,6 +711,7 @@ pub fn Worksheet::set_cell_style_rc(
         col,
         value: cell.value,
         value_type: cell.value_type,
+        rich_text: cell.rich_text,
         formula: cell.formula,
         style_id,
       }
@@ -437,6 +724,7 @@ pub fn Worksheet::set_cell_style_rc(
     col,
     value: "",
     value_type: CellValueType::String,
+    rich_text: None,
     formula: None,
     style_id,
   })
@@ -672,6 +960,7 @@ pub fn Worksheet::set_cell_rc(
         col,
         value,
         value_type: CellValueType::String,
+        rich_text: None,
         formula: None,
         style_id: cell.style_id,
       }
@@ -684,6 +973,7 @@ pub fn Worksheet::set_cell_rc(
     col,
     value,
     value_type: CellValueType::String,
+    rich_text: None,
     formula: None,
     style_id: 0,
   })
@@ -708,6 +998,7 @@ pub fn Worksheet::set_cell_value_rc(
         col,
         value: raw_value,
         value_type,
+        rich_text: None,
         formula: None,
         style_id: cell.style_id,
       }
@@ -720,6 +1011,7 @@ pub fn Worksheet::set_cell_value_rc(
     col,
     value: raw_value,
     value_type,
+    rich_text: None,
     formula: None,
     style_id: 0,
   })
@@ -743,6 +1035,7 @@ pub fn Worksheet::set_cell_formula_rc(
         col,
         value,
         value_type: CellValueType::String,
+        rich_text: None,
         formula: Some(formula),
         style_id: cell.style_id,
       }
@@ -755,6 +1048,7 @@ pub fn Worksheet::set_cell_formula_rc(
     col,
     value,
     value_type: CellValueType::String,
+    rich_text: None,
     formula: Some(formula),
     style_id: 0,
   })
@@ -1275,6 +1569,7 @@ pub fn Worksheet::insert_rows(
         col: cell.col,
         value: cell.value,
         value_type: cell.value_type,
+        rich_text: cell.rich_text,
         formula: cell.formula,
         style_id: cell.style_id,
       }
@@ -1286,6 +1581,23 @@ pub fn Worksheet::insert_rows(
   }
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges[:])
+  let updated_links : Array[Hyperlink] = []
+  for link in self.hyperlinks {
+    let reference = adjust_hyperlink_ref_after_row_insert(
+      link.reference,
+      row,
+      count,
+    )
+    updated_links.push({
+      reference,
+      target: link.target,
+      link_type: link.link_type,
+      display: link.display,
+      tooltip: link.tooltip,
+    })
+  }
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links[:])
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_row_insert(table, row, count))
@@ -1362,6 +1674,7 @@ pub fn Worksheet::remove_rows(
       col: cell.col,
       value: cell.value,
       value_type: cell.value_type,
+      rich_text: cell.rich_text,
       formula: cell.formula,
       style_id: cell.style_id,
     })
@@ -1377,6 +1690,22 @@ pub fn Worksheet::remove_rows(
   }
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges[:])
+  let updated_links : Array[Hyperlink] = []
+  for link in self.hyperlinks {
+    match adjust_hyperlink_ref_after_row_remove(link.reference, row, count) {
+      Some(reference) =>
+        updated_links.push({
+          reference,
+          target: link.target,
+          link_type: link.link_type,
+          display: link.display,
+          tooltip: link.tooltip,
+        })
+      None => ()
+    }
+  }
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links[:])
   let updated_tables : Array[Table] = []
   for table in self.tables {
     match adjust_table_after_row_remove(table, row, count) {
@@ -1456,6 +1785,7 @@ pub fn Worksheet::insert_cols(
         col: new_col,
         value: cell.value,
         value_type: cell.value_type,
+        rich_text: cell.rich_text,
         formula: cell.formula,
         style_id: cell.style_id,
       }
@@ -1467,6 +1797,23 @@ pub fn Worksheet::insert_cols(
   }
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges[:])
+  let updated_links : Array[Hyperlink] = []
+  for link in self.hyperlinks {
+    let reference = adjust_hyperlink_ref_after_col_insert(
+      link.reference,
+      col,
+      count,
+    )
+    updated_links.push({
+      reference,
+      target: link.target,
+      link_type: link.link_type,
+      display: link.display,
+      tooltip: link.tooltip,
+    })
+  }
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links[:])
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_col_insert(table, col, count))
@@ -1543,6 +1890,7 @@ pub fn Worksheet::remove_cols(
       col: new_col,
       value: cell.value,
       value_type: cell.value_type,
+      rich_text: cell.rich_text,
       formula: cell.formula,
       style_id: cell.style_id,
     })
@@ -1558,6 +1906,22 @@ pub fn Worksheet::remove_cols(
   }
   self.merged_cells.clear()
   self.merged_cells.append(updated_merges[:])
+  let updated_links : Array[Hyperlink] = []
+  for link in self.hyperlinks {
+    match adjust_hyperlink_ref_after_col_remove(link.reference, col, count) {
+      Some(reference) =>
+        updated_links.push({
+          reference,
+          target: link.target,
+          link_type: link.link_type,
+          display: link.display,
+          tooltip: link.tooltip,
+        })
+      None => ()
+    }
+  }
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links[:])
   let updated_tables : Array[Table] = []
   for table in self.tables {
     match adjust_table_after_col_remove(table, col, count) {
@@ -1718,6 +2082,58 @@ fn adjust_range_after_col_remove(
       Some("\{start_ref}:\{end_ref}")
     }
     None => None
+  }
+}
+
+///|
+fn adjust_hyperlink_ref_after_row_insert(
+  reference : String,
+  row : Int,
+  count : Int,
+) -> String raise XlsxError {
+  if reference.contains(":") {
+    adjust_range_after_row_insert(reference, row, count)
+  } else {
+    adjust_cell_after_row_insert(reference, row, count)
+  }
+}
+
+///|
+fn adjust_hyperlink_ref_after_row_remove(
+  reference : String,
+  row : Int,
+  count : Int,
+) -> String? raise XlsxError {
+  if reference.contains(":") {
+    adjust_range_after_row_remove(reference, row, count)
+  } else {
+    adjust_cell_after_row_remove(reference, row, count)
+  }
+}
+
+///|
+fn adjust_hyperlink_ref_after_col_insert(
+  reference : String,
+  col : Int,
+  count : Int,
+) -> String raise XlsxError {
+  if reference.contains(":") {
+    adjust_range_after_col_insert(reference, col, count)
+  } else {
+    adjust_cell_after_col_insert(reference, col, count)
+  }
+}
+
+///|
+fn adjust_hyperlink_ref_after_col_remove(
+  reference : String,
+  col : Int,
+  count : Int,
+) -> String? raise XlsxError {
+  if reference.contains(":") {
+    adjust_range_after_col_remove(reference, col, count)
+  } else {
+    adjust_cell_after_col_remove(reference, col, count)
   }
 }
 

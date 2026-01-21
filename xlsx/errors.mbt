@@ -15,6 +15,10 @@ pub suberror XlsxError {
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
+  InvalidHyperlink(msg~ : String)
+  HyperlinkLimitExceeded(limit~ : Int)
+  CellTextTooLong(len~ : Int)
+  CommentAlreadyExists(cell~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed

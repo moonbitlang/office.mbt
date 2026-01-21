@@ -1,26 +1,38 @@
 ///|
 fn collect_shared_strings(
   workbook : Workbook,
-) -> (Array[String], Map[String, Int], Int) {
-  let shared_strings : Array[String] = []
-  let index_map : Map[String, Int] = {}
+) -> (Array[SharedStringEntry], Map[String, Int], Map[String, Int], Int) {
+  let shared_strings : Array[SharedStringEntry] = []
+  let text_map : Map[String, Int] = {}
+  let rich_text_map : Map[String, Int] = {}
   let mut total = 0
   for sheet in workbook.sheets() {
     for cell in sheet.cells() {
       if cell.formula is None && cell.value_type == CellValueType::String {
         total = total + 1
-        match index_map.get(cell.value) {
-          Some(_) => ()
-          None => {
+        match cell.rich_text {
+          Some(runs) => {
             let idx = shared_strings.length()
-            shared_strings.push(cell.value)
-            index_map.set(cell.value, idx)
+            shared_strings.push({
+              text: rich_text_plain_text(runs),
+              runs: Some(runs),
+            })
+            rich_text_map.set(cell.reference, idx)
           }
+          None =>
+            match text_map.get(cell.value) {
+              Some(_) => ()
+              None => {
+                let idx = shared_strings.length()
+                shared_strings.push({ text: cell.value, runs: None })
+                text_map.set(cell.value, idx)
+              }
+            }
         }
       }
     }
   }
-  (shared_strings, index_map, total)
+  (shared_strings, text_map, rich_text_map, total)
 }
 
 ///|
@@ -64,7 +76,7 @@ fn write_workbook_xml(workbook : Workbook) -> String {
 
 ///|
 fn write_shared_strings_xml(
-  values : Array[String],
+  values : Array[SharedStringEntry],
   total_count : Int,
 ) -> String {
   let sb = StringBuilder::new()
@@ -72,10 +84,76 @@ fn write_shared_strings_xml(
   sb.write_view(
     "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"\{total_count}\" uniqueCount=\"\{values.length()}\">\n",
   )
-  for value in values {
-    sb.write_view("  <si><t>")
-    sb.write_view(escape_xml_text(value))
-    sb.write_view("</t></si>\n")
+  for entry in values {
+    match entry.runs {
+      Some(runs) => {
+        sb.write_view("  <si>\n")
+        for run in runs {
+          sb.write_view("    <r>")
+          match run.font {
+            Some(font) => {
+              sb.write_view("<rPr>")
+              if font.bold {
+                sb.write_view("<b/>")
+              }
+              if font.italic {
+                sb.write_view("<i/>")
+              }
+              match font.underline {
+                Some(value) =>
+                  sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
+                None => ()
+              }
+              match font.size {
+                Some(size) => sb.write_view("<sz val=\"\{size}\"/>")
+                None => ()
+              }
+              match font.family {
+                Some(family) =>
+                  sb.write_view("<rFont val=\"\{escape_xml_attr(family)}\"/>")
+                None => ()
+              }
+              match font.color {
+                Some(color) => {
+                  let normalized = color.replace_all(old="#", new="")
+                  let rgb = if normalized.length() == 6 {
+                    "FF" + normalized
+                  } else {
+                    normalized
+                  }
+                  sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"/>")
+                }
+                None => ()
+              }
+              sb.write_view("</rPr>")
+            }
+            None => ()
+          }
+          if run.text.has_prefix(" ") ||
+            run.text.has_suffix(" ") ||
+            run.text.contains("\n") {
+            sb.write_view("<t xml:space=\"preserve\">")
+          } else {
+            sb.write_view("<t>")
+          }
+          sb.write_view(escape_xml_text(run.text))
+          sb.write_view("</t></r>\n")
+        }
+        sb.write_view("  </si>\n")
+      }
+      None => {
+        sb.write_view("  <si>")
+        if entry.text.has_prefix(" ") ||
+          entry.text.has_suffix(" ") ||
+          entry.text.contains("\n") {
+          sb.write_view("<t xml:space=\"preserve\">")
+        } else {
+          sb.write_view("<t>")
+        }
+        sb.write_view(escape_xml_text(entry.text))
+        sb.write_view("</t></si>\n")
+      }
+    }
   }
   sb.write_view("</sst>")
   sb.to_string()
@@ -138,6 +216,12 @@ let rel_pivot_cache_records = "http://schemas.openxmlformats.org/officeDocument/
 let rel_vml = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing"
 
 ///|
+let rel_hyperlink = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+
+///|
+let rel_comments = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
+
+///|
 let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
 
 ///|
@@ -159,10 +243,15 @@ let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spre
 let ct_vml = "application/vnd.openxmlformats-officedocument.vmlDrawing"
 
 ///|
+let ct_comments = "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"
+
+///|
 fn write_sheet_rels_xml(
   drawing_target : String?,
   table_targets : ArrayView[String],
   pivot_table_targets : ArrayView[String],
+  hyperlink_targets : ArrayView[String],
+  comment_targets : ArrayView[String],
   vml_targets : ArrayView[String],
 ) -> String {
   let sb = StringBuilder::new()
@@ -193,6 +282,22 @@ fn write_sheet_rels_xml(
   for target in pivot_table_targets {
     sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
     sb.write_view(rel_pivot_table)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
+  for target in hyperlink_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_hyperlink)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\" TargetMode=\"External\"/>\n")
+    rel_id = rel_id + 1
+  }
+  for target in comment_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_comments)
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(target))
     sb.write_view("\"/>\n")
@@ -497,6 +602,9 @@ fn write_col_attributes(
 fn write_worksheet_xml(
   sheet : Worksheet,
   string_map : Map[String, Int],
+  rich_text_map : Map[String, Int],
+  hyperlink_rel_ids : Map[String, Int],
+  hyperlinks : ArrayView[Hyperlink],
   drawing_rel_id : Int?,
   table_rel_ids : ArrayView[Int],
   pivot_rel_ids : ArrayView[Int],
@@ -508,6 +616,7 @@ fn write_worksheet_xml(
   let needs_rels = drawing_rel_id is Some(_) ||
     table_rel_ids.length() > 0 ||
     pivot_rel_ids.length() > 0 ||
+    hyperlink_rel_ids.length() > 0 ||
     legacy_drawing_rel_id is Some(_) ||
     legacy_drawing_hf_rel_id is Some(_)
   if needs_rels {
@@ -617,9 +726,17 @@ fn write_worksheet_xml(
         None =>
           match cell.value_type {
             CellValueType::String => {
-              let idx = match string_map.get(cell.value) {
-                Some(value) => value
-                None => raise XlsxError::InvalidSharedString(index=cell.row)
+              let idx = match cell.rich_text {
+                Some(_) =>
+                  match rich_text_map.get(cell.reference) {
+                    Some(value) => value
+                    None => raise XlsxError::InvalidSharedString(index=cell.row)
+                  }
+                None =>
+                  match string_map.get(cell.value) {
+                    Some(value) => value
+                    None => raise XlsxError::InvalidSharedString(index=cell.row)
+                  }
               }
               sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
             }
@@ -683,6 +800,57 @@ fn write_worksheet_xml(
     }
     sb.write_view("  </dataValidations>\n")
   }
+  if hyperlinks.length() > 0 {
+    let mut wrote = false
+    for link in hyperlinks {
+      if link.link_type == HyperlinkType::Unset {
+        continue
+      }
+      if !wrote {
+        sb.write_view("  <hyperlinks>\n")
+        wrote = true
+      }
+      sb.write_view("    <hyperlink ref=\"")
+      sb.write_view(escape_xml_attr(link.reference))
+      sb.write_view("\"")
+      match link.link_type {
+        HyperlinkType::External =>
+          match hyperlink_rel_ids.get(link.reference) {
+            Some(rel_id) => sb.write_view(" r:id=\"rId\{rel_id}\"")
+            None =>
+              raise XlsxError::InvalidHyperlink(
+                msg="hyperlink relationship missing",
+              )
+          }
+        HyperlinkType::Location => {
+          sb.write_view(" location=\"")
+          sb.write_view(escape_xml_attr(link.target))
+          sb.write_view("\"")
+        }
+        HyperlinkType::Unset => ()
+      }
+      match link.display {
+        Some(value) => {
+          sb.write_view(" display=\"")
+          sb.write_view(escape_xml_attr(value))
+          sb.write_view("\"")
+        }
+        None => ()
+      }
+      match link.tooltip {
+        Some(value) => {
+          sb.write_view(" tooltip=\"")
+          sb.write_view(escape_xml_attr(value))
+          sb.write_view("\"")
+        }
+        None => ()
+      }
+      sb.write_view("/>\n")
+    }
+    if wrote {
+      sb.write_view("  </hyperlinks>\n")
+    }
+  }
   match drawing_rel_id {
     Some(rel_id) => sb.write_view("  <drawing r:id=\"rId\{rel_id}\"/>\n")
     None => ()
@@ -700,6 +868,302 @@ fn write_worksheet_xml(
     sb.write_view(write_sparkline_ext_xml(sheet.sparkline_groups()))
   }
   sb.write_view("</worksheet>")
+  sb.to_string()
+}
+
+///|
+fn truncate_comment_content(comment : Comment) -> (String, Array[RichTextRun]) {
+  let mut remaining = max_cell_chars
+  let mut text = comment.text
+  if text != "" {
+    let units = count_utf16_units(text)
+    if units > remaining {
+      text = truncate_utf16_units(text, remaining)
+      remaining = 0
+    } else {
+      remaining = remaining - units
+    }
+  }
+  let runs = rich_text_truncate_runs(comment.paragraph, remaining)
+  (text, runs)
+}
+
+///|
+fn write_comments_xml(comments : ArrayView[Comment]) -> String {
+  let authors : Array[String] = []
+  let author_ids : Map[String, Int] = {}
+  for comment in comments {
+    let base_author = if comment.author == "" {
+      "Author"
+    } else {
+      comment.author
+    }
+    let author = if count_utf16_units(base_author) > max_comment_author_chars {
+      truncate_utf16_units(base_author, max_comment_author_chars)
+    } else {
+      base_author
+    }
+    if !author_ids.contains(author) {
+      author_ids[author] = authors.length()
+      authors.push(author)
+    }
+  }
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<comments xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
+  )
+  sb.write_view("  <authors>\n")
+  for author in authors {
+    sb.write_view("    <author>")
+    sb.write_view(escape_xml_text(author))
+    sb.write_view("</author>\n")
+  }
+  sb.write_view("  </authors>\n")
+  sb.write_view("  <commentList>\n")
+  for comment in comments {
+    let base_author = if comment.author == "" {
+      "Author"
+    } else {
+      comment.author
+    }
+    let author = if count_utf16_units(base_author) > max_comment_author_chars {
+      truncate_utf16_units(base_author, max_comment_author_chars)
+    } else {
+      base_author
+    }
+    let author_id = match author_ids.get(author) {
+      Some(id) => id
+      None => 0
+    }
+    let (text_value, runs) = truncate_comment_content(comment)
+    sb.write_view("    <comment ref=\"")
+    sb.write_view(escape_xml_attr(comment.cell))
+    sb.write_view("\" authorId=\"\{author_id}\">\n")
+    sb.write_view("      <text>")
+    if text_value != "" {
+      if text_value.has_prefix(" ") ||
+        text_value.has_suffix(" ") ||
+        text_value.contains("\n") {
+        sb.write_view("<t xml:space=\"preserve\">")
+      } else {
+        sb.write_view("<t>")
+      }
+      sb.write_view(escape_xml_text(text_value))
+      sb.write_view("</t>")
+    }
+    for run in runs {
+      sb.write_view("<r>")
+      match run.font {
+        Some(font) => {
+          sb.write_view("<rPr>")
+          if font.bold {
+            sb.write_view("<b/>")
+          }
+          if font.italic {
+            sb.write_view("<i/>")
+          }
+          match font.underline {
+            Some(value) =>
+              sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
+            None => ()
+          }
+          match font.size {
+            Some(size) => sb.write_view("<sz val=\"\{size}\"/>")
+            None => ()
+          }
+          match font.family {
+            Some(family) =>
+              sb.write_view("<rFont val=\"\{escape_xml_attr(family)}\"/>")
+            None => ()
+          }
+          match font.color {
+            Some(color) => {
+              let normalized = color.replace_all(old="#", new="")
+              let rgb = if normalized.length() == 6 {
+                "FF" + normalized
+              } else {
+                normalized
+              }
+              sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"/>")
+            }
+            None => ()
+          }
+          sb.write_view("</rPr>")
+        }
+        None => ()
+      }
+      if run.text.has_prefix(" ") ||
+        run.text.has_suffix(" ") ||
+        run.text.contains("\n") {
+        sb.write_view("<t xml:space=\"preserve\">")
+      } else {
+        sb.write_view("<t>")
+      }
+      sb.write_view(escape_xml_text(run.text))
+      sb.write_view("</t></r>")
+    }
+    sb.write_view("</text>\n")
+    sb.write_view("    </comment>\n")
+  }
+  sb.write_view("  </commentList>\n")
+  sb.write_view("</comments>")
+  sb.to_string()
+}
+
+///|
+fn write_comments_vml(
+  sheet_id : Int,
+  comments : ArrayView[Comment],
+) -> String raise XlsxError {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\">\n",
+  )
+  sb.write_view("  <o:shapelayout v:ext=\"edit\">\n")
+  sb.write_view("    <o:idmap v:ext=\"edit\" data=\"\{sheet_id}\"/>\n")
+  sb.write_view("  </o:shapelayout>\n")
+  sb.write_view(
+    "  <v:shapetype id=\"_x0000_t202\" coordsize=\"21600,21600\" o:spt=\"202\" path=\"m0,0l0,21600,21600,21600,21600,0xe\">\n",
+  )
+  sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
+  sb.write_view("    <v:path o:connecttype=\"rect\"/>\n")
+  sb.write_view("  </v:shapetype>\n")
+  let mut shape_id = 1025
+  for comment in comments {
+    let (row, col) = cell_ref_to_rc(comment.cell)
+    let row0 = row - 1
+    let col0 = col - 1
+    let anchor = "\{col0}, 15, \{row0}, 2, \{col0 + 2}, 15, \{row0 + 3}, 16"
+    sb.write_view(
+      "  <v:shape id=\"_x0000_s\{shape_id}\" type=\"#_x0000_t202\" style=\"position:absolute;73.5pt;width:108pt;height:59.25pt;z-index:1;visibility:hidden\" fillcolor=\"#ffffe1\" o:insetmode=\"auto\">\n",
+    )
+    sb.write_view("    <v:fill color2=\"#ffffe1\"/>\n")
+    sb.write_view("    <v:shadow on=\"t\" color=\"black\" obscured=\"t\"/>\n")
+    sb.write_view("    <v:path o:connecttype=\"none\"/>\n")
+    sb.write_view("    <v:textbox style=\"mso-direction-alt:auto\">\n")
+    sb.write_view("      <div style=\"text-align:left\"/>\n")
+    sb.write_view("    </v:textbox>\n")
+    sb.write_view("    <x:ClientData ObjectType=\"Note\">\n")
+    sb.write_view("      <x:MoveWithCells/>\n")
+    sb.write_view("      <x:SizeWithCells/>\n")
+    sb.write_view("      <x:Anchor>\{anchor}</x:Anchor>\n")
+    sb.write_view("      <x:AutoFill>False</x:AutoFill>\n")
+    sb.write_view("      <x:Row>\{row0}</x:Row>\n")
+    sb.write_view("      <x:Column>\{col0}</x:Column>\n")
+    sb.write_view("    </x:ClientData>\n")
+    sb.write_view("  </v:shape>\n")
+    shape_id = shape_id + 1
+  }
+  sb.write_view("</xml>")
+  sb.to_string()
+}
+
+///|
+fn extract_vml_shapetype(xml : StringView) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
+  let start = match xml_str.find("<v:shapetype") {
+    Some(pos) => pos
+    None => return None
+  }
+  let end = match xml_str.find("</v:shapetype>") {
+    Some(pos) => pos + "</v:shapetype>".length()
+    None => return None
+  }
+  let slice = xml_str[start:end] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml shapetype invalid")
+    }
+  Some(slice.to_string())
+}
+
+///|
+fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
+  let shapes : Array[String] = []
+  let xml_str = xml.to_string()
+  let mut start = match xml_str.find("<v:shape") {
+    Some(pos) => pos
+    None => return shapes
+  }
+  while start < xml_str.length() {
+    let rest = xml_str[start:] catch {
+        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
+      }
+    let end_rel = match rest.find("</v:shape>") {
+      Some(pos) => pos
+      None => break
+    }
+    let end = start + end_rel + "</v:shape>".length()
+    let slice = xml_str[start:end] catch {
+        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
+      }
+    shapes.push(slice.to_string())
+    let tail = xml_str[end:] catch {
+        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape tail invalid")
+      }
+    match tail.find("<v:shape") {
+      Some(next) => start = end + next
+      None => break
+    }
+  }
+  shapes
+}
+
+///|
+fn merge_vml_drawings(
+  base_xml : String,
+  comment_xml : String,
+) -> String raise XlsxError {
+  if !base_xml.contains("</xml>") {
+    return comment_xml
+  }
+  let mut merged = base_xml
+  if !merged.contains("_x0000_t202") {
+    match extract_vml_shapetype(comment_xml) {
+      Some(shape_type) => {
+        let insert_at = match merged.find("<v:shape") {
+          Some(pos) => pos
+          None =>
+            match merged.find("</xml>") {
+              Some(pos) => pos
+              None => merged.length()
+            }
+        }
+        let prefix = merged[:insert_at] catch {
+            _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+          }
+        let suffix = merged[insert_at:] catch {
+            _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+          }
+        let sb = StringBuilder::new()
+        sb.write_view(prefix)
+        sb.write_view(shape_type)
+        sb.write_view(suffix)
+        merged = sb.to_string()
+      }
+      None => ()
+    }
+  }
+  let shapes = extract_vml_shapes(comment_xml)
+  if shapes.length() == 0 {
+    return merged
+  }
+  let insert_at = match merged.find("</xml>") {
+    Some(pos) => pos
+    None => merged.length()
+  }
+  let prefix = merged[:insert_at] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+    }
+  let suffix = merged[insert_at:] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+    }
+  let sb = StringBuilder::new()
+  sb.write_view(prefix)
+  for shape in shapes {
+    sb.write_view(shape)
+  }
+  sb.write_view(suffix)
   sb.to_string()
 }
 
@@ -732,7 +1196,7 @@ let default_theme_xml =
 
 ///|
 pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
-  let (shared_strings, string_map, total_count) = collect_shared_strings(
+  let (shared_strings, string_map, rich_text_map, total_count) = collect_shared_strings(
     workbook,
   )
   let include_shared = shared_strings.length() > 0
@@ -811,6 +1275,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   let mut image_index = 1
   let mut chart_index = 1
   let mut vml_index = 1
+  let mut comment_index = 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
     let sheet_tables = tables_by_sheet[i]
@@ -840,9 +1305,50 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       pivot_targets.push("../pivotTables/pivotTable\{pivot_id}.xml")
       rel_id = rel_id + 1
     }
+    let hyperlink_targets : Array[String] = []
+    let hyperlink_rel_ids : Map[String, Int] = {}
+    for link in sheet.hyperlinks() {
+      if link.link_type == HyperlinkType::External {
+        hyperlink_targets.push(link.target)
+        hyperlink_rel_ids[link.reference] = rel_id
+        rel_id = rel_id + 1
+      }
+    }
+    let comment_targets : Array[String] = []
+    let comment_parts : Array[(Int, String)] = []
+    let comment_xml = if sheet.comments().length() > 0 {
+      Some(write_comments_xml(sheet.comments()))
+    } else {
+      None
+    }
+    let comment_vml_xml = if sheet.comments().length() > 0 {
+      Some(write_comments_vml(sheet_id, sheet.comments()))
+    } else {
+      None
+    }
+    match comment_xml {
+      Some(xml) => {
+        let comment_id = comment_index
+        comment_index = comment_index + 1
+        comment_targets.push("../comments\{comment_id}.xml")
+        comment_parts.push((comment_id, xml))
+      }
+      None => ()
+    }
+    if comment_targets.length() > 0 {
+      rel_id = rel_id + comment_targets.length()
+    }
     let vml_targets : Array[String] = []
     let vml_parts : Array[(Int, String)] = []
-    let legacy_drawing_rel_id = match sheet.vml_drawing_xml() {
+    let legacy_drawing_xml = match sheet.vml_drawing_xml() {
+      Some(xml) =>
+        match comment_vml_xml {
+          Some(comment_xml) => Some(merge_vml_drawings(xml, comment_xml))
+          None => Some(xml)
+        }
+      None => comment_vml_xml
+    }
+    let legacy_drawing_rel_id = match legacy_drawing_xml {
       Some(xml) => {
         let id = rel_id
         rel_id = rel_id + 1
@@ -867,7 +1373,15 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       None => None
     }
     let sheet_xml = write_worksheet_xml(
-      sheet, string_map, drawing_rel_id, table_rel_ids, pivot_rel_ids, legacy_drawing_rel_id,
+      sheet,
+      string_map,
+      rich_text_map,
+      hyperlink_rel_ids,
+      sheet.hyperlinks(),
+      drawing_rel_id,
+      table_rel_ids,
+      pivot_rel_ids,
+      legacy_drawing_rel_id,
       legacy_drawing_hf_rel_id,
     )
     archive.add(
@@ -877,13 +1391,16 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     if drawing_rel_id is Some(_) ||
       table_targets.length() > 0 ||
       pivot_targets.length() > 0 ||
+      hyperlink_targets.length() > 0 ||
+      comment_targets.length() > 0 ||
       vml_targets.length() > 0 {
       let drawing_target = match drawing_rel_id {
         Some(_) => Some("../drawings/drawing\{sheet_id}.xml")
         None => None
       }
       let sheet_rels_xml = write_sheet_rels_xml(
-        drawing_target, table_targets, pivot_targets, vml_targets,
+        drawing_target, table_targets, pivot_targets, hyperlink_targets, comment_targets,
+        vml_targets,
       )
       archive.add(
         "xl/worksheets/_rels/sheet\{sheet_id}.xml.rels",
@@ -944,6 +1461,14 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         }
         None => ()
       }
+    }
+    for part in comment_parts {
+      let (comment_id, xml) = part
+      archive.add("xl/comments\{comment_id}.xml", @encoding/utf8.encode(xml))
+      manifest.add_content_override(
+        "/xl/comments\{comment_id}.xml",
+        ct_comments,
+      )
     }
     for part in vml_parts {
       let (vml_id, xml) = part

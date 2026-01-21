@@ -9,6 +9,7 @@ pub(all) enum StreamState {
 pub struct StreamCell {
   value : String
   value_type : CellValueType
+  rich_text : Array[RichTextRun]?
   formula : String?
   style_id : Int
 }
@@ -20,7 +21,13 @@ pub fn StreamCell::new(
   style_id? : Int = 0,
 ) -> StreamCell {
   let formula_value = if formula == "" { None } else { Some(formula) }
-  { value, value_type: CellValueType::String, formula: formula_value, style_id }
+  {
+    value,
+    value_type: CellValueType::String,
+    rich_text: None,
+    formula: formula_value,
+    style_id,
+  }
 }
 
 ///|
@@ -33,6 +40,31 @@ pub fn StreamCell::new_value(
   {
     value: cell_value_raw_string(value),
     value_type: cell_value_type(value),
+    rich_text: None,
+    formula: formula_value,
+    style_id,
+  }
+}
+
+///|
+pub fn StreamCell::new_rich_text(
+  runs : ArrayView[RichTextRun],
+  formula? : String = "",
+  style_id? : Int = 0,
+) -> StreamCell raise XlsxError {
+  let total = rich_text_total_units(runs)
+  if total > max_cell_chars {
+    raise XlsxError::CellTextTooLong(len=total)
+  }
+  let stored_runs : Array[RichTextRun] = []
+  for run in runs {
+    stored_runs.push(run)
+  }
+  let formula_value = if formula == "" { None } else { Some(formula) }
+  {
+    value: rich_text_plain_text(runs),
+    value_type: CellValueType::String,
+    rich_text: Some(stored_runs),
     formula: formula_value,
     style_id,
   }
@@ -94,6 +126,7 @@ pub fn StreamWriter::set_row_cells(
       col,
       value: cell.value,
       value_type: cell.value_type,
+      rich_text: cell.rich_text,
       formula: cell.formula,
       style_id: cell.style_id,
     })

@@ -31,6 +31,10 @@ pub suberror XlsxError {
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
+  InvalidHyperlink(msg~ : String)
+  HyperlinkLimitExceeded(limit~ : Int)
+  CellTextTooLong(len~ : Int)
+  CommentAlreadyExists(cell~ : String)
   StreamModeConflict(msg~ : String)
   StreamRowOrder(last~ : Int, next~ : Int)
   StreamWriterClosed
@@ -64,6 +68,7 @@ pub struct Cell {
   col : Int
   value : String
   value_type : CellValueType
+  rich_text : Array[RichTextRun]?
   formula : String?
   style_id : Int
 }
@@ -98,6 +103,17 @@ pub struct ColDimension {
   style_id : Int?
 }
 
+pub(all) struct Comment {
+  cell : String
+  author : String
+  text : String
+  paragraph : Array[RichTextRun]
+  width : Int?
+  height : Int?
+}
+pub impl Eq for Comment
+pub impl Show for Comment
+
 pub struct CoreProperties {
   mut title : String
   mut subject : String
@@ -116,6 +132,24 @@ pub struct CoreProperties {
 }
 pub fn CoreProperties::new() -> Self
 pub fn CoreProperties::with_values(title? : String, subject? : String, creator? : String, keywords? : String, description? : String, last_modified_by? : String, language? : String, identifier? : String, revision? : String, content_status? : String, category? : String, version? : String, created? : String, modified? : String) -> Self
+
+pub struct Hyperlink {
+  reference : String
+  target : String
+  link_type : HyperlinkType
+  display : String?
+  tooltip : String?
+}
+pub impl Eq for Hyperlink
+pub impl Show for Hyperlink
+
+pub(all) enum HyperlinkType {
+  External
+  Location
+  Unset
+}
+pub impl Eq for HyperlinkType
+pub impl Show for HyperlinkType
 
 pub struct Image {
   reference : String
@@ -137,6 +171,24 @@ pub struct PivotTable {
   cache_records_xml : String?
 }
 pub fn PivotTable::new(String, String, cache_records_xml? : String) -> Self raise XlsxError
+
+pub(all) struct RichTextFont {
+  bold : Bool
+  italic : Bool
+  underline : String?
+  size : Double?
+  color : String?
+  family : String?
+}
+pub impl Eq for RichTextFont
+pub impl Show for RichTextFont
+
+pub(all) struct RichTextRun {
+  text : String
+  font : RichTextFont?
+}
+pub impl Eq for RichTextRun
+pub impl Show for RichTextRun
 
 pub struct RowDimension {
   height : Double?
@@ -179,10 +231,12 @@ pub(all) enum SparklineType {
 pub struct StreamCell {
   value : String
   value_type : CellValueType
+  rich_text : Array[RichTextRun]?
   formula : String?
   style_id : Int
 }
 pub fn StreamCell::new(String, formula? : String, style_id? : Int) -> Self
+pub fn StreamCell::new_rich_text(ArrayView[RichTextRun], formula? : String, style_id? : Int) -> Self raise XlsxError
 pub fn StreamCell::new_value(CellValue, formula? : String, style_id? : Int) -> Self
 
 pub(all) enum StreamState {
@@ -228,6 +282,7 @@ pub struct Workbook {
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
+pub fn Workbook::add_comment(Self, StringView, Comment) -> Unit raise XlsxError
 pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
@@ -245,10 +300,13 @@ pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
+pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
+pub fn Workbook::get_cell_hyperlink(Self, StringView, StringView) -> Hyperlink? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
+pub fn Workbook::get_cell_rich_text(Self, StringView, StringView) -> Array[RichTextRun]? raise XlsxError
 pub fn Workbook::get_cell_style(Self, StringView, StringView) -> Int? raise XlsxError
 pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise XlsxError
 pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool) -> String? raise XlsxError
@@ -258,6 +316,7 @@ pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> S
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
+pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
@@ -267,6 +326,7 @@ pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
+pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
@@ -277,7 +337,9 @@ pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_hyperlink(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_rich_text(Self, StringView, String, ArrayView[RichTextRun]) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style_rc(Self, StringView, Int, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_value(Self, StringView, String, CellValue) -> Unit raise XlsxError
@@ -307,6 +369,7 @@ pub struct Worksheet {
   mut name : String
   cells : Array[Cell]
   merged_cells : Array[String]
+  hyperlinks : Array[Hyperlink]
   tables : Array[Table]
   sparkline_groups : Array[SparklineGroup]
   pivot_tables : Array[PivotTable]
@@ -314,6 +377,7 @@ pub struct Worksheet {
   charts : Array[Chart]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  comments : Array[Comment]
   row_dimensions : Map[Int, RowDimension]
   col_dimensions : Map[Int, ColDimension]
   mut state : SheetState
@@ -322,6 +386,7 @@ pub struct Worksheet {
   mut vml_drawing_hf_xml : String?
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_comment(Self, Comment) -> Unit raise XlsxError
 pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
@@ -336,11 +401,15 @@ pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
+pub fn Worksheet::comments(Self) -> ArrayView[Comment]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
+pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
+pub fn Worksheet::get_cell_hyperlink(Self, StringView) -> Hyperlink? raise XlsxError
 pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
+pub fn Worksheet::get_cell_rich_text(Self, StringView) -> Array[RichTextRun]? raise XlsxError
 pub fn Worksheet::get_cell_style(Self, StringView) -> Int? raise XlsxError
 pub fn Worksheet::get_cell_style_rc(Self, Int, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_cell_value_raw(Self, StringView) -> CellValue? raise XlsxError
@@ -351,6 +420,7 @@ pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_row_style(Self, Int) -> Int? raise XlsxError
+pub fn Worksheet::hyperlinks(Self) -> ArrayView[Hyperlink]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::insert_cols(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::insert_rows(Self, Int, Int) -> Unit raise XlsxError
@@ -361,6 +431,7 @@ pub fn Worksheet::merged_cells(Self) -> ArrayView[String]
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
 pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
+pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::remove_cols(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::remove_rows(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::row_outline_level(Self, Int) -> Int raise XlsxError
@@ -369,7 +440,9 @@ pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_hyperlink(Self, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_rc(Self, Int, Int, String) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_rich_text(Self, String, ArrayView[RichTextRun]) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_value(Self, String, CellValue) -> Unit raise XlsxError

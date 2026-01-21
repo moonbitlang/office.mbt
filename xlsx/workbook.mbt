@@ -362,6 +362,35 @@ fn clone_cells(values : ArrayView[Cell]) -> Array[Cell] {
 }
 
 ///|
+fn clone_hyperlinks(values : ArrayView[Hyperlink]) -> Array[Hyperlink] {
+  let out : Array[Hyperlink] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
+fn clone_comments(values : ArrayView[Comment]) -> Array[Comment] {
+  let out : Array[Comment] = []
+  for value in values {
+    let paragraph : Array[RichTextRun] = []
+    for run in value.paragraph {
+      paragraph.push(run)
+    }
+    out.push({
+      cell: value.cell,
+      author: value.author,
+      text: value.text,
+      paragraph,
+      width: value.width,
+      height: value.height,
+    })
+  }
+  out
+}
+
+///|
 fn clone_tables(values : ArrayView[Table]) -> Array[Table] {
   let out : Array[Table] = []
   for value in values {
@@ -439,6 +468,7 @@ fn clone_worksheet(
     name,
     cells: clone_cells(sheet.cells),
     merged_cells: clone_strings(sheet.merged_cells),
+    hyperlinks: clone_hyperlinks(sheet.hyperlinks),
     tables: clone_tables(sheet.tables),
     sparkline_groups: clone_sparkline_groups(sheet.sparkline_groups),
     pivot_tables: clone_pivot_tables(sheet.pivot_tables),
@@ -446,6 +476,7 @@ fn clone_worksheet(
     charts: clone_charts(sheet.charts),
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
+    comments: clone_comments(sheet.comments),
     row_dimensions: clone_row_dimensions(sheet.row_dimensions),
     col_dimensions: clone_col_dimensions(sheet.col_dimensions),
     state,
@@ -527,6 +558,50 @@ pub fn Workbook::set_cell_value(
 }
 
 ///|
+pub fn Workbook::set_cell_rich_text(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  runs : ArrayView[RichTextRun],
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_rich_text(reference, runs)
+}
+
+///|
+pub fn Workbook::set_cell_hyperlink(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  target : String,
+  link_type : HyperlinkType,
+  display? : String = "",
+  tooltip? : String = "",
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_hyperlink(reference, target, link_type, display~, tooltip~)
+}
+
+///|
+pub fn Workbook::remove_cell_hyperlink(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.remove_cell_hyperlink(reference)
+}
+
+///|
 pub fn Workbook::get_cell(
   self : Workbook,
   sheet_name : StringView,
@@ -537,6 +612,32 @@ pub fn Workbook::get_cell(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell(reference)
+}
+
+///|
+pub fn Workbook::get_cell_rich_text(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> Array[RichTextRun]? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_rich_text(reference)
+}
+
+///|
+pub fn Workbook::get_cell_hyperlink(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> Hyperlink? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_hyperlink(reference)
 }
 
 ///|
@@ -682,6 +783,48 @@ pub fn Workbook::add_vml_drawing_hf_xml(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_vml_drawing_hf_xml(xml)
+}
+
+///|
+pub fn Workbook::add_comment(
+  self : Workbook,
+  sheet_name : StringView,
+  comment : Comment,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_comment(comment)
+}
+
+///|
+pub fn Workbook::delete_comment(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.delete_comment(cell)
+}
+
+///|
+pub fn Workbook::get_comments(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[Comment] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let comments : Array[Comment] = []
+  for comment in sheet.comments() {
+    comments.push(comment)
+  }
+  comments
 }
 
 ///|

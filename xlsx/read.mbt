@@ -71,8 +71,20 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
 }
 
 ///|
-fn parse_shared_strings(xml : StringView) -> Array[String] {
-  let values : Array[String] = []
+priv struct SharedStringEntry {
+  text : String
+  runs : Array[RichTextRun]?
+}
+
+///|
+priv struct InlineStringEntry {
+  text : String
+  runs : Array[RichTextRun]?
+}
+
+///|
+fn parse_text_nodes(xml : StringView) -> String {
+  let sb = StringBuilder::new()
   let mut first = true
   for chunk in xml.to_string().split("<t") {
     if first {
@@ -86,9 +98,247 @@ fn parse_shared_strings(xml : StringView) -> Array[String] {
     }
     let rest = try! text[start:]
     match rest.find("</t>") {
-      Some(end) => values.push(unescape_xml_text(try! rest[:end]))
+      Some(end) => sb.write_view(unescape_xml_text(try! rest[:end]))
       None => ()
     }
+  }
+  sb.to_string()
+}
+
+///|
+fn tag_attributes_in(
+  xml : StringView,
+  tag_name : StringView,
+) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
+  let needle = "<\{tag_name.to_string()}"
+  let start = match xml_str.find(needle) {
+    Some(pos) => pos
+    None => return None
+  }
+  let rest = xml_str[start + 1:] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag attributes out of range")
+    }
+  let end = match rest.find(">") {
+    Some(pos) => pos
+    None => return None
+  }
+  let slice = rest[:end] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag attributes invalid")
+    }
+  Some(slice.to_string())
+}
+
+///|
+fn extract_tag_body_from(
+  xml : StringView,
+  tag_name : StringView,
+) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
+  let open_tag = "<\{tag_name.to_string()}"
+  let close_tag = "</\{tag_name.to_string()}>"
+  let start = match xml_str.find(open_tag) {
+    Some(pos) => pos
+    None => return None
+  }
+  let after_start = xml_str[start:] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+    }
+  let open_end_rel = match after_start.find(">") {
+    Some(pos) => pos
+    None => return None
+  }
+  let body_start = start + open_end_rel + 1
+  let end = match xml_str.find(close_tag) {
+    Some(pos) => pos
+    None => return None
+  }
+  let body = xml_str[body_start:end] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag body invalid")
+    }
+  Some(body.to_string())
+}
+
+///|
+fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
+  let rpr_body = match extract_tag_body_from(body, "rPr") {
+    Some(value) => value
+    None => return None
+  }
+  let mut bold = false
+  let mut italic = false
+  let mut underline : String? = None
+  let mut size : Double? = None
+  let mut color : String? = None
+  let mut family : String? = None
+  let mut has_any = false
+  match tag_attributes_in(rpr_body, "b") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        bold = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "i") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        italic = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "u") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => val
+        None => "single"
+      }
+      if value != "none" && value != "0" {
+        underline = Some(value.to_string())
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "sz") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(val) =>
+          try @strconv.parse_double(val) catch {
+            _ => ()
+          } noraise {
+            value => {
+              size = Some(value)
+              has_any = true
+            }
+          }
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "rFont") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(val) => {
+          family = Some(val)
+          has_any = true
+        }
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "color") {
+    Some(tag) =>
+      match attr_value(tag, "rgb") {
+        Some(val) => {
+          color = Some(val)
+          has_any = true
+        }
+        None => ()
+      }
+    None => ()
+  }
+  if has_any {
+    Some({ bold, italic, underline, size, color, family })
+  } else {
+    None
+  }
+}
+
+///|
+fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError {
+  let runs : Array[RichTextRun] = []
+  let xml_str = xml.to_string()
+  let mut index = 0
+  while index < xml_str.length() {
+    let rest = xml_str[index:] catch { _ => break }
+    let rel = match rest.find("<r") {
+      Some(pos) => pos
+      None => break
+    }
+    let start = index + rel
+    let after = start + 2
+    if after >= xml_str.length() {
+      break
+    }
+    let next = xml_str[after]
+    if next != '>' &&
+      next != ' ' &&
+      next != '\t' &&
+      next != '\n' &&
+      next != '\r' {
+      index = after
+      continue
+    }
+    let tail = xml_str[after:] catch {
+        _ => raise XlsxError::InvalidXml(msg="rich text tag invalid")
+      }
+    let open_end_rel = match tail.find(">") {
+      Some(pos) => pos
+      None => break
+    }
+    let body_start = after + open_end_rel + 1
+    let body_rest = xml_str[body_start:] catch {
+        _ => raise XlsxError::InvalidXml(msg="rich text body invalid")
+      }
+    let close_rel = match body_rest.find("</r>") {
+      Some(pos) => pos
+      None => break
+    }
+    let body_end = body_start + close_rel
+    let body = xml_str[body_start:body_end] catch {
+        _ => raise XlsxError::InvalidXml(msg="rich text body invalid")
+      }
+    let run_text = parse_text_nodes(body)
+    let font = parse_rich_text_font(body)
+    runs.push({ text: run_text, font })
+    index = body_end + "</r>".length()
+  }
+  runs
+}
+
+///|
+fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
+  let values : Array[SharedStringEntry] = []
+  let mut first = true
+  for chunk in xml.to_string().split("<si") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let start = match text.find(">") {
+      Some(pos) => pos + 1
+      None => continue
+    }
+    let rest = try! text[start:]
+    let end = match rest.find("</si>") {
+      Some(pos) => pos
+      None => continue
+    }
+    let body = try! rest[:end]
+    let runs = if body.contains("<r") {
+      let parsed = parse_rich_text_runs(body) catch { _ => [] }
+      if parsed.length() > 0 {
+        Some(parsed)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+    values.push({ text: parse_text_nodes(body), runs })
   }
   values
 }
@@ -258,6 +508,145 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
     merged.push(normalized)
   }
   merged
+}
+
+///|
+priv struct HyperlinkElement {
+  reference : String
+  r_id : String?
+  location : String?
+  display : String?
+  tooltip : String?
+}
+
+///|
+fn parse_hyperlink_elements(
+  xml : StringView,
+) -> Array[HyperlinkElement] raise XlsxError {
+  let links : Array[HyperlinkElement] = []
+  let body = match extract_tag_body(xml, "hyperlinks") {
+    Some(value) => value
+    None => return links
+  }
+  let mut first = true
+  for chunk in body.split("<hyperlink ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="hyperlink tag not closed")
+    }
+    let tag = try! text[:end]
+    let reference = match attr_value(tag, "ref") {
+      Some(value) => normalize_cell_or_range_ref(value)
+      None => raise XlsxError::InvalidXml(msg="hyperlink ref missing")
+    }
+    let location = match attr_value(tag, "location") {
+      Some(value) => Some(unescape_xml_text(value))
+      None => None
+    }
+    let display = match attr_value(tag, "display") {
+      Some(value) => Some(unescape_xml_text(value))
+      None => None
+    }
+    let tooltip = match attr_value(tag, "tooltip") {
+      Some(value) => Some(unescape_xml_text(value))
+      None => None
+    }
+    let r_id = match attr_value(tag, "r:id") {
+      Some(value) => Some(value.to_string())
+      None => None
+    }
+    links.push({ reference, r_id, location, display, tooltip })
+  }
+  links
+}
+
+///|
+fn parse_comment_authors(xml : StringView) -> Array[String] raise XlsxError {
+  let authors : Array[String] = []
+  let body = match extract_tag_body(xml, "authors") {
+    Some(value) => value
+    None => return authors
+  }
+  let mut first = true
+  for chunk in body.split("<author>") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("</author>") {
+      Some(pos) => pos
+      None => continue
+    }
+    let name = unescape_xml_text(try! text[:end])
+    authors.push(name)
+  }
+  authors
+}
+
+///|
+fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
+  let comments : Array[Comment] = []
+  let authors = parse_comment_authors(xml)
+  let body = match extract_tag_body(xml, "commentList") {
+    Some(value) => value
+    None => return comments
+  }
+  let mut first = true
+  for chunk in body.split("<comment ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="comment tag not closed")
+    }
+    let tag = try! text[:end]
+    let ref_value = match attr_value(tag, "ref") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="comment ref missing")
+    }
+    let (row, col) = cell_ref_to_rc(ref_value)
+    let cell = cell_ref_from(row, col)
+    let author_id = match attr_value(tag, "authorId") {
+      Some(value) => @strconv.parse_int(value, base=10) catch { _ => 0 }
+      None => 0
+    }
+    let author = if author_id >= 0 && author_id < authors.length() {
+      authors[author_id]
+    } else {
+      ""
+    }
+    let rest = try! text[end + 1:]
+    let text_body = match extract_tag_body_from(rest, "text") {
+      Some(value) => value
+      None => ""
+    }
+    let paragraph = if text_body.contains("<r") {
+      parse_rich_text_runs(text_body) catch {
+        _ => []
+      }
+    } else {
+      []
+    }
+    let text_value = parse_text_nodes(text_body)
+    comments.push({
+      cell,
+      author,
+      text: text_value,
+      paragraph,
+      width: None,
+      height: None,
+    })
+  }
+  comments
 }
 
 ///|
@@ -482,11 +871,11 @@ fn parse_bool_attr(value : StringView) -> Bool {
 }
 
 ///|
-fn parse_inline_string(rest : StringView) -> String raise XlsxError {
+fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
   let text = rest.to_string()
   let start = match text.find("<is") {
     Some(pos) => pos
-    None => return ""
+    None => return { text: "", runs: None }
   }
   let after_start = text[start:] catch {
       _ => raise XlsxError::InvalidXml(msg="inline string tag invalid")
@@ -503,18 +892,17 @@ fn parse_inline_string(rest : StringView) -> String raise XlsxError {
   let body = text[body_start:end] catch {
       _ => raise XlsxError::InvalidXml(msg="inline string body invalid")
     }
-  let t_start = match body.find("<t>") {
-    Some(pos) => pos
-    None => return ""
-  }
-  let t_rest = body[t_start + 3:] catch {
-      _ => raise XlsxError::InvalidXml(msg="inline string text invalid")
+  let runs = if body.contains("<r") {
+    let parsed = parse_rich_text_runs(body) catch { _ => [] }
+    if parsed.length() > 0 {
+      Some(parsed)
+    } else {
+      None
     }
-  let t_end = match t_rest.find("</t>") {
-    Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="inline string text end missing")
+  } else {
+    None
   }
-  unescape_xml_text(try! t_rest[:t_end])
+  { text: parse_text_nodes(body), runs }
 }
 
 ///|
@@ -666,7 +1054,7 @@ fn parse_col_dimensions(
 ///|
 fn parse_worksheet(
   xml : StringView,
-  shared_strings : Array[String],
+  shared_strings : Array[SharedStringEntry],
   style_count : Int,
 ) -> (
   Array[Cell],
@@ -729,9 +1117,9 @@ fn parse_worksheet(
       Some(value) => value
       None => ""
     }
-    let inline_value = match cell_type {
-      Some(kind) if kind == "inlineStr" => parse_inline_string(rest)
-      _ => ""
+    let inline_entry = match cell_type {
+      Some(kind) if kind == "inlineStr" => Some(parse_inline_string(rest))
+      _ => None
     }
     if raw_value_opt is None &&
       formula is None &&
@@ -741,8 +1129,12 @@ fn parse_worksheet(
     let force_string = raw_value_opt is None &&
       formula is Some(_) &&
       !(cell_type is Some("inlineStr"))
-    let (value, value_type) = if force_string {
-      ("", CellValueType::String)
+    let mut value = ""
+    let mut value_type = CellValueType::String
+    let mut rich_text : Array[RichTextRun]? = None
+    if force_string {
+      value = ""
+      value_type = CellValueType::String
     } else {
       match cell_type {
         Some(kind) if kind == "s" => {
@@ -752,38 +1144,63 @@ fn parse_worksheet(
           if index < 0 || index >= shared_strings.length() {
             raise XlsxError::InvalidSharedString(index~)
           }
-          (shared_strings[index], CellValueType::String)
+          let entry = shared_strings[index]
+          value = entry.text
+          rich_text = entry.runs
+          value_type = CellValueType::String
         }
         Some(kind) if kind == "b" => {
           if raw_value != "0" && raw_value != "1" {
             raise XlsxError::InvalidXml(msg="cell boolean invalid")
           }
-          (raw_value, CellValueType::Bool)
+          value = raw_value
+          value_type = CellValueType::Bool
         }
-        Some(kind) if kind == "e" =>
-          (unescape_xml_text(raw_value), CellValueType::Error)
-        Some(kind) if kind == "str" =>
-          (unescape_xml_text(raw_value), CellValueType::String)
+        Some(kind) if kind == "e" => {
+          value = unescape_xml_text(raw_value)
+          value_type = CellValueType::Error
+        }
+        Some(kind) if kind == "str" => {
+          value = unescape_xml_text(raw_value)
+          value_type = CellValueType::String
+        }
         Some(kind) if kind == "inlineStr" =>
-          (inline_value, CellValueType::String)
-        Some(kind) if kind == "d" =>
-          (unescape_xml_text(raw_value), CellValueType::String)
+          match inline_entry {
+            Some(entry) => {
+              value = entry.text
+              rich_text = entry.runs
+              value_type = CellValueType::String
+            }
+            None => {
+              value = ""
+              value_type = CellValueType::String
+            }
+          }
+        Some(kind) if kind == "d" => {
+          value = unescape_xml_text(raw_value)
+          value_type = CellValueType::String
+        }
         Some(kind) if kind == "n" => {
           ignore(
             @strconv.parse_double(raw_value) catch {
               _ => raise XlsxError::InvalidXml(msg="cell number invalid")
             },
           )
-          (raw_value, CellValueType::Number)
+          value = raw_value
+          value_type = CellValueType::Number
         }
-        Some(_) => (unescape_xml_text(raw_value), CellValueType::String)
+        Some(_) => {
+          value = unescape_xml_text(raw_value)
+          value_type = CellValueType::String
+        }
         None => {
           ignore(
             @strconv.parse_double(raw_value) catch {
               _ => raise XlsxError::InvalidXml(msg="cell number invalid")
             },
           )
-          (raw_value, CellValueType::Number)
+          value = raw_value
+          value_type = CellValueType::Number
         }
       }
     }
@@ -795,6 +1212,7 @@ fn parse_worksheet(
       col,
       value,
       value_type,
+      rich_text,
       formula,
       style_id,
     })
@@ -860,6 +1278,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     let (cells, merged_cells, row_dimensions, col_dimensions) = parse_worksheet(
       sheet_xml, shared_strings, style_count,
     )
+    let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
     let table_part_ids = parse_table_part_ids(sheet_xml)
     let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
     let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
@@ -869,8 +1288,16 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       sheet_xml, "legacyDrawingHF",
     )
     let sparkline_groups = parse_sparkline_groups(sheet_xml)
+    let mut needs_hyperlink_rels = false
+    for link in hyperlink_elements {
+      if link.r_id is Some(_) {
+        needs_hyperlink_rels = true
+        break
+      }
+    }
     let needs_rels = table_part_ids.length() > 0 ||
       pivot_part_ids.length() > 0 ||
+      needs_hyperlink_rels ||
       legacy_drawing_rel_id is Some(_) ||
       legacy_drawing_hf_rel_id is Some(_)
     let rels_xml = if needs_rels {
@@ -882,6 +1309,50 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       decode_utf8(rels_bytes)
     } else {
       ""
+    }
+    let hyperlinks = if hyperlink_elements.length() == 0 {
+      []
+    } else {
+      let rel_targets = if needs_hyperlink_rels {
+        parse_relationship_targets(rels_xml, rel_hyperlink)
+      } else {
+        {}
+      }
+      let parsed_links : Array[Hyperlink] = []
+      for link in hyperlink_elements {
+        match link.r_id {
+          Some(rel_id) => {
+            let target = match rel_targets.get(rel_id) {
+              Some(value) => value
+              None =>
+                raise XlsxError::InvalidXml(
+                  msg="hyperlink relationship missing",
+                )
+            }
+            parsed_links.push({
+              reference: link.reference,
+              target,
+              link_type: HyperlinkType::External,
+              display: link.display,
+              tooltip: link.tooltip,
+            })
+          }
+          None =>
+            match link.location {
+              Some(location) =>
+                parsed_links.push({
+                  reference: link.reference,
+                  target: location,
+                  link_type: HyperlinkType::Location,
+                  display: link.display,
+                  tooltip: link.tooltip,
+                })
+              None =>
+                raise XlsxError::InvalidXml(msg="hyperlink target missing")
+            }
+        }
+      }
+      parsed_links
     }
     let tables = if table_part_ids.length() == 0 {
       []
@@ -1019,10 +1490,28 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       }
       None => None
     }
+    let comments = if rels_xml == "" {
+      []
+    } else {
+      let comment_targets = parse_relationship_targets(rels_xml, rel_comments)
+      let parsed_comments : Array[Comment] = []
+      for _rel_id, target in comment_targets {
+        let comment_path = resolve_rel_target(target, "worksheets")
+        let comment_bytes = match archive.get(comment_path) {
+          Some(value) => value
+          None => raise XlsxError::MissingPart(path=comment_path)
+        }
+        let comment_xml = decode_utf8(comment_bytes)
+        let entries = parse_comments_xml(comment_xml)
+        parsed_comments.append(entries[:])
+      }
+      parsed_comments
+    }
     workbook.sheets.push({
       name,
       cells,
       merged_cells,
+      hyperlinks,
       tables,
       sparkline_groups,
       pivot_tables,
@@ -1032,6 +1521,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
       charts: [],
       data_validations: [],
       conditional_formats: [],
+      comments,
       row_dimensions,
       col_dimensions,
       state,
