@@ -289,6 +289,18 @@ test "calc ref functions" {
 }
 
 ///|
+test "calc error type function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "ERROR.TYPE(1/0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
+  sheet.set_cell_formula("A2", "ERROR.TYPE(COUNTIFS(A1,1,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="7")
+  sheet.set_cell_formula("A3", "ERROR.TYPE(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#N/A")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

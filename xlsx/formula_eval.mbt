@@ -5,6 +5,9 @@ let formula_error_div = "#DIV/0!"
 let formula_error_name = "#NAME?"
 
 ///|
+let formula_error_null = "#NULL!"
+
+///|
 let formula_error_na = "#N/A"
 
 ///|
@@ -15,6 +18,12 @@ let formula_error_ref = "#REF!"
 
 ///|
 let formula_error_num = "#NUM!"
+
+///|
+let formula_error_spill = "#SPILL!"
+
+///|
+let formula_error_getting_data = "#GETTING_DATA"
 
 ///|
 let formula_error_calc = "#CALC!"
@@ -1849,6 +1858,12 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "ERRORdotTYPE" | "ERROR.TYPE" =>
+      if values.length() == 1 {
+        error_type_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "N" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
@@ -2242,6 +2257,31 @@ fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn error_type_value(value : FormulaValue) -> FormulaValue {
+  match normalize_scalar(value) {
+    FormulaValue::Error(err) =>
+      if err == formula_error_null {
+        FormulaValue::Number(1.0)
+      } else if err == formula_error_div {
+        FormulaValue::Number(2.0)
+      } else if err == formula_error_value {
+        FormulaValue::Number(3.0)
+      } else if err == formula_error_ref {
+        FormulaValue::Number(4.0)
+      } else if err == formula_error_name {
+        FormulaValue::Number(5.0)
+      } else if err == formula_error_num {
+        FormulaValue::Number(6.0)
+      } else if err == formula_error_na {
+        FormulaValue::Number(7.0)
+      } else {
+        FormulaValue::Error(formula_error_na)
+      }
+    _ => FormulaValue::Error(formula_error_na)
+  }
 }
 
 ///|
