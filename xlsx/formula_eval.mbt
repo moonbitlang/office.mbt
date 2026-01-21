@@ -1077,6 +1077,12 @@ fn trunc_double(value : Double) -> Double {
 }
 
 ///|
+fn modf_double(value : Double) -> (Double, Double) {
+  let truncated = trunc_double(value)
+  (truncated, value - truncated)
+}
+
+///|
 fn round_half_away_from_zero(value : Double) -> Double {
   if value < 0.0 {
     -Double::floor(-value + 0.5)
@@ -1656,6 +1662,74 @@ fn eval_function(
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(lhs), Ok(rhs)) => FormulaValue::Number(@math.pow(lhs, rhs))
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "EVEN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let sign = num < 0.0
+            let (whole, frac) = modf_double(num / 2.0)
+            let mut val = whole * 2.0
+            if frac != 0.0 {
+              if sign {
+                val = val - 2.0
+              } else {
+                val = val + 2.0
+              }
+            }
+            FormulaValue::Number(val)
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ODD" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num == 0.0 {
+              FormulaValue::Number(1.0)
+            } else {
+              let sign = num < 0.0
+              let (whole, frac) = modf_double((num - 1.0) / 2.0)
+              let mut val = whole * 2.0 + 1.0
+              if frac != 0.0 {
+                if sign {
+                  val = val - 2.0
+                } else {
+                  val = val + 2.0
+                }
+              }
+              FormulaValue::Number(val)
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MROUND" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(multiple)) =>
+            if multiple == 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else if (multiple < 0.0 && num > 0.0) ||
+              (multiple > 0.0 && num < 0.0) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              let (whole, frac) = modf_double(num / multiple)
+              let mut rounded = whole
+              if trunc_double(frac + 0.5) > 0.0 {
+                rounded = rounded + 1.0
+              }
+              FormulaValue::Number(rounded * multiple)
+            }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
