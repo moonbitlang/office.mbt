@@ -482,6 +482,42 @@ fn parse_bool_attr(value : StringView) -> Bool {
 }
 
 ///|
+fn parse_inline_string(rest : StringView) -> String raise XlsxError {
+  let text = rest.to_string()
+  let start = match text.find("<is") {
+    Some(pos) => pos
+    None => return ""
+  }
+  let after_start = text[start:] catch {
+      _ => raise XlsxError::InvalidXml(msg="inline string tag invalid")
+    }
+  let open_end = match after_start.find(">") {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="inline string not closed")
+  }
+  let body_start = start + open_end + 1
+  let end = match text.find("</is>") {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="inline string end missing")
+  }
+  let body = text[body_start:end] catch {
+      _ => raise XlsxError::InvalidXml(msg="inline string body invalid")
+    }
+  let t_start = match body.find("<t>") {
+    Some(pos) => pos
+    None => return ""
+  }
+  let t_rest = body[t_start + 3:] catch {
+      _ => raise XlsxError::InvalidXml(msg="inline string text invalid")
+    }
+  let t_end = match t_rest.find("</t>") {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="inline string text end missing")
+  }
+  unescape_xml_text(try! t_rest[:t_end])
+}
+
+///|
 fn parse_row_dimensions(
   xml : StringView,
   style_count : Int,
@@ -678,36 +714,90 @@ fn parse_worksheet(
       }
       None => None
     }
-    let raw_value = match rest.find("<v>") {
+    let raw_value_opt = match rest.find("<v>") {
       Some(pos) => {
         let v_rest = try! rest[pos + 3:]
         let v_end = match v_rest.find("</v>") {
           Some(end) => end
           None => raise XlsxError::InvalidXml(msg="cell value not closed")
         }
-        try! v_rest[:v_end]
+        Some(try! v_rest[:v_end].to_string())
       }
-      None =>
-        match formula {
-          Some(_) => ""
-          None => raise XlsxError::InvalidXml(msg="cell value missing")
-        }
+      None => None
     }
-    let value = match cell_type {
-      Some(kind) if kind == "s" && formula is None => {
-        let index = @strconv.parse_int(raw_value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="shared string index invalid")
+    let raw_value = match raw_value_opt {
+      Some(value) => value
+      None => ""
+    }
+    let inline_value = match cell_type {
+      Some(kind) if kind == "inlineStr" => parse_inline_string(rest)
+      _ => ""
+    }
+    if raw_value_opt is None &&
+      formula is None &&
+      !(cell_type is Some("inlineStr")) {
+      raise XlsxError::InvalidXml(msg="cell value missing")
+    }
+    let force_string = raw_value_opt is None &&
+      formula is Some(_) &&
+      !(cell_type is Some("inlineStr"))
+    let (value, value_type) = if force_string {
+      ("", CellValueType::String)
+    } else {
+      match cell_type {
+        Some(kind) if kind == "s" => {
+          let index = @strconv.parse_int(raw_value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="shared string index invalid")
+          }
+          if index < 0 || index >= shared_strings.length() {
+            raise XlsxError::InvalidSharedString(index~)
+          }
+          (shared_strings[index], CellValueType::String)
         }
-        if index < 0 || index >= shared_strings.length() {
-          raise XlsxError::InvalidSharedString(index~)
+        Some(kind) if kind == "b" => {
+          if raw_value != "0" && raw_value != "1" {
+            raise XlsxError::InvalidXml(msg="cell boolean invalid")
+          }
+          (raw_value, CellValueType::Bool)
         }
-        shared_strings[index]
+        Some(kind) if kind == "e" =>
+          (unescape_xml_text(raw_value), CellValueType::Error)
+        Some(kind) if kind == "str" =>
+          (unescape_xml_text(raw_value), CellValueType::String)
+        Some(kind) if kind == "inlineStr" =>
+          (inline_value, CellValueType::String)
+        Some(kind) if kind == "d" =>
+          (unescape_xml_text(raw_value), CellValueType::String)
+        Some(kind) if kind == "n" => {
+          ignore(
+            @strconv.parse_double(raw_value) catch {
+              _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+            },
+          )
+          (raw_value, CellValueType::Number)
+        }
+        Some(_) => (unescape_xml_text(raw_value), CellValueType::String)
+        None => {
+          ignore(
+            @strconv.parse_double(raw_value) catch {
+              _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+            },
+          )
+          (raw_value, CellValueType::Number)
+        }
       }
-      _ => unescape_xml_text(raw_value)
     }
     let (row, col) = cell_ref_to_rc(ref_value)
     let canonical = cell_ref_from(row, col)
-    cells.push({ reference: canonical, row, col, value, formula, style_id })
+    cells.push({
+      reference: canonical,
+      row,
+      col,
+      value,
+      value_type,
+      formula,
+      style_id,
+    })
   }
   let merged_cells = parse_merge_cells(xml)
   let row_dimensions = parse_row_dimensions(xml, style_count)

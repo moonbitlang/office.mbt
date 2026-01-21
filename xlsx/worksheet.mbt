@@ -4,6 +4,7 @@ pub struct Cell {
   row : Int
   col : Int
   value : String
+  value_type : CellValueType
   formula : String?
   style_id : Int
 }
@@ -222,6 +223,7 @@ pub fn Worksheet::set_cell(
         row,
         col,
         value,
+        value_type: CellValueType::String,
         formula: None,
         style_id: cell.style_id,
       }
@@ -233,6 +235,7 @@ pub fn Worksheet::set_cell(
     row,
     col,
     value,
+    value_type: CellValueType::String,
     formula: None,
     style_id: 0,
   })
@@ -247,6 +250,56 @@ pub fn Worksheet::get_cell(
   for cell in self.cells {
     if cell.row == row && cell.col == col {
       return Some(cell.value)
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::set_cell_value(
+  self : Worksheet,
+  reference : String,
+  value : CellValue,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  let value_type = cell_value_type(value)
+  let raw_value = cell_value_raw_string(value)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = {
+        reference: canonical,
+        row,
+        col,
+        value: raw_value,
+        value_type,
+        formula: None,
+        style_id: cell.style_id,
+      }
+      return
+    }
+  }
+  self.cells.push({
+    reference: canonical,
+    row,
+    col,
+    value: raw_value,
+    value_type,
+    formula: None,
+    style_id: 0,
+  })
+}
+
+///|
+pub fn Worksheet::get_cell_value_raw(
+  self : Worksheet,
+  reference : StringView,
+) -> CellValue? raise XlsxError {
+  let (row, col) = cell_ref_to_rc(reference)
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      return Some(cell_value_from_raw(cell.value_type, cell.value))
     }
   }
   None
@@ -269,6 +322,7 @@ pub fn Worksheet::set_cell_formula(
         row,
         col,
         value,
+        value_type: CellValueType::String,
         formula: Some(formula),
         style_id: cell.style_id,
       }
@@ -280,6 +334,7 @@ pub fn Worksheet::set_cell_formula(
     row,
     col,
     value,
+    value_type: CellValueType::String,
     formula: Some(formula),
     style_id: 0,
   })
@@ -318,6 +373,7 @@ pub fn Worksheet::set_cell_style(
         row,
         col,
         value: cell.value,
+        value_type: cell.value_type,
         formula: cell.formula,
         style_id,
       }
@@ -329,6 +385,7 @@ pub fn Worksheet::set_cell_style(
     row,
     col,
     value: "",
+    value_type: CellValueType::String,
     formula: None,
     style_id,
   })
@@ -367,13 +424,22 @@ pub fn Worksheet::set_cell_style_rc(
         row,
         col,
         value: cell.value,
+        value_type: cell.value_type,
         formula: cell.formula,
         style_id,
       }
       return
     }
   }
-  self.cells.push({ reference, row, col, value: "", formula: None, style_id })
+  self.cells.push({
+    reference,
+    row,
+    col,
+    value: "",
+    value_type: CellValueType::String,
+    formula: None,
+    style_id,
+  })
 }
 
 ///|
@@ -605,13 +671,58 @@ pub fn Worksheet::set_cell_rc(
         row,
         col,
         value,
+        value_type: CellValueType::String,
         formula: None,
         style_id: cell.style_id,
       }
       return
     }
   }
-  self.cells.push({ reference, row, col, value, formula: None, style_id: 0 })
+  self.cells.push({
+    reference,
+    row,
+    col,
+    value,
+    value_type: CellValueType::String,
+    formula: None,
+    style_id: 0,
+  })
+}
+
+///|
+pub fn Worksheet::set_cell_value_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+  value : CellValue,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let reference = cell_ref_from(row, col)
+  let value_type = cell_value_type(value)
+  let raw_value = cell_value_raw_string(value)
+  for i, cell in self.cells {
+    if cell.row == row && cell.col == col {
+      self.cells[i] = {
+        reference,
+        row,
+        col,
+        value: raw_value,
+        value_type,
+        formula: None,
+        style_id: cell.style_id,
+      }
+      return
+    }
+  }
+  self.cells.push({
+    reference,
+    row,
+    col,
+    value: raw_value,
+    value_type,
+    formula: None,
+    style_id: 0,
+  })
 }
 
 ///|
@@ -631,6 +742,7 @@ pub fn Worksheet::set_cell_formula_rc(
         row,
         col,
         value,
+        value_type: CellValueType::String,
         formula: Some(formula),
         style_id: cell.style_id,
       }
@@ -642,6 +754,7 @@ pub fn Worksheet::set_cell_formula_rc(
     row,
     col,
     value,
+    value_type: CellValueType::String,
     formula: Some(formula),
     style_id: 0,
   })
@@ -659,6 +772,23 @@ pub fn Worksheet::get_cell_rc(
   for cell in self.cells {
     if cell.row == row && cell.col == col {
       return Some(cell.value)
+    }
+  }
+  None
+}
+
+///|
+pub fn Worksheet::get_cell_value_raw_rc(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> CellValue? raise XlsxError {
+  if row <= 0 || col <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+  }
+  for cell in self.cells {
+    if cell.row == row && cell.col == col {
+      return Some(cell_value_from_raw(cell.value_type, cell.value))
     }
   }
   None
@@ -1144,6 +1274,7 @@ pub fn Worksheet::insert_rows(
         row: new_row,
         col: cell.col,
         value: cell.value,
+        value_type: cell.value_type,
         formula: cell.formula,
         style_id: cell.style_id,
       }
@@ -1230,6 +1361,7 @@ pub fn Worksheet::remove_rows(
       row: new_row,
       col: cell.col,
       value: cell.value,
+      value_type: cell.value_type,
       formula: cell.formula,
       style_id: cell.style_id,
     })
@@ -1323,6 +1455,7 @@ pub fn Worksheet::insert_cols(
         row: cell.row,
         col: new_col,
         value: cell.value,
+        value_type: cell.value_type,
         formula: cell.formula,
         style_id: cell.style_id,
       }
@@ -1409,6 +1542,7 @@ pub fn Worksheet::remove_cols(
       row: cell.row,
       col: new_col,
       value: cell.value,
+      value_type: cell.value_type,
       formula: cell.formula,
       style_id: cell.style_id,
     })

@@ -8,6 +8,7 @@ pub(all) enum StreamState {
 ///|
 pub struct StreamCell {
   value : String
+  value_type : CellValueType
   formula : String?
   style_id : Int
 }
@@ -19,7 +20,22 @@ pub fn StreamCell::new(
   style_id? : Int = 0,
 ) -> StreamCell {
   let formula_value = if formula == "" { None } else { Some(formula) }
-  { value, formula: formula_value, style_id }
+  { value, value_type: CellValueType::String, formula: formula_value, style_id }
+}
+
+///|
+pub fn StreamCell::new_value(
+  value : CellValue,
+  formula? : String = "",
+  style_id? : Int = 0,
+) -> StreamCell {
+  let formula_value = if formula == "" { None } else { Some(formula) }
+  {
+    value: cell_value_raw_string(value),
+    value_type: cell_value_type(value),
+    formula: formula_value,
+    style_id,
+  }
 }
 
 ///|
@@ -77,6 +93,7 @@ pub fn StreamWriter::set_row_cells(
       row,
       col,
       value: cell.value,
+      value_type: cell.value_type,
       formula: cell.formula,
       style_id: cell.style_id,
     })

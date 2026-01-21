@@ -63,9 +63,28 @@ pub struct Cell {
   row : Int
   col : Int
   value : String
+  value_type : CellValueType
   formula : String?
   style_id : Int
 }
+
+pub(all) enum CellValue {
+  String(String)
+  Numeric(Double)
+  Bool(Bool)
+  Error(String)
+}
+pub impl Eq for CellValue
+pub impl Show for CellValue
+
+pub(all) enum CellValueType {
+  String
+  Number
+  Bool
+  Error
+}
+pub impl Eq for CellValueType
+pub impl Show for CellValueType
 
 pub struct Chart {
   reference : String
@@ -159,10 +178,12 @@ pub(all) enum SparklineType {
 
 pub struct StreamCell {
   value : String
+  value_type : CellValueType
   formula : String?
   style_id : Int
 }
 pub fn StreamCell::new(String, formula? : String, style_id? : Int) -> Self
+pub fn StreamCell::new_value(CellValue, formula? : String, style_id? : Int) -> Self
 
 pub(all) enum StreamState {
   Idle
@@ -230,6 +251,10 @@ pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
 pub fn Workbook::get_cell_style(Self, StringView, StringView) -> Int? raise XlsxError
 pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise XlsxError
+pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool) -> String? raise XlsxError
+pub fn Workbook::get_cell_value_raw(Self, StringView, StringView) -> CellValue? raise XlsxError
+pub fn Workbook::get_cell_value_raw_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
+pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> String? raise XlsxError
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
@@ -255,6 +280,8 @@ pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? 
 pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style_rc(Self, StringView, Int, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::set_cell_value(Self, StringView, String, CellValue) -> Unit raise XlsxError
+pub fn Workbook::set_cell_value_rc(Self, StringView, Int, Int, CellValue) -> Unit raise XlsxError
 pub fn Workbook::set_col(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::set_col_outline_level(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_col_style(Self, StringView, Int, Int) -> Unit raise XlsxError
@@ -316,6 +343,8 @@ pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
 pub fn Worksheet::get_cell_style(Self, StringView) -> Int? raise XlsxError
 pub fn Worksheet::get_cell_style_rc(Self, Int, Int) -> Int? raise XlsxError
+pub fn Worksheet::get_cell_value_raw(Self, StringView) -> CellValue? raise XlsxError
+pub fn Worksheet::get_cell_value_raw_rc(Self, Int, Int) -> CellValue? raise XlsxError
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
@@ -343,6 +372,8 @@ pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -
 pub fn Worksheet::set_cell_rc(Self, Int, Int, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_value(Self, String, CellValue) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_value_rc(Self, Int, Int, CellValue) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_col_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col_style(Self, Int, Int) -> Unit raise XlsxError

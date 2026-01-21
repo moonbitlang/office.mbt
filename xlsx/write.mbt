@@ -7,7 +7,7 @@ fn collect_shared_strings(
   let mut total = 0
   for sheet in workbook.sheets() {
     for cell in sheet.cells() {
-      if cell.formula is None {
+      if cell.formula is None && cell.value_type == CellValueType::String {
         total = total + 1
         match index_map.get(cell.value) {
           Some(_) => ()
@@ -589,28 +589,56 @@ fn write_worksheet_xml(
       }
       match cell.formula {
         Some(formula) => {
-          if cell.value != "" {
-            sb.write_view(" t=\"str\">")
-          } else {
-            sb.write_view(">")
+          match cell.value_type {
+            CellValueType::String =>
+              if cell.value != "" {
+                sb.write_view(" t=\"str\"")
+              }
+            CellValueType::Bool => sb.write_view(" t=\"b\"")
+            CellValueType::Error => sb.write_view(" t=\"e\"")
+            CellValueType::Number => ()
           }
+          sb.write_view(">")
           sb.write_view("<f>")
           sb.write_view(escape_xml_text(formula))
           sb.write_view("</f>")
           if cell.value != "" {
             sb.write_view("<v>")
-            sb.write_view(escape_xml_text(cell.value))
+            match cell.value_type {
+              CellValueType::String =>
+                sb.write_view(escape_xml_text(cell.value))
+              CellValueType::Error => sb.write_view(escape_xml_text(cell.value))
+              _ => sb.write_view(cell.value)
+            }
             sb.write_view("</v>")
           }
           sb.write_view("</c>\n")
         }
-        None => {
-          let idx = match string_map.get(cell.value) {
-            Some(value) => value
-            None => raise XlsxError::InvalidSharedString(index=cell.row)
+        None =>
+          match cell.value_type {
+            CellValueType::String => {
+              let idx = match string_map.get(cell.value) {
+                Some(value) => value
+                None => raise XlsxError::InvalidSharedString(index=cell.row)
+              }
+              sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
+            }
+            CellValueType::Bool => {
+              sb.write_view(" t=\"b\"><v>")
+              sb.write_view(cell.value)
+              sb.write_view("</v></c>\n")
+            }
+            CellValueType::Error => {
+              sb.write_view(" t=\"e\"><v>")
+              sb.write_view(escape_xml_text(cell.value))
+              sb.write_view("</v></c>\n")
+            }
+            CellValueType::Number => {
+              sb.write_view("><v>")
+              sb.write_view(cell.value)
+              sb.write_view("</v></c>\n")
+            }
           }
-          sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
-        }
       }
     }
     sb.write_view("    </row>\n")

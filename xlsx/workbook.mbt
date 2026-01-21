@@ -484,6 +484,21 @@ fn Workbook::check_style_id(
 }
 
 ///|
+fn format_cell_value_for_workbook(
+  styles : ArrayView[Style],
+  cell : Cell,
+  raw : Bool,
+) -> String raise XlsxError {
+  if raw {
+    return cell.value
+  }
+  if cell.style_id < 0 || cell.style_id >= styles.length() {
+    raise XlsxError::InvalidStyleId(index=cell.style_id)
+  }
+  format_cell_value(cell.value_type, cell.value, Some(styles[cell.style_id]))
+}
+
+///|
 pub fn Workbook::set_cell(
   self : Workbook,
   sheet_name : StringView,
@@ -498,6 +513,20 @@ pub fn Workbook::set_cell(
 }
 
 ///|
+pub fn Workbook::set_cell_value(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : CellValue,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_value(reference, value)
+}
+
+///|
 pub fn Workbook::get_cell(
   self : Workbook,
   sheet_name : StringView,
@@ -508,6 +537,39 @@ pub fn Workbook::get_cell(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell(reference)
+}
+
+///|
+pub fn Workbook::get_cell_value_raw(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> CellValue? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_value_raw(reference)
+}
+
+///|
+pub fn Workbook::get_cell_value(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+  raw? : Bool = false,
+) -> String? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let (row, col) = cell_ref_to_rc(reference)
+  for cell in sheet.cells() {
+    if cell.row == row && cell.col == col {
+      return Some(format_cell_value_for_workbook(self.styles, cell, raw))
+    }
+  }
+  None
 }
 
 ///|
@@ -767,6 +829,21 @@ pub fn Workbook::set_cell_rc(
 }
 
 ///|
+pub fn Workbook::set_cell_value_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+  value : CellValue,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_value_rc(row, col, value)
+}
+
+///|
 pub fn Workbook::get_cell_rc(
   self : Workbook,
   sheet_name : StringView,
@@ -778,6 +855,40 @@ pub fn Workbook::get_cell_rc(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_rc(row, col)
+}
+
+///|
+pub fn Workbook::get_cell_value_raw_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+) -> CellValue? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_value_raw_rc(row, col)
+}
+
+///|
+pub fn Workbook::get_cell_value_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+  raw? : Bool = false,
+) -> String? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  for cell in sheet.cells() {
+    if cell.row == row && cell.col == col {
+      return Some(format_cell_value_for_workbook(self.styles, cell, raw))
+    }
+  }
+  None
 }
 
 ///|
