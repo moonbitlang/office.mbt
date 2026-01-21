@@ -557,6 +557,41 @@ test "calc exp radians degrees pi sqrtpi functions" {
 }
 
 ///|
+test "calc random functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "RAND()")
+  let rand_text = workbook.calc_cell_value("Sheet1", "A1")
+  let rand_value = @strconv.parse_double(rand_text) catch {
+    _ => {
+      assert_eq(true, false)
+      0.0
+    }
+  }
+  assert_eq(rand_value >= 0.0 && rand_value < 1.0, true)
+  sheet.set_cell_formula("A2", "RANDBETWEEN(1,2)")
+  let rand_between_text = workbook.calc_cell_value("Sheet1", "A2")
+  let rand_between_value = @strconv.parse_double(rand_between_text) catch {
+    _ => {
+      assert_eq(true, false)
+      0.0
+    }
+  }
+  let rand_between_int = Double::to_int(rand_between_value)
+  assert_eq(rand_between_int == 1 || rand_between_int == 2, true)
+  sheet.set_cell_formula("B1", "RAND(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "RANDBETWEEN(\"X\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("B3", "RANDBETWEEN(1,\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#VALUE!")
+  sheet.set_cell_formula("B4", "RANDBETWEEN()")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+  sheet.set_cell_formula("B5", "RANDBETWEEN(2,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="#NUM!")
+}
+
+///|
 test "calc string coercion" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

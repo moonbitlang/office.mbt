@@ -29,6 +29,9 @@ let formula_error_getting_data = "#GETTING_DATA"
 let formula_error_calc = "#CALC!"
 
 ///|
+let rand_state : @random.Rand = @random.Rand::new()
+
+///|
 priv enum FormulaValue {
   Number(Double)
   String(String)
@@ -1657,6 +1660,35 @@ fn eval_function(
         match value_as_number(values[0]) {
           Ok(num) => FormulaValue::Number(@math.PI / 180.0 * num)
           Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RAND" =>
+      if values.length() == 0 {
+        FormulaValue::Number(rand_state.double())
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RANDBETWEEN" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(bottom), Ok(top)) =>
+            if top < bottom {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              let bottom_int = Double::to_int(trunc_double(bottom))
+              let top_int = Double::to_int(trunc_double(top))
+              let range = top_int - bottom_int + 1
+              let rand_value = if range > 0 {
+                rand_state.int(limit=range)
+              } else {
+                0
+              }
+              FormulaValue::Number(Double::from_int(rand_value + bottom_int))
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
         }
       } else {
         FormulaValue::Error(formula_error_value)
