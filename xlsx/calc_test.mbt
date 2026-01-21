@@ -6405,3 +6405,174 @@ test "calc gamma functions" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+test "calc ttest functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let col_a : Array[Double] = [
+    4.0, 5.0, 2.0, 5.0, 8.0, 9.0, 3.0, 2.0, 3.0, 8.0, 9.0, 5.0,
+  ]
+  let col_b : Array[Double] = [
+    8.0, 3.0, 7.0, 3.0, 5.0, 2.0, 2.0, 7.0, 9.0, 4.0, 4.0, 7.0,
+  ]
+  for i in 0..<col_a.length() {
+    let row = i + 1
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(col_a[i]))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(col_b[i]))
+  }
+  sheet.set_cell_value("D1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("E1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("D2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("E2", CellValue::Numeric(1.0))
+  let cases : Array[(String, String)] = [
+    ("TTEST(A1:A12,B1:B12,1,1)", "0.44907068944428"),
+    ("TTEST(A1:A12,B1:B12,1,2)", "0.436717306029283"),
+    ("TTEST(A1:A12,B1:B12,1,3)", "0.436722015384755"),
+    ("TTEST(A1:A12,B1:B12,2,1)", "0.89814137888856"),
+    ("TTEST(A1:A12,B1:B12,2,2)", "0.873434612058567"),
+    ("TTEST(A1:A12,B1:B12,2,3)", "0.873444030769511"),
+    ("T.TEST(A1:A12,B1:B12,1,1)", "0.44907068944428"),
+    ("T.TEST(A1:A12,B1:B12,1,2)", "0.436717306029283"),
+    ("T.TEST(A1:A12,B1:B12,1,3)", "0.436722015384755"),
+    ("T.TEST(A1:A12,B1:B12,2,1)", "0.89814137888856"),
+    ("T.TEST(A1:A12,B1:B12,2,2)", "0.873434612058567"),
+    ("T.TEST(A1:A12,B1:B12,2,3)", "0.873444030769511"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("TTEST()", "#VALUE!"),
+    ("TTEST(\"\",B1:B12,1,1)", "#NUM!"),
+    ("TTEST(A1:A12,\"\",1,1)", "#NUM!"),
+    ("TTEST(A1:A12,B1:B12,\"\",1)", "#VALUE!"),
+    ("TTEST(A1:A12,B1:B12,1,\"\")", "#VALUE!"),
+    ("TTEST(A1:A12,B1:B12,0,1)", "#NUM!"),
+    ("TTEST(A1:A12,B1:B12,1,0)", "#NUM!"),
+    ("TTEST(A1:A2,B1:B1,1,1)", "#N/A"),
+    ("TTEST(A13:A14,B13:B14,1,1)", "#NUM!"),
+    ("TTEST(A12:A13,B12:B13,1,1)", "#DIV/0!"),
+    ("TTEST(A13:A14,B13:B14,1,2)", "#NUM!"),
+    ("TTEST(D1:D4,E1:E4,1,3)", "#NUM!"),
+    ("T.TEST()", "#VALUE!"),
+    ("T.TEST(\"\",B1:B12,1,1)", "#NUM!"),
+    ("T.TEST(A1:A12,\"\",1,1)", "#NUM!"),
+    ("T.TEST(A1:A12,B1:B12,\"\",1)", "#VALUE!"),
+    ("T.TEST(A1:A12,B1:B12,1,\"\")", "#VALUE!"),
+    ("T.TEST(A1:A12,B1:B12,0,1)", "#NUM!"),
+    ("T.TEST(A1:A12,B1:B12,1,0)", "#NUM!"),
+    ("T.TEST(A1:A2,B1:B1,1,1)", "#N/A"),
+    ("T.TEST(A13:A14,B13:B14,1,1)", "#NUM!"),
+    ("T.TEST(A12:A13,B12:B13,1,1)", "#DIV/0!"),
+    ("T.TEST(A13:A14,B13:B14,1,2)", "#NUM!"),
+    ("T.TEST(D1:D4,E1:E4,1,3)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "F\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc ztest functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let data : Array[Double] = [
+    4.0, 5.0, 2.0, 5.0, 8.0, 9.0, 3.0, 2.0, 3.0, 8.0, 9.0, 5.0,
+  ]
+  let cols : Array[String] = [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
+  ]
+  for i in 0..<data.length() {
+    let cell = cols[i] + "1"
+    sheet.set_cell_value(cell, CellValue::Numeric(data[i]))
+  }
+  let cases : Array[(String, String)] = [
+    ("Z.TEST(A1:L1,5)", "0.371103278558537"),
+    ("Z.TEST(A1:L1,6)", "0.838129187019752"),
+    ("Z.TEST(A1:L1,5,1)", "0.193238115385616"),
+    ("ZTEST(A1:L1,5)", "0.371103278558537"),
+    ("ZTEST(A1:L1,6)", "0.838129187019752"),
+    ("ZTEST(A1:L1,5,1)", "0.193238115385616"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "M\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_book = Workbook::new()
+  let error_sheet = error_book.add_sheet("Sheet1")
+  error_sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  let error_cases : Array[(String, String)] = [
+    ("Z.TEST(A1)", "#VALUE!"),
+    ("Z.TEST(A1,0,0,0)", "#VALUE!"),
+    ("Z.TEST(H1,0)", "#N/A"),
+    ("Z.TEST(A1,\"\")", "#VALUE!"),
+    ("Z.TEST(A1,1)", "#DIV/0!"),
+    ("Z.TEST(A1,1,\"\")", "#VALUE!"),
+    ("ZTEST(A1)", "#VALUE!"),
+    ("ZTEST(A1,0,0,0)", "#VALUE!"),
+    ("ZTEST(H1,0)", "#N/A"),
+    ("ZTEST(A1,\"\")", "#VALUE!"),
+    ("ZTEST(A1,1)", "#DIV/0!"),
+    ("ZTEST(A1,1,\"\")", "#VALUE!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    error_sheet.set_cell_formula(cell, formula)
+    inspect(error_book.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc prob function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("x"))
+  sheet.set_cell_value("B1", CellValue::String("probability"))
+  let xs : Array[Double] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+  let ps : Array[Double] = [0.1, 0.15, 0.17, 0.22, 0.21, 0.09, 0.05, 0.01]
+  for i in 0..<xs.length() {
+    let row = i + 2
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(xs[i]))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(ps[i]))
+  }
+  let cases : Array[(String, String)] = [
+    ("PROB(A2:A9,B2:B9,3)", "0.22"),
+    ("PROB(A2:A9,B2:B9,3,5)", "0.52"),
+    ("PROB(A2:A9,B2:B9,8,10)", "0"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("PROB()", "#VALUE!"),
+    ("PROB(A1:A2,B1:B2,1,1,1)", "#VALUE!"),
+    ("PROB(A1:A2,B1:B2,\"\")", "#VALUE!"),
+    ("PROB(A1:A2,B1:B2,1,\"\")", "#VALUE!"),
+    ("PROB(A1,B1,1)", "#NUM!"),
+    ("PROB(A1:A2,B1:B3,1)", "#N/A"),
+    ("PROB(A1:A2,B1:C2,1)", "#N/A"),
+    ("PROB(A1:A2,B1:B2,1)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "D\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  sheet.set_cell_value("A2", CellValue::Error("#N/A"))
+  sheet.set_cell_formula("E1", "PROB(A2:A9,B2:B9,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="#NUM!")
+}

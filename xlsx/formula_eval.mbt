@@ -7558,6 +7558,7 @@ fn eval_function(
     "POISSONdotDIST" | "POISSON.DIST" | "_XLFN.POISSON.DIST" =>
       poisson_values(values)
     "POISSON" => poisson_values(values)
+    "PROB" => prob_values(values)
     "BINOMdotDIST" | "BINOM.DIST" | "_XLFN.BINOM.DIST" =>
       binomdist_values(values)
     "BINOMDIST" => binomdist_values(values)
@@ -7649,6 +7650,10 @@ fn eval_function(
     "TdotINV" | "T.INV" | "_XLFN.T.INV" => tinv_values(values)
     "TdotINVdot2T" | "T.INV.2T" | "_XLFN.T.INV.2T" => tinv_2t_values(values)
     "TINV" => tinv_2t_values(values)
+    "TdotTEST" | "T.TEST" | "_XLFN.T.TEST" => ttest_values(values)
+    "TTEST" => ttest_values(values)
+    "ZdotTEST" | "Z.TEST" | "_XLFN.Z.TEST" => ztest_values(values)
+    "ZTEST" => ztest_values(values)
     "GESTEP" =>
       if values.length() < 1 {
         FormulaValue::Error(formula_error_value)
@@ -13230,6 +13235,229 @@ fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn number_strict_opt(value : FormulaValue) -> Double? {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) => Some(num)
+    _ => None
+  }
+}
+
+///|
+fn ttest_unpaired(
+  array1 : ArrayView[FormulaValue],
+  array2 : ArrayView[FormulaValue],
+  unequal : Bool,
+) -> (Double, Double, Bool) {
+  let mut sum1 = 0.0
+  let mut sum_sqr1 = 0.0
+  let mut cnt1 = 0.0
+  for value in array1 {
+    match number_strict_opt(value) {
+      Some(num) => {
+        sum1 = sum1 + num
+        sum_sqr1 = sum_sqr1 + num * num
+        cnt1 = cnt1 + 1.0
+      }
+      None => ()
+    }
+  }
+  let mut sum2 = 0.0
+  let mut sum_sqr2 = 0.0
+  let mut cnt2 = 0.0
+  for value in array2 {
+    match number_strict_opt(value) {
+      Some(num) => {
+        sum2 = sum2 + num
+        sum_sqr2 = sum_sqr2 + num * num
+        cnt2 = cnt2 + 1.0
+      }
+      None => ()
+    }
+  }
+  if cnt1 < 2.0 || cnt2 < 2.0 {
+    return (0.0, 0.0, false)
+  }
+  if unequal {
+    let fs1 = (sum_sqr1 - sum1 * sum1 / cnt1) / (cnt1 - 1.0) / cnt1
+    let fs2 = (sum_sqr2 - sum2 * sum2 / cnt2) / (cnt2 - 1.0) / cnt2
+    if fs1 + fs2 == 0.0 {
+      return (0.0, 0.0, false)
+    }
+    let c = fs1 / (fs1 + fs2)
+    let t_value = Double::abs(sum1 / cnt1 - sum2 / cnt2) /
+      Double::sqrt(fs1 + fs2)
+    let df = 1.0 / (c * c / (cnt1 - 1.0) + (1.0 - c) * (1.0 - c) / (cnt2 - 1.0))
+    return (t_value, df, true)
+  }
+  let fs1 = (sum_sqr1 - sum1 * sum1 / cnt1) / (cnt1 - 1.0)
+  let fs2 = (sum_sqr2 - sum2 * sum2 / cnt2) / (cnt2 - 1.0)
+  let denom = (cnt1 - 1.0) * fs1 + (cnt2 - 1.0) * fs2
+  let t_value = Double::abs(sum1 / cnt1 - sum2 / cnt2) /
+    Double::sqrt(denom) *
+    Double::sqrt(cnt1 * cnt2 * (cnt1 + cnt2 - 2.0) / (cnt1 + cnt2))
+  let df = cnt1 + cnt2 - 2.0
+  (t_value, df, true)
+}
+
+///|
+fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let (array1, array2) = match (values[0], values[1]) {
+    (FormulaValue::List(left), FormulaValue::List(right)) => (left, right)
+    _ => return FormulaValue::Error(formula_error_num)
+  }
+  let tails = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let test_type = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if tails != 1.0 && tails != 2.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if test_type != 1.0 && test_type != 2.0 && test_type != 3.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let (t_value, df) = if test_type == 1.0 {
+    if array1.length() != array2.length() {
+      return FormulaValue::Error(formula_error_na)
+    }
+    let mut sum1 = 0.0
+    let mut sum2 = 0.0
+    let mut sum_sqr_d = 0.0
+    let mut cnt = 0.0
+    for i in 0..<array1.length() {
+      match (number_strict_opt(array1[i]), number_strict_opt(array2[i])) {
+        (Some(lhs), Some(rhs)) => {
+          sum1 = sum1 + lhs
+          sum2 = sum2 + rhs
+          let diff = lhs - rhs
+          sum_sqr_d = sum_sqr_d + diff * diff
+          cnt = cnt + 1.0
+        }
+        _ => ()
+      }
+    }
+    if cnt < 1.0 {
+      return FormulaValue::Error(formula_error_num)
+    }
+    let sum_d = sum1 - sum2
+    let divider = cnt * sum_sqr_d - sum_d * sum_d
+    if divider == 0.0 {
+      return FormulaValue::Error(formula_error_div)
+    }
+    let t_val = Double::abs(sum_d) * Double::sqrt((cnt - 1.0) / divider)
+    (t_val, cnt - 1.0)
+  } else {
+    let (t_val, df_val, ok) = ttest_unpaired(array1, array2, test_type == 3.0)
+    if !ok {
+      return FormulaValue::Error(formula_error_num)
+    }
+    (t_val, df_val)
+  }
+  let result = get_t_dist(t_value, df, tails)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let avg_input : Array[FormulaValue] = [values[0]]
+  let mean = match average_values(avg_input) {
+    FormulaValue::Number(num) => num
+    FormulaValue::Error(_) => return FormulaValue::Error(formula_error_na)
+    _ => return FormulaValue::Error(formula_error_na)
+  }
+  let x = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let sigma = if values.length() == 3 {
+    match value_as_number(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    let stdev_input : Array[FormulaValue] = [values[0]]
+    match stdev_values(false, stdev_input) {
+      FormulaValue::Number(num) => num
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      _ => return FormulaValue::Error(formula_error_div)
+    }
+  }
+  let list = list_from_value(values[0])
+  let count = Double::from_int(list.length())
+  let denom = sigma / Double::sqrt(count)
+  if denom == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let z = (mean - x) / denom
+  let result = 1.0 - get_norm_s_dist(z)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn prob_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let (x_range, prob_range) = match (values[0], values[1]) {
+    (FormulaValue::List(xs), FormulaValue::List(ps)) => (xs, ps)
+    _ => return FormulaValue::Error(formula_error_num)
+  }
+  if x_range.length() == 0 || prob_range.length() == 0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if x_range.length() != prob_range.length() {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let lower = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let upper = if values.length() == 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    lower
+  }
+  let mut sum = 0.0
+  let mut res = 0.0
+  for i in 0..<x_range.length() {
+    match (normalize_scalar(x_range[i]), normalize_scalar(prob_range[i])) {
+      (FormulaValue::Number(x), FormulaValue::Number(p)) => {
+        if p < 0.0 || p > 1.0 {
+          return FormulaValue::Error(formula_error_num)
+        }
+        sum = sum + p
+        if x >= lower && x <= upper {
+          res = res + p
+        }
+      }
+      _ => return FormulaValue::Error(formula_error_num)
+    }
+  }
+  if Double::abs(sum - 1.0) > 1.0e-7 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  number_or_num_error(round_significant_digits(res, 15))
 }
 
 ///|
