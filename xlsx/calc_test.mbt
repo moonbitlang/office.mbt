@@ -2197,6 +2197,34 @@ test "calc math and text functions" {
 }
 
 ///|
+test "calc row and column functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("B2", "ROW()")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="2")
+  sheet.set_cell_formula("C3", "COLUMN()")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="3")
+  sheet.set_cell_formula("A5", "ROW(A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="1")
+  sheet.set_cell_formula("A6", "COLUMN(B3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="2")
+  sheet.set_cell_formula("A7", "ROW(B4:C5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="4")
+  sheet.set_cell_formula("A8", "COLUMN(B4:C5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="2")
+  sheet.set_cell_formula("A9", "ROWS(A1:B3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A9"), content="3")
+  sheet.set_cell_formula("A10", "COLUMNS(A1:B3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A10"), content="2")
+  sheet.set_cell_formula("A11", "ROWS(A:A)")
+  inspect(workbook.calc_cell_value("Sheet1", "A11"), content="1048576")
+  sheet.set_cell_formula("A12", "COLUMNS(1:1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A12"), content="16384")
+  sheet.set_cell_formula("A13", "ROW(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A13"), content="#VALUE!")
+}
+
+///|
 test "calc a functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

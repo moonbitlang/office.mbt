@@ -29,6 +29,12 @@ let formula_error_getting_data = "#GETTING_DATA"
 let formula_error_calc = "#CALC!"
 
 ///|
+let excel_max_rows = 1048576
+
+///|
+let excel_max_cols = 16384
+
+///|
 let rand_state : @random.Rand = @random.Rand::new()
 
 ///|
@@ -100,6 +106,8 @@ priv struct CalcContext {
   visiting : Map[String, Bool]
   mut depth : Int
   max_depth : Int
+  mut current_sheet : String
+  mut current_ref : String
 }
 
 ///|
@@ -123,7 +131,7 @@ priv struct CellIndex {
 
 ///|
 fn CalcContext::new() -> CalcContext {
-  { visiting: {}, depth: 0, max_depth: 128 }
+  { visiting: {}, depth: 0, max_depth: 128, current_sheet: "", current_ref: "" }
 }
 
 ///|
@@ -375,7 +383,13 @@ fn FormulaParser::parse_primary(self : FormulaParser) -> Expr raise XlsxError {
     Some('"') => self.parse_string()
     Some('{') => self.parse_list()
     Some(ch) =>
-      if ch.is_ascii_digit() || ch == '.' {
+      if ch.is_ascii_digit() {
+        if self.is_row_range_start() {
+          self.parse_row_range()
+        } else {
+          self.parse_number()
+        }
+      } else if ch == '.' {
         self.parse_number()
       } else {
         self.parse_identifier_expr()
@@ -395,18 +409,16 @@ fn FormulaParser::parse_quoted_sheet_ref(
   }
   self.consume()
   let cell_token = self.parse_identifier_token()
+  if self.peek() == Some(':') {
+    self.consume()
+    let (start_ref, _start_end) = parse_range_ref_token(cell_token)
+    let end_token = self.parse_identifier_token()
+    let (_end_start, end_ref) = parse_range_ref_token(end_token)
+    return Expr::Range(sheet, start_ref, end_ref)
+  }
   let cell_ref = match parse_cell_ref_token(cell_token) {
     Some(value) => value
     None => raise XlsxError::InvalidCellRef(value=cell_token)
-  }
-  if self.peek() == Some(':') {
-    self.consume()
-    let end_token = self.parse_identifier_token()
-    let end_ref = match parse_cell_ref_token(end_token) {
-      Some(value) => value
-      None => raise XlsxError::InvalidCellRef(value=end_token)
-    }
-    return Expr::Range(sheet, cell_ref, end_ref)
   }
   Expr::Cell(sheet, cell_ref)
 }
@@ -526,18 +538,16 @@ fn FormulaParser::parse_identifier_expr(
   if self.peek() == Some('!') {
     self.consume()
     let cell_token = self.parse_identifier_token()
+    if self.peek() == Some(':') {
+      self.consume()
+      let (start_ref, _start_end) = parse_range_ref_token(cell_token)
+      let end_token = self.parse_identifier_token()
+      let (_end_start, end_ref) = parse_range_ref_token(end_token)
+      return Expr::Range(ident, start_ref, end_ref)
+    }
     let cell_ref = match parse_cell_ref_token(cell_token) {
       Some(value) => value
       None => raise XlsxError::InvalidCellRef(value=cell_token)
-    }
-    if self.peek() == Some(':') {
-      self.consume()
-      let end_token = self.parse_identifier_token()
-      let end_ref = match parse_cell_ref_token(end_token) {
-        Some(value) => value
-        None => raise XlsxError::InvalidCellRef(value=end_token)
-      }
-      return Expr::Range(ident, cell_ref, end_ref)
     }
     return Expr::Cell(ident, cell_ref)
   }
@@ -563,16 +573,21 @@ fn FormulaParser::parse_identifier_expr(
     }
     return Expr::FuncCall(upper, args)
   }
+  if self.peek() == Some(':') {
+    self.consume()
+    let (start_ref, _start_end) = parse_range_ref_token(ident)
+    let end_token = self.parse_identifier_token()
+    let (_end_start, end_ref) = parse_range_ref_token(end_token)
+    return Expr::Range("", start_ref, end_ref)
+  }
   match parse_cell_ref_token(ident) {
     Some(value) =>
       if self.peek() == Some(':') {
         self.consume()
+        let (start_ref, _start_end) = parse_range_ref_token(value)
         let end_token = self.parse_identifier_token()
-        let end_ref = match parse_cell_ref_token(end_token) {
-          Some(value) => value
-          None => raise XlsxError::InvalidCellRef(value=end_token)
-        }
-        Expr::Range("", value, end_ref)
+        let (_end_start, end_ref) = parse_range_ref_token(end_token)
+        Expr::Range("", start_ref, end_ref)
       } else {
         Expr::Cell("", value)
       }
@@ -605,6 +620,69 @@ fn FormulaParser::parse_identifier_token(self : FormulaParser) -> String {
 }
 
 ///|
+fn FormulaParser::parse_row_token(self : FormulaParser) -> String {
+  let sb = StringBuilder::new()
+  while self.pos < self.chars.length() {
+    let ch = self.chars[self.pos]
+    if ch.is_ascii_digit() {
+      sb.write_char(ch)
+      self.consume()
+    } else {
+      break
+    }
+  }
+  sb.to_string()
+}
+
+///|
+fn FormulaParser::is_row_range_start(self : FormulaParser) -> Bool {
+  let mut idx = self.pos
+  let mut saw_digit = false
+  while idx < self.chars.length() {
+    let ch = self.chars[idx]
+    if ch.is_ascii_digit() {
+      saw_digit = true
+      idx = idx + 1
+      continue
+    }
+    break
+  }
+  if !saw_digit {
+    return false
+  }
+  while idx < self.chars.length() {
+    let ch = self.chars[idx]
+    if ch.is_ascii_whitespace() {
+      idx = idx + 1
+      continue
+    }
+    return ch == ':'
+  }
+  false
+}
+
+///|
+fn FormulaParser::parse_row_range(self : FormulaParser) -> Expr raise XlsxError {
+  let start_token = self.parse_row_token()
+  if start_token == "" {
+    raise XlsxError::InvalidXml(msg="formula row range invalid")
+  }
+  self.skip_spaces()
+  if self.peek() != Some(':') {
+    raise XlsxError::InvalidXml(msg="formula row range invalid")
+  }
+  self.consume()
+  self.skip_spaces()
+  let end_token = self.parse_row_token()
+  if end_token == "" {
+    raise XlsxError::InvalidXml(msg="formula row range invalid")
+  }
+  let (start_ref, _start_end) = parse_range_ref_token(start_token)
+  let (_end_start, end_ref) = parse_range_ref_token(end_token)
+  Expr::Range("", start_ref, end_ref)
+}
+
+///|
 fn parse_cell_ref_token(token : StringView) -> String? {
   let col_sb = StringBuilder::new()
   let row_sb = StringBuilder::new()
@@ -628,6 +706,80 @@ fn parse_cell_ref_token(token : StringView) -> String? {
     return None
   }
   Some("\{col}\{row}")
+}
+
+///|
+fn parse_range_ref_token(
+  token : StringView,
+) -> (String, String) raise XlsxError {
+  match parse_cell_ref_token(token) {
+    Some(value) => return (value, value)
+    None => ()
+  }
+  let col_sb = StringBuilder::new()
+  let row_sb = StringBuilder::new()
+  for ch in token {
+    if ch == '$' {
+      continue
+    }
+    if ch.is_ascii_alphabetic() {
+      col_sb.write_char(ch.to_ascii_uppercase())
+    } else if ch.is_ascii_digit() {
+      row_sb.write_char(ch)
+    } else {
+      raise XlsxError::InvalidCellRef(value=token.to_string())
+    }
+  }
+  let col = col_sb.to_string()
+  let row = row_sb.to_string()
+  if col != "" && row == "" {
+    let col_index = column_name_to_number(col) catch {
+      _ => raise XlsxError::InvalidCellRef(value=token.to_string())
+    }
+    if col_index <= 0 || col_index > excel_max_cols {
+      raise XlsxError::InvalidCellRef(value=token.to_string())
+    }
+    let start_ref = cell_ref_from(1, col_index)
+    let end_ref = cell_ref_from(excel_max_rows, col_index)
+    return (start_ref, end_ref)
+  }
+  if row != "" && col == "" {
+    let row_index = @strconv.parse_int(row, base=10) catch {
+      _ => raise XlsxError::InvalidCellRef(value=token.to_string())
+    }
+    if row_index <= 0 || row_index > excel_max_rows {
+      raise XlsxError::InvalidCellRef(value=token.to_string())
+    }
+    let start_ref = cell_ref_from(row_index, 1)
+    let end_ref = cell_ref_from(row_index, excel_max_cols)
+    return (start_ref, end_ref)
+  }
+  raise XlsxError::InvalidCellRef(value=token.to_string())
+}
+
+///|
+fn ref_bounds_opt(expr : Expr) -> (Int, Int, Int, Int)? raise XlsxError {
+  match expr {
+    Expr::Cell(_, reference) => {
+      let (row, col) = cell_ref_to_rc(reference)
+      Some((row, col, row, col))
+    }
+    Expr::Range(_, start_ref, end_ref) => {
+      let (row1, col1) = cell_ref_to_rc(start_ref)
+      let (row2, col2) = cell_ref_to_rc(end_ref)
+      Some((row1, col1, row2, col2))
+    }
+    _ => None
+  }
+}
+
+///|
+fn current_cell_rc(ctx : CalcContext) -> (Int, Int)? raise XlsxError {
+  if ctx.current_ref == "" {
+    None
+  } else {
+    Some(cell_ref_to_rc(ctx.current_ref))
+  }
 }
 
 ///|
@@ -1839,6 +1991,70 @@ fn eval_function(
   args : ArrayView[Expr],
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
+  if name == "ROW" {
+    return if args.length() == 0 {
+      match current_cell_rc(ctx) {
+        Some((row, _col)) => FormulaValue::Number(Double::from_int(row))
+        None => FormulaValue::Error(formula_error_value)
+      }
+    } else if args.length() == 1 {
+      match ref_bounds_opt(args[0]) {
+        Some((row1, _col1, row2, _col2)) => {
+          let row = if row1 < row2 { row1 } else { row2 }
+          FormulaValue::Number(Double::from_int(row))
+        }
+        None => FormulaValue::Error(formula_error_value)
+      }
+    } else {
+      FormulaValue::Error(formula_error_value)
+    }
+  }
+  if name == "COLUMN" {
+    return if args.length() == 0 {
+      match current_cell_rc(ctx) {
+        Some((_row, col)) => FormulaValue::Number(Double::from_int(col))
+        None => FormulaValue::Error(formula_error_value)
+      }
+    } else if args.length() == 1 {
+      match ref_bounds_opt(args[0]) {
+        Some((_row1, col1, _row2, col2)) => {
+          let col = if col1 < col2 { col1 } else { col2 }
+          FormulaValue::Number(Double::from_int(col))
+        }
+        None => FormulaValue::Error(formula_error_value)
+      }
+    } else {
+      FormulaValue::Error(formula_error_value)
+    }
+  }
+  if name == "ROWS" {
+    return if args.length() == 1 {
+      match ref_bounds_opt(args[0]) {
+        Some((row1, _col1, row2, _col2)) => {
+          let min_row = if row1 < row2 { row1 } else { row2 }
+          let max_row = if row1 > row2 { row1 } else { row2 }
+          FormulaValue::Number(Double::from_int(max_row - min_row + 1))
+        }
+        None => FormulaValue::Error(formula_error_value)
+      }
+    } else {
+      FormulaValue::Error(formula_error_value)
+    }
+  }
+  if name == "COLUMNS" {
+    return if args.length() == 1 {
+      match ref_bounds_opt(args[0]) {
+        Some((_row1, col1, _row2, col2)) => {
+          let min_col = if col1 < col2 { col1 } else { col2 }
+          let max_col = if col1 > col2 { col1 } else { col2 }
+          FormulaValue::Number(Double::from_int(max_col - min_col + 1))
+        }
+        None => FormulaValue::Error(formula_error_value)
+      }
+    } else {
+      FormulaValue::Error(formula_error_value)
+    }
+  }
   let values : Array[FormulaValue] = []
   for arg in args {
     values.push(eval_expr(workbook, sheet_name, arg, ctx))
@@ -5658,7 +5874,14 @@ fn calc_cell_value_internal(
       match cell.formula {
         Some(formula) => {
           let expr = parse_formula_expr(formula)
-          return eval_expr(workbook, sheet_name, expr, ctx)
+          let prev_sheet = ctx.current_sheet
+          let prev_ref = ctx.current_ref
+          ctx.current_sheet = sheet_name
+          ctx.current_ref = reference
+          let result = eval_expr(workbook, sheet_name, expr, ctx)
+          ctx.current_sheet = prev_sheet
+          ctx.current_ref = prev_ref
+          return result
         }
         None => {
           let value = cell_value_from_raw(cell.value_type, cell.value)
