@@ -400,6 +400,28 @@ test "calc factorial and multinomial functions" {
 }
 
 ///|
+test "calc decimal function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "_xlfn.DECIMAL(\"1100\",2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="12")
+  sheet.set_cell_formula("A2", "_xlfn.DECIMAL(\"186A0\",16)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="100000")
+  sheet.set_cell_formula("A3", "_xlfn.DECIMAL(\"31L0\",32)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="100000")
+  sheet.set_cell_formula("A4", "_xlfn.DECIMAL(\"70122\",8)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="28754")
+  sheet.set_cell_formula("A5", "_xlfn.DECIMAL(\"0x70122\",8)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="28754")
+  sheet.set_cell_formula("A6", "_xlfn.DECIMAL()")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "_xlfn.DECIMAL(\"X\",2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#VALUE!")
+  sheet.set_cell_formula("A8", "_xlfn.DECIMAL(2000,\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#VALUE!")
+}
+
+///|
 test "calc permutation functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

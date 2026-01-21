@@ -809,6 +809,20 @@ fn parse_double_opt(text : StringView) -> Double? {
 }
 
 ///|
+fn strip_hex_prefix(text : String) -> String {
+  if text.length() > 2 && (text.has_prefix("0x") || text.has_prefix("0X")) {
+    let chars = text.to_array()
+    let sb = StringBuilder::new()
+    for i in 2..<chars.length() {
+      sb.write_char(chars[i])
+    }
+    sb.to_string()
+  } else {
+    text
+  }
+}
+
+///|
 fn value_as_bool(value : FormulaValue) -> Result[Bool, FormulaValue] {
   match normalize_scalar(value) {
     FormulaValue::Bool(flag) => Ok(flag)
@@ -1731,6 +1745,23 @@ fn eval_function(
         match value_as_number(values[0]) {
           Ok(num) => FormulaValue::Number(@math.exp(num))
           Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DECIMAL" | "_XLFN.DECIMAL" =>
+      if values.length() == 2 {
+        match (value_as_string(values[0]), value_as_number(values[1])) {
+          (Ok(text), Ok(radix)) => {
+            let base = Double::to_int(trunc_double(radix))
+            let text_value = strip_hex_prefix(text)
+            let parsed = @strconv.parse_int(text_value, base~) catch {
+              _ => return FormulaValue::Error(formula_error_value)
+            }
+            FormulaValue::Number(Double::from_int(parsed))
+          }
+          (Err(err), _) => err
+          (_, Err(err)) => err
         }
       } else {
         FormulaValue::Error(formula_error_value)
