@@ -2939,3 +2939,285 @@ test "calc quoted sheet refs" {
   main.set_cell_formula("A3", "'O''Brien'!B2")
   inspect(workbook.calc_cell_value("Main", "A3"), content="9")
 }
+
+///|
+fn split_complex_body_test(body : String) -> (String, String) {
+  let chars = body.to_array()
+  let mut split = -1
+  let mut idx = 1
+  while idx < chars.length() {
+    let ch = chars[idx]
+    if (ch == '+' || ch == '-') &&
+      chars[idx - 1] != 'e' &&
+      chars[idx - 1] != 'E' {
+      split = idx
+    }
+    idx = idx + 1
+  }
+  if split < 0 {
+    ("0", body)
+  } else {
+    let left = body.unsafe_substring(start=0, end=split)
+    let right = body.unsafe_substring(start=split, end=body.length())
+    (left, right)
+  }
+}
+
+///|
+fn parse_complex_value_test(text : String) -> (Double, Double) raise {
+  let trimmed = text.trim().to_string()
+  if trimmed == "" {
+    fail("complex parse empty")
+  }
+  let lower = trimmed.to_lower()
+  let mut normalized = lower.replace_all(old="j", new="i")
+  if normalized == "i" {
+    normalized = "1i"
+  }
+  normalized = normalized.replace_all(old="+i", new="+1i")
+  normalized = normalized.replace_all(old="-i", new="-1i")
+  if normalized.has_suffix("i") {
+    let body = normalized.unsafe_substring(start=0, end=normalized.length() - 1)
+    let (real_text, imag_text) = split_complex_body_test(body)
+    let real = @strconv.parse_double(real_text) catch {
+      _ => fail("complex real parse")
+    }
+    let imag = @strconv.parse_double(imag_text) catch {
+      _ => fail("complex imag parse")
+    }
+    (real, imag)
+  } else {
+    let real = @strconv.parse_double(normalized) catch {
+      _ => fail("complex real parse")
+    }
+    (real, 0.0)
+  }
+}
+
+///|
+fn assert_complex_result(actual : String, expected : String) -> Unit raise {
+  let actual_trim = actual.trim().to_string()
+  let expected_trim = expected.trim().to_string()
+  if expected_trim.has_suffix("j") {
+    guard actual_trim.has_suffix("j") else { fail("expected j suffix") }
+  } else if expected_trim.has_suffix("i") {
+    guard actual_trim.has_suffix("i") else { fail("expected i suffix") }
+  } else {
+    guard !actual_trim.has_suffix("i") && !actual_trim.has_suffix("j") else {
+      fail("unexpected complex suffix")
+    }
+  }
+  let (actual_real, actual_imag) = parse_complex_value_test(actual_trim)
+  let (expected_real, expected_imag) = parse_complex_value_test(expected_trim)
+  let tol = @math.pow(10.0, -12.0)
+  guard Double::abs(actual_real - expected_real) <= tol &&
+    Double::abs(actual_imag - expected_imag) <= tol else {
+    fail("complex value mismatch")
+  }
+}
+
+///|
+test "calc complex functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("C1", CellValue::Numeric(2.0))
+  let cases : Array[(String, String)] = [
+    ("COMPLEX(5,2)", "5+2i"),
+    ("COMPLEX(5,-9)", "5-9i"),
+    ("COMPLEX(-1,2,\"j\")", "-1+2j"),
+    ("COMPLEX(10,-5,\"i\")", "10-5i"),
+    ("COMPLEX(0,5)", "5i"),
+    ("COMPLEX(3,0)", "3"),
+    ("COMPLEX(0,-2)", "-2i"),
+    ("COMPLEX(0,0)", "0"),
+    ("COMPLEX(0,-1,\"j\")", "-j"),
+    ("IMABS(\"2j\")", "2"),
+    ("IMABS(\"-1+2i\")", "2.23606797749979"),
+    ("IMABS(COMPLEX(-1,2,\"j\"))", "2.23606797749979"),
+    ("IMAGINARY(\"5+2i\")", "2"),
+    ("IMAGINARY(\"2-i\")", "-1"),
+    ("IMAGINARY(6)", "0"),
+    ("IMAGINARY(\"3i\")", "3"),
+    ("IMAGINARY(\"4+i\")", "1"),
+    ("IMARGUMENT(\"5+2i\")", "0.380506377112365"),
+    ("IMARGUMENT(\"2-i\")", "-0.463647609000806"),
+    ("IMARGUMENT(6)", "0"),
+    ("IMCONJUGATE(\"5+2i\")", "5-2i"),
+    ("IMCONJUGATE(\"2-i\")", "2+i"),
+    ("IMCONJUGATE(6)", "6"),
+    ("IMCONJUGATE(\"3i\")", "-3i"),
+    ("IMCONJUGATE(\"4+i\")", "4-i"),
+    ("IMCOS(0)", "1"),
+    ("IMCOS(0.5)", "0.877582561890373"),
+    ("IMCOS(\"3+0.5i\")", "-1.11634124452615-0.0735369737112366i"),
+    ("IMCOSH(0.5)", "1.12762596520638"),
+    ("IMCOSH(\"3+0.5i\")", "8.83520460650099+4.80282508274303i"),
+    ("IMCOSH(\"2-i\")", "2.03272300701967-3.0518977991518i"),
+    ("IMCOSH(COMPLEX(1,-1))", "0.833730025131149-0.988897705762865i"),
+    ("IMCOT(0.5)", "1.83048772171245"),
+    ("IMCOT(\"3+0.5i\")", "-0.479345578747373-2.01609252150623i"),
+    ("IMCOT(\"2-i\")", "-0.171383612909185+0.821329797493852i"),
+    ("IMCOT(COMPLEX(1,-1))", "0.217621561854403+0.868014142895925i"),
+    ("IMCSC(\"j\")", "-0.850918128239322j"),
+    ("IMCSCH(COMPLEX(1,-1))", "0.303931001628426+0.621518017170428i"),
+    ("IMDIV(\"5+2i\",\"1+i\")", "3.5-1.5i"),
+    ("IMDIV(\"2+2i\",\"2+i\")", "1.2+0.4i"),
+    ("IMDIV(COMPLEX(5,2),COMPLEX(0,1))", "2-5i"),
+    ("IMEXP(0)", "1"),
+    ("IMEXP(0.5)", "1.64872127070013"),
+    ("IMEXP(\"1-2i\")", "-1.13120438375681-2.47172667200482i"),
+    ("IMEXP(COMPLEX(1,-1))", "1.46869393991589-2.28735528717884i"),
+    ("IMLN(0.5)", "-0.693147180559945"),
+    ("IMLN(\"3+0.5i\")", "1.11231177576217+0.165148677414627i"),
+    ("IMLN(\"2-i\")", "0.80471895621705-0.463647609000806i"),
+    ("IMLN(COMPLEX(1,-1))", "0.346573590279973-0.785398163397448i"),
+    ("IMLOG10(0.5)", "-0.301029995663981"),
+    ("IMLOG10(\"3+0.5i\")", "0.483070866369516+0.0717231592947926i"),
+    ("IMLOG10(\"2-i\")", "0.349485002168009-0.201359598136687i"),
+    ("IMLOG10(COMPLEX(1,-1))", "0.150514997831991-0.34109408846046i"),
+    ("IMREAL(\"5+2i\")", "5"),
+    ("IMREAL(\"2+2i\")", "2"),
+    ("IMREAL(6)", "6"),
+    ("IMREAL(\"3i\")", "0"),
+    ("IMREAL(COMPLEX(4,1))", "4"),
+    ("IMSEC(0.5)", "1.13949392732455"),
+    ("IMSEC(\"3+0.5i\")", "-0.89191317974033+0.0587531781817398i"),
+    ("IMSEC(\"2-i\")", "-0.41314934426694-0.687527438655479i"),
+    ("IMSEC(COMPLEX(1,-1))", "0.498337030555187-0.591083841721045i"),
+    ("IMSECH(0.5)", "0.886818883970074"),
+    ("IMSECH(\"3+0.5i\")", "0.0873665779621303-0.0474925494901607i"),
+    ("IMSECH(\"2-i\")", "0.151176298265577+0.226973675393722i"),
+    ("IMSECH(COMPLEX(1,-1))", "0.498337030555187+0.591083841721045i"),
+    ("IMSIN(0.5)", "0.479425538604203"),
+    ("IMSIN(\"3+0.5i\")", "0.15913058529844-0.515880442452527i"),
+    ("IMSIN(\"2-i\")", "1.40311925062204+0.489056259041294i"),
+    ("IMSIN(COMPLEX(1,-1))", "1.29845758141598-0.634963914784736i"),
+    ("IMSINH(-0)", "0"),
+    ("IMSINH(0.5)", "0.521095305493747"),
+    ("IMSINH(\"3+0.5i\")", "8.79151234349371+4.82669427481082i"),
+    ("IMSINH(\"2-i\")", "1.95960104142161-3.16577851321617i"),
+    ("IMSINH(COMPLEX(1,-1))", "0.634963914784736-1.29845758141598i"),
+    ("IMSQRT(\"i\")", "0.707106781186548+0.707106781186548i"),
+    ("IMSQRT(\"2-i\")", "1.45534669022535-0.343560749722512i"),
+    ("IMSQRT(\"5+2i\")", "2.27872385417085+0.438842116902254i"),
+    ("IMSQRT(6)", "2.44948974278318"),
+    ("IMSQRT(\"-2-4i\")", "1.11178594050284-1.79890743994787i"),
+    ("IMSUB(\"5+i\",\"1+4i\")", "4-3i"),
+    ("IMSUB(\"9+2i\",6)", "3+2i"),
+    ("IMSUB(COMPLEX(5,2),COMPLEX(0,1))", "5+i"),
+    ("IMSUM(\"1-i\",\"5+10i\",2)", "8+9i"),
+    ("IMSUM(COMPLEX(5,2),COMPLEX(0,1))", "5+3i"),
+    ("IMTAN(-0)", "0"),
+    ("IMTAN(0.5)", "0.54630248984379"),
+    ("IMTAN(\"3+0.5i\")", "-0.111621050771583+0.469469993425885i"),
+    ("IMTAN(\"2-i\")", "-0.243458201185725-1.16673625724092i"),
+    ("IMTAN(COMPLEX(1,-1))", "0.271752585319512-1.08392332733869i"),
+    ("IMLOG2(\"5+2i\")", "2.42899049756379+0.548954663286635i"),
+    ("IMLOG2(\"2-i\")", "1.16096404744368-0.668902106225488i"),
+    ("IMLOG2(6)", "2.58496250072116"),
+    ("IMLOG2(\"3i\")", "1.58496250072116+2.2661800709136i"),
+    ("IMLOG2(\"4+i\")", "2.04373142062517+0.353429502416735i"),
+    ("IMPOWER(\"2-i\",2)", "3-4i"),
+    ("IMPOWER(\"2-i\",3)", "2-11i"),
+    ("IMPOWER(9,0.5)", "3"),
+    ("IMPOWER(\"2+4i\",-2)", "-0.03-0.04i"),
+    ("IMPRODUCT(3,6)", "18"),
+    ("IMPRODUCT(\"\",3,SUM(6))", "18"),
+    ("IMPRODUCT(\"1-i\",\"5+10i\",2)", "30+10i"),
+    ("IMPRODUCT(COMPLEX(5,2),COMPLEX(0,1))", "-2+5i"),
+    ("IMPRODUCT(A1:C1)", "4"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "E\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    let actual = workbook.calc_cell_value("Sheet1", cell)
+    assert_complex_result(actual, expected)
+  }
+}
+
+///|
+test "calc complex errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("C1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("D1", CellValue::String("Month"))
+  let cases : Array[(String, String)] = [
+    ("COMPLEX()", "#VALUE!"),
+    ("COMPLEX(10,-5,\"\")", "#VALUE!"),
+    ("COMPLEX(\"\",0)", "#VALUE!"),
+    ("COMPLEX(0,\"\")", "#VALUE!"),
+    ("COMPLEX(10,-5,\"i\",0)", "#VALUE!"),
+    ("IMABS()", "#VALUE!"),
+    ("IMABS(\"\")", "#NUM!"),
+    ("IMAGINARY()", "#VALUE!"),
+    ("IMAGINARY(\"\")", "#NUM!"),
+    ("IMARGUMENT()", "#VALUE!"),
+    ("IMARGUMENT(\"\")", "#NUM!"),
+    ("IMCONJUGATE()", "#VALUE!"),
+    ("IMCONJUGATE(\"\")", "#NUM!"),
+    ("IMCOS()", "#VALUE!"),
+    ("IMCOS(\"\")", "#NUM!"),
+    ("IMCOSH()", "#VALUE!"),
+    ("IMCOSH(\"\")", "#NUM!"),
+    ("IMCOT()", "#VALUE!"),
+    ("IMCOT(\"\")", "#NUM!"),
+    ("IMCSC()", "#VALUE!"),
+    ("IMCSC(\"\")", "#NUM!"),
+    ("IMCSC(0)", "#NUM!"),
+    ("IMCSCH()", "#VALUE!"),
+    ("IMCSCH(\"\")", "#NUM!"),
+    ("IMCSCH(0)", "#NUM!"),
+    ("IMDIV()", "#VALUE!"),
+    ("IMDIV(0,\"\")", "#NUM!"),
+    ("IMDIV(\"\",0)", "#NUM!"),
+    ("IMDIV(1,0)", "#NUM!"),
+    ("IMEXP()", "#VALUE!"),
+    ("IMEXP(\"\")", "#NUM!"),
+    ("IMLN()", "#VALUE!"),
+    ("IMLN(\"\")", "#NUM!"),
+    ("IMLN(0)", "#NUM!"),
+    ("IMLOG10()", "#VALUE!"),
+    ("IMLOG10(\"\")", "#NUM!"),
+    ("IMLOG10(0)", "#NUM!"),
+    ("IMLOG2()", "#VALUE!"),
+    ("IMLOG2(\"\")", "#NUM!"),
+    ("IMLOG2(0)", "#NUM!"),
+    ("IMPOWER()", "#VALUE!"),
+    ("IMPOWER(0,\"\")", "#NUM!"),
+    ("IMPOWER(\"\",0)", "#NUM!"),
+    ("IMPOWER(0,0)", "#NUM!"),
+    ("IMPOWER(0,-1)", "#NUM!"),
+    ("IMPRODUCT(\"x\")", "#NUM!"),
+    ("IMPRODUCT(A1:D1)", "#NUM!"),
+    ("IMREAL()", "#VALUE!"),
+    ("IMREAL(\"\")", "#NUM!"),
+    ("IMSEC()", "#VALUE!"),
+    ("IMSEC(\"\")", "#NUM!"),
+    ("IMSECH()", "#VALUE!"),
+    ("IMSECH(\"\")", "#NUM!"),
+    ("IMSIN()", "#VALUE!"),
+    ("IMSIN(\"\")", "#NUM!"),
+    ("IMSINH()", "#VALUE!"),
+    ("IMSINH(\"\")", "#NUM!"),
+    ("IMSQRT()", "#VALUE!"),
+    ("IMSQRT(\"\")", "#NUM!"),
+    ("IMSUB()", "#VALUE!"),
+    ("IMSUB(0,\"\")", "#NUM!"),
+    ("IMSUB(\"\",0)", "#NUM!"),
+    ("IMSUM()", "#VALUE!"),
+    ("IMSUM(\"\")", "#NUM!"),
+    ("IMTAN()", "#VALUE!"),
+    ("IMTAN(\"\")", "#NUM!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "E\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}

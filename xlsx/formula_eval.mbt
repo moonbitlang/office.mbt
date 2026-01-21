@@ -2112,6 +2112,254 @@ fn parse_value_number(text : String) -> Double? {
 }
 
 ///|
+priv struct Complex {
+  real : Double
+  imag : Double
+}
+
+///|
+fn complex_new(real : Double, imag : Double) -> Complex {
+  { real, imag }
+}
+
+///|
+fn complex_add(left : Complex, right : Complex) -> Complex {
+  { real: left.real + right.real, imag: left.imag + right.imag }
+}
+
+///|
+fn complex_sub(left : Complex, right : Complex) -> Complex {
+  { real: left.real - right.real, imag: left.imag - right.imag }
+}
+
+///|
+fn complex_mul(left : Complex, right : Complex) -> Complex {
+  {
+    real: left.real * right.real - left.imag * right.imag,
+    imag: left.real * right.imag + left.imag * right.real,
+  }
+}
+
+///|
+fn complex_div(left : Complex, right : Complex) -> Complex {
+  let denom = right.real * right.real + right.imag * right.imag
+  {
+    real: (left.real * right.real + left.imag * right.imag) / denom,
+    imag: (left.imag * right.real - left.real * right.imag) / denom,
+  }
+}
+
+///|
+fn complex_scale(value : Complex, factor : Double) -> Complex {
+  { real: value.real * factor, imag: value.imag * factor }
+}
+
+///|
+fn complex_abs(value : Complex) -> Double {
+  Double::sqrt(value.real * value.real + value.imag * value.imag)
+}
+
+///|
+fn complex_arg(value : Complex) -> Double {
+  @math.atan2(value.imag, value.real)
+}
+
+///|
+fn complex_conj(value : Complex) -> Complex {
+  { real: value.real, imag: -value.imag }
+}
+
+///|
+fn complex_exp(value : Complex) -> Complex {
+  let scale = @math.exp(value.real)
+  { real: scale * @math.cos(value.imag), imag: scale * @math.sin(value.imag) }
+}
+
+///|
+fn complex_log(value : Complex) -> Complex {
+  { real: @math.ln(complex_abs(value)), imag: complex_arg(value) }
+}
+
+///|
+fn complex_pow(base : Complex, exponent : Complex) -> Complex {
+  complex_exp(complex_mul(exponent, complex_log(base)))
+}
+
+///|
+fn complex_sqrt(value : Complex) -> Complex {
+  let r = complex_abs(value)
+  let real = Double::sqrt((r + value.real) / 2.0)
+  let sign = if value.imag < 0.0 { -1.0 } else { 1.0 }
+  let imag = sign * Double::sqrt((r - value.real) / 2.0)
+  { real, imag }
+}
+
+///|
+fn complex_sin(value : Complex) -> Complex {
+  {
+    real: @math.sin(value.real) * @math.cosh(value.imag),
+    imag: @math.cos(value.real) * @math.sinh(value.imag),
+  }
+}
+
+///|
+fn complex_cos(value : Complex) -> Complex {
+  {
+    real: @math.cos(value.real) * @math.cosh(value.imag),
+    imag: -@math.sin(value.real) * @math.sinh(value.imag),
+  }
+}
+
+///|
+fn complex_tan(value : Complex) -> Complex {
+  complex_div(complex_sin(value), complex_cos(value))
+}
+
+///|
+fn complex_sinh(value : Complex) -> Complex {
+  {
+    real: @math.sinh(value.real) * @math.cos(value.imag),
+    imag: @math.cosh(value.real) * @math.sin(value.imag),
+  }
+}
+
+///|
+fn complex_cosh(value : Complex) -> Complex {
+  {
+    real: @math.cosh(value.real) * @math.cos(value.imag),
+    imag: @math.sinh(value.real) * @math.sin(value.imag),
+  }
+}
+
+///|
+fn complex_is_invalid(value : Complex) -> Bool {
+  Double::is_nan(value.real) ||
+  Double::is_nan(value.imag) ||
+  Double::is_inf(value.real) ||
+  Double::is_inf(value.imag)
+}
+
+///|
+fn complex_suffix_from_text(text : String) -> String {
+  let trimmed = text.trim().to_string()
+  if trimmed == "" {
+    return "i"
+  }
+  let chars = trimmed.to_array()
+  let last = chars[chars.length() - 1]
+  let sb = StringBuilder::new()
+  sb.write_char(last)
+  sb.to_string()
+}
+
+///|
+fn normalize_complex_text(text : StringView) -> String {
+  let trimmed = text.trim().to_string()
+  if trimmed == "" {
+    return ""
+  }
+  let lower = trimmed.to_lower()
+  let mut normalized = lower.replace_all(old="j", new="i")
+  if normalized == "i" {
+    normalized = "1i"
+  }
+  normalized = normalized.replace_all(old="+i", new="+1i")
+  normalized = normalized.replace_all(old="-i", new="-1i")
+  normalized
+}
+
+///|
+fn split_complex_body(body : String) -> (String, String) {
+  let chars = body.to_array()
+  let mut split = -1
+  let mut idx = 1
+  while idx < chars.length() {
+    let ch = chars[idx]
+    if (ch == '+' || ch == '-') &&
+      chars[idx - 1] != 'e' &&
+      chars[idx - 1] != 'E' {
+      split = idx
+    }
+    idx = idx + 1
+  }
+  if split < 0 {
+    ("0", body)
+  } else {
+    let left = body.unsafe_substring(start=0, end=split)
+    let right = body.unsafe_substring(start=split, end=body.length())
+    (left, right)
+  }
+}
+
+///|
+fn parse_complex_text(text : StringView) -> Result[Complex, FormulaValue] {
+  let normalized = normalize_complex_text(text)
+  if normalized == "" {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  if normalized.has_suffix("i") {
+    let body = normalized.unsafe_substring(start=0, end=normalized.length() - 1)
+    let (real_text, imag_text) = split_complex_body(body)
+    match (parse_double_opt(real_text), parse_double_opt(imag_text)) {
+      (Some(real), Some(imag)) => Ok(complex_new(real, imag))
+      _ => Err(FormulaValue::Error(formula_error_num))
+    }
+  } else {
+    match parse_double_opt(normalized) {
+      Some(real) => Ok(complex_new(real, 0.0))
+      None => Err(FormulaValue::Error(formula_error_num))
+    }
+  }
+}
+
+///|
+fn parse_complex_value(value : FormulaValue) -> Result[Complex, FormulaValue] {
+  match value_as_string(value) {
+    Ok(text) => parse_complex_text(text)
+    Err(err) => Err(err)
+  }
+}
+
+///|
+fn parse_complex_value_with_suffix(
+  value : FormulaValue,
+) -> Result[(Complex, String), FormulaValue] {
+  match value_as_string(value) {
+    Ok(text) => {
+      let suffix = complex_suffix_from_text(text)
+      match parse_complex_text(text) {
+        Ok(num) => Ok((num, suffix))
+        Err(err) => Err(err)
+      }
+    }
+    Err(err) => Err(err)
+  }
+}
+
+///|
+fn complex_to_string(value : Complex, suffix : String) -> String {
+  let real_raw = round_significant_digits(value.real, 15)
+  let imag_raw = round_significant_digits(value.imag, 15)
+  let real = if real_raw == 0.0 { 0.0 } else { real_raw }
+  let imag = if imag_raw == 0.0 { 0.0 } else { imag_raw }
+  let real_text = format_number(real)
+  if imag == 0.0 {
+    return real_text
+  }
+  let abs_imag = if imag < 0.0 { -imag } else { imag }
+  let imag_text = format_number(abs_imag)
+  let imag_part = if imag_text == "1" { suffix } else { imag_text + suffix }
+  if real == 0.0 {
+    if imag < 0.0 {
+      return "-" + imag_part
+    }
+    return imag_part
+  }
+  let join = if imag < 0.0 { "-" } else { "+" }
+  real_text + join + imag_part
+}
+
+///|
 fn parse_date_parts(text : String) -> (Int, Int, Int)? {
   let trimmed = text.trim().to_string()
   if trimmed == "" {
@@ -3151,6 +3399,17 @@ fn round_half_away_from_zero(value : Double) -> Double {
 }
 
 ///|
+fn round_significant_digits(value : Double, digits : Int) -> Double {
+  if value == 0.0 {
+    return 0.0
+  }
+  let abs_value = Double::abs(value)
+  let exponent = Double::floor(@math.log10(abs_value))
+  let scale = @math.pow(10.0, Double::from_int(digits - 1) - exponent)
+  round_half_away_from_zero(value * scale) / scale
+}
+
+///|
 fn number_or_num_error(value : Double) -> FormulaValue {
   if Double::is_nan(value) || Double::is_inf(value) {
     FormulaValue::Error(formula_error_num)
@@ -4003,6 +4262,35 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "COMPLEX" =>
+      if values.length() < 2 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 3 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(real), Ok(imag)) => {
+            let mut suffix = "i"
+            if values.length() == 3 {
+              match value_as_string(values[2]) {
+                Ok(text) => {
+                  let lower = text.to_lower()
+                  if lower != "i" && lower != "j" {
+                    return FormulaValue::Error(formula_error_value)
+                  }
+                  suffix = lower
+                }
+                Err(err) => return err
+              }
+            }
+            FormulaValue::String(
+              complex_to_string(complex_new(real, imag), suffix),
+            )
+          }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      }
     "FACT" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -4807,6 +5095,347 @@ fn eval_function(
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) => FormulaValue::Number(@math.log10(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMABS" =>
+      if values.length() == 1 {
+        match parse_complex_value(values[0]) {
+          Ok(num) =>
+            number_or_num_error(round_significant_digits(complex_abs(num), 15))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMAGINARY" =>
+      if values.length() == 1 {
+        match parse_complex_value(values[0]) {
+          Ok(num) => number_or_num_error(round_significant_digits(num.imag, 15))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMARGUMENT" =>
+      if values.length() == 1 {
+        match parse_complex_value(values[0]) {
+          Ok(num) =>
+            number_or_num_error(round_significant_digits(complex_arg(num), 15))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMCONJUGATE" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_conj(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMCOS" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_cos(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMCOSH" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_cosh(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMCOT" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(
+              complex_to_string(
+                complex_div(complex_cos(num), complex_sin(num)),
+                suffix,
+              ),
+            )
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMCSC" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
+            if complex_is_invalid(result) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::String(complex_to_string(result, suffix))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMCSCH" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
+            if complex_is_invalid(result) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::String(complex_to_string(result, suffix))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMDIV" =>
+      if values.length() == 2 {
+        match
+          (
+            parse_complex_value_with_suffix(values[0]),
+            parse_complex_value(values[1]),
+          ) {
+          (Ok((left, suffix)), Ok(right)) => {
+            let result = complex_div(left, right)
+            if complex_is_invalid(result) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::String(complex_to_string(result, suffix))
+            }
+          }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMEXP" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_exp(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMLN" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_log(num)
+            if complex_is_invalid(result) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::String(complex_to_string(result, suffix))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMLOG10" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
+            if complex_is_invalid(result) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::String(complex_to_string(result, suffix))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMLOG2" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
+            if complex_is_invalid(result) {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::String(complex_to_string(result, suffix))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMPOWER" =>
+      if values.length() == 2 {
+        match
+          (
+            parse_complex_value_with_suffix(values[0]),
+            parse_complex_value(values[1]),
+          ) {
+          (Ok((base, suffix)), Ok(exponent)) =>
+            if base.real == 0.0 &&
+              base.imag == 0.0 &&
+              exponent.real == 0.0 &&
+              exponent.imag == 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              let result = complex_pow(base, exponent)
+              if complex_is_invalid(result) {
+                FormulaValue::Error(formula_error_num)
+              } else {
+                FormulaValue::String(complex_to_string(result, suffix))
+              }
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMPRODUCT" => {
+      let mut product = complex_new(1.0, 0.0)
+      for value in flatten_values(values) {
+        match value {
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          FormulaValue::Empty => ()
+          FormulaValue::Number(num) =>
+            product = complex_mul(product, complex_new(num, 0.0))
+          FormulaValue::Bool(flag) => {
+            let num = if flag { 1.0 } else { 0.0 }
+            product = complex_mul(product, complex_new(num, 0.0))
+          }
+          FormulaValue::String(text) =>
+            if text == "" {
+              ()
+            } else {
+              match parse_complex_text(text) {
+                Ok(num) => product = complex_mul(product, num)
+                Err(err) => return err
+              }
+            }
+          FormulaValue::List(_) => ()
+        }
+      }
+      FormulaValue::String(complex_to_string(product, "i"))
+    }
+    "IMREAL" =>
+      if values.length() == 1 {
+        match parse_complex_value(values[0]) {
+          Ok(num) => FormulaValue::String(format_number(num.real))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSEC" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
+            FormulaValue::String(complex_to_string(result, suffix))
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSECH" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) => {
+            let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
+            FormulaValue::String(complex_to_string(result, suffix))
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSIN" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_sin(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSINH" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_sinh(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSQRT" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_sqrt(num), suffix))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSUB" =>
+      if values.length() == 2 {
+        match (parse_complex_value(values[0]), parse_complex_value(values[1])) {
+          (Ok(left), Ok(right)) =>
+            FormulaValue::String(
+              complex_to_string(complex_sub(left, right), "i"),
+            )
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMSUM" =>
+      if values.length() >= 1 {
+        let mut result = complex_new(0.0, 0.0)
+        for value in flatten_values(values) {
+          match value {
+            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            _ =>
+              match parse_complex_value(value) {
+                Ok(num) => result = complex_add(result, num)
+                Err(err) => return err
+              }
+          }
+        }
+        FormulaValue::String(complex_to_string(result, "i"))
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "IMTAN" =>
+      if values.length() == 1 {
+        match parse_complex_value_with_suffix(values[0]) {
+          Ok((num, suffix)) =>
+            FormulaValue::String(complex_to_string(complex_tan(num), suffix))
           Err(err) => err
         }
       } else {
