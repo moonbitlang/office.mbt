@@ -2254,6 +2254,18 @@ test "calc date and time functions" {
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1:00:00")
   sheet.set_cell_formula("C3", "TIME(-1,0,0)")
   inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#NUM!")
+  sheet.set_cell_formula("C4", "TEXT(DATEVALUE(\"2020-01-02\"),\"m/d/yy\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="1/2/20")
+  sheet.set_cell_formula("C5", "TEXT(DATEVALUE(\"1/2/20\"),\"m/d/yy\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C5"), content="1/2/20")
+  sheet.set_cell_formula("C6", "DATEVALUE(\"bad\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C6"), content="#VALUE!")
+  sheet.set_cell_formula("D1", "TEXT(TIMEVALUE(\"1:02:03\"),\"h:mm:ss\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1:02:03")
+  sheet.set_cell_formula("D2", "TEXT(TIMEVALUE(\"1:02:03 PM\"),\"h:mm:ss\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="13:02:03")
+  sheet.set_cell_formula("D3", "TIMEVALUE(\"bad\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="#VALUE!")
 }
 
 ///|

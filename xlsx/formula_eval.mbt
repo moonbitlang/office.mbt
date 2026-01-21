@@ -1345,6 +1345,125 @@ fn parse_value_number(text : String) -> Double? {
 }
 
 ///|
+fn parse_date_parts(text : String) -> (Int, Int, Int)? {
+  let trimmed = text.trim().to_string()
+  if trimmed == "" {
+    return None
+  }
+  let parts : Array[String] = []
+  let mut current = StringBuilder::new()
+  for ch in trimmed {
+    if ch.is_ascii_digit() {
+      current.write_char(ch)
+    } else if ch == '/' || ch == '-' {
+      let part = current.to_string()
+      if part == "" {
+        return None
+      }
+      parts.push(part)
+      current = StringBuilder::new()
+    } else if ch.is_ascii_whitespace() {
+      continue
+    } else {
+      return None
+    }
+  }
+  let last = current.to_string()
+  if last == "" {
+    return None
+  }
+  parts.push(last)
+  if parts.length() != 3 {
+    return None
+  }
+  let p0 = @strconv.parse_int(parts[0], base=10) catch { _ => return None }
+  let p1 = @strconv.parse_int(parts[1], base=10) catch { _ => return None }
+  let p2 = @strconv.parse_int(parts[2], base=10) catch { _ => return None }
+  let year = if parts[0].length() == 4 {
+    p0
+  } else if parts[2].length() == 4 {
+    p2
+  } else if p2 <= 29 {
+    2000 + p2
+  } else {
+    1900 + p2
+  }
+  let month = if parts[0].length() == 4 { p1 } else { p0 }
+  let day = if parts[0].length() == 4 { p2 } else { p1 }
+  Some((year, month, day))
+}
+
+///|
+fn parse_time_parts(text : String) -> (Int, Int, Int)? {
+  let trimmed = text.trim().to_upper()
+  if trimmed == "" {
+    return None
+  }
+  let mut is_pm = false
+  let mut is_am = false
+  let mut core = trimmed
+  if core.has_suffix("AM") {
+    is_am = true
+    core = (core[:core.length() - 2] catch { _ => core }).trim().to_string()
+  } else if core.has_suffix("PM") {
+    is_pm = true
+    core = (core[:core.length() - 2] catch { _ => core }).trim().to_string()
+  }
+  let parts : Array[String] = []
+  let mut current = StringBuilder::new()
+  for ch in core {
+    if ch.is_ascii_digit() {
+      current.write_char(ch)
+    } else if ch == ':' {
+      let part = current.to_string()
+      if part == "" {
+        return None
+      }
+      parts.push(part)
+      current = StringBuilder::new()
+    } else if ch.is_ascii_whitespace() {
+      continue
+    } else {
+      return None
+    }
+  }
+  let last = current.to_string()
+  if last == "" {
+    return None
+  }
+  parts.push(last)
+  if parts.length() == 0 || parts.length() > 3 {
+    return None
+  }
+  let hour = @strconv.parse_int(parts[0], base=10) catch { _ => return None }
+  let minute = if parts.length() >= 2 {
+    @strconv.parse_int(parts[1], base=10) catch {
+      _ => return None
+    }
+  } else {
+    0
+  }
+  let second = if parts.length() == 3 {
+    @strconv.parse_int(parts[2], base=10) catch {
+      _ => return None
+    }
+  } else {
+    0
+  }
+  let mut hours = hour
+  if is_am {
+    if hours == 12 {
+      hours = 0
+    }
+  } else if is_pm {
+    if hours < 12 {
+      hours = hours + 12
+    }
+  }
+  Some((hours, minute, second))
+}
+
+///|
 fn strip_hex_prefix(text : String) -> String {
   if text.length() > 2 && (text.has_prefix("0x") || text.has_prefix("0X")) {
     let chars = text.to_array()
@@ -4283,6 +4402,40 @@ fn eval_function(
           (Err(err), _, _) => err
           (_, Err(err), _) => err
           (_, _, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DATEVALUE" =>
+      if values.length() == 1 {
+        let text = match value_as_string(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        match parse_date_parts(text) {
+          Some((year, month, day)) =>
+            match excel_serial_from_date(year, month, day) {
+              Some(serial) => FormulaValue::Number(serial)
+              None => FormulaValue::Error(formula_error_value)
+            }
+          None => FormulaValue::Error(formula_error_value)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TIMEVALUE" =>
+      if values.length() == 1 {
+        let text = match value_as_string(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        match parse_time_parts(text) {
+          Some((hours, minutes, seconds)) =>
+            match excel_time_fraction(hours, minutes, seconds) {
+              Some(value) => FormulaValue::Number(value)
+              None => FormulaValue::Error(formula_error_value)
+            }
+          None => FormulaValue::Error(formula_error_value)
         }
       } else {
         FormulaValue::Error(formula_error_value)
