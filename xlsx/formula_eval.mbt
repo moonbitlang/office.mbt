@@ -4058,6 +4058,11 @@ fn get_log_gamma(fz : Double) -> Double {
 }
 
 ///|
+fn get_gamma(fz : Double) -> Double {
+  @math.exp(get_log_gamma(fz))
+}
+
+///|
 fn get_low_reg_igamma(fa : Double, fx : Double) -> Double {
   let ln_factor = fa * @math.ln(fx) - fx - get_log_gamma(fa)
   let factor = @math.exp(ln_factor)
@@ -4154,6 +4159,27 @@ fn get_chidist(x : Double, degrees : Double) -> Double {
     return c * y + s
   }
   s
+}
+
+///|
+fn get_f_dist_cdf(x : Double, deg1 : Double, deg2 : Double) -> Double {
+  1.0 - get_beta_dist(deg2 / (deg2 + deg1 * x), deg2 / 2.0, deg1 / 2.0)
+}
+
+///|
+fn get_f_dist_pdf(x : Double, deg1 : Double, deg2 : Double) -> Double {
+  let half_sum = (deg1 + deg2) / 2.0
+  let gamma_num = get_gamma(half_sum)
+  let gamma_den = get_gamma(deg1 / 2.0) * get_gamma(deg2 / 2.0)
+  let scale = @math.pow(deg1 / deg2, deg1 / 2.0)
+  let numerator = @math.pow(x, (deg1 - 2.0) / 2.0)
+  let denominator = @math.pow(1.0 + deg1 / deg2 * x, half_sum)
+  gamma_num / gamma_den * scale * (numerator / denominator)
+}
+
+///|
+fn get_f_dist_rt(x : Double, deg1 : Double, deg2 : Double) -> Double {
+  1.0 - get_beta_dist(deg1 * x / (deg1 * x + deg2), deg1 / 2.0, deg2 / 2.0)
 }
 
 ///|
@@ -5825,6 +5851,15 @@ fn eval_function(
     "CHITEST" => chitest_values(workbook, sheet_name, args, values, ctx)
     "CHISQdotTEST" | "CHISQ.TEST" | "_XLFN.CHISQ.TEST" =>
       chitest_values(workbook, sheet_name, args, values, ctx)
+    "FdotDIST" | "F.DIST" | "_XLFN.F.DIST" => fdist_values(values)
+    "FDIST" => fdist_rt_values(values)
+    "FdotDISTdotRT" | "F.DIST.RT" | "_XLFN.F.DIST.RT" => fdist_rt_values(values)
+    "FdotINV" | "F.INV" | "_XLFN.F.INV" => finv_values(values)
+    "FdotINVdotRT" | "F.INV.RT" | "_XLFN.F.INV.RT" => finv_rt_values(values)
+    "FINV" => finv_rt_values(values)
+    "FTEST" => ftest_values(workbook, sheet_name, args, values, ctx)
+    "FdotTEST" | "F.TEST" | "_XLFN.F.TEST" =>
+      ftest_values(workbook, sheet_name, args, values, ctx)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
     "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
     "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
@@ -10311,6 +10346,29 @@ fn betadist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn get_beta_inv(probability : Double, alpha : Double, beta : Double) -> Double {
+  if probability <= 0.0 {
+    return 0.0
+  }
+  if probability >= 1.0 {
+    return 1.0
+  }
+  let mut low = 0.0
+  let mut high = 1.0
+  let mut mid = 0.5
+  for _ in 0..<200 {
+    mid = (low + high) * 0.5
+    let cdf = get_beta_dist(mid, alpha, beta)
+    if cdf > probability {
+      high = mid
+    } else {
+      low = mid
+    }
+  }
+  mid
+}
+
+///|
 fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 || values.length() > 5 {
     return FormulaValue::Error(formula_error_value)
@@ -10350,18 +10408,7 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if a == b {
     return FormulaValue::Error(formula_error_num)
   }
-  let mut low = 0.0
-  let mut high = 1.0
-  let mut mid = 0.5
-  for _ in 0..<200 {
-    mid = (low + high) * 0.5
-    let cdf = get_beta_dist(mid, alpha, beta)
-    if cdf > probability {
-      high = mid
-    } else {
-      low = mid
-    }
-  }
+  let mid = get_beta_inv(probability, alpha, beta)
   let scaled = a + mid * (b - a)
   number_or_num_error(round_significant_digits(scaled, 15))
 }
@@ -10707,6 +10754,209 @@ fn chitest_values(
   }
   let value = round_chisq_result(get_chidist(result, Double::from_int(degrees)))
   number_or_num_error(value)
+}
+
+///|
+fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg1 = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg2 = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if x < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let max_deg = @math.pow(10.0, 10.0)
+  if deg1 < 1.0 || deg1 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if deg2 < 1.0 || deg2 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = if cumulative {
+    get_f_dist_cdf(x, deg1, deg2)
+  } else {
+    get_f_dist_pdf(x, deg1, deg2)
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg1 = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg2 = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if x < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let max_deg = @math.pow(10.0, 10.0)
+  if deg1 < 1.0 || deg1 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if deg2 < 1.0 || deg2 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = get_f_dist_rt(x, deg1, deg2)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg1 = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg2 = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let max_deg = @math.pow(10.0, 10.0)
+  if deg1 < 1.0 || deg1 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if deg2 < 1.0 || deg2 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let beta_inv = get_beta_inv(1.0 - probability, deg2 / 2.0, deg1 / 2.0)
+  let result = (1.0 / beta_inv - 1.0) * (deg2 / deg1)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn finv_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg1 = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let deg2 = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability > 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let max_deg = @math.pow(10.0, 10.0)
+  if deg1 < 1.0 || deg1 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if deg2 < 1.0 || deg2 >= max_deg {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let beta_inv = get_beta_inv(probability, deg2 / 2.0, deg1 / 2.0)
+  let result = (1.0 / beta_inv - 1.0) * (deg2 / deg1)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn ftest_collect(values : Array[FormulaValue]) -> (Double, Double) {
+  let mut n = 0.0
+  let mut mean = 0.0
+  let mut accu = 0.0
+  for value in values {
+    match value_as_number_opt(value) {
+      Some(num) => {
+        let x = num - mean
+        let y = x / (n + 1.0)
+        mean = mean + y
+        accu = accu + n * x * y
+        n = n + 1.0
+      }
+      None => ()
+    }
+  }
+  (n, accu)
+}
+
+///|
+fn ftest_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let left_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let right_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[1],
+    values[1],
+    ctx,
+  )
+  let (n1, accu1) = ftest_collect(left_range.values)
+  if n1 <= 1.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let f1 = accu1 / (n1 - 1.0)
+  if f1 == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let (n2, accu2) = ftest_collect(right_range.values)
+  if n2 <= 1.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let f2 = accu2 / (n2 - 1.0)
+  if f2 == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let fd = get_f_dist_rt(f1 / f2, n1 - 1.0, n2 - 1.0)
+  let mut probability = (1.0 - fd) * 2.0
+  if probability > 1.0 {
+    probability = 2.0 - probability
+  }
+  number_or_num_error(round_significant_digits(probability, 15))
 }
 
 ///|
