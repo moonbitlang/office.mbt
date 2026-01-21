@@ -3745,6 +3745,334 @@ fn weibull_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn get_beta_helper_cont_frac(fx : Double, fa : Double, fb : Double) -> Double {
+  let mut a1 = 1.0
+  let mut b1 = 1.0
+  let mut b2 = 1.0 - (fa + fb) / (fa + 1.0) * fx
+  let mut a2 = 0.0
+  let mut fnorm = 1.0
+  let mut cf = 1.0
+  if b2 == 0.0 {
+    a2 = 0.0
+    fnorm = 1.0
+    cf = 1.0
+  } else {
+    a2 = 1.0
+    fnorm = 1.0 / b2
+    cf = a2 * fnorm
+  }
+  let mut cfnew = 1.0
+  let mut rm = 1.0
+  let max_iter = 50000.0
+  let mach_eps = 2.22045e-016
+  let mut finished = false
+  while rm < max_iter && !finished {
+    let apl2m = fa + 2.0 * rm
+    let d2m = rm * (fb - rm) * fx / ((apl2m - 1.0) * apl2m)
+    let d2m1 = -(fa + rm) * (fa + fb + rm) * fx / (apl2m * (apl2m + 1.0))
+    a1 = (a2 + d2m * a1) * fnorm
+    b1 = (b2 + d2m * b1) * fnorm
+    a2 = a1 + d2m1 * a2 * fnorm
+    b2 = b1 + d2m1 * b2 * fnorm
+    if b2 != 0.0 {
+      fnorm = 1.0 / b2
+      cfnew = a2 * fnorm
+      finished = Double::abs(cf - cfnew) < Double::abs(cf) * mach_eps
+    }
+    cf = cfnew
+    rm = rm + 1.0
+  }
+  cf
+}
+
+///|
+fn get_lanczos_sum(fz : Double) -> Double {
+  let num : Array[Double] = [
+    23531376880.41075968857200767445163675473, 42919803642.64909876895789904700198885093,
+    35711959237.35566804944018545154716670596, 17921034426.03720969991975575445893111267,
+    6039542586.35202800506429164430729792107, 1439720407.311721673663223072794912393972,
+    248874557.8620541565114603864132294232163, 31426415.58540019438061423162831820536287,
+    2876370.628935372441225409051620849613599, 186056.2653952234950402949897160456992822,
+    8071.672002365816210638002902272250613822, 210.8242777515793458725097339207133627117,
+    2.506628274631000270164908177133837338626,
+  ]
+  let denom : Array[Double] = [
+    0.0, 39916800.0, 120543840.0, 150917976.0, 105258076.0, 45995730.0, 13339535.0,
+    2637558.0, 357423.0, 32670.0, 1925.0, 66.0, 1.0,
+  ]
+  let mut sum_num = 0.0
+  let mut sum_denom = 0.0
+  if fz <= 1.0 {
+    sum_num = num[12]
+    sum_denom = denom[12]
+    for i in 0..<12 {
+      let idx = 11 - i
+      sum_num = sum_num * fz + num[idx]
+      sum_denom = sum_denom * fz + denom[idx]
+    }
+  } else {
+    let z_inv = 1.0 / fz
+    sum_num = num[0]
+    sum_denom = denom[0]
+    for i in 1..<=12 {
+      sum_num = sum_num * z_inv + num[i]
+      sum_denom = sum_denom * z_inv + denom[i]
+    }
+  }
+  sum_num / sum_denom
+}
+
+///|
+fn get_log_beta(falpha : Double, fbeta : Double) -> Double {
+  let mut fa = falpha
+  let mut fb = fbeta
+  if falpha > fbeta {
+    fa = falpha
+    fb = fbeta
+  } else {
+    fa = fbeta
+    fb = falpha
+  }
+  let fg = 6.024680040776729583740234375
+  let fgm = fg - 0.5
+  let mut lanczos = get_lanczos_sum(fa)
+  lanczos = lanczos / get_lanczos_sum(fa + fb)
+  lanczos = lanczos * get_lanczos_sum(fb)
+  let mut log_lanczos = @math.ln(lanczos)
+  let fabgm = fa + fb + fgm
+  log_lanczos = log_lanczos +
+    0.5 * (@math.ln(fabgm) - @math.ln(fa + fgm) - @math.ln(fb + fgm))
+  let temp_a = fb / (fa + fgm)
+  let temp_b = fa / (fb + fgm)
+  let mut result = -fa * @math.ln_1p(temp_a) - fb * @math.ln_1p(temp_b) - fgm
+  result = result + log_lanczos
+  result
+}
+
+///|
+fn get_beta(falpha : Double, fbeta : Double) -> Double {
+  @math.exp(get_log_beta(falpha, fbeta))
+}
+
+///|
+fn get_beta_dist_pdf(fx : Double, fa : Double, fb : Double) -> Double {
+  if fx <= 0.0 || fx >= 1.0 {
+    return 0.0
+  }
+  let log_dbl_max = @math.ln(1.79769e+308)
+  let log_dbl_min = @math.ln(2.22507e-308)
+  let mut log_y = @math.ln(0.5 - fx + 0.5)
+  if fx < 0.1 {
+    log_y = @math.ln_1p(-fx)
+  }
+  let log_x = @math.ln(fx)
+  let a_log_x = (fa - 1.0) * log_x
+  let b_log_y = (fb - 1.0) * log_y
+  let log_beta = get_log_beta(fa, fb)
+  if a_log_x < log_dbl_max &&
+    a_log_x > log_dbl_min &&
+    b_log_y < log_dbl_max &&
+    b_log_y > log_dbl_min &&
+    log_beta < log_dbl_max &&
+    log_beta > log_dbl_min &&
+    a_log_x + b_log_y < log_dbl_max &&
+    a_log_x + b_log_y > log_dbl_min {
+    @math.pow(fx, fa - 1.0) *
+    @math.pow(0.5 - fx + 0.5, fb - 1.0) /
+    get_beta(fa, fb)
+  } else {
+    @math.exp(a_log_x + b_log_y - log_beta)
+  }
+}
+
+///|
+fn get_beta_dist(fxin : Double, falpha : Double, fbeta : Double) -> Double {
+  if fxin <= 0.0 {
+    return 0.0
+  }
+  if fxin >= 1.0 {
+    return 1.0
+  }
+  if fbeta == 1.0 {
+    return @math.pow(fxin, falpha)
+  }
+  if falpha == 1.0 {
+    return -@math.expm1(fbeta * @math.ln_1p(-fxin))
+  }
+  let mut fy = 0.5 - fxin + 0.5
+  let mut f_x = fxin
+  let mut ln_x = @math.ln(fxin)
+  let mut ln_y = @math.ln_1p(-fxin)
+  let mut fa = falpha
+  let mut fb = fbeta
+  let reflect = fxin > falpha / (falpha + fbeta)
+  if reflect {
+    fa = fbeta
+    fb = falpha
+    f_x = fy
+    fy = fxin
+    ln_x = ln_y
+    ln_y = @math.ln(fxin)
+  }
+  let mut result = get_beta_helper_cont_frac(f_x, fa, fb) / fa
+  let fp = fa / (fa + fb)
+  let fq = fb / (fa + fb)
+  let temp = if fa > 1.0 && fb > 1.0 && fp < 0.97 && fq < 0.97 {
+    get_beta_dist_pdf(f_x, fa, fb) * f_x * fy
+  } else {
+    @math.exp(fa * ln_x + fb * ln_y - get_log_beta(fa, fb))
+  }
+  result = result * temp
+  if reflect {
+    result = 0.5 - result + 0.5
+  }
+  result
+}
+
+///|
+fn get_t_dist(t : Double, df : Double, ntype : Double) -> Double {
+  match ntype {
+    1.0 => 0.5 * get_beta_dist(df / (df + t * t), df / 2.0, 0.5)
+    2.0 => get_beta_dist(df / (df + t * t), df / 2.0, 0.5)
+    3.0 =>
+      @math.pow(1.0 + t * t / df, -(df + 1.0) / 2.0) /
+      (Double::sqrt(df) * get_beta(0.5, df / 2.0))
+    4.0 => {
+      let x = df / (t * t + df)
+      let r = 0.5 * get_beta_dist(x, 0.5 * df, 0.5)
+      if t < 0.0 {
+        r
+      } else {
+        1.0 - r
+      }
+    }
+    _ => 0.0
+  }
+}
+
+///|
+fn has_change_of_sign(u : Double, w : Double) -> Bool {
+  (u < 0.0 && w > 0.0) || (u > 0.0 && w < 0.0)
+}
+
+///|
+priv struct InverseIterator {
+  fp : Double
+  fdf : Double
+  nt : Double
+}
+
+///|
+fn InverseIterator::call(self : InverseIterator, x : Double) -> Double {
+  self.fp - get_t_dist(x, self.fdf, self.nt)
+}
+
+///|
+fn inverse_quadratic_interpolation(
+  iterator : InverseIterator,
+  ax_in : Double,
+  ay_in : Double,
+  bx_in : Double,
+  by_in : Double,
+) -> Double {
+  let y_eps = 1.0e-307
+  let x_eps = 2.22045e-016
+  let mut ax = ax_in
+  let mut ay = ay_in
+  let mut bx = bx_in
+  let mut by = by_in
+  let mut px = ax
+  let mut py = ay
+  let mut qx = bx
+  let mut qy = by
+  let mut rx = ax
+  let mut ry = ay
+  let mut sx = 0.5 * (ax + bx)
+  let mut has_to_interpolate = true
+  let mut count = 0
+  while count < 500 &&
+        Double::abs(ry) > y_eps &&
+        bx - ax >
+        (if Double::abs(ax) > Double::abs(bx) {
+          Double::abs(ax)
+        } else {
+          Double::abs(bx)
+        }) *
+        x_eps {
+    if has_to_interpolate {
+      if py != qy && qy != ry && ry != py {
+        sx = px * ry * qy / (ry - py) / (qy - py) +
+          rx * qy * py / (qy - ry) / (py - ry) +
+          qx * py * ry / (py - qy) / (ry - qy)
+        has_to_interpolate = ax < sx && sx < bx
+      } else {
+        has_to_interpolate = false
+      }
+    }
+    if !has_to_interpolate {
+      sx = 0.5 * (ax + bx)
+      qx = bx
+      qy = by
+      has_to_interpolate = true
+    }
+    px = qx
+    qx = rx
+    rx = sx
+    py = qy
+    qy = ry
+    ry = iterator.call(rx)
+    if has_change_of_sign(ay, ry) {
+      bx = rx
+      by = ry
+    } else {
+      ax = rx
+      ay = ry
+    }
+    has_to_interpolate = has_to_interpolate &&
+      Double::abs(ry) * 2.0 <= Double::abs(qy)
+    count = count + 1
+  }
+  rx
+}
+
+///|
+fn calc_iterate_inverse(
+  iterator : InverseIterator,
+  ax_in : Double,
+  bx_in : Double,
+) -> Double {
+  let mut ax = ax_in
+  let mut bx = bx_in
+  let mut ay = iterator.call(ax)
+  let mut by = iterator.call(bx)
+  let mut count = 0
+  while count < 1000 && !has_change_of_sign(ay, by) {
+    if Double::abs(ay) <= Double::abs(by) {
+      let temp = ax
+      ax = ax + 2.0 * (ax - bx)
+      if ax < 0.0 {
+        ax = 0.0
+      }
+      bx = temp
+      by = ay
+      ay = iterator.call(ax)
+    } else {
+      let temp = bx
+      bx = bx + 2.0 * (bx - ax)
+      ax = temp
+      ay = by
+      by = iterator.call(bx)
+    }
+    count = count + 1
+  }
+  if ay == 0.0 || by == 0.0 {
+    0.0
+  } else {
+    inverse_quadratic_interpolation(iterator, ax, ay, bx, by)
+  }
+}
+
+///|
 fn erf_double(value : Double) -> Double {
   if value == 0.0 {
     return 0.0
@@ -5265,6 +5593,15 @@ fn eval_function(
     "WEIBULL" => weibull_value(values)
     "WEIBULLdotDIST" | "WEIBULL.DIST" | "_XLFN.WEIBULL.DIST" =>
       weibull_value(values)
+    "BETAdotDIST" | "BETA.DIST" | "_XLFN.BETA.DIST" => beta_dist_values(values)
+    "BETADIST" => betadist_values(values)
+    "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
+    "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
+    "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
+    "TDIST" => tdist_legacy_values(values)
+    "TdotINV" | "T.INV" | "_XLFN.T.INV" => tinv_values(values)
+    "TdotINVdot2T" | "T.INV.2T" | "_XLFN.T.INV.2T" => tinv_2t_values(values)
+    "TINV" => tinv_2t_values(values)
     "GESTEP" =>
       if values.length() < 1 {
         FormulaValue::Error(formula_error_value)
@@ -9642,6 +9979,255 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     FormulaValue::Number(sum / Double::from_int(count))
   }
+}
+
+///|
+fn beta_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 4 || values.length() > 6 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let alpha = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let beta = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || beta <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  let mut a = 0.0
+  let mut b = 1.0
+  if values.length() > 4 {
+    a = match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  if values.length() == 6 {
+    b = match value_as_number(values[5]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  if x < a || x > b {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if a == b {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let scale = b - a
+  let normalized = (x - a) / scale
+  let raw = if cumulative {
+    get_beta_dist(normalized, alpha, beta)
+  } else {
+    get_beta_dist_pdf(normalized, alpha, beta) / scale
+  }
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn betadist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 || values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let alpha = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let beta = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || beta <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let mut a = 0.0
+  let mut b = 1.0
+  if values.length() > 3 {
+    a = match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  if values.length() == 5 {
+    b = match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  if x < a || x > b {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if a == b {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let normalized = (x - a) / (b - a)
+  let raw = get_beta_dist(normalized, alpha, beta)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[2]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if cumulative {
+    if degrees < 1.0 {
+      return FormulaValue::Error(formula_error_num)
+    }
+    let raw = get_t_dist(x, degrees, 4.0)
+    return number_or_num_error(round_significant_digits(raw, 14))
+  }
+  if degrees < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if degrees == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let raw = get_t_dist(x, degrees, 3.0)
+  number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if x < 0.0 || degrees < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = get_t_dist(x, degrees, 2.0)
+  number_or_num_error(round_significant_digits(raw, 14))
+}
+
+///|
+fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if degrees < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let mut value = get_t_dist(x, degrees, 1.0)
+  if x < 0.0 {
+    value = 1.0 - value
+  }
+  number_or_num_error(round_significant_digits(value, 14))
+}
+
+///|
+fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let tails = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if x < 0.0 || degrees < 1.0 || (tails != 1.0 && tails != 2.0) {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let raw = get_t_dist(x, degrees, tails)
+  number_or_num_error(round_significant_digits(raw, 14))
+}
+
+///|
+fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability >= 1.0 || degrees < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let iterator = if probability < 0.5 {
+    InverseIterator::{ fp: 1.0 - probability, fdf: degrees, nt: 4.0 }
+  } else {
+    InverseIterator::{ fp: probability, fdf: degrees, nt: 4.0 }
+  }
+  let mut result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
+  if probability < 0.5 {
+    result = -result
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let degrees = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability > 1.0 || degrees < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let iterator = InverseIterator::{ fp: probability, fdf: degrees, nt: 2.0 }
+  let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
+  number_or_num_error(round_significant_digits(result, 15))
 }
 
 ///|
