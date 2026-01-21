@@ -4947,6 +4947,340 @@ fn eval_function(
         FormulaValue::Error(formula_error_value)
       }
     "TRIMMEAN" => trimmean_values(values)
+    "AVEDEV" =>
+      if values.length() >= 1 {
+        avedev_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DEVSQ" =>
+      if values.length() >= 1 {
+        devsq_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "GEOMEAN" =>
+      if values.length() >= 1 {
+        geomean_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "HARMEAN" =>
+      if values.length() >= 1 {
+        harmean_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "KURT" =>
+      if values.length() >= 1 {
+        kurt_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SKEW" =>
+      if values.length() >= 1 {
+        skew_values("SKEW", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SKEW.P" =>
+      if values.length() >= 1 {
+        skew_values("SKEW.P", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "STANDARDIZE" =>
+      if values.length() == 3 {
+        standardize_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "LARGE" =>
+      if values.length() == 2 {
+        kth_values("LARGE", values[0], values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SMALL" =>
+      if values.length() == 2 {
+        kth_values("SMALL", values[0], values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MODE" =>
+      if values.length() >= 1 {
+        mode_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MODE.SNGL" =>
+      if values.length() >= 1 {
+        mode_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MODE.MULT" =>
+      if values.length() >= 1 {
+        mode_mult_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERCENTILE" =>
+      if values.length() == 2 {
+        match value_as_number(values[1]) {
+          Ok(k) =>
+            if k < 0.0 || k > 1.0 {
+              FormulaValue::Error(formula_error_na)
+            } else {
+              percentile_values(values[0], k, false, false)
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERCENTILE.INC" =>
+      if values.length() == 2 {
+        match value_as_number(values[1]) {
+          Ok(k) =>
+            if k < 0.0 || k > 1.0 {
+              FormulaValue::Error(formula_error_na)
+            } else {
+              percentile_values(values[0], k, false, false)
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERCENTILE.EXC" =>
+      if values.length() == 2 {
+        match value_as_number(values[1]) {
+          Ok(k) =>
+            if k <= 0.0 || k >= 1.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              percentile_values(values[0], k, true, true)
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERCENTRANK" =>
+      if values.length() == 2 || values.length() == 3 {
+        match value_as_number(values[1]) {
+          Ok(x) => {
+            let significance = if values.length() == 3 {
+              match value_as_number(values[2]) {
+                Ok(num) => num
+                Err(err) => return err
+              }
+            } else {
+              3.0
+            }
+            percentrank_values("PERCENTRANK", values[0], x, significance)
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERCENTRANK.INC" =>
+      if values.length() == 2 || values.length() == 3 {
+        match value_as_number(values[1]) {
+          Ok(x) => {
+            let significance = if values.length() == 3 {
+              match value_as_number(values[2]) {
+                Ok(num) => num
+                Err(err) => return err
+              }
+            } else {
+              3.0
+            }
+            percentrank_values("PERCENTRANK.INC", values[0], x, significance)
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERCENTRANK.EXC" =>
+      if values.length() == 2 || values.length() == 3 {
+        match value_as_number(values[1]) {
+          Ok(x) => {
+            let significance = if values.length() == 3 {
+              match value_as_number(values[2]) {
+                Ok(num) => num
+                Err(err) => return err
+              }
+            } else {
+              3.0
+            }
+            percentrank_values("PERCENTRANK.EXC", values[0], x, significance)
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "QUARTILE" =>
+      if values.length() == 2 {
+        match value_as_number(values[1]) {
+          Ok(quart) => quartile_values("QUARTILE", values[0], quart, false)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "QUARTILE.INC" =>
+      if values.length() == 2 {
+        match value_as_number(values[1]) {
+          Ok(quart) => quartile_values("QUARTILE.INC", values[0], quart, false)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "QUARTILE.EXC" =>
+      if values.length() == 2 {
+        match value_as_number(values[1]) {
+          Ok(quart) => quartile_values("QUARTILE.EXC", values[0], quart, true)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RANK" | "RANK.EQ" =>
+      if values.length() == 2 || values.length() == 3 {
+        let order = if values.length() == 3 {
+          match value_as_number(values[2]) {
+            Ok(num) => Some(num)
+            Err(err) => return err
+          }
+        } else {
+          None
+        }
+        rank_values(values[0], values[1], order)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SIGN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            FormulaValue::Number(
+              if num < 0.0 {
+                -1.0
+              } else if num > 0.0 {
+                1.0
+              } else {
+                0.0
+              },
+            )
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SERIESSUM" =>
+      if values.length() == 4 {
+        let x = match value_as_number(values[0]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let n = match value_as_number(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let m = match value_as_number(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let coefficients = list_from_value(values[3])
+        let mut result = 0.0
+        let mut idx = 0.0
+        for coefficient in coefficients {
+          if formula_value_string(coefficient) == "" {
+            continue
+          }
+          let num = match value_as_number(coefficient) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+          result = result + num * @math.pow(x, n + m * idx)
+          idx = idx + 1.0
+        }
+        FormulaValue::Number(round_significant_digits(result, 15))
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CORREL" =>
+      if values.length() == 2 {
+        correl_values(values[0], values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COVAR" =>
+      if values.length() == 2 {
+        covar_values("COVAR", values[0], values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COVARIANCE.P" =>
+      if values.length() == 2 {
+        covar_values("COVARIANCE.P", values[0], values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COVARIANCE.S" =>
+      if values.length() == 2 {
+        covar_values("COVARIANCE.S", values[0], values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PEARSON" =>
+      if values.length() == 2 {
+        pearson_product_values("PEARSON", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RSQ" =>
+      if values.length() == 2 {
+        pearson_product_values("RSQ", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SLOPE" =>
+      if values.length() == 2 {
+        pearson_product_values("SLOPE", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "INTERCEPT" =>
+      if values.length() == 2 {
+        pearson_product_values("INTERCEPT", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "FORECAST" =>
+      if values.length() == 3 {
+        pearson_product_values("FORECAST", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "FORECAST.LINEAR" =>
+      if values.length() == 3 {
+        pearson_product_values("FORECAST.LINEAR", values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "STEYX" =>
+      if values.length() == 2 {
+        steyx_values(values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
@@ -13763,6 +14097,906 @@ fn median_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     FormulaValue::Number(numbers[count / 2])
   }
+}
+
+///|
+fn list_from_value(value : FormulaValue) -> Array[FormulaValue] {
+  match value {
+    FormulaValue::List(list) => list
+    _ => [value]
+  }
+}
+
+///|
+fn index_of_double(values : ArrayView[Double], target : Double) -> Int {
+  for i in 0..<values.length() {
+    if values[i] == target {
+      return i
+    }
+  }
+  -1
+}
+
+///|
+fn avedev_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let avg_value = average_values(values)
+  let avg = match avg_value {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let mut sum = 0.0
+  let mut count = 0
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match value_as_number(cell) {
+            Ok(num) => {
+              sum = sum + Double::abs(num - avg)
+              count = count + 1
+            }
+            Err(_) => return FormulaValue::Error(formula_error_value)
+          }
+        }
+      _ =>
+        match value_as_number(value) {
+          Ok(num) => {
+            sum = sum + Double::abs(num - avg)
+            count = count + 1
+          }
+          Err(_) => return FormulaValue::Error(formula_error_value)
+        }
+    }
+  }
+  if count == 0 {
+    FormulaValue::Error(formula_error_value)
+  } else {
+    FormulaValue::Number(
+      round_significant_digits(sum / Double::from_int(count), 15),
+    )
+  }
+}
+
+///|
+fn devsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Number(num) => numbers.push(num)
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => numbers.push(num)
+          _ => ()
+        }
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut sum = 0.0
+  for num in numbers {
+    sum = sum + num
+  }
+  let mean = sum / Double::from_int(numbers.length())
+  let mut total = 0.0
+  for num in numbers {
+    let delta = num - mean
+    total = total + delta * delta
+  }
+  FormulaValue::Number(round_significant_digits(total, 15))
+}
+
+///|
+fn geomean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut product = 1.0
+  let mut count = 0
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Number(num) => {
+              if num <= 0.0 {
+                return FormulaValue::Error(formula_error_num)
+              }
+              product = product * num
+              count = count + 1
+            }
+            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => {
+            if num <= 0.0 {
+              return FormulaValue::Error(formula_error_num)
+            }
+            product = product * num
+            count = count + 1
+          }
+          FormulaValue::Bool(flag) => {
+            let num = if flag { 1.0 } else { 0.0 }
+            if num <= 0.0 {
+              return FormulaValue::Error(formula_error_num)
+            }
+            product = product * num
+            count = count + 1
+          }
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(num) => {
+                if num <= 0.0 {
+                  return FormulaValue::Error(formula_error_num)
+                }
+                product = product * num
+                count = count + 1
+              }
+              None => return FormulaValue::Error(formula_error_value)
+            }
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          FormulaValue::Empty => ()
+          FormulaValue::List(_) => ()
+        }
+    }
+  }
+  if count == 0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = @math.pow(product, 1.0 / Double::from_int(count))
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn harmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut total = 0.0
+  let mut count = 0
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Number(num) => {
+              if num <= 0.0 {
+                return FormulaValue::Error(formula_error_na)
+              }
+              total = total + 1.0 / num
+              count = count + 1
+            }
+            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => {
+            if num <= 0.0 {
+              return FormulaValue::Error(formula_error_na)
+            }
+            total = total + 1.0 / num
+            count = count + 1
+          }
+          FormulaValue::Bool(flag) => {
+            let num = if flag { 1.0 } else { 0.0 }
+            if num <= 0.0 {
+              return FormulaValue::Error(formula_error_na)
+            }
+            total = total + 1.0 / num
+            count = count + 1
+          }
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(num) => {
+                if num <= 0.0 {
+                  return FormulaValue::Error(formula_error_na)
+                }
+                total = total + 1.0 / num
+                count = count + 1
+              }
+              None => ()
+            }
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          FormulaValue::Empty => ()
+          FormulaValue::List(_) => ()
+        }
+    }
+  }
+  if count == 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let result = 1.0 / (total / Double::from_int(count))
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn kurt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Number(num) => numbers.push(num)
+            FormulaValue::String(text) =>
+              match parse_double_opt(text) {
+                Some(num) => numbers.push(num)
+                None => ()
+              }
+            FormulaValue::Bool(flag) =>
+              numbers.push(if flag { 1.0 } else { 0.0 })
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => numbers.push(num)
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(num) => numbers.push(num)
+              None => ()
+            }
+          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          _ => ()
+        }
+    }
+  }
+  if numbers.length() < 4 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mut sum_numbers = 0.0
+  for num in numbers {
+    sum_numbers = sum_numbers + num
+  }
+  let count = Double::from_int(numbers.length())
+  let mean = sum_numbers / count
+  let stdev = match sample_stdev(numbers) {
+    Some(num) => num
+    None => return FormulaValue::Error(formula_error_div)
+  }
+  if stdev <= 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mut sum = 0.0
+  for num in numbers {
+    let scaled = (num - mean) / stdev
+    sum = sum + scaled * scaled * scaled * scaled
+  }
+  let term1 = sum *
+    (count * (count + 1.0) / ((count - 1.0) * (count - 2.0) * (count - 3.0)))
+  let term2 = 3.0 *
+    @math.pow(count - 1.0, 2.0) /
+    ((count - 2.0) * (count - 3.0))
+  number_or_num_error(round_significant_digits(term1 - term2, 15))
+}
+
+///|
+fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            FormulaValue::Number(num) => numbers.push(num)
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => numbers.push(num)
+          FormulaValue::String(text) =>
+            match parse_double_opt(text) {
+              Some(num) => numbers.push(num)
+              None => return FormulaValue::Error(formula_error_value)
+            }
+          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          FormulaValue::Empty => ()
+          FormulaValue::List(_) => ()
+        }
+    }
+  }
+  if numbers.length() <= 2 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mut sum = 0.0
+  for num in numbers {
+    sum = sum + num
+  }
+  let count = Double::from_int(numbers.length())
+  let mean = sum / count
+  let stdev = if name == "SKEW" {
+    match sample_stdev(numbers) {
+      Some(num) => num
+      None => return FormulaValue::Error(formula_error_div)
+    }
+  } else {
+    let mut sum_sq = 0.0
+    for num in numbers {
+      let delta = num - mean
+      sum_sq = sum_sq + delta * delta
+    }
+    @math.pow(sum_sq / count, 0.5)
+  }
+  if stdev <= 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mut sum_scaled = 0.0
+  for num in numbers {
+    let scaled = (num - mean) / stdev
+    sum_scaled = sum_scaled + scaled * scaled * scaled
+  }
+  let result = if name == "SKEW" {
+    sum_scaled * (count / ((count - 1.0) * (count - 2.0)))
+  } else {
+    sum_scaled / count
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn standardize_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mean = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let stddev = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if stddev <= 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let result = (x - mean) / stddev
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn kth_values(
+  name : String,
+  array_value : FormulaValue,
+  k_value : FormulaValue,
+) -> FormulaValue {
+  let k_raw = match value_as_number(k_value) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let k = k_raw.to_int()
+  if k < 1 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let values = list_from_value(array_value)
+  let numbers : Array[Double] = []
+  for value in values {
+    match normalize_scalar(value) {
+      FormulaValue::Number(num) => numbers.push(num)
+      _ => ()
+    }
+  }
+  if numbers.length() < k {
+    return FormulaValue::Error(formula_error_num)
+  }
+  numbers.sort()
+  let result = if name == "LARGE" {
+    numbers[numbers.length() - k]
+  } else {
+    numbers[k - 1]
+  }
+  FormulaValue::Number(result)
+}
+
+///|
+fn mode_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Number(num) => numbers.push(num)
+            FormulaValue::Bool(flag) =>
+              numbers.push(if flag { 1.0 } else { 0.0 })
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => numbers.push(num)
+          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          _ => return FormulaValue::Error(formula_error_value)
+        }
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  numbers.sort()
+  let mut mode_count = 0
+  let mut mode = 0.0
+  for i in 0..<numbers.length() {
+    let mut count = 0
+    for j in 0..<numbers.length() {
+      if i != j && numbers[j] == numbers[i] {
+        count = count + 1
+      }
+    }
+    if count > mode_count {
+      mode_count = count
+      mode = numbers[i]
+    }
+  }
+  if mode_count == 0 {
+    FormulaValue::Error(formula_error_na)
+  } else {
+    FormulaValue::Number(mode)
+  }
+}
+
+///|
+fn mode_mult_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in values {
+    match value {
+      FormulaValue::List(list) =>
+        for cell in list {
+          match normalize_scalar(cell) {
+            FormulaValue::Number(num) => numbers.push(num)
+            FormulaValue::Bool(flag) =>
+              numbers.push(if flag { 1.0 } else { 0.0 })
+            _ => ()
+          }
+        }
+      _ =>
+        match normalize_scalar(value) {
+          FormulaValue::Number(num) => numbers.push(num)
+          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          FormulaValue::Error(err) => return FormulaValue::Error(err)
+          _ => return FormulaValue::Error(formula_error_value)
+        }
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  numbers.sort()
+  let mut mode_count = 0
+  let mut modes : Array[FormulaValue] = []
+  for i in 0..<numbers.length() {
+    let mut count = 0
+    for j in (i + 1)..<numbers.length() {
+      if numbers[i] == numbers[j] {
+        count = count + 1
+      }
+    }
+    if count > mode_count {
+      mode_count = count
+      modes = [FormulaValue::Number(numbers[i])]
+    } else if count == mode_count {
+      modes.push(FormulaValue::Number(numbers[i]))
+    }
+  }
+  if mode_count == 0 {
+    FormulaValue::Error(formula_error_na)
+  } else {
+    FormulaValue::List(modes)
+  }
+}
+
+///|
+fn percentile_values(
+  array_value : FormulaValue,
+  k : Double,
+  exclusive : Bool,
+  error_on_error : Bool,
+) -> FormulaValue {
+  let values = list_from_value(array_value)
+  let numbers : Array[Double] = []
+  for value in values {
+    match normalize_scalar(value) {
+      FormulaValue::Error(err) =>
+        return if error_on_error {
+          FormulaValue::Error(formula_error_num)
+        } else {
+          FormulaValue::Error(err)
+        }
+      FormulaValue::Number(num) => numbers.push(num)
+      _ => ()
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  numbers.sort()
+  let count = numbers.length()
+  if exclusive {
+    let idx = k * Double::from_int(count + 1)
+    let base = @math.floor(idx)
+    let base_index = base.to_int()
+    let next_index = base_index - 1
+    if next_index < 0 || base_index >= count {
+      return FormulaValue::Error(formula_error_num)
+    }
+    let proportion = idx - base
+    let result = numbers[next_index] +
+      (numbers[base_index] - numbers[next_index]) * proportion
+    return FormulaValue::Number(round_significant_digits(result, 15))
+  }
+  let idx = k * Double::from_int(count - 1)
+  let base = @math.floor(idx)
+  if idx == base {
+    return FormulaValue::Number(numbers[base.to_int()])
+  }
+  let base_index = base.to_int()
+  let next_index = base_index + 1
+  let proportion = idx - base
+  let result = numbers[base_index] +
+    (numbers[next_index] - numbers[base_index]) * proportion
+  FormulaValue::Number(round_significant_digits(result, 15))
+}
+
+///|
+fn percentrank_values(
+  name : String,
+  array_value : FormulaValue,
+  x : Double,
+  significance : Double,
+) -> FormulaValue {
+  if significance < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let values = list_from_value(array_value)
+  let numbers : Array[Double] = []
+  for value in values {
+    match normalize_scalar(value) {
+      FormulaValue::Error(_) => return FormulaValue::Error(formula_error_na)
+      FormulaValue::Number(num) => numbers.push(num)
+      _ => ()
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  numbers.sort()
+  let count = numbers.length()
+  if x < numbers[0] || x > numbers[count - 1] {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut pos = Double::from_int(index_of_double(numbers, x))
+  if pos < 0.0 {
+    let mut idx = 0.0
+    let mut cmp = numbers[0]
+    while cmp < x {
+      idx = idx + 1.0
+      cmp = numbers[idx.to_int()]
+    }
+    idx = idx - 1.0
+    pos = idx + (x - numbers[idx.to_int()]) / (cmp - numbers[idx.to_int()])
+  }
+  let pow = @math.pow(10.0, significance)
+  let digit = if name == "PERCENTRANK.EXC" {
+    pow * (pos + 1.0) / (Double::from_int(count) + 1.0)
+  } else {
+    pow * pos / (Double::from_int(count) - 1.0)
+  }
+  let result = @math.floor(digit) / pow
+  FormulaValue::Number(round_significant_digits(result, 15))
+}
+
+///|
+fn quartile_values(
+  name : String,
+  array_value : FormulaValue,
+  quart : Double,
+  exclusive : Bool,
+) -> FormulaValue {
+  if exclusive {
+    if quart <= 0.0 || quart >= 4.0 {
+      return FormulaValue::Error(formula_error_num)
+    }
+  } else if quart < 0.0 || quart > 4.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let k = quart / 4.0
+  let error_on_error = name == "QUARTILE.EXC"
+  percentile_values(array_value, k, exclusive, error_on_error)
+}
+
+///|
+fn rank_values(
+  num_value : FormulaValue,
+  array_value : FormulaValue,
+  order : Double?,
+) -> FormulaValue {
+  let num = match value_as_number(num_value) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let values = list_from_value(array_value)
+  let numbers : Array[Double] = []
+  for value in values {
+    match normalize_scalar(value) {
+      FormulaValue::Number(num) => numbers.push(num)
+      _ => ()
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  numbers.sort()
+  let order_value = match order {
+    Some(num) => num
+    None => 0.0
+  }
+  if order_value == 0.0 {
+    numbers.rev_in_place()
+  }
+  let idx = index_of_double(numbers, num)
+  if idx < 0 {
+    FormulaValue::Error(formula_error_na)
+  } else {
+    FormulaValue::Number(Double::from_int(idx + 1))
+  }
+}
+
+///|
+fn sample_stdev(numbers : ArrayView[Double]) -> Double? {
+  if numbers.length() < 2 {
+    return None
+  }
+  let mut sum = 0.0
+  for num in numbers {
+    sum = sum + num
+  }
+  let mean = sum / Double::from_int(numbers.length())
+  let mut sum_sq = 0.0
+  for num in numbers {
+    let delta = num - mean
+    sum_sq = sum_sq + delta * delta
+  }
+  let denom = Double::from_int(numbers.length() - 1)
+  Some(@math.pow(sum_sq / denom, 0.5))
+}
+
+///|
+fn correl_values(
+  left_value : FormulaValue,
+  right_value : FormulaValue,
+) -> FormulaValue {
+  let left = list_from_value(left_value)
+  let right = list_from_value(right_value)
+  if left.length() != right.length() {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let xs : Array[Double] = []
+  let ys : Array[Double] = []
+  for i in 0..<left.length() {
+    let x = sumx_number(left[i])
+    let y = sumx_number(right[i])
+    if x != 0.0 && y != 0.0 {
+      xs.push(x)
+      ys.push(y)
+    }
+  }
+  if xs.length() < 2 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let stdev_x = match sample_stdev(xs) {
+    Some(num) => num
+    None => return FormulaValue::Error(formula_error_div)
+  }
+  let stdev_y = match sample_stdev(ys) {
+    Some(num) => num
+    None => return FormulaValue::Error(formula_error_div)
+  }
+  if stdev_x == 0.0 || stdev_y == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mut sum_x = 0.0
+  let mut sum_y = 0.0
+  for num in xs {
+    sum_x = sum_x + num
+  }
+  for num in ys {
+    sum_y = sum_y + num
+  }
+  let mean_x = sum_x / Double::from_int(xs.length())
+  let mean_y = sum_y / Double::from_int(ys.length())
+  let mut sum = 0.0
+  for i in 0..<xs.length() {
+    sum = sum + (xs[i] - mean_x) * (ys[i] - mean_y)
+  }
+  let denom = Double::from_int(xs.length() - 1)
+  let result = sum / denom / stdev_x / stdev_y
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn covar_values(
+  name : String,
+  left_value : FormulaValue,
+  right_value : FormulaValue,
+) -> FormulaValue {
+  let left = list_from_value(left_value)
+  let right = list_from_value(right_value)
+  if left.length() != right.length() {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut sum_left = 0.0
+  let mut count_left = 0
+  for value in left {
+    match value_as_number_opt(value) {
+      Some(num) => {
+        sum_left = sum_left + num
+        count_left = count_left + 1
+      }
+      None => ()
+    }
+  }
+  let mut sum_right = 0.0
+  let mut count_right = 0
+  for value in right {
+    match value_as_number_opt(value) {
+      Some(num) => {
+        sum_right = sum_right + num
+        count_right = count_right + 1
+      }
+      None => ()
+    }
+  }
+  if count_left == 0 || count_right == 0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mean_left = sum_left / Double::from_int(count_left)
+  let mean_right = sum_right / Double::from_int(count_right)
+  let mut sum = 0.0
+  let mut count = 0
+  for i in 0..<left.length() {
+    match (value_as_number_opt(left[i]), value_as_number_opt(right[i])) {
+      (Some(lhs), Some(rhs)) => {
+        sum = sum + (lhs - mean_left) * (rhs - mean_right)
+        count = count + 1
+      }
+      _ => ()
+    }
+  }
+  let denom = if name == "COVARIANCE.S" { count - 1 } else { count }
+  if denom <= 0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let result = sum / Double::from_int(denom)
+  FormulaValue::Number(round_significant_digits(result, 15))
+}
+
+///|
+fn pearson_product_values(
+  name : String,
+  values : ArrayView[FormulaValue],
+) -> FormulaValue {
+  if values.length() != 2 && values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let mut array1 = list_from_value(values[values.length() - 1])
+  let mut array2 = list_from_value(values[0])
+  let mut fx = 0.0
+  if values.length() == 3 {
+    fx = match value_as_number(values[0]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    array2 = list_from_value(values[1])
+    array1 = list_from_value(values[2])
+  }
+  if name == "PEARSON" || name == "RSQ" {
+    let tmp = array1
+    array1 = array2
+    array2 = tmp
+  }
+  if array1.length() != array2.length() {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut sum_x = 0.0
+  let mut sum_y = 0.0
+  let mut count = 0
+  for i in 0..<array1.length() {
+    match (normalize_scalar(array1[i]), normalize_scalar(array2[i])) {
+      (FormulaValue::Number(x), FormulaValue::Number(y)) => {
+        sum_x = sum_x + x
+        sum_y = sum_y + y
+        count = count + 1
+      }
+      _ => ()
+    }
+  }
+  if count == 0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mean_x = sum_x / Double::from_int(count)
+  let mean_y = sum_y / Double::from_int(count)
+  let mut sum = 0.0
+  let mut delta_x = 0.0
+  let mut delta_y = 0.0
+  for i in 0..<array1.length() {
+    match (normalize_scalar(array1[i]), normalize_scalar(array2[i])) {
+      (FormulaValue::Number(x), FormulaValue::Number(y)) => {
+        let dx = x - mean_x
+        let dy = y - mean_y
+        sum = sum + dx * dy
+        delta_x = delta_x + dx * dx
+        delta_y = delta_y + dy * dy
+      }
+      _ => ()
+    }
+  }
+  if sum * delta_x * delta_y == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let result = match name {
+    "FORECAST" | "FORECAST.LINEAR" => mean_y + sum / delta_x * (fx - mean_x)
+    "INTERCEPT" => mean_y - sum / delta_x * mean_x
+    "PEARSON" => sum / @math.pow(delta_x * delta_y, 0.5)
+    "RSQ" => @math.pow(sum / @math.pow(delta_x * delta_y, 0.5), 2.0)
+    _ => sum / delta_x
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn steyx_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let array_x = list_from_value(values[1])
+  let array_y = list_from_value(values[0])
+  if array_x.length() != array_y.length() {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut count = 0.0
+  let mut sum_x = 0.0
+  let mut sum_y = 0.0
+  let mut square_x = 0.0
+  let mut square_y = 0.0
+  let mut sigma_xy = 0.0
+  for i in 0..<array_x.length() {
+    match (normalize_scalar(array_x[i]), normalize_scalar(array_y[i])) {
+      (FormulaValue::Number(x), FormulaValue::Number(y)) => {
+        sum_x = sum_x + x
+        sum_y = sum_y + y
+        square_x = square_x + x * x
+        square_y = square_y + y * y
+        sigma_xy = sigma_xy + x * y
+        count = count + 1.0
+      }
+      _ => ()
+    }
+  }
+  if count < 3.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let dx = sum_x / count
+  let dy = sum_y / count
+  let sigma1 = square_y - 2.0 * dy * sum_y + count * dy * dy
+  let sigma2 = sigma_xy - dy * sum_x - sum_y * dx + count * dy * dx
+  let sigma3 = square_x - 2.0 * dx * sum_x + count * dx * dx
+  let result = @math.pow(
+    (sigma1 - sigma2 * sigma2 / sigma3) / (count - 2.0),
+    0.5,
+  )
+  number_or_num_error(round_significant_digits(result, 15))
 }
 
 ///|

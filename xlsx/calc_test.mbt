@@ -4923,3 +4923,514 @@ test "calc complex errors" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+fn set_calc_base_data(sheet : Worksheet) -> Unit raise XlsxError {
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
+  sheet.set_cell_value("D1", CellValue::String("Month"))
+  sheet.set_cell_value("E1", CellValue::String("Team"))
+  sheet.set_cell_value("F1", CellValue::String("Sales"))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
+  sheet.set_cell_value("D2", CellValue::String("Jan"))
+  sheet.set_cell_value("E2", CellValue::String("North 1"))
+  sheet.set_cell_value("F2", CellValue::Numeric(36693.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("D3", CellValue::String("Jan"))
+  sheet.set_cell_value("E3", CellValue::String("North 2"))
+  sheet.set_cell_value("F3", CellValue::Numeric(22100.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_value("D4", CellValue::String("Jan"))
+  sheet.set_cell_value("E4", CellValue::String("South 1"))
+  sheet.set_cell_value("F4", CellValue::Numeric(53321.0))
+  sheet.set_cell_value("D5", CellValue::String("Jan"))
+  sheet.set_cell_value("E5", CellValue::String("South 2"))
+  sheet.set_cell_value("F5", CellValue::Numeric(34440.0))
+  sheet.set_cell_value("D6", CellValue::String("Feb"))
+  sheet.set_cell_value("E6", CellValue::String("North 1"))
+  sheet.set_cell_value("F6", CellValue::Numeric(29889.0))
+  sheet.set_cell_value("D7", CellValue::String("Feb"))
+  sheet.set_cell_value("E7", CellValue::String("North 2"))
+  sheet.set_cell_value("F7", CellValue::Numeric(50090.0))
+  sheet.set_cell_value("D8", CellValue::String("Feb"))
+  sheet.set_cell_value("E8", CellValue::String("South 1"))
+  sheet.set_cell_value("F8", CellValue::Numeric(32080.0))
+  sheet.set_cell_value("D9", CellValue::String("Feb"))
+  sheet.set_cell_value("E9", CellValue::String("South 2"))
+  sheet.set_cell_value("F9", CellValue::Numeric(45500.0))
+}
+
+///|
+test "calc series and sign functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
+  let cases : Array[(String, String)] = [
+    ("SERIESSUM(1,2,3,A1:A4)", "6"),
+    ("SERIESSUM(1,2,3,A1:B5)", "15"),
+    ("SIGN(9.5)", "1"),
+    ("SIGN(-9.5)", "-1"),
+    ("SIGN(0)", "0"),
+    ("SIGN(0.00000001)", "1"),
+    ("SIGN(6-7)", "-1"),
+    ("SIGN(SIGN(-1))", "-1"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc series and sign errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_calc_base_data(sheet)
+  let cases : Array[(String, String)] = [
+    ("SERIESSUM()", "#VALUE!"),
+    ("SERIESSUM(\"\",2,3,A1:A4)", "#VALUE!"),
+    ("SERIESSUM(1,\"\",3,A1:A4)", "#VALUE!"),
+    ("SERIESSUM(1,2,\"\",A1:A4)", "#VALUE!"),
+    ("SERIESSUM(1,2,3,A1:D1)", "#VALUE!"),
+    ("SIGN()", "#VALUE!"),
+    ("SIGN(\"X\")", "#VALUE!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc stats functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_calc_base_data(sheet)
+  let cases : Array[(String, String)] = [
+    ("AVEDEV(1,2)", "0.5"),
+    ("DEVSQ(1,3,5,2,9,7)", "47.5"),
+    ("DEVSQ(A1:D2)", "10"),
+    ("GEOMEAN(2.5,3,0.5,1,3)", "1.6226711115996"),
+    ("HARMEAN(2.5,3,0.5,1,3)", "1.22950819672131"),
+    ("HARMEAN(\"2.5\",3,0.5,1,INT(3),\"\")", "1.22950819672131"),
+    ("KURT(F1:F9)", "-1.03350350255137"),
+    ("KURT(F1,F2:F9)", "-1.03350350255137"),
+    ("KURT(INT(1),MUNIT(2))", "-3.33333333333334"),
+    ("SKEW(1,2,3,4,3)", "-0.404796008910937"),
+    ("SKEW(A1:B2)", "0"),
+    ("SKEW(A1:D3)", "0"),
+    ("SKEW.P(1,2,3,4,3)", "-0.27154541788364"),
+    ("SKEW.P(A1:B2)", "0"),
+    ("SKEW.P(A1:D3)", "0"),
+    ("LARGE(A1:A5,1)", "3"),
+    ("LARGE(A1:B5,2)", "4"),
+    ("LARGE(A1,1)", "1"),
+    ("LARGE(A1:F2,1)", "36693"),
+    ("SMALL(A1:A5,1)", "0"),
+    ("SMALL(A1:B5,2)", "1"),
+    ("SMALL(A1,1)", "1"),
+    ("SMALL(A1:F2,1)", "1"),
+    ("PERCENTILE.EXC(A1:A4,0.2)", "0"),
+    ("PERCENTILE.EXC(A1:A4,0.6)", "2"),
+    ("PERCENTILE.INC(A1:A4,0.2)", "0.6"),
+    ("PERCENTILE(A1:A4,0.2)", "0.6"),
+    ("PERCENTILE(0,0)", "0"),
+    ("PERCENTRANK.EXC(A1:B4,0)", "0.142"),
+    ("PERCENTRANK.EXC(A1:B4,2)", "0.428"),
+    ("PERCENTRANK.EXC(A1:B4,2.5)", "0.5"),
+    ("PERCENTRANK.EXC(A1:B4,2.6,1)", "0.5"),
+    ("PERCENTRANK.EXC(A1:B4,5)", "0.857"),
+    ("PERCENTRANK.INC(A1:B4,0)", "0"),
+    ("PERCENTRANK.INC(A1:B4,2)", "0.4"),
+    ("PERCENTRANK.INC(A1:B4,2.5)", "0.5"),
+    ("PERCENTRANK.INC(A1:B4,2.6,1)", "0.5"),
+    ("PERCENTRANK.INC(A1:B4,5)", "1"),
+    ("PERCENTRANK(A1:B4,0)", "0"),
+    ("PERCENTRANK(A1:B4,2)", "0.4"),
+    ("PERCENTRANK(A1:B4,2.5)", "0.5"),
+    ("PERCENTRANK(A1:B4,2.6,1)", "0.5"),
+    ("PERCENTRANK(A1:B4,5)", "1"),
+    ("QUARTILE(A1:A4,2)", "1.5"),
+    ("QUARTILE.EXC(A1:A4,1)", "0.25"),
+    ("QUARTILE.EXC(A1:A4,2)", "1.5"),
+    ("QUARTILE.EXC(A1:A4,3)", "2.75"),
+    ("QUARTILE.INC(A1:A4,0)", "0"),
+    ("RANK(1,A1:B5)", "5"),
+    ("RANK(1,A1:B5,0)", "5"),
+    ("RANK(1,A1:B5,1)", "2"),
+    ("RANK.EQ(1,A1:B5)", "5"),
+    ("RANK.EQ(1,A1:B5,0)", "5"),
+    ("RANK.EQ(1,A1:B5,1)", "2"),
+    ("STANDARDIZE(5.5,5,2)", "0.25"),
+    ("STANDARDIZE(12,15,1.5)", "-2"),
+    ("STANDARDIZE(-2,0,5)", "-0.4"),
+    ("CORREL(A1:A5,B1:B5)", "1"),
+    ("FORECAST(7,A1:A7,B1:B7)", "4"),
+    ("FORECAST.LINEAR(7,A1:A7,B1:B7)", "4"),
+    ("INTERCEPT(A1:A4,B1:B4)", "-3"),
+    ("PEARSON(A1:A4,B1:B4)", "1"),
+    ("RSQ(A1:A4,B1:B4)", "1"),
+    ("SLOPE(A1:A4,B1:B4)", "1"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "H\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc stats errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_calc_base_data(sheet)
+  let cases : Array[(String, String)] = [
+    ("AVEDEV()", "#VALUE!"),
+    ("AVEDEV(\"\")", "#VALUE!"),
+    ("AVEDEV(1,\"\")", "#VALUE!"),
+    ("DEVSQ()", "#VALUE!"),
+    ("DEVSQ(D1:D2)", "#N/A"),
+    ("GEOMEAN()", "#VALUE!"),
+    ("GEOMEAN(0)", "#NUM!"),
+    ("GEOMEAN(D1:D2)", "#NUM!"),
+    ("GEOMEAN(\"\")", "#VALUE!"),
+    ("HARMEAN()", "#VALUE!"),
+    ("HARMEAN(-1)", "#N/A"),
+    ("HARMEAN(0)", "#N/A"),
+    ("KURT()", "#VALUE!"),
+    ("KURT(F1,INT(1))", "#DIV/0!"),
+    ("SKEW()", "#VALUE!"),
+    ("SKEW(\"\")", "#VALUE!"),
+    ("SKEW(0)", "#DIV/0!"),
+    ("SKEW.P()", "#VALUE!"),
+    ("SKEW.P(\"\")", "#VALUE!"),
+    ("SKEW.P(0)", "#DIV/0!"),
+    ("LARGE()", "#VALUE!"),
+    ("LARGE(A1:A5,0)", "#NUM!"),
+    ("LARGE(A1:A5,6)", "#NUM!"),
+    ("LARGE(A1:A5,\"\")", "#VALUE!"),
+    ("SMALL()", "#VALUE!"),
+    ("SMALL(A1:A5,0)", "#NUM!"),
+    ("SMALL(A1:A5,6)", "#NUM!"),
+    ("SMALL(A1:A5,\"\")", "#VALUE!"),
+    ("PERCENTILE.EXC()", "#VALUE!"),
+    ("PERCENTILE.EXC(A1:A4,\"\")", "#VALUE!"),
+    ("PERCENTILE.EXC(A1:A4,-1)", "#NUM!"),
+    ("PERCENTILE.EXC(A1:A4,0)", "#NUM!"),
+    ("PERCENTILE.EXC(A1:A4,1)", "#NUM!"),
+    ("PERCENTILE.EXC(NA(),0.5)", "#NUM!"),
+    ("PERCENTILE.INC()", "#VALUE!"),
+    ("PERCENTILE()", "#VALUE!"),
+    ("PERCENTILE(0,\"\")", "#VALUE!"),
+    ("PERCENTILE(0,-1)", "#N/A"),
+    ("PERCENTILE(NA(),1)", "#N/A"),
+    ("PERCENTRANK.EXC()", "#VALUE!"),
+    ("PERCENTRANK.EXC(A1:B4,\"\")", "#VALUE!"),
+    ("PERCENTRANK.EXC(A1:B4,0,\"\")", "#VALUE!"),
+    ("PERCENTRANK.EXC(A1:B4,0,0)", "#NUM!"),
+    ("PERCENTRANK.EXC(A1:B4,6)", "#N/A"),
+    ("PERCENTRANK.EXC(NA(),1)", "#N/A"),
+    ("PERCENTRANK.INC()", "#VALUE!"),
+    ("PERCENTRANK.INC(A1:B4,\"\")", "#VALUE!"),
+    ("PERCENTRANK.INC(A1:B4,0,\"\")", "#VALUE!"),
+    ("PERCENTRANK.INC(A1:B4,0,0)", "#NUM!"),
+    ("PERCENTRANK.INC(A1:B4,6)", "#N/A"),
+    ("PERCENTRANK.INC(NA(),1)", "#N/A"),
+    ("PERCENTRANK()", "#VALUE!"),
+    ("PERCENTRANK(A1:B4,\"\")", "#VALUE!"),
+    ("PERCENTRANK(A1:B4,0,\"\")", "#VALUE!"),
+    ("PERCENTRANK(A1:B4,0,0)", "#NUM!"),
+    ("PERCENTRANK(A1:B4,6)", "#N/A"),
+    ("PERCENTRANK(NA(),1)", "#N/A"),
+    ("QUARTILE()", "#VALUE!"),
+    ("QUARTILE(A1:A4,\"\")", "#VALUE!"),
+    ("QUARTILE(A1:A4,-1)", "#NUM!"),
+    ("QUARTILE(A1:A4,5)", "#NUM!"),
+    ("QUARTILE.EXC()", "#VALUE!"),
+    ("QUARTILE.EXC(A1:A4,\"\")", "#VALUE!"),
+    ("QUARTILE.EXC(A1:A4,0)", "#NUM!"),
+    ("QUARTILE.EXC(A1:A4,4)", "#NUM!"),
+    ("QUARTILE.INC()", "#VALUE!"),
+    ("RANK()", "#VALUE!"),
+    ("RANK(1,A1:B5,0,0)", "#VALUE!"),
+    ("STANDARDIZE()", "#VALUE!"),
+    ("STANDARDIZE(\"\",0,5)", "#VALUE!"),
+    ("STANDARDIZE(0,\"\",5)", "#VALUE!"),
+    ("STANDARDIZE(0,0,\"\")", "#VALUE!"),
+    ("STANDARDIZE(0,0,0)", "#N/A"),
+    ("CORREL()", "#VALUE!"),
+    ("CORREL(A1:A3,B1:B5)", "#N/A"),
+    ("CORREL(A1:A1,B1:B1)", "#DIV/0!"),
+    ("FORECAST()", "#VALUE!"),
+    ("FORECAST(\"\",A1:A7,B1:B7)", "#VALUE!"),
+    ("FORECAST(1,A1:A2,B1:B1)", "#N/A"),
+    ("FORECAST(1,A4,A4)", "#DIV/0!"),
+    ("FORECAST.LINEAR()", "#VALUE!"),
+    ("FORECAST.LINEAR(\"\",A1:A7,B1:B7)", "#VALUE!"),
+    ("FORECAST.LINEAR(1,A1:A2,B1:B1)", "#N/A"),
+    ("FORECAST.LINEAR(1,A4,A4)", "#DIV/0!"),
+    ("INTERCEPT()", "#VALUE!"),
+    ("INTERCEPT(A1:A2,B1:B1)", "#N/A"),
+    ("INTERCEPT(A4,A4)", "#DIV/0!"),
+    ("PEARSON()", "#VALUE!"),
+    ("PEARSON(A1:A2,B1:B1)", "#N/A"),
+    ("PEARSON(A4,A4)", "#DIV/0!"),
+    ("RSQ()", "#VALUE!"),
+    ("RSQ(A1:A2,B1:B1)", "#N/A"),
+    ("RSQ(A4,A4)", "#DIV/0!"),
+    ("SLOPE()", "#VALUE!"),
+    ("SLOPE(A1:A2,B1:B1)", "#N/A"),
+    ("SLOPE(A4,A4)", "#DIV/0!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "H\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc mode functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let col_a : Array[Double] = [1, 1, 2, 2, 3, 3, 3, 4, 4, 4]
+  for i in 0..<col_a.length() {
+    let row = i + 1
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(col_a[i]))
+  }
+  let col_b : Array[Double] = [1, 1, 2, 2, 2]
+  for i in 0..<col_b.length() {
+    let row = i + 1
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(col_b[i]))
+  }
+  let cases : Array[(String, String)] = [
+    ("MODE(A1:A10)", "3"),
+    ("MODE(B1:B6)", "2"),
+    ("MODE.MULT(A1:A10)", "3"),
+    ("MODE.SNGL(A1:A10)", "3"),
+    ("MODE.SNGL(B1:B6)", "2"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc mode errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
+  let cases : Array[(String, String)] = [
+    ("MODE()", "#VALUE!"),
+    ("MODE(0,\"\")", "#VALUE!"),
+    ("MODE(D1:D3)", "#N/A"),
+    ("MODE.MULT()", "#VALUE!"),
+    ("MODE.MULT(0,\"\")", "#VALUE!"),
+    ("MODE.MULT(D1:D3)", "#N/A"),
+    ("MODE.SNGL()", "#VALUE!"),
+    ("MODE.SNGL(0,\"\")", "#VALUE!"),
+    ("MODE.SNGL(D1:D3)", "#N/A"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc covar functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("array1"))
+  sheet.set_cell_value("B1", CellValue::String("array2"))
+  let data : Array[(Double, Double)] = [
+    (2.0, 22.9),
+    (7.0, 33.49),
+    (8.0, 34.5),
+    (3.0, 27.61),
+    (4.0, 19.5),
+    (1.0, 10.11),
+    (6.0, 37.9),
+    (5.0, 31.08),
+  ]
+  for i in 0..<data.length() {
+    let row = i + 2
+    let (left, right) = data[i]
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+  }
+  let cases : Array[(String, String)] = [
+    ("COVAR(A1:A9,B1:B9)", "16.633125"),
+    ("COVAR(A2:A9,B2:B9)", "16.633125"),
+    ("COVARIANCE.P(A1:A9,B1:B9)", "16.633125"),
+    ("COVARIANCE.P(A2:A9,B2:B9)", "16.633125"),
+    ("COVARIANCE.S(A1:A9,B1:B9)", "19.0092857142857"),
+    ("COVARIANCE.S(A2:A9,B2:B9)", "19.0092857142857"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("COVAR()", "#VALUE!"),
+    ("COVAR(A2:A9,B3:B3)", "#N/A"),
+    ("COVARIANCE.P()", "#VALUE!"),
+    ("COVARIANCE.P(A2:A9,B3:B3)", "#N/A"),
+    ("COVARIANCE.S()", "#VALUE!"),
+    ("COVARIANCE.S(A2:A9,B3:B3)", "#N/A"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "D\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc pearson functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("x"))
+  sheet.set_cell_value("B1", CellValue::String("y"))
+  let data : Array[(Double, Double)] = [
+    (1.0, 10.11),
+    (2.0, 22.9),
+    (2.0, 27.61),
+    (3.0, 27.61),
+    (4.0, 11.15),
+    (5.0, 31.08),
+    (6.0, 37.9),
+    (7.0, 33.49),
+    (8.0, 21.05),
+    (9.0, 27.01),
+    (10.0, 45.78),
+    (11.0, 31.32),
+    (12.0, 50.57),
+    (13.0, 45.48),
+    (14.0, 40.94),
+    (15.0, 53.76),
+    (16.0, 36.18),
+    (17.0, 49.77),
+    (18.0, 55.66),
+    (19.0, 63.83),
+    (20.0, 63.6),
+  ]
+  for i in 0..<data.length() {
+    let row = i + 2
+    let (left, right) = data[i]
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+  }
+  sheet.set_cell_formula("C1", "PEARSON(A2:A22,B2:B22)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.864129542184994")
+}
+
+///|
+test "calc rsq functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("known_y's"))
+  sheet.set_cell_value("B1", CellValue::String("known_x's"))
+  let data : Array[(Double, Double)] = [
+    (2.0, 22.9),
+    (7.0, 33.49),
+    (8.0, 34.5),
+    (3.0, 27.61),
+    (4.0, 19.5),
+    (1.0, 10.11),
+    (6.0, 37.9),
+    (5.0, 31.08),
+  ]
+  for i in 0..<data.length() {
+    let row = i + 2
+    let (left, right) = data[i]
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+  }
+  sheet.set_cell_formula("C1", "RSQ(A2:A9,B2:B9)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.711666290486784")
+}
+
+///|
+test "calc slope functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("known_x's"))
+  sheet.set_cell_value("B1", CellValue::String("known_y's"))
+  let data : Array[(Double, Double)] = [
+    (1.0, 3.0),
+    (2.0, 7.0),
+    (3.0, 17.0),
+    (4.0, 20.0),
+    (5.0, 20.0),
+    (6.0, 27.0),
+  ]
+  for i in 0..<data.length() {
+    let row = i + 2
+    let (left, right) = data[i]
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+  }
+  sheet.set_cell_formula("C1", "SLOPE(A2:A7,B2:B7)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.200826446280992")
+}
+
+///|
+test "calc steyx functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("known_x's"))
+  sheet.set_cell_value("B1", CellValue::String("known_y's"))
+  let data : Array[(Double, Double)] = [
+    (1.0, 3.0),
+    (2.0, 7.9),
+    (3.0, 8.0),
+    (4.0, 9.2),
+    (4.5, 12.0),
+    (5.0, 10.5),
+    (6.0, 15.0),
+    (7.0, 15.5),
+    (8.0, 17.0),
+  ]
+  for i in 0..<data.length() {
+    let row = i + 2
+    let (left, right) = data[i]
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
+    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+  }
+  sheet.set_cell_formula("C1", "STEYX(B2:B11,A2:A11)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1.20118634668221")
+  let error_cases : Array[(String, String)] = [
+    ("STEYX()", "#VALUE!"),
+    ("STEYX(B2:B11,A1:A9)", "#N/A"),
+    ("STEYX(B2,A2)", "#DIV/0!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "D\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
