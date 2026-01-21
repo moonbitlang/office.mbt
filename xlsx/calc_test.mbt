@@ -311,6 +311,38 @@ test "calc stdev functions" {
 }
 
 ///|
+test "calc var functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_formula("B1", "VAR(1,3,5,0,C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="4.91666666666667")
+  sheet.set_cell_formula("B2", "VAR(1,3,5,0,C1,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="4")
+  sheet.set_cell_formula("B3", "VARA(1,3,5,0,C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="4.91666666666667")
+  sheet.set_cell_formula("B4", "VARA(1,3,5,0,C1,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="4")
+  sheet.set_cell_formula("B5", "VARP(A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="1.25")
+  sheet.set_cell_formula("B6", "VARP(1,3,5,0,C1,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="3.2")
+  sheet.set_cell_formula("B7", "VAR.P(A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B7"), content="1.25")
+  sheet.set_cell_formula("B8", "VAR.S(1,3,5,0,C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B8"), content="4.91666666666667")
+  sheet.set_cell_formula("B9", "VAR.S(1,3,5,0,C1,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B9"), content="4")
+  sheet.set_cell_formula("B10", "VARPA(1,3,5,0,C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B10"), content="3.6875")
+  sheet.set_cell_formula("B11", "VARPA(1,3,5,0,C1,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "B11"), content="3.2")
+}
+
+///|
 test "calc gcd and lcm functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -2801,6 +2833,28 @@ test "calc stdev function errors" {
   sheet.set_cell_formula("A7", "STDEV.P(\"\")")
   inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#DIV/0!")
   sheet.set_cell_formula("A8", "STDEVPA(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#DIV/0!")
+}
+
+///|
+test "calc var function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "VAR()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "VARA()")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "VARP()")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "VAR.P()")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "VAR.S()")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "VARPA()")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "VARP(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#DIV/0!")
+  sheet.set_cell_formula("A8", "VAR.P(\"\")")
   inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#DIV/0!")
 }
 

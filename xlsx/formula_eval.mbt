@@ -4296,6 +4296,30 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "VAR" | "VAR.S" =>
+      if values.length() >= 1 {
+        variance_values(values, true, false)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "VARA" =>
+      if values.length() >= 1 {
+        variance_values(values, true, true)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "VARP" | "VAR.P" =>
+      if values.length() >= 1 {
+        variance_values(values, false, false)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "VARPA" =>
+      if values.length() >= 1 {
+        variance_values(values, false, true)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
@@ -9525,9 +9549,9 @@ fn variance_values(
   if count > minimum {
     let count_d = Double::from_int(count)
     let min_d = Double::from_int(minimum)
-    FormulaValue::Number(
-      (sum_sq * count_d - sum * sum) / (count_d * (count_d - min_d)),
-    )
+    let variance = (sum_sq * count_d - sum * sum) /
+      (count_d * (count_d - min_d))
+    FormulaValue::Number(round_significant_digits(variance, 15))
   } else {
     FormulaValue::Error(formula_error_div)
   }
