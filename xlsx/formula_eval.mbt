@@ -1244,6 +1244,222 @@ fn unique_range_values(
 }
 
 ///|
+fn sequence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 1 || values.length() > 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rows = match value_as_int(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cols = if values.length() >= 2 {
+    match value_as_int(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1
+  }
+  if rows <= 0 || cols <= 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let start = if values.length() >= 3 {
+    match value_as_number(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1.0
+  }
+  let step = if values.length() == 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1.0
+  }
+  let out : Array[FormulaValue] = []
+  for row in 0..<rows {
+    for col in 0..<cols {
+      let idx = row * cols + col
+      let value = start + step * Double::from_int(idx)
+      out.push(FormulaValue::Number(value))
+    }
+  }
+  FormulaValue::List(out)
+}
+
+///|
+fn sort_range_values(
+  range : RangeValues,
+  sort_index : Int,
+  sort_order : Int,
+) -> Result[RangeValues, FormulaValue] {
+  if sort_index < 1 || sort_index > range.cols {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  if sort_order != 1 && sort_order != -1 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let entries : Array[(Int, FormulaValue)] = []
+  let key_col = sort_index - 1
+  for row in 0..<range.rows {
+    let key = match range.get(row, key_col) {
+      Some(value) => value
+      None => return Err(FormulaValue::Error(formula_error_value))
+    }
+    match key {
+      FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+      _ => entries.push((row, key))
+    }
+  }
+  entries.sort_by((left, right) => {
+    let (left_idx, left_key) = left
+    let (right_idx, right_key) = right
+    let cmp = match compare_values(left_key, right_key) {
+      Ok(value) => value
+      Err(_) => 0
+    }
+    if cmp == 0 {
+      left_idx - right_idx
+    } else {
+      sort_order * cmp
+    }
+  })
+  let out : Array[FormulaValue] = []
+  for entry in entries {
+    let (row, _) = entry
+    let offset = row * range.cols
+    for col in 0..<range.cols {
+      out.push(range.values[offset + col])
+    }
+  }
+  Ok({ values: out, rows: range.rows, cols: range.cols })
+}
+
+///|
+fn sort_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() < 1 || args.length() > 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let sort_index = if values.length() >= 2 {
+    match value_as_int(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1
+  }
+  let sort_order = if values.length() >= 3 {
+    match value_as_int(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    1
+  }
+  let by_col = if values.length() == 4 {
+    match value_as_bool(values[3]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+  } else {
+    false
+  }
+  if sort_index < 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let base = if by_col { transpose_range_values(range) } else { range }
+  match sort_range_values(base, sort_index, sort_order) {
+    Ok(sorted) => {
+      let result = if by_col { transpose_range_values(sorted) } else { sorted }
+      FormulaValue::List(result.values)
+    }
+    Err(err) => err
+  }
+}
+
+///|
+fn filter_range_values(
+  range : RangeValues,
+  mask : RangeValues,
+  if_empty : FormulaValue?,
+) -> FormulaValue {
+  let values = match range_vector(range) {
+    Some(list) => list
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  let include_values = match range_vector(mask) {
+    Some(list) => list
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() != include_values.length() {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let out : Array[FormulaValue] = []
+  for i in 0..<values.length() {
+    let keep = match value_as_bool(include_values[i]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+    if keep {
+      out.push(values[i])
+    }
+  }
+  if out.length() == 0 {
+    match if_empty {
+      Some(value) => value
+      None => FormulaValue::Error(formula_error_calc)
+    }
+  } else {
+    FormulaValue::List(out)
+  }
+}
+
+///|
+fn filter_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() < 2 || args.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let mask = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[1],
+    values[1],
+    ctx,
+  )
+  let if_empty = if args.length() == 3 { Some(values[2]) } else { None }
+  filter_range_values(range, mask, if_empty)
+}
+
+///|
 fn range_from_expr_or_value(
   workbook : Workbook,
   sheet_name : String,
@@ -8226,6 +8442,9 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "SEQUENCE" => sequence_values(values)
+    "SORT" => sort_values(workbook, sheet_name, args, values, ctx)
+    "FILTER" => filter_values(workbook, sheet_name, args, values, ctx)
     "UNIQUE" =>
       if args.length() >= 1 && args.length() <= 3 {
         let by_col = if args.length() >= 2 {

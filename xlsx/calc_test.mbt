@@ -2830,6 +2830,109 @@ test "calc unique error functions" {
 }
 
 ///|
+test "calc sequence functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "TEXTJOIN(\",\",TRUE(),SEQUENCE(3))")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1,2,3")
+  sheet.set_cell_formula("A2", "TEXTJOIN(\",\",TRUE(),SEQUENCE(2,3))")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="1,2,3,4,5,6")
+  sheet.set_cell_formula("A3", "TEXTJOIN(\",\",TRUE(),SEQUENCE(2,2,10,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="10,12,14,16")
+  sheet.set_cell_formula("A4", "TEXTJOIN(\",\",TRUE(),SEQUENCE(3,1,5,-1))")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="5,4,3")
+}
+
+///|
+test "calc sequence error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "SEQUENCE()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "SEQUENCE(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "SEQUENCE(1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+}
+
+///|
+test "calc sort functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(20.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(10.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(30.0))
+  sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),SORT(A1:B3))")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,10,2,30,3,20")
+  sheet.set_cell_formula("C2", "TEXTJOIN(\",\",TRUE(),SORT(A1:B3,2,-1))")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2,30,3,20,1,10")
+  sheet.set_cell_value("D1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("E1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("F1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("D2", CellValue::Numeric(30.0))
+  sheet.set_cell_value("E2", CellValue::Numeric(10.0))
+  sheet.set_cell_value("F2", CellValue::Numeric(20.0))
+  sheet.set_cell_formula("C3", "TEXTJOIN(\",\",TRUE(),SORT(D1:F2,2,1,TRUE()))")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="1,2,3,10,20,30")
+}
+
+///|
+test "calc sort error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("B1", "SORT(A1:A2,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "SORT(A1:A2,1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+}
+
+///|
+test "calc filter functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A5", CellValue::Numeric(5.0))
+  sheet.set_cell_value("B1", CellValue::Bool(true))
+  sheet.set_cell_value("B2", CellValue::Bool(false))
+  sheet.set_cell_value("B3", CellValue::Bool(true))
+  sheet.set_cell_value("B4", CellValue::Bool(false))
+  sheet.set_cell_value("B5", CellValue::Bool(true))
+  sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),FILTER(A1:A5,B1:B5))")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,3,5")
+  sheet.set_cell_value("D1", CellValue::Bool(false))
+  sheet.set_cell_value("D2", CellValue::Bool(false))
+  sheet.set_cell_value("D3", CellValue::Bool(false))
+  sheet.set_cell_value("D4", CellValue::Bool(false))
+  sheet.set_cell_value("D5", CellValue::Bool(false))
+  sheet.set_cell_formula("C2", "FILTER(A1:A5,D1:D5,\"none\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="none")
+}
+
+///|
+test "calc filter error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B1", CellValue::Bool(false))
+  sheet.set_cell_value("B2", CellValue::Bool(false))
+  sheet.set_cell_formula("C1", "FILTER(A1:A2,B1:B2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#CALC!")
+  sheet.set_cell_formula("C2", "FILTER(A1:A2,B1:B1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+  sheet.set_cell_formula("C3", "FILTER()")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#VALUE!")
+}
+
+///|
 test "calc row and column functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
