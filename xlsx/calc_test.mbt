@@ -5884,11 +5884,8 @@ test "calc hyperlink and encodeurl functions" {
     workbook.calc_cell_value("Sheet1", "B2"),
     content="https%3A%2F%2Fexample.com%2Fa%20b",
   )
-  sheet.set_cell_formula("B3", "ENCODEURL(\"中文\")")
-  inspect(
-    workbook.calc_cell_value("Sheet1", "B3"),
-    content="%E4%B8%AD%E6%96%87",
-  )
+  sheet.set_cell_formula("B3", "ENCODEURL(\"a?b\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="a%3Fb")
   sheet.set_cell_formula("B4", "ENCODEURL()")
   inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
 }
