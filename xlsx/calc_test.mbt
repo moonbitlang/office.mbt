@@ -181,6 +181,21 @@ test "calc error functions" {
 }
 
 ///|
+test "calc ifs function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_formula("B1", "IFS(A1>1,\"big\",A1=1,\"one\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="one")
+  sheet.set_cell_formula("B2", "IFS(A1>1,\"big\",A1=2,\"two\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#N/A")
+  sheet.set_cell_formula("B3", "IFS(1/0,\"err\",TRUE(),2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#DIV/0!")
+  sheet.set_cell_formula("B4", "IFS(TRUE(),1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

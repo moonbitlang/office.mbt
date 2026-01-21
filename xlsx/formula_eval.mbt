@@ -1681,6 +1681,18 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "IFS" =>
+      if values.length() < 2 || values.length() % 2 != 0 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        for i in 0..<(values.length() / 2) {
+          match value_as_bool(values[i * 2]) {
+            Ok(flag) => if flag { return values[i * 2 + 1] }
+            Err(err) => return err
+          }
+        }
+        FormulaValue::Error(formula_error_na)
+      }
     _ => FormulaValue::Error(formula_error_name)
   }
 }
