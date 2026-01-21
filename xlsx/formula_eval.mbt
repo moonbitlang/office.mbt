@@ -1739,7 +1739,9 @@ fn eval_function(
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
           FormulaValue::Error(err) =>
-            FormulaValue::Bool(err != formula_error_na)
+            FormulaValue::Bool(
+              is_known_error_code(err) && err != formula_error_na,
+            )
           _ => FormulaValue::Bool(false)
         }
       } else {
@@ -1780,7 +1782,8 @@ fn eval_function(
     "ISERROR" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(_) => FormulaValue::Bool(true)
+          FormulaValue::Error(err) =>
+            FormulaValue::Bool(is_known_error_code(err))
           _ => FormulaValue::Bool(false)
         }
       } else {
@@ -2282,6 +2285,20 @@ fn error_type_value(value : FormulaValue) -> FormulaValue {
       }
     _ => FormulaValue::Error(formula_error_na)
   }
+}
+
+///|
+fn is_known_error_code(err : String) -> Bool {
+  err == formula_error_null ||
+  err == formula_error_div ||
+  err == formula_error_value ||
+  err == formula_error_ref ||
+  err == formula_error_name ||
+  err == formula_error_num ||
+  err == formula_error_na ||
+  err == formula_error_spill ||
+  err == formula_error_calc ||
+  err == formula_error_getting_data
 }
 
 ///|

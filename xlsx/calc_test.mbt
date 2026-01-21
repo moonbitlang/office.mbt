@@ -204,6 +204,8 @@ test "calc is functions" {
   sheet.set_cell_value("A3", CellValue::String("1"))
   sheet.set_cell_value("A4", CellValue::Bool(true))
   sheet.set_cell_value("A5", CellValue::Error("#DIV/0!"))
+  sheet.set_cell_value("A6", CellValue::Error("#SPILL!"))
+  sheet.set_cell_value("A7", CellValue::Error("#GETTING_DATA"))
   sheet.set_cell_formula("B1", "ISBLANK(B2)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="TRUE")
   sheet.set_cell_formula("B2", "ISNUMBER(A1)")
@@ -224,6 +226,16 @@ test "calc is functions" {
   inspect(workbook.calc_cell_value("Sheet1", "B9"), content="FALSE")
   sheet.set_cell_formula("B10", "ISNA(COUNTIFS(A1,1,2))")
   inspect(workbook.calc_cell_value("Sheet1", "B10"), content="TRUE")
+  sheet.set_cell_formula("B11", "ISERROR(A6)")
+  inspect(workbook.calc_cell_value("Sheet1", "B11"), content="TRUE")
+  sheet.set_cell_formula("B12", "ISERROR(A7)")
+  inspect(workbook.calc_cell_value("Sheet1", "B12"), content="TRUE")
+  sheet.set_cell_formula("B13", "ISERR(A6)")
+  inspect(workbook.calc_cell_value("Sheet1", "B13"), content="TRUE")
+  sheet.set_cell_formula("B14", "ISERR(A7)")
+  inspect(workbook.calc_cell_value("Sheet1", "B14"), content="TRUE")
+  sheet.set_cell_formula("B15", "ISERR(COUNTIFS(A1,1,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "B15"), content="FALSE")
 }
 
 ///|
