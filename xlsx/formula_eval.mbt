@@ -1867,6 +1867,41 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "SHEET" =>
+      if args.length() == 0 {
+        match sheet_index_opt(workbook, sheet_name) {
+          Some(index) => FormulaValue::Number(Double::from_int(index + 1))
+          None => FormulaValue::Error(formula_error_na)
+        }
+      } else if args.length() == 1 {
+        let target_sheet = match args[0] {
+          Expr::Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
+          Expr::Range(sheet, _, _) =>
+            if sheet == "" {
+              sheet_name
+            } else {
+              sheet
+            }
+          _ => formula_value_string(values[0])
+        }
+        match sheet_index_opt(workbook, target_sheet) {
+          Some(index) => FormulaValue::Number(Double::from_int(index + 1))
+          None => FormulaValue::Error(formula_error_na)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SHEETS" =>
+      if args.length() == 0 {
+        FormulaValue::Number(Double::from_int(workbook.sheets().length()))
+      } else if args.length() == 1 {
+        match args[0] {
+          Expr::Cell(_, _) | Expr::Range(_, _, _) => FormulaValue::Number(1.0)
+          _ => FormulaValue::Error(formula_error_na)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "NA" =>
       if values.length() == 0 {
         FormulaValue::Error(formula_error_na)
@@ -2290,6 +2325,15 @@ fn error_type_value(value : FormulaValue) -> FormulaValue {
         FormulaValue::Error(formula_error_na)
       }
     _ => FormulaValue::Error(formula_error_na)
+  }
+}
+
+///|
+fn sheet_index_opt(workbook : Workbook, name : String) -> Int? {
+  try workbook.sheet_index(name) catch {
+    _ => None
+  } noraise {
+    value => Some(value)
   }
 }
 

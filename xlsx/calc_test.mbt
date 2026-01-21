@@ -323,6 +323,31 @@ test "calc na function" {
 }
 
 ///|
+test "calc sheet functions" {
+  let workbook = Workbook::new()
+  let sheet1 = workbook.add_sheet("Sheet1")
+  let sheet2 = workbook.add_sheet("Sheet2")
+  sheet1.set_cell_formula("A1", "SHEET()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
+  sheet1.set_cell_formula("A2", "SHEET(\"Sheet2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="2")
+  sheet1.set_cell_formula("A3", "SHEET(Sheet2!A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="2")
+  sheet1.set_cell_formula("A4", "SHEET(\"Missing\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#N/A")
+  sheet1.set_cell_formula("B1", "SHEETS()")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="2")
+  sheet1.set_cell_formula("B2", "SHEETS(A1:B2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="1")
+  sheet1.set_cell_formula("B3", "SHEETS(Sheet2!A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="1")
+  sheet1.set_cell_formula("B4", "SHEETS(\"Sheet1\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#N/A")
+  sheet2.set_cell_formula("A1", "SHEET()")
+  inspect(workbook.calc_cell_value("Sheet2", "A1"), content="2")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
