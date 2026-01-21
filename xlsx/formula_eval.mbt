@@ -1467,6 +1467,124 @@ fn modf_double(value : Double) -> (Double, Double) {
 }
 
 ///|
+fn normalize_year_month(year : Int, month : Int) -> (Int, Int) {
+  let mut y = year
+  let mut m = month
+  while m <= 0 {
+    m = m + 12
+    y = y - 1
+  }
+  while m > 12 {
+    m = m - 12
+    y = y + 1
+  }
+  (y, m)
+}
+
+///|
+fn normalize_date_parts(year : Int, month : Int, day : Int) -> (Int, Int, Int) {
+  let (year_value, month_value) = normalize_year_month(year, month)
+  let mut y = year_value
+  let mut m = month_value
+  let mut d = day
+  while d <= 0 {
+    m = m - 1
+    if m <= 0 {
+      m = 12
+      y = y - 1
+    }
+    d = d + days_in_month(y, m)
+  }
+  let mut dim = days_in_month(y, m)
+  while d > dim {
+    d = d - dim
+    m = m + 1
+    if m > 12 {
+      m = 1
+      y = y + 1
+    }
+    dim = days_in_month(y, m)
+  }
+  (y, m, d)
+}
+
+///|
+fn days_before_year(year : Int) -> Int {
+  let mut days = 0
+  let mut y = 1900
+  if year >= 1900 {
+    while y < year {
+      let inc = if is_leap_year(y) { 366 } else { 365 }
+      days = days + inc
+      y = y + 1
+    }
+  } else {
+    while y > year {
+      y = y - 1
+      let dec = if is_leap_year(y) { 366 } else { 365 }
+      days = days - dec
+    }
+  }
+  days
+}
+
+///|
+fn days_before_month(year : Int, month : Int) -> Int {
+  let mut days = 0
+  for m in 1..<month {
+    days = days + days_in_month(year, m)
+  }
+  days
+}
+
+///|
+fn excel_serial_from_date(year : Int, month : Int, day : Int) -> Double? {
+  if year < 0 || year > 9999 {
+    return None
+  }
+  let (y, m, d) = normalize_date_parts(year, month, day)
+  if y < 0 || y > 9999 {
+    return None
+  }
+  let mut days = days_before_year(y)
+  days = days + days_before_month(y, m)
+  days = days + (d - 1)
+  let mut serial = days + 1
+  if serial >= 60 {
+    serial = serial + 1
+  }
+  if serial < 0 {
+    None
+  } else {
+    Some(Double::from_int(serial))
+  }
+}
+
+///|
+fn excel_time_fraction(hours : Int, minutes : Int, seconds : Int) -> Double? {
+  if hours < 0 || minutes < 0 || seconds < 0 {
+    return None
+  }
+  let total = hours * 3600 + minutes * 60 + seconds
+  let wrapped = total % 86400
+  Some(Double::from_int(wrapped) / 86400.0)
+}
+
+///|
+fn excel_serial_parts(
+  value : FormulaValue,
+) -> Result[(Int, Int, Int, Int, Int, Int), FormulaValue] {
+  match value_as_number(value) {
+    Ok(num) =>
+      match excel_serial_to_parts(num) {
+        Some(parts) => Ok(parts)
+        None => Err(FormulaValue::Error(formula_error_num))
+      }
+    Err(err) => Err(err)
+  }
+}
+
+///|
 fn gcd_double(left : Double, right : Double) -> Double {
   let mut x = trunc_double(left)
   let mut y = trunc_double(right)
@@ -3955,6 +4073,106 @@ fn eval_function(
             FormulaValue::String(
               format_number_code(format_number(num), format_text),
             )
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DATE" =>
+      if values.length() == 3 {
+        match
+          (
+            value_as_int(values[0]),
+            value_as_int(values[1]),
+            value_as_int(values[2]),
+          ) {
+          (Ok(year), Ok(month), Ok(day)) =>
+            match excel_serial_from_date(year, month, day) {
+              Some(serial) => FormulaValue::Number(serial)
+              None => FormulaValue::Error(formula_error_num)
+            }
+          (Err(err), _, _) => err
+          (_, Err(err), _) => err
+          (_, _, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TIME" =>
+      if values.length() == 3 {
+        match
+          (
+            value_as_int(values[0]),
+            value_as_int(values[1]),
+            value_as_int(values[2]),
+          ) {
+          (Ok(hours), Ok(minutes), Ok(seconds)) =>
+            match excel_time_fraction(hours, minutes, seconds) {
+              Some(value) => FormulaValue::Number(value)
+              None => FormulaValue::Error(formula_error_num)
+            }
+          (Err(err), _, _) => err
+          (_, Err(err), _) => err
+          (_, _, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "YEAR" =>
+      if values.length() == 1 {
+        match excel_serial_parts(values[0]) {
+          Ok((year, _, _, _, _, _)) =>
+            FormulaValue::Number(Double::from_int(year))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MONTH" =>
+      if values.length() == 1 {
+        match excel_serial_parts(values[0]) {
+          Ok((_, month, _, _, _, _)) =>
+            FormulaValue::Number(Double::from_int(month))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DAY" =>
+      if values.length() == 1 {
+        match excel_serial_parts(values[0]) {
+          Ok((_, _, day, _, _, _)) =>
+            FormulaValue::Number(Double::from_int(day))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "HOUR" =>
+      if values.length() == 1 {
+        match excel_serial_parts(values[0]) {
+          Ok((_, _, _, hour, _, _)) =>
+            FormulaValue::Number(Double::from_int(hour))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MINUTE" =>
+      if values.length() == 1 {
+        match excel_serial_parts(values[0]) {
+          Ok((_, _, _, _, minute, _)) =>
+            FormulaValue::Number(Double::from_int(minute))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SECOND" =>
+      if values.length() == 1 {
+        match excel_serial_parts(values[0]) {
+          Ok((_, _, _, _, _, second)) =>
+            FormulaValue::Number(Double::from_int(second))
           Err(err) => err
         }
       } else {

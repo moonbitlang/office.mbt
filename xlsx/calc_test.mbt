@@ -2225,6 +2225,38 @@ test "calc row and column functions" {
 }
 
 ///|
+test "calc date and time functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "TEXT(DATE(2020,1,2),\"m/d/yy\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1/2/20")
+  sheet.set_cell_formula("A2", "TEXT(DATE(2020,14,1),\"m/d/yy\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="2/1/21")
+  sheet.set_cell_formula("A3", "TEXT(DATE(2020,1,0),\"m/d/yy\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="12/31/19")
+  sheet.set_cell_formula("B1", "YEAR(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1900")
+  sheet.set_cell_formula("B2", "MONTH(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="1")
+  sheet.set_cell_formula("B3", "DAY(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="1")
+  sheet.set_cell_formula("B4", "HOUR(1.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="12")
+  sheet.set_cell_formula("B5", "MINUTE(1.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="0")
+  sheet.set_cell_formula("B6", "SECOND(1.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="0")
+  sheet.set_cell_formula("B7", "YEAR(-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B7"), content="#NUM!")
+  sheet.set_cell_formula("C1", "TEXT(TIME(1,2,3),\"h:mm:ss\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1:02:03")
+  sheet.set_cell_formula("C2", "TEXT(TIME(25,0,0),\"h:mm:ss\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1:00:00")
+  sheet.set_cell_formula("C3", "TIME(-1,0,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#NUM!")
+}
+
+///|
 test "calc a functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
