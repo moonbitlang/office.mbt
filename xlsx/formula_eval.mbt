@@ -1364,6 +1364,134 @@ fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn slice_range_values(
+  range : RangeValues,
+  row_start : Int,
+  row_count : Int,
+  col_start : Int,
+  col_count : Int,
+) -> Result[RangeValues, FormulaValue] {
+  if row_count <= 0 || col_count <= 0 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  if row_start < 0 || col_start < 0 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  if row_start + row_count > range.rows || col_start + col_count > range.cols {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let out : Array[FormulaValue] = []
+  for row in 0..<row_count {
+    let offset = (row_start + row) * range.cols + col_start
+    for col in 0..<col_count {
+      out.push(range.values[offset + col])
+    }
+  }
+  Ok({ values: out, rows: row_count, cols: col_count })
+}
+
+///|
+fn take_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 2 || values.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rows_value = match value_as_int(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cols_value = if values.length() == 3 {
+    match value_as_int(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let rows_count = if rows_value == 0 { range.rows } else { rows_value }
+  let cols_count = if values.length() == 3 {
+    if cols_value == 0 {
+      range.cols
+    } else {
+      cols_value
+    }
+  } else {
+    range.cols
+  }
+  if rows_count == 0 || cols_count == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let row_count = Double::abs(Double::from_int(rows_count)).to_int()
+  let col_count = Double::abs(Double::from_int(cols_count)).to_int()
+  if row_count > range.rows || col_count > range.cols {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let row_start = if rows_count > 0 { 0 } else { range.rows - row_count }
+  let col_start = if cols_count > 0 { 0 } else { range.cols - col_count }
+  match slice_range_values(range, row_start, row_count, col_start, col_count) {
+    Ok(result) => FormulaValue::List(result.values)
+    Err(err) => err
+  }
+}
+
+///|
+fn drop_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 2 || values.length() > 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rows_value = match value_as_int(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cols_value = if values.length() == 3 {
+    match value_as_int(values[2]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let drop_rows = Double::abs(Double::from_int(rows_value)).to_int()
+  let drop_cols = Double::abs(Double::from_int(cols_value)).to_int()
+  if drop_rows > range.rows || drop_cols > range.cols {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let row_start = if rows_value >= 0 { drop_rows } else { 0 }
+  let col_start = if cols_value >= 0 { drop_cols } else { 0 }
+  let row_count = range.rows - drop_rows
+  let col_count = range.cols - drop_cols
+  match slice_range_values(range, row_start, row_count, col_start, col_count) {
+    Ok(result) => FormulaValue::List(result.values)
+    Err(err) => err
+  }
+}
+
+///|
 fn sort_range_values(
   range : RangeValues,
   sort_index : Int,
@@ -8755,6 +8883,8 @@ fn eval_function(
         FormulaValue::Error(formula_error_value)
       }
     "SEQUENCE" => sequence_values(values)
+    "TAKE" => take_values(workbook, sheet_name, args, values, ctx)
+    "DROP" => drop_values(workbook, sheet_name, args, values, ctx)
     "SORT" => sort_values(workbook, sheet_name, args, values, ctx)
     "SORTBY" | "_XLFN.SORTBY" =>
       sortby_values(workbook, sheet_name, args, values, ctx)

@@ -2964,6 +2964,70 @@ test "calc sortby error functions" {
 }
 
 ///|
+test "calc take functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let mut value = 1.0
+  for row in 1..<=3 {
+    for col in 1..<=3 {
+      sheet.set_cell_value_rc(row, col, CellValue::Numeric(value))
+      value = value + 1.0
+    }
+  }
+  sheet.set_cell_formula("D1", "TEXTJOIN(\",\",TRUE(),TAKE(A1:C3,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1,2,3,4,5,6")
+  sheet.set_cell_formula("D2", "TEXTJOIN(\",\",TRUE(),TAKE(A1:C3,-1,2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="7,8")
+  sheet.set_cell_formula("D3", "TEXTJOIN(\",\",TRUE(),TAKE(A1:C3,1,-1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="3")
+}
+
+///|
+test "calc take error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("C1", CellValue::Numeric(3.0))
+  sheet.set_cell_formula("D1", "TAKE(A1:C1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
+  sheet.set_cell_formula("D2", "TAKE(A1:C1,1,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="#VALUE!")
+}
+
+///|
+test "calc drop functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let mut value = 1.0
+  for row in 1..<=3 {
+    for col in 1..<=3 {
+      sheet.set_cell_value_rc(row, col, CellValue::Numeric(value))
+      value = value + 1.0
+    }
+  }
+  sheet.set_cell_formula("D1", "TEXTJOIN(\",\",TRUE(),DROP(A1:C3,1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="4,5,6,7,8,9")
+  sheet.set_cell_formula("D2", "TEXTJOIN(\",\",TRUE(),DROP(A1:C3,-1,1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="2,3,5,6")
+  sheet.set_cell_formula("D3", "TEXTJOIN(\",\",TRUE(),DROP(A1:C3,0,-1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1,2,4,5,7,8")
+}
+
+///|
+test "calc drop error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("C1", CellValue::Numeric(3.0))
+  sheet.set_cell_formula("D1", "DROP(A1:C1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
+  sheet.set_cell_formula("D2", "DROP(A1:C1,1,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="#VALUE!")
+}
+
+///|
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
