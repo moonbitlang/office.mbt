@@ -1867,6 +1867,12 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "NA" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_na)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "N" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {

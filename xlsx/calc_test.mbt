@@ -313,6 +313,16 @@ test "calc error type function" {
 }
 
 ///|
+test "calc na function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "NA()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#N/A")
+  sheet.set_cell_formula("A2", "NA(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+}
+
+///|
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
