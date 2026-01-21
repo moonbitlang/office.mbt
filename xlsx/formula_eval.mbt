@@ -1155,6 +1155,109 @@ fn match_range_value(
 }
 
 ///|
+fn lookup_range_flag(value : FormulaValue) -> Result[Bool, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Bool(flag) => Ok(flag)
+    FormulaValue::Number(num) => Ok(num != 0.0)
+    FormulaValue::Empty => Ok(false)
+    FormulaValue::String(text) => {
+      let parsed = @strconv.parse_bool(text) catch {
+        _ => return Err(FormulaValue::Error(formula_error_value))
+      }
+      Ok(parsed)
+    }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+  }
+}
+
+///|
+fn vlookup_value(
+  lookup : FormulaValue,
+  table : RangeValues,
+  col_index : Int,
+  range_lookup : Bool,
+) -> FormulaValue {
+  match lookup {
+    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    _ => ()
+  }
+  if col_index <= 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if col_index > table.cols {
+    return FormulaValue::Error(formula_error_ref)
+  }
+  if range_lookup {
+    let mut best_row : Int? = None
+    for row in 0..<table.rows {
+      let key = table.values[row * table.cols]
+      match compare_values(key, lookup) {
+        Ok(cmp) => if cmp <= 0 { best_row = Some(row) }
+        Err(err) => return err
+      }
+    }
+    match best_row {
+      Some(row) => table.values[row * table.cols + (col_index - 1)]
+      None => FormulaValue::Error(formula_error_na)
+    }
+  } else {
+    for row in 0..<table.rows {
+      let key = table.values[row * table.cols]
+      match compare_values(key, lookup) {
+        Ok(0) => return table.values[row * table.cols + (col_index - 1)]
+        Ok(_) => ()
+        Err(err) => return err
+      }
+    }
+    FormulaValue::Error(formula_error_na)
+  }
+}
+
+///|
+fn hlookup_value(
+  lookup : FormulaValue,
+  table : RangeValues,
+  row_index : Int,
+  range_lookup : Bool,
+) -> FormulaValue {
+  match lookup {
+    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    _ => ()
+  }
+  if row_index <= 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if row_index > table.rows {
+    return FormulaValue::Error(formula_error_ref)
+  }
+  if range_lookup {
+    let mut best_col : Int? = None
+    for col in 0..<table.cols {
+      let key = table.values[col]
+      match compare_values(key, lookup) {
+        Ok(cmp) => if cmp <= 0 { best_col = Some(col) }
+        Err(err) => return err
+      }
+    }
+    match best_col {
+      Some(col) => table.values[(row_index - 1) * table.cols + col]
+      None => FormulaValue::Error(formula_error_na)
+    }
+  } else {
+    for col in 0..<table.cols {
+      let key = table.values[col]
+      match compare_values(key, lookup) {
+        Ok(0) => return table.values[(row_index - 1) * table.cols + col]
+        Ok(_) => ()
+        Err(err) => return err
+      }
+    }
+    FormulaValue::Error(formula_error_na)
+  }
+}
+
+///|
 fn normalize_scalar(value : FormulaValue) -> FormulaValue {
   match value {
     FormulaValue::List(list) =>
@@ -4283,6 +4386,46 @@ fn eval_function(
           1
         }
         match_range_value(lookup, range, match_type)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "VLOOKUP" =>
+      if args.length() == 3 || args.length() == 4 {
+        let lookup = values[0]
+        let table = eval_range_expr(workbook, sheet_name, args[1], ctx)
+        let col_index = match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let range_lookup = if args.length() == 4 {
+          match lookup_range_flag(values[3]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          true
+        }
+        vlookup_value(lookup, table, col_index, range_lookup)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "HLOOKUP" =>
+      if args.length() == 3 || args.length() == 4 {
+        let lookup = values[0]
+        let table = eval_range_expr(workbook, sheet_name, args[1], ctx)
+        let row_index = match value_as_int(values[2]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let range_lookup = if args.length() == 4 {
+          match lookup_range_flag(values[3]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          true
+        }
+        hlookup_value(lookup, table, row_index, range_lookup)
       } else {
         FormulaValue::Error(formula_error_value)
       }
