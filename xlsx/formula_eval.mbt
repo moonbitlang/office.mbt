@@ -713,6 +713,50 @@ fn value_as_string(value : FormulaValue) -> Result[String, FormulaValue] {
 }
 
 ///|
+fn char_from_code(code : Int) -> String {
+  String::from_array([code.unsafe_to_char()])
+}
+
+///|
+fn code_value(name : String, value : FormulaValue) -> FormulaValue {
+  let text = match value_as_string(value) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  if text.length() == 0 {
+    return if name == "CODE" {
+      FormulaValue::Number(0.0)
+    } else {
+      FormulaValue::Error(formula_error_value)
+    }
+  }
+  match text.get_char(0) {
+    Some(ch) => FormulaValue::Number(Double::from_int(ch.to_int()))
+    None =>
+      if name == "CODE" {
+        FormulaValue::Number(0.0)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+  }
+}
+
+///|
+fn clean_text_value(value : FormulaValue) -> FormulaValue {
+  let text = match value_as_string(value) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let sb = StringBuilder::new()
+  for ch in text {
+    if ch.to_int() > 31 {
+      sb.write_char(ch)
+    }
+  }
+  FormulaValue::String(sb.to_string())
+}
+
+///|
 fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let sb = StringBuilder::new()
   for value in flatten_values(values) {
@@ -3201,6 +3245,74 @@ fn eval_function(
         match value_as_string(values[0]) {
           Ok(text) => FormulaValue::String(trim_excel_text(text))
           Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CHAR" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => {
+            let code = Double::to_int(trunc_double(num))
+            if code < 0 || code > max_field_length {
+              FormulaValue::Error(formula_error_value)
+            } else {
+              FormulaValue::String(char_from_code(code))
+            }
+          }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "UNICHAR" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num <= 0.0 || num > 55295.0 {
+              FormulaValue::Error(formula_error_value)
+            } else {
+              let code = Double::to_int(trunc_double(num))
+              FormulaValue::String(char_from_code(code))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CLEAN" =>
+      if values.length() == 1 {
+        clean_text_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CODE" =>
+      if values.length() == 1 {
+        code_value("CODE", values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "UNICODE" =>
+      if values.length() == 1 {
+        code_value("UNICODE", values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CHOOSE" =>
+      if values.length() >= 2 {
+        let index_text = match value_as_string(values[0]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        let idx = @strconv.parse_int(index_text, base=10) catch {
+          _ => return FormulaValue::Error(formula_error_value)
+        }
+        if values.length() <= idx {
+          FormulaValue::Error(formula_error_value)
+        } else if idx <= 0 {
+          values[0]
+        } else {
+          values[idx]
         }
       } else {
         FormulaValue::Error(formula_error_value)
