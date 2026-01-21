@@ -110,6 +110,48 @@ test "calc math and text functions" {
 }
 
 ///|
+test "calc criteria functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::String("2"))
+  sheet.set_cell_value("B1", CellValue::Numeric(10.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(20.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(30.0))
+  sheet.set_cell_value("B4", CellValue::Numeric(40.0))
+  sheet.set_cell_value("B5", CellValue::Numeric(50.0))
+  sheet.set_cell_value("C1", CellValue::String("data"))
+  sheet.set_cell_value("C2", CellValue::String("beta"))
+  sheet.set_cell_value("C3", CellValue::String("alpha"))
+  sheet.set_cell_value("C4", CellValue::String("delta"))
+  sheet.set_cell_value("C5", CellValue::String("1"))
+  sheet.set_cell_formula("D1", "COUNTIF(A1:A5,\"2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1")
+  sheet.set_cell_formula("D2", "COUNTIF(A1:A5,\">=2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="2")
+  sheet.set_cell_formula("D3", "COUNTIF(C1:C5,\"*ta\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="3")
+  sheet.set_cell_formula("D4", "SUMIF(A1:A5,\">=2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="5")
+  sheet.set_cell_formula("D5", "SUMIF(A1:A5,\">=2\",B1:B5)")
+  inspect(workbook.calc_cell_value("Sheet1", "D5"), content="90")
+  sheet.set_cell_formula("D6", "AVERAGEIF(A1:A5,\">=2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D6"), content="2.5")
+  sheet.set_cell_formula("D7", "AVERAGEIF(A1:A5,\">=2\",B1:B5)")
+  inspect(workbook.calc_cell_value("Sheet1", "D7"), content="25")
+  sheet.set_cell_formula("D8", "COUNTIFS(A1:A5,\">=2\",C1:C5,\"ta\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D8"), content="2")
+  sheet.set_cell_formula("D9", "SUMIFS(B1:B5,A1:A5,\">=2\",C1:C5,\"ta\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D9"), content="60")
+  sheet.set_cell_formula("D10", "AVERAGEIFS(B1:B5,A1:A5,\">=2\",C1:C5,\"ta\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D10"), content="30")
+  sheet.set_cell_formula("D11", "COUNTIFS(A1:A5,\">=2\",B1:B5)")
+  inspect(workbook.calc_cell_value("Sheet1", "D11"), content="#N/A")
+}
+
+///|
 test "calc quoted sheet refs" {
   let workbook = Workbook::new()
   let main = workbook.add_sheet("Main")

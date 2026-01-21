@@ -5,6 +5,9 @@ let formula_error_div = "#DIV/0!"
 let formula_error_name = "#NAME?"
 
 ///|
+let formula_error_na = "#N/A"
+
+///|
 let formula_error_value = "#VALUE!"
 
 ///|
@@ -63,6 +66,24 @@ priv enum Expr {
 }
 
 ///|
+priv enum FormulaCriteriaType {
+  Unset
+  Eq
+  Ne
+  Le
+  Ge
+  Lt
+  Gt
+  Regexp
+}
+
+///|
+priv struct FormulaCriteria {
+  kind : FormulaCriteriaType
+  condition : FormulaValue
+}
+
+///|
 priv struct CalcContext {
   visiting : Map[String, Bool]
   mut depth : Int
@@ -70,8 +91,30 @@ priv struct CalcContext {
 }
 
 ///|
+priv struct RangeValues {
+  values : Array[FormulaValue]
+  rows : Int
+  cols : Int
+}
+
+///|
+priv struct CellIndex {
+  row : Int
+  col : Int
+}
+
+///|
 fn CalcContext::new() -> CalcContext {
   { visiting: {}, depth: 0, max_depth: 128 }
+}
+
+///|
+fn RangeValues::get(self : RangeValues, row : Int, col : Int) -> FormulaValue? {
+  if row < 0 || col < 0 || row >= self.rows || col >= self.cols {
+    None
+  } else {
+    Some(self.values[row * self.cols + col])
+  }
 }
 
 ///|
@@ -771,6 +814,218 @@ fn value_as_bool(value : FormulaValue) -> Result[Bool, FormulaValue] {
 }
 
 ///|
+fn value_as_number_opt(value : FormulaValue) -> Double? {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) => Some(num)
+    FormulaValue::Bool(flag) => Some(if flag { 1.0 } else { 0.0 })
+    FormulaValue::String(text) => parse_double_opt(text)
+    _ => None
+  }
+}
+
+///|
+fn is_digits(text : StringView) -> Bool {
+  if text == "" {
+    return false
+  }
+  for ch in text {
+    if ch < '0' || ch > '9' {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn parse_criteria_number(text : StringView) -> Double? {
+  match text.strip_suffix("%") {
+    Some(stripped) =>
+      match parse_double_opt(stripped) {
+        Some(num) => Some(num / 100.0)
+        None => None
+      }
+    None => parse_double_opt(text)
+  }
+}
+
+///|
+fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
+  let text = formula_value_string(value)
+  if text == "" {
+    return { kind: FormulaCriteriaType::Unset, condition: FormulaValue::Empty }
+  }
+  if is_digits(text) {
+    return {
+      kind: FormulaCriteriaType::Eq,
+      condition: match parse_criteria_number(text) {
+        Some(num) => FormulaValue::Number(num)
+        None => FormulaValue::String(text)
+      },
+    }
+  }
+  let mut condition_text = text
+  let kind = if text.has_prefix("<>") {
+    condition_text = (text[2:] catch { _ => "" }).to_string()
+    FormulaCriteriaType::Ne
+  } else if text.has_prefix("<=") {
+    condition_text = (text[2:] catch { _ => "" }).to_string()
+    FormulaCriteriaType::Le
+  } else if text.has_prefix(">=") {
+    condition_text = (text[2:] catch { _ => "" }).to_string()
+    FormulaCriteriaType::Ge
+  } else if text.has_prefix("<") {
+    condition_text = (text[1:] catch { _ => "" }).to_string()
+    FormulaCriteriaType::Lt
+  } else if text.has_prefix(">") {
+    condition_text = (text[1:] catch { _ => "" }).to_string()
+    FormulaCriteriaType::Gt
+  } else if text.has_prefix("=") {
+    condition_text = (text[1:] catch { _ => "" }).to_string()
+    FormulaCriteriaType::Eq
+  } else {
+    FormulaCriteriaType::Regexp
+  }
+  match kind {
+    FormulaCriteriaType::Regexp => ()
+    _ =>
+      return {
+        kind,
+        condition: match parse_criteria_number(condition_text) {
+          Some(num) => FormulaValue::Number(num)
+          None => FormulaValue::String(condition_text)
+        },
+      }
+  }
+  let mut pattern = condition_text
+  if pattern.contains("?") {
+    pattern = pattern.replace_all(old="?", new=".")
+  }
+  if pattern.contains("*") {
+    pattern = pattern.replace_all(old="*", new=".*")
+  }
+  pattern = ".*" + pattern + ".*"
+  let mut condition : FormulaValue = FormulaValue::String(pattern)
+  match parse_double_opt(pattern) {
+    Some(num) => condition = FormulaValue::Number(num)
+    None => ()
+  }
+  { kind, condition }
+}
+
+///|
+fn formula_criteria_condition_is_string(criteria : FormulaCriteria) -> Bool {
+  match criteria.condition {
+    FormulaValue::String(_) => true
+    _ => false
+  }
+}
+
+///|
+fn compare_criteria_values(left : FormulaValue, right : FormulaValue) -> Int? {
+  let lhs = normalize_scalar(left)
+  let rhs = normalize_scalar(right)
+  match (lhs, rhs) {
+    (FormulaValue::Number(a), FormulaValue::Number(b)) =>
+      Some(if a < b { -1 } else if a > b { 1 } else { 0 })
+    (FormulaValue::Bool(a), FormulaValue::Bool(b)) => {
+      let la = if a { 1.0 } else { 0.0 }
+      let rb = if b { 1.0 } else { 0.0 }
+      Some(if la < rb { -1 } else if la > rb { 1 } else { 0 })
+    }
+    (FormulaValue::Bool(a), FormulaValue::Number(b)) => {
+      let la = if a { 1.0 } else { 0.0 }
+      Some(if la < b { -1 } else if la > b { 1 } else { 0 })
+    }
+    (FormulaValue::Number(a), FormulaValue::Bool(b)) => {
+      let rb = if b { 1.0 } else { 0.0 }
+      Some(if a < rb { -1 } else if a > rb { 1 } else { 0 })
+    }
+    (FormulaValue::String(a), FormulaValue::String(b)) =>
+      Some(compare_strings(a, b))
+    (FormulaValue::String(_), FormulaValue::Number(_) | FormulaValue::Bool(_)) =>
+      Some(1)
+    (FormulaValue::Number(_) | FormulaValue::Bool(_), FormulaValue::String(_)) =>
+      Some(-1)
+    _ => None
+  }
+}
+
+///|
+fn regex_match_from(
+  text : Array[Char],
+  pattern : Array[Char],
+  i : Int,
+  j : Int,
+  memo : Map[(Int, Int), Bool],
+) -> Bool {
+  match memo.get((i, j)) {
+    Some(result) => return result
+    None => ()
+  }
+  let result = if j == pattern.length() {
+    i == text.length()
+  } else if j + 1 < pattern.length() &&
+    pattern[j] == '.' &&
+    pattern[j + 1] == '*' {
+    if regex_match_from(text, pattern, i, j + 2, memo) {
+      true
+    } else if i < text.length() {
+      regex_match_from(text, pattern, i + 1, j, memo)
+    } else {
+      false
+    }
+  } else if i < text.length() && (pattern[j] == '.' || pattern[j] == text[i]) {
+    regex_match_from(text, pattern, i + 1, j + 1, memo)
+  } else {
+    false
+  }
+  memo[(i, j)] = result
+  result
+}
+
+///|
+fn regex_like_match(text : StringView, pattern : StringView) -> Bool {
+  let text_chars = text.to_array()
+  let pattern_chars = pattern.to_array()
+  let memo : Map[(Int, Int), Bool] = {}
+  regex_match_from(text_chars, pattern_chars, 0, 0, memo)
+}
+
+///|
+fn formula_criteria_eval(
+  value : FormulaValue,
+  criteria : FormulaCriteria,
+) -> Bool {
+  match criteria.kind {
+    FormulaCriteriaType::Unset => false
+    FormulaCriteriaType::Eq =>
+      formula_value_string(value) == formula_value_string(criteria.condition)
+    FormulaCriteriaType::Ne =>
+      formula_value_string(value) != formula_value_string(criteria.condition)
+    FormulaCriteriaType::Regexp =>
+      regex_like_match(
+        formula_value_string(value),
+        formula_value_string(criteria.condition),
+      )
+    FormulaCriteriaType::Lt
+    | FormulaCriteriaType::Le
+    | FormulaCriteriaType::Gt
+    | FormulaCriteriaType::Ge =>
+      match compare_criteria_values(value, criteria.condition) {
+        Some(result) =>
+          match criteria.kind {
+            FormulaCriteriaType::Lt => result < 0
+            FormulaCriteriaType::Le => result <= 0
+            FormulaCriteriaType::Gt => result > 0
+            FormulaCriteriaType::Ge => result >= 0
+            _ => false
+          }
+        None => false
+      }
+  }
+}
+
+///|
 fn abs_double(value : Double) -> Double {
   if value < 0.0 {
     -value
@@ -1017,6 +1272,145 @@ fn eval_function(
     "MIN" => min_values(values)
     "MAX" => max_values(values)
     "COUNT" => count_values(values)
+    "COUNTIF" =>
+      if args.length() == 2 {
+        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        countif_values(range_values, values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COUNTIFS" =>
+      if args.length() >= 2 {
+        if args.length() % 2 != 0 {
+          FormulaValue::Error(formula_error_na)
+        } else {
+          let ranges : Array[RangeValues] = []
+          let criterias : Array[FormulaCriteria] = []
+          for i in 0..<(args.length() / 2) {
+            let range_values = eval_range_expr(
+              workbook,
+              sheet_name,
+              args[i * 2],
+              ctx,
+            )
+            ranges.push(range_values)
+            criterias.push(parse_formula_criteria(values[i * 2 + 1]))
+          }
+          let matches = ifs_match(ranges, criterias)
+          FormulaValue::Number(Double::from_int(matches.length()))
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SUMIF" =>
+      if args.length() == 2 || args.length() == 3 {
+        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let sum_range = if args.length() == 3 {
+          Some(eval_range_expr(workbook, sheet_name, args[2], ctx))
+        } else {
+          None
+        }
+        sumif_values(range_values, values[1], sum_range)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SUMIFS" =>
+      if args.length() >= 3 {
+        if args.length() % 2 != 1 {
+          FormulaValue::Error(formula_error_na)
+        } else {
+          let sum_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
+          let ranges : Array[RangeValues] = []
+          let criterias : Array[FormulaCriteria] = []
+          for i in 0..<((args.length() - 1) / 2) {
+            let offset = 1 + i * 2
+            let range_values = eval_range_expr(
+              workbook,
+              sheet_name,
+              args[offset],
+              ctx,
+            )
+            ranges.push(range_values)
+            criterias.push(parse_formula_criteria(values[offset + 1]))
+          }
+          let matches = ifs_match(ranges, criterias)
+          let mut sum = 0.0
+          for cell in matches {
+            match sum_range.get(cell.row, cell.col) {
+              Some(value) =>
+                match value_as_number_opt(value) {
+                  Some(num) => sum = sum + num
+                  None => ()
+                }
+              None => return FormulaValue::Error(formula_error_value)
+            }
+          }
+          FormulaValue::Number(sum)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "AVERAGEIF" =>
+      if args.length() == 2 || args.length() == 3 {
+        let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let average_range = if args.length() == 3 {
+          Some(eval_range_expr(workbook, sheet_name, args[2], ctx))
+        } else {
+          None
+        }
+        averageif_values(range_values, values[1], average_range)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "AVERAGEIFS" =>
+      if args.length() >= 3 {
+        if args.length() % 2 != 1 {
+          FormulaValue::Error(formula_error_na)
+        } else {
+          let average_range = eval_range_expr(
+            workbook,
+            sheet_name,
+            args[0],
+            ctx,
+          )
+          let ranges : Array[RangeValues] = []
+          let criterias : Array[FormulaCriteria] = []
+          for i in 0..<((args.length() - 1) / 2) {
+            let offset = 1 + i * 2
+            let range_values = eval_range_expr(
+              workbook,
+              sheet_name,
+              args[offset],
+              ctx,
+            )
+            ranges.push(range_values)
+            criterias.push(parse_formula_criteria(values[offset + 1]))
+          }
+          let matches = ifs_match(ranges, criterias)
+          let mut sum = 0.0
+          let mut count = 0
+          for cell in matches {
+            match average_range.get(cell.row, cell.col) {
+              Some(value) =>
+                match value_as_number_opt(value) {
+                  Some(num) => {
+                    sum = sum + num
+                    count = count + 1
+                  }
+                  None => ()
+                }
+              None => return FormulaValue::Error(formula_error_value)
+            }
+          }
+          if count == 0 {
+            FormulaValue::Error(formula_error_div)
+          } else {
+            FormulaValue::Number(sum / Double::from_int(count))
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "ABS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -1374,6 +1768,149 @@ fn count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 }
 
 ///|
+fn countif_values(
+  range_values : RangeValues,
+  criteria_value : FormulaValue,
+) -> FormulaValue {
+  let criteria = parse_formula_criteria(criteria_value)
+  let mut count = 0
+  for value in range_values.values {
+    let normalized = normalize_scalar(value)
+    if normalized is FormulaValue::String(_) &&
+      !formula_criteria_condition_is_string(criteria) {
+      continue
+    }
+    if formula_criteria_eval(normalized, criteria) {
+      count = count + 1
+    }
+  }
+  FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn sumif_values(
+  range_values : RangeValues,
+  criteria_value : FormulaValue,
+  sum_range : RangeValues?,
+) -> FormulaValue {
+  let criteria = parse_formula_criteria(criteria_value)
+  let mut sum = 0.0
+  for row in 0..<range_values.rows {
+    for col in 0..<range_values.cols {
+      let idx = row * range_values.cols + col
+      let cell = range_values.values[idx]
+      let normalized = normalize_scalar(cell)
+      if normalized is FormulaValue::Empty {
+        continue
+      }
+      if formula_criteria_eval(normalized, criteria) {
+        let target = match sum_range {
+          Some(range) =>
+            match range.get(row, col) {
+              Some(value) => value
+              None => cell
+            }
+          None => cell
+        }
+        match normalize_scalar(target) {
+          FormulaValue::Number(num) => sum = sum + num
+          FormulaValue::Bool(flag) => {
+            let num = if flag { 1.0 } else { 0.0 }
+            sum = sum + num
+          }
+          _ => ()
+        }
+      }
+    }
+  }
+  FormulaValue::Number(sum)
+}
+
+///|
+fn averageif_values(
+  range_values : RangeValues,
+  criteria_value : FormulaValue,
+  average_range : RangeValues?,
+) -> FormulaValue {
+  let criteria = parse_formula_criteria(criteria_value)
+  let mut sum = 0.0
+  let mut count = 0
+  for row in 0..<range_values.rows {
+    for col in 0..<range_values.cols {
+      let idx = row * range_values.cols + col
+      let cell = normalize_scalar(range_values.values[idx])
+      if formula_value_string(cell) == "" {
+        continue
+      }
+      if cell is FormulaValue::String(_) &&
+        !formula_criteria_condition_is_string(criteria) {
+        continue
+      }
+      if formula_criteria_eval(cell, criteria) {
+        let target = match average_range {
+          Some(range) =>
+            match range.get(row, col) {
+              Some(value) => value
+              None => cell
+            }
+          None => cell
+        }
+        match parse_double_opt(formula_value_string(target)) {
+          Some(num) => {
+            sum = sum + num
+            count = count + 1
+          }
+          None => ()
+        }
+      }
+    }
+  }
+  if count == 0 {
+    FormulaValue::Error(formula_error_div)
+  } else {
+    FormulaValue::Number(sum / Double::from_int(count))
+  }
+}
+
+///|
+fn ifs_match(
+  ranges : Array[RangeValues],
+  criteria : Array[FormulaCriteria],
+) -> Array[CellIndex] {
+  let matches : Array[CellIndex] = []
+  if ranges.length() == 0 {
+    return matches
+  }
+  let base = ranges[0]
+  let base_criteria = criteria[0]
+  for row in 0..<base.rows {
+    for col in 0..<base.cols {
+      let value = base.values[row * base.cols + col]
+      if formula_criteria_eval(value, base_criteria) {
+        matches.push({ row, col })
+      }
+    }
+  }
+  let mut current = matches
+  for i in 1..<ranges.length() {
+    let range = ranges[i]
+    let criteria = criteria[i]
+    let next : Array[CellIndex] = []
+    for cell in current {
+      match range.get(cell.row, cell.col) {
+        Some(value) =>
+          if formula_criteria_eval(value, criteria) {
+            next.push(cell)
+          }
+        None => ()
+      }
+    }
+    current = next
+  }
+  current
+}
+
+///|
 fn flatten_values(values : ArrayView[FormulaValue]) -> Array[FormulaValue] {
   let out : Array[FormulaValue] = []
   for value in values {
@@ -1447,6 +1984,17 @@ fn collect_range_values(
   end_ref : String,
   ctx : CalcContext,
 ) -> Array[FormulaValue] raise XlsxError {
+  collect_range_values_with_shape(workbook, sheet_name, start_ref, end_ref, ctx).values
+}
+
+///|
+fn collect_range_values_with_shape(
+  workbook : Workbook,
+  sheet_name : String,
+  start_ref : String,
+  end_ref : String,
+  ctx : CalcContext,
+) -> RangeValues raise XlsxError {
   let (row1, col1) = cell_ref_to_rc(start_ref)
   let (row2, col2) = cell_ref_to_rc(end_ref)
   let min_row = if row1 < row2 { row1 } else { row2 }
@@ -1460,5 +2008,31 @@ fn collect_range_values(
       out.push(resolve_cell_value(workbook, sheet_name, cell_ref, ctx))
     }
   }
-  out
+  { values: out, rows: max_row - min_row + 1, cols: max_col - min_col + 1 }
+}
+
+///|
+fn eval_range_expr(
+  workbook : Workbook,
+  sheet_name : String,
+  expr : Expr,
+  ctx : CalcContext,
+) -> RangeValues raise XlsxError {
+  match expr {
+    Expr::Range(sheet, start_ref, end_ref) => {
+      let target_sheet = if sheet == "" { sheet_name } else { sheet }
+      collect_range_values_with_shape(
+        workbook, target_sheet, start_ref, end_ref, ctx,
+      )
+    }
+    Expr::Cell(sheet, reference) => {
+      let target_sheet = if sheet == "" { sheet_name } else { sheet }
+      let value = resolve_cell_value(workbook, target_sheet, reference, ctx)
+      { values: [value], rows: 1, cols: 1 }
+    }
+    _ => {
+      let value = eval_expr(workbook, sheet_name, expr, ctx)
+      { values: [value], rows: 1, cols: 1 }
+    }
+  }
 }
