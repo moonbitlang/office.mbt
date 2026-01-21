@@ -1635,6 +1635,70 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "FACT" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num < 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::Number(factorial_double(num))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "FACTDOUBLE" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num < 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              FormulaValue::Number(double_factorial_double(num))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "MULTINOMIAL" => multinomial_values(values)
+    "PERMUT" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(chosen)) =>
+            if num < chosen {
+              FormulaValue::Error(formula_error_na)
+            } else {
+              let result = factorial_double(num) /
+                factorial_double(num - chosen)
+              FormulaValue::Number(round_half_away_from_zero(result))
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PERMUTATIONA" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(chosen)) => {
+            let number = Double::floor(num)
+            let number_chosen = Double::floor(chosen)
+            if number < 0.0 || number_chosen < 0.0 {
+              FormulaValue::Error(formula_error_na)
+            } else {
+              FormulaValue::Number(@math.pow(number, number_chosen))
+            }
+          }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "ABS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
@@ -2719,6 +2783,93 @@ fn combin_values(number : Double, chosen : Double) -> FormulaValue {
     val = val * (n + 1.0 - c) / c
   }
   FormulaValue::Number(Double::ceil(val))
+}
+
+///|
+fn factorial_double(number : Double) -> Double {
+  let n = trunc_double(number)
+  if n < 2.0 {
+    return 1.0
+  }
+  let n_int = Double::to_int(n)
+  let mut value = 1.0
+  for i in 2..<=n_int {
+    value = value * Double::from_int(i)
+  }
+  value
+}
+
+///|
+fn double_factorial_double(number : Double) -> Double {
+  let n = trunc_double(number)
+  if n < 2.0 {
+    return 1.0
+  }
+  let mut value = 1.0
+  let mut i = Double::to_int(n)
+  while i > 1 {
+    value = value * Double::from_int(i)
+    i = i - 2
+  }
+  value
+}
+
+///|
+fn multinomial_collect(
+  value : FormulaValue,
+  numbers : Array[Double],
+) -> Result[Unit, FormulaValue] {
+  match value {
+    FormulaValue::List(list) => {
+      for item in list {
+        match multinomial_collect(item, numbers) {
+          Ok(_) => ()
+          Err(err) => return Err(err)
+        }
+      }
+      Ok(())
+    }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::Number(num) => {
+      numbers.push(num)
+      Ok(())
+    }
+    FormulaValue::Bool(flag) => {
+      numbers.push(if flag { 1.0 } else { 0.0 })
+      Ok(())
+    }
+    FormulaValue::String(text) =>
+      if text == "" {
+        Ok(())
+      } else {
+        match parse_double_opt(text) {
+          Some(num) => {
+            numbers.push(num)
+            Ok(())
+          }
+          None => Err(FormulaValue::Error(formula_error_value))
+        }
+      }
+    FormulaValue::Empty => Ok(())
+  }
+}
+
+///|
+fn multinomial_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let numbers : Array[Double] = []
+  for value in values {
+    match multinomial_collect(value, numbers) {
+      Ok(_) => ()
+      Err(err) => return err
+    }
+  }
+  let mut numerator = 0.0
+  let mut denominator = 1.0
+  for num in numbers {
+    numerator = numerator + num
+    denominator = denominator * factorial_double(num)
+  }
+  FormulaValue::Number(factorial_double(numerator) / denominator)
 }
 
 ///|
