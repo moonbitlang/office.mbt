@@ -1629,6 +1629,53 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "EXP" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(@math.exp(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DEGREES" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              FormulaValue::Number(180.0 / @math.PI * num)
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "RADIANS" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(@math.PI / 180.0 * num)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "PI" =>
+      if values.length() == 0 {
+        FormulaValue::Number(@math.PI)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SQRTPI" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => FormulaValue::Number(@math.pow(num * @math.PI, 0.5))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "LOG" =>
       if values.length() == 0 {
         FormulaValue::Error(formula_error_value)

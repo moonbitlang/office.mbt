@@ -472,6 +472,91 @@ test "calc log and ln functions" {
 }
 
 ///|
+test "calc exp radians degrees pi sqrtpi functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "DEGREES(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="57.29577951308232")
+  sheet.set_cell_formula("A2", "DEGREES(2.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="143.2394487827058")
+  sheet.set_cell_formula("A3", "DEGREES(DEGREES(1))")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="3282.806350011744")
+  sheet.set_cell_formula("A4", "DEGREES()")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "DEGREES(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "DEGREES(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#DIV/0!")
+  sheet.set_cell_formula("B1", "EXP(100)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B1"),
+    content="2.6881171418161356e+43",
+  )
+  sheet.set_cell_formula("B2", "EXP(0.1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B2"),
+    content="1.1051709180756477",
+  )
+  sheet.set_cell_formula("B3", "EXP(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="1")
+  sheet.set_cell_formula("B4", "EXP(-5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B4"),
+    content="0.006737946999085467",
+  )
+  sheet.set_cell_formula("B5", "EXP(EXP(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="2.718281828459045")
+  sheet.set_cell_formula("B6", "EXP()")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="#VALUE!")
+  sheet.set_cell_formula("B7", "EXP(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B7"), content="#VALUE!")
+  sheet.set_cell_formula("C1", "PI()")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="3.141592653589793")
+  sheet.set_cell_formula("C2", "PI(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+  sheet.set_cell_formula("D1", "RADIANS(50)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D1"),
+    content="0.8726646259971648",
+  )
+  sheet.set_cell_formula("D2", "RADIANS(-180)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D2"),
+    content="-3.141592653589793",
+  )
+  sheet.set_cell_formula("D3", "RADIANS(180)")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="3.141592653589793")
+  sheet.set_cell_formula("D4", "RADIANS(360)")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="6.283185307179586")
+  sheet.set_cell_formula("D5", "RADIANS(RADIANS(360))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D5"),
+    content="0.1096622711232151",
+  )
+  sheet.set_cell_formula("D6", "RADIANS()")
+  inspect(workbook.calc_cell_value("Sheet1", "D6"), content="#VALUE!")
+  sheet.set_cell_formula("D7", "RADIANS(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D7"), content="#VALUE!")
+  sheet.set_cell_formula("E1", "SQRTPI(5)")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="3.963327297606011")
+  sheet.set_cell_formula("E2", "SQRTPI(0.2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "E2"),
+    content="0.7926654595212022",
+  )
+  sheet.set_cell_formula("E3", "SQRTPI(100)")
+  inspect(workbook.calc_cell_value("Sheet1", "E3"), content="17.72453850905516")
+  sheet.set_cell_formula("E4", "SQRTPI(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "E4"), content="0")
+  sheet.set_cell_formula("E5", "SQRTPI(SQRTPI(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "E5"), content="0")
+  sheet.set_cell_formula("E6", "SQRTPI()")
+  inspect(workbook.calc_cell_value("Sheet1", "E6"), content="#VALUE!")
+  sheet.set_cell_formula("E7", "SQRTPI(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "E7"), content="#VALUE!")
+}
+
+///|
 test "calc string coercion" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
