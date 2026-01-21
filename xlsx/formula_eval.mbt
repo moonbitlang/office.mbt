@@ -3707,6 +3707,44 @@ fn number_or_num_error(value : Double) -> FormulaValue {
 }
 
 ///|
+fn weibull_value(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let x = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let alpha = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let beta = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let cumulative = match value_as_bool(values[3]) {
+    Ok(flag) => flag
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || beta <= 0.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let exponent = @math.pow(x / beta, alpha)
+  if cumulative {
+    let result = 1.0 - @math.exp(-exponent)
+    number_or_num_error(round_significant_digits(result, 15))
+  } else {
+    let denom = @math.pow(beta, alpha)
+    let result = alpha /
+      denom *
+      @math.pow(x, alpha - 1.0) *
+      @math.exp(-exponent)
+    number_or_num_error(round_significant_digits(result, 15))
+  }
+}
+
+///|
 fn erf_double(value : Double) -> Double {
   if value == 0.0 {
     return 0.0
@@ -5223,6 +5261,9 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "WEIBULL" => weibull_value(values)
+    "WEIBULLdotDIST" | "WEIBULL.DIST" | "_XLFN.WEIBULL.DIST" =>
+      weibull_value(values)
     "GESTEP" =>
       if values.length() < 1 {
         FormulaValue::Error(formula_error_value)

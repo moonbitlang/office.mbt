@@ -343,6 +343,20 @@ test "calc var functions" {
 }
 
 ///|
+test "calc weibull functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "WEIBULL(1,3,1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1.10363832351433")
+  sheet.set_cell_formula("A2", "WEIBULL(2,5,1.5,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="0.985212776817482")
+  sheet.set_cell_formula("A3", "WEIBULL.DIST(1,3,1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="1.10363832351433")
+  sheet.set_cell_formula("A4", "WEIBULL.DIST(2,5,1.5,TRUE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="0.985212776817482")
+}
+
+///|
 test "calc gcd and lcm functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -2856,6 +2870,28 @@ test "calc var function errors" {
   inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#DIV/0!")
   sheet.set_cell_formula("A8", "VAR.P(\"\")")
   inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#DIV/0!")
+}
+
+///|
+test "calc weibull function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "WEIBULL()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "WEIBULL(\"\",1,1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "WEIBULL(1,0,1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#N/A")
+  sheet.set_cell_formula("A4", "WEIBULL(1,1,-1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#N/A")
+  sheet.set_cell_formula("A5", "WEIBULL.DIST()")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "WEIBULL.DIST(\"\",1,1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "WEIBULL.DIST(1,0,1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#N/A")
+  sheet.set_cell_formula("A8", "WEIBULL.DIST(1,1,-1,FALSE)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#N/A")
 }
 
 ///|
