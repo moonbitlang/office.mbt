@@ -1145,6 +1145,15 @@ fn round_half_away_from_zero(value : Double) -> Double {
 }
 
 ///|
+fn number_or_num_error(value : Double) -> FormulaValue {
+  if Double::is_nan(value) || Double::is_inf(value) {
+    FormulaValue::Error(formula_error_num)
+  } else {
+    FormulaValue::Number(value)
+  }
+}
+
+///|
 fn round_with_digits(value : Double, digits : Int) -> Double {
   if digits >= 0 {
     let scale = Double::from_int(pow10_int(digits))
@@ -1799,6 +1808,218 @@ fn eval_function(
           }
           Err(err) => err
         }
+      }
+    "ACOS" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.acos(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ACOSH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.acosh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ACOT" | "_XLFN.ACOT" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.PI / 2.0 - @math.atan(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ACOTH" | "_XLFN.ACOTH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.atanh(1.0 / num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ASIN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.asin(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ASINH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.asinh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ATAN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.atan(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ATANH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.atanh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ATAN2" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(y), Ok(x)) => number_or_num_error(@math.atan2(x, y))
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COS" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.cos(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COSH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.cosh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SIN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.sin(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SINH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.sinh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TAN" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.tan(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TANH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.tanh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COT" | "_XLFN.COT" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              number_or_num_error(1.0 / @math.tan(num))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "COTH" | "_XLFN.COTH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              let exp_pos = @math.exp(num)
+              let exp_neg = @math.exp(-num)
+              number_or_num_error((exp_pos + exp_neg) / (exp_pos - exp_neg))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CSC" | "_XLFN.CSC" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              number_or_num_error(1.0 / @math.sin(num))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "CSCH" | "_XLFN.CSCH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) =>
+            if num == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              number_or_num_error(1.0 / @math.sinh(num))
+            }
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SEC" | "_XLFN.SEC" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(@math.cos(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "SECH" | "_XLFN.SECH" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(num) => number_or_num_error(1.0 / @math.cosh(num))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
       }
     "DEGREES" =>
       if values.length() == 1 {

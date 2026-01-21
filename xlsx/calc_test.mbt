@@ -456,6 +456,382 @@ test "calc roman function" {
 }
 
 ///|
+test "calc trig functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "ACOS(-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="3.141592653589793")
+  sheet.set_cell_formula("A2", "ACOS(0)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A2"),
+    content="1.5707963267948966",
+  )
+  sheet.set_cell_formula("A3", "ACOS(ABS(0))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A3"),
+    content="1.5707963267948966",
+  )
+  sheet.set_cell_formula("B1", "ACOSH(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="0")
+  sheet.set_cell_formula("B2", "ACOSH(2.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="1.566799236972411")
+  sheet.set_cell_formula("B3", "ACOSH(5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B3"),
+    content="2.2924316695611777",
+  )
+  sheet.set_cell_formula("B4", "ACOSH(ACOSH(5))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B4"),
+    content="1.4713833215366792",
+  )
+  sheet.set_cell_formula("C1", "_xlfn.ACOT(1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C1"),
+    content="0.7853981633974483",
+  )
+  sheet.set_cell_formula("C2", "_xlfn.ACOT(-2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2.677945044588987")
+  sheet.set_cell_formula("C3", "_xlfn.ACOT(0)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C3"),
+    content="1.5707963267948966",
+  )
+  sheet.set_cell_formula("C4", "_xlfn.ACOT(_xlfn.ACOT(0))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C4"),
+    content="0.5669115049410094",
+  )
+  sheet.set_cell_formula("D1", "_xlfn.ACOTH(-5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D1"),
+    content="-0.2027325540540822",
+  )
+  sheet.set_cell_formula("D2", "_xlfn.ACOTH(1.1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D2"),
+    content="1.5222612188617113",
+  )
+  sheet.set_cell_formula("D3", "_xlfn.ACOTH(2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D3"),
+    content="0.5493061443340548",
+  )
+  sheet.set_cell_formula("D4", "_xlfn.ACOTH(ABS(-2))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D4"),
+    content="0.5493061443340548",
+  )
+  sheet.set_cell_formula("E1", "ASIN(-1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "E1"),
+    content="-1.5707963267948966",
+  )
+  sheet.set_cell_formula("E2", "ASIN(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "E2"), content="0")
+  sheet.set_cell_formula("E3", "ASIN(ASIN(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "E3"), content="0")
+  sheet.set_cell_formula("F1", "ASINH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="0")
+  sheet.set_cell_formula("F2", "ASINH(-0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "F2"),
+    content="-0.48121182505960347",
+  )
+  sheet.set_cell_formula("F3", "ASINH(2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "F3"),
+    content="1.4436354751788103",
+  )
+  sheet.set_cell_formula("F4", "ASINH(ASINH(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "F4"), content="0")
+  sheet.set_cell_formula("G1", "ATAN(-1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "G1"),
+    content="-0.7853981633974483",
+  )
+  sheet.set_cell_formula("G2", "ATAN(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "G2"), content="0")
+  sheet.set_cell_formula("G3", "ATAN(1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "G3"),
+    content="0.7853981633974483",
+  )
+  sheet.set_cell_formula("G4", "ATAN(ATAN(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "G4"), content="0")
+  sheet.set_cell_formula("H1", "ATANH(-0.8)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H1"),
+    content="-1.0986122886681098",
+  )
+  sheet.set_cell_formula("H2", "ATANH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "H2"), content="0")
+  sheet.set_cell_formula("H3", "ATANH(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "H3"),
+    content="0.5493061443340548",
+  )
+  sheet.set_cell_formula("H4", "ATANH(ATANH(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "H4"), content="0")
+  sheet.set_cell_formula("I1", "ATAN2(1,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "I1"),
+    content="0.7853981633974483",
+  )
+  sheet.set_cell_formula("I2", "ATAN2(1,-1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "I2"),
+    content="-0.7853981633974483",
+  )
+  sheet.set_cell_formula("I3", "ATAN2(4,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "I3"), content="0")
+  sheet.set_cell_formula("I4", "ATAN2(4,ATAN2(4,0))")
+  inspect(workbook.calc_cell_value("Sheet1", "I4"), content="0")
+  sheet.set_cell_formula("J1", "COS(0.785398163)")
+  inspect(workbook.calc_cell_value("Sheet1", "J1"), content="0.707106781467586")
+  sheet.set_cell_formula("J2", "COS(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "J2"), content="1")
+  sheet.set_cell_formula("J3", "-COS(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "J3"), content="-1")
+  sheet.set_cell_formula("J4", "COS(COS(0))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "J4"),
+    content="0.5403023058681398",
+  )
+  sheet.set_cell_formula("K1", "COSH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "K1"), content="1")
+  sheet.set_cell_formula("K2", "COSH(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "K2"),
+    content="1.1276259652063807",
+  )
+  sheet.set_cell_formula("K3", "COSH(-2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "K3"),
+    content="3.7621956910836314",
+  )
+  sheet.set_cell_formula("K4", "COSH(COSH(0))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "K4"),
+    content="1.5430806348152437",
+  )
+  sheet.set_cell_formula("L1", "_xlfn.COT(0.785398163397448)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "L1"),
+    content="1.0000000000000009",
+  )
+  sheet.set_cell_formula("L2", "_xlfn.COT(_xlfn.COT(0.45))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "L2"),
+    content="-0.5454731167872287",
+  )
+  sheet.set_cell_formula("M1", "_xlfn.COTH(-3.14159265358979)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "M1"),
+    content="-1.0037418731973216",
+  )
+  sheet.set_cell_formula("M2", "_xlfn.COTH(_xlfn.COTH(1))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "M2"),
+    content="1.1560140181139542",
+  )
+  sheet.set_cell_formula("N1", "_xlfn.CSC(-6)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "N1"),
+    content="3.5788995472544056",
+  )
+  sheet.set_cell_formula("N2", "_xlfn.CSC(1.5707963267949)")
+  inspect(workbook.calc_cell_value("Sheet1", "N2"), content="1")
+  sheet.set_cell_formula("N3", "_xlfn.CSC(_xlfn.CSC(1))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "N3"),
+    content="1.0778518403108819",
+  )
+  sheet.set_cell_formula("O1", "_xlfn.CSCH(-3.14159265358979)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "O1"),
+    content="-0.08658953753004724",
+  )
+  sheet.set_cell_formula("O2", "_xlfn.CSCH(_xlfn.CSCH(1))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "O2"),
+    content="1.0445101039551836",
+  )
+  sheet.set_cell_formula("P1", "_xlfn.SEC(-3.14159265358979)")
+  inspect(workbook.calc_cell_value("Sheet1", "P1"), content="-1")
+  sheet.set_cell_formula("P2", "_xlfn.SEC(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "P2"), content="1")
+  sheet.set_cell_formula("P3", "_xlfn.SEC(_xlfn.SEC(0))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "P3"),
+    content="0.5403023058681398",
+  )
+  sheet.set_cell_formula("Q1", "_xlfn.SECH(-3.14159265358979)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "Q1"),
+    content="0.0862667383340547",
+  )
+  sheet.set_cell_formula("Q2", "_xlfn.SECH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "Q2"), content="1")
+  sheet.set_cell_formula("Q3", "_xlfn.SECH(_xlfn.SECH(0))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "Q3"),
+    content="0.6480542736638855",
+  )
+  sheet.set_cell_formula("R1", "SINH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "R1"), content="0")
+  sheet.set_cell_formula("R2", "SINH(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "R2"),
+    content="0.5210953054937474",
+  )
+  sheet.set_cell_formula("R3", "SINH(-2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "R3"),
+    content="-3.626860407847019",
+  )
+  sheet.set_cell_formula("R4", "SINH(SINH(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "R4"), content="0")
+  sheet.set_cell_formula("S1", "TANH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "S1"), content="0")
+  sheet.set_cell_formula("S2", "TANH(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "S2"),
+    content="0.46211715726000974",
+  )
+  sheet.set_cell_formula("S3", "TANH(-2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "S3"),
+    content="-0.9640275800758169",
+  )
+  sheet.set_cell_formula("S4", "TANH(TANH(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "S4"), content="0")
+  sheet.set_cell_formula("T1", "SIN(0.785398163)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "T1"),
+    content="0.7071067809055092",
+  )
+  sheet.set_cell_formula("T2", "SIN(SIN(1))")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "T2"),
+    content="0.7456241416655579",
+  )
+  sheet.set_cell_formula("U1", "TAN(1.047197551)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "U1"),
+    content="1.7320508067824865",
+  )
+  sheet.set_cell_formula("U2", "TAN(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "U2"), content="0")
+  sheet.set_cell_formula("U3", "TAN(TAN(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "U3"), content="0")
+}
+
+///|
+test "calc trig function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "ACOS()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "ACOS(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "ACOS(ACOS(0))")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#NUM!")
+  sheet.set_cell_formula("B1", "ACOSH()")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "ACOSH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("C1", "_xlfn.ACOT()")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
+  sheet.set_cell_formula("C2", "_xlfn.ACOT(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+  sheet.set_cell_formula("D1", "_xlfn.ACOTH()")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
+  sheet.set_cell_formula("D2", "_xlfn.ACOTH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="#VALUE!")
+  sheet.set_cell_formula("D3", "_xlfn.ACOTH(_xlfn.ACOTH(2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="#NUM!")
+  sheet.set_cell_formula("E1", "ASIN()")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="#VALUE!")
+  sheet.set_cell_formula("E2", "ASIN(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "E2"), content="#VALUE!")
+  sheet.set_cell_formula("F1", "ASINH()")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#VALUE!")
+  sheet.set_cell_formula("F2", "ASINH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "F2"), content="#VALUE!")
+  sheet.set_cell_formula("G1", "ATAN()")
+  inspect(workbook.calc_cell_value("Sheet1", "G1"), content="#VALUE!")
+  sheet.set_cell_formula("G2", "ATAN(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "G2"), content="#VALUE!")
+  sheet.set_cell_formula("H1", "ATANH()")
+  inspect(workbook.calc_cell_value("Sheet1", "H1"), content="#VALUE!")
+  sheet.set_cell_formula("H2", "ATANH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "H2"), content="#VALUE!")
+  sheet.set_cell_formula("I1", "ATAN2()")
+  inspect(workbook.calc_cell_value("Sheet1", "I1"), content="#VALUE!")
+  sheet.set_cell_formula("I2", "ATAN2(\"X\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "I2"), content="#VALUE!")
+  sheet.set_cell_formula("I3", "ATAN2(0,\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "I3"), content="#VALUE!")
+  sheet.set_cell_formula("J1", "COS()")
+  inspect(workbook.calc_cell_value("Sheet1", "J1"), content="#VALUE!")
+  sheet.set_cell_formula("J2", "COS(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "J2"), content="#VALUE!")
+  sheet.set_cell_formula("K1", "COSH()")
+  inspect(workbook.calc_cell_value("Sheet1", "K1"), content="#VALUE!")
+  sheet.set_cell_formula("K2", "COSH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "K2"), content="#VALUE!")
+  sheet.set_cell_formula("L1", "COT()")
+  inspect(workbook.calc_cell_value("Sheet1", "L1"), content="#VALUE!")
+  sheet.set_cell_formula("L2", "COT(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "L2"), content="#VALUE!")
+  sheet.set_cell_formula("L3", "COT(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "L3"), content="#DIV/0!")
+  sheet.set_cell_formula("M1", "COTH()")
+  inspect(workbook.calc_cell_value("Sheet1", "M1"), content="#VALUE!")
+  sheet.set_cell_formula("M2", "COTH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "M2"), content="#VALUE!")
+  sheet.set_cell_formula("M3", "COTH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "M3"), content="#DIV/0!")
+  sheet.set_cell_formula("N1", "_xlfn.CSC()")
+  inspect(workbook.calc_cell_value("Sheet1", "N1"), content="#VALUE!")
+  sheet.set_cell_formula("N2", "_xlfn.CSC(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "N2"), content="#VALUE!")
+  sheet.set_cell_formula("N3", "_xlfn.CSC(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "N3"), content="#DIV/0!")
+  sheet.set_cell_formula("O1", "_xlfn.CSCH()")
+  inspect(workbook.calc_cell_value("Sheet1", "O1"), content="#VALUE!")
+  sheet.set_cell_formula("O2", "_xlfn.CSCH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "O2"), content="#VALUE!")
+  sheet.set_cell_formula("O3", "_xlfn.CSCH(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "O3"), content="#DIV/0!")
+  sheet.set_cell_formula("P1", "_xlfn.SEC()")
+  inspect(workbook.calc_cell_value("Sheet1", "P1"), content="#VALUE!")
+  sheet.set_cell_formula("P2", "_xlfn.SEC(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "P2"), content="#VALUE!")
+  sheet.set_cell_formula("Q1", "_xlfn.SECH()")
+  inspect(workbook.calc_cell_value("Sheet1", "Q1"), content="#VALUE!")
+  sheet.set_cell_formula("Q2", "_xlfn.SECH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "Q2"), content="#VALUE!")
+  sheet.set_cell_formula("R1", "SINH()")
+  inspect(workbook.calc_cell_value("Sheet1", "R1"), content="#VALUE!")
+  sheet.set_cell_formula("R2", "SINH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "R2"), content="#VALUE!")
+  sheet.set_cell_formula("S1", "TANH()")
+  inspect(workbook.calc_cell_value("Sheet1", "S1"), content="#VALUE!")
+  sheet.set_cell_formula("S2", "TANH(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "S2"), content="#VALUE!")
+  sheet.set_cell_formula("T1", "SIN()")
+  inspect(workbook.calc_cell_value("Sheet1", "T1"), content="#VALUE!")
+  sheet.set_cell_formula("T2", "SIN(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "T2"), content="#VALUE!")
+  sheet.set_cell_formula("U1", "TAN()")
+  inspect(workbook.calc_cell_value("Sheet1", "U1"), content="#VALUE!")
+  sheet.set_cell_formula("U2", "TAN(\"X\")")
+  inspect(workbook.calc_cell_value("Sheet1", "U2"), content="#VALUE!")
+}
+
+///|
 test "calc permutation functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
