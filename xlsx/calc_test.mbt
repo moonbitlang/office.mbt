@@ -5859,3 +5859,100 @@ test "calc steyx functions" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+test "calc hyperlink and encodeurl functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula(
+    "A1", "HYPERLINK(\"https://example.com\", \"Example\")",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="Example")
+  sheet.set_cell_formula("A2", "HYPERLINK(\"https://example.com\")")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A2"),
+    content="https://example.com",
+  )
+  sheet.set_cell_formula("A3", "HYPERLINK()")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "HYPERLINK(\"a\", \"b\", \"c\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("B1", "ENCODEURL(\"Hello World!\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="Hello%20World%21")
+  sheet.set_cell_formula("B2", "ENCODEURL(\"https://example.com/a b\")")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B2"),
+    content="https%3A%2F%2Fexample.com%2Fa%20b",
+  )
+  sheet.set_cell_formula("B3", "ENCODEURL(\"中文\")")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B3"),
+    content="%E4%B8%AD%E6%96%87",
+  )
+  sheet.set_cell_formula("B4", "ENCODEURL()")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+}
+
+///|
+test "calc formulatext function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "SUM(1,2)")
+  sheet.set_cell_value("A2", CellValue::Numeric(5.0))
+  sheet.set_cell_formula("B1", "FORMULATEXT(A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="SUM(1,2)")
+  sheet.set_cell_formula("B2", "FORMULATEXT(A1:B1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="SUM(1,2)")
+  sheet.set_cell_formula("B3", "FORMULATEXT(A2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="")
+  sheet.set_cell_formula("B4", "FORMULATEXT(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+}
+
+///|
+test "calc subtotal and frequency functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let data : Array[Double] = [1.0, 2.0, 2.0, 3.0]
+  for i in 0..<data.length() {
+    sheet.set_cell_value("A\{i + 1}", CellValue::Numeric(data[i]))
+  }
+  let bins : Array[Double] = [1.0, 2.0]
+  for i in 0..<bins.length() {
+    sheet.set_cell_value("B\{i + 1}", CellValue::Numeric(bins[i]))
+  }
+  sheet.set_cell_formula("C1", "SUBTOTAL(9,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="8")
+  sheet.set_cell_formula("C2", "SUBTOTAL(1,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2")
+  sheet.set_cell_formula("C3", "SUBTOTAL(2,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="4")
+  sheet.set_cell_formula("C4", "SUBTOTAL(109,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="8")
+  sheet.set_cell_formula("C5", "SUBTOTAL()")
+  inspect(workbook.calc_cell_value("Sheet1", "C5"), content="#VALUE!")
+  sheet.set_cell_formula("C6", "SUBTOTAL(0,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C6"), content="#VALUE!")
+  sheet.set_cell_formula("D1", "SUM(FREQUENCY(A1:A4,B1:B2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="4")
+  sheet.set_cell_formula("D2", "TEXTJOIN(\",\", TRUE, FREQUENCY(A1:A4,B1:B2))")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="1,1,2")
+  sheet.set_cell_formula("D3", "FREQUENCY()")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="#VALUE!")
+  sheet.set_cell_formula("D4", "FREQUENCY(NA(),A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="#N/A")
+}
+
+///|
+test "calc fisher functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "FISHER(0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.549306144334055")
+  sheet.set_cell_formula("A2", "FISHERINV(0.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="0.46211715726001")
+  sheet.set_cell_formula("A3", "FISHER(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#N/A")
+  sheet.set_cell_formula("A4", "FISHERINV(\"bad\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+}

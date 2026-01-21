@@ -897,6 +897,41 @@ fn current_cell_rc(ctx : CalcContext) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
+fn formula_text_value(
+  workbook : Workbook,
+  sheet_name : String,
+  expr : Expr,
+) -> FormulaValue raise XlsxError {
+  let (target_sheet, reference) = match expr {
+    Expr::Cell(sheet, reference) =>
+      if sheet == "" {
+        (sheet_name, reference)
+      } else {
+        (sheet, reference)
+      }
+    Expr::Range(sheet, start_ref, _) =>
+      if sheet == "" {
+        (sheet_name, start_ref)
+      } else {
+        (sheet, start_ref)
+      }
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let sheet = match workbook.sheet(target_sheet) {
+    Some(value) => value
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  let formula = sheet.get_cell_formula(reference) catch {
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let text = match formula {
+    Some(value) => value
+    None => ""
+  }
+  FormulaValue::String(text)
+}
+
+///|
 fn range_vector(range : RangeValues) -> Array[FormulaValue]? {
   if range.rows == 1 {
     let out : Array[FormulaValue] = []
@@ -2165,6 +2200,77 @@ fn filter_values(
 }
 
 ///|
+fn sorted_numbers_from_range(
+  range : RangeValues,
+) -> Result[Array[Double], FormulaValue] {
+  let numbers : Array[Double] = []
+  for col in 0..<range.cols {
+    for row in 0..<range.rows {
+      let value = range.values[row * range.cols + col]
+      match normalize_scalar(value) {
+        FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+        FormulaValue::Number(num) => numbers.push(num)
+        _ => ()
+      }
+    }
+  }
+  numbers.sort()
+  Ok(numbers)
+}
+
+///|
+fn frequency_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if args.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let data_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let bins_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[1],
+    values[1],
+    ctx,
+  )
+  let data = match sorted_numbers_from_range(data_range) {
+    Ok(list) => list
+    Err(err) => return err
+  }
+  let bins = match sorted_numbers_from_range(bins_range) {
+    Ok(list) => list
+    Err(err) => return err
+  }
+  let out : Array[FormulaValue] = []
+  let mut idx = 0
+  for bin in bins {
+    let mut count = 0
+    while idx < data.length() && data[idx] <= bin {
+      count = count + 1
+      idx = idx + 1
+    }
+    out.push(FormulaValue::Number(Double::from_int(count)))
+  }
+  out.push(FormulaValue::Number(Double::from_int(data.length() - idx)))
+  if out.length() > 2 {
+    let temp = out[1]
+    out[1] = out[2]
+    out[2] = temp
+  }
+  FormulaValue::List(out)
+}
+
+///|
 fn range_from_expr_or_value(
   workbook : Workbook,
   sheet_name : String,
@@ -2332,6 +2438,41 @@ fn clean_text_value(value : FormulaValue) -> FormulaValue {
     if ch.to_int() > 31 {
       sb.write_char(ch)
     }
+  }
+  FormulaValue::String(sb.to_string())
+}
+
+///|
+let hex_digits : Array[Char] = "0123456789ABCDEF".to_array()
+
+///|
+fn encode_url_byte(sb : StringBuilder, byte : Byte) -> Unit {
+  let value = byte.to_int()
+  if (value >= 0x30 && value <= 0x39) ||
+    (value >= 0x41 && value <= 0x5a) ||
+    (value >= 0x61 && value <= 0x7a) ||
+    value == 0x2d ||
+    value == 0x2e ||
+    value == 0x5f ||
+    value == 0x7e {
+    sb.write_char(Int::unsafe_to_char(value))
+  } else {
+    sb.write_char('%')
+    sb.write_char(hex_digits[value / 16])
+    sb.write_char(hex_digits[value % 16])
+  }
+}
+
+///|
+fn encode_url_value(value : FormulaValue) -> FormulaValue {
+  let text = match value_as_string(value) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let bytes = @encoding/utf8.encode(text)
+  let sb = StringBuilder::new()
+  for byte in bytes {
+    encode_url_byte(sb, byte)
   }
   FormulaValue::String(sb.to_string())
 }
@@ -5404,6 +5545,30 @@ fn erfc_double(value : Double) -> Double {
 }
 
 ///|
+fn fisher_value(value : FormulaValue) -> FormulaValue {
+  let num = match value_as_number(value) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if num <= -1.0 || num >= 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let result = 0.5 * @math.ln((1.0 + num) / (1.0 - num))
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn fisherinv_value(value : FormulaValue) -> FormulaValue {
+  let num = match value_as_number(value) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let exp_val = @math.exp(2.0 * num)
+  let result = (exp_val - 1.0) / (exp_val + 1.0)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
 fn bessel_bassel(x : Double, n : Double, modified : Bool) -> Double {
   let mut x1 = x * 0.5
   let x2 = x1 * x1
@@ -5910,6 +6075,13 @@ fn eval_function(
       FormulaValue::Error(formula_error_value)
     }
   }
+  if name == "FORMULATEXT" {
+    return if args.length() == 1 {
+      formula_text_value(workbook, sheet_name, args[0])
+    } else {
+      FormulaValue::Error(formula_error_value)
+    }
+  }
   let values : Array[FormulaValue] = []
   for arg in args {
     values.push(eval_expr(workbook, sheet_name, arg, ctx))
@@ -5918,6 +6090,7 @@ fn eval_function(
     "TRUE" => FormulaValue::Bool(true)
     "FALSE" => FormulaValue::Bool(false)
     "SUM" => sum_values(values)
+    "SUBTOTAL" => subtotal_values(values)
     "PRODUCT" => product_values(values)
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
@@ -6312,6 +6485,18 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "FISHER" =>
+      if values.length() == 1 {
+        fisher_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "FISHERINV" =>
+      if values.length() == 1 {
+        fisherinv_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "STEYX" =>
       if values.length() == 2 {
         steyx_values(values)
@@ -6332,6 +6517,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "FREQUENCY" => frequency_values(workbook, sheet_name, args, values, ctx)
     "COUNTIF" =>
       if args.length() == 2 {
         let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
@@ -10369,6 +10555,12 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "ENCODEURL" =>
+      if values.length() == 1 {
+        encode_url_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "CODE" =>
       if values.length() == 1 {
         code_value("CODE", values[0])
@@ -10378,6 +10570,15 @@ fn eval_function(
     "UNICODE" =>
       if values.length() == 1 {
         code_value("UNICODE", values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "HYPERLINK" =>
+      if values.length() == 1 || values.length() == 2 {
+        match value_as_string(values[values.length() - 1]) {
+          Ok(text) => FormulaValue::String(text)
+          Err(err) => err
+        }
       } else {
         FormulaValue::Error(formula_error_value)
       }
@@ -16300,6 +16501,43 @@ fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn subtotal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let function_num = match value_as_number(values[0]) {
+    Ok(num) => Double::to_int(trunc_double(num))
+    Err(err) => return err
+  }
+  let sub_values : Array[FormulaValue] = []
+  for i in 1..<values.length() {
+    sub_values.push(values[i])
+  }
+  match function_num {
+    1 | 101 => average_values(sub_values)
+    2 | 102 => count_values(sub_values)
+    3 | 103 => counta_values(sub_values)
+    4 | 104 => max_values(sub_values)
+    5 | 105 => min_values(sub_values)
+    6 | 106 => product_values(sub_values)
+    7 | 107 => stdev_values(false, sub_values)
+    8 | 108 =>
+      match variance_values(sub_values, false, false) {
+        FormulaValue::Number(variance) => {
+          let result = @math.pow(variance, 0.5)
+          FormulaValue::Number(round_significant_digits(result, 15))
+        }
+        FormulaValue::Error(err) => FormulaValue::Error(err)
+        _ => FormulaValue::Error(formula_error_value)
+      }
+    9 | 109 => sum_values(sub_values)
+    10 | 110 => variance_values(sub_values, true, false)
+    11 | 111 => variance_values(sub_values, false, false)
+    _ => FormulaValue::Error(formula_error_value)
+  }
 }
 
 ///|
