@@ -1188,6 +1188,241 @@ fn erfc_double(value : Double) -> Double {
 }
 
 ///|
+fn bessel_bassel(x : Double, n : Double, modified : Bool) -> Double {
+  let mut x1 = x * 0.5
+  let x2 = x1 * x1
+  x1 = @math.pow(x1, n)
+  let mut n1 = factorial_double(n)
+  let mut n2 = 1.0
+  let mut n3 = 0.0
+  let mut n4 = n
+  let mut add = false
+  let mut result = x1 / n1
+  let mut prev = result * 0.9
+  let mut iter = 100
+  while result != prev && iter != 0 {
+    x1 = x1 * x2
+    n3 = n3 + 1.0
+    n1 = n1 * n3
+    n4 = n4 + 1.0
+    n2 = n2 * n4
+    prev = result
+    let term = x1 / n1 / n2
+    if modified || add {
+      result = result + term
+    } else {
+      result = result - term
+    }
+    iter = iter - 1
+    add = !add
+  }
+  result
+}
+
+///|
+fn bessel_i(x : Double, n : Double) -> Double {
+  bessel_bassel(x, n, true)
+}
+
+///|
+fn bessel_j(x : Double, n : Double) -> Double {
+  bessel_bassel(x, n, false)
+}
+
+///|
+fn bessel_k0(x : Double) -> Double {
+  if x <= 2.0 {
+    let n2 = x * 0.5
+    let y = n2 * n2
+    -@math.ln(n2) * bessel_i(x, 0.0) +
+    (
+      -0.57721566 +
+      y *
+      (
+        0.42278420 +
+        y *
+        (
+          0.23069756 +
+          y * (0.0348859 + y * (0.00262698 + y * (0.0001075 + y * 0.0000074)))
+        )
+      )
+    )
+  } else {
+    let y = 2.0 / x
+    @math.exp(-x) /
+    Double::sqrt(x) *
+    (
+      1.25331414 +
+      y *
+      (
+        -0.07832358 +
+        y *
+        (
+          0.02189568 +
+          y *
+          (-0.01062446 + y * (0.00587872 + y * (-0.0025154 + y * 0.00053208)))
+        )
+      )
+    )
+  }
+}
+
+///|
+fn bessel_k1(x : Double) -> Double {
+  if x <= 2.0 {
+    let n2 = x * 0.5
+    let y = n2 * n2
+    @math.ln(n2) * bessel_i(x, 1.0) +
+    (
+      1.0 +
+      y *
+      (
+        0.15443144 +
+        y *
+        (
+          -0.67278579 +
+          y *
+          (
+            -0.18156897 +
+            y * (-0.01919402 + y * (-0.00110404 + y * -0.00004686))
+          )
+        )
+      )
+    ) /
+    x
+  } else {
+    let y = 2.0 / x
+    @math.exp(-x) /
+    Double::sqrt(x) *
+    (
+      1.25331414 +
+      y *
+      (
+        0.23498619 +
+        y *
+        (
+          -0.0365562 +
+          y *
+          (0.01504268 + y * (-0.00780353 + y * (0.00325614 + y * -0.00068245)))
+        )
+      )
+    )
+  }
+}
+
+///|
+fn bessel_k2(x : Double, n : Double) -> Double {
+  let tox = 2.0 / x
+  let mut bkm = bessel_k0(x)
+  let mut bk = bessel_k1(x)
+  let mut bkp = 0.0
+  let mut i = 1.0
+  while i < n {
+    bkp = bkm + i * tox * bk
+    bkm = bk
+    bk = bkp
+    i = i + 1.0
+  }
+  bk
+}
+
+///|
+fn bessel_y0(x : Double) -> Double {
+  if x < 8.0 {
+    let y = x * x
+    let f1 = -2957821389.0 +
+      y *
+      (
+        7062834065.0 +
+        y *
+        (
+          -512359803.6 +
+          y * (10879881.29 + y * (-86327.92757 + y * 228.4622733))
+        )
+      )
+    let f2 = 40076544269.0 +
+      y *
+      (
+        745249964.8 +
+        y * (7189466.438 + y * (47447.26470 + y * (226.1030244 + y)))
+      )
+    f1 / f2 + 0.636619772 * bessel_j(x, 0.0) * @math.ln(x)
+  } else {
+    let z = 8.0 / x
+    let y = z * z
+    let xx = x - 0.785398164
+    let f1 = 1.0 +
+      y *
+      (
+        -0.001098628627 +
+        y *
+        (0.00002734510407 + y * (-0.000002073370639 + y * 0.0000002093887211))
+      )
+    let f2 = -0.01562499995 +
+      y *
+      (
+        0.0001430488765 +
+        y *
+        (
+          -0.000006911147651 +
+          y * (0.0000007621095161 + y * -0.0000000934945152)
+        )
+      )
+    Double::sqrt(0.636619772 / x) *
+    (@math.sin(xx) * f1 + z * @math.cos(xx) * f2)
+  }
+}
+
+///|
+fn bessel_y1(x : Double) -> Double {
+  if x < 8.0 {
+    let y = x * x
+    let f1 = x *
+      (
+        -4900604943000.0 +
+        y *
+        (
+          1275274390000.0 +
+          y *
+          (
+            -51534381390.0 +
+            y * (734926455.1 + y * (-4237922.726 + y * 8511.937935))
+          )
+        )
+      )
+    let f2 = 24995805700000.0 +
+      y *
+      (
+        424441966400.0 +
+        y *
+        (
+          3733650367.0 +
+          y * (22459040.02 + y * (102042.605 + y * (354.9632885 + y)))
+        )
+      )
+    f1 / f2 + 0.636619772 * (bessel_j(x, 1.0) * @math.ln(x) - 1.0 / x)
+  } else {
+    Double::sqrt(0.636619772 / x) * @math.sin(x - 2.356194491)
+  }
+}
+
+///|
+fn bessel_y2(x : Double, n : Double) -> Double {
+  let tox = 2.0 / x
+  let mut bym = bessel_y0(x)
+  let mut by = bessel_y1(x)
+  let mut byp = 0.0
+  let mut i = 1.0
+  while i < n {
+    byp = i * tox * by - bym
+    bym = by
+    by = byp
+    i = i + 1.0
+  }
+  by
+}
+
+///|
 fn round_with_digits(value : Double, digits : Int) -> Double {
   if digits >= 0 {
     let scale = Double::from_int(pow10_int(digits))
@@ -2034,6 +2269,72 @@ fn eval_function(
             }
           Err(err) => err
         }
+      }
+    "BESSELI" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(x), Ok(n)) => number_or_num_error(bessel_i(x, n))
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "BESSELJ" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(x), Ok(n)) => number_or_num_error(bessel_j(x, n))
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "BESSELK" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(x), Ok(n)) =>
+            if x <= 0.0 || n < 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              let order = Double::floor(n)
+              let result = if order == 0.0 {
+                bessel_k0(x)
+              } else if order == 1.0 {
+                bessel_k1(x)
+              } else {
+                bessel_k2(x, n)
+              }
+              number_or_num_error(result)
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "BESSELY" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(x), Ok(n)) =>
+            if x <= 0.0 || n < 0.0 {
+              FormulaValue::Error(formula_error_num)
+            } else {
+              let order = Double::floor(n)
+              let result = if order == 0.0 {
+                bessel_y0(x)
+              } else if order == 1.0 {
+                bessel_y1(x)
+              } else {
+                bessel_y2(x, n)
+              }
+              number_or_num_error(result)
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
       }
     "DELTA" =>
       if values.length() < 1 {

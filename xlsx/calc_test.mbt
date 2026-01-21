@@ -756,6 +756,147 @@ test "calc base conversion error functions" {
 }
 
 ///|
+test "calc bessel functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "BESSELI(4.5,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A1"),
+    content="15.389222753735925",
+  )
+  sheet.set_cell_formula("A2", "BESSELI(32,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="5502845511211.247")
+  sheet.set_cell_formula("A3", "BESSELI({32},1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="5502845511211.247")
+  sheet.set_cell_formula("A4", "BESSELI(32,{1})")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="5502845511211.247")
+  sheet.set_cell_formula("A5", "BESSELI({32},{1})")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="5502845511211.247")
+  sheet.set_cell_formula("B1", "BESSELJ(1.9,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B1"),
+    content="0.32992572769238715",
+  )
+  sheet.set_cell_formula("B2", "BESSELJ({1.9},2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B2"),
+    content="0.32992572769238715",
+  )
+  sheet.set_cell_formula("B3", "BESSELJ(1.9,{2})")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B3"),
+    content="0.32992572769238715",
+  )
+  sheet.set_cell_formula("B4", "BESSELJ({1.9},{2})")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "B4"),
+    content="0.32992572769238715",
+  )
+  sheet.set_cell_formula("C1", "BESSELK(0.05,0)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C1"),
+    content="3.1142340342896615",
+  )
+  sheet.set_cell_formula("C2", "BESSELK(0.05,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="19.90967432724863")
+  sheet.set_cell_formula("C3", "BESSELK(0.05,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="799.501207124235")
+  sheet.set_cell_formula("C4", "BESSELK(3,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C4"),
+    content="0.06151045856191182",
+  )
+  sheet.set_cell_formula("C5", "BESSELK({3},2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C5"),
+    content="0.06151045856191182",
+  )
+  sheet.set_cell_formula("C6", "BESSELK(3,{2})")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C6"),
+    content="0.06151045856191182",
+  )
+  sheet.set_cell_formula("C7", "BESSELK({3},{2})")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "C7"),
+    content="0.06151045856191182",
+  )
+  sheet.set_cell_formula("D1", "BESSELY(0.05,0)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D1"),
+    content="-1.9793110068415278",
+  )
+  sheet.set_cell_formula("D2", "BESSELY(0.05,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D2"),
+    content="-12.789855163794034",
+  )
+  sheet.set_cell_formula("D3", "BESSELY(0.05,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D3"),
+    content="-509.61489554491976",
+  )
+  sheet.set_cell_formula("D4", "BESSELY(9,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D4"),
+    content="-0.22908208748774117",
+  )
+  sheet.set_cell_formula("D5", "BESSELY({9},2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D5"),
+    content="-0.22908208748774117",
+  )
+  sheet.set_cell_formula("D6", "BESSELY(9,{2})")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D6"),
+    content="-0.22908208748774117",
+  )
+  sheet.set_cell_formula("D7", "BESSELY({9},{2})")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "D7"),
+    content="-0.22908208748774117",
+  )
+}
+
+///|
+test "calc bessel error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "BESSELI()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "BESSELI(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "BESSELI(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("B1", "BESSELJ()")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
+  sheet.set_cell_formula("B2", "BESSELJ(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="#VALUE!")
+  sheet.set_cell_formula("B3", "BESSELJ(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="#VALUE!")
+  sheet.set_cell_formula("C1", "BESSELK()")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
+  sheet.set_cell_formula("C2", "BESSELK(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+  sheet.set_cell_formula("C3", "BESSELK(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#VALUE!")
+  sheet.set_cell_formula("C4", "BESSELK(-1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="#NUM!")
+  sheet.set_cell_formula("C5", "BESSELK(1,-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C5"), content="#NUM!")
+  sheet.set_cell_formula("D1", "BESSELY()")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
+  sheet.set_cell_formula("D2", "BESSELY(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="#VALUE!")
+  sheet.set_cell_formula("D3", "BESSELY(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="#VALUE!")
+  sheet.set_cell_formula("D4", "BESSELY(-1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="#NUM!")
+  sheet.set_cell_formula("D5", "BESSELY(1,-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D5"), content="#NUM!")
+}
+
+///|
 test "calc delta erf erfc gestep functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
