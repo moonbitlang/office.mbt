@@ -756,6 +756,121 @@ test "calc base conversion error functions" {
 }
 
 ///|
+test "calc delta erf erfc gestep functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "DELTA(5,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0")
+  sheet.set_cell_formula("A2", "DELTA(1.00001,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="0")
+  sheet.set_cell_formula("A3", "DELTA(1.23,1.23)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="1")
+  sheet.set_cell_formula("A4", "DELTA(1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="0")
+  sheet.set_cell_formula("A5", "DELTA(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="1")
+  sheet.set_cell_formula("A6", "ERF(1.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A6"),
+    content="0.9661051464753108",
+  )
+  sheet.set_cell_formula("A7", "ERF(0,1.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A7"),
+    content="0.9661051464753108",
+  )
+  sheet.set_cell_formula("A8", "ERF(1,2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A8"),
+    content="0.15262147206923837",
+  )
+  sheet.set_cell_formula("A9", "ERF.PRECISE(-1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A9"),
+    content="-0.8427007929497148",
+  )
+  sheet.set_cell_formula("A10", "ERF.PRECISE(1.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A10"),
+    content="0.9661051464753108",
+  )
+  sheet.set_cell_formula("A11", "ERFC(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A11"), content="1")
+  sheet.set_cell_formula("A12", "ERFC(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A12"),
+    content="0.4795001221869535",
+  )
+  sheet.set_cell_formula("A13", "ERFC(-1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A13"),
+    content="1.8427007929497148",
+  )
+  sheet.set_cell_formula("A14", "ERFC.PRECISE(0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A14"), content="1")
+  sheet.set_cell_formula("A15", "ERFC.PRECISE(0.5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A15"),
+    content="0.4795001221869535",
+  )
+  sheet.set_cell_formula("A16", "ERFC.PRECISE(-1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A16"),
+    content="1.8427007929497148",
+  )
+  sheet.set_cell_formula("A17", "GESTEP(1.2,0.001)")
+  inspect(workbook.calc_cell_value("Sheet1", "A17"), content="1")
+  sheet.set_cell_formula("A18", "GESTEP(0.05,0.05)")
+  inspect(workbook.calc_cell_value("Sheet1", "A18"), content="1")
+  sheet.set_cell_formula("A19", "GESTEP(-0.00001,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A19"), content="0")
+  sheet.set_cell_formula("A20", "GESTEP(-0.00001)")
+  inspect(workbook.calc_cell_value("Sheet1", "A20"), content="0")
+}
+
+///|
+test "calc delta erf erfc gestep error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "DELTA()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "DELTA(0,0,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "DELTA(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "DELTA(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "ERF()")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "ERF(0,0,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "ERF(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#VALUE!")
+  sheet.set_cell_formula("A8", "ERF(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#VALUE!")
+  sheet.set_cell_formula("A9", "ERF.PRECISE()")
+  inspect(workbook.calc_cell_value("Sheet1", "A9"), content="#VALUE!")
+  sheet.set_cell_formula("A10", "ERF.PRECISE(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A10"), content="#VALUE!")
+  sheet.set_cell_formula("A11", "ERFC()")
+  inspect(workbook.calc_cell_value("Sheet1", "A11"), content="#VALUE!")
+  sheet.set_cell_formula("A12", "ERFC(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A12"), content="#VALUE!")
+  sheet.set_cell_formula("A13", "ERFC.PRECISE()")
+  inspect(workbook.calc_cell_value("Sheet1", "A13"), content="#VALUE!")
+  sheet.set_cell_formula("A14", "ERFC.PRECISE(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A14"), content="#VALUE!")
+  sheet.set_cell_formula("A15", "GESTEP()")
+  inspect(workbook.calc_cell_value("Sheet1", "A15"), content="#VALUE!")
+  sheet.set_cell_formula("A16", "GESTEP(0,0,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A16"), content="#VALUE!")
+  sheet.set_cell_formula("A17", "GESTEP(\"\",0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A17"), content="#VALUE!")
+  sheet.set_cell_formula("A18", "GESTEP(0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A18"), content="#VALUE!")
+}
+
+///|
 test "calc arabic function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

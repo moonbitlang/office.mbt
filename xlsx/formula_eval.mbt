@@ -1154,6 +1154,40 @@ fn number_or_num_error(value : Double) -> FormulaValue {
 }
 
 ///|
+fn erf_double(value : Double) -> Double {
+  if value == 0.0 {
+    return 0.0
+  }
+  let mut x = value
+  let mut sign = 1.0
+  if x < 0.0 {
+    sign = -1.0
+    x = -x
+  }
+  let x2 = x * x
+  let mut term = x
+  let mut sum = term
+  let mut n = 1
+  let max_iter = 2000
+  let threshold = @math.pow(10.0, -18.0)
+  while n < max_iter && Double::abs(term) > threshold {
+    let n_int = n
+    let numerator = -x2 * Double::from_int(2 * n_int - 1)
+    let denominator = Double::from_int(n_int * (2 * n_int + 1))
+    term = term * numerator / denominator
+    sum = sum + term
+    n = n + 1
+  }
+  let scale = 2.0 / Double::sqrt(@math.PI)
+  sign * scale * sum
+}
+
+///|
+fn erfc_double(value : Double) -> Double {
+  1.0 - erf_double(value)
+}
+
+///|
 fn round_with_digits(value : Double, digits : Int) -> Double {
   if digits >= 0 {
     let scale = Double::from_int(pow10_int(digits))
@@ -2000,6 +2034,93 @@ fn eval_function(
             }
           Err(err) => err
         }
+      }
+    "DELTA" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        let number1 = match value_as_number(values[0]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let number2 = if values.length() == 2 {
+          match value_as_number(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          0.0
+        }
+        FormulaValue::Number(if number1 == number2 { 1.0 } else { 0.0 })
+      }
+    "ERF" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        match value_as_number(values[0]) {
+          Ok(lower) =>
+            if values.length() == 2 {
+              match value_as_number(values[1]) {
+                Ok(upper) =>
+                  number_or_num_error(erf_double(upper) - erf_double(lower))
+                Err(err) => err
+              }
+            } else {
+              number_or_num_error(erf_double(lower))
+            }
+          Err(err) => err
+        }
+      }
+    "ERFdotPRECISE" | "ERF.PRECISE" | "_XLFN.ERF.PRECISE" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(value) => number_or_num_error(erf_double(value))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ERFC" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(value) => number_or_num_error(erfc_double(value))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ERFCdotPRECISE" | "ERFC.PRECISE" | "_XLFN.ERFC.PRECISE" =>
+      if values.length() == 1 {
+        match value_as_number(values[0]) {
+          Ok(value) => number_or_num_error(erfc_double(value))
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "GESTEP" =>
+      if values.length() < 1 {
+        FormulaValue::Error(formula_error_value)
+      } else if values.length() > 2 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        let number = match value_as_number(values[0]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let step = if values.length() == 2 {
+          match value_as_number(values[1]) {
+            Ok(num) => num
+            Err(err) => return err
+          }
+        } else {
+          0.0
+        }
+        FormulaValue::Number(if number >= step { 1.0 } else { 0.0 })
       }
     "BITAND" => bitwise_values("BITAND", values)
     "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
