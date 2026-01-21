@@ -5882,9 +5882,23 @@ fn eval_function(
     "FVSCHEDULE" => fvschedule_values(values)
     "IRR" => irr_values(values)
     "MIRR" => mirr_values(values)
+    "DOLLAR" => dollar_values(values)
+    "DOLLARDE" => dollar_fraction_values("DOLLARDE", values)
+    "DOLLARFR" => dollar_fraction_values("DOLLARFR", values)
+    "EFFECT" => effect_values(values)
+    "IPMT" => ipmt_values("IPMT", values)
+    "ISPMT" => ispmt_values(values)
+    "NOMINAL" => nominal_values(values)
+    "NPER" => nper_values(values)
     "NPV" => npv_values(values)
+    "PDURATION" => pduration_values(values)
+    "PMT" => pmt_values(values)
+    "PPMT" => ipmt_values("PPMT", values)
     "PV" => pv_values(values)
     "RATE" => rate_values(values)
+    "RRI" => rri_values(values)
+    "SLN" => sln_values(values)
+    "SYD" => syd_values(values)
     "XIRR" => xirr_values(values)
     "XNPV" => xnpv_values(values)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
@@ -11155,12 +11169,13 @@ fn pv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     0.0
   }
-  let mut typ = 0.0
-  if values.length() == 5 {
+  let typ = if values.length() == 5 {
     match value_as_number(values[4]) {
-      Ok(num) => if num != 0.0 { typ = 1.0 }
+      Ok(num) => num
       Err(err) => return err
     }
+  } else {
+    0.0
   }
   let result = if rate == 0.0 {
     -pmt * nper - fv
@@ -11514,6 +11529,454 @@ fn xnpv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     result = result +
       value_args[idx] / @math.pow(1.0 + rate, (date_args[idx] - date1) / 365.0)
   }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn dollar_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let number = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mut decimals = 2
+  let mut rounded = number
+  if values.length() == 2 {
+    let decimals_value = match value_as_number(values[1]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+    if decimals_value >= 128.0 {
+      return FormulaValue::Error(formula_error_value)
+    }
+    let digits = Double::to_int(decimals_value)
+    if digits < 0 {
+      rounded = round_down_with_digits(number, digits)
+      decimals = 0
+    } else {
+      decimals = digits
+    }
+  }
+  let symbol = "$"
+  let abs_value = abs_double(rounded)
+  let formatted = format_fixed_number(abs_value, decimals, true)
+  if rounded < 0.0 {
+    FormulaValue::String("(\{symbol}\{formatted})")
+  } else {
+    FormulaValue::String("\{symbol}\{formatted}")
+  }
+}
+
+///|
+fn dollar_fraction_values(
+  name : String,
+  values : ArrayView[FormulaValue],
+) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let dollar = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let frac = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if frac < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if frac == 0.0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let (_whole, cents_raw) = modf_double(dollar)
+  let mut cents = cents_raw
+  let exponent = Double::ceil(@math.log10(frac))
+  if name == "DOLLARDE" {
+    cents = cents / frac
+    cents = cents * @math.pow(10.0, exponent)
+  } else {
+    cents = cents * frac
+    cents = cents * @math.pow(10.0, -exponent)
+  }
+  let result = Double::floor(dollar) + cents
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn effect_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let npery = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if rate <= 0.0 || npery < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = @math.pow(1.0 + rate / npery, npery) - 1.0
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn nominal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let npery = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if rate <= 0.0 || npery < 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = npery * (@math.pow(rate + 1.0, 1.0 / npery) - 1.0)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn nper_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pmt = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let fv = if values.length() >= 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let typ = if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  if typ != 0.0 && typ != 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  if pmt == 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = if rate != 0.0 {
+    let term = pmt * (1.0 + rate * typ) / rate
+    @math.ln((term - fv) / (pv + term)) / @math.ln(1.0 + rate)
+  } else {
+    (-pv - fv) / pmt
+  }
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn calc_pmt(
+  rate : Double,
+  nper : Double,
+  pv : Double,
+  fv : Double,
+  typ : Double,
+) -> Double {
+  if rate != 0.0 {
+    let factor = @math.pow(1.0 + rate, nper)
+    (-fv - pv * factor) / (1.0 + rate * typ) / ((factor - 1.0) / rate)
+  } else {
+    (-pv - fv) / nper
+  }
+}
+
+///|
+fn pmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let nper = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let fv = if values.length() >= 4 {
+    match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let typ = if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  if typ != 0.0 && typ != 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let result = calc_pmt(rate, nper, pv, fv, typ)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn calc_ipmt(
+  typ : Double,
+  per : Double,
+  pmt : Double,
+  pv : Double,
+  rate : Double,
+) -> (Double, Double) {
+  let mut capital = pv
+  let mut interest = 0.0
+  let mut principal = 0.0
+  let per_int = Double::to_int(per)
+  let mut i = 1
+  while i <= per_int {
+    if typ != 0.0 && i == 1 {
+      interest = 0.0
+    } else {
+      interest = -capital * rate
+    }
+    principal = pmt - interest
+    capital = capital + principal
+    i = i + 1
+  }
+  (interest, principal)
+}
+
+///|
+fn ipmt_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 6 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let per = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let nper = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let fv = if values.length() >= 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  let typ = if values.length() == 6 {
+    match value_as_number(values[5]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    0.0
+  }
+  if typ != 0.0 && typ != 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  if per <= 0.0 || per > nper {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let payment = calc_pmt(rate, nper, pv, fv, typ)
+  let (interest, principal) = calc_ipmt(typ, per, payment, pv, rate)
+  let value = if name == "IPMT" { interest } else { principal }
+  number_or_num_error(round_significant_digits(value, 15))
+}
+
+///|
+fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let per = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let nper = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mut pr = pv
+  let payment = pv / nper
+  let mut num = 0.0
+  let per_int = Double::to_int(per)
+  let nper_int = Double::to_int(nper)
+  let mut i = 0
+  while i <= per_int {
+    num = rate * pr * -1.0
+    pr = pr - payment
+    if i == nper_int {
+      num = 0.0
+    }
+    i = i + 1
+  }
+  number_or_num_error(round_significant_digits(num, 15))
+}
+
+///|
+fn rri_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let nper = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let pv = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let fv = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  if nper <= 0.0 || pv <= 0.0 || fv < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = @math.pow(fv / pv, 1.0 / nper) - 1.0
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn sln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let cost = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let salvage = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let life = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  if life <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = (cost - salvage) / life
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn syd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let cost = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let salvage = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let life = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  let per = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(_) => return FormulaValue::Error(formula_error_num)
+  }
+  if life <= 0.0 || per <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if per > life {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = (cost - salvage) *
+    (life - per + 1.0) *
+    2.0 /
+    (life * (life + 1.0))
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn pduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let fv = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if rate <= 0.0 || pv <= 0.0 || fv <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let result = (@math.ln(fv) - @math.ln(pv)) / @math.ln(1.0 + rate)
   number_or_num_error(round_significant_digits(result, 15))
 }
 

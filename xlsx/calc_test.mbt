@@ -3981,6 +3981,93 @@ test "calc financial functions" {
 }
 
 ///|
+test "calc dollar functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("DOLLAR(1234.56)", "$1,234.56"),
+    ("DOLLAR(1234.56,0)", "$1,235"),
+    ("DOLLAR(1234.56,1)", "$1,234.6"),
+    ("DOLLAR(1234.56,2)", "$1,234.56"),
+    ("DOLLAR(1234.56,3)", "$1,234.560"),
+    ("DOLLAR(1234.56,-2)", "$1,200"),
+    ("DOLLAR(1234.56,-3)", "$1,000"),
+    ("DOLLAR(-1234.56,3)", "($1,234.560)"),
+    ("DOLLAR(-1234.56,-3)", "($1,000)"),
+    ("DOLLARDE(1.01,16)", "1.0625"),
+    ("DOLLARFR(1.0625,16)", "1.01"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc rate conversion functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("EFFECT(0.1,4)", "0.103812890625"),
+    ("EFFECT(0.025,2)", "0.02515625"),
+    ("NOMINAL(0.025,12)", "0.0247180352381129"),
+    ("RRI(10,10000,15000)", "0.0413797439924106"),
+    ("PDURATION(0.04,10000,15000)", "10.3380350715077"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc loan functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("NPER(0.04,-6000,50000)", "10.3380350715077"),
+    ("NPER(0,-6000,50000)", "8.33333333333333"),
+    ("NPER(0.06/4,-2000,60000,30000,1)", "52.7947737092748"),
+    ("PMT(0,8,0,5000,1)", "-625"),
+    ("PMT(0.035/4,8,0,5000,1)", "-600.85202718047"),
+    ("IPMT(0.05/12,2,60,50000)", "-205.26988187972"),
+    ("IPMT(0.035/4,2,8,0,5000,1)", "5.25745523782911"),
+    ("PPMT(0.05/12,2,60,50000)", "-738.29180032083"),
+    ("PPMT(0.035/4,2,8,0,5000,1)", "-606.109482418299"),
+    ("ISPMT(0.05/12,1,60,50000)", "-204.861111111111"),
+    ("ISPMT(0.05/12,2,60,50000)", "-201.388888888889"),
+    ("ISPMT(0.05/12,2,1,50000)", "208.333333333333"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc depreciation functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("SLN(10000,1000,5)", "1800"),
+    ("SYD(10000,1000,5,1)", "3000"),
+    ("SYD(10000,1000,5,2)", "2400"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "D\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
 test "calc irr and mirr functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -4094,6 +4181,149 @@ test "calc financial function errors" {
   for idx, entry in cases {
     let (formula, expected) = entry
     let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc dollar function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("DOLLAR()", "#VALUE!"),
+    ("DOLLAR(0,0,0)", "#VALUE!"),
+    ("DOLLAR(\"\")", "#VALUE!"),
+    ("DOLLAR(0,\"\")", "#VALUE!"),
+    ("DOLLAR(1,200)", "#VALUE!"),
+    ("DOLLARDE()", "#VALUE!"),
+    ("DOLLARDE(\"\",0)", "#VALUE!"),
+    ("DOLLARDE(0,\"\")", "#VALUE!"),
+    ("DOLLARDE(0,-1)", "#NUM!"),
+    ("DOLLARDE(0,0)", "#DIV/0!"),
+    ("DOLLARFR()", "#VALUE!"),
+    ("DOLLARFR(\"\",0)", "#VALUE!"),
+    ("DOLLARFR(0,\"\")", "#VALUE!"),
+    ("DOLLARFR(0,-1)", "#NUM!"),
+    ("DOLLARFR(0,0)", "#DIV/0!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc rate conversion errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("EFFECT()", "#VALUE!"),
+    ("EFFECT(\"\",0)", "#VALUE!"),
+    ("EFFECT(0,\"\")", "#VALUE!"),
+    ("EFFECT(0,0)", "#NUM!"),
+    ("EFFECT(1,0)", "#NUM!"),
+    ("NOMINAL()", "#VALUE!"),
+    ("NOMINAL(\"\",0)", "#VALUE!"),
+    ("NOMINAL(0,\"\")", "#VALUE!"),
+    ("NOMINAL(0,0)", "#NUM!"),
+    ("NOMINAL(1,0)", "#NUM!"),
+    ("PDURATION()", "#VALUE!"),
+    ("PDURATION(\"\",0,0)", "#VALUE!"),
+    ("PDURATION(0,\"\",0)", "#VALUE!"),
+    ("PDURATION(0,0,\"\")", "#VALUE!"),
+    ("PDURATION(0,0,0)", "#NUM!"),
+    ("RRI()", "#VALUE!"),
+    ("RRI(\"\",\"\",\"\")", "#NUM!"),
+    ("RRI(0,10000,15000)", "#NUM!"),
+    ("RRI(10,0,15000)", "#NUM!"),
+    ("RRI(10,10000,-1)", "#NUM!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc loan function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("NPER()", "#VALUE!"),
+    ("NPER(0,0,0,0,0,0)", "#VALUE!"),
+    ("NPER(0,0,0)", "#NUM!"),
+    ("NPER(0,0,0,0,2)", "#N/A"),
+    ("NPER(\"\",0,0,0,0)", "#VALUE!"),
+    ("NPER(0,\"\",0,0,0)", "#VALUE!"),
+    ("NPER(0,0,\"\",0,0)", "#VALUE!"),
+    ("NPER(0,0,0,\"\",0)", "#VALUE!"),
+    ("NPER(0,0,0,0,\"\")", "#VALUE!"),
+    ("PMT()", "#VALUE!"),
+    ("PMT(0,0,0,0,0,0)", "#VALUE!"),
+    ("PMT(0,0,0,0,2)", "#N/A"),
+    ("PMT(\"\",0,0,0,0)", "#VALUE!"),
+    ("PMT(0,\"\",0,0,0)", "#VALUE!"),
+    ("PMT(0,0,\"\",0,0)", "#VALUE!"),
+    ("PMT(0,0,0,\"\",0)", "#VALUE!"),
+    ("PMT(0,0,0,0,\"\")", "#VALUE!"),
+    ("IPMT()", "#VALUE!"),
+    ("IPMT(0,0,0,0,0,0,0)", "#VALUE!"),
+    ("IPMT(0,0,0,0,0,2)", "#N/A"),
+    ("IPMT(0,-1,0,0,0,0)", "#N/A"),
+    ("IPMT(0,1,0,0,0,0)", "#N/A"),
+    ("IPMT(\"\",0,0,0,0,0)", "#VALUE!"),
+    ("IPMT(0,\"\",0,0,0,0)", "#VALUE!"),
+    ("IPMT(0,0,\"\",0,0,0)", "#VALUE!"),
+    ("IPMT(0,0,0,\"\",0,0)", "#VALUE!"),
+    ("IPMT(0,0,0,0,\"\",0)", "#VALUE!"),
+    ("IPMT(0,0,0,0,0,\"\")", "#VALUE!"),
+    ("PPMT()", "#VALUE!"),
+    ("PPMT(0,0,0,0,0,0,0)", "#VALUE!"),
+    ("PPMT(0,0,0,0,0,2)", "#N/A"),
+    ("PPMT(0,-1,0,0,0,0)", "#N/A"),
+    ("PPMT(0,1,0,0,0,0)", "#N/A"),
+    ("PPMT(\"\",0,0,0,0,0)", "#VALUE!"),
+    ("PPMT(0,\"\",0,0,0,0)", "#VALUE!"),
+    ("PPMT(0,0,\"\",0,0,0)", "#VALUE!"),
+    ("PPMT(0,0,0,\"\",0,0)", "#VALUE!"),
+    ("PPMT(0,0,0,0,\"\",0)", "#VALUE!"),
+    ("PPMT(0,0,0,0,0,\"\")", "#VALUE!"),
+    ("ISPMT()", "#VALUE!"),
+    ("ISPMT(\"\",0,0,0)", "#VALUE!"),
+    ("ISPMT(0,\"\",0,0)", "#VALUE!"),
+    ("ISPMT(0,0,\"\",0)", "#VALUE!"),
+    ("ISPMT(0,0,0,\"\")", "#VALUE!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc depreciation errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("SLN()", "#VALUE!"),
+    ("SLN(\"\",\"\",\"\")", "#NUM!"),
+    ("SLN(10000,1000,0)", "#NUM!"),
+    ("SYD()", "#VALUE!"),
+    ("SYD(\"\",\"\",\"\",\"\")", "#NUM!"),
+    ("SYD(10000,1000,0,1)", "#NUM!"),
+    ("SYD(10000,1000,5,0)", "#NUM!"),
+    ("SYD(10000,1000,1,5)", "#NUM!"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "D\{idx + 1}"
     sheet.set_cell_formula(cell, formula)
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
