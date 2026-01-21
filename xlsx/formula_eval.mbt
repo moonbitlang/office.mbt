@@ -1547,6 +1547,97 @@ fn flatten_range_values(
 }
 
 ///|
+fn choose_indices(
+  values : ArrayView[FormulaValue],
+  total : Int,
+) -> Result[Array[Int], FormulaValue] {
+  let out : Array[Int] = []
+  for value in values {
+    let idx = match value_as_int(value) {
+      Ok(num) => num
+      Err(err) => return Err(err)
+    }
+    if idx == 0 {
+      return Err(FormulaValue::Error(formula_error_value))
+    }
+    let resolved = if idx > 0 { idx - 1 } else { total + idx }
+    if resolved < 0 || resolved >= total {
+      return Err(FormulaValue::Error(formula_error_value))
+    }
+    out.push(resolved)
+  }
+  if out.length() == 0 {
+    Err(FormulaValue::Error(formula_error_value))
+  } else {
+    Ok(out)
+  }
+}
+
+///|
+fn choosecols_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let indices = match choose_indices(values.sub(start=1), range.cols) {
+    Ok(list) => list
+    Err(err) => return err
+  }
+  let out : Array[FormulaValue] = []
+  for row in 0..<range.rows {
+    let offset = row * range.cols
+    for col in indices {
+      out.push(range.values[offset + col])
+    }
+  }
+  FormulaValue::List(out)
+}
+
+///|
+fn chooserows_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let indices = match choose_indices(values.sub(start=1), range.rows) {
+    Ok(list) => list
+    Err(err) => return err
+  }
+  let out : Array[FormulaValue] = []
+  for row in indices {
+    let offset = row * range.cols
+    for col in 0..<range.cols {
+      out.push(range.values[offset + col])
+    }
+  }
+  FormulaValue::List(out)
+}
+
+///|
 fn tocol_torow_values(
   workbook : Workbook,
   sheet_name : String,
@@ -8984,6 +9075,8 @@ fn eval_function(
     "SEQUENCE" => sequence_values(values)
     "TAKE" => take_values(workbook, sheet_name, args, values, ctx)
     "DROP" => drop_values(workbook, sheet_name, args, values, ctx)
+    "CHOOSECOLS" => choosecols_values(workbook, sheet_name, args, values, ctx)
+    "CHOOSEROWS" => chooserows_values(workbook, sheet_name, args, values, ctx)
     "TOCOL" =>
       tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
     "TOROW" =>

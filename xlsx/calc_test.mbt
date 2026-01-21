@@ -3067,6 +3067,43 @@ test "calc tocol torow error functions" {
 }
 
 ///|
+test "calc choosecols chooserows functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let mut value = 1.0
+  for row in 1..<=3 {
+    for col in 1..<=3 {
+      sheet.set_cell_value_rc(row, col, CellValue::Numeric(value))
+      value = value + 1.0
+    }
+  }
+  sheet.set_cell_formula("D1", "TEXTJOIN(\",\",TRUE(),CHOOSECOLS(A1:C3,1,3))")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1,3,4,6,7,9")
+  sheet.set_cell_formula("D2", "TEXTJOIN(\",\",TRUE(),CHOOSECOLS(A1:C3,-1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="3,6,9")
+  sheet.set_cell_formula("D3", "TEXTJOIN(\",\",TRUE(),CHOOSEROWS(A1:C3,1,3))")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1,2,3,7,8,9")
+  sheet.set_cell_formula("D4", "TEXTJOIN(\",\",TRUE(),CHOOSEROWS(A1:C3,-1))")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="7,8,9")
+}
+
+///|
+test "calc choosecols chooserows error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("C1", "CHOOSECOLS(A1:B1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
+  sheet.set_cell_formula("C2", "CHOOSECOLS(A1:B1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
+  sheet.set_cell_formula("C3", "CHOOSECOLS(A1:B1,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="#VALUE!")
+  sheet.set_cell_formula("C4", "CHOOSEROWS(A1:B1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="#VALUE!")
+}
+
+///|
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
