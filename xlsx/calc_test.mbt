@@ -406,6 +406,16 @@ test "calc beta functions" {
   inspect(workbook.calc_cell_value("Sheet1", "A14"), content="0.00001955359")
   sheet.set_cell_formula("A15", "BETADIST(0.75,130,140)")
   inspect(workbook.calc_cell_value("Sheet1", "A15"), content="1")
+  sheet.set_cell_formula("A16", "BETAINV(0.2,4,5,0,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A16"),
+    content="0.303225844664082",
+  )
+  sheet.set_cell_formula("A17", "BETA.INV(0.2,4,5,0,1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A17"),
+    content="0.303225844664082",
+  )
 }
 
 ///|
@@ -3060,6 +3070,60 @@ test "calc beta function errors" {
   inspect(workbook.calc_cell_value("Sheet1", "A24"), content="#NUM!")
   sheet.set_cell_formula("A25", "BETADIST(0.4,4,5,0.4,0.4)")
   inspect(workbook.calc_cell_value("Sheet1", "A25"), content="#NUM!")
+}
+
+///|
+test "calc betainv function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "BETAINV()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "BETAINV(0.2,4,5,0,1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "BETAINV(\"\",4,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "BETAINV(0.2,\"\",5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#VALUE!")
+  sheet.set_cell_formula("A5", "BETAINV(0.2,4,\"\",0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#VALUE!")
+  sheet.set_cell_formula("A6", "BETAINV(0.2,4,5,\"\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="#VALUE!")
+  sheet.set_cell_formula("A7", "BETAINV(0.2,4,5,0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#VALUE!")
+  sheet.set_cell_formula("A8", "BETAINV(0,4,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#NUM!")
+  sheet.set_cell_formula("A9", "BETAINV(1,4,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A9"), content="#NUM!")
+  sheet.set_cell_formula("A10", "BETAINV(0.2,0,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A10"), content="#NUM!")
+  sheet.set_cell_formula("A11", "BETAINV(0.2,4,0,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A11"), content="#NUM!")
+  sheet.set_cell_formula("A12", "BETAINV(0.2,4,5,2,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A12"), content="#NUM!")
+  sheet.set_cell_formula("A13", "BETA.INV()")
+  inspect(workbook.calc_cell_value("Sheet1", "A13"), content="#VALUE!")
+  sheet.set_cell_formula("A14", "BETA.INV(0.2,4,5,0,1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A14"), content="#VALUE!")
+  sheet.set_cell_formula("A15", "BETA.INV(\"\",4,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A15"), content="#VALUE!")
+  sheet.set_cell_formula("A16", "BETA.INV(0.2,\"\",5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A16"), content="#VALUE!")
+  sheet.set_cell_formula("A17", "BETA.INV(0.2,4,\"\",0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A17"), content="#VALUE!")
+  sheet.set_cell_formula("A18", "BETA.INV(0.2,4,5,\"\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A18"), content="#VALUE!")
+  sheet.set_cell_formula("A19", "BETA.INV(0.2,4,5,0,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A19"), content="#VALUE!")
+  sheet.set_cell_formula("A20", "BETA.INV(0,4,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A20"), content="#NUM!")
+  sheet.set_cell_formula("A21", "BETA.INV(1,4,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A21"), content="#NUM!")
+  sheet.set_cell_formula("A22", "BETA.INV(0.2,0,5,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A22"), content="#NUM!")
+  sheet.set_cell_formula("A23", "BETA.INV(0.2,4,0,0,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A23"), content="#NUM!")
+  sheet.set_cell_formula("A24", "BETA.INV(0.2,4,5,2,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A24"), content="#NUM!")
 }
 
 ///|

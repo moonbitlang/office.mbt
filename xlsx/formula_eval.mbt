@@ -5595,6 +5595,8 @@ fn eval_function(
       weibull_value(values)
     "BETAdotDIST" | "BETA.DIST" | "_XLFN.BETA.DIST" => beta_dist_values(values)
     "BETADIST" => betadist_values(values)
+    "BETAINV" => betainv_values(values)
+    "BETAdotINV" | "BETA.INV" | "_XLFN.BETA.INV" => betainv_values(values)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
     "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
     "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
@@ -10078,6 +10080,62 @@ fn betadist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let normalized = (x - a) / (b - a)
   let raw = get_beta_dist(normalized, alpha, beta)
   number_or_num_error(round_significant_digits(raw, 15))
+}
+
+///|
+fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 || values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let probability = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if probability <= 0.0 || probability >= 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let alpha = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let beta = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if alpha <= 0.0 || beta <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let mut a = 0.0
+  let mut b = 1.0
+  if values.length() > 3 {
+    a = match value_as_number(values[3]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  if values.length() == 5 {
+    b = match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  if a == b {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let mut low = 0.0
+  let mut high = 1.0
+  let mut mid = 0.5
+  for _ in 0..<200 {
+    mid = (low + high) * 0.5
+    let cdf = get_beta_dist(mid, alpha, beta)
+    if cdf > probability {
+      high = mid
+    } else {
+      low = mid
+    }
+  }
+  let scaled = a + mid * (b - a)
+  number_or_num_error(round_significant_digits(scaled, 15))
 }
 
 ///|
