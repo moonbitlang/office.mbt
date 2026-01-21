@@ -142,6 +142,40 @@ test "calc sumsq and sumx functions" {
 }
 
 ///|
+test "calc mod and quotient functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "MOD(6,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
+  sheet.set_cell_formula("A2", "MOD(6,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="0")
+  sheet.set_cell_formula("A3", "MOD(6,2.5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="1")
+  sheet.set_cell_formula("A4", "MOD(7.25,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="1.25")
+  sheet.set_cell_formula("A5", "MOD(-10.25,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="0.75")
+  sheet.set_cell_formula("A6", "MOD(MOD(1,1),1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="0")
+  sheet.set_cell_formula("A7", "MOD(1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#DIV/0!")
+  sheet.set_cell_formula("A8", "MOD(\"X\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#VALUE!")
+  sheet.set_cell_formula("B1", "QUOTIENT(5,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="2")
+  sheet.set_cell_formula("B2", "QUOTIENT(4.5,3.1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="1")
+  sheet.set_cell_formula("B3", "QUOTIENT(-10,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="-3")
+  sheet.set_cell_formula("B4", "QUOTIENT(QUOTIENT(1,2),3)")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="0")
+  sheet.set_cell_formula("B5", "QUOTIENT(1,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="#DIV/0!")
+  sheet.set_cell_formula("B6", "QUOTIENT(\"X\",2)")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="#VALUE!")
+}
+
+///|
 test "calc string coercion" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

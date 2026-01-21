@@ -1662,6 +1662,38 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "MOD" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(divisor)) =>
+            if divisor == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              let quotient = num / divisor
+              let truncated = Double::floor(quotient)
+              FormulaValue::Number(num - divisor * truncated)
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "QUOTIENT" =>
+      if values.length() == 2 {
+        match (value_as_number(values[0]), value_as_number(values[1])) {
+          (Ok(num), Ok(divisor)) =>
+            if divisor == 0.0 {
+              FormulaValue::Error(formula_error_div)
+            } else {
+              FormulaValue::Number(trunc_double(num / divisor))
+            }
+          (Err(err), _) => err
+          (_, Err(err)) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "AND" =>
       if values.length() == 0 {
         FormulaValue::Error(formula_error_value)
