@@ -4358,6 +4358,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "TRIMMEAN" => trimmean_values(values)
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
     "MAX" => max_values(values)
@@ -9595,6 +9596,51 @@ fn variance_values(
     FormulaValue::Number(round_significant_digits(variance, 15))
   } else {
     FormulaValue::Error(formula_error_div)
+  }
+}
+
+///|
+fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 2 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let percent = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if percent < 0.0 || percent >= 1.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let numbers : Array[Double] = []
+  let list_values : Array[FormulaValue] = [values[0]]
+  for value in flatten_values(list_values) {
+    match normalize_scalar(value) {
+      FormulaValue::Number(num) => numbers.push(num)
+      _ => ()
+    }
+  }
+  if numbers.length() == 0 {
+    return FormulaValue::Error(formula_error_div)
+  }
+  numbers.sort()
+  let discard = Double::floor(
+    Double::from_int(numbers.length()) * percent / 2.0,
+  ).to_int()
+  let start = discard
+  let end = numbers.length() - discard
+  if end <= start {
+    return FormulaValue::Error(formula_error_div)
+  }
+  let mut sum = 0.0
+  let mut count = 0
+  for i in start..<end {
+    sum = sum + numbers[i]
+    count = count + 1
+  }
+  if count == 0 {
+    FormulaValue::Error(formula_error_div)
+  } else {
+    FormulaValue::Number(sum / Double::from_int(count))
   }
 }
 

@@ -357,6 +357,22 @@ test "calc weibull functions" {
 }
 
 ///|
+test "calc trimmean functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_formula("C1", "TRIMMEAN(A1:B4,10%)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2.5")
+  sheet.set_cell_formula("C2", "TRIMMEAN(A1:B4,70%)")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2.5")
+}
+
+///|
 test "calc gcd and lcm functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -2892,6 +2908,20 @@ test "calc weibull function errors" {
   inspect(workbook.calc_cell_value("Sheet1", "A7"), content="#N/A")
   sheet.set_cell_formula("A8", "WEIBULL.DIST(1,1,-1,FALSE)")
   inspect(workbook.calc_cell_value("Sheet1", "A8"), content="#N/A")
+}
+
+///|
+test "calc trimmean function errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "TRIMMEAN()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "TRIMMEAN(A1,\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+  sheet.set_cell_formula("A3", "TRIMMEAN(A1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#NUM!")
+  sheet.set_cell_formula("A4", "TRIMMEAN(A1,-1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#NUM!")
 }
 
 ///|
