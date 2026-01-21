@@ -1873,6 +1873,478 @@ fn excel_serial_parts(
 }
 
 ///|
+fn date_parts_from_serial(serial : Double) -> (Int, Int, Int)? {
+  match excel_serial_to_parts(serial) {
+    Some((year, month, day, _, _, _)) => Some((year, month, day))
+    None => None
+  }
+}
+
+///|
+fn value_as_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) =>
+      if num < 0.0 {
+        Err(FormulaValue::Error(formula_error_num))
+      } else {
+        Ok(num)
+      }
+    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    FormulaValue::Empty => Ok(0.0)
+    FormulaValue::String(text) => {
+      let trimmed = text.trim().to_string()
+      match parse_date_parts(trimmed) {
+        Some((year, month, day)) =>
+          match excel_serial_from_date(year, month, day) {
+            Some(serial) => Ok(serial)
+            None => Err(FormulaValue::Error(formula_error_value))
+          }
+        None =>
+          match parse_value_number(trimmed) {
+            Some(num) =>
+              if num < 0.0 {
+                Err(FormulaValue::Error(formula_error_num))
+              } else {
+                Ok(num)
+              }
+            None => Err(FormulaValue::Error(formula_error_value))
+          }
+      }
+    }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+  }
+}
+
+///|
+fn date_parts_from_value(
+  value : FormulaValue,
+) -> Result[(Int, Int, Int), FormulaValue] {
+  match value_as_date_serial(value) {
+    Ok(serial) =>
+      match date_parts_from_serial(serial) {
+        Some(parts) => Ok(parts)
+        None => Err(FormulaValue::Error(formula_error_num))
+      }
+    Err(err) => Err(err)
+  }
+}
+
+///|
+fn days_in_year(year : Int) -> Int {
+  if is_leap_year(year) {
+    366
+  } else {
+    365
+  }
+}
+
+///|
+fn day_of_year(year : Int, month : Int, day : Int) -> Int {
+  days_before_month(year, month) + day
+}
+
+///|
+fn weekday_monday1(year : Int, month : Int, day : Int) -> Int {
+  let mut days = days_before_year(year)
+  days = days + days_before_month(year, month)
+  days = days + (day - 1)
+  let mut idx = days % 7
+  if idx < 0 {
+    idx = idx + 7
+  }
+  idx + 1
+}
+
+///|
+fn weekday_sun1(year : Int, month : Int, day : Int) -> Int {
+  let monday = weekday_monday1(year, month, day)
+  if monday == 7 {
+    1
+  } else {
+    monday + 1
+  }
+}
+
+///|
+fn iso_week_number(year : Int, month : Int, day : Int) -> Int? {
+  let serial = match excel_serial_from_date(year, month, day) {
+    Some(value) => value
+    None => return None
+  }
+  let weekday = weekday_monday1(year, month, day)
+  let thursday_serial = serial + Double::from_int(4 - weekday)
+  let (iso_year, _, _) = match date_parts_from_serial(thursday_serial) {
+    Some(parts) => parts
+    None => return None
+  }
+  let week1_serial = match excel_serial_from_date(iso_year, 1, 4) {
+    Some(value) => value
+    None => return None
+  }
+  let week1_weekday = weekday_monday1(iso_year, 1, 4)
+  let week1_thursday = week1_serial + Double::from_int(4 - week1_weekday)
+  let offset = (thursday_serial - week1_thursday) / 7.0
+  Some(Double::to_int(Double::floor(offset)) + 1)
+}
+
+///|
+fn weekend_mask_from_value(
+  value : FormulaValue,
+) -> Result[(Array[Int], Int), FormulaValue] {
+  let weekend_mask : Array[Int] = [0, 0, 0, 0, 0, 0, 0]
+  let mut workdays = 0
+  let parse_code = fn(code : Int) -> Result[Unit, FormulaValue] {
+    let indices = match code {
+      1 => [5, 6]
+      2 => [6, 0]
+      3 => [0, 1]
+      4 => [1, 2]
+      5 => [2, 3]
+      6 => [3, 4]
+      7 => [4, 5]
+      11 => [6]
+      12 => [0]
+      13 => [1]
+      14 => [2]
+      15 => [3]
+      16 => [4]
+      17 => [5]
+      _ => return Err(FormulaValue::Error(formula_error_value))
+    }
+    for idx in indices {
+      weekend_mask[idx] = 1
+    }
+    Ok(())
+  }
+  match normalize_scalar(value) {
+    FormulaValue::String(text) => {
+      let trimmed = text.trim().to_string()
+      if trimmed.length() == 7 {
+        let mut idx = 0
+        for ch in trimmed {
+          if ch == '0' {
+            weekend_mask[idx] = 0
+          } else if ch == '1' {
+            weekend_mask[idx] = 1
+          } else {
+            return Err(FormulaValue::Error(formula_error_value))
+          }
+          idx = idx + 1
+        }
+      } else {
+        match parse_value_number(trimmed) {
+          Some(num) => {
+            let code = Double::to_int(trunc_double(num))
+            match parse_code(code) {
+              Ok(_) => ()
+              Err(err) => return Err(err)
+            }
+          }
+          None => return Err(FormulaValue::Error(formula_error_value))
+        }
+      }
+    }
+    _ =>
+      match value_as_number(value) {
+        Ok(num) => {
+          let code = Double::to_int(trunc_double(num))
+          match parse_code(code) {
+            Ok(_) => ()
+            Err(err) => return Err(err)
+          }
+        }
+        Err(err) => return Err(err)
+      }
+  }
+  for mask in weekend_mask {
+    if mask == 0 {
+      workdays = workdays + 1
+    }
+  }
+  Ok((weekend_mask, workdays))
+}
+
+///|
+fn is_workday_mask(weekend_mask : Array[Int], serial : Double) -> Bool {
+  match date_parts_from_serial(serial) {
+    Some((year, month, day)) => {
+      let weekday = weekday_monday1(year, month, day)
+      weekend_mask[weekday - 1] == 0
+    }
+    None => false
+  }
+}
+
+///|
+fn collect_holidays(value : FormulaValue) -> Array[Int] {
+  let holidays : Array[Int] = []
+  for item in flatten_values([value]) {
+    match value_as_date_serial(item) {
+      Ok(serial) => holidays.push(Double::to_int(Double::ceil(serial)))
+      Err(_) => ()
+    }
+  }
+  holidays
+}
+
+///|
+fn workday_intl_adjust(
+  end_date : Int,
+  sign : Int,
+  holidays : Array[Int],
+  weekend_mask : Array[Int],
+  start_serial : Double,
+) -> Int {
+  let mut adjusted = end_date
+  for holiday in holidays {
+    if sign > 0 {
+      if holiday > adjusted {
+        break
+      }
+      if holiday > Double::to_int(Double::ceil(start_serial)) {
+        if is_workday_mask(weekend_mask, Double::from_int(holiday)) {
+          adjusted = adjusted + sign
+          while !is_workday_mask(weekend_mask, Double::from_int(adjusted)) {
+            adjusted = adjusted + sign
+          }
+        }
+      }
+    } else {
+      if holiday < adjusted {
+        continue
+      }
+      if holiday < Double::to_int(Double::ceil(start_serial)) {
+        if is_workday_mask(weekend_mask, Double::from_int(holiday)) {
+          adjusted = adjusted + sign
+          while !is_workday_mask(weekend_mask, Double::from_int(adjusted)) {
+            adjusted = adjusted + sign
+          }
+        }
+      }
+    }
+  }
+  adjusted
+}
+
+///|
+fn networkdays_intl_value(
+  start_serial : Double,
+  end_serial : Double,
+  weekend_value : FormulaValue,
+  holidays : Array[Int],
+) -> FormulaValue {
+  holidays.sort()
+  let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  if workdays == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let mut start = start_serial
+  let mut end = end_serial
+  let mut sign = 1
+  if start > end {
+    sign = -1
+    let temp = start
+    start = end
+    end = temp
+  }
+  let offset = end - start
+  let weeks = Double::to_int(Double::floor(offset / 7.0))
+  let mut count = weeks * workdays
+  let mut days_mod = Double::to_int(Double::floor(offset)) % 7
+  while days_mod >= 0 {
+    if is_workday_mask(weekend_mask, end - Double::from_int(days_mod)) {
+      count = count + 1
+    }
+    days_mod = days_mod - 1
+  }
+  for holiday in holidays {
+    let holiday_serial = Double::from_int(holiday)
+    if is_workday_mask(weekend_mask, holiday_serial) &&
+      holiday_serial >= start &&
+      holiday_serial <= end {
+      count = count - 1
+    }
+  }
+  FormulaValue::Number(Double::from_int(sign * count))
+}
+
+///|
+fn workday_intl_value(
+  start_serial : Double,
+  days : Double,
+  weekend_value : FormulaValue,
+  holidays : Array[Int],
+) -> FormulaValue {
+  holidays.sort()
+  if days == 0.0 {
+    return FormulaValue::Number(Double::ceil(start_serial))
+  }
+  let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  if workdays == 0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let mut sign = 1
+  if days < 0.0 {
+    sign = -1
+  }
+  let days_int = Double::to_int(trunc_double(days))
+  let offset = days_int / workdays
+  let mut days_mod = days_int % workdays
+  let mut end_date = Double::to_int(Double::ceil(start_serial)) + offset * 7
+  if days_mod == 0 {
+    while !is_workday_mask(weekend_mask, Double::from_int(end_date)) {
+      end_date = end_date - sign
+    }
+  } else {
+    while days_mod != 0 {
+      end_date = end_date + sign
+      if is_workday_mask(weekend_mask, Double::from_int(end_date)) {
+        if days_mod < 0 {
+          days_mod = days_mod + 1
+        } else {
+          days_mod = days_mod - 1
+        }
+      }
+    }
+  }
+  let adjusted = workday_intl_adjust(
+    end_date, sign, holidays, weekend_mask, start_serial,
+  )
+  FormulaValue::Number(Double::from_int(adjusted))
+}
+
+///|
+fn yearfrac_basis_cond(
+  sy : Int,
+  sm : Int,
+  sd : Int,
+  ey : Int,
+  em : Int,
+  ed : Int,
+) -> Bool {
+  (is_leap_year(sy) && (sm < 2 || (sm == 2 && sd <= 29))) ||
+  (is_leap_year(ey) && (em > 2 || (em == 2 && ed == 29)))
+}
+
+///|
+fn yearfrac_basis0(
+  start_serial : Double,
+  end_serial : Double,
+) -> (Double, Double) {
+  let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+    Some(parts) => parts
+    None => return (0.0, 0.0)
+  }
+  let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+    Some(parts) => parts
+    None => return (0.0, 0.0)
+  }
+  let mut start_day = sd
+  let mut end_day = ed
+  if start_day == 31 {
+    start_day = 30
+  }
+  if start_day == 30 && end_day == 31 {
+    end_day = 30
+  } else if sm == 2 && start_day == days_in_month(sy, sm) {
+    start_day = 30
+    if em == 2 && end_day == days_in_month(ey, em) {
+      end_day = 30
+    }
+  }
+  let diff = (ey - sy) * 360 + (em - sm) * 30 + (end_day - start_day)
+  (Double::from_int(diff), 360.0)
+}
+
+///|
+fn yearfrac_basis1(
+  start_serial : Double,
+  end_serial : Double,
+) -> (Double, Double) {
+  let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+    Some(parts) => parts
+    None => return (0.0, 0.0)
+  }
+  let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+    Some(parts) => parts
+    None => return (0.0, 0.0)
+  }
+  let day_diff = end_serial - start_serial
+  let is_year_different = sy != ey
+  let days_in_year_value = if is_year_different &&
+    (ey != sy + 1 || sm < em || (sm == em && sd < ed)) {
+    let mut day_count = 0
+    for y in sy..<=ey {
+      day_count = day_count + days_in_year(y)
+    }
+    Double::from_int(day_count) / Double::from_int(ey - sy + 1)
+  } else if !is_year_different && is_leap_year(sy) {
+    366.0
+  } else if is_year_different && yearfrac_basis_cond(sy, sm, sd, ey, em, ed) {
+    366.0
+  } else {
+    365.0
+  }
+  (day_diff, days_in_year_value)
+}
+
+///|
+fn yearfrac_basis4(
+  start_serial : Double,
+  end_serial : Double,
+) -> (Double, Double) {
+  let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+    Some(parts) => parts
+    None => return (0.0, 0.0)
+  }
+  let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+    Some(parts) => parts
+    None => return (0.0, 0.0)
+  }
+  let mut start_day = sd
+  let mut end_day = ed
+  if start_day == 31 {
+    start_day = 30
+  }
+  if end_day == 31 {
+    end_day = 30
+  }
+  let diff = (ey - sy) * 360 + (em - sm) * 30 + (end_day - start_day)
+  (Double::from_int(diff), 360.0)
+}
+
+///|
+fn yearfrac_value(
+  start_serial : Double,
+  end_serial : Double,
+  basis : Int,
+) -> FormulaValue {
+  if start_serial == end_serial {
+    return FormulaValue::Number(0.0)
+  }
+  let (day_diff, days_in_year) = match basis {
+    0 => yearfrac_basis0(start_serial, end_serial)
+    1 => yearfrac_basis1(start_serial, end_serial)
+    2 => (end_serial - start_serial, 360.0)
+    3 => (end_serial - start_serial, 365.0)
+    4 => yearfrac_basis4(start_serial, end_serial)
+    _ => return FormulaValue::Error(formula_error_num)
+  }
+  if days_in_year == 0.0 {
+    FormulaValue::Error(formula_error_value)
+  } else {
+    FormulaValue::Number(day_diff / days_in_year)
+  }
+}
+
+///|
 fn gcd_double(left : Double, right : Double) -> Double {
   let mut x = trunc_double(left)
   let mut y = trunc_double(right)
@@ -4000,6 +4472,46 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "XOR" =>
+      if values.length() == 0 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        let mut count = 0
+        let mut ok = false
+        for value in flatten_values(values) {
+          match normalize_scalar(value) {
+            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            FormulaValue::Number(num) => {
+              ok = true
+              if num != 0.0 {
+                count = count + 1
+              }
+            }
+            FormulaValue::Bool(flag) => {
+              ok = true
+              if flag {
+                count = count + 1
+              }
+            }
+            FormulaValue::String(text) => {
+              let parsed = @strconv.parse_bool(text) catch {
+                _ => return FormulaValue::Error(formula_error_value)
+              }
+              ok = true
+              if parsed {
+                count = count + 1
+              }
+            }
+            FormulaValue::Empty => ()
+            FormulaValue::List(_) => ()
+          }
+        }
+        if !ok {
+          FormulaValue::Error(formula_error_value)
+        } else {
+          FormulaValue::Bool(count % 2 != 0)
+        }
+      }
     "LEN" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
@@ -4440,6 +4952,432 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "DATEDIF" =>
+      if values.length() == 3 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let end_serial = match value_as_date_serial(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        if start_serial > end_serial {
+          FormulaValue::Error(formula_error_num)
+        } else if start_serial == end_serial {
+          FormulaValue::Number(0.0)
+        } else {
+          let unit = match value_as_string(values[2]) {
+            Ok(text) => text.to_lower()
+            Err(err) => return err
+          }
+          let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+            Some(parts) => parts
+            None => return FormulaValue::Error(formula_error_num)
+          }
+          let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+            Some(parts) => parts
+            None => return FormulaValue::Error(formula_error_num)
+          }
+          match unit {
+            "y" => {
+              let mut diff = ey - sy
+              if em < sm || (em == sm && ed < sd) {
+                diff = diff - 1
+              }
+              FormulaValue::Number(Double::from_int(diff))
+            }
+            "m" => {
+              let mut diff = (ey - sy) * 12 + (em - sm)
+              if ed < sd {
+                diff = diff - 1
+              }
+              FormulaValue::Number(Double::from_int(diff))
+            }
+            "d" => FormulaValue::Number(end_serial - start_serial)
+            "ym" => {
+              let mut diff = em - sm
+              if ed < sd {
+                diff = diff - 1
+              }
+              if diff < 0 {
+                diff = diff + 12
+              }
+              FormulaValue::Number(Double::from_int(diff))
+            }
+            "yd" => {
+              let mut target_year = sy
+              if em < sm || (em == sm && ed < sd) {
+                target_year = sy + 1
+              }
+              let start_base = match excel_serial_from_date(sy, sm, sd) {
+                Some(value) => value
+                None => return FormulaValue::Error(formula_error_num)
+              }
+              let end_base = match excel_serial_from_date(target_year, em, ed) {
+                Some(value) => value
+                None => return FormulaValue::Error(formula_error_num)
+              }
+              FormulaValue::Number(end_base - start_base)
+            }
+            "md" => {
+              let diff = if ed >= sd {
+                ed - sd
+              } else {
+                let (prev_year, prev_month) = normalize_year_month(ey, em - 1)
+                let dim = days_in_month(prev_year, prev_month)
+                dim - sd + ed
+              }
+              FormulaValue::Number(Double::from_int(diff))
+            }
+            _ => FormulaValue::Error(formula_error_value)
+          }
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DAYS" =>
+      if values.length() == 2 {
+        let end_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let start_serial = match value_as_date_serial(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        FormulaValue::Number(end_serial - start_serial)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DAYS360" =>
+      if values.length() == 2 || values.length() == 3 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let end_serial = match value_as_date_serial(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
+          Some(parts) => parts
+          None => return FormulaValue::Error(formula_error_num)
+        }
+        let (ey, em, ed) = match date_parts_from_serial(end_serial) {
+          Some(parts) => parts
+          None => return FormulaValue::Error(formula_error_num)
+        }
+        let mut start_day = sd
+        let mut end_day = ed
+        let end_year = ey
+        let mut end_month = em
+        let use_european = if values.length() == 3 {
+          match value_as_bool(values[2]) {
+            Ok(flag) => flag
+            Err(err) => return err
+          }
+        } else {
+          false
+        }
+        if use_european {
+          if start_day == 31 {
+            start_day = 30
+          }
+          if end_day == 31 {
+            end_day = 30
+          }
+        } else {
+          if days_in_month(sy, sm) == start_day {
+            start_day = 30
+          }
+          if end_day > 30 {
+            if start_day < 30 {
+              end_month = end_month + 1
+              end_day = 1
+            } else {
+              end_day = 30
+            }
+          }
+        }
+        let (norm_year, norm_month) = normalize_year_month(end_year, end_month)
+        let diff = (norm_year - sy) * 360 +
+          (norm_month - sm) * 30 +
+          (end_day - start_day)
+        FormulaValue::Number(Double::from_int(diff))
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "ISOWEEKNUM" =>
+      if values.length() == 1 {
+        let (year, month, day) = match date_parts_from_value(values[0]) {
+          Ok(parts) => parts
+          Err(err) => return err
+        }
+        match iso_week_number(year, month, day) {
+          Some(week) => FormulaValue::Number(Double::from_int(week))
+          None => FormulaValue::Error(formula_error_num)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "EDATE" =>
+      if values.length() == 2 {
+        let (year, month, day) = match date_parts_from_value(values[0]) {
+          Ok(parts) => parts
+          Err(err) => return err
+        }
+        let months = match value_as_number(values[1]) {
+          Ok(num) => Double::to_int(trunc_double(num))
+          Err(err) => return err
+        }
+        let (new_year, new_month) = normalize_year_month(year, month + months)
+        let max_day = days_in_month(new_year, new_month)
+        let new_day = if day > max_day { max_day } else { day }
+        match excel_serial_from_date(new_year, new_month, new_day) {
+          Some(serial) => FormulaValue::Number(serial)
+          None => FormulaValue::Error(formula_error_num)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "EOMONTH" =>
+      if values.length() == 2 {
+        let (year, month, _) = match date_parts_from_value(values[0]) {
+          Ok(parts) => parts
+          Err(err) => return err
+        }
+        let months = match value_as_number(values[1]) {
+          Ok(num) => Double::to_int(trunc_double(num))
+          Err(err) => return err
+        }
+        let (new_year, new_month) = normalize_year_month(year, month + months)
+        let new_day = days_in_month(new_year, new_month)
+        match excel_serial_from_date(new_year, new_month, new_day) {
+          Some(serial) => FormulaValue::Number(serial)
+          None => FormulaValue::Error(formula_error_num)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "YEARFRAC" =>
+      if values.length() == 2 || values.length() == 3 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let end_serial = match value_as_date_serial(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let basis = if values.length() == 3 {
+          match value_as_number(values[2]) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+        } else {
+          0
+        }
+        yearfrac_value(start_serial, end_serial, basis)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "WEEKDAY" =>
+      if values.length() == 1 || values.length() == 2 {
+        let (year, month, day) = match date_parts_from_value(values[0]) {
+          Ok(parts) => parts
+          Err(err) => return err
+        }
+        let mut return_type = 1
+        if values.length() == 2 {
+          return_type = match value_as_number(values[1]) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+        }
+        if return_type == 2 {
+          return_type = 11
+        }
+        let weekday = weekday_sun1(year, month, day)
+        if return_type == 1 {
+          FormulaValue::Number(Double::from_int(weekday))
+        } else if return_type == 3 {
+          let value = (weekday + 6 - 1) % 7
+          FormulaValue::Number(Double::from_int(value))
+        } else if return_type >= 11 && return_type <= 17 {
+          let value = (weekday + 6 - (return_type - 10)) % 7 + 1
+          FormulaValue::Number(Double::from_int(value))
+        } else {
+          FormulaValue::Error(formula_error_value)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "WEEKNUM" =>
+      if values.length() == 1 || values.length() == 2 {
+        let (year, month, day) = match date_parts_from_value(values[0]) {
+          Ok(parts) => parts
+          Err(err) => return err
+        }
+        let mut return_type = 1
+        if values.length() == 2 {
+          return_type = match value_as_number(values[1]) {
+            Ok(num) => Double::to_int(trunc_double(num))
+            Err(err) => return err
+          }
+        }
+        let days = day_of_year(year, month, day)
+        let mut week_mod = days % 7
+        if week_mod == 0 {
+          week_mod = 7
+        }
+        let mut week_num = (days + 6) / 7
+        let first_weekday = weekday_sun1(year, 1, 1) - 1
+        let offset = match return_type {
+          1 | 17 => 0
+          2 | 11 | 21 => 1
+          12 | 13 | 14 | 15 | 16 => return_type - 10
+          _ => return FormulaValue::Error(formula_error_num)
+        }
+        let mut padding = offset + 7 - first_weekday
+        if padding > 7 {
+          padding = padding - 7
+        }
+        if week_mod > padding {
+          week_num = week_num + 1
+        }
+        if return_type == 21 && (first_weekday == 0 || first_weekday > 4) {
+          week_num = week_num - 1
+          if week_num < 1 {
+            week_num = 52
+            let prev_first_weekday = weekday_sun1(year - 1, 1, 1) - 1
+            if prev_first_weekday < 4 {
+              week_num = week_num + 1
+            }
+          }
+        }
+        FormulaValue::Number(Double::from_int(week_num))
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "NETWORKDAYS" =>
+      if values.length() == 2 || values.length() == 3 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let end_serial = match value_as_date_serial(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let holidays = if values.length() == 3 {
+          collect_holidays(values[2])
+        } else {
+          []
+        }
+        networkdays_intl_value(
+          start_serial,
+          end_serial,
+          FormulaValue::Number(1.0),
+          holidays,
+        )
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "NETWORKDAYS.INTL" =>
+      if values.length() >= 2 && values.length() <= 4 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let end_serial = match value_as_date_serial(values[1]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let weekend_value = if values.length() >= 3 {
+          values[2]
+        } else {
+          FormulaValue::Number(1.0)
+        }
+        let holidays = if values.length() == 4 {
+          collect_holidays(values[3])
+        } else {
+          []
+        }
+        networkdays_intl_value(
+          start_serial, end_serial, weekend_value, holidays,
+        )
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "WORKDAY" =>
+      if values.length() == 2 || values.length() == 3 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let days = match value_as_number(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let holidays = if values.length() == 3 {
+          collect_holidays(values[2])
+        } else {
+          []
+        }
+        workday_intl_value(
+          start_serial,
+          days,
+          FormulaValue::Number(1.0),
+          holidays,
+        )
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "WORKDAY.INTL" =>
+      if values.length() >= 2 && values.length() <= 4 {
+        let start_serial = match value_as_date_serial(values[0]) {
+          Ok(value) => value
+          Err(err) => return err
+        }
+        let days = match value_as_number(values[1]) {
+          Ok(num) => num
+          Err(err) => return err
+        }
+        let weekend_value = if values.length() >= 3 {
+          values[2]
+        } else {
+          FormulaValue::Number(1.0)
+        }
+        let holidays = if values.length() == 4 {
+          collect_holidays(values[3])
+        } else {
+          []
+        }
+        workday_intl_value(start_serial, days, weekend_value, holidays)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "NOW" =>
+      if values.length() == 0 {
+        let now_ms = @env.now()
+        let total_seconds = UInt64::to_double(now_ms) / 1000.0
+        let days = Double::floor(total_seconds / 86400.0)
+        let seconds_in_day = total_seconds - days * 86400.0
+        let serial = days + 25569.0 + seconds_in_day / 86400.0
+        FormulaValue::Number(serial)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TODAY" =>
+      if values.length() == 0 {
+        let now_ms = @env.now()
+        let total_seconds = UInt64::to_double(now_ms) / 1000.0
+        let days = Double::floor(total_seconds / 86400.0)
+        FormulaValue::Number(days + 25569.0)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     "YEAR" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
@@ -4702,6 +5640,32 @@ fn eval_function(
           }
         }
         FormulaValue::Error(formula_error_na)
+      }
+    "SWITCH" =>
+      if values.length() < 3 {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        let target = values[0]
+        let arg_count = values.length() - 1
+        let switch_count = arg_count / 2
+        let has_default = arg_count % 2 != 0
+        let mut result = if has_default {
+          values[values.length() - 1]
+        } else {
+          FormulaValue::Error(formula_error_na)
+        }
+        for i in 0..<switch_count {
+          let match_value = values[1 + i * 2]
+          match compare_values(target, match_value) {
+            Ok(0) => {
+              result = values[1 + i * 2 + 1]
+              break
+            }
+            Ok(_) => ()
+            Err(err) => return err
+          }
+        }
+        result
       }
     "ISBLANK" =>
       if values.length() == 1 {
