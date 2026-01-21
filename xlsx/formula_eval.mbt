@@ -967,9 +967,60 @@ fn value_as_number(value : FormulaValue) -> Result[Double, FormulaValue] {
 }
 
 ///|
+fn value_as_number_text(value : FormulaValue) -> Result[Double, FormulaValue] {
+  match normalize_scalar(value) {
+    FormulaValue::Number(num) => Ok(num)
+    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    FormulaValue::Empty => Ok(0.0)
+    FormulaValue::String(text) =>
+      match parse_value_number(text) {
+        Some(num) => Ok(num)
+        None => Err(FormulaValue::Error(formula_error_value))
+      }
+    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+  }
+}
+
+///|
 fn parse_double_opt(text : StringView) -> Double? {
   let parsed = @strconv.parse_double(text) catch { _ => return None }
   Some(parsed)
+}
+
+///|
+fn parse_value_number(text : String) -> Double? {
+  let trimmed = text.trim().to_string()
+  if trimmed == "" {
+    return Some(0.0)
+  }
+  let mut negative = false
+  let mut body = trimmed
+  if body.has_prefix("(") && body.has_suffix(")") && body.length() >= 2 {
+    negative = true
+    body = (body[1:body.length() - 1] catch { _ => body }).to_string()
+  }
+  let mut percent = false
+  if body.has_suffix("%") && body.length() >= 1 {
+    percent = true
+    body = (body[:body.length() - 1] catch { _ => body }).to_string()
+  }
+  let sb = StringBuilder::new()
+  for ch in body {
+    if ch != ',' {
+      sb.write_char(ch)
+    }
+  }
+  let cleaned = sb.to_string().trim().to_string()
+  if cleaned == "" {
+    return None
+  }
+  let parsed = @strconv.parse_double(cleaned) catch { _ => return None }
+  let mut value = if percent { parsed / 100.0 } else { parsed }
+  if negative {
+    value = -value
+  }
+  Some(value)
 }
 
 ///|
@@ -3665,6 +3716,31 @@ fn eval_function(
           Err(err) => return err
         }
         FormulaValue::Bool(left == right)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "VALUE" =>
+      if values.length() == 1 {
+        match value_as_number_text(values[0]) {
+          Ok(num) => FormulaValue::Number(num)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "TEXT" =>
+      if values.length() == 2 {
+        let format_text = match value_as_string(values[1]) {
+          Ok(text) => text
+          Err(err) => return err
+        }
+        match value_as_number_text(values[0]) {
+          Ok(num) =>
+            FormulaValue::String(
+              format_number_code(format_number(num), format_text),
+            )
+          Err(err) => err
+        }
       } else {
         FormulaValue::Error(formula_error_value)
       }
