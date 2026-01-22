@@ -2494,6 +2494,16 @@ pub fn Workbook::remove_rows(
 }
 
 ///|
+/// Remove a single row (1-based) and shift rows upward.
+pub fn Workbook::remove_row(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Unit raise XlsxError {
+  self.remove_rows(sheet_name, row, 1)
+}
+
+///|
 pub fn Workbook::insert_cols(
   self : Workbook,
   sheet_name : StringView,
@@ -2528,5 +2538,43 @@ pub fn Workbook::remove_cols(
     ref_text : StringView,
   ) -> String? raise XlsxError {
     adjust_ref_after_col_remove(ref_text, col, count)
+  })
+}
+
+///|
+/// Remove a single column (1-based) and shift columns left.
+pub fn Workbook::remove_col(
+  self : Workbook,
+  sheet_name : StringView,
+  col : Int,
+) -> Unit raise XlsxError {
+  self.remove_cols(sheet_name, col, 1)
+}
+
+///|
+pub fn Workbook::duplicate_row(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+) -> Unit raise XlsxError {
+  self.duplicate_row_to(sheet_name, row, row + 1)
+}
+
+///|
+pub fn Workbook::duplicate_row_to(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  target_row : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.duplicate_row_to(row, target_row)
+  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+    ref_text : StringView,
+  ) -> String? raise XlsxError {
+    adjust_ref_after_row_insert(ref_text, target_row, 1)
   })
 }

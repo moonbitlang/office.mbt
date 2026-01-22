@@ -181,6 +181,15 @@ pub struct ColDimension {
   style_id : Int?
 }
 
+pub struct Cols {
+  columns : Array[Array[String]]
+  mut index : Int
+}
+pub fn Cols::col_index(Self) -> Int?
+pub fn Cols::new(Worksheet) -> Self
+pub fn Cols::next(Self) -> Bool
+pub fn Cols::rows(Self) -> Array[String]
+
 pub(all) struct Comment {
   cell : String
   author : String
@@ -373,12 +382,23 @@ pub struct RowDimension {
   style_id : Int?
 }
 
+type RowEntry
+
 pub struct RowStream {
   cells : Array[Cell]
   mut index : Int
 }
 pub fn RowStream::new(Worksheet) -> Self
 pub fn RowStream::next(Self) -> Array[String]?
+
+pub struct Rows {
+  entries : Array[RowEntry]
+  mut index : Int
+}
+pub fn Rows::columns(Self) -> Array[String]
+pub fn Rows::new(Worksheet) -> Self
+pub fn Rows::next(Self) -> Bool
+pub fn Rows::row_index(Self) -> Int?
 
 pub struct Selection {
   mut sqref : String
@@ -589,6 +609,7 @@ pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
+pub fn Workbook::cols(Self, StringView) -> Cols raise XlsxError
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
 pub fn Workbook::custom_properties(Self) -> Array[CustomProperty]
@@ -600,6 +621,8 @@ pub fn Workbook::delete_picture(Self, StringView, StringView) -> Unit raise Xlsx
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::doc_properties(Self) -> CoreProperties
+pub fn Workbook::duplicate_row(Self, StringView, Int) -> Unit raise XlsxError
+pub fn Workbook::duplicate_row_to(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::get_app_props(Self) -> AppProperties
 pub fn Workbook::get_auto_filter(Self, StringView) -> AutoFilter? raise XlsxError
 pub fn Workbook::get_calc_props(Self) -> CalcPropsOptions
@@ -618,6 +641,7 @@ pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> S
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
+pub fn Workbook::get_cols(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_custom_props(Self) -> Array[CustomProperty]
 pub fn Workbook::get_default_font(Self) -> String
@@ -633,6 +657,7 @@ pub fn Workbook::get_pictures(Self, StringView, StringView) -> Array[Image] rais
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
+pub fn Workbook::get_rows(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_sheet_dimension(Self, StringView) -> String raise XlsxError
 pub fn Workbook::get_sheet_view(Self, StringView, Int) -> SheetViewOptions raise XlsxError
 pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
@@ -648,12 +673,15 @@ pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxE
 pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn Workbook::remove_col(Self, StringView, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_page_break(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn Workbook::remove_row(Self, StringView, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
+pub fn Workbook::rows(Self, StringView) -> Rows raise XlsxError
 pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
 pub fn Workbook::set_app_props(Self, AppProperties) -> Unit
@@ -788,12 +816,15 @@ pub fn Worksheet::clear_sheet_background(Self) -> Unit raise XlsxError
 pub fn Worksheet::col_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
+pub fn Worksheet::cols(Self) -> Cols
 pub fn Worksheet::comments(Self) -> ArrayView[Comment]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_picture(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::duplicate_row(Self, Int) -> Unit raise XlsxError
+pub fn Worksheet::duplicate_row_to(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_hyperlink(Self, StringView) -> Hyperlink? raise XlsxError
@@ -807,12 +838,14 @@ pub fn Worksheet::get_cell_value_raw_rc(Self, Int, Int) -> CellValue? raise Xlsx
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
+pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
 pub fn Worksheet::get_panes(Self) -> Panes
 pub fn Worksheet::get_picture_cells(Self) -> Array[String] raise XlsxError
 pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_row_style(Self, Int) -> Int? raise XlsxError
+pub fn Worksheet::get_rows(Self) -> Array[Array[String]]
 pub fn Worksheet::get_sheet_view(Self, Int) -> SheetViewOptions raise XlsxError
 pub fn Worksheet::header_footer(Self) -> HeaderFooterOptions?
 pub fn Worksheet::hyperlinks(Self) -> ArrayView[Hyperlink]
@@ -831,13 +864,16 @@ pub fn Worksheet::page_margins(Self) -> PageLayoutMarginsOptions
 pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::remove_col(Self, Int) -> Unit raise XlsxError
 pub fn Worksheet::remove_cols(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::remove_page_break(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::remove_row(Self, Int) -> Unit raise XlsxError
 pub fn Worksheet::remove_rows(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::row_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
+pub fn Worksheet::rows(Self) -> Rows
 pub fn Worksheet::set_auto_filter(Self, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError

@@ -1960,6 +1960,328 @@ pub fn Worksheet::remove_rows(
 }
 
 ///|
+/// Remove a single row (1-based) and shift rows upward.
+pub fn Worksheet::remove_row(
+  self : Worksheet,
+  row : Int,
+) -> Unit raise XlsxError {
+  self.remove_rows(row, 1)
+}
+
+///|
+fn parse_cell_ref_with_abs(
+  reference : StringView,
+) -> (Int, Int, Bool, Bool) raise XlsxError {
+  let chars = reference.to_array()
+  let mut idx = 0
+  let mut abs_col = false
+  if idx < chars.length() && chars[idx] == '$' {
+    abs_col = true
+    idx = idx + 1
+  }
+  let mut col = 0
+  let mut has_col = false
+  while idx < chars.length() {
+    let ch = chars[idx]
+    if ch.is_ascii_alphabetic() {
+      let upper = ch.to_ascii_uppercase()
+      col = col * 26 + (upper.to_int() - 'A'.to_int() + 1)
+      has_col = true
+      idx = idx + 1
+    } else {
+      break
+    }
+  }
+  if !has_col {
+    raise XlsxError::InvalidCellRef(value=reference.to_string())
+  }
+  let mut abs_row = false
+  if idx < chars.length() && chars[idx] == '$' {
+    abs_row = true
+    idx = idx + 1
+  }
+  let row_sb = StringBuilder::new()
+  while idx < chars.length() {
+    let ch = chars[idx]
+    if ch.is_ascii_digit() {
+      row_sb.write_char(ch)
+      idx = idx + 1
+    } else {
+      raise XlsxError::InvalidCellRef(value=reference.to_string())
+    }
+  }
+  let row_text = row_sb.to_string()
+  if row_text == "" {
+    raise XlsxError::InvalidCellRef(value=reference.to_string())
+  }
+  let row = @strconv.parse_int(row_text, base=10) catch {
+    _ => raise XlsxError::InvalidCellRef(value=reference.to_string())
+  }
+  if row <= 0 {
+    raise XlsxError::InvalidCellRef(value=reference.to_string())
+  }
+  (row, col, abs_col, abs_row)
+}
+
+///|
+fn format_cell_ref_with_abs(
+  row : Int,
+  col : Int,
+  abs_col : Bool,
+  abs_row : Bool,
+) -> String raise XlsxError {
+  let base = cell_ref_from(row, col)
+  let chars = base.to_array()
+  let mut split = 0
+  while split < chars.length() && chars[split].is_ascii_alphabetic() {
+    split = split + 1
+  }
+  let col_text = base[:split] catch {
+      _ => raise XlsxError::InvalidCellRef(value=base)
+    }
+  let row_text = base[split:] catch {
+      _ => raise XlsxError::InvalidCellRef(value=base)
+    }
+  let sb = StringBuilder::new()
+  if abs_col {
+    sb.write_char('$')
+  }
+  sb.write_view(col_text)
+  if abs_row {
+    sb.write_char('$')
+  }
+  sb.write_view(row_text)
+  sb.to_string()
+}
+
+///|
+fn duplicate_sqref_for_row(
+  row : Int,
+  target_row : Int,
+  sqref : StringView,
+) -> Array[String] raise XlsxError {
+  let refs : Array[String] = []
+  for part in sqref.to_string().split(" ") {
+    let text = part.to_string().trim().to_string()
+    if text == "" {
+      continue
+    }
+    let (start_ref, end_ref) = if text.contains(":") {
+      let parts : Array[String] = []
+      for item in text.split(":") {
+        parts.push(item.to_string())
+      }
+      if parts.length() != 2 {
+        raise XlsxError::InvalidCellRef(value=text)
+      }
+      (parts[0], parts[1])
+    } else {
+      (text, text)
+    }
+    let (row1, col1, abs_col1, abs_row1) = parse_cell_ref_with_abs(start_ref)
+    let (row2, col2, abs_col2, abs_row2) = parse_cell_ref_with_abs(end_ref)
+    if row1 == row2 && row1 == row {
+      let from_ref = format_cell_ref_with_abs(
+        target_row, col1, abs_col1, abs_row1,
+      )
+      let to_ref = format_cell_ref_with_abs(
+        target_row, col2, abs_col2, abs_row2,
+      )
+      refs.push("\{from_ref}:\{to_ref}")
+    }
+  }
+  refs
+}
+
+///|
+fn replace_attr_value_in_open_tag(
+  xml : StringView,
+  attr_name : StringView,
+  value : String,
+) -> String? raise XlsxError {
+  let text = xml.to_string()
+  let tag_start = match text.find("<") {
+    Some(pos) => pos
+    None => return None
+  }
+  let tag_end = match text.find(">") {
+    Some(pos) => pos
+    None => return None
+  }
+  let open_tag = text[tag_start:tag_end] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+    }
+  let needle = "\{attr_name.to_string()}=\""
+  let attr_pos = match open_tag.find(needle) {
+    Some(pos) => pos
+    None => return None
+  }
+  let value_start = tag_start + attr_pos + needle.length()
+  let rest = text[value_start:] catch {
+      _ => raise XlsxError::InvalidXml(msg="attribute slice invalid")
+    }
+  let value_end_rel = match rest.find("\"") {
+    Some(pos) => pos
+    None => return None
+  }
+  let value_end = value_start + value_end_rel
+  let sb = StringBuilder::new()
+  sb.write_view(
+    text[:value_start] catch {
+      _ => raise XlsxError::InvalidXml(msg="attribute start invalid")
+    },
+  )
+  sb.write_view(escape_xml_attr(value))
+  sb.write_view(
+    text[value_end:] catch {
+      _ => raise XlsxError::InvalidXml(msg="attribute end invalid")
+    },
+  )
+  Some(sb.to_string())
+}
+
+///|
+fn duplicate_xml_sqref(
+  xml : StringView,
+  row : Int,
+  target_row : Int,
+) -> String? raise XlsxError {
+  let tag_text = match tag_attributes_in(xml, "conditionalFormatting") {
+    Some(value) => value
+    None =>
+      match tag_attributes_in(xml, "dataValidation") {
+        Some(value) => value
+        None => return None
+      }
+  }
+  let sqref = match attr_value(tag_text, "sqref") {
+    Some(value) => value
+    None => return None
+  }
+  let refs = duplicate_sqref_for_row(row, target_row, sqref)
+  if refs.length() == 0 {
+    return None
+  }
+  let joined = refs.join(" ")
+  replace_attr_value_in_open_tag(xml, "sqref", joined)
+}
+
+///|
+fn Worksheet::duplicate_conditional_formats(
+  self : Worksheet,
+  row : Int,
+  target_row : Int,
+) -> Unit raise XlsxError {
+  let copies : Array[String] = []
+  for xml in self.conditional_formats {
+    match duplicate_xml_sqref(xml, row, target_row) {
+      Some(value) => copies.push(value)
+      None => ()
+    }
+  }
+  if copies.length() > 0 {
+    self.conditional_formats.append(copies[:])
+  }
+}
+
+///|
+fn Worksheet::duplicate_data_validations(
+  self : Worksheet,
+  row : Int,
+  target_row : Int,
+) -> Unit raise XlsxError {
+  let copies : Array[String] = []
+  for xml in self.data_validations {
+    match duplicate_xml_sqref(xml, row, target_row) {
+      Some(value) => copies.push(value)
+      None => ()
+    }
+  }
+  if copies.length() > 0 {
+    self.data_validations.append(copies[:])
+  }
+}
+
+///|
+fn Worksheet::duplicate_merge_cells(
+  self : Worksheet,
+  row : Int,
+  target_row : Int,
+) -> Unit raise XlsxError {
+  let mut source_row = row
+  if row > target_row {
+    source_row = row + 1
+  }
+  for range_ref in self.merged_cells {
+    let (min_row, _min_col, max_row, _max_col) = parse_range_ref(range_ref)
+    if min_row < target_row && target_row < max_row {
+      return
+    }
+  }
+  for range_ref in self.merged_cells {
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    if min_row == max_row && min_row == source_row {
+      let from_ref = cell_ref_from(target_row, min_col)
+      let to_ref = cell_ref_from(target_row, max_col)
+      self.merge_cells("\{from_ref}:\{to_ref}")
+    }
+  }
+}
+
+///|
+pub fn Worksheet::duplicate_row(
+  self : Worksheet,
+  row : Int,
+) -> Unit raise XlsxError {
+  self.duplicate_row_to(row, row + 1)
+}
+
+///|
+pub fn Worksheet::duplicate_row_to(
+  self : Worksheet,
+  row : Int,
+  target_row : Int,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  if row <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+  }
+  if target_row <= 0 || row == target_row {
+    raise XlsxError::InvalidSheetOperation(
+      msg="duplicate row target must be different",
+    )
+  }
+  let row_cells : Array[Cell] = []
+  for cell in self.cells {
+    if cell.row == row {
+      row_cells.push(cell)
+    }
+  }
+  let row_dim = self.row_dimensions.get(row)
+  self.insert_rows(target_row, 1)
+  for cell in row_cells {
+    let reference = cell_ref_from(target_row, cell.col)
+    self.cells.push({
+      reference,
+      row: target_row,
+      col: cell.col,
+      value: cell.value,
+      value_type: cell.value_type,
+      rich_text: cell.rich_text,
+      formula: cell.formula,
+      style_id: cell.style_id,
+    })
+  }
+  match row_dim {
+    Some(dim) => self.set_row_dimension(target_row, dim)
+    None => self.row_dimensions.remove(target_row)
+  }
+  self.duplicate_conditional_formats(row, target_row)
+  self.duplicate_data_validations(row, target_row)
+  self.duplicate_merge_cells(row, target_row)
+}
+
+///|
 pub fn Worksheet::insert_cols(
   self : Worksheet,
   col : Int,
@@ -2204,6 +2526,15 @@ pub fn Worksheet::remove_cols(
   )
   self.col_breaks.clear()
   self.col_breaks.append(updated_breaks[:])
+}
+
+///|
+/// Remove a single column (1-based) and shift columns left.
+pub fn Worksheet::remove_col(
+  self : Worksheet,
+  col : Int,
+) -> Unit raise XlsxError {
+  self.remove_cols(col, 1)
 }
 
 ///|
