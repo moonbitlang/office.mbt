@@ -1,9 +1,9 @@
 ///|
-test "read uses transcoder for non-utf8 xml" {
+fn build_non_utf8_workbook_bytes() -> Bytes raise {
   let workbook = Workbook::new()
-  ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell("Sheet1", "A1", "alpha")
-  let raw = write(workbook)
+  ignore(try! workbook.add_sheet("Sheet1"))
+  try! workbook.set_cell("Sheet1", "A1", "alpha")
+  let raw = try! write(workbook)
   let archive = @zip.read(raw) catch { err => fail("zip read failed: \{err}") }
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
@@ -26,9 +26,14 @@ test "read uses transcoder for non-utf8 xml" {
       data_descriptor=entry.data_descriptor,
     )
   }
-  let bytes = @zip.write(updated) catch {
+  @zip.write(updated) catch {
     err => fail("zip write failed: \{err}")
   }
+}
+
+///|
+test "read uses transcoder for non-utf8 xml" {
+  let bytes = build_non_utf8_workbook_bytes()
   let called = @ref.new(false)
   fn transcode(_encoding : String, data : Bytes) -> String raise XlsxError {
     if _encoding.is_empty() {
@@ -41,6 +46,33 @@ test "read uses transcoder for non-utf8 xml" {
   }
 
   let parsed = read(bytes, transcoder=transcode)
+  guard called.val else { fail("transcoder not called") }
+  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+}
+
+///|
+async test "workbook read_zip_reader uses charset_transcoder" {
+  let bytes = build_non_utf8_workbook_bytes()
+  let called = @ref.new(false)
+  fn transcode(_encoding : String, data : Bytes) -> String raise XlsxError {
+    if _encoding.is_empty() {
+      ignore(read(b""))
+    }
+    called.val = true
+    @encoding/utf8.decode(data) catch {
+      _ => ""
+    }
+  }
+
+  let builder = Workbook::new().charset_transcoder(transcode)
+  let (reader, writer) = @async/io.pipe()
+  let parsed = @async.with_task_group(fn(group) {
+    group.spawn_bg(() => {
+      defer writer.close()
+      writer.write(bytes)
+    })
+    builder.read_zip_reader(reader)
+  })
   guard called.val else { fail("transcoder not called") }
   inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }

@@ -846,6 +846,7 @@ pub struct Workbook {
   indexed_colors : Array[String]?
   mut file_path : String?
   mut zip_writer : ((@zip.Archive) -> Bytes raise)?
+  mut charset_transcoder : ((String, Bytes) -> String raise XlsxError)?
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
@@ -882,6 +883,7 @@ pub fn Workbook::auto_filter(Self, StringView, String, ArrayView[AutoFilterOptio
 pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String raise XlsxError
 pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String raise XlsxError
 pub fn Workbook::calc_props(Self) -> CalcPropsOptions
+pub fn Workbook::charset_transcoder(Self, (String, Bytes) -> String raise XlsxError) -> Self
 pub fn Workbook::chart_sheet(Self, StringView) -> ChartSheet?
 pub fn Workbook::chart_sheets(Self) -> ArrayView[ChartSheet]
 pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
@@ -985,6 +987,7 @@ pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxE
 pub fn Workbook::new_style(Self, Style) -> Int
 pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
+pub async fn[R : @io.Reader] Workbook::read_zip_reader(Self, R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Self raise XlsxError
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_col(Self, StringView, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError

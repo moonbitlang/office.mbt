@@ -75,6 +75,29 @@ pub async fn[R : @async/io.Reader] read_zip_reader(
 }
 
 ///|
+pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
+  self : Workbook,
+  reader : R,
+  password? : String = "",
+  options? : Options,
+  transcoder? : (String, Bytes) -> String raise XlsxError,
+) -> Workbook raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  let resolved_transcoder = match transcoder {
+    Some(value) => Some(value)
+    None => self.charset_transcoder
+  }
+  match resolved_transcoder {
+    Some(value) =>
+      open_reader(reader, password~, options=resolved_options, transcoder=value)
+    None => open_reader(reader, password~, options=resolved_options)
+  }
+}
+
+///|
 pub async fn open_file(
   path : String,
   password? : String = "",

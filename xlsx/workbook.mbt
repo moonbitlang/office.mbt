@@ -17,6 +17,7 @@ pub struct Workbook {
   indexed_colors : Array[String]?
   mut file_path : String?
   mut zip_writer : ((@zip.Archive) -> Bytes raise)?
+  mut charset_transcoder : ((String, Bytes) -> String raise XlsxError)?
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
@@ -166,6 +167,7 @@ pub fn Workbook::new() -> Workbook {
     indexed_colors: None,
     file_path: None,
     zip_writer: None,
+    charset_transcoder: None,
     options: Options::new(),
     workbook_protection: None,
     active_sheet_index: 0,

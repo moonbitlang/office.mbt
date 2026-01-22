@@ -25,6 +25,15 @@ pub fn Workbook::get_sheet_visible(
 }
 
 ///|
+pub fn Workbook::charset_transcoder(
+  self : Workbook,
+  transcoder : (String, Bytes) -> String raise XlsxError,
+) -> Workbook {
+  self.charset_transcoder = Some(transcoder)
+  self
+}
+
+///|
 pub fn Workbook::get_row_outline_level(
   self : Workbook,
   sheet_name : StringView,
