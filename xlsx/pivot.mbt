@@ -1,5 +1,6 @@
 ///|
 pub struct PivotTable {
+  name : String
   table_id : Int
   cache_id : Int
   table_xml : String
@@ -12,6 +13,7 @@ pub fn PivotTable::new(
   table_xml : String,
   cache_definition_xml : String,
   cache_records_xml? : String = "",
+  name? : String = "",
 ) -> PivotTable raise XlsxError {
   if table_xml == "" {
     raise XlsxError::InvalidPivotTable(msg="pivot table xml empty")
@@ -25,6 +27,7 @@ pub fn PivotTable::new(
     Some(cache_records_xml)
   }
   {
+    name,
     table_id: 0,
     cache_id: 0,
     table_xml,

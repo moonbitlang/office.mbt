@@ -405,6 +405,9 @@ let rel_pivot_cache_records = "http://schemas.openxmlformats.org/officeDocument/
 let rel_vml = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing"
 
 ///|
+let rel_slicer = "http://schemas.microsoft.com/office/2007/relationships/slicer"
+
+///|
 let rel_hyperlink = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 
 ///|
@@ -432,6 +435,12 @@ let ct_pivot_cache_def = "application/vnd.openxmlformats-officedocument.spreadsh
 let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
 
 ///|
+let ct_slicer = "application/vnd.ms-excel.slicer+xml"
+
+///|
+let ct_slicer_cache = "application/vnd.ms-excel.slicerCache+xml"
+
+///|
 let ct_vml = "application/vnd.openxmlformats-officedocument.vmlDrawing"
 
 ///|
@@ -442,6 +451,7 @@ fn write_sheet_rels_xml(
   drawing_target : String?,
   table_targets : ArrayView[String],
   pivot_table_targets : ArrayView[String],
+  slicer_targets : ArrayView[String],
   hyperlink_targets : ArrayView[String],
   comment_targets : ArrayView[String],
   vml_targets : ArrayView[String],
@@ -475,6 +485,14 @@ fn write_sheet_rels_xml(
   for target in pivot_table_targets {
     sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
     sb.write_view(rel_pivot_table)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
+  for target in slicer_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_slicer)
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(target))
     sb.write_view("\"/>\n")
@@ -581,6 +599,7 @@ fn write_drawing_rels_xml(
 fn write_drawing_xml(
   images : Array[(String, Int)],
   charts : Array[(String, Int)],
+  shapes : Array[Shape],
 ) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -657,6 +676,47 @@ fn write_drawing_xml(
     sb.write_view("        </a:graphicData>\n")
     sb.write_view("      </a:graphic>\n")
     sb.write_view("    </xdr:graphicFrame>\n")
+    sb.write_view("    <xdr:clientData/>\n")
+    sb.write_view("  </xdr:oneCellAnchor>\n")
+  }
+  for shape in shapes {
+    let (row, col) = cell_ref_to_rc(shape.reference)
+    let col_idx = col - 1
+    let row_idx = row - 1
+    let shape_id = obj_id
+    obj_id = obj_id + 1
+    sb.write_view("  <xdr:oneCellAnchor>\n")
+    sb.write_view("    <xdr:from>\n")
+    sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+    sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+    sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+    sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+    sb.write_view("    </xdr:from>\n")
+    sb.write_view("    <xdr:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("    <xdr:sp>\n")
+    sb.write_view("      <xdr:nvSpPr>\n")
+    sb.write_view(
+      "        <xdr:cNvPr id=\"\{shape_id}\" name=\"Shape \{shape_id}\"/>\n",
+    )
+    sb.write_view("        <xdr:cNvSpPr/>\n")
+    sb.write_view("      </xdr:nvSpPr>\n")
+    sb.write_view("      <xdr:spPr>\n")
+    sb.write_view("        <a:prstGeom prst=\"")
+    sb.write_view(escape_xml_attr(shape.shape_type.to_lower()))
+    sb.write_view("\"><a:avLst/></a:prstGeom>\n")
+    sb.write_view("      </xdr:spPr>\n")
+    if shape.text != "" {
+      sb.write_view("      <xdr:txBody>\n")
+      sb.write_view("        <a:bodyPr/>\n")
+      sb.write_view("        <a:lstStyle/>\n")
+      sb.write_view("        <a:p>\n")
+      sb.write_view("          <a:r><a:t>")
+      sb.write_view(escape_xml_text(shape.text))
+      sb.write_view("</a:t></a:r>\n")
+      sb.write_view("        </a:p>\n")
+      sb.write_view("      </xdr:txBody>\n")
+    }
+    sb.write_view("    </xdr:sp>\n")
     sb.write_view("    <xdr:clientData/>\n")
     sb.write_view("  </xdr:oneCellAnchor>\n")
   }
@@ -2038,11 +2098,15 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   let mut vml_index = 1
   let mut comment_index = 1
   let mut drawing_index = sheet_count + 1
+  let mut slicer_index = 1
+  let mut slicer_cache_index = 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
     let sheet_tables = tables_by_sheet[i]
     let sheet_pivots = pivots_by_sheet[i]
-    let has_drawing = sheet.images().length() > 0 || sheet.charts().length() > 0
+    let has_drawing = sheet.images().length() > 0 ||
+      sheet.charts().length() > 0 ||
+      sheet.shapes().length() > 0
     let mut rel_id = 1
     let drawing_rel_id = if has_drawing {
       let id = rel_id
@@ -2067,6 +2131,20 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       pivot_targets.push("../pivotTables/pivotTable\{pivot_id}.xml")
       rel_id = rel_id + 1
     }
+    let sheet_slicers : Array[(Int, Int, Slicer)] = []
+    for slicer in sheet.slicers() {
+      let slicer_id = slicer_index
+      slicer_index = slicer_index + 1
+      let cache_id = slicer_cache_index
+      slicer_cache_index = slicer_cache_index + 1
+      sheet_slicers.push((slicer_id, cache_id, slicer))
+    }
+    let slicer_targets : Array[String] = []
+    for entry in sheet_slicers {
+      let (slicer_id, _cache_id, _slicer) = entry
+      slicer_targets.push("../slicers/slicer\{slicer_id}.xml")
+      rel_id = rel_id + 1
+    }
     let hyperlink_targets : Array[String] = []
     let hyperlink_rel_ids : Map[String, Int] = {}
     for link in sheet.hyperlinks() {
@@ -2088,6 +2166,11 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     } else {
       None
     }
+    let form_control_vml_xml = if sheet.form_controls().length() > 0 {
+      Some(write_form_controls_vml(sheet_id, sheet.form_controls()))
+    } else {
+      None
+    }
     match comment_xml {
       Some(xml) => {
         let comment_id = comment_index
@@ -2102,7 +2185,19 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     }
     let vml_targets : Array[String] = []
     let vml_parts : Array[(Int, String)] = []
-    let legacy_drawing_xml = match sheet.vml_drawing_xml() {
+    let base_vml = match sheet.vml_drawing_xml() {
+      Some(xml) => Some(xml)
+      None => None
+    }
+    let merged_vml = match base_vml {
+      Some(xml) =>
+        match form_control_vml_xml {
+          Some(control_xml) => Some(merge_vml_drawings(xml, control_xml))
+          None => Some(xml)
+        }
+      None => form_control_vml_xml
+    }
+    let legacy_drawing_xml = match merged_vml {
       Some(xml) =>
         match comment_vml_xml {
           Some(comment_xml) => Some(merge_vml_drawings(xml, comment_xml))
@@ -2174,6 +2269,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     if drawing_rel_id is Some(_) ||
       table_targets.length() > 0 ||
       pivot_targets.length() > 0 ||
+      slicer_targets.length() > 0 ||
       hyperlink_targets.length() > 0 ||
       comment_targets.length() > 0 ||
       vml_targets.length() > 0 ||
@@ -2183,8 +2279,8 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         None => None
       }
       let sheet_rels_xml = write_sheet_rels_xml(
-        drawing_target, table_targets, pivot_targets, hyperlink_targets, comment_targets,
-        vml_targets, picture_targets,
+        drawing_target, table_targets, pivot_targets, slicer_targets, hyperlink_targets,
+        comment_targets, vml_targets, picture_targets,
       )
       archive.add(
         "xl/worksheets/_rels/sheet\{sheet_id}.xml.rels",
@@ -2246,6 +2342,27 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         None => ()
       }
     }
+    for entry in sheet_slicers {
+      let (slicer_id, cache_id, slicer) = entry
+      let slicer_xml = write_slicer_xml(slicer, cache_id)
+      archive.add(
+        "xl/slicers/slicer\{slicer_id}.xml",
+        @encoding/utf8.encode(slicer_xml),
+      )
+      manifest.add_content_override(
+        "/xl/slicers/slicer\{slicer_id}.xml",
+        ct_slicer,
+      )
+      let cache_xml = write_slicer_cache_xml(slicer, cache_id)
+      archive.add(
+        "xl/slicerCaches/slicerCache\{cache_id}.xml",
+        @encoding/utf8.encode(cache_xml),
+      )
+      manifest.add_content_override(
+        "/xl/slicerCaches/slicerCache\{cache_id}.xml",
+        ct_slicer_cache,
+      )
+    }
     for part in comment_parts {
       let (comment_id, xml) = part
       archive.add("xl/comments\{comment_id}.xml", @encoding/utf8.encode(xml))
@@ -2272,6 +2389,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     let chart_targets : Array[String] = []
     let drawing_images : Array[(String, Int)] = []
     let drawing_charts : Array[(String, Int)] = []
+    let drawing_shapes : Array[Shape] = []
     let mut rel_id = 1
     for image in sheet.images() {
       let file_name = "image\{image_index}.\{image.extension}"
@@ -2298,7 +2416,12 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       "/xl/drawings/drawing\{sheet_id}.xml",
       ct_drawing,
     )
-    let drawing_xml = write_drawing_xml(drawing_images, drawing_charts)
+    for shape in sheet.shapes() {
+      drawing_shapes.push(shape)
+    }
+    let drawing_xml = write_drawing_xml(
+      drawing_images, drawing_charts, drawing_shapes,
+    )
     archive.add(
       "xl/drawings/drawing\{sheet_id}.xml",
       @encoding/utf8.encode(drawing_xml),
@@ -2325,7 +2448,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       ct_drawing,
     )
     let drawing_charts : Array[(String, Int)] = [("A1", 1)]
-    let drawing_xml = write_drawing_xml([], drawing_charts)
+    let drawing_xml = write_drawing_xml([], drawing_charts, [])
     archive.add(
       "xl/drawings/drawing\{drawing_id}.xml",
       @encoding/utf8.encode(drawing_xml),
@@ -2343,6 +2466,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     )
     let chartsheet_rels_xml = write_sheet_rels_xml(
       Some("../drawings/drawing\{drawing_id}.xml"),
+      [],
       [],
       [],
       [],

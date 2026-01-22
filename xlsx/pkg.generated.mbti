@@ -351,6 +351,15 @@ pub fn DefinedName::new(String, String, scope? : String, comment? : String) -> S
 pub impl Eq for DefinedName
 pub impl Show for DefinedName
 
+pub struct FormControl {
+  cell : String
+  control_type : String
+  text : String
+}
+pub fn FormControl::new(String, String, text? : String) -> Self raise XlsxError
+pub impl Eq for FormControl
+pub impl Show for FormControl
+
 pub struct HeaderFooterOptions {
   mut align_with_margins : Bool?
   mut different_first : Bool
@@ -454,13 +463,14 @@ pub impl Eq for Panes
 pub impl Show for Panes
 
 pub struct PivotTable {
+  name : String
   table_id : Int
   cache_id : Int
   table_xml : String
   cache_definition_xml : String
   cache_records_xml : String?
 }
-pub fn PivotTable::new(String, String, cache_records_xml? : String) -> Self raise XlsxError
+pub fn PivotTable::new(String, String, cache_records_xml? : String, name? : String) -> Self raise XlsxError
 
 pub(all) struct RichTextFont {
   bold : Bool
@@ -514,6 +524,15 @@ pub fn Selection::new() -> Self
 pub fn Selection::with_values(sqref? : String, active_cell? : String, pane? : String) -> Self
 pub impl Eq for Selection
 pub impl Show for Selection
+
+pub struct Shape {
+  reference : String
+  shape_type : String
+  text : String
+}
+pub fn Shape::new(String, String, text? : String) -> Self raise XlsxError
+pub impl Eq for Shape
+pub impl Show for Shape
 
 pub struct SheetBackground {
   data : Bytes
@@ -610,6 +629,13 @@ pub fn SheetViewOptions::with_values(default_grid_color? : Bool, right_to_left? 
 pub impl Eq for SheetViewOptions
 pub impl Show for SheetViewOptions
 
+pub struct Slicer {
+  name : String
+}
+pub fn Slicer::new(String) -> Self raise XlsxError
+pub impl Eq for Slicer
+pub impl Show for Slicer
+
 pub struct Sparkline {
   range_ref : String
   location : String
@@ -698,9 +724,13 @@ pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit ra
 pub fn Workbook::add_data_validation(Self, StringView, DataValidation) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::add_form_control(Self, StringView, FormControl) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
-pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String) -> PivotTable raise XlsxError
+pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
+pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
+pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
+pub fn Workbook::add_slicer(Self, StringView, Slicer) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
@@ -728,8 +758,11 @@ pub fn Workbook::defined_names(Self) -> ArrayView[DefinedName]
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_data_validation(Self, StringView, sqrefs? : Array[String]) -> Unit raise XlsxError
 pub fn Workbook::delete_defined_name(Self, DefinedName) -> Unit raise XlsxError
+pub fn Workbook::delete_form_control(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_picture(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn Workbook::delete_pivot_table(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
+pub fn Workbook::delete_slicer(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::doc_properties(Self) -> CoreProperties
 pub fn Workbook::duplicate_row(Self, StringView, Int) -> Unit raise XlsxError
@@ -761,6 +794,7 @@ pub fn Workbook::get_data_validations(Self, StringView) -> Array[DataValidation]
 pub fn Workbook::get_default_font(Self) -> String
 pub fn Workbook::get_defined_names(Self) -> Array[DefinedName]
 pub fn Workbook::get_doc_props(Self) -> CoreProperties
+pub fn Workbook::get_form_controls(Self, StringView) -> Array[FormControl] raise XlsxError
 pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
 pub fn Workbook::get_merge_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
@@ -768,12 +802,14 @@ pub fn Workbook::get_page_margins(Self, StringView) -> PageLayoutMarginsOptions 
 pub fn Workbook::get_panes(Self, StringView) -> Panes raise XlsxError
 pub fn Workbook::get_picture_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_pictures(Self, StringView, StringView) -> Array[Image] raise XlsxError
+pub fn Workbook::get_pivot_tables(Self, StringView) -> Array[PivotTable] raise XlsxError
 pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_rows(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_sheet_dimension(Self, StringView) -> String raise XlsxError
 pub fn Workbook::get_sheet_view(Self, StringView, Int) -> SheetViewOptions raise XlsxError
+pub fn Workbook::get_slicers(Self, StringView) -> Array[Slicer] raise XlsxError
 pub fn Workbook::get_style(Self, Int) -> Style raise XlsxError
 pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
 pub fn Workbook::get_workbook_props(Self) -> WorkbookPropsOptions
@@ -897,6 +933,9 @@ pub struct Worksheet {
   pivot_tables : Array[PivotTable]
   images : Array[Image]
   charts : Array[Chart]
+  shapes : Array[Shape]
+  form_controls : Array[FormControl]
+  slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
   comments : Array[Comment]
@@ -921,8 +960,12 @@ pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation(Self, DataValidation) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
+pub fn Worksheet::add_form_control(Self, FormControl) -> Unit raise XlsxError
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
-pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String) -> PivotTable raise XlsxError
+pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
+pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
+pub fn Worksheet::add_shape(Self, Shape) -> Unit raise XlsxError
+pub fn Worksheet::add_slicer(Self, Slicer) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline(Self, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
@@ -942,10 +985,14 @@ pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_data_validation(Self, sqrefs? : Array[String]) -> Unit raise XlsxError
+pub fn Worksheet::delete_form_control(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_picture(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::delete_pivot_table(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::delete_slicer(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::duplicate_row(Self, Int) -> Unit raise XlsxError
 pub fn Worksheet::duplicate_row_to(Self, Int, Int) -> Unit raise XlsxError
+pub fn Worksheet::form_controls(Self) -> ArrayView[FormControl]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_hyperlink(Self, StringView) -> Hyperlink? raise XlsxError
@@ -962,6 +1009,7 @@ pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
 pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
+pub fn Worksheet::get_form_controls(Self) -> ArrayView[FormControl]
 pub fn Worksheet::get_panes(Self) -> Panes
 pub fn Worksheet::get_picture_cells(Self) -> Array[String] raise XlsxError
 pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError
@@ -970,6 +1018,7 @@ pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_row_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_rows(Self) -> Array[Array[String]]
 pub fn Worksheet::get_sheet_view(Self, Int) -> SheetViewOptions raise XlsxError
+pub fn Worksheet::get_slicers(Self) -> ArrayView[Slicer]
 pub fn Worksheet::header_footer(Self) -> HeaderFooterOptions?
 pub fn Worksheet::hyperlinks(Self) -> ArrayView[Hyperlink]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
@@ -1027,9 +1076,11 @@ pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxEr
 pub fn Worksheet::set_sheet_dimension(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_view(Self, Int, SheetViewOptions) -> Unit raise XlsxError
 pub fn Worksheet::set_state(Self, SheetState) -> Unit
+pub fn Worksheet::shapes(Self) -> ArrayView[Shape]
 pub fn Worksheet::sheet_background(Self) -> SheetBackground?
 pub fn Worksheet::sheet_dimension(Self) -> String? raise XlsxError
 pub fn Worksheet::sheet_protection(Self) -> SheetProtection?
+pub fn Worksheet::slicers(Self) -> ArrayView[Slicer]
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::state(Self) -> SheetState
 pub fn Worksheet::tables(Self) -> ArrayView[Table]

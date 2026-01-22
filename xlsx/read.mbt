@@ -319,6 +319,18 @@ fn parse_default_font(xml : StringView) -> String {
 }
 
 ///|
+fn parse_pivot_table_name(xml : StringView) -> String raise XlsxError {
+  match tag_attributes_in(xml, "pivotTableDefinition") {
+    Some(tag) =>
+      match attr_value(tag, "name") {
+        Some(value) => unescape_xml_text(value)
+        None => ""
+      }
+    None => ""
+  }
+}
+
+///|
 fn parse_defined_names(
   xml : StringView,
   sheet_names : Array[String],
@@ -2747,6 +2759,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             None => None
           }
           parsed_pivots.push({
+            name: parse_pivot_table_name(pivot_xml),
             table_id: pivot_id,
             cache_id,
             table_xml: pivot_xml,
@@ -2837,6 +2850,9 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         vml_drawing_hf_xml,
         images: [],
         charts: [],
+        shapes: [],
+        form_controls: [],
+        slicers: [],
         data_validations: [],
         conditional_formats: [],
         comments,

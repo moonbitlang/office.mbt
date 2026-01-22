@@ -1169,6 +1169,7 @@ fn clone_pivot_tables(values : ArrayView[PivotTable]) -> Array[PivotTable] {
   let out : Array[PivotTable] = []
   for value in values {
     out.push({
+      name: value.name,
       table_id: 0,
       cache_id: 0,
       table_xml: value.table_xml,
@@ -1191,6 +1192,33 @@ fn clone_images(values : ArrayView[Image]) -> Array[Image] {
 ///|
 fn clone_charts(values : ArrayView[Chart]) -> Array[Chart] {
   let out : Array[Chart] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
+fn clone_shapes(values : ArrayView[Shape]) -> Array[Shape] {
+  let out : Array[Shape] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
+fn clone_form_controls(values : ArrayView[FormControl]) -> Array[FormControl] {
+  let out : Array[FormControl] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
+fn clone_slicers(values : ArrayView[Slicer]) -> Array[Slicer] {
+  let out : Array[Slicer] = []
   for value in values {
     out.push(value)
   }
@@ -1254,6 +1282,9 @@ fn clone_worksheet(
     pivot_tables: clone_pivot_tables(sheet.pivot_tables),
     images: clone_images(sheet.images),
     charts: clone_charts(sheet.charts),
+    shapes: clone_shapes(sheet.shapes),
+    form_controls: clone_form_controls(sheet.form_controls),
+    slicers: clone_slicers(sheet.slicers),
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
     comments: clone_comments(sheet.comments),
@@ -1791,6 +1822,19 @@ pub fn Workbook::add_chart(
 }
 
 ///|
+pub fn Workbook::add_shape(
+  self : Workbook,
+  sheet_name : StringView,
+  shape : Shape,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_shape(shape)
+}
+
+///|
 pub fn Workbook::add_vml_drawing_xml(
   self : Workbook,
   sheet_name : StringView,
@@ -1814,6 +1858,103 @@ pub fn Workbook::add_vml_drawing_hf_xml(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_vml_drawing_hf_xml(xml)
+}
+
+///|
+pub fn Workbook::add_form_control(
+  self : Workbook,
+  sheet_name : StringView,
+  control : FormControl,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_form_control(control)
+}
+
+///|
+pub fn Workbook::get_form_controls(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[FormControl] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let out : Array[FormControl] = []
+  for control in sheet.get_form_controls() {
+    out.push(control)
+  }
+  out
+}
+
+///|
+pub fn Workbook::delete_form_control(
+  self : Workbook,
+  sheet_name : StringView,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.delete_form_control(cell)
+}
+
+///|
+pub fn Workbook::add_slicer(
+  self : Workbook,
+  sheet_name : StringView,
+  slicer : Slicer,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_slicer(slicer)
+}
+
+///|
+pub fn Workbook::get_slicers(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[Slicer] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let out : Array[Slicer] = []
+  for slicer in sheet.get_slicers() {
+    out.push(slicer)
+  }
+  out
+}
+
+///|
+pub fn Workbook::delete_slicer(
+  self : Workbook,
+  name : StringView,
+) -> Unit raise XlsxError {
+  let target = name.to_string()
+  let mut removed = false
+  for sheet in self.sheets {
+    let mut found = false
+    for slicer in sheet.get_slicers() {
+      if slicer.name == target {
+        found = true
+        break
+      }
+    }
+    if found {
+      sheet.delete_slicer(target)
+      removed = true
+      break
+    }
+  }
+  if !removed {
+    raise XlsxError::InvalidSheetOperation(msg="slicer not found")
+  }
 }
 
 ///|
@@ -2174,12 +2315,61 @@ pub fn Workbook::add_pivot_table_xml(
   table_xml : String,
   cache_definition_xml : String,
   cache_records_xml? : String = "",
+  name? : String = "",
 ) -> PivotTable raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.add_pivot_table_xml(table_xml, cache_definition_xml, cache_records_xml~)
+  sheet.add_pivot_table_xml(
+    table_xml,
+    cache_definition_xml,
+    cache_records_xml~,
+    name~,
+  )
+}
+
+///|
+pub fn Workbook::add_pivot_table(
+  self : Workbook,
+  sheet_name : StringView,
+  table_xml : String,
+  cache_definition_xml : String,
+  cache_records_xml? : String = "",
+  name? : String = "",
+) -> PivotTable raise XlsxError {
+  self.add_pivot_table_xml(
+    sheet_name,
+    table_xml,
+    cache_definition_xml,
+    cache_records_xml~,
+    name~,
+  )
+}
+
+///|
+pub fn Workbook::get_pivot_tables(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[PivotTable] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  clone_pivot_tables(sheet.pivot_tables())
+}
+
+///|
+pub fn Workbook::delete_pivot_table(
+  self : Workbook,
+  sheet_name : StringView,
+  name : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.delete_pivot_table(name)
 }
 
 ///|

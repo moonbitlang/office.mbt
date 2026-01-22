@@ -101,6 +101,7 @@ test "pivot table roundtrip" {
   }
   inspect(parsed_sheet.pivot_tables().length(), content="1")
   let pivot = parsed_sheet.pivot_tables()[0]
+  inspect(pivot.name, content="Pivot2")
   inspect(pivot.table_id, content="1")
   inspect(pivot.cache_id, content="1")
   inspect(pivot.table_xml, content="<pivotTableDefinition name=\"Pivot2\"/>")
@@ -129,4 +130,23 @@ test "pivot table validation" {
     result,
     content="Err(InvalidPivotTable(msg=\"pivot table xml empty\"))",
   )
+}
+
+///|
+test "pivot table add/get/delete" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_pivot_table(
+      "Sheet1",
+      "<pivotTableDefinition name=\"PivotA\"/>",
+      "<pivotCacheDefinition/>",
+      name="PivotA",
+    ),
+  )
+  let pivots = workbook.get_pivot_tables("Sheet1")
+  inspect(pivots.length(), content="1")
+  inspect(pivots[0].name, content="PivotA")
+  workbook.delete_pivot_table("Sheet1", "PivotA")
+  inspect(workbook.get_pivot_tables("Sheet1").length(), content="0")
 }

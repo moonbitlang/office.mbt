@@ -60,6 +60,9 @@ pub struct Worksheet {
   pivot_tables : Array[PivotTable]
   images : Array[Image]
   charts : Array[Chart]
+  shapes : Array[Shape]
+  form_controls : Array[FormControl]
+  slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
   comments : Array[Comment]
@@ -93,6 +96,9 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     pivot_tables: [],
     images: [],
     charts: [],
+    shapes: [],
+    form_controls: [],
+    slicers: [],
     data_validations: [],
     conditional_formats: [],
     comments: [],
@@ -168,6 +174,21 @@ pub fn Worksheet::images(self : Worksheet) -> ArrayView[Image] {
 ///|
 pub fn Worksheet::charts(self : Worksheet) -> ArrayView[Chart] {
   self.charts[:]
+}
+
+///|
+pub fn Worksheet::shapes(self : Worksheet) -> ArrayView[Shape] {
+  self.shapes[:]
+}
+
+///|
+pub fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
+  self.form_controls[:]
+}
+
+///|
+pub fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
+  self.slicers[:]
 }
 
 ///|
@@ -942,14 +963,61 @@ pub fn Worksheet::add_pivot_table_xml(
   table_xml : String,
   cache_definition_xml : String,
   cache_records_xml? : String = "",
+  name? : String = "",
 ) -> PivotTable raise XlsxError {
+  self.ensure_stream_idle()
   let pivot = PivotTable::new(
     table_xml,
     cache_definition_xml,
     cache_records_xml~,
+    name~,
   )
   self.pivot_tables.push(pivot)
   pivot
+}
+
+///|
+pub fn Worksheet::add_pivot_table(
+  self : Worksheet,
+  table_xml : String,
+  cache_definition_xml : String,
+  cache_records_xml? : String = "",
+  name? : String = "",
+) -> PivotTable raise XlsxError {
+  self.add_pivot_table_xml(
+    table_xml,
+    cache_definition_xml,
+    cache_records_xml~,
+    name~,
+  )
+}
+
+///|
+pub fn Worksheet::delete_pivot_table(
+  self : Worksheet,
+  name : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let target = name.to_string()
+  if target == "" {
+    raise XlsxError::InvalidSheetOperation(msg="pivot table name empty")
+  }
+  let remaining : Array[PivotTable] = []
+  let mut removed = false
+  for pivot in self.pivot_tables {
+    if pivot.name == target {
+      removed = true
+    } else {
+      remaining.push(pivot)
+    }
+  }
+  if !removed {
+    raise XlsxError::InvalidSheetOperation(msg="pivot table not found")
+  }
+  self.pivot_tables.clear()
+  for pivot in remaining {
+    self.pivot_tables.push(pivot)
+  }
 }
 
 ///|
@@ -1048,6 +1116,15 @@ pub fn Worksheet::add_chart(
 }
 
 ///|
+pub fn Worksheet::add_shape(
+  self : Worksheet,
+  shape : Shape,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  self.shapes.push(shape)
+}
+
+///|
 pub fn Worksheet::add_vml_drawing_xml(
   self : Worksheet,
   xml : String,
@@ -1067,6 +1144,88 @@ pub fn Worksheet::add_vml_drawing_hf_xml(
     raise XlsxError::InvalidVmlDrawing(msg="vml drawing hf xml empty")
   }
   self.vml_drawing_hf_xml = Some(xml)
+}
+
+///|
+pub fn Worksheet::add_form_control(
+  self : Worksheet,
+  control : FormControl,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  self.form_controls.push(control)
+}
+
+///|
+pub fn Worksheet::get_form_controls(self : Worksheet) -> ArrayView[FormControl] {
+  self.form_controls[:]
+}
+
+///|
+pub fn Worksheet::delete_form_control(
+  self : Worksheet,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (target_row, target_col) = cell_ref_to_rc(cell)
+  let remaining : Array[FormControl] = []
+  let mut removed = false
+  for control in self.form_controls {
+    let (row, col) = cell_ref_to_rc(control.cell)
+    if row == target_row && col == target_col {
+      removed = true
+    } else {
+      remaining.push(control)
+    }
+  }
+  if !removed {
+    raise XlsxError::InvalidSheetOperation(msg="form control not found")
+  }
+  self.form_controls.clear()
+  for control in remaining {
+    self.form_controls.push(control)
+  }
+}
+
+///|
+pub fn Worksheet::add_slicer(
+  self : Worksheet,
+  slicer : Slicer,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  self.slicers.push(slicer)
+}
+
+///|
+pub fn Worksheet::get_slicers(self : Worksheet) -> ArrayView[Slicer] {
+  self.slicers[:]
+}
+
+///|
+pub fn Worksheet::delete_slicer(
+  self : Worksheet,
+  name : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let target = name.to_string()
+  if target == "" {
+    raise XlsxError::InvalidSheetOperation(msg="slicer name empty")
+  }
+  let remaining : Array[Slicer] = []
+  let mut removed = false
+  for slicer in self.slicers {
+    if slicer.name == target {
+      removed = true
+    } else {
+      remaining.push(slicer)
+    }
+  }
+  if !removed {
+    raise XlsxError::InvalidSheetOperation(msg="slicer not found")
+  }
+  self.slicers.clear()
+  for slicer in remaining {
+    self.slicers.push(slicer)
+  }
 }
 
 ///|
