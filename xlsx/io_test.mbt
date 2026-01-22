@@ -98,6 +98,23 @@ async test "open file save and save_as" {
 }
 
 ///|
+async test "open_reader from pipe" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "B2", "gamma")
+  let bytes = workbook.write_to_buffer()
+  let (reader, writer) = @async/io.pipe()
+  let parsed = @async.with_task_group(fn(group) {
+    group.spawn_bg(() => {
+      defer writer.close()
+      writer.write(bytes)
+    })
+    open_reader(reader)
+  })
+  inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"gamma\")")
+}
+
+///|
 test "write_to_buffer roundtrip" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -133,4 +150,17 @@ async test "write wrapper" {
   let bytes = Bytes::from_array(writer.data)
   let parsed = read(bytes)
   inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+}
+
+///|
+async test "write_to returns byte length" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "D4", "delta")
+  let bytes = workbook.write_to_buffer()
+  let writer = MemWriter::new()
+  let size = workbook.write_to(writer)
+  let written = Bytes::from_array(writer.data)
+  inspect(size == bytes.length(), content="true")
+  inspect(written == bytes, content="true")
 }

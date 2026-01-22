@@ -2,36 +2,19 @@
 async fn[R : @async/io.Reader] read_all_bytes(
   reader : R,
 ) -> Bytes raise XlsxError {
-  let out : Array[Byte] = []
-  while true {
-    let chunk = reader.read_some() catch {
-      err => raise XlsxError::InvalidSheetOperation(msg="reader failed: \{err}")
-    }
-    match chunk {
-      Some(bytes) =>
-        for value in bytes {
-          out.push(value)
-        }
-      None => break
-    }
+  let data = reader.read_all() catch {
+    err => raise XlsxError::InvalidSheetOperation(msg="reader failed: \{err}")
   }
-  Bytes::from_array(out)
+  data.binary()
 }
 
 ///|
 async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
-  let file = @async/fs.open(path, mode=@async/fs.Mode::ReadOnly) catch {
+  let data = @async/fs.read_file(path) catch {
     err =>
-      raise XlsxError::InvalidSheetOperation(msg="open file failed: \{err}")
+      raise XlsxError::InvalidSheetOperation(msg="read file failed: \{err}")
   }
-  let bytes = read_all_bytes(file) catch {
-    err => {
-      file.close()
-      raise err
-    }
-  }
-  file.close()
-  bytes
+  data.binary()
 }
 
 ///|
