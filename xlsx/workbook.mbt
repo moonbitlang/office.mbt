@@ -2535,6 +2535,40 @@ pub fn Workbook::get_merge_cells(
 }
 
 ///|
+pub fn Workbook::get_merge_cells_info(
+  self : Workbook,
+  sheet_name : StringView,
+  without_values? : Bool = false,
+  options? : Options,
+) -> Array[MergeCell] raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let merged_ranges = merge_overlap_ranges(sheet.merged_cells())
+  let results : Array[MergeCell] = []
+  for range_ref in merged_ranges {
+    let value = if without_values {
+      ""
+    } else {
+      let (min_row, min_col, _, _) = parse_range_ref(range_ref)
+      let start_axis = cell_ref_from(min_row, min_col)
+      match
+        self.get_cell_value(sheet_name, start_axis, options=resolved_options) {
+        Some(text) => text
+        None => ""
+      }
+    }
+    results.push(MergeCell::new(range_ref, value))
+  }
+  results
+}
+
+///|
 pub fn Workbook::add_table(
   self : Workbook,
   sheet_name : StringView,

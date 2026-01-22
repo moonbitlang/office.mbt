@@ -476,6 +476,17 @@ pub struct Image {
   hyperlink_type : HyperlinkType
 }
 
+pub struct MergeCell {
+  range_ref : String
+  value : String
+}
+pub fn MergeCell::get_cell_value(Self) -> String
+pub fn MergeCell::get_end_axis(Self) -> String
+pub fn MergeCell::get_start_axis(Self) -> String
+pub fn MergeCell::new(String, String) -> Self
+pub impl Eq for MergeCell
+pub impl Show for MergeCell
+
 pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
@@ -932,6 +943,7 @@ pub fn Workbook::get_form_controls(Self, StringView) -> Array[FormControl] raise
 pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
 pub fn Workbook::get_header_footer_images(Self, StringView) -> Array[HeaderFooterImageOptions] raise XlsxError
 pub fn Workbook::get_merge_cells(Self, StringView) -> Array[String] raise XlsxError
+pub fn Workbook::get_merge_cells_info(Self, StringView, without_values? : Bool, options? : Options) -> Array[MergeCell] raise XlsxError
 pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
 pub fn Workbook::get_page_margins(Self, StringView) -> PageLayoutMarginsOptions raise XlsxError
 pub fn Workbook::get_panes(Self, StringView) -> Panes raise XlsxError

@@ -44,3 +44,39 @@ test "workbook merge cell wrappers" {
   workbook.unmerge_cell("Sheet1", "A1", "B2")
   inspect(workbook.get_merge_cells("Sheet1"), content="[]")
 }
+
+///|
+test "merge cells info includes value" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "hello")
+  workbook.merge_cells("Sheet1", "A1:B2")
+  let merges = workbook.get_merge_cells_info("Sheet1")
+  guard merges is [cell] && cell.range_ref == "A1:B2" && cell.value == "hello" else {
+    fail("unexpected merge cell info")
+  }
+}
+
+///|
+test "merge cells info without values" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "hello")
+  workbook.merge_cells("Sheet1", "A1:B2")
+  let merges = workbook.get_merge_cells_info("Sheet1", without_values=true)
+  guard merges is [cell] && cell.range_ref == "A1:B2" && cell.value == "" else {
+    fail("unexpected merge cell info")
+  }
+}
+
+///|
+test "merge cells info merges overlap" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.merge_cells("Sheet1", "A1:B2")
+  workbook.merge_cells("Sheet1", "B2:C3")
+  let merges = workbook.get_merge_cells_info("Sheet1", without_values=true)
+  guard merges.length() == 1 && merges[0].range_ref == "A1:C3" else {
+    fail("unexpected merged range")
+  }
+}
