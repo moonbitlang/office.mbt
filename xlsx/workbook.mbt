@@ -2919,12 +2919,23 @@ pub fn Workbook::set_row_style(
   row : Int,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  self.set_row_style_range(sheet_name, row, row, style_id)
+}
+
+///|
+pub fn Workbook::set_row_style_range(
+  self : Workbook,
+  sheet_name : StringView,
+  start : Int,
+  end : Int,
+  style_id : Int,
+) -> Unit raise XlsxError {
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.set_row_style(row, style_id)
+  sheet.set_row_style_range(start, end, style_id)
 }
 
 ///|

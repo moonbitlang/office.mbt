@@ -1009,6 +1009,7 @@ pub fn Workbook::set_row(Self, StringView, Int, ArrayView[String]) -> Unit raise
 pub fn Workbook::set_row_height(Self, StringView, Int, Double) -> Unit raise XlsxError
 pub fn Workbook::set_row_outline_level(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_row_style(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::set_row_style_range(Self, StringView, Int, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_row_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_background(Self, StringView, Bytes, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_background_from_bytes(Self, StringView, String, Bytes) -> Unit raise XlsxError
@@ -1222,6 +1223,7 @@ pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row_height(Self, Int, Double) -> Unit raise XlsxError
 pub fn Worksheet::set_row_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_style(Self, Int, Int) -> Unit raise XlsxError
+pub fn Worksheet::set_row_style_range(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_dimension(Self, StringView) -> Unit raise XlsxError

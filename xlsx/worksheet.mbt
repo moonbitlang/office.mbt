@@ -2098,24 +2098,39 @@ pub fn Worksheet::row_outline_level(
 }
 
 ///|
+pub fn Worksheet::set_row_style_range(
+  self : Worksheet,
+  start : Int,
+  end : Int,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  if start <= 0 || end <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{0}:\{start}")
+  }
+  if end < start {
+    raise XlsxError::InvalidSheetOperation(msg="row style range invalid")
+  }
+  let style = if style_id > 0 { Some(style_id) } else { None }
+  for row in start..<=end {
+    let dim = self.row_dimension_value(row)
+    let updated : RowDimension = {
+      height: dim.height,
+      hidden: dim.hidden,
+      outline_level: dim.outline_level,
+      style_id: style,
+    }
+    self.set_row_dimension(row, updated)
+  }
+}
+
+///|
 pub fn Worksheet::set_row_style(
   self : Worksheet,
   row : Int,
   style_id : Int,
 ) -> Unit raise XlsxError {
-  self.ensure_stream_idle()
-  if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
-  }
-  let dim = self.row_dimension_value(row)
-  let style = if style_id > 0 { Some(style_id) } else { None }
-  let updated : RowDimension = {
-    height: dim.height,
-    hidden: dim.hidden,
-    outline_level: dim.outline_level,
-    style_id: style,
-  }
-  self.set_row_dimension(row, updated)
+  self.set_row_style_range(row, row, style_id)
 }
 
 ///|
