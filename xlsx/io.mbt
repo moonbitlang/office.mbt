@@ -37,35 +37,52 @@ async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
 ///|
 pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
+  password? : String = "",
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let bytes = read_all_bytes(reader)
-  match transcoder {
-    Some(value) => read_zip_bytes(bytes, transcoder=value)
-    None => read_zip_bytes(bytes)
+  if password == "" {
+    match transcoder {
+      Some(value) => read_zip_bytes(bytes, transcoder=value)
+      None => read_zip_bytes(bytes)
+    }
+  } else {
+    match transcoder {
+      Some(value) => read_with_password(bytes, password, transcoder=value)
+      None => read_with_password(bytes, password)
+    }
   }
 }
 
 ///|
 pub async fn[R : @async/io.Reader] read_zip_reader(
   reader : R,
+  password? : String = "",
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   match transcoder {
-    Some(value) => open_reader(reader, transcoder=value)
-    None => open_reader(reader)
+    Some(value) => open_reader(reader, password~, transcoder=value)
+    None => open_reader(reader, password~)
   }
 }
 
 ///|
 pub async fn open_file(
   path : String,
+  password? : String = "",
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let bytes = read_file_bytes(path)
-  let workbook = match transcoder {
-    Some(value) => read_zip_bytes(bytes, transcoder=value)
-    None => read_zip_bytes(bytes)
+  let workbook = if password == "" {
+    match transcoder {
+      Some(value) => read_zip_bytes(bytes, transcoder=value)
+      None => read_zip_bytes(bytes)
+    }
+  } else {
+    match transcoder {
+      Some(value) => read_with_password(bytes, password, transcoder=value)
+      None => read_with_password(bytes, password)
+    }
   }
   workbook.file_path = Some(path)
   workbook

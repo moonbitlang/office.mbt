@@ -3235,15 +3235,22 @@ pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
 pub fn read_with_password(
   bytes : BytesView,
   password : String,
+  transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   if is_encrypted_package(bytes) {
     let decrypted = decrypt_encrypted_package(bytes, password)
-    let result : Result[Workbook, Error] = try? read_zip_bytes(decrypted)
+    let result : Result[Workbook, Error] = try? (match transcoder {
+      Some(value) => read_zip_bytes(decrypted, transcoder=value)
+      None => read_zip_bytes(decrypted)
+    })
     match result {
       Ok(workbook) => workbook
       Err(_) => raise XlsxError::InvalidPassword
     }
   } else {
-    read_zip_bytes(bytes)
+    match transcoder {
+      Some(value) => read_zip_bytes(bytes, transcoder=value)
+      None => read_zip_bytes(bytes)
+    }
   }
 }

@@ -14,15 +14,15 @@ pub fn column_name_to_number(StringView) -> Int raise XlsxError
 
 pub fn column_number_to_name(Int) -> String raise XlsxError
 
-pub async fn open_file(String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn open_file(String, password? : String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub async fn[R : @io.Reader] open_reader(R, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn[R : @io.Reader] open_reader(R, password? : String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub fn read(BytesView) -> Workbook raise XlsxError
 
-pub fn read_with_password(BytesView, String) -> Workbook raise XlsxError
+pub fn read_with_password(BytesView, String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub async fn[R : @io.Reader] read_zip_reader(R, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub fn write(Workbook) -> Bytes raise XlsxError
 

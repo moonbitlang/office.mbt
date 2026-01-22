@@ -12,8 +12,12 @@ pub fn read(bytes : BytesView) -> @xlsx.Workbook raise @xlsx.XlsxError {
 pub fn read_with_password(
   bytes : BytesView,
   password : String,
+  transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
-  @xlsx.read_with_password(bytes, password)
+  match transcoder {
+    Some(value) => @xlsx.read_with_password(bytes, password, transcoder=value)
+    None => @xlsx.read_with_password(bytes, password)
+  }
 }
 
 ///|
@@ -30,20 +34,37 @@ pub fn write_with_password(
 }
 
 ///|
-pub async fn open_file(path : String) -> @xlsx.Workbook raise @xlsx.XlsxError {
-  @xlsx.open_file(path)
+pub async fn open_file(
+  path : String,
+  password? : String = "",
+  transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
+) -> @xlsx.Workbook raise @xlsx.XlsxError {
+  match transcoder {
+    Some(value) => @xlsx.open_file(path, password~, transcoder=value)
+    None => @xlsx.open_file(path, password~)
+  }
 }
 
 ///|
 pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
+  password? : String = "",
+  transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
-  @xlsx.open_reader(reader)
+  match transcoder {
+    Some(value) => @xlsx.open_reader(reader, password~, transcoder=value)
+    None => @xlsx.open_reader(reader, password~)
+  }
 }
 
 ///|
 pub async fn[R : @async/io.Reader] read_zip_reader(
   reader : R,
+  password? : String = "",
+  transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
-  @xlsx.read_zip_reader(reader)
+  match transcoder {
+    Some(value) => @xlsx.read_zip_reader(reader, password~, transcoder=value)
+    None => @xlsx.read_zip_reader(reader, password~)
+  }
 }
