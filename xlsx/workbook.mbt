@@ -1923,12 +1923,29 @@ pub fn Workbook::add_image(
   data : Bytes,
   extension : String,
   content_type : String,
+  offset_x? : Int = 0,
+  offset_y? : Int = 0,
+  scale_x? : Double = 1.0,
+  scale_y? : Double = 1.0,
+  hyperlink? : String = "",
+  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.add_image(reference, data, extension, content_type)
+  sheet.add_image(
+    reference,
+    data,
+    extension,
+    content_type,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+  )
 }
 
 ///|
@@ -1938,12 +1955,28 @@ pub fn Workbook::add_picture_from_bytes(
   reference : String,
   data : Bytes,
   extension : String,
+  offset_x? : Int = 0,
+  offset_y? : Int = 0,
+  scale_x? : Double = 1.0,
+  scale_y? : Double = 1.0,
+  hyperlink? : String = "",
+  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.add_picture_from_bytes(reference, data, extension)
+  sheet.add_picture_from_bytes(
+    reference,
+    data,
+    extension,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+  )
 }
 
 ///|

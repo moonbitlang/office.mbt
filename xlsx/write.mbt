@@ -575,30 +575,41 @@ fn write_pivot_cache_rels_xml(cache_id : Int) -> String {
 
 ///|
 fn write_drawing_rels_xml(
-  image_targets : Array[String],
-  chart_targets : Array[String],
+  image_targets : Array[(Int, String)],
+  chart_targets : Array[(Int, String)],
+  hyperlink_targets : Array[DrawingHyperlink],
 ) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
   )
-  let mut rel_id = 1
-  for target in image_targets {
+  for entry in image_targets {
+    let (rel_id, target) = entry
     sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
     sb.write_view(rel_image)
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(target))
     sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
   }
-  for target in chart_targets {
+  for entry in chart_targets {
+    let (rel_id, target) = entry
     sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
     sb.write_view(rel_chart)
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(target))
     sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
+  }
+  for entry in hyperlink_targets {
+    sb.write_view("  <Relationship Id=\"rId\{entry.rel_id}\" Type=\"")
+    sb.write_view(rel_hyperlink)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(entry.target))
+    sb.write_view("\"")
+    if entry.link_type == HyperlinkType::External {
+      sb.write_view(" TargetMode=\"External\"")
+    }
+    sb.write_view("/>\n")
   }
   sb.write_view("</Relationships>")
   sb.to_string()
@@ -625,8 +636,36 @@ fn write_vml_rels_xml(image_targets : Array[String]) -> String {
 }
 
 ///|
+priv struct DrawingImage {
+  image : Image
+  rel_id : Int
+  hyperlink_rel_id : Int?
+}
+
+///|
+priv struct DrawingHyperlink {
+  rel_id : Int
+  target : String
+  link_type : HyperlinkType
+}
+
+///|
+let emu_per_pixel = 9525
+
+///|
+let default_image_width_emu = 1905000
+
+///|
+let default_image_height_emu = 1524000
+
+///|
+fn scaled_emu(value : Int, scale : Double) -> Int {
+  (Double::from_int(value) * scale).round().to_int()
+}
+
+///|
 fn write_drawing_xml(
-  images : Array[(String, Int)],
+  images : Array[DrawingImage],
   charts : Array[(String, Int)],
   shapes : Array[Shape],
 ) -> String raise XlsxError {
@@ -636,30 +675,44 @@ fn write_drawing_xml(
     "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
   )
   let mut obj_id = 1
-  for image in images {
-    let (reference, rel_id) = image
-    let (row, col) = cell_ref_to_rc(reference)
+  for item in images {
+    let image = item.image
+    let (row, col) = cell_ref_to_rc(image.reference)
     let col_idx = col - 1
     let row_idx = row - 1
     let pic_id = obj_id
     obj_id = obj_id + 1
+    let col_off = image.offset_x * emu_per_pixel
+    let row_off = image.offset_y * emu_per_pixel
+    let cx = scaled_emu(default_image_width_emu, image.scale_x)
+    let cy = scaled_emu(default_image_height_emu, image.scale_y)
     sb.write_view("  <xdr:oneCellAnchor>\n")
     sb.write_view("    <xdr:from>\n")
     sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-    sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+    sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
     sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-    sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+    sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
     sb.write_view("    </xdr:from>\n")
-    sb.write_view("    <xdr:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("    <xdr:pic>\n")
     sb.write_view("      <xdr:nvPicPr>\n")
-    sb.write_view(
-      "        <xdr:cNvPr id=\"\{pic_id}\" name=\"Image \{pic_id}\"/>\n",
-    )
+    match item.hyperlink_rel_id {
+      Some(link_id) => {
+        sb.write_view(
+          "        <xdr:cNvPr id=\"\{pic_id}\" name=\"Image \{pic_id}\">\n",
+        )
+        sb.write_view("          <a:hlinkClick r:id=\"rId\{link_id}\"/>\n")
+        sb.write_view("        </xdr:cNvPr>\n")
+      }
+      None =>
+        sb.write_view(
+          "        <xdr:cNvPr id=\"\{pic_id}\" name=\"Image \{pic_id}\"/>\n",
+        )
+    }
     sb.write_view("        <xdr:cNvPicPr/>\n")
     sb.write_view("      </xdr:nvPicPr>\n")
     sb.write_view("      <xdr:blipFill>\n")
-    sb.write_view("        <a:blip r:embed=\"rId\{rel_id}\"/>\n")
+    sb.write_view("        <a:blip r:embed=\"rId\{item.rel_id}\"/>\n")
     sb.write_view("        <a:stretch><a:fillRect/></a:stretch>\n")
     sb.write_view("      </xdr:blipFill>\n")
     sb.write_view("      <xdr:spPr>\n")
@@ -2834,9 +2887,10 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     if !has_drawing {
       continue
     }
-    let image_targets : Array[String] = []
-    let chart_targets : Array[String] = []
-    let drawing_images : Array[(String, Int)] = []
+    let image_targets : Array[(Int, String)] = []
+    let chart_targets : Array[(Int, String)] = []
+    let drawing_images : Array[DrawingImage] = []
+    let drawing_hyperlinks : Array[DrawingHyperlink] = []
     let drawing_charts : Array[(String, Int)] = []
     let drawing_shapes : Array[Shape] = []
     let mut rel_id = 1
@@ -2844,9 +2898,21 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       let file_name = "image\{image_index}.\{image.extension}"
       image_index = image_index + 1
       archive.add("xl/media/\{file_name}", image.data)
-      image_targets.push("../media/\{file_name}")
-      drawing_images.push((image.reference, rel_id))
+      let image_rel_id = rel_id
       rel_id = rel_id + 1
+      let mut hyperlink_rel_id : Int? = None
+      if image.hyperlink != "" && image.hyperlink_type != HyperlinkType::Unset {
+        let link_rel_id = rel_id
+        rel_id = rel_id + 1
+        drawing_hyperlinks.push({
+          rel_id: link_rel_id,
+          target: image.hyperlink,
+          link_type: image.hyperlink_type,
+        })
+        hyperlink_rel_id = Some(link_rel_id)
+      }
+      image_targets.push((image_rel_id, "../media/\{file_name}"))
+      drawing_images.push({ image, rel_id: image_rel_id, hyperlink_rel_id })
       if !added_extensions.contains(image.extension) {
         manifest.add_content_default(image.extension, image.content_type)
         added_extensions.set(image.extension, true)
@@ -2856,7 +2922,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       let file_name = "chart\{chart_index}.xml"
       chart_index = chart_index + 1
       archive.add("xl/charts/\{file_name}", @encoding/utf8.encode(chart.xml))
-      chart_targets.push("../charts/\{file_name}")
+      chart_targets.push((rel_id, "../charts/\{file_name}"))
       drawing_charts.push((chart.reference, rel_id))
       rel_id = rel_id + 1
       manifest.add_content_override("/xl/charts/\{file_name}", ct_chart)
@@ -2875,7 +2941,9 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       "xl/drawings/drawing\{sheet_id}.xml",
       @encoding/utf8.encode(drawing_xml),
     )
-    let drawing_rels_xml = write_drawing_rels_xml(image_targets, chart_targets)
+    let drawing_rels_xml = write_drawing_rels_xml(
+      image_targets, chart_targets, drawing_hyperlinks,
+    )
     archive.add(
       "xl/drawings/_rels/drawing\{sheet_id}.xml.rels",
       @encoding/utf8.encode(drawing_rels_xml),
@@ -2896,14 +2964,15 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       "/xl/drawings/drawing\{drawing_id}.xml",
       ct_drawing,
     )
+    let drawing_images : Array[DrawingImage] = []
     let drawing_charts : Array[(String, Int)] = [("A1", 1)]
-    let drawing_xml = write_drawing_xml([], drawing_charts, [])
+    let drawing_xml = write_drawing_xml(drawing_images, drawing_charts, [])
     archive.add(
       "xl/drawings/drawing\{drawing_id}.xml",
       @encoding/utf8.encode(drawing_xml),
     )
-    let chart_targets : Array[String] = ["../charts/\{chart_name}"]
-    let drawing_rels_xml = write_drawing_rels_xml([], chart_targets)
+    let chart_targets : Array[(Int, String)] = [(1, "../charts/\{chart_name}")]
+    let drawing_rels_xml = write_drawing_rels_xml([], chart_targets, [])
     archive.add(
       "xl/drawings/_rels/drawing\{drawing_id}.xml.rels",
       @encoding/utf8.encode(drawing_rels_xml),

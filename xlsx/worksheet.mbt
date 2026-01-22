@@ -16,6 +16,12 @@ pub struct Image {
   data : Bytes
   extension : String
   content_type : String
+  offset_x : Int
+  offset_y : Int
+  scale_x : Double
+  scale_y : Double
+  hyperlink : String
+  hyperlink_type : HyperlinkType
 }
 
 ///|
@@ -1095,6 +1101,30 @@ fn check_header_footer_image_size(
 }
 
 ///|
+fn normalize_picture_options(
+  offset_x : Int,
+  offset_y : Int,
+  scale_x : Double,
+  scale_y : Double,
+  hyperlink : String,
+  hyperlink_type : HyperlinkType,
+) -> (Int, Int, Double, Double, String, HyperlinkType) raise XlsxError {
+  if offset_x < 0 || offset_y < 0 {
+    raise XlsxError::InvalidSheetOperation(msg="picture offset must be >= 0")
+  }
+  if scale_x <= 0.0 || scale_y <= 0.0 {
+    raise XlsxError::InvalidSheetOperation(msg="picture scale must be > 0")
+  }
+  if hyperlink == "" {
+    return (offset_x, offset_y, scale_x, scale_y, "", HyperlinkType::Unset)
+  }
+  if hyperlink_type == HyperlinkType::Unset {
+    raise XlsxError::InvalidHyperlink(msg="picture hyperlink type missing")
+  }
+  (offset_x, offset_y, scale_x, scale_y, hyperlink, hyperlink_type)
+}
+
+///|
 pub fn Worksheet::add_header_footer_image(
   self : Worksheet,
   options : HeaderFooterImageOptions,
@@ -1140,6 +1170,12 @@ pub fn Worksheet::add_picture_from_bytes(
   reference : String,
   data : Bytes,
   extension : String,
+  offset_x? : Int = 0,
+  offset_y? : Int = 0,
+  scale_x? : Double = 1.0,
+  scale_y? : Double = 1.0,
+  hyperlink? : String = "",
+  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
 ) -> Unit raise XlsxError {
   let ext = normalize_image_extension_lower(extension)
   let content_type = match image_content_type(ext) {
@@ -1147,7 +1183,18 @@ pub fn Worksheet::add_picture_from_bytes(
     None =>
       raise XlsxError::UnsupportedFeature(msg="unsupported picture extension")
   }
-  self.add_image(reference, data, ext, content_type)
+  self.add_image(
+    reference,
+    data,
+    ext,
+    content_type,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+  )
 }
 
 ///|
@@ -1157,10 +1204,53 @@ pub fn Worksheet::add_image(
   data : Bytes,
   extension : String,
   content_type : String,
+  offset_x? : Int = 0,
+  offset_y? : Int = 0,
+  scale_x? : Double = 1.0,
+  scale_y? : Double = 1.0,
+  hyperlink? : String = "",
+  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
-  self.images.push({ reference, data, extension: ext, content_type })
+  let (
+    normalized_offset_x,
+    normalized_offset_y,
+    normalized_scale_x,
+    normalized_scale_y,
+    normalized_hyperlink,
+    normalized_hyperlink_type,
+  ) = normalize_picture_options(
+    offset_x, offset_y, scale_x, scale_y, hyperlink, hyperlink_type,
+  )
+  self.images.push({
+    reference,
+    data,
+    extension: ext,
+    content_type,
+    offset_x: normalized_offset_x,
+    offset_y: normalized_offset_y,
+    scale_x: normalized_scale_x,
+    scale_y: normalized_scale_y,
+    hyperlink: normalized_hyperlink,
+    hyperlink_type: normalized_hyperlink_type,
+  })
+}
+
+///|
+fn image_with_reference(image : Image, reference : String) -> Image {
+  {
+    reference,
+    data: image.data,
+    extension: image.extension,
+    content_type: image.content_type,
+    offset_x: image.offset_x,
+    offset_y: image.offset_y,
+    scale_x: image.scale_x,
+    scale_y: image.scale_y,
+    hyperlink: image.hyperlink,
+    hyperlink_type: image.hyperlink_type,
+  }
 }
 
 ///|
@@ -2230,12 +2320,7 @@ pub fn Worksheet::insert_rows(
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_row_insert(image.reference, row, count)
-    updated_images.push({
-      reference,
-      data: image.data,
-      extension: image.extension,
-      content_type: image.content_type,
-    })
+    updated_images.push(image_with_reference(image, reference))
   }
   self.images.clear()
   self.images.append(updated_images[:])
@@ -2358,12 +2443,7 @@ pub fn Worksheet::remove_rows(
   for image in self.images {
     match adjust_cell_after_row_remove(image.reference, row, count) {
       Some(reference) =>
-        updated_images.push({
-          reference,
-          data: image.data,
-          extension: image.extension,
-          content_type: image.content_type,
-        })
+        updated_images.push(image_with_reference(image, reference))
       None => ()
     }
   }
@@ -2799,12 +2879,7 @@ pub fn Worksheet::insert_cols(
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_col_insert(image.reference, col, count)
-    updated_images.push({
-      reference,
-      data: image.data,
-      extension: image.extension,
-      content_type: image.content_type,
-    })
+    updated_images.push(image_with_reference(image, reference))
   }
   self.images.clear()
   self.images.append(updated_images[:])
@@ -2927,12 +3002,7 @@ pub fn Worksheet::remove_cols(
   for image in self.images {
     match adjust_cell_after_col_remove(image.reference, col, count) {
       Some(reference) =>
-        updated_images.push({
-          reference,
-          data: image.data,
-          extension: image.extension,
-          content_type: image.content_type,
-        })
+        updated_images.push(image_with_reference(image, reference))
       None => ()
     }
   }
