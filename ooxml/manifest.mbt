@@ -167,6 +167,31 @@ pub fn WorkbookManifest::add_content_override(
 }
 
 ///|
+pub fn WorkbookManifest::set_workbook_content_type(
+  self : WorkbookManifest,
+  content_type : String,
+) -> Unit {
+  let overrides = self.content_types.overrides
+  let updated : Array[ContentTypeOverride] = []
+  let mut replaced = false
+  for item in overrides {
+    if item.part_name == "/xl/workbook.xml" {
+      updated.push({ part_name: "/xl/workbook.xml", content_type })
+      replaced = true
+    } else {
+      updated.push(item)
+    }
+  }
+  if !replaced {
+    updated.push({ part_name: "/xl/workbook.xml", content_type })
+  }
+  overrides.clear()
+  for item in updated {
+    overrides.push(item)
+  }
+}
+
+///|
 pub fn WorkbookManifest::add_workbook_relationship(
   self : WorkbookManifest,
   rel_type : String,

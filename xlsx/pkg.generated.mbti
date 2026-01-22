@@ -30,6 +30,7 @@ pub suberror XlsxError {
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
+  InvalidVBAProject(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
   InvalidAutoFilter(msg~ : String)
   InvalidDataValidation(msg~ : String)
@@ -710,6 +711,7 @@ pub struct Workbook {
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
   custom_properties : Array[CustomProperty]
+  mut vba_project : Bytes?
   mut workbook_props : WorkbookPropsOptions
   mut calc_props : CalcPropsOptions
   mut default_font : String
@@ -735,6 +737,7 @@ pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type?
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
 pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
+pub fn Workbook::add_vba_project(Self, Bytes) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties

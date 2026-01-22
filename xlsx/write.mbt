@@ -408,6 +408,9 @@ let rel_vml = "http://schemas.openxmlformats.org/officeDocument/2006/relationshi
 let rel_slicer = "http://schemas.microsoft.com/office/2007/relationships/slicer"
 
 ///|
+let rel_vba_project = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
+
+///|
 let rel_hyperlink = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 
 ///|
@@ -433,6 +436,12 @@ let ct_pivot_cache_def = "application/vnd.openxmlformats-officedocument.spreadsh
 
 ///|
 let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
+
+///|
+let ct_workbook_macro = "application/vnd.ms-excel.sheet.macroEnabled.main+xml"
+
+///|
+let ct_vba_project = "application/vnd.ms-office.vbaProject"
 
 ///|
 let ct_slicer = "application/vnd.ms-excel.slicer+xml"
@@ -2029,6 +2038,14 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       "chartsheets/sheet\{sheet_id}.xml",
     )
   }
+  match workbook.vba_project {
+    Some(_) => {
+      manifest.set_workbook_content_type(ct_workbook_macro)
+      manifest.add_content_default("bin", ct_vba_project)
+      manifest.add_workbook_relationship(rel_vba_project, "vbaProject.bin")
+    }
+    None => ()
+  }
   let archive = @zip.Archive::new()
   archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
   archive.add(
@@ -2478,6 +2495,10 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       "xl/chartsheets/_rels/sheet\{sheet_id}.xml.rels",
       @encoding/utf8.encode(chartsheet_rels_xml),
     )
+  }
+  match workbook.vba_project {
+    Some(value) => archive.add("xl/vbaProject.bin", value)
+    None => ()
   }
   if include_shared {
     archive.add(

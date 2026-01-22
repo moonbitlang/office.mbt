@@ -9,6 +9,7 @@ pub struct Workbook {
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
   custom_properties : Array[CustomProperty]
+  mut vba_project : Bytes?
   mut workbook_props : WorkbookPropsOptions
   mut calc_props : CalcPropsOptions
   mut default_font : String
@@ -24,6 +25,9 @@ enum SheetEntry {
 
 ///|
 let max_sheet_name_length = 31
+
+///|
+let ole_identifier_bytes : Bytes = Bytes::from_array(ole_identifier)
 
 ///|
 fn check_sheet_name(name : StringView) -> Unit raise XlsxError {
@@ -149,6 +153,7 @@ pub fn Workbook::new() -> Workbook {
     core_properties: CoreProperties::new(),
     app_properties: AppProperties::new(),
     custom_properties: [],
+    vba_project: None,
     workbook_props: WorkbookPropsOptions::new(),
     calc_props: CalcPropsOptions::new(),
     default_font: "Calibri",
@@ -389,6 +394,17 @@ pub fn Workbook::set_custom_props(
         None => self.custom_properties.push(prop)
       }
   }
+}
+
+///|
+pub fn Workbook::add_vba_project(
+  self : Workbook,
+  data : Bytes,
+) -> Unit raise XlsxError {
+  if data.find(ole_identifier_bytes) is None {
+    raise XlsxError::InvalidVBAProject(msg="unsupported vba project")
+  }
+  self.vba_project = Some(data)
 }
 
 ///|

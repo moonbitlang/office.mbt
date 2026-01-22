@@ -54,6 +54,7 @@ pub fn WorkbookManifest::add_workbook_relationship(Self, String, String) -> Unit
 pub fn WorkbookManifest::content_types_xml(Self) -> String
 pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool, include_calc_chain? : Bool) -> Self
 pub fn WorkbookManifest::root_rels_xml(Self) -> String
+pub fn WorkbookManifest::set_workbook_content_type(Self, String) -> Unit
 pub fn WorkbookManifest::workbook_rels_xml(Self) -> String
 
 // Type aliases

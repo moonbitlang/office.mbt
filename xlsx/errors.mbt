@@ -14,6 +14,7 @@ pub suberror XlsxError {
   InvalidTable(msg~ : String)
   InvalidSparkline(msg~ : String)
   InvalidPivotTable(msg~ : String)
+  InvalidVBAProject(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
   InvalidAutoFilter(msg~ : String)
   InvalidDataValidation(msg~ : String)

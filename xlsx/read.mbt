@@ -2491,6 +2491,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     core_properties,
     app_properties,
     custom_properties,
+    vba_project: None,
     workbook_props,
     calc_props,
     default_font,
@@ -2500,6 +2501,18 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
   let workbook_rels = match archive.get("xl/_rels/workbook.xml.rels") {
     Some(value) => decode_utf8(value)
     None => raise XlsxError::MissingPart(path="xl/_rels/workbook.xml.rels")
+  }
+  let vba_targets = parse_relationship_targets(workbook_rels, rel_vba_project)
+  match first_relationship_target(vba_targets) {
+    Some(target) => {
+      let vba_path = resolve_workbook_rel_target(target)
+      let vba_bytes = match archive.get(vba_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=vba_path)
+      }
+      workbook.vba_project = Some(vba_bytes)
+    }
+    None => ()
   }
   let worksheet_targets = parse_relationship_targets(
     workbook_rels, rel_worksheet,
