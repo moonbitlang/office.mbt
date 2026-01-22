@@ -50,6 +50,8 @@ pub struct ColDimension {
 ///|
 pub struct Worksheet {
   mut name : String
+  sheet_views : Array[SheetView]
+  mut dimension_ref : String?
   cells : Array[Cell]
   merged_cells : Array[String]
   hyperlinks : Array[Hyperlink]
@@ -81,6 +83,8 @@ pub struct Worksheet {
 pub fn Worksheet::new(name : String) -> Worksheet {
   {
     name,
+    sheet_views: [],
+    dimension_ref: None,
     cells: [],
     merged_cells: [],
     hyperlinks: [],

@@ -1,6 +1,8 @@
 ///|
 pub struct Workbook {
   sheets : Array[Worksheet]
+  chart_sheets : Array[ChartSheet]
+  sheet_order : Array[SheetEntry]
   styles : Array[Style]
   defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
@@ -12,6 +14,12 @@ pub struct Workbook {
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
+
+///|
+enum SheetEntry {
+  Worksheet(Int)
+  ChartSheet(Int)
+} derive(Eq, Show)
 
 ///|
 let max_sheet_name_length = 31
@@ -52,6 +60,73 @@ fn sheet_name_equal(a : StringView, b : StringView) -> Bool {
 }
 
 ///|
+fn Workbook::sheet_entry_index(self : Workbook, name : StringView) -> Int? {
+  let needle = normalize_sheet_name(name)
+  for i, entry in self.sheet_order {
+    match entry {
+      SheetEntry::Worksheet(idx) =>
+        if normalize_sheet_name(self.sheets[idx].name()) == needle {
+          return Some(i)
+        }
+      SheetEntry::ChartSheet(idx) =>
+        if normalize_sheet_name(self.chart_sheets[idx].name()) == needle {
+          return Some(i)
+        }
+    }
+  }
+  None
+}
+
+///|
+fn Workbook::sheet_entry(self : Workbook, name : StringView) -> SheetEntry? {
+  let needle = normalize_sheet_name(name)
+  for entry in self.sheet_order {
+    match entry {
+      SheetEntry::Worksheet(idx) =>
+        if normalize_sheet_name(self.sheets[idx].name()) == needle {
+          return Some(entry)
+        }
+      SheetEntry::ChartSheet(idx) =>
+        if normalize_sheet_name(self.chart_sheets[idx].name()) == needle {
+          return Some(entry)
+        }
+    }
+  }
+  None
+}
+
+///|
+fn Workbook::sheet_entry_name(self : Workbook, entry : SheetEntry) -> String {
+  match entry {
+    SheetEntry::Worksheet(idx) => self.sheets[idx].name()
+    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].name()
+  }
+}
+
+///|
+fn Workbook::sheet_entry_state(
+  self : Workbook,
+  entry : SheetEntry,
+) -> SheetState {
+  match entry {
+    SheetEntry::Worksheet(idx) => self.sheets[idx].state()
+    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].state()
+  }
+}
+
+///|
+fn Workbook::set_sheet_entry_state(
+  self : Workbook,
+  entry : SheetEntry,
+  state : SheetState,
+) -> Unit {
+  match entry {
+    SheetEntry::Worksheet(idx) => self.sheets[idx].state = state
+    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].state = state
+  }
+}
+
+///|
 fn defined_name_scope_key(scope : StringView) -> String {
   let normalized = normalize_defined_name_scope(scope)
   if normalized == "Workbook" {
@@ -65,6 +140,8 @@ fn defined_name_scope_key(scope : StringView) -> String {
 pub fn Workbook::new() -> Workbook {
   {
     sheets: [],
+    chart_sheets: [],
+    sheet_order: [],
     styles: [Style::new()],
     defined_names: [],
     core_properties: CoreProperties::new(),
@@ -84,15 +161,34 @@ pub fn Workbook::add_sheet(
   name : String,
 ) -> Worksheet raise XlsxError {
   check_sheet_name(name)
-  let normalized = normalize_sheet_name(name)
-  for sheet in self.sheets {
-    if normalize_sheet_name(sheet.name()) == normalized {
-      raise XlsxError::SheetAlreadyExists(name~)
-    }
+  match self.sheet_entry(name) {
+    Some(_) => raise XlsxError::SheetAlreadyExists(name~)
+    None => ()
   }
   let sheet = Worksheet::new(name)
   self.sheets.push(sheet)
-  if self.sheets.length() == 1 {
+  self.sheet_order.push(SheetEntry::Worksheet(self.sheets.length() - 1))
+  if self.sheet_order.length() == 1 {
+    self.active_sheet_index = 0
+  }
+  sheet
+}
+
+///|
+pub fn Workbook::add_chart_sheet(
+  self : Workbook,
+  name : String,
+  chart_xml : String,
+) -> ChartSheet raise XlsxError {
+  check_sheet_name(name)
+  match self.sheet_entry(name) {
+    Some(_) => raise XlsxError::SheetAlreadyExists(name~)
+    None => ()
+  }
+  let sheet = ChartSheet::new(name, chart_xml)
+  self.chart_sheets.push(sheet)
+  self.sheet_order.push(SheetEntry::ChartSheet(self.chart_sheets.length() - 1))
+  if self.sheet_order.length() == 1 {
     self.active_sheet_index = 0
   }
   sheet
@@ -129,11 +225,22 @@ pub fn Workbook::sheet(self : Workbook, name : StringView) -> Worksheet? {
 }
 
 ///|
+pub fn Workbook::chart_sheet(self : Workbook, name : StringView) -> ChartSheet? {
+  let needle = normalize_sheet_name(name)
+  for sheet in self.chart_sheets {
+    if normalize_sheet_name(sheet.name()) == needle {
+      return Some(sheet)
+    }
+  }
+  None
+}
+
+///|
 pub fn Workbook::sheet_name(self : Workbook, index : Int) -> String? {
-  if index < 0 || index >= self.sheets.length() {
+  if index < 0 || index >= self.sheet_order.length() {
     return None
   }
-  Some(self.sheets[index].name())
+  Some(self.sheet_entry_name(self.sheet_order[index]))
 }
 
 ///|
@@ -141,18 +248,20 @@ pub fn Workbook::sheet_index(
   self : Workbook,
   name : StringView,
 ) -> Int raise XlsxError {
-  let needle = normalize_sheet_name(name)
-  for i, sheet in self.sheets {
-    if normalize_sheet_name(sheet.name()) == needle {
-      return i
-    }
+  match self.sheet_entry_index(name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=name.to_string())
   }
-  raise XlsxError::SheetNotFound(name=name.to_string())
 }
 
 ///|
 pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
   self.sheets[:]
+}
+
+///|
+pub fn Workbook::chart_sheets(self : Workbook) -> ArrayView[ChartSheet] {
+  self.chart_sheets[:]
 }
 
 ///|
@@ -364,11 +473,11 @@ pub fn Workbook::active_sheet_index(self : Workbook) -> Int {
 
 ///|
 pub fn Workbook::set_active_sheet(self : Workbook, index : Int) -> Unit {
-  if self.sheets.length() == 0 {
+  if self.sheet_order.length() == 0 {
     self.active_sheet_index = 0
     return
   }
-  if index < 0 || index >= self.sheets.length() {
+  if index < 0 || index >= self.sheet_order.length() {
     self.active_sheet_index = 0
   } else {
     self.active_sheet_index = index
@@ -386,15 +495,19 @@ pub fn Workbook::set_sheet_name(
   if sheet_name_equal(source, target) {
     return
   }
-  let target_norm = normalize_sheet_name(target)
-  for sheet in self.sheets {
-    if normalize_sheet_name(sheet.name()) == target_norm {
-      raise XlsxError::SheetAlreadyExists(name=target)
-    }
+  match self.sheet_entry(target) {
+    Some(_) => raise XlsxError::SheetAlreadyExists(name=target)
+    None => ()
   }
-  let index = self.sheet_index(source)
-  let old_name = self.sheets[index].name
-  self.sheets[index].name = target
+  let entry = match self.sheet_entry(source) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=source.to_string())
+  }
+  let old_name = self.sheet_entry_name(entry)
+  match entry {
+    SheetEntry::Worksheet(idx) => self.sheets[idx].name = target
+    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].name = target
+  }
   if self.defined_names.length() > 0 {
     let updated : Array[DefinedName] = []
     for dn in self.defined_names {
@@ -421,14 +534,57 @@ pub fn Workbook::delete_sheet(
   name : StringView,
 ) -> Unit raise XlsxError {
   check_sheet_name(name)
-  let index = self.sheet_index(name)
-  let deleted_name = self.sheets[index].name
-  if self.sheets.length() <= 1 {
+  let entry = match self.sheet_entry(name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=name.to_string())
+  }
+  let order_index = match self.sheet_entry_index(name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=name.to_string())
+  }
+  let deleted_name = self.sheet_entry_name(entry)
+  if self.sheet_order.length() <= 1 {
     raise XlsxError::InvalidSheetOperation(
       msg="workbook must contain at least one sheet",
     )
   }
-  ignore(self.sheets.remove(index))
+  ignore(self.sheet_order.remove(order_index))
+  match entry {
+    SheetEntry::Worksheet(idx) => {
+      ignore(self.sheets.remove(idx))
+      let updated : Array[SheetEntry] = []
+      for item in self.sheet_order {
+        match item {
+          SheetEntry::Worksheet(value) =>
+            if value > idx {
+              updated.push(SheetEntry::Worksheet(value - 1))
+            } else {
+              updated.push(item)
+            }
+          SheetEntry::ChartSheet(_) => updated.push(item)
+        }
+      }
+      self.sheet_order.clear()
+      self.sheet_order.append(updated[:])
+    }
+    SheetEntry::ChartSheet(idx) => {
+      ignore(self.chart_sheets.remove(idx))
+      let updated : Array[SheetEntry] = []
+      for item in self.sheet_order {
+        match item {
+          SheetEntry::ChartSheet(value) =>
+            if value > idx {
+              updated.push(SheetEntry::ChartSheet(value - 1))
+            } else {
+              updated.push(item)
+            }
+          SheetEntry::Worksheet(_) => updated.push(item)
+        }
+      }
+      self.sheet_order.clear()
+      self.sheet_order.append(updated[:])
+    }
+  }
   if self.defined_names.length() > 0 {
     let deleted_key = defined_name_scope_key(deleted_name)
     let updated : Array[DefinedName] = []
@@ -441,14 +597,14 @@ pub fn Workbook::delete_sheet(
     self.defined_names.clear()
     self.defined_names.append(updated[:])
   }
-  if self.active_sheet_index == index {
-    let fallback = if index >= self.sheets.length() {
-      self.sheets.length() - 1
+  if self.active_sheet_index == order_index {
+    let fallback = if order_index >= self.sheet_order.length() {
+      self.sheet_order.length() - 1
     } else {
-      index
+      order_index
     }
     self.active_sheet_index = fallback
-  } else if self.active_sheet_index > index {
+  } else if self.active_sheet_index > order_index {
     self.active_sheet_index = self.active_sheet_index - 1
   }
 }
@@ -466,13 +622,13 @@ pub fn Workbook::move_sheet(
   }
   let source_index = self.sheet_index(source)
   let target_index = self.sheet_index(target)
-  let sheet = self.sheets.remove(source_index)
+  let entry = self.sheet_order.remove(source_index)
   let insert_index = if target_index > source_index {
     target_index - 1
   } else {
     target_index
   }
-  self.sheets.insert(insert_index, sheet)
+  self.sheet_order.insert(insert_index, entry)
   if self.active_sheet_index == source_index {
     self.active_sheet_index = insert_index
   } else if source_index < self.active_sheet_index &&
@@ -492,15 +648,26 @@ pub fn Workbook::copy_sheet(
 ) -> Unit raise XlsxError {
   if from_index < 0 ||
     to_index < 0 ||
-    from_index >= self.sheets.length() ||
-    to_index >= self.sheets.length() ||
+    from_index >= self.sheet_order.length() ||
+    to_index >= self.sheet_order.length() ||
     from_index == to_index {
     raise XlsxError::InvalidSheetIndex(index=to_index)
   }
-  let from_sheet = self.sheets[from_index]
-  let to_sheet = self.sheets[to_index]
-  let cloned = clone_worksheet(from_sheet, to_sheet.name(), to_sheet.state())
-  self.sheets[to_index] = cloned
+  let from_entry = self.sheet_order[from_index]
+  let to_entry = self.sheet_order[to_index]
+  match (from_entry, to_entry) {
+    (SheetEntry::Worksheet(from_sheet_idx), SheetEntry::Worksheet(to_sheet_idx)) => {
+      let from_sheet = self.sheets[from_sheet_idx]
+      let to_sheet = self.sheets[to_sheet_idx]
+      let cloned = clone_worksheet(
+        from_sheet,
+        to_sheet.name(),
+        to_sheet.state(),
+      )
+      self.sheets[to_sheet_idx] = cloned
+    }
+    _ => raise XlsxError::InvalidSheetIndex(index=to_index)
+  }
 }
 
 ///|
@@ -511,7 +678,14 @@ pub fn Workbook::set_sheet_visible(
   very_hidden? : Bool = false,
 ) -> Unit raise XlsxError {
   check_sheet_name(name)
-  let index = self.sheet_index(name)
+  let entry = match self.sheet_entry(name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=name.to_string())
+  }
+  let index = match self.sheet_entry_index(name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=name.to_string())
+  }
   let state = if visible {
     SheetState::Visible
   } else if very_hidden {
@@ -521,8 +695,12 @@ pub fn Workbook::set_sheet_visible(
   }
   if state != SheetState::Visible {
     let mut visible_count = 0
-    for i, sheet in self.sheets {
-      let sheet_state = if i == index { state } else { sheet.state() }
+    for i, order_entry in self.sheet_order {
+      let sheet_state = if i == index {
+        state
+      } else {
+        self.sheet_entry_state(order_entry)
+      }
       if sheet_state == SheetState::Visible {
         visible_count = visible_count + 1
       }
@@ -533,7 +711,7 @@ pub fn Workbook::set_sheet_visible(
       )
     }
   }
-  self.sheets[index].state = state
+  self.set_sheet_entry_state(entry, state)
 }
 
 ///|
@@ -542,8 +720,10 @@ pub fn Workbook::sheet_visible(
   name : StringView,
 ) -> Bool raise XlsxError {
   check_sheet_name(name)
-  let index = self.sheet_index(name)
-  self.sheets[index].state() == SheetState::Visible
+  match self.sheet_entry(name) {
+    Some(entry) => self.sheet_entry_state(entry) == SheetState::Visible
+    None => raise XlsxError::SheetNotFound(name=name.to_string())
+  }
 }
 
 ///|
@@ -619,6 +799,86 @@ pub fn Workbook::get_header_footer(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.header_footer()
+}
+
+///|
+pub fn Workbook::set_sheet_view(
+  self : Workbook,
+  sheet_name : StringView,
+  view_index : Int,
+  options : SheetViewOptions,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_sheet_view(view_index, options)
+}
+
+///|
+pub fn Workbook::get_sheet_view(
+  self : Workbook,
+  sheet_name : StringView,
+  view_index : Int,
+) -> SheetViewOptions raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_sheet_view(view_index)
+}
+
+///|
+pub fn Workbook::set_panes(
+  self : Workbook,
+  sheet_name : StringView,
+  panes : Panes,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_panes(panes)
+}
+
+///|
+pub fn Workbook::get_panes(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Panes raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_panes()
+}
+
+///|
+pub fn Workbook::set_sheet_dimension(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : StringView,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_sheet_dimension(range_ref)
+}
+
+///|
+pub fn Workbook::get_sheet_dimension(
+  self : Workbook,
+  sheet_name : StringView,
+) -> String raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  match sheet.sheet_dimension() {
+    Some(value) => value
+    None => ""
+  }
 }
 
 ///|
@@ -931,6 +1191,45 @@ fn clone_charts(values : ArrayView[Chart]) -> Array[Chart] {
 }
 
 ///|
+fn clone_sheet_views(values : ArrayView[SheetView]) -> Array[SheetView] {
+  let out : Array[SheetView] = []
+  for view in values {
+    let selection : Array[Selection] = []
+    for item in view.selection {
+      selection.push(item)
+    }
+    let pane = match view.pane {
+      Some(value) =>
+        Some({
+          active_pane: value.active_pane,
+          state: value.state,
+          top_left_cell: value.top_left_cell,
+          x_split: value.x_split,
+          y_split: value.y_split,
+        })
+      None => None
+    }
+    out.push({
+      default_grid_color: view.default_grid_color,
+      right_to_left: view.right_to_left,
+      show_formulas: view.show_formulas,
+      show_grid_lines: view.show_grid_lines,
+      show_row_col_headers: view.show_row_col_headers,
+      show_ruler: view.show_ruler,
+      show_zeros: view.show_zeros,
+      top_left_cell: view.top_left_cell,
+      view: view.view,
+      zoom_scale: view.zoom_scale,
+      tab_selected: view.tab_selected,
+      workbook_view_id: view.workbook_view_id,
+      pane,
+      selection,
+    })
+  }
+  out
+}
+
+///|
 fn clone_worksheet(
   sheet : Worksheet,
   name : String,
@@ -938,6 +1237,8 @@ fn clone_worksheet(
 ) -> Worksheet {
   {
     name,
+    sheet_views: clone_sheet_views(sheet.sheet_views),
+    dimension_ref: sheet.dimension_ref,
     cells: clone_cells(sheet.cells),
     merged_cells: clone_strings(sheet.merged_cells),
     hyperlinks: clone_hyperlinks(sheet.hyperlinks),

@@ -36,12 +36,16 @@ fn collect_shared_strings(
 }
 
 ///|
-fn write_workbook_xml(workbook : Workbook) -> String {
-  let sheets = workbook.sheets()
+fn write_workbook_xml(
+  workbook : Workbook,
+  chartsheet_rel_start : Int,
+) -> String {
+  let sheets = workbook.sheet_order
+  let worksheet_count = workbook.sheets().length()
   let sb = StringBuilder::new()
   let sheet_index : Map[String, Int] = {}
-  for i, sheet in sheets {
-    sheet_index.set(normalize_sheet_name(sheet.name()), i)
+  for i, entry in sheets {
+    sheet_index.set(normalize_sheet_name(workbook.sheet_entry_name(entry)), i)
   }
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -63,14 +67,21 @@ fn write_workbook_xml(workbook : Workbook) -> String {
     sb.write_view("  </bookViews>\n")
   }
   sb.write_view("  <sheets>\n")
-  for i, sheet in sheets {
-    let sheet_id = i + 1
+  for _i, entry in sheets {
+    let sheet_id = match entry {
+      SheetEntry::Worksheet(idx) => idx + 1
+      SheetEntry::ChartSheet(idx) => worksheet_count + idx + 1
+    }
+    let rel_id = match entry {
+      SheetEntry::Worksheet(idx) => idx + 1
+      SheetEntry::ChartSheet(idx) => chartsheet_rel_start + idx
+    }
     sb.write_view("    <sheet name=\"")
-    sb.write_view(escape_xml_attr(sheet.name()))
+    sb.write_view(escape_xml_attr(workbook.sheet_entry_name(entry)))
     sb.write_view("\" sheetId=\"")
     sb.write_view("\{sheet_id}\"")
-    sb.write_view(" r:id=\"rId\{sheet_id}\"")
-    match sheet.state() {
+    sb.write_view(" r:id=\"rId\{rel_id}\"")
+    match workbook.sheet_entry_state(entry) {
       SheetState::Visible => ()
       SheetState::Hidden => sb.write_view(" state=\"hidden\"")
       SheetState::VeryHidden => sb.write_view(" state=\"veryHidden\"")
@@ -367,10 +378,16 @@ fn write_calc_chain_xml(cells : Array[(Int, String)]) -> String {
 let rel_drawing = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing"
 
 ///|
+let rel_worksheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+
+///|
 let rel_image = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
 
 ///|
 let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
+
+///|
+let rel_chartsheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet"
 
 ///|
 let rel_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table"
@@ -398,6 +415,9 @@ let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
 
 ///|
 let ct_chart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
+
+///|
+let ct_chartsheet = "application/vnd.openxmlformats-officedocument.spreadsheetml.chartsheet+xml"
 
 ///|
 let ct_table = "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"
@@ -645,7 +665,147 @@ fn write_drawing_xml(
 }
 
 ///|
+fn write_sheet_views_xml(sheet : Worksheet) -> String? {
+  if sheet.sheet_views.length() == 0 {
+    return None
+  }
+  let sb = StringBuilder::new()
+  sb.write_view("  <sheetViews>\n")
+  for view in sheet.sheet_views {
+    sb.write_view("    <sheetView")
+    match view.default_grid_color {
+      Some(value) => sb.write_view(" defaultGridColor=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.right_to_left {
+      Some(value) => sb.write_view(" rightToLeft=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.show_formulas {
+      Some(value) => sb.write_view(" showFormulas=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.show_grid_lines {
+      Some(value) => sb.write_view(" showGridLines=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.show_row_col_headers {
+      Some(value) => sb.write_view(" showRowColHeaders=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.show_ruler {
+      Some(value) => sb.write_view(" showRuler=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.show_zeros {
+      Some(value) => sb.write_view(" showZeros=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match view.top_left_cell {
+      Some(value) => {
+        sb.write_view(" topLeftCell=\"")
+        sb.write_view(escape_xml_attr(value))
+        sb.write_view("\"")
+      }
+      None => ()
+    }
+    match view.view {
+      Some(value) => {
+        sb.write_view(" view=\"")
+        sb.write_view(escape_xml_attr(value))
+        sb.write_view("\"")
+      }
+      None => ()
+    }
+    match view.zoom_scale {
+      Some(value) => sb.write_view(" zoomScale=\"\{value}\"")
+      None => ()
+    }
+    if view.tab_selected {
+      sb.write_view(" tabSelected=\"1\"")
+    }
+    sb.write_view(" workbookViewId=\"\{view.workbook_view_id}\"")
+    if view.pane is None && view.selection.length() == 0 {
+      sb.write_view("/>\n")
+      continue
+    }
+    sb.write_view(">\n")
+    match view.pane {
+      Some(pane) => {
+        sb.write_view("      <pane")
+        if pane.active_pane != "" {
+          sb.write_view(" activePane=\"")
+          sb.write_view(escape_xml_attr(pane.active_pane))
+          sb.write_view("\"")
+        }
+        if pane.state != "" {
+          sb.write_view(" state=\"")
+          sb.write_view(escape_xml_attr(pane.state))
+          sb.write_view("\"")
+        }
+        if pane.top_left_cell != "" {
+          sb.write_view(" topLeftCell=\"")
+          sb.write_view(escape_xml_attr(pane.top_left_cell))
+          sb.write_view("\"")
+        }
+        if pane.x_split != 0.0 {
+          sb.write_view(" xSplit=\"\{pane.x_split}\"")
+        }
+        if pane.y_split != 0.0 {
+          sb.write_view(" ySplit=\"\{pane.y_split}\"")
+        }
+        sb.write_view("/>\n")
+      }
+      None => ()
+    }
+    for selection in view.selection {
+      sb.write_view("      <selection")
+      if selection.pane != "" {
+        sb.write_view(" pane=\"")
+        sb.write_view(escape_xml_attr(selection.pane))
+        sb.write_view("\"")
+      }
+      if selection.active_cell != "" {
+        sb.write_view(" activeCell=\"")
+        sb.write_view(escape_xml_attr(selection.active_cell))
+        sb.write_view("\"")
+      }
+      if selection.sqref != "" {
+        sb.write_view(" sqref=\"")
+        sb.write_view(escape_xml_attr(selection.sqref))
+        sb.write_view("\"")
+      }
+      sb.write_view("/>\n")
+    }
+    sb.write_view("    </sheetView>\n")
+  }
+  sb.write_view("  </sheetViews>\n")
+  Some(sb.to_string())
+}
+
+///|
+fn write_chartsheet_xml(drawing_rel_id : Int) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<chartsheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
+  )
+  sb.write_view("  <sheetViews>\n")
+  sb.write_view(
+    "    <sheetView zoomScale=\"100\" zoomToFit=\"1\" workbookViewId=\"0\"/>\n",
+  )
+  sb.write_view("  </sheetViews>\n")
+  sb.write_view("  <drawing r:id=\"rId\{drawing_rel_id}\"/>\n")
+  sb.write_view("</chartsheet>")
+  sb.to_string()
+}
+
+///|
 fn worksheet_dimension(sheet : Worksheet) -> String? raise XlsxError {
+  match sheet.dimension_ref {
+    Some(value) => return Some(value)
+    None => ()
+  }
   let mut has_any = false
   let mut min_row = 0
   let mut min_col = 0
@@ -1177,6 +1337,10 @@ fn write_worksheet_xml(
       sb.write_view(escape_xml_attr(value))
       sb.write_view("\"/>\n")
     }
+    None => ()
+  }
+  match write_sheet_views_xml(sheet) {
+    Some(value) => sb.write_view(value)
     None => ()
   }
   if sheet.col_dimensions.length() > 0 {
@@ -1785,16 +1949,31 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   let sheet_count = workbook.sheets().length()
   let formula_cells = collect_formula_cells(workbook)
   let include_calc_chain = formula_cells.length() > 0
+  let rel_offset = 2 +
+    (if include_shared { 1 } else { 0 }) +
+    (if include_calc_chain { 1 } else { 0 })
+  let chartsheet_rel_start = sheet_count + rel_offset + 1
   let manifest = @ooxml.WorkbookManifest::new(
     sheet_count,
     include_shared_strings=include_shared,
     include_calc_chain~,
   )
+  for i, _sheet in workbook.chart_sheets() {
+    let sheet_id = i + 1
+    manifest.add_content_override(
+      "/xl/chartsheets/sheet\{sheet_id}.xml",
+      ct_chartsheet,
+    )
+    manifest.add_workbook_relationship(
+      rel_chartsheet,
+      "chartsheets/sheet\{sheet_id}.xml",
+    )
+  }
   let archive = @zip.Archive::new()
   archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
   archive.add(
     "xl/workbook.xml",
-    @encoding/utf8.encode(write_workbook_xml(workbook)),
+    @encoding/utf8.encode(write_workbook_xml(workbook, chartsheet_rel_start)),
   )
   let tables_by_sheet : Array[Array[(Int, Table)]] = []
   let mut next_table_id = 1
@@ -1858,6 +2037,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   let mut chart_index = 1
   let mut vml_index = 1
   let mut comment_index = 1
+  let mut drawing_index = sheet_count + 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
     let sheet_tables = tables_by_sheet[i]
@@ -2127,6 +2307,52 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     archive.add(
       "xl/drawings/_rels/drawing\{sheet_id}.xml.rels",
       @encoding/utf8.encode(drawing_rels_xml),
+    )
+  }
+  for i, sheet in workbook.chart_sheets() {
+    let sheet_id = i + 1
+    let chart_name = "chart\{chart_index}.xml"
+    chart_index = chart_index + 1
+    archive.add(
+      "xl/charts/\{chart_name}",
+      @encoding/utf8.encode(sheet.chart_xml()),
+    )
+    manifest.add_content_override("/xl/charts/\{chart_name}", ct_chart)
+    let drawing_id = drawing_index
+    drawing_index = drawing_index + 1
+    manifest.add_content_override(
+      "/xl/drawings/drawing\{drawing_id}.xml",
+      ct_drawing,
+    )
+    let drawing_charts : Array[(String, Int)] = [("A1", 1)]
+    let drawing_xml = write_drawing_xml([], drawing_charts)
+    archive.add(
+      "xl/drawings/drawing\{drawing_id}.xml",
+      @encoding/utf8.encode(drawing_xml),
+    )
+    let chart_targets : Array[String] = ["../charts/\{chart_name}"]
+    let drawing_rels_xml = write_drawing_rels_xml([], chart_targets)
+    archive.add(
+      "xl/drawings/_rels/drawing\{drawing_id}.xml.rels",
+      @encoding/utf8.encode(drawing_rels_xml),
+    )
+    let chartsheet_xml = write_chartsheet_xml(1)
+    archive.add(
+      "xl/chartsheets/sheet\{sheet_id}.xml",
+      @encoding/utf8.encode(chartsheet_xml),
+    )
+    let chartsheet_rels_xml = write_sheet_rels_xml(
+      Some("../drawings/drawing\{drawing_id}.xml"),
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+    )
+    archive.add(
+      "xl/chartsheets/_rels/sheet\{sheet_id}.xml.rels",
+      @encoding/utf8.encode(chartsheet_rels_xml),
     )
   }
   if include_shared {

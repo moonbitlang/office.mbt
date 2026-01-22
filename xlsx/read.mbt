@@ -6,10 +6,17 @@ fn decode_utf8(bytes : Bytes) -> String raise XlsxError {
 }
 
 ///|
+priv struct WorkbookSheetInfo {
+  name : String
+  state : SheetState
+  rel_id : String
+}
+
+///|
 fn parse_workbook_sheets(
   xml : StringView,
-) -> Array[(String, SheetState)] raise XlsxError {
-  let sheets : Array[(String, SheetState)] = []
+) -> Array[WorkbookSheetInfo] raise XlsxError {
+  let sheets : Array[WorkbookSheetInfo] = []
   let mut first = true
   for chunk in xml.to_string().split("<sheet ") {
     if first {
@@ -26,6 +33,10 @@ fn parse_workbook_sheets(
       Some(value) => unescape_xml_text(value)
       None => raise XlsxError::InvalidXml(msg="sheet name missing")
     }
+    let rel_id = match attr_value(tag, "r:id") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="sheet relationship missing")
+    }
     let state = match attr_value(tag, "state") {
       Some(value) =>
         match value.to_lower() {
@@ -35,7 +46,7 @@ fn parse_workbook_sheets(
         }
       None => SheetState::Visible
     }
-    sheets.push((name, state))
+    sheets.push({ name, state, rel_id })
   }
   sheets
 }
@@ -813,6 +824,229 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
     merged.push(normalized)
   }
   merged
+}
+
+///|
+fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
+  let marker = "<dimension"
+  match xml_str.find(marker) {
+    None => None
+    Some(start) => {
+      let rest = xml_str[start + marker.length():] catch {
+          _ => raise XlsxError::InvalidXml(msg="dimension slice invalid")
+        }
+      let end = match rest.find("/>") {
+        Some(pos) => pos
+        None =>
+          match rest.find(">") {
+            Some(pos) => pos
+            None => raise XlsxError::InvalidXml(msg="dimension tag not closed")
+          }
+      }
+      let tag = rest[:end] catch {
+          _ => raise XlsxError::InvalidXml(msg="dimension tag invalid")
+        }
+      match attr_value(tag, "ref") {
+        Some(value) => Some(unescape_xml_text(value))
+        None => None
+      }
+    }
+  }
+}
+
+///|
+fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
+  let mut first = true
+  for chunk in body.to_string().split("<pane ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="pane tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="pane tag invalid")
+      }
+    let pane = SheetPane::new()
+    match attr_value(tag, "activePane") {
+      Some(value) => pane.active_pane = unescape_xml_text(value)
+      None => ()
+    }
+    match attr_value(tag, "state") {
+      Some(value) => pane.state = unescape_xml_text(value)
+      None => ()
+    }
+    match attr_value(tag, "topLeftCell") {
+      Some(value) => pane.top_left_cell = unescape_xml_text(value)
+      None => ()
+    }
+    match attr_value(tag, "xSplit") {
+      Some(value) =>
+        pane.x_split = @strconv.parse_double(value) catch {
+          _ => raise XlsxError::InvalidXml(msg="pane xSplit invalid")
+        }
+      None => ()
+    }
+    match attr_value(tag, "ySplit") {
+      Some(value) =>
+        pane.y_split = @strconv.parse_double(value) catch {
+          _ => raise XlsxError::InvalidXml(msg="pane ySplit invalid")
+        }
+      None => ()
+    }
+    return Some(pane)
+  }
+  None
+}
+
+///|
+fn parse_sheet_view_selections(
+  body : StringView,
+) -> Array[Selection] raise XlsxError {
+  let selections : Array[Selection] = []
+  let mut first = true
+  for chunk in body.to_string().split("<selection ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="selection tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="selection tag invalid")
+      }
+    let selection = { sqref: "", active_cell: "", pane: "" }
+    match attr_value(tag, "sqref") {
+      Some(value) => selection.sqref = unescape_xml_text(value)
+      None => ()
+    }
+    match attr_value(tag, "activeCell") {
+      Some(value) => selection.active_cell = unescape_xml_text(value)
+      None => ()
+    }
+    match attr_value(tag, "pane") {
+      Some(value) => selection.pane = unescape_xml_text(value)
+      None => ()
+    }
+    selections.push(selection)
+  }
+  selections
+}
+
+///|
+fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
+  let views : Array[SheetView] = []
+  let body = match extract_tag_body(xml, "sheetViews") {
+    Some(value) => value
+    None => return views
+  }
+  let mut first = true
+  for chunk in body.split("<sheetView ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="sheetView tag not closed")
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="sheetView tag invalid")
+      }
+    let view = SheetView::new()
+    match attr_value(tag, "defaultGridColor") {
+      Some(value) => view.default_grid_color = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "rightToLeft") {
+      Some(value) => view.right_to_left = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "showFormulas") {
+      Some(value) => view.show_formulas = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "showGridLines") {
+      Some(value) => view.show_grid_lines = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "showRowColHeaders") {
+      Some(value) => view.show_row_col_headers = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "showRuler") {
+      Some(value) => view.show_ruler = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "showZeros") {
+      Some(value) => view.show_zeros = Some(parse_cell_bool(value))
+      None => ()
+    }
+    match attr_value(tag, "topLeftCell") {
+      Some(value) => view.top_left_cell = Some(unescape_xml_text(value))
+      None => ()
+    }
+    match attr_value(tag, "view") {
+      Some(value) => view.view = Some(unescape_xml_text(value))
+      None => ()
+    }
+    match attr_value(tag, "zoomScale") {
+      Some(value) =>
+        view.zoom_scale = Some(
+          @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="sheetView zoomScale invalid")
+          },
+        )
+      None => ()
+    }
+    match attr_value(tag, "tabSelected") {
+      Some(value) => view.tab_selected = parse_cell_bool(value)
+      None => ()
+    }
+    match attr_value(tag, "workbookViewId") {
+      Some(value) =>
+        view.workbook_view_id = @strconv.parse_int(value, base=10) catch {
+          _ =>
+            raise XlsxError::InvalidXml(msg="sheetView workbookViewId invalid")
+        }
+      None => ()
+    }
+    let self_closing = tag.to_string().trim().has_suffix("/")
+    if !self_closing {
+      let close = match text.find("</sheetView>") {
+        Some(pos) => pos
+        None => raise XlsxError::InvalidXml(msg="sheetView close missing")
+      }
+      let body_start = end + 1
+      if close > body_start {
+        let inner = text[body_start:close] catch {
+            _ => raise XlsxError::InvalidXml(msg="sheetView body invalid")
+          }
+        view.pane = parse_sheet_view_pane(inner)
+        let selections = parse_sheet_view_selections(inner)
+        view.selection.clear()
+        view.selection.append(selections[:])
+      }
+    }
+    views.push(view)
+  }
+  views
 }
 
 ///|
@@ -1695,6 +1929,21 @@ fn resolve_rel_target(
 }
 
 ///|
+fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
+  let target_str = target.to_string()
+  if target_str.has_prefix("../") {
+    let rest = target_str[3:] catch {
+        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+      }
+    "xl/" + rest.to_string()
+  } else if target_str.has_prefix("xl/") {
+    target_str
+  } else {
+    "xl/" + target_str
+  }
+}
+
+///|
 fn parse_bool_attr(value : StringView) -> Bool {
   match value.to_string() {
     "1" => true
@@ -1902,6 +2151,8 @@ fn parse_worksheet(
   SheetProtection?,
   Array[PageBreak],
   Array[PageBreak],
+  Array[SheetView],
+  String?,
   String?,
 ) raise XlsxError {
   let cells : Array[Cell] = []
@@ -2069,10 +2320,13 @@ fn parse_worksheet(
   let sheet_protection = parse_sheet_protection(xml)
   let row_breaks = parse_page_breaks(xml, "rowBreaks")
   let col_breaks = parse_page_breaks(xml, "colBreaks")
+  let sheet_views = parse_sheet_views(xml)
+  let dimension_ref = parse_sheet_dimension(xml)
   let picture_rel_id = parse_picture_rel_id(xml)
   (
     cells, merged_cells, auto_filter, row_dimensions, col_dimensions, page_margins,
-    page_layout, header_footer, sheet_protection, row_breaks, col_breaks, picture_rel_id,
+    page_layout, header_footer, sheet_protection, row_breaks, col_breaks, sheet_views,
+    dimension_ref, picture_rel_id,
   )
 }
 
@@ -2089,8 +2343,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
   let sheets = parse_workbook_sheets(workbook_xml)
   let sheet_names : Array[String] = []
   for entry in sheets {
-    let (name, _state) = entry
-    sheet_names.push(name)
+    sheet_names.push(entry.name)
   }
   let defined_names = parse_defined_names(workbook_xml, sheet_names)
   let active_index = match parse_active_sheet_index(workbook_xml) {
@@ -2131,6 +2384,8 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
   let style_count = styles.length()
   let workbook : Workbook = {
     sheets: [],
+    chart_sheets: [],
+    sheet_order: [],
     styles,
     defined_names,
     core_properties,
@@ -2142,333 +2397,428 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     workbook_protection,
     active_sheet_index: safe_active_index,
   }
-  for i, entry in sheets {
-    let (name, state) = entry
-    let sheet_path = "xl/worksheets/sheet\{i + 1}.xml"
-    let sheet_bytes = match archive.get(sheet_path) {
-      Some(value) => value
-      None => raise XlsxError::MissingPart(path=sheet_path)
+  let workbook_rels = match archive.get("xl/_rels/workbook.xml.rels") {
+    Some(value) => decode_utf8(value)
+    None => raise XlsxError::MissingPart(path="xl/_rels/workbook.xml.rels")
+  }
+  let worksheet_targets = parse_relationship_targets(
+    workbook_rels, rel_worksheet,
+  )
+  let chartsheet_targets = parse_relationship_targets(
+    workbook_rels, rel_chartsheet,
+  )
+  for entry in sheets {
+    let name = entry.name
+    let state = entry.state
+    let rel_id = entry.rel_id
+    let is_worksheet = worksheet_targets.contains(rel_id)
+    let is_chartsheet = chartsheet_targets.contains(rel_id)
+    if !is_worksheet && !is_chartsheet {
+      raise XlsxError::InvalidXml(msg="sheet relationship missing")
     }
-    let sheet_xml = decode_utf8(sheet_bytes)
-    let (
-      cells,
-      merged_cells,
-      auto_filter,
-      row_dimensions,
-      col_dimensions,
-      page_margins,
-      page_layout,
-      header_footer,
-      sheet_protection,
-      row_breaks,
-      col_breaks,
-      picture_rel_id,
-    ) = parse_worksheet(sheet_xml, shared_strings, style_count)
-    let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
-    let table_part_ids = parse_table_part_ids(sheet_xml)
-    let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
-    let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
-      sheet_xml, "legacyDrawing",
-    )
-    let legacy_drawing_hf_rel_id = parse_legacy_drawing_rel_id(
-      sheet_xml, "legacyDrawingHF",
-    )
-    let sparkline_groups = parse_sparkline_groups(sheet_xml)
-    let mut needs_hyperlink_rels = false
-    for link in hyperlink_elements {
-      if link.r_id is Some(_) {
-        needs_hyperlink_rels = true
-        break
-      }
-    }
-    let needs_rels = table_part_ids.length() > 0 ||
-      pivot_part_ids.length() > 0 ||
-      needs_hyperlink_rels ||
-      legacy_drawing_rel_id is Some(_) ||
-      legacy_drawing_hf_rel_id is Some(_) ||
-      picture_rel_id is Some(_)
-    let rels_xml = if needs_rels {
-      let rels_path = "xl/worksheets/_rels/sheet\{i + 1}.xml.rels"
-      let rels_bytes = match archive.get(rels_path) {
+    if is_worksheet {
+      let target = match worksheet_targets.get(rel_id) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=rels_path)
+        None => raise XlsxError::InvalidXml(msg="worksheet target missing")
       }
-      decode_utf8(rels_bytes)
-    } else {
-      ""
-    }
-    let sheet_background = match picture_rel_id {
-      Some(rel_id) => {
-        if rels_xml == "" {
-          raise XlsxError::InvalidXml(msg="picture relationship missing")
+      let sheet_path = resolve_workbook_rel_target(target)
+      let sheet_bytes = match archive.get(sheet_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=sheet_path)
+      }
+      let sheet_xml = decode_utf8(sheet_bytes)
+      let (
+        cells,
+        merged_cells,
+        auto_filter,
+        row_dimensions,
+        col_dimensions,
+        page_margins,
+        page_layout,
+        header_footer,
+        sheet_protection,
+        row_breaks,
+        col_breaks,
+        sheet_views,
+        dimension_ref,
+        picture_rel_id,
+      ) = parse_worksheet(sheet_xml, shared_strings, style_count)
+      let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
+      let table_part_ids = parse_table_part_ids(sheet_xml)
+      let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
+      let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
+        sheet_xml, "legacyDrawing",
+      )
+      let legacy_drawing_hf_rel_id = parse_legacy_drawing_rel_id(
+        sheet_xml, "legacyDrawingHF",
+      )
+      let sparkline_groups = parse_sparkline_groups(sheet_xml)
+      let mut needs_hyperlink_rels = false
+      for link in hyperlink_elements {
+        if link.r_id is Some(_) {
+          needs_hyperlink_rels = true
+          break
         }
-        let image_targets = parse_relationship_targets(rels_xml, rel_image)
-        let target = match image_targets.get(rel_id) {
+      }
+      let needs_rels = table_part_ids.length() > 0 ||
+        pivot_part_ids.length() > 0 ||
+        needs_hyperlink_rels ||
+        legacy_drawing_rel_id is Some(_) ||
+        legacy_drawing_hf_rel_id is Some(_) ||
+        picture_rel_id is Some(_)
+      let rels_xml = if needs_rels {
+        let rels_path = rels_path_for(sheet_path, "worksheets")
+        let rels_bytes = match archive.get(rels_path) {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="picture target missing")
+          None => raise XlsxError::MissingPart(path=rels_path)
         }
-        let image_path = resolve_rel_target(target, "worksheets")
-        let image_bytes = match archive.get(image_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=image_path)
-        }
-        let path_text = target.to_string()
-        let extension = match path_text.rev_find(".") {
-          Some(pos) =>
-            if pos + 1 < path_text.length() {
-              let view = path_text[pos + 1:] catch {
-                  _ =>
-                    raise XlsxError::InvalidSheetBackground(
-                      msg="image extension missing",
-                    )
-                }
-              view.to_string().to_lower()
-            } else {
+        decode_utf8(rels_bytes)
+      } else {
+        ""
+      }
+      let sheet_background = match picture_rel_id {
+        Some(rel_id) => {
+          if rels_xml == "" {
+            raise XlsxError::InvalidXml(msg="picture relationship missing")
+          }
+          let image_targets = parse_relationship_targets(rels_xml, rel_image)
+          let target = match image_targets.get(rel_id) {
+            Some(value) => value
+            None => raise XlsxError::InvalidXml(msg="picture target missing")
+          }
+          let image_path = resolve_rel_target(target, "worksheets")
+          let image_bytes = match archive.get(image_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=image_path)
+          }
+          let path_text = target.to_string()
+          let extension = match path_text.rev_find(".") {
+            Some(pos) =>
+              if pos + 1 < path_text.length() {
+                let view = path_text[pos + 1:] catch {
+                    _ =>
+                      raise XlsxError::InvalidSheetBackground(
+                        msg="image extension missing",
+                      )
+                  }
+                view.to_string().to_lower()
+              } else {
+                raise XlsxError::InvalidSheetBackground(
+                  msg="image extension missing",
+                )
+              }
+            None =>
               raise XlsxError::InvalidSheetBackground(
                 msg="image extension missing",
               )
-            }
-          None =>
-            raise XlsxError::InvalidSheetBackground(
-              msg="image extension missing",
-            )
+          }
+          let content_type = match image_content_type(extension) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidSheetBackground(
+                msg="unsupported image extension",
+              )
+          }
+          Some({ data: image_bytes, extension, content_type })
         }
-        let content_type = match image_content_type(extension) {
-          Some(value) => value
-          None =>
-            raise XlsxError::InvalidSheetBackground(
-              msg="unsupported image extension",
-            )
-        }
-        Some({ data: image_bytes, extension, content_type })
+        None => None
       }
-      None => None
-    }
-    let hyperlinks = if hyperlink_elements.length() == 0 {
-      []
-    } else {
-      let rel_targets = if needs_hyperlink_rels {
-        parse_relationship_targets(rels_xml, rel_hyperlink)
+      let hyperlinks = if hyperlink_elements.length() == 0 {
+        []
+      } else {
+        let rel_targets = if needs_hyperlink_rels {
+          parse_relationship_targets(rels_xml, rel_hyperlink)
+        } else {
+          {}
+        }
+        let parsed_links : Array[Hyperlink] = []
+        for link in hyperlink_elements {
+          match link.r_id {
+            Some(rel_id) => {
+              let target = match rel_targets.get(rel_id) {
+                Some(value) => value
+                None =>
+                  raise XlsxError::InvalidXml(
+                    msg="hyperlink relationship missing",
+                  )
+              }
+              parsed_links.push({
+                reference: link.reference,
+                target,
+                link_type: HyperlinkType::External,
+                display: link.display,
+                tooltip: link.tooltip,
+              })
+            }
+            None =>
+              match link.location {
+                Some(location) =>
+                  parsed_links.push({
+                    reference: link.reference,
+                    target: location,
+                    link_type: HyperlinkType::Location,
+                    display: link.display,
+                    tooltip: link.tooltip,
+                  })
+                None =>
+                  raise XlsxError::InvalidXml(msg="hyperlink target missing")
+              }
+          }
+        }
+        parsed_links
+      }
+      let tables = if table_part_ids.length() == 0 {
+        []
+      } else {
+        let rel_targets = parse_relationship_targets(rels_xml, rel_table)
+        let parsed_tables : Array[Table] = []
+        for rel_id in table_part_ids {
+          let target = match rel_targets.get(rel_id) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidXml(msg="table relationship missing")
+          }
+          let table_path = resolve_rel_target(target, "worksheets")
+          let table_bytes = match archive.get(table_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=table_path)
+          }
+          let table_xml = decode_utf8(table_bytes)
+          parsed_tables.push(parse_table_xml(table_xml))
+        }
+        parsed_tables
+      }
+      let pivot_tables = if pivot_part_ids.length() == 0 {
+        []
+      } else {
+        let rel_targets = parse_relationship_targets(rels_xml, rel_pivot_table)
+        let parsed_pivots : Array[PivotTable] = []
+        for rel_id in pivot_part_ids {
+          let target = match rel_targets.get(rel_id) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidXml(
+                msg="pivot table relationship missing",
+              )
+          }
+          let pivot_path = resolve_rel_target(target, "worksheets")
+          let pivot_bytes = match archive.get(pivot_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=pivot_path)
+          }
+          let pivot_xml = decode_utf8(pivot_bytes)
+          let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
+          let pivot_rels_bytes = match archive.get(pivot_rels_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=pivot_rels_path)
+          }
+          let pivot_rels_xml = decode_utf8(pivot_rels_bytes)
+          let cache_targets = parse_relationship_targets(
+            pivot_rels_xml, rel_pivot_cache,
+          )
+          let cache_target = match first_relationship_target(cache_targets) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidXml(
+                msg="pivot cache relationship missing",
+              )
+          }
+          let cache_path = resolve_rel_target(cache_target, "pivotTables")
+          let cache_bytes = match archive.get(cache_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=cache_path)
+          }
+          let cache_xml = decode_utf8(cache_bytes)
+          let cache_id = parse_id_from_path(
+            cache_path, "xl/pivotCache/pivotCacheDefinition",
+          )
+          let pivot_id = parse_id_from_path(
+            pivot_path, "xl/pivotTables/pivotTable",
+          )
+          let cache_records_xml = match
+            archive.get(rels_path_for(cache_path, "pivotCache")) {
+            Some(value) => {
+              let cache_rels_xml = decode_utf8(value)
+              let record_targets = parse_relationship_targets(
+                cache_rels_xml, rel_pivot_cache_records,
+              )
+              match first_relationship_target(record_targets) {
+                Some(record_target) => {
+                  let record_path = resolve_rel_target(
+                    record_target, "pivotCache",
+                  )
+                  let record_bytes = match archive.get(record_path) {
+                    Some(value) => value
+                    None => raise XlsxError::MissingPart(path=record_path)
+                  }
+                  Some(decode_utf8(record_bytes))
+                }
+                None => None
+              }
+            }
+            None => None
+          }
+          parsed_pivots.push({
+            table_id: pivot_id,
+            cache_id,
+            table_xml: pivot_xml,
+            cache_definition_xml: cache_xml,
+            cache_records_xml,
+          })
+        }
+        parsed_pivots
+      }
+      let vml_targets = if legacy_drawing_rel_id is Some(_) ||
+        legacy_drawing_hf_rel_id is Some(_) {
+        parse_relationship_targets(rels_xml, rel_vml)
       } else {
         {}
       }
-      let parsed_links : Array[Hyperlink] = []
-      for link in hyperlink_elements {
-        match link.r_id {
-          Some(rel_id) => {
-            let target = match rel_targets.get(rel_id) {
-              Some(value) => value
-              None =>
-                raise XlsxError::InvalidXml(
-                  msg="hyperlink relationship missing",
-                )
-            }
-            parsed_links.push({
-              reference: link.reference,
-              target,
-              link_type: HyperlinkType::External,
-              display: link.display,
-              tooltip: link.tooltip,
-            })
+      let vml_drawing_xml = match legacy_drawing_rel_id {
+        Some(rel_id) => {
+          let target = match vml_targets.get(rel_id) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidXml(
+                msg="vml drawing relationship missing",
+              )
           }
-          None =>
-            match link.location {
-              Some(location) =>
-                parsed_links.push({
-                  reference: link.reference,
-                  target: location,
-                  link_type: HyperlinkType::Location,
-                  display: link.display,
-                  tooltip: link.tooltip,
-                })
-              None =>
-                raise XlsxError::InvalidXml(msg="hyperlink target missing")
-            }
-        }
-      }
-      parsed_links
-    }
-    let tables = if table_part_ids.length() == 0 {
-      []
-    } else {
-      let rel_targets = parse_relationship_targets(rels_xml, rel_table)
-      let parsed_tables : Array[Table] = []
-      for rel_id in table_part_ids {
-        let target = match rel_targets.get(rel_id) {
-          Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="table relationship missing")
-        }
-        let table_path = resolve_rel_target(target, "worksheets")
-        let table_bytes = match archive.get(table_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=table_path)
-        }
-        let table_xml = decode_utf8(table_bytes)
-        parsed_tables.push(parse_table_xml(table_xml))
-      }
-      parsed_tables
-    }
-    let pivot_tables = if pivot_part_ids.length() == 0 {
-      []
-    } else {
-      let rel_targets = parse_relationship_targets(rels_xml, rel_pivot_table)
-      let parsed_pivots : Array[PivotTable] = []
-      for rel_id in pivot_part_ids {
-        let target = match rel_targets.get(rel_id) {
-          Some(value) => value
-          None =>
-            raise XlsxError::InvalidXml(msg="pivot table relationship missing")
-        }
-        let pivot_path = resolve_rel_target(target, "worksheets")
-        let pivot_bytes = match archive.get(pivot_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=pivot_path)
-        }
-        let pivot_xml = decode_utf8(pivot_bytes)
-        let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
-        let pivot_rels_bytes = match archive.get(pivot_rels_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=pivot_rels_path)
-        }
-        let pivot_rels_xml = decode_utf8(pivot_rels_bytes)
-        let cache_targets = parse_relationship_targets(
-          pivot_rels_xml, rel_pivot_cache,
-        )
-        let cache_target = match first_relationship_target(cache_targets) {
-          Some(value) => value
-          None =>
-            raise XlsxError::InvalidXml(msg="pivot cache relationship missing")
-        }
-        let cache_path = resolve_rel_target(cache_target, "pivotTables")
-        let cache_bytes = match archive.get(cache_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=cache_path)
-        }
-        let cache_xml = decode_utf8(cache_bytes)
-        let cache_id = parse_id_from_path(
-          cache_path, "xl/pivotCache/pivotCacheDefinition",
-        )
-        let pivot_id = parse_id_from_path(
-          pivot_path, "xl/pivotTables/pivotTable",
-        )
-        let cache_records_xml = match
-          archive.get(rels_path_for(cache_path, "pivotCache")) {
-          Some(value) => {
-            let cache_rels_xml = decode_utf8(value)
-            let record_targets = parse_relationship_targets(
-              cache_rels_xml, rel_pivot_cache_records,
-            )
-            match first_relationship_target(record_targets) {
-              Some(record_target) => {
-                let record_path = resolve_rel_target(
-                  record_target, "pivotCache",
-                )
-                let record_bytes = match archive.get(record_path) {
-                  Some(value) => value
-                  None => raise XlsxError::MissingPart(path=record_path)
-                }
-                Some(decode_utf8(record_bytes))
-              }
-              None => None
-            }
+          let vml_path = resolve_rel_target(target, "worksheets")
+          let vml_bytes = match archive.get(vml_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=vml_path)
           }
-          None => None
+          Some(decode_utf8(vml_bytes))
         }
-        parsed_pivots.push({
-          table_id: pivot_id,
-          cache_id,
-          table_xml: pivot_xml,
-          cache_definition_xml: cache_xml,
-          cache_records_xml,
-        })
+        None => None
       }
-      parsed_pivots
-    }
-    let vml_targets = if legacy_drawing_rel_id is Some(_) ||
-      legacy_drawing_hf_rel_id is Some(_) {
-      parse_relationship_targets(rels_xml, rel_vml)
+      let vml_drawing_hf_xml = match legacy_drawing_hf_rel_id {
+        Some(rel_id) => {
+          let target = match vml_targets.get(rel_id) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidXml(
+                msg="vml drawing hf relationship missing",
+              )
+          }
+          let vml_path = resolve_rel_target(target, "worksheets")
+          let vml_bytes = match archive.get(vml_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=vml_path)
+          }
+          Some(decode_utf8(vml_bytes))
+        }
+        None => None
+      }
+      let comments = if rels_xml == "" {
+        []
+      } else {
+        let comment_targets = parse_relationship_targets(rels_xml, rel_comments)
+        let parsed_comments : Array[Comment] = []
+        for _rel_id, target in comment_targets {
+          let comment_path = resolve_rel_target(target, "worksheets")
+          let comment_bytes = match archive.get(comment_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=comment_path)
+          }
+          let comment_xml = decode_utf8(comment_bytes)
+          let entries = parse_comments_xml(comment_xml)
+          parsed_comments.append(entries[:])
+        }
+        parsed_comments
+      }
+      let sheet = {
+        name,
+        sheet_views,
+        dimension_ref,
+        cells,
+        merged_cells,
+        auto_filter,
+        page_margins,
+        page_layout,
+        header_footer,
+        sheet_protection,
+        sheet_background,
+        row_breaks,
+        col_breaks,
+        hyperlinks,
+        tables,
+        sparkline_groups,
+        pivot_tables,
+        vml_drawing_xml,
+        vml_drawing_hf_xml,
+        images: [],
+        charts: [],
+        data_validations: [],
+        conditional_formats: [],
+        comments,
+        row_dimensions,
+        col_dimensions,
+        state,
+        stream_state: StreamState::Idle,
+      }
+      workbook.sheets.push(sheet)
+      workbook.sheet_order.push(
+        SheetEntry::Worksheet(workbook.sheets.length() - 1),
+      )
     } else {
-      {}
-    }
-    let vml_drawing_xml = match legacy_drawing_rel_id {
-      Some(rel_id) => {
-        let target = match vml_targets.get(rel_id) {
-          Some(value) => value
-          None =>
-            raise XlsxError::InvalidXml(msg="vml drawing relationship missing")
-        }
-        let vml_path = resolve_rel_target(target, "worksheets")
-        let vml_bytes = match archive.get(vml_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=vml_path)
-        }
-        Some(decode_utf8(vml_bytes))
+      let target = match chartsheet_targets.get(rel_id) {
+        Some(value) => value
+        None => raise XlsxError::InvalidXml(msg="chartsheet target missing")
       }
-      None => None
-    }
-    let vml_drawing_hf_xml = match legacy_drawing_hf_rel_id {
-      Some(rel_id) => {
-        let target = match vml_targets.get(rel_id) {
-          Some(value) => value
-          None =>
-            raise XlsxError::InvalidXml(
-              msg="vml drawing hf relationship missing",
-            )
-        }
-        let vml_path = resolve_rel_target(target, "worksheets")
-        let vml_bytes = match archive.get(vml_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=vml_path)
-        }
-        Some(decode_utf8(vml_bytes))
+      let chartsheet_path = resolve_workbook_rel_target(target)
+      let chartsheet_bytes = match archive.get(chartsheet_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=chartsheet_path)
       }
-      None => None
-    }
-    let comments = if rels_xml == "" {
-      []
-    } else {
-      let comment_targets = parse_relationship_targets(rels_xml, rel_comments)
-      let parsed_comments : Array[Comment] = []
-      for _rel_id, target in comment_targets {
-        let comment_path = resolve_rel_target(target, "worksheets")
-        let comment_bytes = match archive.get(comment_path) {
-          Some(value) => value
-          None => raise XlsxError::MissingPart(path=comment_path)
-        }
-        let comment_xml = decode_utf8(comment_bytes)
-        let entries = parse_comments_xml(comment_xml)
-        parsed_comments.append(entries[:])
+      let chartsheet_xml = decode_utf8(chartsheet_bytes)
+      let drawing_rel_id = parse_legacy_drawing_rel_id(
+        chartsheet_xml, "drawing",
+      )
+      let drawing_rel = match drawing_rel_id {
+        Some(value) => value
+        None => raise XlsxError::InvalidXml(msg="chartsheet drawing missing")
       }
-      parsed_comments
+      let chartsheet_rels_path = rels_path_for(chartsheet_path, "chartsheets")
+      let chartsheet_rels_bytes = match archive.get(chartsheet_rels_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=chartsheet_rels_path)
+      }
+      let chartsheet_rels_xml = decode_utf8(chartsheet_rels_bytes)
+      let drawing_targets = parse_relationship_targets(
+        chartsheet_rels_xml, rel_drawing,
+      )
+      let drawing_target = match drawing_targets.get(drawing_rel) {
+        Some(value) => value
+        None => raise XlsxError::InvalidXml(msg="drawing target missing")
+      }
+      let drawing_path = resolve_rel_target(drawing_target, "chartsheets")
+      let drawing_rels_path = rels_path_for(drawing_path, "drawings")
+      let drawing_rels_bytes = match archive.get(drawing_rels_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=drawing_rels_path)
+      }
+      let drawing_rels_xml = decode_utf8(drawing_rels_bytes)
+      let chart_targets = parse_relationship_targets(
+        drawing_rels_xml, rel_chart,
+      )
+      let chart_target = match first_relationship_target(chart_targets) {
+        Some(value) => value
+        None => raise XlsxError::InvalidXml(msg="chart target missing")
+      }
+      let chart_path = resolve_rel_target(chart_target, "drawings")
+      let chart_bytes = match archive.get(chart_path) {
+        Some(value) => value
+        None => raise XlsxError::MissingPart(path=chart_path)
+      }
+      let chart_xml = decode_utf8(chart_bytes)
+      let chart_sheet = ChartSheet::new(name, chart_xml)
+      chart_sheet.state = state
+      workbook.chart_sheets.push(chart_sheet)
+      workbook.sheet_order.push(
+        SheetEntry::ChartSheet(workbook.chart_sheets.length() - 1),
+      )
     }
-    workbook.sheets.push({
-      name,
-      cells,
-      merged_cells,
-      auto_filter,
-      page_margins,
-      page_layout,
-      header_footer,
-      sheet_protection,
-      sheet_background,
-      row_breaks,
-      col_breaks,
-      hyperlinks,
-      tables,
-      sparkline_groups,
-      pivot_tables,
-      vml_drawing_xml,
-      vml_drawing_hf_xml,
-      images: [],
-      charts: [],
-      data_validations: [],
-      conditional_formats: [],
-      comments,
-      row_dimensions,
-      col_dimensions,
-      state,
-      stream_state: StreamState::Idle,
-    })
   }
   workbook
 }
