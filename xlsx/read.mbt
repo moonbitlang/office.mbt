@@ -3284,11 +3284,13 @@ pub fn read_with_password(
   options? : Options = Options::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  let resolved_options = options_with_password(options, password)
   if is_encrypted_package(bytes) {
     let decrypted = decrypt_encrypted_package(bytes, password)
     let result : Result[Workbook, Error] = try? (match transcoder {
-      Some(value) => read_zip_bytes(decrypted, options~, transcoder=value)
-      None => read_zip_bytes(decrypted, options~)
+      Some(value) =>
+        read_zip_bytes(decrypted, options=resolved_options, transcoder=value)
+      None => read_zip_bytes(decrypted, options=resolved_options)
     })
     match result {
       Ok(workbook) => workbook
@@ -3296,8 +3298,9 @@ pub fn read_with_password(
     }
   } else {
     match transcoder {
-      Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
-      None => read_zip_bytes(bytes, options~)
+      Some(value) =>
+        read_zip_bytes(bytes, options=resolved_options, transcoder=value)
+      None => read_zip_bytes(bytes, options=resolved_options)
     }
   }
 }

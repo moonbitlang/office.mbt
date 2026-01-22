@@ -62,6 +62,26 @@ pub fn Options::with_values(
 }
 
 ///|
+fn options_with_password(options : Options, password : String) -> Options {
+  if password == "" || options.password == password {
+    options
+  } else {
+    Options::with_values(
+      max_calc_iterations=options.max_calc_iterations,
+      password~,
+      raw_cell_value=options.raw_cell_value,
+      unzip_size_limit=options.unzip_size_limit,
+      unzip_xml_size_limit=options.unzip_xml_size_limit,
+      tmp_dir=options.tmp_dir,
+      short_date_pattern=options.short_date_pattern,
+      long_date_pattern=options.long_date_pattern,
+      long_time_pattern=options.long_time_pattern,
+      culture_info=options.culture_info,
+    )
+  }
+}
+
+///|
 fn normalize_unzip_limits(options : Options) -> Options raise XlsxError {
   let mut unzip_size_limit = options.unzip_size_limit
   let mut unzip_xml_size_limit = options.unzip_xml_size_limit

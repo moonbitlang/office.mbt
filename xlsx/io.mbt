@@ -18,6 +18,27 @@ async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
 }
 
 ///|
+fn resolve_write_options(workbook : Workbook, options : Options?) -> Options {
+  match options {
+    Some(value) => value
+    None => workbook.options
+  }
+}
+
+///|
+fn write_bytes(
+  workbook : Workbook,
+  options : Options?,
+) -> Bytes raise XlsxError {
+  let resolved = resolve_write_options(workbook, options)
+  if resolved.password == "" {
+    write(workbook)
+  } else {
+    write_with_password(workbook, resolved.password)
+  }
+}
+
+///|
 pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
   password? : String = "",
@@ -30,16 +51,24 @@ pub async fn[R : @async/io.Reader] open_reader(
   } else {
     password
   }
+  let resolved_options = options_with_password(options, resolved_password)
   if resolved_password == "" {
     match transcoder {
-      Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
-      None => read_zip_bytes(bytes, options~)
+      Some(value) =>
+        read_zip_bytes(bytes, options=resolved_options, transcoder=value)
+      None => read_zip_bytes(bytes, options=resolved_options)
     }
   } else {
     match transcoder {
       Some(value) =>
-        read_with_password(bytes, resolved_password, options~, transcoder=value)
-      None => read_with_password(bytes, resolved_password, options~)
+        read_with_password(
+          bytes,
+          resolved_password,
+          options=resolved_options,
+          transcoder=value,
+        )
+      None =>
+        read_with_password(bytes, resolved_password, options=resolved_options)
     }
   }
 }
@@ -93,16 +122,24 @@ pub async fn open_file(
   } else {
     password
   }
+  let resolved_options = options_with_password(options, resolved_password)
   let workbook = if resolved_password == "" {
     match transcoder {
-      Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
-      None => read_zip_bytes(bytes, options~)
+      Some(value) =>
+        read_zip_bytes(bytes, options=resolved_options, transcoder=value)
+      None => read_zip_bytes(bytes, options=resolved_options)
     }
   } else {
     match transcoder {
       Some(value) =>
-        read_with_password(bytes, resolved_password, options~, transcoder=value)
-      None => read_with_password(bytes, resolved_password, options~)
+        read_with_password(
+          bytes,
+          resolved_password,
+          options=resolved_options,
+          transcoder=value,
+        )
+      None =>
+        read_with_password(bytes, resolved_password, options=resolved_options)
     }
   }
   workbook.file_path = Some(path)
@@ -125,9 +162,16 @@ pub async fn Workbook::set_sheet_background_from_file(
 }
 
 ///|
-pub async fn Workbook::save(self : Workbook) -> Unit raise XlsxError {
+pub async fn Workbook::save(
+  self : Workbook,
+  options? : Options,
+) -> Unit raise XlsxError {
   match self.file_path {
-    Some(path) => self.save_as(path)
+    Some(path) =>
+      match options {
+        Some(value) => self.save_as(path, options=value)
+        None => self.save_as(path)
+      }
     None => raise XlsxError::InvalidSheetOperation(msg="workbook path not set")
   }
 }
@@ -136,8 +180,9 @@ pub async fn Workbook::save(self : Workbook) -> Unit raise XlsxError {
 pub async fn Workbook::save_as(
   self : Workbook,
   path : String,
+  options? : Options,
 ) -> Unit raise XlsxError {
-  let bytes = write(self)
+  let bytes = write_bytes(self, options)
   @async/fs.write_file(path, bytes, create=0o644) catch {
     err =>
       raise XlsxError::InvalidSheetOperation(msg="write file failed: \{err}")
@@ -146,24 +191,32 @@ pub async fn Workbook::save_as(
 }
 
 ///|
-pub fn Workbook::write_to_buffer(self : Workbook) -> Bytes raise XlsxError {
-  write(self)
+pub fn Workbook::write_to_buffer(
+  self : Workbook,
+  options? : Options,
+) -> Bytes raise XlsxError {
+  write_bytes(self, options)
 }
 
 ///|
 pub async fn[W : @async/io.Writer] Workbook::write(
   self : Workbook,
   writer : W,
+  options? : Options,
 ) -> Unit raise XlsxError {
-  ignore(self.write_to(writer))
+  match options {
+    Some(value) => ignore(self.write_to(writer, options=value))
+    None => ignore(self.write_to(writer))
+  }
 }
 
 ///|
 pub async fn[W : @async/io.Writer] Workbook::write_to(
   self : Workbook,
   writer : W,
+  options? : Options,
 ) -> Int raise XlsxError {
-  let bytes = write(self)
+  let bytes = write_bytes(self, options)
   writer.write(bytes) catch {
     err => raise XlsxError::InvalidSheetOperation(msg="writer failed: \{err}")
   }

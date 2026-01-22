@@ -1045,8 +1045,8 @@ pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::rows(Self, StringView) -> Rows raise XlsxError
-pub async fn Workbook::save(Self) -> Unit raise XlsxError
-pub async fn Workbook::save_as(Self, String) -> Unit raise XlsxError
+pub async fn Workbook::save(Self, options? : Options) -> Unit raise XlsxError
+pub async fn Workbook::save_as(Self, String, options? : Options) -> Unit raise XlsxError
 pub fn Workbook::search_sheet(Self, StringView, String, reg? : Bool) -> Array[String] raise XlsxError
 pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
@@ -1122,9 +1122,9 @@ pub fn Workbook::unprotect_workbook(Self, password? : String) -> Unit raise Xlsx
 pub fn Workbook::unset_conditional_format(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::update_linked_value(Self) -> Unit raise XlsxError
 pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
-pub async fn[W : @io.Writer] Workbook::write(Self, W) -> Unit raise XlsxError
-pub async fn[W : @io.Writer] Workbook::write_to(Self, W) -> Int raise XlsxError
-pub fn Workbook::write_to_buffer(Self) -> Bytes raise XlsxError
+pub async fn[W : @io.Writer] Workbook::write(Self, W, options? : Options) -> Unit raise XlsxError
+pub async fn[W : @io.Writer] Workbook::write_to(Self, W, options? : Options) -> Int raise XlsxError
+pub fn Workbook::write_to_buffer(Self, options? : Options) -> Bytes raise XlsxError
 
 pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
