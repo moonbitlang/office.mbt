@@ -788,6 +788,7 @@ pub fn Workbook::core_properties(Self) -> CoreProperties
 pub fn Workbook::custom_properties(Self) -> Array[CustomProperty]
 pub fn Workbook::default_font(Self) -> String
 pub fn Workbook::defined_names(Self) -> ArrayView[DefinedName]
+pub fn Workbook::delete_chart(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_data_validation(Self, StringView, sqrefs? : Array[String]) -> Unit raise XlsxError
 pub fn Workbook::delete_defined_name(Self, DefinedName) -> Unit raise XlsxError
@@ -1018,6 +1019,7 @@ pub fn Worksheet::cols(Self) -> Cols
 pub fn Worksheet::comments(Self) -> ArrayView[Comment]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
+pub fn Worksheet::delete_chart(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_data_validation(Self, sqrefs? : Array[String]) -> Unit raise XlsxError
 pub fn Worksheet::delete_form_control(Self, StringView) -> Unit raise XlsxError

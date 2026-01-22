@@ -32,3 +32,24 @@ test "chart package" {
   }
   inspect(types_xml.contains("chart1.xml"), content="true")
 }
+
+///|
+test "chart delete" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart/>
+    #|</c:chartSpace>
+  sheet.add_chart("A1", chart_xml)
+  sheet.add_chart("C3", chart_xml)
+  inspect(sheet.charts().length(), content="2")
+  sheet.delete_chart("A1")
+  inspect(sheet.charts().length(), content="1")
+  workbook.delete_chart("Sheet1", "C3")
+  inspect(sheet.charts().length(), content="0")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  inspect(archive.get("xl/charts/chart1.xml") is None, content="true")
+}

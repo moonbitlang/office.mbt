@@ -1123,6 +1123,25 @@ pub fn Worksheet::add_chart(
 }
 
 ///|
+pub fn Worksheet::delete_chart(
+  self : Worksheet,
+  cell : StringView,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let (row, col) = cell_ref_to_rc(cell)
+  let updated : Array[Chart] = []
+  for chart in self.charts {
+    let (chart_row, chart_col) = cell_ref_to_rc(chart.reference)
+    if chart_row == row && chart_col == col {
+      continue
+    }
+    updated.push(chart)
+  }
+  self.charts.clear()
+  self.charts.append(updated[:])
+}
+
+///|
 pub fn Worksheet::add_shape(
   self : Worksheet,
   shape : Shape,
