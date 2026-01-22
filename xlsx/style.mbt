@@ -2,12 +2,12 @@
 pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
-}
+} derive(Eq, Show)
 
 ///|
 pub struct Style {
   number_format : NumberFormat?
-}
+} derive(Eq, Show)
 
 ///|
 pub fn Style::new() -> Style {
@@ -27,6 +27,7 @@ pub fn Style::builtin_number_format(id : Int) -> Style {
 ///|
 fn write_styles_xml(
   styles : ArrayView[Style],
+  conditional_styles : ArrayView[Style],
   default_font : StringView,
 ) -> String {
   let style_list : Array[Style] = []
@@ -36,10 +37,28 @@ fn write_styles_xml(
   if style_list.length() == 0 {
     style_list.push(Style::new())
   }
+  let dxf_list : Array[Style] = []
+  for style in conditional_styles {
+    dxf_list.push(style)
+  }
   let num_fmt_entries : Array[(Int, String)] = []
   let num_fmt_ids : Map[String, Int] = {}
   let mut next_id = 164
   for style in style_list {
+    match style.number_format {
+      Some(NumberFormat::Custom(code)) =>
+        match num_fmt_ids.get(code) {
+          Some(_) => ()
+          None => {
+            num_fmt_ids[code] = next_id
+            num_fmt_entries.push((next_id, code))
+            next_id = next_id + 1
+          }
+        }
+      _ => ()
+    }
+  }
+  for style in dxf_list {
     match style.number_format {
       Some(NumberFormat::Custom(code)) =>
         match num_fmt_ids.get(code) {
@@ -115,14 +134,35 @@ fn write_styles_xml(
     }
     sb.write_view("/>\n")
   }
-  let tail_block =
-    #|  </cellXfs>
-    #|  <cellStyles count="1">
-    #|    <cellStyle name="Normal" xfId="0" builtinId="0"/>
-    #|  </cellStyles>
-    #|  <dxfs count="0"/>
-    #|  <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
-    #|</styleSheet>
-  sb.write_view(tail_block)
+  sb.write_view("  </cellXfs>\n")
+  sb.write_view("  <cellStyles count=\"1\">\n")
+  sb.write_view("    <cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/>\n")
+  sb.write_view("  </cellStyles>\n")
+  if dxf_list.length() == 0 {
+    sb.write_view("  <dxfs count=\"0\"></dxfs>\n")
+  } else {
+    sb.write_view("  <dxfs count=\"\{dxf_list.length()}\">\n")
+    for style in dxf_list {
+      match style.number_format {
+        Some(NumberFormat::Builtin(id)) =>
+          sb.write_view("    <dxf><numFmt numFmtId=\"\{id}\"/></dxf>\n")
+        Some(NumberFormat::Custom(code)) =>
+          match num_fmt_ids.get(code) {
+            Some(id) => {
+              sb.write_view("    <dxf><numFmt numFmtId=\"\{id}\" formatCode=\"")
+              sb.write_view(escape_xml_attr(code))
+              sb.write_view("\"/></dxf>\n")
+            }
+            None => sb.write_view("    <dxf/>\n")
+          }
+        None => sb.write_view("    <dxf/>\n")
+      }
+    }
+    sb.write_view("  </dxfs>\n")
+  }
+  sb.write_view(
+    "  <tableStyles count=\"0\" defaultTableStyle=\"TableStyleMedium9\" defaultPivotStyle=\"PivotStyleLight16\"/>\n",
+  )
+  sb.write_view("</styleSheet>")
   sb.to_string()
 }

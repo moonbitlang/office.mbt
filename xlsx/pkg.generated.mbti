@@ -397,6 +397,8 @@ pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
 }
+pub impl Eq for NumberFormat
+pub impl Show for NumberFormat
 
 pub struct PageBreak {
   id : Int
@@ -659,6 +661,8 @@ pub struct Style {
 pub fn Style::builtin_number_format(Int) -> Self
 pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
+pub impl Eq for Style
+pub impl Show for Style
 
 pub struct Table {
   id : Int
@@ -675,6 +679,7 @@ pub struct Workbook {
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]
   styles : Array[Style]
+  conditional_styles : Array[Style]
   defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
@@ -714,6 +719,7 @@ pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxErro
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::cols(Self, StringView) -> Cols raise XlsxError
+pub fn Workbook::conditional_styles(Self) -> ArrayView[Style]
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
 pub fn Workbook::custom_properties(Self) -> Array[CustomProperty]
@@ -749,6 +755,7 @@ pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_cols(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_conditional_formats(Self, StringView) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
+pub fn Workbook::get_conditional_style(Self, Int) -> Style raise XlsxError
 pub fn Workbook::get_custom_props(Self) -> Array[CustomProperty]
 pub fn Workbook::get_data_validations(Self, StringView) -> Array[DataValidation] raise XlsxError
 pub fn Workbook::get_default_font(Self) -> String
@@ -767,6 +774,7 @@ pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_rows(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_sheet_dimension(Self, StringView) -> String raise XlsxError
 pub fn Workbook::get_sheet_view(Self, StringView, Int) -> SheetViewOptions raise XlsxError
+pub fn Workbook::get_style(Self, Int) -> Style raise XlsxError
 pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
 pub fn Workbook::get_workbook_props(Self) -> WorkbookPropsOptions
 pub fn Workbook::insert_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
@@ -776,7 +784,9 @@ pub fn Workbook::merge_cell(Self, StringView, StringView, StringView) -> Unit ra
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
+pub fn Workbook::new_conditional_style(Self, Style) -> Int
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
+pub fn Workbook::new_style(Self, Style) -> Int
 pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError

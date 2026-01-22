@@ -786,9 +786,94 @@ fn parse_cell_xfs(
 }
 
 ///|
-fn parse_styles(xml : StringView) -> Array[Style] raise XlsxError {
+fn parse_dxfs(
+  xml : StringView,
+  num_fmts : Map[Int, String],
+) -> Array[Style] raise XlsxError {
+  let styles : Array[Style] = []
+  let xml_str = xml.to_string()
+  let open_tag = "<dxfs"
+  let start = match xml_str.find(open_tag) {
+    Some(pos) => pos
+    None => return styles
+  }
+  let after_start = xml_str[start:] catch {
+      _ => raise XlsxError::InvalidXml(msg="dxfs tag out of range")
+    }
+  let tag_end = match after_start.find(">") {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="dxfs tag close missing")
+  }
+  let tag_text = after_start[:tag_end] catch {
+      _ => raise XlsxError::InvalidXml(msg="dxfs tag invalid")
+    }
+  if tag_text.has_suffix("/") {
+    return styles
+  }
+  let close_tag = "</dxfs>"
+  let close_start = match after_start.find(close_tag) {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="dxfs close missing")
+  }
+  let body = after_start[tag_end + 1:close_start] catch {
+      _ => raise XlsxError::InvalidXml(msg="dxfs body invalid")
+    }
+  let mut first = true
+  for chunk in body.split("<dxf") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("</dxf>") {
+      Some(pos) => pos
+      None =>
+        match text.find("/>") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="dxf tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="dxf tag invalid")
+      }
+    let style = match tag_attributes_in(tag, "numFmt") {
+      Some(num_fmt_tag) => {
+        let num_fmt_id = match attr_value(num_fmt_tag, "numFmtId") {
+          Some(value) =>
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="numFmtId invalid")
+            }
+          None => 0
+        }
+        match attr_value(num_fmt_tag, "formatCode") {
+          Some(value) => Style::number_format(unescape_xml_text(value))
+          None =>
+            match num_fmts.get(num_fmt_id) {
+              Some(code) => Style::number_format(code)
+              None =>
+                if num_fmt_id == 0 {
+                  Style::new()
+                } else {
+                  Style::builtin_number_format(num_fmt_id)
+                }
+            }
+        }
+      }
+      None => Style::new()
+    }
+    styles.push(style)
+  }
+  styles
+}
+
+///|
+fn parse_styles(
+  xml : StringView,
+) -> (Array[Style], Array[Style]) raise XlsxError {
   let num_fmts = parse_num_fmts(xml)
-  parse_cell_xfs(xml, num_fmts)
+  let styles = parse_cell_xfs(xml, num_fmts)
+  let conditional_styles = parse_dxfs(xml, num_fmts)
+  (styles, conditional_styles)
 }
 
 ///|
@@ -2359,12 +2444,14 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     Some(value) => parse_shared_strings(decode_utf8(value))
     None => []
   }
-  let (styles, default_font) = match archive.get("xl/styles.xml") {
+  let (styles, conditional_styles, default_font) = match
+    archive.get("xl/styles.xml") {
     Some(value) => {
       let styles_xml = decode_utf8(value)
-      (parse_styles(styles_xml), parse_default_font(styles_xml))
+      let (styles, conditional_styles) = parse_styles(styles_xml)
+      (styles, conditional_styles, parse_default_font(styles_xml))
     }
-    None => ([Style::new()], "Calibri")
+    None => ([Style::new()], [], "Calibri")
   }
   let core_properties = match archive.get("docProps/core.xml") {
     Some(value) => parse_core_properties(decode_utf8(value))
@@ -2387,6 +2474,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     chart_sheets: [],
     sheet_order: [],
     styles,
+    conditional_styles,
     defined_names,
     core_properties,
     app_properties,

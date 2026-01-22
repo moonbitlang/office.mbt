@@ -2372,7 +2372,11 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   archive.add(
     "xl/styles.xml",
     @encoding/utf8.encode(
-      write_styles_xml(workbook.styles(), workbook.default_font()),
+      write_styles_xml(
+        workbook.styles(),
+        workbook.conditional_styles(),
+        workbook.default_font(),
+      ),
     ),
   )
   archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))

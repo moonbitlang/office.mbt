@@ -4,6 +4,7 @@ pub struct Workbook {
   chart_sheets : Array[ChartSheet]
   sheet_order : Array[SheetEntry]
   styles : Array[Style]
+  conditional_styles : Array[Style]
   defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
@@ -143,6 +144,7 @@ pub fn Workbook::new() -> Workbook {
     chart_sheets: [],
     sheet_order: [],
     styles: [Style::new()],
+    conditional_styles: [],
     defined_names: [],
     core_properties: CoreProperties::new(),
     app_properties: AppProperties::new(),
@@ -267,6 +269,11 @@ pub fn Workbook::chart_sheets(self : Workbook) -> ArrayView[ChartSheet] {
 ///|
 pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
   self.styles[:]
+}
+
+///|
+pub fn Workbook::conditional_styles(self : Workbook) -> ArrayView[Style] {
+  self.conditional_styles[:]
 }
 
 ///|
@@ -1301,6 +1308,11 @@ pub fn Workbook::add_style(self : Workbook, style : Style) -> Int {
 }
 
 ///|
+pub fn Workbook::new_style(self : Workbook, style : Style) -> Int {
+  self.add_style(style)
+}
+
+///|
 fn Workbook::check_style_id(
   self : Workbook,
   style_id : Int,
@@ -1308,6 +1320,40 @@ fn Workbook::check_style_id(
   if style_id < 0 || style_id >= self.styles.length() {
     raise XlsxError::InvalidStyleId(index=style_id)
   }
+}
+
+///|
+fn Workbook::check_conditional_style_id(
+  self : Workbook,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  if style_id < 0 || style_id >= self.conditional_styles.length() {
+    raise XlsxError::InvalidStyleId(index=style_id)
+  }
+}
+
+///|
+pub fn Workbook::get_style(
+  self : Workbook,
+  style_id : Int,
+) -> Style raise XlsxError {
+  self.check_style_id(style_id)
+  self.styles[style_id]
+}
+
+///|
+pub fn Workbook::new_conditional_style(self : Workbook, style : Style) -> Int {
+  self.conditional_styles.push(style)
+  self.conditional_styles.length() - 1
+}
+
+///|
+pub fn Workbook::get_conditional_style(
+  self : Workbook,
+  style_id : Int,
+) -> Style raise XlsxError {
+  self.check_conditional_style_id(style_id)
+  self.conditional_styles[style_id]
 }
 
 ///|
