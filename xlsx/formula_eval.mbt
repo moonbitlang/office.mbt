@@ -35,6 +35,9 @@ let excel_max_rows = 1048576
 let excel_max_cols = 16384
 
 ///|
+let max_range_cells = 10000
+
+///|
 let max_financial_iterations = 128
 
 ///|
@@ -3310,6 +3313,67 @@ fn array_shape_binary(left : (Int, Int)?, right : (Int, Int)?) -> (Int, Int)? {
 }
 
 ///|
+fn effective_range_bounds(
+  workbook : Workbook,
+  sheet_name : String,
+  min_row : Int,
+  max_row : Int,
+  min_col : Int,
+  max_col : Int,
+) -> (Int, Int, Int, Int) {
+  let rows = max_row - min_row + 1
+  let cols = max_col - min_col + 1
+  if rows <= 0 || cols <= 0 {
+    return (min_row, max_row, min_col, max_col)
+  }
+  if rows * cols <= max_range_cells {
+    return (min_row, max_row, min_col, max_col)
+  }
+  let sheet = match workbook.sheet(sheet_name) {
+    Some(value) => value
+    None => return (min_row, max_row, min_col, max_col)
+  }
+  let mut max_used_row = 0
+  let mut max_used_col = 0
+  for cell in sheet.cells() {
+    if cell.row < min_row ||
+      cell.row > max_row ||
+      cell.col < min_col ||
+      cell.col > max_col {
+      continue
+    }
+    if cell.row > max_used_row {
+      max_used_row = cell.row
+    }
+    if cell.col > max_used_col {
+      max_used_col = cell.col
+    }
+  }
+  let mut new_max_row = max_row
+  let mut new_max_col = max_col
+  if max_row == excel_max_rows {
+    new_max_row = if max_used_row > 0 { max_used_row } else { min_row }
+  }
+  if max_col == excel_max_cols {
+    new_max_col = if max_used_col > 0 { max_used_col } else { min_col }
+  }
+  let new_rows = new_max_row - min_row + 1
+  let new_cols = new_max_col - min_col + 1
+  if new_rows > 0 && new_cols > 0 && new_rows * new_cols > max_range_cells {
+    if new_rows >= new_cols {
+      let allowed_rows = max_range_cells / new_cols
+      let final_rows = if allowed_rows > 0 { allowed_rows } else { 1 }
+      new_max_row = min_row + final_rows - 1
+    } else {
+      let allowed_cols = max_range_cells / new_rows
+      let final_cols = if allowed_cols > 0 { allowed_cols } else { 1 }
+      new_max_col = min_col + final_cols - 1
+    }
+  }
+  (min_row, new_max_row, min_col, new_max_col)
+}
+
+///|
 fn array_shape_from_expr(
   workbook : Workbook,
   sheet_name : String,
@@ -3318,11 +3382,19 @@ fn array_shape_from_expr(
   match expr {
     Expr::Number(_) | Expr::String(_) | Expr::Bool(_) => Some((1, 1))
     Expr::Cell(_, _) => Some((1, 1))
-    Expr::Range(_, start_ref, end_ref) => {
+    Expr::Range(sheet, start_ref, end_ref) => {
+      let target_sheet = if sheet == "" { sheet_name } else { sheet }
       let (row1, col1) = cell_ref_to_rc(start_ref)
       let (row2, col2) = cell_ref_to_rc(end_ref)
-      let rows = (if row1 > row2 { row1 - row2 } else { row2 - row1 }) + 1
-      let cols = (if col1 > col2 { col1 - col2 } else { col2 - col1 }) + 1
+      let min_row = if row1 < row2 { row1 } else { row2 }
+      let max_row = if row1 > row2 { row1 } else { row2 }
+      let min_col = if col1 < col2 { col1 } else { col2 }
+      let max_col = if col1 > col2 { col1 } else { col2 }
+      let (min_row, max_row, min_col, max_col) = effective_range_bounds(
+        workbook, target_sheet, min_row, max_row, min_col, max_col,
+      )
+      let rows = max_row - min_row + 1
+      let cols = max_col - min_col + 1
       Some((rows, cols))
     }
     Expr::Unary(_, inner) => array_shape_from_expr(workbook, sheet_name, inner)
@@ -21380,7 +21452,7 @@ fn spill_value_for_cell(
     Some(value) => value
     None => return None
   }
-  let max_cells = 10000
+  let max_cells = max_range_cells
   for cell in sheet.cells() {
     let formula = match cell.formula {
       Some(value) => value
@@ -21489,6 +21561,9 @@ fn collect_range_values_with_shape(
   let max_row = if row1 > row2 { row1 } else { row2 }
   let min_col = if col1 < col2 { col1 } else { col2 }
   let max_col = if col1 > col2 { col1 } else { col2 }
+  let (min_row, max_row, min_col, max_col) = effective_range_bounds(
+    workbook, sheet_name, min_row, max_row, min_col, max_col,
+  )
   let out : Array[FormulaValue] = []
   for row in min_row..<=max_row {
     for col in min_col..<=max_col {

@@ -4822,6 +4822,29 @@ test "calc array formula multiplication" {
 }
 
 ///|
+test "calc row and column range formulas" {
+  let workbook = Workbook::new()
+  let col_sheet = workbook.add_sheet("Cols")
+  col_sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  col_sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  col_sheet.set_cell_value("A2", CellValue::Numeric(3.0))
+  col_sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  col_sheet.set_cell_formula("C1", "A:A*B:B")
+  inspect(workbook.calc_cell_value("Cols", "C1"), content="2")
+  inspect(workbook.calc_cell_value("Cols", "C2"), content="12")
+  col_sheet.set_cell_formula("D1", "SUM(Cols!B:B)")
+  inspect(workbook.calc_cell_value("Cols", "D1"), content="6")
+  let row_sheet = workbook.add_sheet("Rows")
+  row_sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  row_sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  row_sheet.set_cell_value("A2", CellValue::Numeric(3.0))
+  row_sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  row_sheet.set_cell_formula("A3", "1:1*2:2")
+  inspect(workbook.calc_cell_value("Rows", "A3"), content="3")
+  inspect(workbook.calc_cell_value("Rows", "B3"), content="8")
+}
+
+///|
 test "calc financial functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
