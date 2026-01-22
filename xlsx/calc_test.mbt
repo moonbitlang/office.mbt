@@ -4462,6 +4462,128 @@ test "calc criteria functions" {
 }
 
 ///|
+test "calc database functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("Tree"))
+  sheet.set_cell_value("B1", CellValue::String("Height"))
+  sheet.set_cell_value("C1", CellValue::String("Age"))
+  sheet.set_cell_value("D1", CellValue::String("Yield"))
+  sheet.set_cell_value("E1", CellValue::String("Profit"))
+  sheet.set_cell_value("F1", CellValue::String("Height"))
+  sheet.set_cell_formula("A2", "\"=Apple\"")
+  sheet.set_cell_value("B2", CellValue::String(">1000%"))
+  sheet.set_cell_value("F2", CellValue::String("<16"))
+  sheet.set_cell_formula("A3", "\"=Pear\"")
+  sheet.set_cell_value("A4", CellValue::String("Tree"))
+  sheet.set_cell_value("B4", CellValue::String("Height"))
+  sheet.set_cell_value("C4", CellValue::String("Age"))
+  sheet.set_cell_value("D4", CellValue::String("Yield"))
+  sheet.set_cell_value("E4", CellValue::String("Profit"))
+  sheet.set_cell_value("A5", CellValue::String("Apple"))
+  sheet.set_cell_value("B5", CellValue::Numeric(18.0))
+  sheet.set_cell_value("C5", CellValue::Numeric(20.0))
+  sheet.set_cell_value("D5", CellValue::Numeric(14.0))
+  sheet.set_cell_value("E5", CellValue::Numeric(105.0))
+  sheet.set_cell_value("A6", CellValue::String("Pear"))
+  sheet.set_cell_value("B6", CellValue::Numeric(12.0))
+  sheet.set_cell_value("C6", CellValue::Numeric(12.0))
+  sheet.set_cell_value("D6", CellValue::Numeric(10.0))
+  sheet.set_cell_value("E6", CellValue::Numeric(96.0))
+  sheet.set_cell_value("A7", CellValue::String("Cherry"))
+  sheet.set_cell_value("B7", CellValue::Numeric(13.0))
+  sheet.set_cell_value("C7", CellValue::Numeric(14.0))
+  sheet.set_cell_value("D7", CellValue::Numeric(9.0))
+  sheet.set_cell_value("E7", CellValue::Numeric(105.0))
+  sheet.set_cell_value("A8", CellValue::String("Apple"))
+  sheet.set_cell_value("B8", CellValue::Numeric(14.0))
+  sheet.set_cell_formula("C8", "NA()")
+  sheet.set_cell_value("D8", CellValue::Numeric(10.0))
+  sheet.set_cell_value("E8", CellValue::Numeric(75.0))
+  sheet.set_cell_value("A9", CellValue::String("Pear"))
+  sheet.set_cell_value("B9", CellValue::Numeric(9.0))
+  sheet.set_cell_value("C9", CellValue::Numeric(8.0))
+  sheet.set_cell_value("D9", CellValue::Numeric(8.0))
+  sheet.set_cell_value("E9", CellValue::Numeric(77.0))
+  sheet.set_cell_value("A10", CellValue::String("Apple"))
+  sheet.set_cell_value("B10", CellValue::Numeric(12.0))
+  sheet.set_cell_value("C10", CellValue::Numeric(11.0))
+  sheet.set_cell_value("D10", CellValue::Numeric(6.0))
+  sheet.set_cell_value("E10", CellValue::Numeric(45.0))
+  let checks : Array[(String, String)] = [
+    ("DAVERAGE(A4:E10,\"Profit\",A1:F3)", "73.25"),
+    ("DCOUNT(A4:E10,\"Age\",A1:F2)", "1"),
+    ("DCOUNT(A4:E10,,A1:F2)", "2"),
+    ("DCOUNT(A4:E10,\"Profit\",A1:F2)", "2"),
+    ("DCOUNT(A4:E10,\"Tree\",A1:F2)", "0"),
+    ("DCOUNT(A4:E10,\"Age\",A2:F3)", "0"),
+    ("DCOUNTA(A4:E10,\"Age\",A1:F2)", "1"),
+    ("DCOUNTA(A4:E10,,A1:F2)", "2"),
+    ("DCOUNTA(A4:E10,\"Profit\",A1:F2)", "2"),
+    ("DCOUNTA(A4:E10,\"Tree\",A1:F2)", "2"),
+    ("DCOUNTA(A4:E10,\"Age\",A2:F3)", "0"),
+    ("DGET(A4:E6,\"Profit\",A1:F3)", "96"),
+    ("DMAX(A4:E10,\"Tree\",A1:F3)", "0"),
+    ("DMAX(A4:E10,\"Profit\",A1:F3)", "96"),
+    ("DMIN(A4:E10,\"Tree\",A1:F3)", "0"),
+    ("DMIN(A4:E10,\"Profit\",A1:F3)", "45"),
+    ("DPRODUCT(A4:E10,\"Profit\",A1:F3)", "24948000"),
+    ("DSTDEV(A4:E10,\"Profit\",A1:F3)", "21.077238908358"),
+    ("DSTDEVP(A4:E10,\"Profit\",A1:F3)", "18.2534243362718"),
+    ("DSUM(A4:E10,\"Profit\",A1:F3)", "293"),
+    ("DVAR(A4:E10,\"Profit\",A1:F3)", "444.25"),
+    ("DVARP(A4:E10,\"Profit\",A1:F3)", "333.1875"),
+  ]
+  for item in checks {
+    let (formula, expected) = item
+    sheet.set_cell_formula("A11", formula)
+    inspect(workbook.calc_cell_value("Sheet1", "A11"), content=expected)
+  }
+  let error_checks : Array[(String, String)] = [
+    ("DAVERAGE()", "#VALUE!"),
+    ("DAVERAGE(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DAVERAGE(A4:E10,\"Tree\",A1:F3)", "#DIV/0!"),
+    ("DCOUNT()", "#VALUE!"),
+    ("DCOUNT(A4:E10,\"Age\",A1:F2,\"\")", "#VALUE!"),
+    ("DCOUNT(A4,\"Age\",A1:F2)", "#VALUE!"),
+    ("DCOUNT(A4:E10,NA(),A1:F2)", "#VALUE!"),
+    ("DCOUNT(A4:E4,,A1:F2)", "#VALUE!"),
+    ("DCOUNT(A4:E10,\"x\",A2:F3)", "#VALUE!"),
+    ("DCOUNTA()", "#VALUE!"),
+    ("DCOUNTA(A4:E10,\"Age\",A1:F2,\"\")", "#VALUE!"),
+    ("DCOUNTA(A4,\"Age\",A1:F2)", "#VALUE!"),
+    ("DCOUNTA(A4:E10,NA(),A1:F2)", "#VALUE!"),
+    ("DCOUNTA(A4:E4,,A1:F2)", "#VALUE!"),
+    ("DCOUNTA(A4:E10,\"x\",A2:F3)", "#VALUE!"),
+    ("DGET()", "#VALUE!"),
+    ("DGET(A1,\"Profit\",A1)", "#VALUE!"),
+    ("DGET(A4:E5,\"Profit\",A1:F3)", "#VALUE!"),
+    ("DGET(A4:E10,\"Profit\",A1:F3)", "#NUM!"),
+    ("DMAX()", "#VALUE!"),
+    ("DMAX(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DMIN()", "#VALUE!"),
+    ("DMIN(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DPRODUCT()", "#VALUE!"),
+    ("DPRODUCT(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DSTDEV()", "#VALUE!"),
+    ("DSTDEV(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DSTDEVP()", "#VALUE!"),
+    ("DSTDEVP(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DSUM()", "#VALUE!"),
+    ("DSUM(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DVAR()", "#VALUE!"),
+    ("DVAR(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+    ("DVARP()", "#VALUE!"),
+    ("DVARP(A4:E10,\"x\",A1:F3)", "#VALUE!"),
+  ]
+  for item in error_checks {
+    let (formula, expected) = item
+    sheet.set_cell_formula("A11", formula)
+    inspect(workbook.calc_cell_value("Sheet1", "A11"), content=expected)
+  }
+}
+
+///|
 test "calc quoted sheet refs" {
   let workbook = Workbook::new()
   let main = workbook.add_sheet("Main")

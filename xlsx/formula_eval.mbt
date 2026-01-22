@@ -5066,6 +5066,259 @@ fn formula_criteria_eval(
 }
 
 ///|
+priv struct CalcDatabase {
+  mut row : Int
+  col : Int
+  index_map : Map[Int, Int]
+  database : RangeValues
+  criteria : RangeValues
+}
+
+///|
+fn calc_database_column_index(
+  database : RangeValues,
+  field : FormulaValue,
+) -> Int {
+  let normalized = normalize_scalar(field)
+  match normalized {
+    FormulaValue::Error(_) => return -1
+    _ => ()
+  }
+  match value_as_number_opt(normalized) {
+    Some(num) => return Double::to_int(trunc_double(num)) - 1
+    None => ()
+  }
+  let field_text = formula_value_string(normalized).to_lower()
+  if field_text == "" {
+    return -1
+  }
+  for idx in 0..<database.cols {
+    match database.get(0, idx) {
+      Some(value) =>
+        if formula_value_string(value).to_lower() == field_text {
+          return idx
+        }
+      None => ()
+    }
+  }
+  -1
+}
+
+///|
+fn calc_database_new(
+  database : RangeValues,
+  field : FormulaValue,
+  criteria : RangeValues,
+) -> CalcDatabase? {
+  let invalid = database.rows < 2 ||
+    database.cols < 1 ||
+    criteria.rows < 2 ||
+    criteria.cols < 1
+  if invalid {
+    return None
+  }
+  let mut col = -1
+  let normalized_field = normalize_scalar(field)
+  let has_field = match normalized_field {
+    FormulaValue::Empty => false
+    _ => true
+  }
+  if has_field {
+    col = calc_database_column_index(database, field)
+    if col < 0 || col >= database.cols {
+      return None
+    }
+  }
+  Some(CalcDatabase::{ row: 0, col, index_map: {}, database, criteria })
+}
+
+///|
+fn calc_database_value(db : CalcDatabase) -> FormulaValue {
+  if db.col == -1 {
+    match db.database.get(db.row, db.database.cols - 1) {
+      Some(value) => value
+      None => FormulaValue::Empty
+    }
+  } else {
+    match db.database.get(db.row, db.col) {
+      Some(value) => value
+      None => FormulaValue::Empty
+    }
+  }
+}
+
+///|
+fn calc_database_criteria_eval(db : CalcDatabase) -> Bool {
+  let columns = db.criteria.cols
+  let rows = db.criteria.rows
+  if db.index_map.get(0) is None {
+    for j in 0..<columns {
+      let header = match db.criteria.get(0, j) {
+        Some(value) => value
+        None => FormulaValue::Empty
+      }
+      let idx = calc_database_column_index(db.database, header)
+      if idx < 0 {
+        return false
+      }
+      db.index_map[j] = idx
+    }
+  }
+  let mut matched = false
+  let mut i = 1
+  while !matched && i < rows {
+    let mut row_match = true
+    let mut j = 0
+    while row_match && j < columns {
+      let criteria_value = match db.criteria.get(i, j) {
+        Some(value) => value
+        None => FormulaValue::Empty
+      }
+      if formula_value_string(criteria_value) != "" {
+        let criteria = parse_formula_criteria(criteria_value)
+        let col_index = match db.index_map.get(j) {
+          Some(value) => value
+          None => return false
+        }
+        let cell = match db.database.get(db.row, col_index) {
+          Some(value) => value
+          None => FormulaValue::Empty
+        }
+        if !formula_criteria_eval(cell, criteria) {
+          row_match = false
+        }
+      }
+      j = j + 1
+    }
+    if row_match {
+      matched = true
+    }
+    i = i + 1
+  }
+  matched
+}
+
+///|
+fn calc_database_next(db : CalcDatabase) -> Bool {
+  let rows = db.database.rows
+  let mut matched = false
+  while !matched && db.row < rows {
+    db.row = db.row + 1
+    if db.row < rows {
+      matched = calc_database_criteria_eval(db)
+    }
+  }
+  matched
+}
+
+///|
+fn database_collect_values(
+  database : RangeValues,
+  field : FormulaValue,
+  criteria : RangeValues,
+) -> Result[Array[FormulaValue], FormulaValue] {
+  let db = match calc_database_new(database, field, criteria) {
+    Some(value) => value
+    None => return Err(FormulaValue::Error(formula_error_value))
+  }
+  let values : Array[FormulaValue] = []
+  while calc_database_next(db) {
+    values.push(calc_database_value(db))
+  }
+  Ok(values)
+}
+
+///|
+fn database_count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let mut count = 0
+  for value in values {
+    match normalize_scalar(value) {
+      FormulaValue::Number(_) => count = count + 1
+      FormulaValue::String(text) =>
+        match parse_double_opt(text) {
+          Some(_) => count = count + 1
+          None => ()
+        }
+      FormulaValue::Bool(_) => ()
+      FormulaValue::Error(_) => ()
+      FormulaValue::Empty => ()
+      FormulaValue::List(_) => ()
+    }
+  }
+  FormulaValue::Number(Double::from_int(count))
+}
+
+///|
+fn database_values(
+  name : String,
+  database : RangeValues,
+  field : FormulaValue,
+  criteria : RangeValues,
+) -> FormulaValue {
+  let values = match database_collect_values(database, field, criteria) {
+    Ok(items) => items
+    Err(err) => return err
+  }
+  match name {
+    "DMAX" => max_values(values)
+    "DMIN" => min_values(values)
+    "DPRODUCT" => product_values(values)
+    "DSUM" => sum_values(values)
+    "DSTDEV" => stdev_values(false, values)
+    "DSTDEVP" =>
+      match variance_values(values, false, false) {
+        FormulaValue::Number(variance) => {
+          let result = @math.pow(variance, 0.5)
+          FormulaValue::Number(round_significant_digits(result, 15))
+        }
+        FormulaValue::Error(err) => FormulaValue::Error(err)
+        _ => FormulaValue::Error(formula_error_value)
+      }
+    "DVAR" => variance_values(values, true, false)
+    "DVARP" => variance_values(values, false, false)
+    _ => average_values(values)
+  }
+}
+
+///|
+fn dcount_values(
+  name : String,
+  database : RangeValues,
+  field : FormulaValue,
+  criteria : RangeValues,
+) -> FormulaValue {
+  let values = match database_collect_values(database, field, criteria) {
+    Ok(items) => items
+    Err(err) => return err
+  }
+  if name == "DCOUNT" {
+    database_count_values(values)
+  } else {
+    counta_values(values)
+  }
+}
+
+///|
+fn dget_values(
+  database : RangeValues,
+  field : FormulaValue,
+  criteria : RangeValues,
+) -> FormulaValue {
+  let db = match calc_database_new(database, field, criteria) {
+    Some(value) => value
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  let mut value = FormulaValue::Error(formula_error_value)
+  if calc_database_next(db) {
+    value = calc_database_value(db)
+    if calc_database_next(db) {
+      return FormulaValue::Error(formula_error_num)
+    }
+  }
+  value
+}
+
+///|
 fn abs_double(value : Double) -> Double {
   if value < 0.0 {
     -value
@@ -7493,6 +7746,52 @@ fn eval_function(
           let matches = ifs_match(ranges, criterias)
           FormulaValue::Number(Double::from_int(matches.length()))
         }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DAVERAGE"
+    | "DMAX"
+    | "DMIN"
+    | "DPRODUCT"
+    | "DSTDEV"
+    | "DSTDEVP"
+    | "DSUM"
+    | "DVAR"
+    | "DVARP" =>
+      if args.length() == 3 {
+        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
+        database_values(name, database, values[1], criteria)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DCOUNT" | "DCOUNTA" =>
+      if args.length() >= 2 && args.length() <= 3 {
+        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let field = if args.length() == 3 {
+          match args[1] {
+            Expr::FuncCall(name, _) if name == "" => FormulaValue::Empty
+            _ => values[1]
+          }
+        } else {
+          FormulaValue::Empty
+        }
+        let criteria_idx = if args.length() == 3 { 2 } else { 1 }
+        let criteria = eval_range_expr(
+          workbook,
+          sheet_name,
+          args[criteria_idx],
+          ctx,
+        )
+        dcount_values(name, database, field, criteria)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DGET" =>
+      if args.length() == 3 {
+        let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
+        let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
+        dget_values(database, values[1], criteria)
       } else {
         FormulaValue::Error(formula_error_value)
       }
