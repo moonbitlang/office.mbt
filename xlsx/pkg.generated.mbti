@@ -624,6 +624,15 @@ pub struct RowDimension {
 
 type RowEntry
 
+pub struct RowOpts {
+  height : Double
+  hidden : Bool
+  style_id : Int
+  outline_level : Int
+}
+pub impl Eq for RowOpts
+pub impl Show for RowOpts
+
 pub struct RowStream {
   cells : Array[Cell]
   mut index : Int
@@ -632,10 +641,14 @@ pub fn RowStream::new(Worksheet) -> Self
 pub fn RowStream::next(Self) -> Array[String]?
 
 pub struct Rows {
+  sheet : Worksheet
   entries : Array[RowEntry]
   mut index : Int
 }
+pub fn Rows::close(Self) -> Unit
 pub fn Rows::columns(Self) -> Array[String]
+pub fn Rows::error(Self) -> XlsxError?
+pub fn Rows::get_row_opts(Self) -> RowOpts
 pub fn Rows::new(Worksheet) -> Self
 pub fn Rows::next(Self) -> Bool
 pub fn Rows::row_index(Self) -> Int?

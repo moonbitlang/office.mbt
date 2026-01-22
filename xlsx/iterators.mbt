@@ -5,7 +5,16 @@ struct RowEntry {
 }
 
 ///|
+pub struct RowOpts {
+  height : Double
+  hidden : Bool
+  style_id : Int
+  outline_level : Int
+} derive(Eq, Show)
+
+///|
 pub struct Rows {
+  sheet : Worksheet
   entries : Array[RowEntry]
   mut index : Int
 }
@@ -61,7 +70,7 @@ fn collect_row_entries(sheet : Worksheet) -> Array[RowEntry] {
 
 ///|
 pub fn Rows::new(sheet : Worksheet) -> Rows {
-  { entries: collect_row_entries(sheet), index: 0 }
+  { sheet, entries: collect_row_entries(sheet), index: 0 }
 }
 
 ///|
@@ -88,6 +97,53 @@ pub fn Rows::row_index(self : Rows) -> Int? {
     return None
   }
   Some(self.entries[self.index - 1].row)
+}
+
+///|
+fn default_row_height(sheet : Worksheet) -> Double {
+  let props = sheet.sheet_props()
+  match props.default_row_height {
+    Some(value) => value
+    None => 15.0
+  }
+}
+
+///|
+fn row_opts_for_row(sheet : Worksheet, row : Int) -> RowOpts {
+  let dim = sheet.row_dimension_value(row)
+  let height = match dim.height {
+    Some(value) => value
+    None => default_row_height(sheet)
+  }
+  let style_id = match dim.style_id {
+    Some(value) => value
+    None => 0
+  }
+  { height, hidden: dim.hidden, style_id, outline_level: dim.outline_level }
+}
+
+///|
+pub fn Rows::get_row_opts(self : Rows) -> RowOpts {
+  match self.row_index() {
+    Some(row) => row_opts_for_row(self.sheet, row)
+    None =>
+      {
+        height: default_row_height(self.sheet),
+        hidden: false,
+        style_id: 0,
+        outline_level: 0,
+      }
+  }
+}
+
+///|
+pub fn Rows::error(_self : Rows) -> XlsxError? {
+  None
+}
+
+///|
+pub fn Rows::close(_self : Rows) -> Unit {
+  ()
 }
 
 ///|
