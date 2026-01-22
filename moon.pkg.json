@@ -2,6 +2,10 @@
   "import": [
     "bobzhang/mbtexcel/xlsx",
     {
+      "path": "moonbitlang/async/io",
+      "alias": "async/io"
+    },
+    {
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"
     }

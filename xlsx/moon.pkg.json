@@ -10,10 +10,21 @@
       "path": "moonbitlang/core/encoding/utf16",
       "alias": "encoding/utf16"
     },
+    {
+      "path": "moonbitlang/async/io",
+      "alias": "async/io"
+    },
+    {
+      "path": "moonbitlang/async/fs",
+      "alias": "async/fs"
+    },
     "moonbitlang/core/random",
     "moonbitlang/core/buffer",
     "moonbitlang/core/strconv",
     "moonbitlang/core/math",
     "moonbitlang/core/env"
+  ],
+  "test-import": [
+    "moonbitlang/async"
   ]
 }

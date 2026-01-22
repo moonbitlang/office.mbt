@@ -1198,6 +1198,40 @@ pub fn Worksheet::add_picture_from_bytes(
 }
 
 ///|
+pub async fn Worksheet::add_picture(
+  self : Worksheet,
+  reference : String,
+  path : String,
+  offset_x? : Int = 0,
+  offset_y? : Int = 0,
+  scale_x? : Double = 1.0,
+  scale_y? : Double = 1.0,
+  hyperlink? : String = "",
+  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let extension = match extension_from_path(path) {
+    Some(value) => value
+    None => raise XlsxError::UnsupportedFeature(msg="image extension missing")
+  }
+  let bytes = read_file_bytes(path) catch {
+    err =>
+      raise XlsxError::InvalidSheetOperation(msg="read picture failed: \{err}")
+  }
+  self.add_picture_from_bytes(
+    reference,
+    bytes,
+    extension,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+  )
+}
+
+///|
 pub fn Worksheet::add_image(
   self : Worksheet,
   reference : String,

@@ -15,6 +15,7 @@ pub struct Workbook {
   mut default_font : String
   theme_colors : Array[String]?
   indexed_colors : Array[String]?
+  mut file_path : String?
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
@@ -161,6 +162,7 @@ pub fn Workbook::new() -> Workbook {
     default_font: "Calibri",
     theme_colors: None,
     indexed_colors: None,
+    file_path: None,
     workbook_protection: None,
     active_sheet_index: 0,
   }
@@ -1939,6 +1941,35 @@ pub fn Workbook::add_image(
     data,
     extension,
     content_type,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+  )
+}
+
+///|
+pub async fn Workbook::add_picture(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  path : String,
+  offset_x? : Int = 0,
+  offset_y? : Int = 0,
+  scale_x? : Double = 1.0,
+  scale_y? : Double = 1.0,
+  hyperlink? : String = "",
+  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_picture(
+    reference,
+    path,
     offset_x~,
     offset_y~,
     scale_x~,

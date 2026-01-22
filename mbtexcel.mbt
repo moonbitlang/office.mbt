@@ -28,3 +28,22 @@ pub fn write_with_password(
 ) -> Bytes raise @xlsx.XlsxError {
   @xlsx.write_with_password(workbook, password)
 }
+
+///|
+pub async fn open_file(path : String) -> @xlsx.Workbook raise @xlsx.XlsxError {
+  @xlsx.open_file(path)
+}
+
+///|
+pub async fn[R : @async/io.Reader] open_reader(
+  reader : R,
+) -> @xlsx.Workbook raise @xlsx.XlsxError {
+  @xlsx.open_reader(reader)
+}
+
+///|
+pub async fn[R : @async/io.Reader] read_zip_reader(
+  reader : R,
+) -> @xlsx.Workbook raise @xlsx.XlsxError {
+  @xlsx.read_zip_reader(reader)
+}

@@ -145,3 +145,25 @@ test "picture options validation" {
     content="Err(InvalidHyperlink(msg=\"picture hyperlink type missing\"))",
   )
 }
+
+///|
+async test "picture from file path" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let stamp = @env.now().to_string()
+  let path = "mbtexcel_picture_\{stamp}.png"
+  @async/fs.write_file(path, b"img", create=0o644) catch {
+    err => fail("write image failed: \{err}")
+  }
+  workbook.add_picture("Sheet1", "A1", path)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let stored = match archive.get("xl/media/image1.png") {
+    Some(value) => value
+    None => fail("missing image1.png")
+  }
+  inspect(stored == b"img", content="true")
+  @async/fs.remove(path) catch {
+    err => fail("remove image failed: \{err}")
+  }
+}

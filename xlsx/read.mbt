@@ -1,5 +1,76 @@
 ///|
-fn decode_utf8(bytes : Bytes) -> String raise XlsxError {
+fn is_utf8_encoding(value : StringView) -> Bool {
+  let normalized = value.to_string().to_lower()
+  normalized == "utf-8" || normalized == "utf8"
+}
+
+///|
+fn is_encoding_char(value : Byte) -> Bool {
+  (value >= b'a' && value <= b'z') ||
+  (value >= b'A' && value <= b'Z') ||
+  (value >= b'0' && value <= b'9') ||
+  value == b'-' ||
+  value == b'_' ||
+  value == b'.'
+}
+
+///|
+fn xml_encoding(bytes : Bytes) -> String? {
+  let len = bytes.length()
+  if len < 5 {
+    return None
+  }
+  let prefix_len = if len < 256 { len } else { 256 }
+  let prefix = bytes[:prefix_len]
+  let start = if prefix_len >= 3 && prefix[:3].equal(b"\xEF\xBB\xBF") {
+    3
+  } else {
+    0
+  }
+  if prefix_len < start + 5 || !prefix[start:start + 5].equal(b"<?xml") {
+    return None
+  }
+  let (needle, quote) = match prefix.find(b"encoding=\"") {
+    Some(pos) => (pos + b"encoding=\"".length(), b'"')
+    None =>
+      match prefix.find(b"encoding='") {
+        Some(pos) => (pos + b"encoding='".length(), b'\'')
+        None => return None
+      }
+  }
+  let mut i = needle
+  while i < prefix_len && prefix[i] != quote {
+    if !is_encoding_char(prefix[i]) {
+      return None
+    }
+    i = i + 1
+  }
+  if i <= needle || i >= prefix_len {
+    return None
+  }
+  let slice = prefix[needle:i]
+  let value = @encoding/utf8.decode(slice) catch { _ => return None }
+  Some(value)
+}
+
+///|
+fn decode_utf8(
+  bytes : Bytes,
+  transcoder : ((String, Bytes) -> String raise XlsxError)?,
+) -> String raise XlsxError {
+  match xml_encoding(bytes) {
+    Some(encoding) =>
+      if !is_utf8_encoding(encoding) {
+        match transcoder {
+          Some(value) => return value(encoding, bytes)
+          None =>
+            raise XlsxError::InvalidXml(
+              msg="xml encoding \{encoding} requires charset transcoder",
+            )
+        }
+      }
+    None => ()
+  }
   @encoding/utf8.decode(bytes) catch {
     _ => raise XlsxError::InvalidXml(msg="invalid utf8")
   }
@@ -2600,15 +2671,19 @@ fn parse_worksheet(
 }
 
 ///|
-fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
+fn read_zip_bytes(
+  bytes : BytesView,
+  transcoder? : (String, Bytes) -> String raise XlsxError,
+) -> Workbook raise XlsxError {
   let archive = @zip.read(bytes) catch {
     err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
   }
+  let decode = (value : Bytes) => decode_utf8(value, transcoder)
   let workbook_bytes = match archive.get("xl/workbook.xml") {
     Some(value) => value
     None => raise XlsxError::MissingPart(path="xl/workbook.xml")
   }
-  let workbook_xml = decode_utf8(workbook_bytes)
+  let workbook_xml = decode(workbook_bytes)
   let sheets = parse_workbook_sheets(workbook_xml)
   let sheet_names : Array[String] = []
   for entry in sheets {
@@ -2625,13 +2700,13 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     active_index
   }
   let shared_strings = match archive.get("xl/sharedStrings.xml") {
-    Some(value) => parse_shared_strings(decode_utf8(value))
+    Some(value) => parse_shared_strings(decode(value))
     None => []
   }
   let (styles, conditional_styles, default_font, indexed_colors) = match
     archive.get("xl/styles.xml") {
     Some(value) => {
-      let styles_xml = decode_utf8(value)
+      let styles_xml = decode(value)
       let (styles, conditional_styles) = parse_styles(styles_xml)
       let indexed_colors = parse_indexed_colors(styles_xml)
       (
@@ -2644,19 +2719,19 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     None => ([Style::new()], [], "Calibri", None)
   }
   let theme_colors = match archive.get("xl/theme/theme1.xml") {
-    Some(value) => parse_theme_colors(decode_utf8(value))
+    Some(value) => parse_theme_colors(decode(value))
     None => None
   }
   let core_properties = match archive.get("docProps/core.xml") {
-    Some(value) => parse_core_properties(decode_utf8(value))
+    Some(value) => parse_core_properties(decode(value))
     None => CoreProperties::new()
   }
   let app_properties = match archive.get("docProps/app.xml") {
-    Some(value) => parse_app_properties(decode_utf8(value))
+    Some(value) => parse_app_properties(decode(value))
     None => AppProperties::new()
   }
   let custom_properties = match archive.get("docProps/custom.xml") {
-    Some(value) => parse_custom_properties(decode_utf8(value))
+    Some(value) => parse_custom_properties(decode(value))
     None => []
   }
   let workbook_props = parse_workbook_props(workbook_xml)
@@ -2679,11 +2754,12 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     default_font,
     theme_colors,
     indexed_colors,
+    file_path: None,
     workbook_protection,
     active_sheet_index: safe_active_index,
   }
   let workbook_rels = match archive.get("xl/_rels/workbook.xml.rels") {
-    Some(value) => decode_utf8(value)
+    Some(value) => decode(value)
     None => raise XlsxError::MissingPart(path="xl/_rels/workbook.xml.rels")
   }
   let vba_targets = parse_relationship_targets(workbook_rels, rel_vba_project)
@@ -2723,7 +2799,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         Some(value) => value
         None => raise XlsxError::MissingPart(path=sheet_path)
       }
-      let sheet_xml = decode_utf8(sheet_bytes)
+      let sheet_xml = decode(sheet_bytes)
       let (
         cells,
         merged_cells,
@@ -2771,7 +2847,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
           Some(value) => value
           None => raise XlsxError::MissingPart(path=rels_path)
         }
-        decode_utf8(rels_bytes)
+        decode(rels_bytes)
       } else {
         ""
       }
@@ -2882,7 +2958,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=table_path)
           }
-          let table_xml = decode_utf8(table_bytes)
+          let table_xml = decode(table_bytes)
           parsed_tables.push(parse_table_xml(table_xml))
         }
         parsed_tables
@@ -2905,13 +2981,13 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=pivot_path)
           }
-          let pivot_xml = decode_utf8(pivot_bytes)
+          let pivot_xml = decode(pivot_bytes)
           let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
           let pivot_rels_bytes = match archive.get(pivot_rels_path) {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=pivot_rels_path)
           }
-          let pivot_rels_xml = decode_utf8(pivot_rels_bytes)
+          let pivot_rels_xml = decode(pivot_rels_bytes)
           let cache_targets = parse_relationship_targets(
             pivot_rels_xml, rel_pivot_cache,
           )
@@ -2927,7 +3003,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=cache_path)
           }
-          let cache_xml = decode_utf8(cache_bytes)
+          let cache_xml = decode(cache_bytes)
           let cache_id = parse_id_from_path(
             cache_path, "xl/pivotCache/pivotCacheDefinition",
           )
@@ -2937,7 +3013,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
           let cache_records_xml = match
             archive.get(rels_path_for(cache_path, "pivotCache")) {
             Some(value) => {
-              let cache_rels_xml = decode_utf8(value)
+              let cache_rels_xml = decode(value)
               let record_targets = parse_relationship_targets(
                 cache_rels_xml, rel_pivot_cache_records,
               )
@@ -2950,7 +3026,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
                     Some(value) => value
                     None => raise XlsxError::MissingPart(path=record_path)
                   }
-                  Some(decode_utf8(record_bytes))
+                  Some(decode(record_bytes))
                 }
                 None => None
               }
@@ -2988,7 +3064,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=vml_path)
           }
-          Some(decode_utf8(vml_bytes))
+          Some(decode(vml_bytes))
         }
         None => None
       }
@@ -3006,7 +3082,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=vml_path)
           }
-          Some((decode_utf8(vml_bytes), vml_path))
+          Some((decode(vml_bytes), vml_path))
         }
         None => None
       }
@@ -3019,7 +3095,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
           let vml_rels_xml = match vml_drawing_hf_path {
             Some(path) =>
               match archive.get(rels_path_for(path, "drawings")) {
-                Some(value) => Some(decode_utf8(value))
+                Some(value) => Some(decode(value))
                 None => None
               }
             None => None
@@ -3039,7 +3115,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=comment_path)
           }
-          let comment_xml = decode_utf8(comment_bytes)
+          let comment_xml = decode(comment_bytes)
           let entries = parse_comments_xml(comment_xml)
           parsed_comments.append(entries[:])
         }
@@ -3095,7 +3171,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         Some(value) => value
         None => raise XlsxError::MissingPart(path=chartsheet_path)
       }
-      let chartsheet_xml = decode_utf8(chartsheet_bytes)
+      let chartsheet_xml = decode(chartsheet_bytes)
       let drawing_rel_id = parse_legacy_drawing_rel_id(
         chartsheet_xml, "drawing",
       )
@@ -3108,7 +3184,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         Some(value) => value
         None => raise XlsxError::MissingPart(path=chartsheet_rels_path)
       }
-      let chartsheet_rels_xml = decode_utf8(chartsheet_rels_bytes)
+      let chartsheet_rels_xml = decode(chartsheet_rels_bytes)
       let drawing_targets = parse_relationship_targets(
         chartsheet_rels_xml, rel_drawing,
       )
@@ -3122,7 +3198,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         Some(value) => value
         None => raise XlsxError::MissingPart(path=drawing_rels_path)
       }
-      let drawing_rels_xml = decode_utf8(drawing_rels_bytes)
+      let drawing_rels_xml = decode(drawing_rels_bytes)
       let chart_targets = parse_relationship_targets(
         drawing_rels_xml, rel_chart,
       )
@@ -3135,7 +3211,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         Some(value) => value
         None => raise XlsxError::MissingPart(path=chart_path)
       }
-      let chart_xml = decode_utf8(chart_bytes)
+      let chart_xml = decode(chart_bytes)
       let chart_sheet = ChartSheet::new(name, chart_xml)
       chart_sheet.state = state
       workbook.chart_sheets.push(chart_sheet)

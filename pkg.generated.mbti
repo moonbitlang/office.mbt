@@ -3,14 +3,21 @@ package "bobzhang/mbtexcel"
 
 import {
   "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/async/io",
 }
 
 // Values
 pub fn new_workbook() -> @xlsx.Workbook
 
+pub async fn open_file(String) -> @xlsx.Workbook raise @xlsx.XlsxError
+
+pub async fn[R : @io.Reader] open_reader(R) -> @xlsx.Workbook raise @xlsx.XlsxError
+
 pub fn read(BytesView) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub fn read_with_password(BytesView, String) -> @xlsx.Workbook raise @xlsx.XlsxError
+
+pub async fn[R : @io.Reader] read_zip_reader(R) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub fn utf16_index_to_utf8_offset(StringView, Int) -> Int raise UtfIndexError
 

@@ -1,14 +1,24 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "bobzhang/mbtexcel/xlsx"
 
+import {
+  "moonbitlang/async/io",
+}
+
 // Values
 pub fn cell_ref_from(Int, Int) -> String raise XlsxError
 
 pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
 
+pub async fn open_file(String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+
+pub async fn[R : @io.Reader] open_reader(R, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+
 pub fn read(BytesView) -> Workbook raise XlsxError
 
 pub fn read_with_password(BytesView, String) -> Workbook raise XlsxError
+
+pub async fn[R : @io.Reader] read_zip_reader(R, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub fn write(Workbook) -> Bytes raise XlsxError
 
@@ -800,6 +810,7 @@ pub struct Workbook {
   mut default_font : String
   theme_colors : Array[String]?
   indexed_colors : Array[String]?
+  mut file_path : String?
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
@@ -815,6 +826,7 @@ pub fn Workbook::add_form_control(Self, StringView, FormControl) -> Unit raise X
 pub fn Workbook::add_header_footer_image(Self, StringView, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Workbook::add_ignored_errors(Self, StringView, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType) -> Unit raise XlsxError
+pub async fn Workbook::add_picture(Self, StringView, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType) -> Unit raise XlsxError
 pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
@@ -838,6 +850,7 @@ pub fn Workbook::chart_sheet(Self, StringView) -> ChartSheet?
 pub fn Workbook::chart_sheets(Self) -> ArrayView[ChartSheet]
 pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxError
+pub fn Workbook::close(Self) -> Unit
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::cols(Self, StringView) -> Cols raise XlsxError
@@ -944,6 +957,8 @@ pub fn Workbook::row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::rows(Self, StringView) -> Rows raise XlsxError
+pub async fn Workbook::save(Self) -> Unit raise XlsxError
+pub async fn Workbook::save_as(Self, String) -> Unit raise XlsxError
 pub fn Workbook::search_sheet(Self, StringView, String, reg? : Bool) -> Array[String] raise XlsxError
 pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
@@ -1011,6 +1026,8 @@ pub fn Workbook::unprotect_workbook(Self, password? : String) -> Unit raise Xlsx
 pub fn Workbook::unset_conditional_format(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::update_linked_value(Self) -> Unit raise XlsxError
 pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
+pub async fn[W : @io.Writer] Workbook::write_to(Self, W) -> Int raise XlsxError
+pub fn Workbook::write_to_buffer(Self) -> Bytes raise XlsxError
 
 pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
@@ -1083,6 +1100,7 @@ pub fn Worksheet::add_form_control(Self, FormControl) -> Unit raise XlsxError
 pub fn Worksheet::add_header_footer_image(Self, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_ignored_errors(Self, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Worksheet::add_image(Self, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType) -> Unit raise XlsxError
+pub async fn Worksheet::add_picture(Self, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType) -> Unit raise XlsxError
 pub fn Worksheet::add_picture_from_bytes(Self, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType) -> Unit raise XlsxError
 pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
