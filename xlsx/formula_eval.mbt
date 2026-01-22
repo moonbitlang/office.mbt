@@ -3775,6 +3775,31 @@ fn dbcs_byte_length(text : String) -> Int {
 }
 
 ///|
+fn dbcs_enabled(workbook : Workbook) -> Bool {
+  let lang = workbook.core_properties().language
+  if lang == "" {
+    return false
+  }
+  let normalized = lang.to_lower().replace(old="_", new="-")
+  normalized == "ja-jp" || normalized == "zh-cn" || normalized == "zh-tw"
+}
+
+///|
+fn dbcs_convert(text : String) -> String {
+  let sb = StringBuilder::new()
+  for ch in text {
+    let r = ch.to_int()
+    let code = if r == 32 { 12288 } else { r + 65248 }
+    if (code < 32 || code > 126) && r != 165 && code < 65381 {
+      sb.write_char(Int::unsafe_to_char(code))
+    } else {
+      sb.write_char(ch)
+    }
+  }
+  sb.to_string()
+}
+
+///|
 fn dbcs_index_from_offset(text : String, start_num : Int) -> Int? {
   if start_num <= 0 {
     return None
@@ -10186,7 +10211,12 @@ fn eval_function(
     "DBCS" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) => FormulaValue::String(text)
+          Ok(text) =>
+            if dbcs_enabled(workbook) {
+              FormulaValue::String(dbcs_convert(text))
+            } else {
+              FormulaValue::String(text)
+            }
           Err(err) => err
         }
       } else {

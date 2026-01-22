@@ -3017,6 +3017,21 @@ test "calc text b error functions" {
 }
 
 ///|
+test "calc dbcs locale functions" {
+  let workbook = Workbook::new()
+  let props = CoreProperties::with_values(language="zh-cn")
+  workbook.set_core_properties(props)
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "DBCS(\"ABC 123\")")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A1"),
+    content="ＡＢＣ　１２３",
+  )
+  sheet.set_cell_formula("A2", "DBCS(\"¥\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="¥")
+}
+
+///|
 test "calc textsplit functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
