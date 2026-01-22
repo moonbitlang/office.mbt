@@ -4805,6 +4805,23 @@ test "calc defined name functions" {
 }
 
 ///|
+test "calc array formula multiplication" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_formula("C1", "A1:A2*B1:B2")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="12")
+  workbook.set_defined_name(DefinedName::new("matrix", "Sheet1!$A$1:$A$2"))
+  sheet.set_cell_formula("D1", "matrix*B1:B2+\"1\"")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="13")
+}
+
+///|
 test "calc financial functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

@@ -991,12 +991,11 @@ fn eval_defined_name_ref(
 }
 
 ///|
-fn defined_name_value(
+fn find_defined_name(
   workbook : Workbook,
   sheet_name : String,
   name : String,
-  ctx : CalcContext,
-) -> FormulaValue? raise XlsxError {
+) -> DefinedName? {
   let name_upper = name.to_upper()
   let sheet_key = defined_name_scope_key(sheet_name)
   let workbook_key = defined_name_scope_key("Workbook")
@@ -1007,15 +1006,38 @@ fn defined_name_value(
     }
     let scope_key = defined_name_scope_key(defined_name.scope)
     if scope_key == sheet_key {
-      return Some(
-        eval_defined_name_ref(workbook, sheet_name, defined_name, ctx),
-      )
+      return Some(defined_name)
     }
     if scope_key == workbook_key {
       workbook_match = Some(defined_name)
     }
   }
-  match workbook_match {
+  workbook_match
+}
+
+///|
+fn defined_name_expr(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+) -> Expr? {
+  match find_defined_name(workbook, sheet_name, name) {
+    Some(value) => {
+      let expr = parse_formula_expr(value.refers_to) catch { _ => return None }
+      Some(expr)
+    }
+    None => None
+  }
+}
+
+///|
+fn defined_name_value(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  ctx : CalcContext,
+) -> FormulaValue? raise XlsxError {
+  match find_defined_name(workbook, sheet_name, name) {
     Some(value) => Some(eval_defined_name_ref(workbook, sheet_name, value, ctx))
     None => None
   }
@@ -3269,6 +3291,125 @@ fn formula_value_to_cell(value : FormulaValue) -> (CellValueType, String) {
       } else {
         (CellValueType::String, "")
       }
+  }
+}
+
+///|
+fn array_shape_binary(left : (Int, Int)?, right : (Int, Int)?) -> (Int, Int)? {
+  match (left, right) {
+    (Some((1, 1)), Some(shape)) => Some(shape)
+    (Some(shape), Some((1, 1))) => Some(shape)
+    (Some((lrows, lcols)), Some((rrows, rcols))) =>
+      if lrows == rrows && lcols == rcols {
+        Some((lrows, lcols))
+      } else {
+        None
+      }
+    _ => None
+  }
+}
+
+///|
+fn array_shape_from_expr(
+  workbook : Workbook,
+  sheet_name : String,
+  expr : Expr,
+) -> (Int, Int)? raise XlsxError {
+  match expr {
+    Expr::Number(_) | Expr::String(_) | Expr::Bool(_) => Some((1, 1))
+    Expr::Cell(_, _) => Some((1, 1))
+    Expr::Range(_, start_ref, end_ref) => {
+      let (row1, col1) = cell_ref_to_rc(start_ref)
+      let (row2, col2) = cell_ref_to_rc(end_ref)
+      let rows = (if row1 > row2 { row1 - row2 } else { row2 - row1 }) + 1
+      let cols = (if col1 > col2 { col1 - col2 } else { col2 - col1 }) + 1
+      Some((rows, cols))
+    }
+    Expr::Unary(_, inner) => array_shape_from_expr(workbook, sheet_name, inner)
+    Expr::Binary(_, left, right) =>
+      array_shape_binary(
+        array_shape_from_expr(workbook, sheet_name, left),
+        array_shape_from_expr(workbook, sheet_name, right),
+      )
+    Expr::List(items) => Some((1, items.length()))
+    Expr::FuncCall(name, args) =>
+      if args.length() == 0 {
+        match defined_name_expr(workbook, sheet_name, name) {
+          Some(value) => array_shape_from_expr(workbook, sheet_name, value)
+          None => None
+        }
+      } else {
+        None
+      }
+  }
+}
+
+///|
+fn eval_numeric_binary(
+  op : BinaryOp,
+  left : FormulaValue,
+  right : FormulaValue,
+) -> FormulaValue {
+  match (value_as_number(left), value_as_number(right)) {
+    (Ok(lhs), Ok(rhs)) =>
+      match op {
+        BinaryOp::Add => FormulaValue::Number(lhs + rhs)
+        BinaryOp::Sub => FormulaValue::Number(lhs - rhs)
+        BinaryOp::Mul => FormulaValue::Number(lhs * rhs)
+        BinaryOp::Div =>
+          if rhs == 0.0 {
+            FormulaValue::Error(formula_error_div)
+          } else {
+            FormulaValue::Number(lhs / rhs)
+          }
+        BinaryOp::Pow => FormulaValue::Number(@math.pow(lhs, rhs))
+        _ => FormulaValue::Error(formula_error_value)
+      }
+    (Err(err), _) => err
+    (_, Err(err)) => err
+  }
+}
+
+///|
+fn eval_list_binary(
+  op : BinaryOp,
+  left : FormulaValue,
+  right : FormulaValue,
+) -> FormulaValue {
+  let left_list = match left {
+    FormulaValue::List(list) => Some(list)
+    _ => None
+  }
+  let right_list = match right {
+    FormulaValue::List(list) => Some(list)
+    _ => None
+  }
+  match (left_list, right_list) {
+    (Some(lhs), Some(rhs)) =>
+      if lhs.length() != rhs.length() {
+        FormulaValue::Error(formula_error_value)
+      } else {
+        let out : Array[FormulaValue] = []
+        for i in 0..<lhs.length() {
+          out.push(eval_numeric_binary(op, lhs[i], rhs[i]))
+        }
+        FormulaValue::List(out)
+      }
+    (Some(lhs), None) => {
+      let out : Array[FormulaValue] = []
+      for item in lhs {
+        out.push(eval_numeric_binary(op, item, right))
+      }
+      FormulaValue::List(out)
+    }
+    (None, Some(rhs)) => {
+      let out : Array[FormulaValue] = []
+      for item in rhs {
+        out.push(eval_numeric_binary(op, left, item))
+      }
+      FormulaValue::List(out)
+    }
+    _ => FormulaValue::Error(formula_error_value)
   }
 }
 
@@ -7495,23 +7636,10 @@ fn eval_binary(
         Err(err) => err
       }
     _ =>
-      match (value_as_number(left), value_as_number(right)) {
-        (Ok(lhs), Ok(rhs)) =>
-          match op {
-            BinaryOp::Add => FormulaValue::Number(lhs + rhs)
-            BinaryOp::Sub => FormulaValue::Number(lhs - rhs)
-            BinaryOp::Mul => FormulaValue::Number(lhs * rhs)
-            BinaryOp::Div =>
-              if rhs == 0.0 {
-                FormulaValue::Error(formula_error_div)
-              } else {
-                FormulaValue::Number(lhs / rhs)
-              }
-            BinaryOp::Pow => FormulaValue::Number(@math.pow(lhs, rhs))
-            _ => FormulaValue::Error(formula_error_value)
-          }
-        (Err(err), _) => err
-        (_, Err(err)) => err
+      match (left, right) {
+        (FormulaValue::List(_), _) | (_, FormulaValue::List(_)) =>
+          eval_list_binary(op, left, right)
+        _ => eval_numeric_binary(op, left, right)
       }
   }
 }
@@ -21241,6 +21369,63 @@ fn resolve_cell_value(
 }
 
 ///|
+fn spill_value_for_cell(
+  workbook : Workbook,
+  sheet_name : String,
+  target_row : Int,
+  target_col : Int,
+  ctx : CalcContext,
+) -> FormulaValue? raise XlsxError {
+  let sheet = match workbook.sheet(sheet_name) {
+    Some(value) => value
+    None => return None
+  }
+  let max_cells = 10000
+  for cell in sheet.cells() {
+    let formula = match cell.formula {
+      Some(value) => value
+      None => continue
+    }
+    let expr = parse_formula_expr(formula) catch { _ => continue }
+    let shape = array_shape_from_expr(workbook, sheet_name, expr) catch {
+      _ => continue
+    }
+    let (rows, cols) = match shape {
+      Some(value) => value
+      None => continue
+    }
+    if rows == 1 && cols == 1 {
+      continue
+    }
+    if rows * cols > max_cells {
+      continue
+    }
+    let anchor_row = cell.row
+    let anchor_col = cell.col
+    if target_row < anchor_row ||
+      target_row >= anchor_row + rows ||
+      target_col < anchor_col ||
+      target_col >= anchor_col + cols {
+      continue
+    }
+    let anchor_ref = cell_ref_from(anchor_row, anchor_col)
+    let value = resolve_cell_value(workbook, sheet_name, anchor_ref, ctx)
+    match value {
+      FormulaValue::List(list) => {
+        let offset_row = target_row - anchor_row
+        let offset_col = target_col - anchor_col
+        let idx = offset_row * cols + offset_col
+        if idx >= 0 && idx < list.length() {
+          return Some(list[idx])
+        }
+      }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 fn calc_cell_value_internal(
   workbook : Workbook,
   sheet_name : String,
@@ -21273,7 +21458,10 @@ fn calc_cell_value_internal(
       }
     }
   }
-  FormulaValue::Empty
+  match spill_value_for_cell(workbook, sheet_name, row, col, ctx) {
+    Some(value) => value
+    None => FormulaValue::Empty
+  }
 }
 
 ///|
