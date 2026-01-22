@@ -3488,6 +3488,374 @@ fn array_shape_from_expr(
             } else {
               None
             }
+          "SORT" =>
+            if args.length() >= 1 && args.length() <= 4 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              if range.rows <= 0 || range.cols <= 0 {
+                None
+              } else {
+                Some((range.rows, range.cols))
+              }
+            } else {
+              None
+            }
+          "SORTBY" | "_XLFN.SORTBY" =>
+            if args.length() >= 2 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              if range.rows <= 0 || range.cols <= 0 {
+                None
+              } else {
+                Some((range.rows, range.cols))
+              }
+            } else {
+              None
+            }
+          "UNIQUE" =>
+            if args.length() >= 1 && args.length() <= 3 {
+              let by_col = if args.length() >= 2 {
+                match value_as_bool(values[1]) {
+                  Ok(flag) => flag
+                  Err(_) => return None
+                }
+              } else {
+                false
+              }
+              let exactly_once = if args.length() == 3 {
+                match value_as_bool(values[2]) {
+                  Ok(flag) => flag
+                  Err(_) => return None
+                }
+              } else {
+                false
+              }
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              match unique_range_values(range, by_col, exactly_once) {
+                Ok(result) => Some((result.rows, result.cols))
+                Err(_) => None
+              }
+            } else {
+              None
+            }
+          "FILTER" =>
+            if args.length() >= 2 && args.length() <= 3 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let mask = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[1],
+                values[1],
+                ctx,
+              )
+              let if_empty = if args.length() == 3 {
+                Some(values[2])
+              } else {
+                None
+              }
+              let is_row = range.rows == 1
+              let is_col = range.cols == 1
+              if !is_row && !is_col {
+                return None
+              }
+              match filter_range_values(range, mask, if_empty) {
+                FormulaValue::List(list) =>
+                  if is_row {
+                    Some((1, list.length()))
+                  } else {
+                    Some((list.length(), 1))
+                  }
+                FormulaValue::Error(_) => None
+                _ => Some((1, 1))
+              }
+            } else {
+              None
+            }
+          "TAKE" =>
+            if values.length() >= 2 && values.length() <= 3 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let rows_value = match value_as_int(values[1]) {
+                Ok(num) => num
+                Err(_) => return None
+              }
+              let cols_value = if values.length() == 3 {
+                match value_as_int(values[2]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                0
+              }
+              let rows_count = if rows_value == 0 {
+                range.rows
+              } else {
+                rows_value
+              }
+              let cols_count = if values.length() == 3 {
+                if cols_value == 0 {
+                  range.cols
+                } else {
+                  cols_value
+                }
+              } else {
+                range.cols
+              }
+              if rows_count == 0 || cols_count == 0 {
+                None
+              } else {
+                let row_count = Double::abs(Double::from_int(rows_count)).to_int()
+                let col_count = Double::abs(Double::from_int(cols_count)).to_int()
+                if row_count <= 0 ||
+                  col_count <= 0 ||
+                  row_count > range.rows ||
+                  col_count > range.cols {
+                  None
+                } else {
+                  Some((row_count, col_count))
+                }
+              }
+            } else {
+              None
+            }
+          "DROP" =>
+            if values.length() >= 2 && values.length() <= 3 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let rows_value = match value_as_int(values[1]) {
+                Ok(num) => num
+                Err(_) => return None
+              }
+              let cols_value = if values.length() == 3 {
+                match value_as_int(values[2]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                0
+              }
+              let drop_rows = Double::abs(Double::from_int(rows_value)).to_int()
+              let drop_cols = Double::abs(Double::from_int(cols_value)).to_int()
+              let row_count = range.rows - drop_rows
+              let col_count = range.cols - drop_cols
+              if row_count <= 0 ||
+                col_count <= 0 ||
+                drop_rows > range.rows ||
+                drop_cols > range.cols {
+                None
+              } else {
+                Some((row_count, col_count))
+              }
+            } else {
+              None
+            }
+          "CHOOSECOLS" =>
+            if values.length() >= 2 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              match choose_indices(values.sub(start=1), range.cols) {
+                Ok(indices) => Some((range.rows, indices.length()))
+                Err(_) => None
+              }
+            } else {
+              None
+            }
+          "CHOOSEROWS" =>
+            if values.length() >= 2 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              match choose_indices(values.sub(start=1), range.rows) {
+                Ok(indices) => Some((indices.length(), range.cols))
+                Err(_) => None
+              }
+            } else {
+              None
+            }
+          "HSTACK" | "VSTACK" =>
+            if values.length() >= 1 {
+              let horizontal = name == "HSTACK"
+              let mut max_rows = 0
+              let mut max_cols = 0
+              let mut total_rows = 0
+              let mut total_cols = 0
+              for i in 0..<values.length() {
+                let range = range_from_expr_or_value(
+                  workbook,
+                  sheet_name,
+                  args[i],
+                  values[i],
+                  ctx,
+                )
+                if range.rows > max_rows {
+                  max_rows = range.rows
+                }
+                if range.cols > max_cols {
+                  max_cols = range.cols
+                }
+                if horizontal {
+                  total_cols = total_cols + range.cols
+                } else {
+                  total_rows = total_rows + range.rows
+                }
+              }
+              let rows = if horizontal { max_rows } else { total_rows }
+              let cols = if horizontal { total_cols } else { max_cols }
+              if rows <= 0 || cols <= 0 {
+                None
+              } else {
+                Some((rows, cols))
+              }
+            } else {
+              None
+            }
+          "EXPAND" =>
+            if values.length() >= 2 && values.length() <= 4 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let rows = match value_as_int(values[1]) {
+                Ok(num) => num
+                Err(_) => return None
+              }
+              let cols = if values.length() >= 3 {
+                match value_as_int(values[2]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                range.cols
+              }
+              if rows < range.rows ||
+                cols < range.cols ||
+                rows <= 0 ||
+                cols <= 0 {
+                None
+              } else {
+                Some((rows, cols))
+              }
+            } else {
+              None
+            }
+          "WRAPROWS" | "WRAPCOLS" =>
+            if values.length() >= 2 && values.length() <= 3 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let vector = match range_vector(range) {
+                Some(list) => list
+                None => return None
+              }
+              let count = match value_as_int(values[1]) {
+                Ok(num) => num
+                Err(_) => return None
+              }
+              if count <= 0 {
+                None
+              } else {
+                let total = vector.length()
+                if total == 0 {
+                  None
+                } else if name == "WRAPROWS" {
+                  let rows = (total + count - 1) / count
+                  Some((rows, count))
+                } else {
+                  let cols = (total + count - 1) / count
+                  Some((count, cols))
+                }
+              }
+            } else {
+              None
+            }
+          "TOCOL" | "TOROW" =>
+            if values.length() >= 1 && values.length() <= 3 {
+              let ignore = if values.length() >= 2 {
+                match value_as_int(values[1]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                0
+              }
+              if ignore < 0 || ignore > 3 {
+                return None
+              }
+              let scan_by_column = if values.length() == 3 {
+                match value_as_bool(values[2]) {
+                  Ok(flag) => flag
+                  Err(_) => return None
+                }
+              } else {
+                false
+              }
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              match flatten_range_values(range, scan_by_column, ignore) {
+                Ok(list) =>
+                  if name == "TOCOL" {
+                    Some((list.length(), 1))
+                  } else {
+                    Some((1, list.length()))
+                  }
+                Err(_) => None
+              }
+            } else {
+              None
+            }
           _ => None
         }
       }

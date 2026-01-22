@@ -4845,6 +4845,45 @@ test "calc spill array functions" {
 }
 
 ///|
+test "calc spill dynamic array shapes" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A5", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(0.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(1.0))
+  sheet.set_cell_formula("C1", "SORT(A1:A3)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="3")
+  sheet.set_cell_formula("D1", "FILTER(A1:A3,B1:B3)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="2")
+  sheet.set_cell_formula("F1", "UNIQUE(A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "F2"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "F3"), content="2")
+  sheet.set_cell_value("H1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("I1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("H2", CellValue::Numeric(3.0))
+  sheet.set_cell_value("I2", CellValue::Numeric(4.0))
+  sheet.set_cell_formula("K1", "TOCOL(H1:I2)")
+  inspect(workbook.calc_cell_value("Sheet1", "K1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "K2"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "K3"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "K4"), content="4")
+  sheet.set_cell_formula("M1", "TOROW(H1:I2)")
+  inspect(workbook.calc_cell_value("Sheet1", "M1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "N1"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "O1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "P1"), content="4")
+}
+
+///|
 test "calc row and column range formulas" {
   let workbook = Workbook::new()
   let col_sheet = workbook.add_sheet("Cols")
