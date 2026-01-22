@@ -257,3 +257,11 @@ pub fn Workbook::update_linked_value(self : Workbook) -> Unit raise XlsxError {
     }
   }
 }
+
+///|
+pub fn Workbook::add_vbaproject(
+  self : Workbook,
+  data : Bytes,
+) -> Unit raise XlsxError {
+  self.add_vba_project(data)
+}

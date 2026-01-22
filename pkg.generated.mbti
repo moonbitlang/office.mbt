@@ -24,6 +24,8 @@ pub fn excel_date_to_time(Double, use_1904_format? : Bool) -> @time.ZonedDateTim
 
 pub fn hsl_to_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
 
+pub fn hslto_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
+
 pub fn join_cell_name(StringView, Int) -> String raise @xlsx.XlsxError
 
 pub fn new_data_validation(Bool) -> @xlsx.DataValidation
@@ -45,6 +47,8 @@ pub fn read_with_password(BytesView, String, options? : @xlsx.Options, transcode
 pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
+
+pub fn rgbto_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 
 pub fn split_cell_name(StringView) -> (String, Int) raise @xlsx.XlsxError
 

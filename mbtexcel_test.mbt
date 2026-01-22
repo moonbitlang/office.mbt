@@ -62,3 +62,13 @@ test "mbtexcel column name conversions" {
   let invalid_num : Result[String, Error] = try? column_number_to_name(0)
   inspect(invalid_num is Err(_), content="true")
 }
+
+///|
+test "mbtexcel acronym color helpers" {
+  let (r, g, b) = hslto_rgb(0.0, 1.0, 0.4)
+  assert_eq(r, (204).to_byte())
+  assert_eq(g, (0).to_byte())
+  assert_eq(b, (0).to_byte())
+  let (h, s, l) = rgbto_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
+  inspect((h, s, l), content="(0.16666666666666666, 1, 0.5)")
+}

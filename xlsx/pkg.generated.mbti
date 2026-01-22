@@ -897,6 +897,7 @@ pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayV
 pub fn Workbook::add_style(Self, Style) -> Int
 pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Workbook::add_vba_project(Self, Bytes) -> Unit raise XlsxError
+pub fn Workbook::add_vbaproject(Self, Bytes) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties

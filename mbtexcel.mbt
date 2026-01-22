@@ -121,7 +121,17 @@ pub fn rgb_to_hsl(r : Byte, g : Byte, b : Byte) -> (Double, Double, Double) {
 }
 
 ///|
+pub fn rgbto_hsl(r : Byte, g : Byte, b : Byte) -> (Double, Double, Double) {
+  @xlsx.rgb_to_hsl(r, g, b)
+}
+
+///|
 pub fn hsl_to_rgb(h : Double, s : Double, l : Double) -> (Byte, Byte, Byte) {
+  @xlsx.hsl_to_rgb(h, s, l)
+}
+
+///|
+pub fn hslto_rgb(h : Double, s : Double, l : Double) -> (Byte, Byte, Byte) {
   @xlsx.hsl_to_rgb(h, s, l)
 }
 

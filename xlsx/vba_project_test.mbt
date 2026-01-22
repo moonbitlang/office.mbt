@@ -6,7 +6,7 @@ test "vba project write" {
     0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
   ]
   let vba_bytes : Bytes = Bytes::from_array(vba_header)
-  workbook.add_vba_project(vba_bytes)
+  workbook.add_vbaproject(vba_bytes)
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
   let vba_part = match archive.get("xl/vbaProject.bin") {
