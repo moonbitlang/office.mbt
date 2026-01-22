@@ -3596,6 +3596,85 @@ fn array_shape_from_expr(
             } else {
               None
             }
+          "FREQUENCY" =>
+            if args.length() == 2 {
+              let bins_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[1],
+                values[1],
+                ctx,
+              )
+              match sorted_numbers_from_range(bins_range) {
+                Ok(bins) => Some((bins.length() + 1, 1))
+                Err(_) => None
+              }
+            } else {
+              None
+            }
+          "TREND" | "GROWTH" =>
+            if values.length() >= 1 && values.length() <= 4 {
+              let know_y_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let know_y = match number_matrix_from_range(know_y_range, false) {
+                Ok(matrix) => matrix
+                Err(_) => return None
+              }
+              let mut know_x : Array[Array[Double]] = []
+              if values.length() >= 2 {
+                let know_x_range = range_from_expr_or_value(
+                  workbook,
+                  sheet_name,
+                  args[1],
+                  values[1],
+                  ctx,
+                )
+                know_x = match number_matrix_from_range(know_x_range, false) {
+                  Ok(matrix) => matrix
+                  Err(_) => return None
+                }
+              }
+              let mut new_x : Array[Array[Double]] = []
+              if values.length() >= 3 {
+                let new_x_range = range_from_expr_or_value(
+                  workbook,
+                  sheet_name,
+                  args[2],
+                  values[2],
+                  ctx,
+                )
+                let base = match number_matrix_from_range(new_x_range, false) {
+                  Ok(matrix) => matrix
+                  Err(_) => return None
+                }
+                new_x = transpose_number_matrix(base)
+              }
+              let mut constant = true
+              if values.length() == 4 {
+                constant = match value_as_bool(values[3]) {
+                  Ok(flag) => flag
+                  Err(_) => return None
+                }
+              }
+              let is_growth = name == "GROWTH"
+              match
+                calc_trend_growth(know_y, know_x, new_x, constant, is_growth) {
+                Ok(matrix) =>
+                  if matrix.length() == 0 || matrix[0].length() == 0 {
+                    None
+                  } else {
+                    Some((matrix.length(), matrix[0].length()))
+                  }
+                Err(_) => None
+              }
+            } else {
+              None
+            }
           "SORT" | "_XLFN.SORT" =>
             if args.length() >= 1 && args.length() <= 4 {
               let range = range_from_expr_or_value(

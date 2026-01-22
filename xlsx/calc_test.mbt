@@ -4942,6 +4942,32 @@ test "calc xlfn dynamic array functions" {
 }
 
 ///|
+test "calc spill frequency and trend" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(4.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(3.0))
+  sheet.set_cell_formula("C1", "FREQUENCY(A1:A4,B1:B2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="1")
+  sheet.set_cell_value("D1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("D2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("D3", CellValue::Numeric(6.0))
+  sheet.set_cell_value("E1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("E2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("E3", CellValue::Numeric(3.0))
+  sheet.set_cell_formula("G1", "TREND(D1:D3,E1:E3)")
+  inspect(workbook.calc_cell_value("Sheet1", "G1"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "H1"), content="4")
+  inspect(workbook.calc_cell_value("Sheet1", "I1"), content="6")
+}
+
+///|
 test "calc row and column range formulas" {
   let workbook = Workbook::new()
   let col_sheet = workbook.add_sheet("Cols")
