@@ -1013,6 +1013,7 @@ pub fn Workbook::set_row_style_range(Self, StringView, Int, Int, Int) -> Unit ra
 pub fn Workbook::set_row_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_background(Self, StringView, Bytes, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_background_from_bytes(Self, StringView, String, Bytes) -> Unit raise XlsxError
+pub async fn Workbook::set_sheet_background_from_file(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_col(Self, StringView, StringView, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_dimension(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_name(Self, StringView, String) -> Unit raise XlsxError

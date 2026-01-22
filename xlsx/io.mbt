@@ -72,6 +72,21 @@ pub async fn open_file(
 }
 
 ///|
+pub async fn Workbook::set_sheet_background_from_file(
+  self : Workbook,
+  sheet_name : StringView,
+  path : String,
+) -> Unit raise XlsxError {
+  let extension = match extension_from_path(path) {
+    Some(value) => value
+    None =>
+      raise XlsxError::InvalidSheetBackground(msg="image extension missing")
+  }
+  let bytes = read_file_bytes(path)
+  self.set_sheet_background(sheet_name, bytes, extension)
+}
+
+///|
 pub async fn Workbook::save(self : Workbook) -> Unit raise XlsxError {
   match self.file_path {
     Some(path) => self.save_as(path)
