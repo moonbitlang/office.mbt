@@ -4822,6 +4822,29 @@ test "calc array formula multiplication" {
 }
 
 ///|
+test "calc spill array functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_formula("C1", "TRANSPOSE(A1:A3)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="2")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="3")
+  sheet.set_cell_formula("A5", "SEQUENCE(2,2,10,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="10")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="11")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="12")
+  inspect(workbook.calc_cell_value("Sheet1", "B6"), content="13")
+  sheet.set_cell_formula("D3", "MUNIT(2)")
+  inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "E3"), content="0")
+  inspect(workbook.calc_cell_value("Sheet1", "D4"), content="0")
+  inspect(workbook.calc_cell_value("Sheet1", "E4"), content="1")
+}
+
+///|
 test "calc row and column range formulas" {
   let workbook = Workbook::new()
   let col_sheet = workbook.add_sheet("Cols")

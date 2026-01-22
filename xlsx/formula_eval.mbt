@@ -3378,6 +3378,7 @@ fn array_shape_from_expr(
   workbook : Workbook,
   sheet_name : String,
   expr : Expr,
+  ctx : CalcContext,
 ) -> (Int, Int)? raise XlsxError {
   match expr {
     Expr::Number(_) | Expr::String(_) | Expr::Bool(_) => Some((1, 1))
@@ -3397,21 +3398,98 @@ fn array_shape_from_expr(
       let cols = max_col - min_col + 1
       Some((rows, cols))
     }
-    Expr::Unary(_, inner) => array_shape_from_expr(workbook, sheet_name, inner)
+    Expr::Unary(_, inner) =>
+      array_shape_from_expr(workbook, sheet_name, inner, ctx)
     Expr::Binary(_, left, right) =>
       array_shape_binary(
-        array_shape_from_expr(workbook, sheet_name, left),
-        array_shape_from_expr(workbook, sheet_name, right),
+        array_shape_from_expr(workbook, sheet_name, left, ctx),
+        array_shape_from_expr(workbook, sheet_name, right, ctx),
       )
     Expr::List(items) => Some((1, items.length()))
     Expr::FuncCall(name, args) =>
       if args.length() == 0 {
         match defined_name_expr(workbook, sheet_name, name) {
-          Some(value) => array_shape_from_expr(workbook, sheet_name, value)
+          Some(value) => array_shape_from_expr(workbook, sheet_name, value, ctx)
           None => None
         }
       } else {
-        None
+        let values : Array[FormulaValue] = []
+        for arg in args {
+          values.push(eval_expr(workbook, sheet_name, arg, ctx))
+        }
+        match name {
+          "TRANSPOSE" =>
+            if args.length() == 1 {
+              let base_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              Some((base_range.cols, base_range.rows))
+            } else {
+              None
+            }
+          "MUNIT" | "_XLFN.MUNIT" =>
+            if values.length() == 1 {
+              match munit_dimension(values[0]) {
+                Ok(dimension) => Some((dimension, dimension))
+                Err(_) => None
+              }
+            } else {
+              None
+            }
+          "SEQUENCE" =>
+            if values.length() >= 1 && values.length() <= 4 {
+              let rows = match value_as_int(values[0]) {
+                Ok(num) => num
+                Err(_) => return None
+              }
+              let cols = if values.length() >= 2 {
+                match value_as_int(values[1]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                1
+              }
+              if rows <= 0 || cols <= 0 {
+                None
+              } else {
+                Some((rows, cols))
+              }
+            } else {
+              None
+            }
+          "RANDARRAY" =>
+            if values.length() <= 5 {
+              let rows = if values.length() >= 1 {
+                match value_as_int(values[0]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                1
+              }
+              let cols = if values.length() >= 2 {
+                match value_as_int(values[1]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                1
+              }
+              if rows <= 0 || cols <= 0 {
+                None
+              } else {
+                Some((rows, cols))
+              }
+            } else {
+              None
+            }
+          _ => None
+        }
       }
   }
 }
@@ -21459,7 +21537,7 @@ fn spill_value_for_cell(
       None => continue
     }
     let expr = parse_formula_expr(formula) catch { _ => continue }
-    let shape = array_shape_from_expr(workbook, sheet_name, expr) catch {
+    let shape = array_shape_from_expr(workbook, sheet_name, expr, ctx) catch {
       _ => continue
     }
     let (rows, cols) = match shape {
