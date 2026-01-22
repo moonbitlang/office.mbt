@@ -489,6 +489,7 @@ pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxEr
 pub fn Workbook::get_cell_rich_text(Self, StringView, StringView) -> Array[RichTextRun]? raise XlsxError
 pub fn Workbook::get_cell_style(Self, StringView, StringView) -> Int? raise XlsxError
 pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise XlsxError
+pub fn Workbook::get_cell_type(Self, StringView, StringView) -> CellValueType? raise XlsxError
 pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool) -> String? raise XlsxError
 pub fn Workbook::get_cell_value_raw(Self, StringView, StringView) -> CellValue? raise XlsxError
 pub fn Workbook::get_cell_value_raw_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
@@ -499,6 +500,7 @@ pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_defined_names(Self) -> Array[DefinedName]
 pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
+pub fn Workbook::get_merge_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
 pub fn Workbook::get_page_margins(Self, StringView) -> PageLayoutMarginsOptions raise XlsxError
 pub fn Workbook::get_picture_cells(Self, StringView) -> Array[String] raise XlsxError
@@ -510,6 +512,7 @@ pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
 pub fn Workbook::insert_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::insert_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::insert_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::merge_cell(Self, StringView, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::new() -> Self
@@ -526,13 +529,19 @@ pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
 pub fn Workbook::set_auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_bool(Self, StringView, String, Bool) -> Unit raise XlsxError
+pub fn Workbook::set_cell_default(Self, StringView, String, String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_float(Self, StringView, String, Double, precision? : Int, bit_size? : Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_hyperlink(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_int(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rich_text(Self, StringView, String, ArrayView[RichTextRun]) -> Unit raise XlsxError
+pub fn Workbook::set_cell_str(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style_rc(Self, StringView, Int, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::set_cell_uint(Self, StringView, String, UInt) -> Unit raise XlsxError
 pub fn Workbook::set_cell_value(Self, StringView, String, CellValue) -> Unit raise XlsxError
 pub fn Workbook::set_cell_value_rc(Self, StringView, Int, Int, CellValue) -> Unit raise XlsxError
 pub fn Workbook::set_col(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
@@ -559,6 +568,7 @@ pub fn Workbook::sheet_name(Self, Int) -> String?
 pub fn Workbook::sheet_visible(Self, StringView) -> Bool raise XlsxError
 pub fn Workbook::sheets(Self) -> ArrayView[Worksheet]
 pub fn Workbook::styles(Self) -> ArrayView[Style]
+pub fn Workbook::unmerge_cell(Self, StringView, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::unmerge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::unprotect_sheet(Self, StringView, password? : String) -> Unit raise XlsxError
 
@@ -623,6 +633,7 @@ pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rich_text(Self, StringView) -> Array[RichTextRun]? raise XlsxError
 pub fn Worksheet::get_cell_style(Self, StringView) -> Int? raise XlsxError
 pub fn Worksheet::get_cell_style_rc(Self, Int, Int) -> Int? raise XlsxError
+pub fn Worksheet::get_cell_type(Self, StringView) -> CellValueType? raise XlsxError
 pub fn Worksheet::get_cell_value_raw(Self, StringView) -> CellValue? raise XlsxError
 pub fn Worksheet::get_cell_value_raw_rc(Self, Int, Int) -> CellValue? raise XlsxError
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError

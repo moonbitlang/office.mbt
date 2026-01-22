@@ -34,3 +34,13 @@ test "merge cells roundtrip" {
   parsed_sheet.unmerge_cells("D4:C3")
   inspect(parsed_sheet.merged_cells(), content="[]")
 }
+
+///|
+test "workbook merge cell wrappers" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.merge_cell("Sheet1", "B2", "A1")
+  inspect(workbook.get_merge_cells("Sheet1"), content="[\"A1:B2\"]")
+  workbook.unmerge_cell("Sheet1", "A1", "B2")
+  inspect(workbook.get_merge_cells("Sheet1"), content="[]")
+}

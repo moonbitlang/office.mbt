@@ -438,6 +438,17 @@ pub fn Worksheet::get_cell_value_raw(
 }
 
 ///|
+pub fn Worksheet::get_cell_type(
+  self : Worksheet,
+  reference : StringView,
+) -> CellValueType? raise XlsxError {
+  match self.get_cell_value_raw(reference) {
+    Some(value) => Some(cell_value_type(value))
+    None => None
+  }
+}
+
+///|
 pub fn Worksheet::set_auto_filter(
   self : Worksheet,
   range_ref : String,

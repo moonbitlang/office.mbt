@@ -63,3 +63,25 @@ test "formatted percent and date" {
   inspect(workbook.get_cell_value("Sheet1", "B1"), content="Some(\"1/2/00\")")
   inspect(workbook.get_cell_value("Sheet1", "C1"), content="Some(\"TRUE\")")
 }
+
+///|
+test "typed setters and cell type" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let value_uint : UInt = 7
+  workbook.set_cell_bool("Sheet1", "A1", true)
+  workbook.set_cell_int("Sheet1", "B1", -12)
+  workbook.set_cell_uint("Sheet1", "C1", value_uint)
+  workbook.set_cell_float("Sheet1", "D1", 1.234, precision=2)
+  workbook.set_cell_str("Sheet1", "E1", "text")
+  workbook.set_cell_default("Sheet1", "F1", "raw")
+  inspect(workbook.get_cell_type("Sheet1", "A1"), content="Some(Bool)")
+  inspect(workbook.get_cell_type("Sheet1", "B1"), content="Some(Number)")
+  inspect(workbook.get_cell_type("Sheet1", "E1"), content="Some(String)")
+  inspect(workbook.get_cell_type("Sheet1", "Z9"), content="None")
+  inspect(
+    workbook.get_cell_value_raw("Sheet1", "D1"),
+    content="Some(Numeric(1.23))",
+  )
+  inspect(workbook.get_cell("Sheet1", "F1"), content="Some(\"raw\")")
+}

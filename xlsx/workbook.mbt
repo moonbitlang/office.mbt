@@ -849,6 +849,29 @@ fn format_cell_value_for_workbook(
 }
 
 ///|
+fn normalize_cell_float_value(
+  value : Double,
+  precision : Int,
+  bit_size : Int,
+) -> Double {
+  let normalized = if bit_size == 32 {
+    Float::from_double(value).to_double()
+  } else {
+    value
+  }
+  if precision < 0 {
+    normalized
+  } else {
+    let factor = @math.pow(10.0, Double::from_int(precision))
+    if factor == 0.0 {
+      normalized
+    } else {
+      (normalized * factor).round() / factor
+    }
+  }
+}
+
+///|
 pub fn Workbook::set_cell(
   self : Workbook,
   sheet_name : StringView,
@@ -874,6 +897,77 @@ pub fn Workbook::set_cell_value(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_value(reference, value)
+}
+
+///|
+pub fn Workbook::set_cell_bool(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : Bool,
+) -> Unit raise XlsxError {
+  self.set_cell_value(sheet_name, reference, CellValue::Bool(value))
+}
+
+///|
+pub fn Workbook::set_cell_int(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : Int,
+) -> Unit raise XlsxError {
+  self.set_cell_value(
+    sheet_name,
+    reference,
+    CellValue::Numeric(Double::from_int(value)),
+  )
+}
+
+///|
+pub fn Workbook::set_cell_uint(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : UInt,
+) -> Unit raise XlsxError {
+  self.set_cell_value(
+    sheet_name,
+    reference,
+    CellValue::Numeric(Double::convert_uint(value)),
+  )
+}
+
+///|
+pub fn Workbook::set_cell_float(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : Double,
+  precision? : Int = -1,
+  bit_size? : Int = 64,
+) -> Unit raise XlsxError {
+  let normalized = normalize_cell_float_value(value, precision, bit_size)
+  self.set_cell_value(sheet_name, reference, CellValue::Numeric(normalized))
+}
+
+///|
+pub fn Workbook::set_cell_str(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : String,
+) -> Unit raise XlsxError {
+  self.set_cell(sheet_name, reference, value)
+}
+
+///|
+pub fn Workbook::set_cell_default(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  value : String,
+) -> Unit raise XlsxError {
+  self.set_cell(sheet_name, reference, value)
 }
 
 ///|
@@ -970,6 +1064,19 @@ pub fn Workbook::get_cell_value_raw(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_value_raw(reference)
+}
+
+///|
+pub fn Workbook::get_cell_type(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> CellValueType? raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_cell_type(reference)
 }
 
 ///|
@@ -1321,6 +1428,19 @@ pub fn Workbook::merge_cells(
 }
 
 ///|
+pub fn Workbook::merge_cell(
+  self : Workbook,
+  sheet_name : StringView,
+  top_left : StringView,
+  bottom_right : StringView,
+) -> Unit raise XlsxError {
+  self.merge_cells(
+    sheet_name,
+    "\{top_left.to_string()}:\{bottom_right.to_string()}",
+  )
+}
+
+///|
 pub fn Workbook::unmerge_cells(
   self : Workbook,
   sheet_name : StringView,
@@ -1331,6 +1451,35 @@ pub fn Workbook::unmerge_cells(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.unmerge_cells(range_ref)
+}
+
+///|
+pub fn Workbook::unmerge_cell(
+  self : Workbook,
+  sheet_name : StringView,
+  top_left : StringView,
+  bottom_right : StringView,
+) -> Unit raise XlsxError {
+  self.unmerge_cells(
+    sheet_name,
+    "\{top_left.to_string()}:\{bottom_right.to_string()}",
+  )
+}
+
+///|
+pub fn Workbook::get_merge_cells(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[String] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let merged : Array[String] = []
+  for range_ref in sheet.merged_cells() {
+    merged.push(range_ref)
+  }
+  merged
 }
 
 ///|
