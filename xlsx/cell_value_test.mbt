@@ -60,7 +60,7 @@ test "formatted percent and date" {
   workbook.set_cell_style("Sheet1", "B1", date_style)
   workbook.set_cell_value("Sheet1", "C1", CellValue::Bool(true))
   inspect(workbook.get_cell_value("Sheet1", "A1"), content="Some(\"26%\")")
-  inspect(workbook.get_cell_value("Sheet1", "B1"), content="Some(\"1/2/00\")")
+  inspect(workbook.get_cell_value("Sheet1", "B1"), content="Some(\"01-02-00\")")
   inspect(workbook.get_cell_value("Sheet1", "C1"), content="Some(\"TRUE\")")
 }
 

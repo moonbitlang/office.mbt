@@ -11918,7 +11918,9 @@ fn eval_function(
         } else {
           false
         }
-        FormulaValue::String(format_fixed_number(number, decimals, !no_commas))
+        FormulaValue::String(
+          format_fixed_number(number, decimals, !no_commas, 1),
+        )
       } else {
         FormulaValue::Error(formula_error_value)
       }
@@ -11967,7 +11969,11 @@ fn eval_function(
         match value_as_number_text(values[0]) {
           Ok(num) =>
             FormulaValue::String(
-              format_number_code(format_number(num), format_text),
+              format_number_code(
+                format_number(num),
+                format_text,
+                Options::new(),
+              ),
             )
           Err(err) => err
         }
@@ -18156,7 +18162,7 @@ fn dollar_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let symbol = "$"
   let abs_value = abs_double(rounded)
-  let formatted = format_fixed_number(abs_value, decimals, true)
+  let formatted = format_fixed_number(abs_value, decimals, true, 1)
   if rounded < 0.0 {
     FormulaValue::String("(\{symbol}\{formatted})")
   } else {
