@@ -53,6 +53,45 @@ let xirr_max_iterations = 50
 let xirr_precision = 1.0e-10
 
 ///|
+let category_weight_and_mass = 0
+
+///|
+let category_distance = 1
+
+///|
+let category_time = 2
+
+///|
+let category_pressure = 3
+
+///|
+let category_force = 4
+
+///|
+let category_energy = 5
+
+///|
+let category_power = 6
+
+///|
+let category_magnetism = 7
+
+///|
+let category_temperature = 8
+
+///|
+let category_volume_and_liquid_measure = 9
+
+///|
+let category_area = 10
+
+///|
+let category_information = 11
+
+///|
+let category_speed = 12
+
+///|
 let rand_state : @random.Rand = @random.Rand::new()
 
 ///|
@@ -8422,6 +8461,7 @@ fn eval_function(
     "DOLLARDE" => dollar_fraction_values("DOLLARDE", values)
     "DOLLARFR" => dollar_fraction_values("DOLLARFR", values)
     "EFFECT" => effect_values(values)
+    "CONVERT" => convert_values(values)
     "EUROCONVERT" => euroconvert_values(values)
     "IPMT" => ipmt_values("IPMT", values)
     "ISPMT" => ispmt_values(values)
@@ -15130,6 +15170,660 @@ fn amorlinc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     return number_or_num_error(round_significant_digits(result, 15))
   }
   FormulaValue::Number(0.0)
+}
+
+///|
+priv struct ConversionUnit {
+  group : Int
+  allow_prefix : Bool
+}
+
+///|
+let conversion_units : Map[String, ConversionUnit] = {
+  "g": ConversionUnit::{ group: category_weight_and_mass, allow_prefix: true },
+  "sg": ConversionUnit::{ group: category_weight_and_mass, allow_prefix: false },
+  "lbm": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "u": ConversionUnit::{ group: category_weight_and_mass, allow_prefix: true },
+  "ozm": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "grain": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "cwt": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "shweight": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "uk_cwt": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "lcwt": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "hweight": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "stone": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "ton": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "uk_ton": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "LTON": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "brton": ConversionUnit::{
+    group: category_weight_and_mass,
+    allow_prefix: false,
+  },
+  "m": ConversionUnit::{ group: category_distance, allow_prefix: true },
+  "mi": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "Nmi": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "in": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "ft": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "yd": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "ang": ConversionUnit::{ group: category_distance, allow_prefix: true },
+  "ell": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "ly": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "parsec": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "pc": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "Pica": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "Picapt": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "pica": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "survey_mi": ConversionUnit::{ group: category_distance, allow_prefix: false },
+  "yr": ConversionUnit::{ group: category_time, allow_prefix: false },
+  "day": ConversionUnit::{ group: category_time, allow_prefix: false },
+  "d": ConversionUnit::{ group: category_time, allow_prefix: false },
+  "hr": ConversionUnit::{ group: category_time, allow_prefix: false },
+  "mn": ConversionUnit::{ group: category_time, allow_prefix: false },
+  "min": ConversionUnit::{ group: category_time, allow_prefix: false },
+  "sec": ConversionUnit::{ group: category_time, allow_prefix: true },
+  "s": ConversionUnit::{ group: category_time, allow_prefix: true },
+  "Pa": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "p": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "atm": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "at": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "mmHg": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "psi": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "Torr": ConversionUnit::{ group: category_pressure, allow_prefix: true },
+  "N": ConversionUnit::{ group: category_force, allow_prefix: true },
+  "dyn": ConversionUnit::{ group: category_force, allow_prefix: true },
+  "dy": ConversionUnit::{ group: category_force, allow_prefix: true },
+  "lbf": ConversionUnit::{ group: category_force, allow_prefix: false },
+  "pond": ConversionUnit::{ group: category_force, allow_prefix: true },
+  "J": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "e": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "c": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "cal": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "eV": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "ev": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "HPh": ConversionUnit::{ group: category_energy, allow_prefix: false },
+  "hh": ConversionUnit::{ group: category_energy, allow_prefix: false },
+  "Wh": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "wh": ConversionUnit::{ group: category_energy, allow_prefix: true },
+  "flb": ConversionUnit::{ group: category_energy, allow_prefix: false },
+  "BTU": ConversionUnit::{ group: category_energy, allow_prefix: false },
+  "btu": ConversionUnit::{ group: category_energy, allow_prefix: false },
+  "HP": ConversionUnit::{ group: category_power, allow_prefix: false },
+  "h": ConversionUnit::{ group: category_power, allow_prefix: false },
+  "W": ConversionUnit::{ group: category_power, allow_prefix: true },
+  "w": ConversionUnit::{ group: category_power, allow_prefix: true },
+  "PS": ConversionUnit::{ group: category_power, allow_prefix: false },
+  "T": ConversionUnit::{ group: category_magnetism, allow_prefix: true },
+  "ga": ConversionUnit::{ group: category_magnetism, allow_prefix: true },
+  "C": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "cel": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "F": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "fah": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "K": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "kel": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "Rank": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "Reau": ConversionUnit::{ group: category_temperature, allow_prefix: false },
+  "l": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "L": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "lt": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "tsp": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "tspm": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "tbs": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "oz": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "cup": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "pt": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "us_pt": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "uk_pt": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "qt": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "uk_qt": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "gal": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "uk_gal": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "ang3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "ang^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "barrel": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "bushel": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "in3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "in^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "ft3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "ft^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "ly3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "ly^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "m3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "m^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: true,
+  },
+  "mi3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "mi^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "yd3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "yd^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "Nmi3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "Nmi^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "Pica3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "Pica^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "Picapt3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "Picapt^3": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "GRT": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "regton": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "MTON": ConversionUnit::{
+    group: category_volume_and_liquid_measure,
+    allow_prefix: false,
+  },
+  "ha": ConversionUnit::{ group: category_area, allow_prefix: true },
+  "uk_acre": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "us_acre": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "ang2": ConversionUnit::{ group: category_area, allow_prefix: true },
+  "ang^2": ConversionUnit::{ group: category_area, allow_prefix: true },
+  "ar": ConversionUnit::{ group: category_area, allow_prefix: true },
+  "ft2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "ft^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "in2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "in^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "ly2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "ly^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "m2": ConversionUnit::{ group: category_area, allow_prefix: true },
+  "m^2": ConversionUnit::{ group: category_area, allow_prefix: true },
+  "Morgen": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "mi2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "mi^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "Nmi2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "Nmi^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "Pica2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "Pica^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "Picapt2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "Picapt^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "yd2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "yd^2": ConversionUnit::{ group: category_area, allow_prefix: false },
+  "byte": ConversionUnit::{ group: category_information, allow_prefix: true },
+  "bit": ConversionUnit::{ group: category_information, allow_prefix: true },
+  "m/s": ConversionUnit::{ group: category_speed, allow_prefix: true },
+  "m/sec": ConversionUnit::{ group: category_speed, allow_prefix: true },
+  "m/h": ConversionUnit::{ group: category_speed, allow_prefix: true },
+  "m/hr": ConversionUnit::{ group: category_speed, allow_prefix: true },
+  "mph": ConversionUnit::{ group: category_speed, allow_prefix: false },
+  "admkn": ConversionUnit::{ group: category_speed, allow_prefix: false },
+  "kn": ConversionUnit::{ group: category_speed, allow_prefix: false },
+}
+
+///|
+let conversion_multipliers : Map[String, Double] = {
+  "Y": 1.0e24,
+  "Z": 1.0e21,
+  "E": 1.0e18,
+  "P": 1.0e15,
+  "T": 1.0e12,
+  "G": 1.0e9,
+  "M": 1.0e6,
+  "k": 1.0e3,
+  "h": 1.0e2,
+  "e": 1.0e1,
+  "da": 1.0e1,
+  "d": 1.0e-1,
+  "c": 1.0e-2,
+  "m": 1.0e-3,
+  "u": 1.0e-6,
+  "n": 1.0e-9,
+  "p": 1.0e-12,
+  "f": 1.0e-15,
+  "a": 1.0e-18,
+  "z": 1.0e-21,
+  "y": 1.0e-24,
+  "Yi": @math.pow(2.0, 80.0),
+  "Zi": @math.pow(2.0, 70.0),
+  "Ei": @math.pow(2.0, 60.0),
+  "Pi": @math.pow(2.0, 50.0),
+  "Ti": @math.pow(2.0, 40.0),
+  "Gi": @math.pow(2.0, 30.0),
+  "Mi": @math.pow(2.0, 20.0),
+  "ki": @math.pow(2.0, 10.0),
+}
+
+///|
+fn build_unit_conversions() -> Map[Int, Map[String, Double]] {
+  let conversions : Map[Int, Map[String, Double]] = {}
+  conversions[category_weight_and_mass] = {
+    "g": 1.0,
+    "sg": 6.85217658567918e-05,
+    "lbm": 2.20462262184878e-03,
+    "u": 6.02214179421676e+23,
+    "ozm": 3.52739619495804e-02,
+    "grain": 1.54323583529414e+01,
+    "cwt": 2.20462262184878e-05,
+    "shweight": 2.20462262184878e-05,
+    "uk_cwt": 1.96841305522212e-05,
+    "lcwt": 1.96841305522212e-05,
+    "hweight": 1.96841305522212e-05,
+    "stone": 1.57473044417770e-04,
+    "ton": 1.10231131092439e-06,
+    "uk_ton": 9.84206527611061e-07,
+    "LTON": 9.84206527611061e-07,
+    "brton": 9.84206527611061e-07,
+  }
+  conversions[category_distance] = {
+    "m": 1.0,
+    "mi": 6.21371192237334e-04,
+    "Nmi": 5.39956803455724e-04,
+    "in": 3.93700787401575e+01,
+    "ft": 3.28083989501312e+00,
+    "yd": 1.09361329833771e+00,
+    "ang": 1.0e+10,
+    "ell": 8.74890638670166e-01,
+    "ly": 1.05700083402462e-16,
+    "parsec": 3.24077928966473e-17,
+    "pc": 3.24077928966473e-17,
+    "Pica": 2.83464566929134e+03,
+    "Picapt": 2.83464566929134e+03,
+    "pica": 2.36220472440945e+02,
+    "survey_mi": 6.21369949494950e-04,
+  }
+  conversions[category_time] = {
+    "yr": 3.16880878140289e-08,
+    "day": 1.15740740740741e-05,
+    "d": 1.15740740740741e-05,
+    "hr": 2.77777777777778e-04,
+    "mn": 1.66666666666667e-02,
+    "min": 1.66666666666667e-02,
+    "sec": 1.0,
+    "s": 1.0,
+  }
+  conversions[category_pressure] = {
+    "Pa": 1.0,
+    "p": 1.0,
+    "atm": 9.86923266716013e-06,
+    "at": 9.86923266716013e-06,
+    "mmHg": 7.50063755419211e-03,
+    "psi": 1.45037737730209e-04,
+    "Torr": 7.50061682704170e-03,
+  }
+  conversions[category_force] = {
+    "N": 1.0,
+    "dyn": 1.0e+5,
+    "dy": 1.0e+5,
+    "lbf": 2.24808923655339e-01,
+    "pond": 1.01971621297793e+02,
+  }
+  conversions[category_energy] = {
+    "J": 1.0,
+    "e": 9.99999519343231e+06,
+    "c": 2.39006249473467e-01,
+    "cal": 2.38846190642017e-01,
+    "eV": 6.24145700000000e+18,
+    "ev": 6.24145700000000e+18,
+    "HPh": 3.72506430801000e-07,
+    "hh": 3.72506430801000e-07,
+    "Wh": 2.77777916238711e-04,
+    "wh": 2.77777916238711e-04,
+    "flb": 2.37304222192651e+01,
+    "BTU": 9.47815067349015e-04,
+    "btu": 9.47815067349015e-04,
+  }
+  conversions[category_power] = {
+    "HP": 1.0,
+    "h": 1.0,
+    "W": 7.45699871582270e+02,
+    "w": 7.45699871582270e+02,
+    "PS": 1.01386966542400e+00,
+  }
+  conversions[category_magnetism] = { "T": 1.0, "ga": 10000.0 }
+  conversions[category_volume_and_liquid_measure] = {
+    "l": 1.0,
+    "L": 1.0,
+    "lt": 1.0,
+    "tsp": 2.02884136211058e+02,
+    "tspm": 2.0e+02,
+    "tbs": 6.76280454036860e+01,
+    "oz": 3.38140227018430e+01,
+    "cup": 4.22675283773038e+00,
+    "pt": 2.11337641886519e+00,
+    "us_pt": 2.11337641886519e+00,
+    "uk_pt": 1.75975398639270e+00,
+    "qt": 1.05668820943259e+00,
+    "uk_qt": 8.79876993196351e-01,
+    "gal": 2.64172052358148e-01,
+    "uk_gal": 2.19969248299088e-01,
+    "ang3": 1.0e+27,
+    "ang^3": 1.0e+27,
+    "barrel": 6.28981077043211e-03,
+    "bushel": 2.83775932584017e-02,
+    "in3": 6.10237440947323e+01,
+    "in^3": 6.10237440947323e+01,
+    "ft3": 3.53146667214886e-02,
+    "ft^3": 3.53146667214886e-02,
+    "ly3": 1.18093498844171e-51,
+    "ly^3": 1.18093498844171e-51,
+    "m3": 1.0e-03,
+    "m^3": 1.0e-03,
+    "mi3": 2.39912758578928e-13,
+    "mi^3": 2.39912758578928e-13,
+    "yd3": 1.30795061931439e-03,
+    "yd^3": 1.30795061931439e-03,
+    "Nmi3": 1.57426214685811e-13,
+    "Nmi^3": 1.57426214685811e-13,
+    "Pica3": 2.27769904358706e+07,
+    "Pica^3": 2.27769904358706e+07,
+    "Picapt3": 2.27769904358706e+07,
+    "Picapt^3": 2.27769904358706e+07,
+    "GRT": 3.53146667214886e-04,
+    "regton": 3.53146667214886e-04,
+    "MTON": 8.82866668037215e-04,
+  }
+  conversions[category_area] = {
+    "ha": 1.0,
+    "uk_acre": 2.47105381467165e+00,
+    "us_acre": 2.47104393046628e+00,
+    "ang2": 1.0e+24,
+    "ang^2": 1.0e+24,
+    "ar": 1.0e+02,
+    "ft2": 1.07639104167097e+05,
+    "ft^2": 1.07639104167097e+05,
+    "in2": 1.55000310000620e+07,
+    "in^2": 1.55000310000620e+07,
+    "ly2": 1.11725076312873e-28,
+    "ly^2": 1.11725076312873e-28,
+    "m2": 1.0e+04,
+    "m^2": 1.0e+04,
+    "Morgen": 4.0e+00,
+    "mi2": 3.86102158542446e-03,
+    "mi^2": 3.86102158542446e-03,
+    "Nmi2": 2.91553349598123e-03,
+    "Nmi^2": 2.91553349598123e-03,
+    "Pica2": 8.03521607043214e+10,
+    "Pica^2": 8.03521607043214e+10,
+    "Picapt2": 8.03521607043214e+10,
+    "Picapt^2": 8.03521607043214e+10,
+    "yd2": 1.19599004630108e+04,
+    "yd^2": 1.19599004630108e+04,
+  }
+  conversions[category_information] = { "bit": 1.0, "byte": 0.125 }
+  conversions[category_speed] = {
+    "m/s": 1.0,
+    "m/sec": 1.0,
+    "m/h": 3.60e+03,
+    "m/hr": 3.60e+03,
+    "mph": 2.23693629205440e+00,
+    "admkn": 1.94260256941567e+00,
+    "kn": 1.94384449244060e+00,
+  }
+  conversions
+}
+
+///|
+let unit_conversions : Map[Int, Map[String, Double]] = build_unit_conversions()
+
+///|
+fn get_unit_details(uom_text : String) -> (String, Int, Double, Bool) {
+  if uom_text.length() == 0 {
+    return ("", 0, 0.0, false)
+  }
+  match conversion_units.get(uom_text) {
+    Some(unit) => return (uom_text, unit.group, 1.0, true)
+    None => ()
+  }
+  let mut uom = uom_text
+  let mut multiplier_type = uom.unsafe_substring(start=0, end=1)
+  uom = uom.unsafe_substring(start=1, end=uom.length())
+  match
+    (conversion_units.get(uom), conversion_multipliers.get(multiplier_type)) {
+    (Some(unit), Some(multiplier)) =>
+      if !unit.allow_prefix {
+        return ("", 0, 0.0, false)
+      } else {
+        return (uom, unit.group, multiplier, true)
+      }
+    _ => ()
+  }
+  if uom.length() > 0 {
+    multiplier_type = multiplier_type + uom.unsafe_substring(start=0, end=1)
+    uom = uom.unsafe_substring(start=1, end=uom.length())
+  }
+  match
+    (conversion_units.get(uom), conversion_multipliers.get(multiplier_type)) {
+    (Some(unit), Some(multiplier)) =>
+      if !unit.allow_prefix {
+        ("", 0, 0.0, false)
+      } else {
+        (uom, unit.group, multiplier, true)
+      }
+    _ => ("", 0, 0.0, false)
+  }
+}
+
+///|
+fn resolve_temperature_synonyms(uom : String) -> String {
+  match uom {
+    "fah" => "F"
+    "cel" => "C"
+    "kel" => "K"
+    _ => uom
+  }
+}
+
+///|
+fn convert_temperature(
+  from_uom : String,
+  to_uom : String,
+  value : Double,
+) -> Double {
+  let from_unit = resolve_temperature_synonyms(from_uom)
+  let to_unit = resolve_temperature_synonyms(to_uom)
+  if from_unit == to_unit {
+    return value
+  }
+  let mut result = value
+  match from_unit {
+    "F" => result = (result - 32.0) / 1.8 + 273.15
+    "C" => result = result + 273.15
+    "Rank" => result = result / 1.8
+    "Reau" => result = result * 1.25 + 273.15
+    _ => ()
+  }
+  match to_unit {
+    "F" => result = (result - 273.15) * 1.8 + 32.0
+    "C" => result = result - 273.15
+    "Rank" => result = result * 1.8
+    "Reau" => result = (result - 273.15) * 0.8
+    _ => ()
+  }
+  result
+}
+
+///|
+fn convert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let number = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let from_unit = match value_as_string(values[1]) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let to_unit = match value_as_string(values[2]) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let (from_uom, from_category, from_multiplier, ok1) = get_unit_details(
+    from_unit,
+  )
+  let (to_uom, to_category, to_multiplier, ok2) = get_unit_details(to_unit)
+  if !ok1 || !ok2 || from_category != to_category {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let value = number * from_multiplier
+  let result = if from_uom == to_uom && from_multiplier == to_multiplier {
+    value / from_multiplier
+  } else if from_uom == to_uom {
+    value / to_multiplier
+  } else if from_category == category_temperature {
+    convert_temperature(from_uom, to_uom, value)
+  } else {
+    let conversions = match unit_conversions.get(from_category) {
+      Some(map) => map
+      None => return FormulaValue::Error(formula_error_na)
+    }
+    let from_conversion = match conversions.get(from_uom) {
+      Some(num) => num
+      None => return FormulaValue::Error(formula_error_na)
+    }
+    let to_conversion = match conversions.get(to_uom) {
+      Some(num) => num
+      None => return FormulaValue::Error(formula_error_na)
+    }
+    let base_value = value * (1.0 / from_conversion)
+    base_value * to_conversion / to_multiplier
+  }
+  number_or_num_error(round_significant_digits(result, 15))
 }
 
 ///|
