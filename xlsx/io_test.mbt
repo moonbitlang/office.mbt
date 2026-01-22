@@ -108,6 +108,22 @@ test "write_to_buffer roundtrip" {
 }
 
 ///|
+test "custom zip writer used" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "alpha")
+  let called = @ref.new(false)
+  workbook.set_zip_writer(archive => {
+    called.val = true
+    @zip.write(archive)
+  })
+  let bytes = workbook.write_to_buffer()
+  guard called.val else { fail("zip writer was not called") }
+  let parsed = read(bytes)
+  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+}
+
+///|
 async test "write wrapper" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

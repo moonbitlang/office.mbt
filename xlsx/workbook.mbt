@@ -16,6 +16,7 @@ pub struct Workbook {
   theme_colors : Array[String]?
   indexed_colors : Array[String]?
   mut file_path : String?
+  mut zip_writer : ((@zip.Archive) -> Bytes raise)?
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
@@ -164,6 +165,7 @@ pub fn Workbook::new() -> Workbook {
     theme_colors: None,
     indexed_colors: None,
     file_path: None,
+    zip_writer: None,
     options: Options::new(),
     workbook_protection: None,
     active_sheet_index: 0,
@@ -489,6 +491,14 @@ pub fn Workbook::get_default_font(self : Workbook) -> String {
 ///|
 pub fn Workbook::set_default_font(self : Workbook, font_name : String) -> Unit {
   self.default_font = font_name
+}
+
+///|
+pub fn Workbook::set_zip_writer(
+  self : Workbook,
+  writer : (@zip.Archive) -> Bytes raise,
+) -> Unit {
+  self.zip_writer = Some(writer)
 }
 
 ///|

@@ -2,6 +2,7 @@
 package "bobzhang/mbtexcel/xlsx"
 
 import {
+  "bobzhang/mbtexcel/zip",
   "moonbitlang/async/io",
 }
 
@@ -844,6 +845,7 @@ pub struct Workbook {
   theme_colors : Array[String]?
   indexed_colors : Array[String]?
   mut file_path : String?
+  mut zip_writer : ((@zip.Archive) -> Bytes raise)?
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
@@ -1055,6 +1057,7 @@ pub fn Workbook::set_sheet_row(Self, StringView, StringView, ArrayView[String]) 
 pub fn Workbook::set_sheet_view(Self, StringView, Int, SheetViewOptions) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_visible(Self, StringView, Bool, very_hidden? : Bool) -> Unit raise XlsxError
 pub fn Workbook::set_workbook_props(Self, WorkbookPropsOptions?) -> Unit
+pub fn Workbook::set_zip_writer(Self, (@zip.Archive) -> Bytes raise) -> Unit
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
 pub fn Workbook::sheet_index(Self, StringView) -> Int raise XlsxError
 pub fn Workbook::sheet_name(Self, Int) -> String?

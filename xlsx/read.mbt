@@ -2779,6 +2779,7 @@ fn read_zip_bytes(
     theme_colors,
     indexed_colors,
     file_path: None,
+    zip_writer: None,
     options: resolved_options,
     workbook_protection,
     active_sheet_index: safe_active_index,

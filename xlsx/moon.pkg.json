@@ -20,6 +20,7 @@
     },
     "moonbitlang/core/random",
     "moonbitlang/core/buffer",
+    "moonbitlang/core/ref",
     "moonbitlang/core/strconv",
     "moonbitlang/core/math",
     "moonbitlang/core/env"

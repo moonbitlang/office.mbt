@@ -3058,8 +3058,15 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     "[Content_Types].xml",
     @encoding/utf8.encode(manifest.content_types_xml()),
   )
-  @zip.write(archive) catch {
-    err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+  match workbook.zip_writer {
+    Some(writer) =>
+      writer(archive) catch {
+        err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+      }
+    None =>
+      @zip.write(archive) catch {
+        err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+      }
   }
 }
 
