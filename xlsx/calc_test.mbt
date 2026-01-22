@@ -5068,6 +5068,91 @@ test "calc xnpv errors" {
 }
 
 ///|
+test "calc growth and trend functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("known_x's"))
+  sheet.set_cell_value("B1", CellValue::String("known_y's"))
+  sheet.set_cell_value("C1", CellValue::Numeric(0.0))
+  sheet.set_cell_value("D1", CellValue::Numeric(-1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(10.0))
+  sheet.set_cell_value("C2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(20.0))
+  sheet.set_cell_value("C3", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A4", CellValue::Numeric(3.0))
+  sheet.set_cell_value("B4", CellValue::Numeric(40.0))
+  sheet.set_cell_value("A5", CellValue::Numeric(4.0))
+  sheet.set_cell_value("B5", CellValue::Numeric(80.0))
+  sheet.set_cell_value("A7", CellValue::String("new_x's"))
+  sheet.set_cell_value("B7", CellValue::String("new_y's"))
+  sheet.set_cell_value("A8", CellValue::Numeric(5.0))
+  sheet.set_cell_value("A9", CellValue::Numeric(6.0))
+  sheet.set_cell_value("A10", CellValue::Numeric(7.0))
+  let cases : Array[(String, String)] = [
+    ("GROWTH(A2:B2)", "1"),
+    ("GROWTH(B2:B5,A2:A5,A8:A10)", "160"),
+    ("GROWTH(B2:B5,A2:A5,A8:A10,FALSE)", "467.842838114059"),
+    ("GROWTH(A4:A5,A2:B3,A8:A10,FALSE)", ""),
+    ("GROWTH(A3:A5,A2:B4,A2:B3)", "2"),
+    ("GROWTH(A4:A5,A2:B3)", ""),
+    ("GROWTH(A2:B2,A2:B3)", ""),
+    ("GROWTH(A2:B2,A2:B3,A2:B3,FALSE)", "1.28402541668774"),
+    ("GROWTH(A2:B2,A4:B5,A4:B5,FALSE)", "1"),
+    ("GROWTH(A3:C3,A2:C3,A2:B3)", "2"),
+    ("TREND(A2:B2)", "1"),
+    ("TREND(B2:B5,A2:A5,A8:A10)", "95"),
+    ("TREND(B2:B5,A2:A5,A8:A10,FALSE)", "81.6666666666667"),
+    ("TREND(A4:A5,A2:B3,A8:A10,FALSE)", ""),
+    ("TREND(A4:A5,A2:B3,A2:B3,FALSE)", "1.5"),
+    ("TREND(A3:A5,A2:B4,A2:B3)", "2"),
+    ("TREND(A4:A5,A2:B3)", ""),
+    ("TREND(A2:B2,A2:B3)", ""),
+    ("TREND(A2:B2,A2:B3,A2:B3,FALSE)", "1"),
+    ("TREND(A2:B2,A4:B5,A4:B5,FALSE)", "1"),
+    ("TREND(A3:C3,A2:C3,A2:B3)", "2"),
+  ]
+  for _, entry in cases {
+    let (formula, expected) = entry
+    sheet.set_cell_formula("C1", formula)
+    inspect(workbook.calc_cell_value("Sheet1", "C1"), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("GROWTH()", "#VALUE!"),
+    ("GROWTH(B2:B5,A2:A5,A8:A10,TRUE,0)", "#VALUE!"),
+    ("GROWTH(A1:B1,A2:A5,A8:A10,TRUE)", "#VALUE!"),
+    ("GROWTH(B2:B5,A1:B1,A8:A10,TRUE)", "#VALUE!"),
+    ("GROWTH(B2:B5,A2:A5,A1:B1,TRUE)", "#VALUE!"),
+    ("GROWTH(B2:B5,A2:A5,A8:A10,\"\")", "#VALUE!"),
+    ("GROWTH(A2:B3,A4:B4)", "#REF!"),
+    ("GROWTH(A4:B4,A2:A2)", "#REF!"),
+    ("GROWTH(A2:A2,A4:A5)", "#REF!"),
+    ("GROWTH(C1:C1,A2:A3)", "#VALUE!"),
+    ("GROWTH(D1:D1,A2:A3)", "#NUM!"),
+    ("GROWTH(A2:A3,C1:C1)", "#VALUE!"),
+    ("TREND()", "#VALUE!"),
+    ("TREND(B2:B5,A2:A5,A8:A10,TRUE,0)", "#VALUE!"),
+    ("TREND(A1:B1,A2:A5,A8:A10,TRUE)", "#VALUE!"),
+    ("TREND(B2:B5,A1:B1,A8:A10,TRUE)", "#VALUE!"),
+    ("TREND(B2:B5,A2:A5,A1:B1,TRUE)", "#VALUE!"),
+    ("TREND(B2:B5,A2:A5,A8:A10,\"\")", "#VALUE!"),
+    ("TREND(A2:B3,A4:B4)", "#REF!"),
+    ("TREND(A4:B4,A2:A2)", "#REF!"),
+    ("TREND(A2:A2,A4:A5)", "#REF!"),
+    ("TREND(C1:C1,A2:A3)", "#VALUE!"),
+    ("TREND(D1:D1,A2:A3)", "#REF!"),
+    ("TREND(A2:A3,C1:C1)", "#VALUE!"),
+    ("TREND(C1:C1,C1:C1)", "#VALUE!"),
+  ]
+  for _, entry in error_cases {
+    let (formula, expected) = entry
+    sheet.set_cell_formula("C1", formula)
+    inspect(workbook.calc_cell_value("Sheet1", "C1"), content=expected)
+  }
+}
+
+///|
 fn split_complex_body_test(body : String) -> (String, String) {
   let chars = body.to_array()
   let mut split = -1

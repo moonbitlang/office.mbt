@@ -1216,6 +1216,803 @@ fn matrix_multiply(
 }
 
 ///|
+fn new_matrix(cols : Int, rows : Int) -> Array[Array[Double]] {
+  if cols <= 0 || rows <= 0 {
+    return []
+  }
+  let out : Array[Array[Double]] = []
+  for _ in 0..<cols {
+    out.push(Array::make(rows, 0.0))
+  }
+  out
+}
+
+///|
+fn approx_sub(a : Double, b : Double) -> Double {
+  if ((a < 0.0 && b < 0.0) || (a > 0.0 && b > 0.0)) &&
+    Double::abs(a - b) < 2.22045e-016 {
+    0.0
+  } else {
+    a - b
+  }
+}
+
+///|
+fn matrix_clone(matrix : Array[Array[Double]]) -> Array[Array[Double]] {
+  let out : Array[Array[Double]] = []
+  for col in 0..<matrix.length() {
+    let column = matrix[col]
+    let copy = Array::make(column.length(), 0.0)
+    for row in 0..<column.length() {
+      copy[row] = column[row]
+    }
+    out.push(copy)
+  }
+  out
+}
+
+///|
+fn transpose_number_matrix(
+  matrix : Array[Array[Double]],
+) -> Array[Array[Double]] {
+  let out : Array[Array[Double]] = []
+  for row in 0..<matrix.length() {
+    for col in 0..<matrix[row].length() {
+      while out.length() <= col {
+        out.push([])
+      }
+      let column = out[col]
+      while column.length() <= row {
+        column.push(0.0)
+      }
+      column[row] = matrix[row][col]
+    }
+  }
+  out
+}
+
+///|
+priv struct TrendGrowthMatrixInfo {
+  trend_type : Int
+  n_cx : Int
+  n_cy : Int
+  n_rx : Int
+  n_ry : Int
+  m : Int
+  n : Int
+  mtx_x : Array[Array[Double]]
+  mtx_y : Array[Array[Double]]
+}
+
+///|
+fn prepare_trend_growth_mtx_x(
+  mtx_x : Array[Array[Double]],
+) -> Result[Array[Array[Double]], FormulaValue] {
+  let out : Array[Array[Double]] = []
+  for row in 0..<mtx_x.length() {
+    for col in 0..<mtx_x[row].length() {
+      let value = mtx_x[row][col]
+      if value == 0.0 {
+        return Err(FormulaValue::Error(formula_error_num))
+      }
+      while out.length() <= col {
+        out.push([])
+      }
+      let column = out[col]
+      while column.length() <= row {
+        column.push(0.0)
+      }
+      column[row] = value
+    }
+  }
+  Ok(out)
+}
+
+///|
+fn prepare_trend_growth_mtx_y(
+  b_log : Bool,
+  mtx_y : Array[Array[Double]],
+) -> Result[Array[Array[Double]], FormulaValue] {
+  let out : Array[Array[Double]] = []
+  for row in 0..<mtx_y.length() {
+    for col in 0..<mtx_y[row].length() {
+      let value = mtx_y[row][col]
+      if value == 0.0 {
+        return Err(FormulaValue::Error(formula_error_num))
+      }
+      while out.length() <= col {
+        out.push([])
+      }
+      let column = out[col]
+      while column.length() <= row {
+        column.push(0.0)
+      }
+      column[row] = value
+    }
+  }
+  if !b_log {
+    return Ok(out)
+  }
+  let log_out : Array[Array[Double]] = []
+  for row in 0..<mtx_y.length() {
+    for col in 0..<mtx_y[row].length() {
+      let value = mtx_y[row][col]
+      if value <= 0.0 {
+        return Err(FormulaValue::Error(formula_error_num))
+      }
+      while log_out.length() <= col {
+        log_out.push([])
+      }
+      let column = log_out[col]
+      while column.length() <= row {
+        column.push(0.0)
+      }
+      column[row] = @math.ln(value)
+    }
+  }
+  Ok(log_out)
+}
+
+///|
+fn prepare_trend_growth(
+  b_log : Bool,
+  mtx_x : Array[Array[Double]],
+  mtx_y : Array[Array[Double]],
+) -> Result[TrendGrowthMatrixInfo, FormulaValue] {
+  let n_ry = mtx_y.length()
+  let n_cy = mtx_y[0].length()
+  let cnt_y = n_cy * n_ry
+  let new_y = match prepare_trend_growth_mtx_y(b_log, mtx_y) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  let mut new_x : Array[Array[Double]] = []
+  let mut n_rx = 0
+  let mut n_cx = 0
+  let mut trend_type = 0
+  let mut m = 0
+  let mut n = 0
+  if mtx_x.length() != 0 {
+    n_rx = mtx_x.length()
+    n_cx = mtx_x[0].length()
+    new_x = match prepare_trend_growth_mtx_x(mtx_x) {
+      Ok(value) => value
+      Err(err) => return Err(err)
+    }
+    if n_cx == n_cy && n_rx == n_ry {
+      trend_type = 1
+      m = 1
+      n = cnt_y
+    } else if n_cy != 1 && n_ry != 1 {
+      return Err(FormulaValue::Error(formula_error_ref))
+    } else if n_cy == 1 {
+      if n_rx != n_ry {
+        return Err(FormulaValue::Error(formula_error_ref))
+      }
+      trend_type = 2
+      m = n_cx
+      n = n_ry
+    } else if n_cx != n_cy {
+      return Err(FormulaValue::Error(formula_error_ref))
+    } else {
+      trend_type = 3
+      m = n_rx
+      n = n_cy
+    }
+  } else {
+    new_x = new_matrix(n_cy, n_ry)
+    n_cx = n_cy
+    n_rx = n_ry
+    let mut value = 1.0
+    for row in 0..<n_ry {
+      for col in 0..<n_cy {
+        new_x[col][row] = value
+        value = value + 1.0
+      }
+    }
+    trend_type = 1
+    m = 1
+    n = cnt_y
+  }
+  Ok(TrendGrowthMatrixInfo::{
+    trend_type,
+    n_cx,
+    n_cy,
+    n_rx,
+    n_ry,
+    m,
+    n,
+    mtx_x: new_x,
+    mtx_y: new_y,
+  })
+}
+
+///|
+fn calc_position(mtx : Array[Array[Double]], idx : Int) -> (Int, Int) {
+  let row_size = mtx[0].length()
+  let col = if row_size > 1 { idx / row_size } else { idx }
+  let row = idx - col * row_size
+  (row, col)
+}
+
+///|
+fn get_double(mtx : Array[Array[Double]], idx : Int) -> Double {
+  let (row, col) = calc_position(mtx, idx)
+  mtx[col][row]
+}
+
+///|
+fn put_double(mtx : Array[Array[Double]], idx : Int, value : Double) -> Unit {
+  let (row, col) = calc_position(mtx, idx)
+  mtx[col][row] = value
+}
+
+///|
+fn calc_mean_over_all(mtx : Array[Array[Double]], n : Int) -> Double {
+  let mut sum = 0.0
+  for col in 0..<mtx.length() {
+    for row in 0..<mtx[col].length() {
+      sum = sum + mtx[col][row]
+    }
+  }
+  sum / Double::from_int(n)
+}
+
+///|
+fn calc_sum_product(
+  mtx_a : Array[Array[Double]],
+  mtx_b : Array[Array[Double]],
+  m : Int,
+) -> Double {
+  let mut sum = 0.0
+  for idx in 0..<m {
+    sum = sum + get_double(mtx_a, idx) * get_double(mtx_b, idx)
+  }
+  sum
+}
+
+///|
+fn calc_column_means(
+  mtx_x : Array[Array[Double]],
+  mtx_res : Array[Array[Double]],
+  c : Int,
+  r : Int,
+) -> Unit {
+  for i in 0..<c {
+    let mut sum = 0.0
+    for k in 0..<r {
+      sum = sum + mtx_x[i][k]
+    }
+    put_double(mtx_res, i, sum / Double::from_int(r))
+  }
+}
+
+///|
+fn calc_columns_delta(
+  mtx : Array[Array[Double]],
+  column_means : Array[Array[Double]],
+  c : Int,
+  r : Int,
+) -> Unit {
+  for i in 0..<c {
+    for k in 0..<r {
+      mtx[i][k] = approx_sub(mtx[i][k], get_double(column_means, i))
+    }
+  }
+}
+
+///|
+fn calc_sign(value : Double) -> Double {
+  if value > 0.0 {
+    1.0
+  } else {
+    -1.0
+  }
+}
+
+///|
+fn calc_cols_maximum_norm(
+  mtx_a : Array[Array[Double]],
+  c : Int,
+  r : Int,
+  n : Int,
+) -> Double {
+  let mut norm = 0.0
+  for row in r..<n {
+    let value = Double::abs(mtx_a[c][row])
+    if norm < value {
+      norm = value
+    }
+  }
+  norm
+}
+
+///|
+fn calc_fast_mult(
+  mtx_a : Array[Array[Double]],
+  mtx_b : Array[Array[Double]],
+  mtx_r : Array[Array[Double]],
+  n : Int,
+  m : Int,
+  l : Int,
+) -> Unit {
+  for row in 0..<n {
+    for col in 0..<l {
+      let mut sum = 0.0
+      for k in 0..<m {
+        sum = sum + mtx_a[k][row] * mtx_b[col][k]
+      }
+      mtx_r[col][row] = sum
+    }
+  }
+}
+
+///|
+fn calc_rows_euclidean_norm(
+  mtx_a : Array[Array[Double]],
+  c : Int,
+  r : Int,
+  n : Int,
+) -> Double {
+  let mut norm = 0.0
+  for row in r..<n {
+    let value = mtx_a[c][row]
+    norm = norm + value * value
+  }
+  Double::sqrt(norm)
+}
+
+///|
+fn calc_rows_sum_product(
+  mtx_a : Array[Array[Double]],
+  a : Int,
+  mtx_b : Array[Array[Double]],
+  b : Int,
+  r : Int,
+  n : Int,
+) -> Double {
+  let mut result = 0.0
+  for row in r..<n {
+    result = result + mtx_a[a][row] * mtx_b[b][row]
+  }
+  result
+}
+
+///|
+fn calc_solve_with_upper_right_triangle(
+  mtx_a : Array[Array[Double]],
+  vec_r : Array[Double],
+  mtx_s : Array[Array[Double]],
+  k : Int,
+  b_is_transposed : Bool,
+) -> Unit {
+  for idx in 0..<k {
+    let row_p1 = k - idx
+    let row = row_p1 - 1
+    let mut sum = get_double(mtx_s, row)
+    for col in row_p1..<k {
+      if b_is_transposed {
+        sum = sum - mtx_a[row][col] * get_double(mtx_s, col)
+      } else {
+        sum = sum - mtx_a[col][row] * get_double(mtx_s, col)
+      }
+    }
+    put_double(mtx_s, row, sum / vec_r[row])
+  }
+}
+
+///|
+fn calc_row_qr_decomposition(
+  mtx_a : Array[Array[Double]],
+  vec_r : Array[Double],
+  k : Int,
+  n : Int,
+) -> Bool {
+  for col in 0..<k {
+    let scale = calc_cols_maximum_norm(mtx_a, col, col, n)
+    if scale == 0.0 {
+      return false
+    }
+    for row in col..<n {
+      mtx_a[col][row] = mtx_a[col][row] / scale
+    }
+    let euclid = calc_rows_euclidean_norm(mtx_a, col, col, n)
+    let factor = 1.0 / euclid / (euclid + Double::abs(mtx_a[col][col]))
+    let signum = calc_sign(mtx_a[col][col])
+    mtx_a[col][col] = mtx_a[col][col] + signum * euclid
+    vec_r[col] = -signum * scale * euclid
+    for c in (col + 1)..<k {
+      let sum = calc_rows_sum_product(mtx_a, col, mtx_a, c, col, n)
+      for row in col..<n {
+        mtx_a[c][row] = mtx_a[c][row] - sum * factor * mtx_a[col][row]
+      }
+    }
+  }
+  true
+}
+
+///|
+fn calc_apply_cols_householder_transformation(
+  mtx_a : Array[Array[Double]],
+  r : Int,
+  mtx_y : Array[Array[Double]],
+  n : Int,
+) -> Unit {
+  let denominator = calc_cols_sum_product(mtx_a, r, mtx_a, r, r, n)
+  let numerator = calc_cols_sum_product(mtx_a, r, mtx_y, 0, r, n)
+  let factor = 2.0 * (numerator / denominator)
+  for col in r..<n {
+    put_double(mtx_y, col, get_double(mtx_y, col) - factor * mtx_a[col][r])
+  }
+}
+
+///|
+fn calc_row_means(
+  mtx_x : Array[Array[Double]],
+  mtx_res : Array[Array[Double]],
+  c : Int,
+  r : Int,
+) -> Unit {
+  for k in 0..<r {
+    let mut sum = 0.0
+    for i in 0..<c {
+      sum = sum + mtx_x[i][k]
+    }
+    mtx_res[k][0] = sum / Double::from_int(c)
+  }
+}
+
+///|
+fn calc_rows_delta(
+  mtx : Array[Array[Double]],
+  row_means : Array[Array[Double]],
+  c : Int,
+  r : Int,
+) -> Unit {
+  for k in 0..<r {
+    for i in 0..<c {
+      mtx[i][k] = approx_sub(mtx[i][k], row_means[k][0])
+    }
+  }
+}
+
+///|
+fn calc_column_maximum_norm(
+  mtx_a : Array[Array[Double]],
+  r : Int,
+  c : Int,
+  n : Int,
+) -> Double {
+  let mut norm = 0.0
+  for col in c..<n {
+    let value = Double::abs(mtx_a[col][r])
+    if norm < value {
+      norm = value
+    }
+  }
+  norm
+}
+
+///|
+fn calc_cols_euclidean_norm(
+  mtx_a : Array[Array[Double]],
+  r : Int,
+  c : Int,
+  n : Int,
+) -> Double {
+  let mut norm = 0.0
+  for col in c..<n {
+    let value = mtx_a[col][r]
+    norm = norm + value * value
+  }
+  Double::sqrt(norm)
+}
+
+///|
+fn calc_cols_sum_product(
+  mtx_a : Array[Array[Double]],
+  a : Int,
+  mtx_b : Array[Array[Double]],
+  b : Int,
+  c : Int,
+  n : Int,
+) -> Double {
+  let mut result = 0.0
+  for col in c..<n {
+    result = result + mtx_a[col][a] * mtx_b[col][b]
+  }
+  result
+}
+
+///|
+fn calc_col_qr_decomposition(
+  mtx_a : Array[Array[Double]],
+  vec_r : Array[Double],
+  k : Int,
+  n : Int,
+) -> Bool {
+  for row in 0..<k {
+    let scale = calc_column_maximum_norm(mtx_a, row, row, n)
+    if scale == 0.0 {
+      return false
+    }
+    for col in row..<n {
+      mtx_a[col][row] = mtx_a[col][row] / scale
+    }
+    let euclid = calc_cols_euclidean_norm(mtx_a, row, row, n)
+    let factor = 1.0 / euclid / (euclid + Double::abs(mtx_a[row][row]))
+    let signum = calc_sign(mtx_a[row][row])
+    mtx_a[row][row] = mtx_a[row][row] + signum * euclid
+    vec_r[row] = -signum * scale * euclid
+    for r in (row + 1)..<k {
+      let sum = calc_cols_sum_product(mtx_a, row, mtx_a, r, row, n)
+      for col in row..<n {
+        mtx_a[col][r] = mtx_a[col][r] - sum * factor * mtx_a[col][row]
+      }
+    }
+  }
+  true
+}
+
+///|
+fn calc_apply_rows_householder_transformation(
+  mtx_a : Array[Array[Double]],
+  c : Int,
+  mtx_y : Array[Array[Double]],
+  n : Int,
+) -> Unit {
+  let denominator = calc_rows_sum_product(mtx_a, c, mtx_a, c, c, n)
+  let numerator = calc_rows_sum_product(mtx_a, c, mtx_y, 0, c, n)
+  let factor = 2.0 * (numerator / denominator)
+  for row in c..<n {
+    put_double(mtx_y, row, get_double(mtx_y, row) - factor * mtx_a[c][row])
+  }
+}
+
+///|
+fn calc_trend_growth_simple_regression(
+  b_constant : Bool,
+  b_growth : Bool,
+  mtx_y : Array[Array[Double]],
+  mtx_x : Array[Array[Double]],
+  new_x : Array[Array[Double]],
+  mtx_res : Array[Array[Double]],
+  mean_y : Double,
+  n : Int,
+) -> Unit {
+  let mut mean_x = 0.0
+  if b_constant {
+    mean_x = calc_mean_over_all(mtx_x, n)
+    for col in 0..<mtx_x.length() {
+      for row in 0..<mtx_x[col].length() {
+        mtx_x[col][row] = approx_sub(mtx_x[col][row], mean_x)
+      }
+    }
+  }
+  let sum_xy = calc_sum_product(mtx_x, mtx_y, n)
+  let sum_x2 = calc_sum_product(mtx_x, mtx_x, n)
+  let slope = sum_xy / sum_x2
+  if b_constant {
+    let intercept = mean_y - slope * mean_x
+    for col in 0..<mtx_res.length() {
+      for row in 0..<mtx_res[col].length() {
+        let help = new_x[col][row] * slope + intercept
+        mtx_res[col][row] = if b_growth { @math.exp(help) } else { help }
+      }
+    }
+  } else {
+    for col in 0..<mtx_res.length() {
+      for row in 0..<mtx_res[col].length() {
+        let help = new_x[col][row] * slope
+        mtx_res[col][row] = if b_growth { @math.exp(help) } else { help }
+      }
+    }
+  }
+}
+
+///|
+fn calc_trend_growth_multiple_regression_part1(
+  b_constant : Bool,
+  b_growth : Bool,
+  mtx_y : Array[Array[Double]],
+  mtx_x : Array[Array[Double]],
+  new_x : Array[Array[Double]],
+  mtx_res : Array[Array[Double]],
+  mean_y : Double,
+  r_xn : Int,
+  k : Int,
+  n : Int,
+) -> Unit {
+  let vec_r = Array::make(n, 0.0)
+  let means = new_matrix(k, 1)
+  let slopes = new_matrix(1, k)
+  if means.length() == 0 || slopes.length() == 0 {
+    return
+  }
+  if b_constant {
+    calc_column_means(mtx_x, means, k, n)
+    calc_columns_delta(mtx_x, means, k, n)
+  }
+  if !calc_row_qr_decomposition(mtx_x, vec_r, k, n) {
+    return
+  }
+  let mut is_singular = false
+  for row in 0..<k {
+    if vec_r[row] == 0.0 {
+      is_singular = true
+    }
+  }
+  if is_singular {
+    return
+  }
+  for col in 0..<k {
+    calc_apply_rows_householder_transformation(mtx_x, col, mtx_y, n)
+  }
+  for col in 0..<k {
+    put_double(slopes, col, get_double(mtx_y, col))
+  }
+  calc_solve_with_upper_right_triangle(mtx_x, vec_r, slopes, k, false)
+  calc_fast_mult(new_x, slopes, mtx_res, r_xn, k, 1)
+  if b_constant {
+    let intercept = mean_y - calc_sum_product(means, slopes, k)
+    for row in 0..<r_xn {
+      mtx_res[0][row] = mtx_res[0][row] + intercept
+    }
+  }
+  if b_growth {
+    for idx in 0..<r_xn {
+      put_double(mtx_res, idx, @math.exp(get_double(mtx_res, idx)))
+    }
+  }
+}
+
+///|
+fn calc_trend_growth_multiple_regression_part2(
+  b_constant : Bool,
+  b_growth : Bool,
+  mtx_y : Array[Array[Double]],
+  mtx_x : Array[Array[Double]],
+  new_x : Array[Array[Double]],
+  mtx_res : Array[Array[Double]],
+  mean_y : Double,
+  n_cxn : Int,
+  k : Int,
+  n : Int,
+) -> Unit {
+  let vec_r = Array::make(n, 0.0)
+  let means = new_matrix(k, 1)
+  let slopes = new_matrix(k, 1)
+  if means.length() == 0 || slopes.length() == 0 {
+    return
+  }
+  if b_constant {
+    calc_row_means(mtx_x, means, n, k)
+    calc_rows_delta(mtx_x, means, n, k)
+  }
+  if !calc_col_qr_decomposition(mtx_x, vec_r, k, n) {
+    return
+  }
+  let mut is_singular = false
+  for row in 0..<k {
+    if vec_r[row] == 0.0 {
+      is_singular = true
+    }
+  }
+  if is_singular {
+    return
+  }
+  for row in 0..<k {
+    calc_apply_cols_householder_transformation(mtx_x, row, mtx_y, n)
+  }
+  for col in 0..<k {
+    put_double(slopes, col, get_double(mtx_y, col))
+  }
+  calc_solve_with_upper_right_triangle(mtx_x, vec_r, slopes, k, true)
+  calc_fast_mult(slopes, new_x, mtx_res, 1, k, n_cxn)
+  if b_constant {
+    let intercept = mean_y - calc_sum_product(means, slopes, k)
+    for col in 0..<n_cxn {
+      mtx_res[col][0] = mtx_res[col][0] + intercept
+    }
+  }
+  if b_growth {
+    for idx in 0..<n_cxn {
+      put_double(mtx_res, idx, @math.exp(get_double(mtx_res, idx)))
+    }
+  }
+}
+
+///|
+fn calc_trend_growth_regression(
+  b_constant : Bool,
+  b_growth : Bool,
+  trend_type : Int,
+  n_cxn : Int,
+  n_rxn : Int,
+  k : Int,
+  n : Int,
+  mtx_y : Array[Array[Double]],
+  mtx_x : Array[Array[Double]],
+  new_x : Array[Array[Double]],
+  mtx_res : Array[Array[Double]],
+) -> Unit {
+  if mtx_res.length() == 0 {
+    return
+  }
+  let mut mean_y = 0.0
+  let mut work_x = mtx_x
+  let mut work_y = mtx_y
+  if b_constant {
+    work_x = matrix_clone(mtx_x)
+    work_y = matrix_clone(mtx_y)
+    mean_y = calc_mean_over_all(work_y, n)
+    for col in 0..<work_y.length() {
+      for row in 0..<work_y[col].length() {
+        work_y[col][row] = approx_sub(work_y[col][row], mean_y)
+      }
+    }
+  }
+  match trend_type {
+    1 =>
+      calc_trend_growth_simple_regression(
+        b_constant, b_growth, work_y, work_x, new_x, mtx_res, mean_y, n,
+      )
+    2 =>
+      calc_trend_growth_multiple_regression_part1(
+        b_constant, b_growth, work_y, work_x, new_x, mtx_res, mean_y, n_rxn, k, n,
+      )
+    _ =>
+      calc_trend_growth_multiple_regression_part2(
+        b_constant, b_growth, work_y, work_x, new_x, mtx_res, mean_y, n_cxn, k, n,
+      )
+  }
+}
+
+///|
+fn calc_trend_growth(
+  mtx_y : Array[Array[Double]],
+  mtx_x : Array[Array[Double]],
+  new_x : Array[Array[Double]],
+  b_constant : Bool,
+  b_growth : Bool,
+) -> Result[Array[Array[Double]], FormulaValue] {
+  let info = match prepare_trend_growth(b_growth, mtx_x, mtx_y) {
+    Ok(value) => value
+    Err(err) => return Err(err)
+  }
+  let trend_type = info.trend_type
+  let mut n_cxn = info.n_cx
+  let mut n_rxn = info.n_rx
+  let k = info.m
+  let n = info.n
+  let work_x = info.mtx_x
+  let work_y = info.mtx_y
+  if (b_constant && n < k + 1) || (!b_constant && n < k) || n < 1 || k < 1 {
+    return Ok([])
+  }
+  let mut work_new_x = new_x
+  if work_new_x.length() == 0 {
+    work_new_x = matrix_clone(work_x)
+  } else {
+    n_rxn = work_new_x[0].length()
+    n_cxn = work_new_x.length()
+    if (trend_type == 2 && k != n_cxn) || (trend_type == 3 && k != n_rxn) {
+      return Ok([])
+    }
+  }
+  let mtx_res = match trend_type {
+    1 => new_matrix(n_cxn, n_rxn)
+    2 => new_matrix(1, n_rxn)
+    _ => new_matrix(n_cxn, 1)
+  }
+  calc_trend_growth_regression(
+    b_constant, b_growth, trend_type, n_cxn, n_rxn, k, n, work_y, work_x, work_new_x,
+    mtx_res,
+  )
+  Ok(mtx_res)
+}
+
+///|
 fn unique_row_key(
   range : RangeValues,
   row : Int,
@@ -6593,6 +7390,10 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "GROWTH" =>
+      trend_growth_values(workbook, sheet_name, "GROWTH", args, values, ctx)
+    "TREND" =>
+      trend_growth_values(workbook, sheet_name, "TREND", args, values, ctx)
     "FISHER" =>
       if values.length() == 1 {
         fisher_value(values[0])
@@ -17861,6 +18662,82 @@ fn steyx_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     0.5,
   )
   number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn trend_growth_values(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  if values.length() < 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let know_y_range = range_from_expr_or_value(
+    workbook,
+    sheet_name,
+    args[0],
+    values[0],
+    ctx,
+  )
+  let know_y = match number_matrix_from_range(know_y_range, false) {
+    Ok(matrix) => matrix
+    Err(err) => return err
+  }
+  let mut know_x : Array[Array[Double]] = []
+  if values.length() >= 2 {
+    let know_x_range = range_from_expr_or_value(
+      workbook,
+      sheet_name,
+      args[1],
+      values[1],
+      ctx,
+    )
+    know_x = match number_matrix_from_range(know_x_range, false) {
+      Ok(matrix) => matrix
+      Err(err) => return err
+    }
+  }
+  let mut new_x : Array[Array[Double]] = []
+  if values.length() >= 3 {
+    let new_x_range = range_from_expr_or_value(
+      workbook,
+      sheet_name,
+      args[2],
+      values[2],
+      ctx,
+    )
+    let base = match number_matrix_from_range(new_x_range, false) {
+      Ok(matrix) => matrix
+      Err(err) => return err
+    }
+    new_x = transpose_number_matrix(base)
+  }
+  let mut constant = true
+  if values.length() == 4 {
+    constant = match value_as_bool(values[3]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+  }
+  let is_growth = name == "GROWTH"
+  let result = match
+    calc_trend_growth(know_y, know_x, new_x, constant, is_growth) {
+    Ok(matrix) => matrix
+    Err(err) => return err
+  }
+  for col in 0..<result.length() {
+    for row in 0..<result[col].length() {
+      result[col][row] = round_significant_digits(result[col][row], 15)
+    }
+  }
+  FormulaValue::List(matrix_values(result))
 }
 
 ///|
