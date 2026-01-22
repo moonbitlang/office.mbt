@@ -6472,6 +6472,24 @@ test "calc spill mode.mult" {
 }
 
 ///|
+test "calc spill indirect and anchorarray" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("B1", "INDIRECT(\"A1:A2\")")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="2")
+  sheet.set_cell_formula("C1", "A1:A2*3")
+  sheet.set_cell_formula("D1", "ANCHORARRAY(C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "D2"), content="6")
+  sheet.set_cell_formula("E1", "_xlfn.ANCHORARRAY(C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "E2"), content="6")
+}
+
+///|
 test "calc mode errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

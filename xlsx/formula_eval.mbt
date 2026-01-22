@@ -3622,6 +3622,152 @@ fn array_shape_from_expr(
             } else {
               None
             }
+          "ANCHORARRAY" | "_XLFN.ANCHORARRAY" =>
+            if args.length() == 1 {
+              match args[0] {
+                Expr::Cell(sheet, reference) => {
+                  let target_sheet = if sheet == "" {
+                    sheet_name
+                  } else {
+                    sheet
+                  }
+                  let target = match workbook.sheet(target_sheet) {
+                    Some(value) => value
+                    None => return None
+                  }
+                  let formula = target.get_cell_formula(reference) catch {
+                    _ => None
+                  }
+                  match formula {
+                    Some(text) => {
+                      let inner_expr = parse_formula_expr(text) catch {
+                        _ => return None
+                      }
+                      array_shape_from_expr(
+                        workbook, target_sheet, inner_expr, ctx,
+                      )
+                    }
+                    None => Some((1, 1))
+                  }
+                }
+                _ => None
+              }
+            } else {
+              None
+            }
+          "INDIRECT" =>
+            if values.length() == 1 || values.length() == 2 {
+              let ref_text = match value_as_string(values[0]) {
+                Ok(text) => text
+                Err(_) => return None
+              }
+              let a1 = if values.length() == 2 {
+                match value_as_bool(values[1]) {
+                  Ok(flag) => flag
+                  Err(_) => return None
+                }
+              } else {
+                true
+              }
+              let (sheet_text, ref_part) = split_sheet_ref(ref_text)
+              let target_sheet = if sheet_text == "" {
+                sheet_name
+              } else {
+                sheet_text
+              }
+              let shape_from_range_refs = fn(
+                target_sheet : String,
+                start_ref : String,
+                end_ref : String,
+              ) -> (Int, Int)? raise XlsxError {
+                let (row1, col1) = cell_ref_to_rc(start_ref)
+                let (row2, col2) = cell_ref_to_rc(end_ref)
+                let min_row = if row1 < row2 { row1 } else { row2 }
+                let max_row = if row1 > row2 { row1 } else { row2 }
+                let min_col = if col1 < col2 { col1 } else { col2 }
+                let max_col = if col1 > col2 { col1 } else { col2 }
+                let (min_row, max_row, min_col, max_col) = effective_range_bounds(
+                  workbook, target_sheet, min_row, max_row, min_col, max_col,
+                )
+                let rows = max_row - min_row + 1
+                let cols = max_col - min_col + 1
+                if rows <= 0 || cols <= 0 {
+                  None
+                } else {
+                  Some((rows, cols))
+                }
+              }
+              if a1 {
+                match ref_part.find(":") {
+                  Some(idx) => {
+                    let start_token = ref_part.unsafe_substring(
+                      start=0,
+                      end=idx,
+                    )
+                    let end_token = ref_part.unsafe_substring(
+                      start=idx + 1,
+                      end=ref_part.length(),
+                    )
+                    let (start_ref, _start_end) = parse_range_ref_token(
+                      start_token,
+                    ) catch {
+                      _ => return None
+                    }
+                    let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
+                      _ => return None
+                    }
+                    shape_from_range_refs(target_sheet, start_ref, end_ref)
+                  }
+                  None =>
+                    match parse_cell_ref_token(ref_part) {
+                      Some(_) => Some((1, 1))
+                      None => {
+                        let (start_ref, end_ref) = parse_range_ref_token(
+                          ref_part,
+                        ) catch {
+                          _ => return None
+                        }
+                        shape_from_range_refs(target_sheet, start_ref, end_ref)
+                      }
+                    }
+                }
+              } else {
+                match ref_part.find(":") {
+                  Some(idx) => {
+                    let start_token = ref_part.unsafe_substring(
+                      start=0,
+                      end=idx,
+                    )
+                    let end_token = ref_part.unsafe_substring(
+                      start=idx + 1,
+                      end=ref_part.length(),
+                    )
+                    let (row1, col1) = match parse_r1c1_token(start_token) {
+                      Some(value) => value
+                      None => return None
+                    }
+                    let (row2, col2) = match parse_r1c1_token(end_token) {
+                      Some(value) => value
+                      None => return None
+                    }
+                    let start_ref = cell_ref_from(row1, col1) catch {
+                      _ => return None
+                    }
+                    let end_ref = cell_ref_from(row2, col2) catch {
+                      _ => return None
+                    }
+                    shape_from_range_refs(target_sheet, start_ref, end_ref)
+                  }
+                  None =>
+                    match parse_r1c1_token(ref_part) {
+                      Some(_) => Some((1, 1))
+                      None => None
+                    }
+                }
+              }
+            } else {
+              None
+            }
           "TREND" | "GROWTH" =>
             if values.length() >= 1 && values.length() <= 4 {
               let know_y_range = range_from_expr_or_value(
