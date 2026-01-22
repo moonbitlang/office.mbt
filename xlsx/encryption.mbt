@@ -715,3 +715,19 @@ fn encrypt_package(raw : BytesView, password : String) -> Bytes raise XlsxError 
   builder.put("EncryptedPackage", Bytes::from_array(encrypted_package))
   builder.write()
 }
+
+///|
+pub fn encrypt(
+  raw : BytesView,
+  options? : Options = Options::new(),
+) -> Bytes raise XlsxError {
+  encrypt_package(raw, options.password)
+}
+
+///|
+pub fn decrypt(
+  raw : BytesView,
+  options? : Options = Options::new(),
+) -> Bytes raise XlsxError {
+  decrypt_encrypted_package(raw, options.password)
+}

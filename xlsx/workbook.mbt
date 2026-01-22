@@ -148,7 +148,7 @@ fn defined_name_scope_key(scope : StringView) -> String {
 }
 
 ///|
-pub fn Workbook::new() -> Workbook {
+pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
   {
     sheets: [],
     chart_sheets: [],
@@ -168,7 +168,7 @@ pub fn Workbook::new() -> Workbook {
     file_path: None,
     zip_writer: None,
     charset_transcoder: None,
-    options: Options::new(),
+    options,
     workbook_protection: None,
     active_sheet_index: 0,
   }

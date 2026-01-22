@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn cell_name_to_coordinates(StringView) -> (Int, Int) raise XlsxError
+
 pub fn cell_ref_from(Int, Int) -> String raise XlsxError
 
 pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
@@ -14,6 +16,16 @@ pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
 pub fn column_name_to_number(StringView) -> Int raise XlsxError
 
 pub fn column_number_to_name(Int) -> String raise XlsxError
+
+pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise XlsxError
+
+pub fn decrypt(BytesView, options? : Options) -> Bytes raise XlsxError
+
+pub fn encrypt(BytesView, options? : Options) -> Bytes raise XlsxError
+
+pub fn hsl_to_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
+
+pub fn join_cell_name(StringView, Int) -> String raise XlsxError
 
 pub async fn open_file(String, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
@@ -24,6 +36,12 @@ pub fn read(BytesView, options? : Options, transcoder? : (String, Bytes) -> Stri
 pub fn read_with_password(BytesView, String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+
+pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
+
+pub fn split_cell_name(StringView) -> (String, Int) raise XlsxError
+
+pub fn theme_color(String, Double) -> String
 
 pub fn write(Workbook) -> Bytes raise XlsxError
 
@@ -980,7 +998,7 @@ pub fn Workbook::insert_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::merge_cell(Self, StringView, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::merge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxError
-pub fn Workbook::new() -> Self
+pub fn Workbook::new(options? : Options) -> Self
 pub fn Workbook::new_conditional_style(Self, Style) -> Int
 pub fn Workbook::new_sheet(Self, String) -> Worksheet raise XlsxError
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError

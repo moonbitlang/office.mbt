@@ -7,7 +7,25 @@ import {
 }
 
 // Values
-pub fn new_workbook() -> @xlsx.Workbook
+pub fn cell_name_to_coordinates(StringView) -> (Int, Int) raise @xlsx.XlsxError
+
+pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise @xlsx.XlsxError
+
+pub fn decrypt(BytesView, options? : @xlsx.Options) -> Bytes raise @xlsx.XlsxError
+
+pub fn encrypt(BytesView, options? : @xlsx.Options) -> Bytes raise @xlsx.XlsxError
+
+pub fn hsl_to_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
+
+pub fn join_cell_name(StringView, Int) -> String raise @xlsx.XlsxError
+
+pub fn new_data_validation(Bool) -> @xlsx.DataValidation
+
+pub fn new_file(options? : @xlsx.Options) -> @xlsx.Workbook
+
+pub fn[T] new_stack() -> Stack[T]
+
+pub fn new_workbook(options? : @xlsx.Options) -> @xlsx.Workbook
 
 pub async fn open_file(String, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
@@ -18,6 +36,12 @@ pub fn read(BytesView, options? : @xlsx.Options, transcoder? : (String, Bytes) -
 pub fn read_with_password(BytesView, String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+
+pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
+
+pub fn split_cell_name(StringView) -> (String, Int) raise @xlsx.XlsxError
+
+pub fn theme_color(String, Double) -> String
 
 pub fn utf16_index_to_utf8_offset(StringView, Int) -> Int raise UtfIndexError
 
@@ -41,6 +65,15 @@ pub impl Eq for UtfIndexError
 pub impl Show for UtfIndexError
 
 // Types and methods
+pub struct Stack[T] {
+  items : Array[T]
+}
+pub fn[T] Stack::empty(Self[T]) -> Bool
+pub fn[T] Stack::len(Self[T]) -> Int
+pub fn[T] Stack::new() -> Self[T]
+pub fn[T] Stack::peek(Self[T]) -> T?
+pub fn[T] Stack::pop(Self[T]) -> T?
+pub fn[T] Stack::push(Self[T], T) -> Unit
 
 // Type aliases
 
