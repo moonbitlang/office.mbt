@@ -194,27 +194,6 @@ fn auto_filter_column_from_expression(
 }
 
 ///|
-fn column_name_to_number(name : StringView) -> Int raise XlsxError {
-  let text = name.to_string()
-  if text == "" {
-    raise XlsxError::InvalidAutoFilter(msg="auto filter column invalid")
-  }
-  let mut value = 0
-  for c in text {
-    if !c.is_ascii_alphabetic() {
-      raise XlsxError::InvalidAutoFilter(msg="auto filter column invalid")
-    }
-    let upper = c.to_ascii_uppercase()
-    if upper < 'A' || upper > 'Z' {
-      raise XlsxError::InvalidAutoFilter(msg="auto filter column invalid")
-    }
-    value = value * 26 + (upper.to_int() - 'A'.to_int() + 1)
-  }
-  if value <= 0 {
-    raise XlsxError::InvalidAutoFilter(msg="auto filter column invalid")
-  }
-  value
-}
 
 ///|
 fn auto_filter_from_options(
@@ -228,7 +207,9 @@ fn auto_filter_from_options(
     if opt.column == "" || opt.expression == "" {
       continue
     }
-    let col = column_name_to_number(opt.column)
+    let col = column_name_to_number(opt.column) catch {
+      _ => raise XlsxError::InvalidAutoFilter(msg="auto filter column invalid")
+    }
     if col < min_col || col > max_col {
       raise XlsxError::InvalidAutoFilter(msg="auto filter column out of range")
     }

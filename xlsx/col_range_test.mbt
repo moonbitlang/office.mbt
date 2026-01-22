@@ -1,0 +1,57 @@
+///|
+test "column name conversions" {
+  inspect(column_name_to_number("A"), content="1")
+  inspect(column_name_to_number("Z"), content="26")
+  inspect(column_name_to_number("AA"), content="27")
+  inspect(column_number_to_name(1), content="A")
+  inspect(column_number_to_name(27), content="AA")
+  let bad : Result[Int, Error] = try? column_name_to_number("A1")
+  guard bad is Err(_) else { fail("expected invalid column name") }
+  let bad_number : Result[String, Error] = try? column_number_to_name(0)
+  guard bad_number is Err(_) else { fail("expected invalid column number") }
+}
+
+///|
+test "column range setters" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let style_id = workbook.add_style(Style::new())
+  workbook.set_col_width_range("Sheet1", "B:D", 11.0)
+  workbook.set_col_visible_range("Sheet1", "B:D", false)
+  workbook.set_col_outline_level_range("Sheet1", "B:D", 2)
+  workbook.set_col_style_range("Sheet1", "B:D", style_id)
+  let bytes = write(workbook)
+  let parsed = read(bytes)
+  inspect(
+    [
+      parsed.get_col_width("Sheet1", 2),
+      parsed.get_col_width("Sheet1", 3),
+      parsed.get_col_width("Sheet1", 4),
+    ],
+    content="[Some(11), Some(11), Some(11)]",
+  )
+  inspect(
+    [
+      parsed.col_visible("Sheet1", 2),
+      parsed.col_visible("Sheet1", 3),
+      parsed.col_visible("Sheet1", 4),
+    ],
+    content="[false, false, false]",
+  )
+  inspect(
+    [
+      parsed.col_outline_level("Sheet1", 2),
+      parsed.col_outline_level("Sheet1", 3),
+      parsed.col_outline_level("Sheet1", 4),
+    ],
+    content="[2, 2, 2]",
+  )
+  inspect(
+    [
+      parsed.get_col_style("Sheet1", 2),
+      parsed.get_col_style("Sheet1", 3),
+      parsed.get_col_style("Sheet1", 4),
+    ],
+    content="[Some(1), Some(1), Some(1)]",
+  )
+}

@@ -10,6 +10,10 @@ pub fn cell_ref_from(Int, Int) -> String raise XlsxError
 
 pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
 
+pub fn column_name_to_number(StringView) -> Int raise XlsxError
+
+pub fn column_number_to_name(Int) -> String raise XlsxError
+
 pub async fn open_file(String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub async fn[R : @io.Reader] open_reader(R, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
@@ -983,9 +987,13 @@ pub fn Workbook::set_cell_value(Self, StringView, String, CellValue) -> Unit rai
 pub fn Workbook::set_cell_value_rc(Self, StringView, Int, Int, CellValue) -> Unit raise XlsxError
 pub fn Workbook::set_col(Self, StringView, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Workbook::set_col_outline_level(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::set_col_outline_level_range(Self, StringView, StringView, Int) -> Unit raise XlsxError
 pub fn Workbook::set_col_style(Self, StringView, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::set_col_style_range(Self, StringView, StringView, Int) -> Unit raise XlsxError
 pub fn Workbook::set_col_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
+pub fn Workbook::set_col_visible_range(Self, StringView, StringView, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_col_width(Self, StringView, Int, Double) -> Unit raise XlsxError
+pub fn Workbook::set_col_width_range(Self, StringView, StringView, Double) -> Unit raise XlsxError
 pub fn Workbook::set_conditional_format(Self, StringView, String, ArrayView[ConditionalFormatOptions]) -> Unit raise XlsxError
 pub fn Workbook::set_core_properties(Self, CoreProperties) -> Unit
 pub fn Workbook::set_custom_props(Self, CustomProperty) -> Unit raise XlsxError

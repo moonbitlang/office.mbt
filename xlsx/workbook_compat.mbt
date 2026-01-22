@@ -134,6 +134,96 @@ pub fn Workbook::set_sheet_background_from_bytes(
 }
 
 ///|
+fn parse_column_range(columns : StringView) -> (Int, Int) raise XlsxError {
+  let text = columns.to_string()
+  let parts : Array[StringView] = []
+  for part in text.split(":") {
+    parts.push(part)
+  }
+  if parts.length() == 0 || parts.length() > 2 {
+    raise XlsxError::InvalidCellRef(value=text)
+  }
+  let start = column_name_to_number(parts[0])
+  let end = if parts.length() == 2 {
+    column_name_to_number(parts[1])
+  } else {
+    start
+  }
+  if end < start {
+    raise XlsxError::InvalidCellRef(value=text)
+  }
+  (start, end)
+}
+
+///|
+pub fn Workbook::set_col_width_range(
+  self : Workbook,
+  sheet_name : StringView,
+  columns : StringView,
+  width : Double,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let (start, end) = parse_column_range(columns)
+  for col in start..<=end {
+    sheet.set_col_width(col, width)
+  }
+}
+
+///|
+pub fn Workbook::set_col_visible_range(
+  self : Workbook,
+  sheet_name : StringView,
+  columns : StringView,
+  visible : Bool,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let (start, end) = parse_column_range(columns)
+  for col in start..<=end {
+    sheet.set_col_visible(col, visible)
+  }
+}
+
+///|
+pub fn Workbook::set_col_outline_level_range(
+  self : Workbook,
+  sheet_name : StringView,
+  columns : StringView,
+  level : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let (start, end) = parse_column_range(columns)
+  for col in start..<=end {
+    sheet.set_col_outline_level(col, level)
+  }
+}
+
+///|
+pub fn Workbook::set_col_style_range(
+  self : Workbook,
+  sheet_name : StringView,
+  columns : StringView,
+  style_id : Int,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let (start, end) = parse_column_range(columns)
+  for col in start..<=end {
+    sheet.set_col_style(col, style_id)
+  }
+}
+
+///|
 pub fn Workbook::update_linked_value(self : Workbook) -> Unit raise XlsxError {
   self.calc_props = CalcPropsOptions::new()
   for sheet in self.sheets {

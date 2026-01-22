@@ -44,3 +44,39 @@ pub fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
   let col_name = col_rev.rev()
   "\{col_name}\{row}"
 }
+
+///|
+pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
+  let text = name.to_string()
+  if text == "" {
+    raise XlsxError::InvalidCellRef(value=text)
+  }
+  let mut value = 0
+  for c in text {
+    if !c.is_ascii_alphabetic() {
+      raise XlsxError::InvalidCellRef(value=text)
+    }
+    let upper = c.to_ascii_uppercase()
+    value = value * 26 + (upper.to_int() - 'A'.to_int() + 1)
+  }
+  if value <= 0 {
+    raise XlsxError::InvalidCellRef(value=text)
+  }
+  value
+}
+
+///|
+pub fn column_number_to_name(col : Int) -> String raise XlsxError {
+  if col <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}")
+  }
+  let sb = StringBuilder::new()
+  let mut n = col
+  while n > 0 {
+    let rem = (n - 1) % 26
+    let c = Int::unsafe_to_char('A'.to_int() + rem)
+    sb.write_char(c)
+    n = (n - 1) / 26
+  }
+  sb.to_string().rev()
+}
