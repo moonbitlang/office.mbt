@@ -13,6 +13,21 @@ pub struct RowOpts {
 } derive(Eq, Show)
 
 ///|
+pub fn RowOpts::new() -> RowOpts {
+  { height: 0.0, hidden: false, style_id: 0, outline_level: 0 }
+}
+
+///|
+pub fn RowOpts::with_values(
+  height? : Double = 0.0,
+  hidden? : Bool = false,
+  style_id? : Int = 0,
+  outline_level? : Int = 0,
+) -> RowOpts {
+  { height, hidden, style_id, outline_level }
+}
+
+///|
 pub struct Rows {
   sheet : Worksheet
   entries : Array[RowEntry]
@@ -126,13 +141,7 @@ fn row_opts_for_row(sheet : Worksheet, row : Int) -> RowOpts {
 pub fn Rows::get_row_opts(self : Rows) -> RowOpts {
   match self.row_index() {
     Some(row) => row_opts_for_row(self.sheet, row)
-    None =>
-      {
-        height: default_row_height(self.sheet),
-        hidden: false,
-        style_id: 0,
-        outline_level: 0,
-      }
+    None => RowOpts::with_values(height=default_row_height(self.sheet))
   }
 }
 

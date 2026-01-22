@@ -630,6 +630,8 @@ pub struct RowOpts {
   style_id : Int
   outline_level : Int
 }
+pub fn RowOpts::new() -> Self
+pub fn RowOpts::with_values(height? : Double, hidden? : Bool, style_id? : Int, outline_level? : Int) -> Self
 pub impl Eq for RowOpts
 pub impl Show for RowOpts
 
@@ -836,13 +838,20 @@ pub impl Eq for StreamState
 pub struct StreamWriter {
   sheet : Worksheet
   mut last_row : Int
-  style_count : Int
+  styles : Array[Style]
   mut closed : Bool
 }
+pub fn StreamWriter::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn StreamWriter::flush(Self) -> Unit raise XlsxError
 pub fn StreamWriter::insert_page_break(Self, StringView) -> Unit raise XlsxError
-pub fn StreamWriter::set_row(Self, String, ArrayView[String]) -> Unit raise XlsxError
-pub fn StreamWriter::set_row_cells(Self, String, ArrayView[StreamCell]) -> Unit raise XlsxError
+pub fn StreamWriter::merge_cell(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn StreamWriter::set_col_outline_level(Self, Int, Int) -> Unit raise XlsxError
+pub fn StreamWriter::set_col_style(Self, Int, Int, Int) -> Unit raise XlsxError
+pub fn StreamWriter::set_col_visible(Self, Int, Int, Bool) -> Unit raise XlsxError
+pub fn StreamWriter::set_col_width(Self, Int, Int, Double) -> Unit raise XlsxError
+pub fn StreamWriter::set_panes(Self, Panes) -> Unit raise XlsxError
+pub fn StreamWriter::set_row(Self, String, ArrayView[String], row_opts? : RowOpts) -> Unit raise XlsxError
+pub fn StreamWriter::set_row_cells(Self, String, ArrayView[StreamCell], row_opts? : RowOpts) -> Unit raise XlsxError
 
 pub struct Style {
   number_format : NumberFormat?

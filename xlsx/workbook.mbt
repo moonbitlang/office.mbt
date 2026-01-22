@@ -229,7 +229,7 @@ pub fn Workbook::new_stream_writer(
     raise XlsxError::StreamModeConflict(msg="worksheet already has data")
   }
   sheet.stream_state = StreamState::Writing
-  StreamWriter::new(sheet, self.styles.length())
+  StreamWriter::new(sheet, self.styles)
 }
 
 ///|
