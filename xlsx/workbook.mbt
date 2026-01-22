@@ -1242,6 +1242,17 @@ fn clone_slicers(values : ArrayView[Slicer]) -> Array[Slicer] {
 }
 
 ///|
+fn clone_ignored_errors(
+  values : ArrayView[IgnoredError],
+) -> Array[IgnoredError] {
+  let out : Array[IgnoredError] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
 fn clone_sheet_views(values : ArrayView[SheetView]) -> Array[SheetView] {
   let out : Array[SheetView] = []
   for view in values {
@@ -1303,6 +1314,7 @@ fn clone_worksheet(
     slicers: clone_slicers(sheet.slicers),
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
+    ignored_errors: clone_ignored_errors(sheet.ignored_errors),
     comments: clone_comments(sheet.comments),
     auto_filter: match sheet.auto_filter {
       Some(filter) => Some(clone_auto_filter(filter))
@@ -2117,6 +2129,20 @@ pub fn Workbook::delete_data_validation(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_data_validation(sqrefs~)
+}
+
+///|
+pub fn Workbook::add_ignored_errors(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+  error_type : IgnoredErrorType,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_ignored_errors(range_ref, error_type)
 }
 
 ///|

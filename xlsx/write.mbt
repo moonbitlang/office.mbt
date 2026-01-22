@@ -1584,6 +1584,10 @@ fn write_worksheet_xml(
     }
     sb.write_view("  </dataValidations>\n")
   }
+  match write_ignored_errors_xml(sheet.ignored_errors()) {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
   if hyperlinks.length() > 0 {
     let mut wrote = false
     for link in hyperlinks {

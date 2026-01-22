@@ -2566,6 +2566,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         sheet_xml, "legacyDrawingHF",
       )
       let sparkline_groups = parse_sparkline_groups(sheet_xml)
+      let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
         if link.r_id is Some(_) {
@@ -2868,6 +2869,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         slicers: [],
         data_validations: [],
         conditional_formats: [],
+        ignored_errors,
         comments,
         row_dimensions,
         col_dimensions,

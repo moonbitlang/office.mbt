@@ -65,6 +65,7 @@ pub struct Worksheet {
   slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  ignored_errors : Array[IgnoredError]
   comments : Array[Comment]
   mut auto_filter : AutoFilter?
   mut page_margins : PageLayoutMarginsOptions?
@@ -101,6 +102,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     slicers: [],
     data_validations: [],
     conditional_formats: [],
+    ignored_errors: [],
     comments: [],
     auto_filter: None,
     page_margins: None,
@@ -199,6 +201,11 @@ pub fn Worksheet::data_validations(self : Worksheet) -> ArrayView[String] {
 ///|
 pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
   self.conditional_formats[:]
+}
+
+///|
+pub fn Worksheet::ignored_errors(self : Worksheet) -> ArrayView[IgnoredError] {
+  self.ignored_errors[:]
 }
 
 ///|
@@ -1307,6 +1314,26 @@ pub fn Worksheet::delete_data_validation(
   }
   self.data_validations.clear()
   self.data_validations.append(updated[:])
+}
+
+///|
+pub fn Worksheet::add_ignored_errors(
+  self : Worksheet,
+  range_ref : String,
+  error_type : IgnoredErrorType,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  if range_ref == "" {
+    raise XlsxError::InvalidSheetOperation(msg="ignored errors range empty")
+  }
+  let sqref = normalize_cell_or_range_ref(range_ref)
+  let entry = ignored_error_from_type(sqref, error_type)
+  for existing in self.ignored_errors {
+    if existing == entry {
+      return
+    }
+  }
+  self.ignored_errors.push(entry)
 }
 
 ///|

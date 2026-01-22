@@ -396,6 +396,35 @@ pub(all) enum HyperlinkType {
 pub impl Eq for HyperlinkType
 pub impl Show for HyperlinkType
 
+pub struct IgnoredError {
+  sqref : String
+  eval_error : Bool
+  two_digit_text_year : Bool
+  number_stored_as_text : Bool
+  formula : Bool
+  formula_range : Bool
+  unlocked_formula : Bool
+  empty_cell_reference : Bool
+  list_data_validation : Bool
+  calculated_column : Bool
+}
+pub impl Eq for IgnoredError
+pub impl Show for IgnoredError
+
+pub(all) enum IgnoredErrorType {
+  EvalError
+  TwoDigitTextYear
+  NumberStoredAsText
+  Formula
+  FormulaRange
+  UnlockedFormula
+  EmptyCellReference
+  ListDataValidation
+  CalculatedColumn
+}
+pub impl Eq for IgnoredErrorType
+pub impl Show for IgnoredErrorType
+
 pub struct Image {
   reference : String
   data : Bytes
@@ -727,6 +756,7 @@ pub fn Workbook::add_data_validation(Self, StringView, DataValidation) -> Unit r
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_form_control(Self, StringView, FormControl) -> Unit raise XlsxError
+pub fn Workbook::add_ignored_errors(Self, StringView, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
@@ -941,6 +971,7 @@ pub struct Worksheet {
   slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  ignored_errors : Array[IgnoredError]
   comments : Array[Comment]
   mut auto_filter : AutoFilter?
   mut page_margins : PageLayoutMarginsOptions?
@@ -964,6 +995,7 @@ pub fn Worksheet::add_data_validation(Self, DataValidation) -> Unit raise XlsxEr
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_form_control(Self, FormControl) -> Unit raise XlsxError
+pub fn Worksheet::add_ignored_errors(Self, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
@@ -1024,6 +1056,7 @@ pub fn Worksheet::get_sheet_view(Self, Int) -> SheetViewOptions raise XlsxError
 pub fn Worksheet::get_slicers(Self) -> ArrayView[Slicer]
 pub fn Worksheet::header_footer(Self) -> HeaderFooterOptions?
 pub fn Worksheet::hyperlinks(Self) -> ArrayView[Hyperlink]
+pub fn Worksheet::ignored_errors(Self) -> ArrayView[IgnoredError]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::insert_cols(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::insert_page_break(Self, StringView) -> Unit raise XlsxError
