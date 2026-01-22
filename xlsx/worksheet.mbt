@@ -1078,6 +1078,16 @@ pub fn Worksheet::add_data_validation_xml(
 }
 
 ///|
+pub fn Worksheet::add_data_validation(
+  self : Worksheet,
+  dv : DataValidation,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let xml = data_validation_xml(dv)
+  self.data_validations.push(xml)
+}
+
+///|
 pub fn Worksheet::add_data_validation_list(
   self : Worksheet,
   range_ref : String,
@@ -1087,18 +1097,57 @@ pub fn Worksheet::add_data_validation_list(
   if values.length() == 0 {
     raise XlsxError::UnsupportedFeature(msg="empty validation list")
   }
-  let sb = StringBuilder::new()
-  for i, value in values {
-    if i > 0 {
-      sb.write_char(',')
-    }
-    sb.write_view(value)
+  let dv = DataValidation::new(allow_blank)
+  dv.set_sqref(range_ref)
+  dv.set_drop_list(values)
+  self.add_data_validation(dv)
+}
+
+///|
+pub fn Worksheet::get_data_validations(
+  self : Worksheet,
+) -> Array[DataValidation] raise XlsxError {
+  let validations : Array[DataValidation] = []
+  for xml in self.data_validations {
+    validations.push(data_validation_from_xml(xml))
   }
-  let joined = sb.to_string()
-  let allow = if allow_blank { "1" } else { "0" }
-  let formula = "\"\{joined}\""
-  let xml = "<dataValidation type=\"list\" allowBlank=\"\{allow}\" sqref=\"\{escape_xml_attr(range_ref)}\"><formula1>\{escape_xml_text(formula)}</formula1></dataValidation>"
-  self.data_validations.push(xml)
+  validations
+}
+
+///|
+pub fn Worksheet::delete_data_validation(
+  self : Worksheet,
+  sqrefs? : Array[String] = [],
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  if sqrefs.length() == 0 {
+    self.data_validations.clear()
+    return
+  }
+  let sqref_text = sqrefs.join(" ")
+  let del_cells = flat_sqref(sqref_text)
+  let updated : Array[String] = []
+  for xml in self.data_validations {
+    let tag = match tag_attributes_in(xml, "dataValidation") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="data validation tag missing")
+    }
+    let sqref = match attr_value(tag, "sqref") {
+      Some(value) => unescape_xml_text(value)
+      None => raise XlsxError::InvalidXml(msg="data validation sqref missing")
+    }
+    let next_sqref = delete_cells_from_sqref(sqref, del_cells)
+    if next_sqref == "" {
+      continue
+    }
+    match replace_attr_value_in_open_tag(xml, "sqref", next_sqref) {
+      Some(value) => updated.push(value)
+      None =>
+        raise XlsxError::InvalidXml(msg="data validation sqref update failed")
+    }
+  }
+  self.data_validations.clear()
+  self.data_validations.append(updated[:])
 }
 
 ///|
@@ -1107,6 +1156,90 @@ pub fn Worksheet::add_conditional_format_xml(
   xml : String,
 ) -> Unit {
   self.conditional_formats.push(xml)
+}
+
+///|
+pub fn Worksheet::set_conditional_format(
+  self : Worksheet,
+  range_ref : String,
+  options : ArrayView[ConditionalFormatOptions],
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  if options.length() == 0 {
+    raise XlsxError::InvalidConditionalFormat(msg="options empty")
+  }
+  let (sqref, master_cell) = prepare_conditional_format_range(range_ref)
+  let mut priority = 0
+  for xml in self.conditional_formats {
+    let mut count = 0
+    let mut first = true
+    for _ in xml.split("<cfRule") {
+      if first {
+        first = false
+        continue
+      }
+      count = count + 1
+    }
+    priority = priority + count
+  }
+  let rules = conditional_format_rules_xml(options, priority, master_cell)
+  let xml = conditional_format_xml(sqref, rules)
+  self.conditional_formats.push(xml)
+}
+
+///|
+pub fn Worksheet::get_conditional_formats(
+  self : Worksheet,
+) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError {
+  let formats : Map[String, Array[ConditionalFormatOptions]] = {}
+  for xml in self.conditional_formats {
+    let (sqref, opts) = parse_conditional_format_xml(xml)
+    match formats.get(sqref) {
+      Some(existing) => {
+        existing.append(opts[:])
+        formats[sqref] = existing
+      }
+      None => formats[sqref] = opts
+    }
+  }
+  formats
+}
+
+///|
+pub fn Worksheet::unset_conditional_format(
+  self : Worksheet,
+  range_ref : String,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let del_cells = flat_sqref(
+    range_ref.to_string().replace_all(old=",", new=" "),
+  )
+  let updated : Array[String] = []
+  for xml in self.conditional_formats {
+    let tag = match tag_attributes_in(xml, "conditionalFormatting") {
+      Some(value) => value
+      None =>
+        raise XlsxError::InvalidXml(msg="conditionalFormatting tag missing")
+    }
+    let sqref = match attr_value(tag, "sqref") {
+      Some(value) => unescape_xml_text(value)
+      None =>
+        raise XlsxError::InvalidXml(msg="conditionalFormatting sqref missing")
+    }
+    let next_sqref = delete_cells_from_sqref(sqref, del_cells)
+    if next_sqref == "" {
+      continue
+    }
+    match replace_attr_value_in_open_tag(xml, "sqref", next_sqref) {
+      Some(value) => updated.push(value)
+      None =>
+        raise XlsxError::InvalidXml(
+          msg="conditionalFormatting sqref update failed",
+        )
+    }
+  }
+  self.conditional_formats.clear()
+  self.conditional_formats.append(updated[:])
 }
 
 ///|

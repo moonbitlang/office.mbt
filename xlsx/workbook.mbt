@@ -1864,6 +1864,19 @@ pub fn Workbook::add_data_validation_xml(
 }
 
 ///|
+pub fn Workbook::add_data_validation(
+  self : Workbook,
+  sheet_name : StringView,
+  dv : DataValidation,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_data_validation(dv)
+}
+
+///|
 pub fn Workbook::add_data_validation_list(
   self : Workbook,
   sheet_name : StringView,
@@ -1879,6 +1892,31 @@ pub fn Workbook::add_data_validation_list(
 }
 
 ///|
+pub fn Workbook::get_data_validations(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[DataValidation] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_data_validations()
+}
+
+///|
+pub fn Workbook::delete_data_validation(
+  self : Workbook,
+  sheet_name : StringView,
+  sqrefs? : Array[String] = [],
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.delete_data_validation(sqrefs~)
+}
+
+///|
 pub fn Workbook::add_conditional_format_xml(
   self : Workbook,
   sheet_name : StringView,
@@ -1889,6 +1927,45 @@ pub fn Workbook::add_conditional_format_xml(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_conditional_format_xml(xml)
+}
+
+///|
+pub fn Workbook::set_conditional_format(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+  options : ArrayView[ConditionalFormatOptions],
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_conditional_format(range_ref, options)
+}
+
+///|
+pub fn Workbook::get_conditional_formats(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_conditional_formats()
+}
+
+///|
+pub fn Workbook::unset_conditional_format(
+  self : Workbook,
+  sheet_name : StringView,
+  range_ref : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.unset_conditional_format(range_ref)
 }
 
 ///|

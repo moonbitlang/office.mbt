@@ -16,6 +16,8 @@ pub suberror XlsxError {
   InvalidPivotTable(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
   InvalidAutoFilter(msg~ : String)
+  InvalidDataValidation(msg~ : String)
+  InvalidConditionalFormat(msg~ : String)
   InvalidDefinedName(msg~ : String)
   DefinedNameDuplicate(name~ : String)
   DefinedNameScope(name~ : String)

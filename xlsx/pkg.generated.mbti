@@ -32,6 +32,8 @@ pub suberror XlsxError {
   InvalidPivotTable(msg~ : String)
   InvalidVmlDrawing(msg~ : String)
   InvalidAutoFilter(msg~ : String)
+  InvalidDataValidation(msg~ : String)
+  InvalidConditionalFormat(msg~ : String)
   InvalidDefinedName(msg~ : String)
   DefinedNameDuplicate(name~ : String)
   DefinedNameScope(name~ : String)
@@ -201,6 +203,39 @@ pub(all) struct Comment {
 pub impl Eq for Comment
 pub impl Show for Comment
 
+pub(all) struct ConditionalFormatOptions {
+  mut format_type : String
+  mut above_average : Bool
+  mut percent : Bool
+  mut format : Int?
+  mut criteria : String
+  mut value : String
+  mut min_type : String
+  mut mid_type : String
+  mut max_type : String
+  mut min_value : String
+  mut mid_value : String
+  mut max_value : String
+  mut min_color : String
+  mut mid_color : String
+  mut max_color : String
+  mut bar_color : String
+  mut bar_border_color : String
+  mut bar_direction : String
+  mut bar_only : Bool
+  mut bar_solid : Bool
+  mut icon_style : String
+  mut reverse_icons : Bool
+  mut icons_only : Bool
+  mut stop_if_true : Bool
+}
+pub fn ConditionalFormatOptions::new(String) -> Self
+pub fn ConditionalFormatOptions::set_bar_border_color(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_bar_direction(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_bar_solid(Self, Bool) -> Unit
+pub impl Eq for ConditionalFormatOptions
+pub impl Show for ConditionalFormatOptions
+
 pub struct CoreProperties {
   mut title : String
   mut subject : String
@@ -237,6 +272,74 @@ pub(all) enum CustomPropertyValue {
 }
 pub impl Eq for CustomPropertyValue
 pub impl Show for CustomPropertyValue
+
+pub struct DataValidation {
+  allow_blank : Bool
+  mut error : String?
+  mut error_style : String?
+  mut error_title : String?
+  mut operator : String
+  mut prompt : String?
+  mut prompt_title : String?
+  mut show_drop_down : Bool
+  mut show_error_message : Bool
+  mut show_input_message : Bool
+  mut sqref : String
+  mut validation_type : String
+  mut formula1 : String
+  mut formula2 : String
+}
+pub fn DataValidation::new(Bool) -> Self
+pub fn DataValidation::set_drop_list(Self, ArrayView[String]) -> Unit raise XlsxError
+pub fn DataValidation::set_error(Self, DataValidationErrorStyle, String, String) -> Unit
+pub fn DataValidation::set_input(Self, String, String) -> Unit
+pub fn DataValidation::set_range(Self, DataValidationFormula, DataValidationFormula, DataValidationType, DataValidationOperator) -> Unit raise XlsxError
+pub fn DataValidation::set_sqref(Self, String) -> Unit
+pub fn DataValidation::set_sqref_drop_list(Self, String) -> Unit
+pub impl Eq for DataValidation
+pub impl Show for DataValidation
+
+pub(all) enum DataValidationErrorStyle {
+  Stop
+  Warning
+  Information
+}
+pub impl Eq for DataValidationErrorStyle
+pub impl Show for DataValidationErrorStyle
+
+pub(all) enum DataValidationFormula {
+  IntValue(Int)
+  DoubleValue(Double)
+  TextValue(String)
+}
+pub impl Eq for DataValidationFormula
+pub impl Show for DataValidationFormula
+
+pub(all) enum DataValidationOperator {
+  Between
+  Equal
+  GreaterThan
+  GreaterThanOrEqual
+  LessThan
+  LessThanOrEqual
+  NotBetween
+  NotEqual
+}
+pub impl Eq for DataValidationOperator
+pub impl Show for DataValidationOperator
+
+pub(all) enum DataValidationType {
+  NoneType
+  Custom
+  Date
+  Decimal
+  List
+  TextLength
+  Time
+  Whole
+}
+pub impl Eq for DataValidationType
+pub impl Show for DataValidationType
 
 pub struct DefinedName {
   name : String
@@ -587,6 +690,7 @@ pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxE
 pub fn Workbook::add_chart_sheet(Self, String, String) -> ChartSheet raise XlsxError
 pub fn Workbook::add_comment(Self, StringView, Comment) -> Unit raise XlsxError
 pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
+pub fn Workbook::add_data_validation(Self, StringView, DataValidation) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
@@ -616,6 +720,7 @@ pub fn Workbook::custom_properties(Self) -> Array[CustomProperty]
 pub fn Workbook::default_font(Self) -> String
 pub fn Workbook::defined_names(Self) -> ArrayView[DefinedName]
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn Workbook::delete_data_validation(Self, StringView, sqrefs? : Array[String]) -> Unit raise XlsxError
 pub fn Workbook::delete_defined_name(Self, DefinedName) -> Unit raise XlsxError
 pub fn Workbook::delete_picture(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
@@ -643,7 +748,9 @@ pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_cols(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
+pub fn Workbook::get_conditional_formats(Self, StringView) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Workbook::get_custom_props(Self) -> Array[CustomProperty]
+pub fn Workbook::get_data_validations(Self, StringView) -> Array[DataValidation] raise XlsxError
 pub fn Workbook::get_default_font(Self) -> String
 pub fn Workbook::get_defined_names(Self) -> Array[DefinedName]
 pub fn Workbook::get_doc_props(Self) -> CoreProperties
@@ -708,6 +815,7 @@ pub fn Workbook::set_col_outline_level(Self, StringView, Int, Int) -> Unit raise
 pub fn Workbook::set_col_style(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::set_col_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_col_width(Self, StringView, Int, Double) -> Unit raise XlsxError
+pub fn Workbook::set_conditional_format(Self, StringView, String, ArrayView[ConditionalFormatOptions]) -> Unit raise XlsxError
 pub fn Workbook::set_core_properties(Self, CoreProperties) -> Unit
 pub fn Workbook::set_custom_props(Self, CustomProperty) -> Unit raise XlsxError
 pub fn Workbook::set_default_font(Self, String) -> Unit
@@ -739,6 +847,7 @@ pub fn Workbook::unmerge_cell(Self, StringView, StringView, StringView) -> Unit 
 pub fn Workbook::unmerge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::unprotect_sheet(Self, StringView, password? : String) -> Unit raise XlsxError
 pub fn Workbook::unprotect_workbook(Self, password? : String) -> Unit raise XlsxError
+pub fn Workbook::unset_conditional_format(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
 
 pub struct WorkbookPropsOptions {
@@ -799,6 +908,7 @@ pub struct Worksheet {
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_comment(Self, Comment) -> Unit raise XlsxError
 pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
+pub fn Worksheet::add_data_validation(Self, DataValidation) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
@@ -821,6 +931,7 @@ pub fn Worksheet::comments(Self) -> ArrayView[Comment]
 pub fn Worksheet::conditional_formats(Self) -> ArrayView[String]
 pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
+pub fn Worksheet::delete_data_validation(Self, sqrefs? : Array[String]) -> Unit raise XlsxError
 pub fn Worksheet::delete_picture(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::duplicate_row(Self, Int) -> Unit raise XlsxError
@@ -839,6 +950,8 @@ pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
+pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
+pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
 pub fn Worksheet::get_panes(Self) -> Panes
 pub fn Worksheet::get_picture_cells(Self) -> Array[String] raise XlsxError
 pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError
@@ -890,6 +1003,7 @@ pub fn Worksheet::set_col_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_col_width(Self, Int, Double) -> Unit raise XlsxError
+pub fn Worksheet::set_conditional_format(Self, String, ArrayView[ConditionalFormatOptions]) -> Unit raise XlsxError
 pub fn Worksheet::set_header_footer(Self, HeaderFooterOptions?) -> Unit raise XlsxError
 pub fn Worksheet::set_page_layout(Self, PageLayoutOptions?) -> Unit raise XlsxError
 pub fn Worksheet::set_page_margins(Self, PageLayoutMarginsOptions?) -> Unit raise XlsxError
@@ -911,6 +1025,7 @@ pub fn Worksheet::state(Self) -> SheetState
 pub fn Worksheet::tables(Self) -> ArrayView[Table]
 pub fn Worksheet::unmerge_cells(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::unprotect_sheet(Self, password? : String) -> Unit raise XlsxError
+pub fn Worksheet::unset_conditional_format(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
 
