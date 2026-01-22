@@ -18,32 +18,47 @@ let default_theme_colors : Array[String] = [
 ]
 
 ///|
+fn normalize_rgb_hex(value : StringView) -> String {
+  let text = value.to_string()
+  if text.length() == 8 && text.has_prefix("FF") {
+    let view = text[2:] catch { _ => return text }
+    view.to_string()
+  } else {
+    text
+  }
+}
+
+///|
 pub fn Workbook::get_base_color(
   self : Workbook,
   hex_color : String,
   indexed_color : Int,
   theme_color? : Int,
 ) -> String {
-  ignore(self)
+  let theme_colors = match self.theme_colors {
+    Some(colors) => colors
+    None => default_theme_colors
+  }
   match theme_color {
     Some(value) =>
-      if value >= 0 && value < default_theme_colors.length() {
-        return default_theme_colors[value]
+      if value >= 0 && value < theme_colors.length() {
+        return theme_colors[value]
       }
     None => ()
   }
-  if hex_color.length() == 6 {
-    return hex_color
+  let normalized_hex = normalize_rgb_hex(hex_color)
+  if normalized_hex.length() == 6 {
+    return normalized_hex
   }
-  if hex_color.length() == 8 {
-    if hex_color.has_prefix("FF") {
-      let view = hex_color[2:] catch { _ => return hex_color }
-      return view.to_string()
-    }
-    return hex_color
+  match self.indexed_colors {
+    Some(colors) =>
+      if indexed_color >= 0 && indexed_color < colors.length() {
+        return colors[indexed_color]
+      }
+    None => ()
   }
   if indexed_color >= 0 && indexed_color < indexed_color_mapping.length() {
     return indexed_color_mapping[indexed_color]
   }
-  hex_color
+  normalized_hex
 }

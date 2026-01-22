@@ -2628,14 +2628,24 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     Some(value) => parse_shared_strings(decode_utf8(value))
     None => []
   }
-  let (styles, conditional_styles, default_font) = match
+  let (styles, conditional_styles, default_font, indexed_colors) = match
     archive.get("xl/styles.xml") {
     Some(value) => {
       let styles_xml = decode_utf8(value)
       let (styles, conditional_styles) = parse_styles(styles_xml)
-      (styles, conditional_styles, parse_default_font(styles_xml))
+      let indexed_colors = parse_indexed_colors(styles_xml)
+      (
+        styles,
+        conditional_styles,
+        parse_default_font(styles_xml),
+        indexed_colors,
+      )
     }
-    None => ([Style::new()], [], "Calibri")
+    None => ([Style::new()], [], "Calibri", None)
+  }
+  let theme_colors = match archive.get("xl/theme/theme1.xml") {
+    Some(value) => parse_theme_colors(decode_utf8(value))
+    None => None
   }
   let core_properties = match archive.get("docProps/core.xml") {
     Some(value) => parse_core_properties(decode_utf8(value))
@@ -2667,6 +2677,8 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     workbook_props,
     calc_props,
     default_font,
+    theme_colors,
+    indexed_colors,
     workbook_protection,
     active_sheet_index: safe_active_index,
   }

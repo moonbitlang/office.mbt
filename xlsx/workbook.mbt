@@ -13,6 +13,8 @@ pub struct Workbook {
   mut workbook_props : WorkbookPropsOptions
   mut calc_props : CalcPropsOptions
   mut default_font : String
+  theme_colors : Array[String]?
+  indexed_colors : Array[String]?
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
@@ -157,6 +159,8 @@ pub fn Workbook::new() -> Workbook {
     workbook_props: WorkbookPropsOptions::new(),
     calc_props: CalcPropsOptions::new(),
     default_font: "Calibri",
+    theme_colors: None,
+    indexed_colors: None,
     workbook_protection: None,
     active_sheet_index: 0,
   }
