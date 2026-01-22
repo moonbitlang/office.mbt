@@ -8,13 +8,16 @@ test "rows iterator includes dimension-only rows" {
   let rows = workbook.rows("Sheet1")
   inspect(rows.next(), content="true")
   inspect(rows.row_index(), content="Some(1)")
-  inspect(rows.columns(), content="[\"A\"]")
+  let row1 = rows.columns() catch { err => fail("row1 columns failed: \{err}") }
+  inspect(row1, content="[\"A\"]")
   inspect(rows.next(), content="true")
   inspect(rows.row_index(), content="Some(2)")
-  inspect(rows.columns(), content="[]")
+  let row2 = rows.columns() catch { err => fail("row2 columns failed: \{err}") }
+  inspect(row2, content="[]")
   inspect(rows.next(), content="true")
   inspect(rows.row_index(), content="Some(3)")
-  inspect(rows.columns(), content="[\"C\"]")
+  let row3 = rows.columns() catch { err => fail("row3 columns failed: \{err}") }
+  inspect(row3, content="[\"C\"]")
   inspect(rows.next(), content="false")
 }
 
@@ -52,6 +55,26 @@ test "rows error and close are no-ops" {
   inspect(rows.error(), content="None")
   rows.close()
   inspect(rows.next(), content="false")
+}
+
+///|
+test "rows columns honors options" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_float("Sheet1", "A1", 1.0)
+  let style_id = workbook.add_style(Style::builtin_number_format(2))
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let rows = workbook.rows("Sheet1")
+  inspect(rows.next(), content="true")
+  let formatted = rows.columns() catch {
+    err => fail("formatted columns failed: \{err}")
+  }
+  inspect(formatted, content="[\"1.00\"]")
+  let raw_opts = Options::with_values(raw_cell_value=true)
+  let raw_values = rows.columns(options=raw_opts) catch {
+    err => fail("raw columns failed: \{err}")
+  }
+  inspect(raw_values, content="[\"1\"]")
 }
 
 ///|

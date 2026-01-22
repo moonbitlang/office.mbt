@@ -615,14 +615,14 @@ pub(all) struct RichTextRun {
 pub impl Eq for RichTextRun
 pub impl Show for RichTextRun
 
+type RowCells
+
 pub struct RowDimension {
   height : Double?
   hidden : Bool
   outline_level : Int
   style_id : Int?
 }
-
-type RowEntry
 
 pub struct RowOpts {
   height : Double
@@ -644,11 +644,13 @@ pub fn RowStream::next(Self) -> Array[String]?
 
 pub struct Rows {
   sheet : Worksheet
-  entries : Array[RowEntry]
+  entries : Array[RowCells]
   mut index : Int
+  styles : Array[Style]?
+  options : Options
 }
 pub fn Rows::close(Self) -> Unit
-pub fn Rows::columns(Self) -> Array[String]
+pub fn Rows::columns(Self, options? : Options) -> Array[String] raise XlsxError
 pub fn Rows::error(Self) -> XlsxError?
 pub fn Rows::get_row_opts(Self) -> RowOpts
 pub fn Rows::new(Worksheet) -> Self

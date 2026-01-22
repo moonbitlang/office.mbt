@@ -1,7 +1,14 @@
 ///|
-struct RowEntry {
+priv struct RowValues {
   row : Int
   values : Array[String]
+}
+
+///|
+struct RowCells {
+  row : Int
+  cells : Array[Cell]
+  max_col : Int
 }
 
 ///|
@@ -30,12 +37,14 @@ pub fn RowOpts::with_values(
 ///|
 pub struct Rows {
   sheet : Worksheet
-  entries : Array[RowEntry]
+  entries : Array[RowCells]
   mut index : Int
+  styles : Array[Style]?
+  options : Options
 }
 
 ///|
-fn collect_row_entries(sheet : Worksheet) -> Array[RowEntry] {
+fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
   let cells = sheet.sorted_cells()
   let row_cells : Map[Int, Array[Cell]] = {}
   for cell in cells {
@@ -58,14 +67,14 @@ fn collect_row_entries(sheet : Worksheet) -> Array[RowEntry] {
     }
   }
   row_keys.sort_by((a, b) => a - b)
-  let entries : Array[RowEntry] = []
+  let entries : Array[RowCells] = []
   for row in row_keys {
     let row_entries = match row_cells.get(row) {
       Some(value) => value
       None => []
     }
     if row_entries.length() == 0 {
-      entries.push({ row, values: [] })
+      entries.push({ row, cells: [], max_col: 0 })
       continue
     }
     let mut max_col = 0
@@ -74,18 +83,23 @@ fn collect_row_entries(sheet : Worksheet) -> Array[RowEntry] {
         max_col = cell.col
       }
     }
-    let values : Array[String] = Array::make(max_col, "")
-    for cell in row_entries {
-      values[cell.col - 1] = cell.value
-    }
-    entries.push({ row, values })
+    entries.push({ row, cells: row_entries, max_col })
   }
   entries
 }
 
 ///|
 pub fn Rows::new(sheet : Worksheet) -> Rows {
-  { sheet, entries: collect_row_entries(sheet), index: 0 }
+  Rows::new_with_options(sheet, None, Options::new())
+}
+
+///|
+fn Rows::new_with_options(
+  sheet : Worksheet,
+  styles : Array[Style]?,
+  options : Options,
+) -> Rows {
+  { sheet, entries: collect_row_cells(sheet), index: 0, styles, options }
 }
 
 ///|
@@ -99,11 +113,36 @@ pub fn Rows::next(self : Rows) -> Bool {
 }
 
 ///|
-pub fn Rows::columns(self : Rows) -> Array[String] {
+pub fn Rows::columns(
+  self : Rows,
+  options? : Options,
+) -> Array[String] raise XlsxError {
   if self.index <= 0 || self.index > self.entries.length() {
     return []
   }
-  self.entries[self.index - 1].values
+  let entry = self.entries[self.index - 1]
+  if entry.max_col == 0 {
+    return []
+  }
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  let values : Array[String] = Array::make(entry.max_col, "")
+  match self.styles {
+    Some(styles) =>
+      for cell in entry.cells {
+        let formatted = format_cell_value_for_workbook(
+          styles, cell, false, resolved_options,
+        )
+        values[cell.col - 1] = formatted
+      }
+    None =>
+      for cell in entry.cells {
+        values[cell.col - 1] = cell.value
+      }
+  }
+  values
 }
 
 ///|
@@ -211,7 +250,7 @@ fn collect_row_entries_with_options(
   sheet : Worksheet,
   styles : ArrayView[Style],
   options : Options,
-) -> Array[RowEntry] raise XlsxError {
+) -> Array[RowValues] raise XlsxError {
   let cells = sheet.sorted_cells()
   let row_cells : Map[Int, Array[Cell]] = {}
   for cell in cells {
@@ -234,7 +273,7 @@ fn collect_row_entries_with_options(
     }
   }
   row_keys.sort_by((a, b) => a - b)
-  let entries : Array[RowEntry] = []
+  let entries : Array[RowValues] = []
   for row in row_keys {
     let row_entries = match row_cells.get(row) {
       Some(value) => value
@@ -344,14 +383,19 @@ pub fn Worksheet::cols(self : Worksheet) -> Cols {
 
 ///|
 pub fn Worksheet::get_rows(self : Worksheet) -> Array[Array[String]] {
-  let rows = Rows::new(self)
+  let entries = collect_row_cells(self)
   let results : Array[Array[String]] = []
   let mut max_with_values = 0
-  while rows.next() {
-    let values = rows.columns()
-    let current = match rows.row_index() {
-      Some(value) => value
-      None => continue
+  for entry in entries {
+    let current = entry.row
+    let values = if entry.max_col == 0 {
+      []
+    } else {
+      let row_values : Array[String] = Array::make(entry.max_col, "")
+      for cell in entry.cells {
+        row_values[cell.col - 1] = cell.value
+      }
+      row_values
     }
     if values.length() > 0 {
       let empty = current - max_with_values - 1
@@ -390,7 +434,7 @@ pub fn Workbook::rows(
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  Rows::new(sheet)
+  Rows::new_with_options(sheet, Some(self.styles), self.options)
 }
 
 ///|
