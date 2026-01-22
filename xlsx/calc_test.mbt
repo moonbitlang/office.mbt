@@ -4860,6 +4860,28 @@ test "calc rate conversion functions" {
 }
 
 ///|
+test "calc received function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula(
+    "A1", "RECEIVED(\"04/01/2011\",\"03/31/2016\",1000,4.5%)",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1290.32258064516")
+  sheet.set_cell_formula(
+    "A2", "RECEIVED(\"04/01/2011\",\"03/31/2016\",1000,4.5%,0)",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="1290.32258064516")
+  sheet.set_cell_formula("A3", "RECEIVED()")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="#VALUE!")
+  sheet.set_cell_formula("A4", "RECEIVED(\"04/01/2011\",\"03/31/2016\",1000,0)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="#NUM!")
+  sheet.set_cell_formula(
+    "A5", "RECEIVED(\"04/01/2011\",\"03/31/2016\",1000,4.5%,5)",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="#NUM!")
+}
+
+///|
 test "calc loan functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -6419,6 +6441,10 @@ test "calc hyperlink and encodeurl functions" {
   inspect(workbook.calc_cell_value("Sheet1", "B3"), content="a%3Fb")
   sheet.set_cell_formula("B4", "ENCODEURL()")
   inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+  sheet.set_cell_formula("C1", "DISPIMG(\"ID_1\",1)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="ID_1")
+  sheet.set_cell_formula("C2", "DISPIMG()")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
 }
 
 ///|
@@ -6435,6 +6461,19 @@ test "calc formulatext function" {
   inspect(workbook.calc_cell_value("Sheet1", "B3"), content="")
   sheet.set_cell_formula("B4", "FORMULATEXT(1)")
   inspect(workbook.calc_cell_value("Sheet1", "B4"), content="#VALUE!")
+}
+
+///|
+test "calc anchorarray function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("B1", "A1:A2")
+  sheet.set_cell_formula("C1", "SUM(ANCHORARRAY(B1))")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="3")
+  sheet.set_cell_formula("C2", "ANCHORARRAY()")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="#VALUE!")
 }
 
 ///|
@@ -6461,6 +6500,16 @@ test "calc subtotal and frequency functions" {
   inspect(workbook.calc_cell_value("Sheet1", "C5"), content="#VALUE!")
   sheet.set_cell_formula("C6", "SUBTOTAL(0,A1:A4)")
   inspect(workbook.calc_cell_value("Sheet1", "C6"), content="#VALUE!")
+  sheet.set_cell_formula("C7", "AGGREGATE(9,0,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C7"), content="8")
+  sheet.set_cell_formula("C8", "AGGREGATE(1,0,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C8"), content="2")
+  sheet.set_cell_formula("C9", "AGGREGATE(2,0,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C9"), content="4")
+  sheet.set_cell_formula("C10", "AGGREGATE(0,0,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C10"), content="#VALUE!")
+  sheet.set_cell_formula("C11", "AGGREGATE(9,8,A1:A4)")
+  inspect(workbook.calc_cell_value("Sheet1", "C11"), content="#VALUE!")
   sheet.set_cell_formula("D1", "SUM(FREQUENCY(A1:A4,B1:B2))")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="4")
   sheet.set_cell_formula("D2", "TEXTJOIN(\",\", TRUE, FREQUENCY(A1:A4,B1:B2))")

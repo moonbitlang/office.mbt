@@ -971,6 +971,43 @@ fn formula_text_value(
 }
 
 ///|
+fn anchorarray_values(
+  workbook : Workbook,
+  sheet_name : String,
+  args : ArrayView[Expr],
+  values : ArrayView[FormulaValue],
+) -> FormulaValue raise XlsxError {
+  if args.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let (target_sheet, reference) = match args[0] {
+    Expr::Cell(sheet, reference) =>
+      if sheet == "" {
+        (sheet_name, reference)
+      } else {
+        (sheet, reference)
+      }
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let sheet = match workbook.sheet(target_sheet) {
+    Some(value) => value
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  let formula = sheet.get_cell_formula(reference) catch {
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  match formula {
+    None => FormulaValue::Empty
+    Some(_) =>
+      match values[0] {
+        FormulaValue::Error(err) => FormulaValue::Error(err)
+        FormulaValue::List(list) => FormulaValue::List(list)
+        _ => FormulaValue::List([values[0]])
+      }
+  }
+}
+
+///|
 fn range_vector(range : RangeValues) -> Array[FormulaValue]? {
   if range.rows == 1 {
     let out : Array[FormulaValue] = []
@@ -7500,6 +7537,7 @@ fn eval_function(
     "FALSE" => FormulaValue::Bool(false)
     "SUM" => sum_values(values)
     "SUBTOTAL" => subtotal_values(values)
+    "AGGREGATE" => aggregate_values(values)
     "PRODUCT" => product_values(values)
     "AVERAGE" => average_values(values)
     "AVERAGEA" => averagea_values(values)
@@ -8991,6 +9029,7 @@ fn eval_function(
     "PRICEMAT" => pricemat_values(values)
     "PV" => pv_values(values)
     "RATE" => rate_values(values)
+    "RECEIVED" => received_values(values)
     "RRI" => rri_values(values)
     "SLN" => sln_values(values)
     "SYD" => syd_values(values)
@@ -11892,6 +11931,8 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
+    "ANCHORARRAY" | "_XLFN.ANCHORARRAY" =>
+      anchorarray_values(workbook, sheet_name, args, values)
     "ADDRESS" =>
       if values.length() >= 2 && values.length() <= 5 {
         let row_num = match value_as_int(values[0]) {
@@ -12114,6 +12155,12 @@ fn eval_function(
           Ok(text) => FormulaValue::String(text)
           Err(err) => err
         }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "DISPIMG" | "_XLFN.DISPIMG" =>
+      if values.length() == 2 {
+        values[0]
       } else {
         FormulaValue::Error(formula_error_value)
       }
@@ -18004,6 +18051,49 @@ fn disc_intrate_values(
 }
 
 ///|
+fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 4 && values.length() != 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let settlement = match value_as_date_serial(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let maturity = match value_as_date_serial(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if maturity <= settlement {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let investment = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let discount = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if discount <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let basis = if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => Double::to_int(trunc_double(num))
+      Err(_) => return FormulaValue::Error(formula_error_num)
+    }
+  } else {
+    0
+  }
+  let frac = match yearfrac_number(settlement, maturity, basis) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let result = investment / (1.0 - discount * frac)
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
 fn prepare_duration_args(
   values : ArrayView[FormulaValue],
 ) -> Result[(Double, Double, Double, Double, Double, Int), FormulaValue] {
@@ -20498,6 +20588,128 @@ fn subtotal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     9 | 109 => sum_values(sub_values)
     10 | 110 => variance_values(sub_values, true, false)
     11 | 111 => variance_values(sub_values, false, false)
+    _ => FormulaValue::Error(formula_error_value)
+  }
+}
+
+///|
+fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let func_num = match value_as_int(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let opts = match value_as_int(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if opts < 0 || opts > 7 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let args_values = values[2:]
+  match func_num {
+    1 => average_values(args_values)
+    2 => count_values(args_values)
+    3 => counta_values(args_values)
+    4 => max_values(args_values)
+    5 => min_values(args_values)
+    6 => product_values(args_values)
+    7 =>
+      if args_values.length() >= 1 {
+        stdev_values(false, args_values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    8 =>
+      if args_values.length() >= 1 {
+        match variance_values(args_values, false, false) {
+          FormulaValue::Number(variance) => {
+            let result = @math.pow(variance, 0.5)
+            FormulaValue::Number(round_significant_digits(result, 15))
+          }
+          FormulaValue::Error(err) => FormulaValue::Error(err)
+          _ => FormulaValue::Error(formula_error_value)
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    9 => sum_values(args_values)
+    10 =>
+      if args_values.length() >= 1 {
+        variance_values(args_values, true, false)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    11 =>
+      if args_values.length() >= 1 {
+        variance_values(args_values, false, false)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    12 =>
+      if args_values.length() >= 1 {
+        median_values(args_values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    13 =>
+      if args_values.length() >= 1 {
+        mode_values(args_values)
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    14 =>
+      if args_values.length() == 2 {
+        kth_values("LARGE", args_values[0], args_values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    15 =>
+      if args_values.length() == 2 {
+        kth_values("SMALL", args_values[0], args_values[1])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    16 =>
+      if args_values.length() == 2 {
+        match value_as_number(args_values[1]) {
+          Ok(k) => percentile_values(args_values[0], k, false, false)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    17 =>
+      if args_values.length() == 2 {
+        match value_as_number(args_values[1]) {
+          Ok(quart) =>
+            quartile_values("QUARTILE.INC", args_values[0], quart, false)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    18 =>
+      if args_values.length() == 2 {
+        match value_as_number(args_values[1]) {
+          Ok(k) => percentile_values(args_values[0], k, true, false)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    19 =>
+      if args_values.length() == 2 {
+        match value_as_number(args_values[1]) {
+          Ok(quart) =>
+            quartile_values("QUARTILE.EXC", args_values[0], quart, true)
+          Err(err) => err
+        }
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
     _ => FormulaValue::Error(formula_error_value)
   }
 }
