@@ -3440,7 +3440,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "SEQUENCE" =>
+          "SEQUENCE" | "_XLFN.SEQUENCE" =>
             if values.length() >= 1 && values.length() <= 4 {
               let rows = match value_as_int(values[0]) {
                 Ok(num) => num
@@ -3462,7 +3462,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "RANDARRAY" =>
+          "RANDARRAY" | "_XLFN.RANDARRAY" =>
             if values.length() <= 5 {
               let rows = if values.length() >= 1 {
                 match value_as_int(values[0]) {
@@ -3488,7 +3488,115 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "SORT" =>
+          "MINVERSE" =>
+            if args.length() == 1 {
+              let range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              if range.rows <= 0 || range.cols <= 0 || range.rows != range.cols {
+                None
+              } else {
+                Some((range.rows, range.cols))
+              }
+            } else {
+              None
+            }
+          "MMULT" =>
+            if args.length() == 2 {
+              let left_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[0],
+                values[0],
+                ctx,
+              )
+              let right_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[1],
+                values[1],
+                ctx,
+              )
+              if left_range.rows <= 0 ||
+                left_range.cols <= 0 ||
+                right_range.rows <= 0 ||
+                right_range.cols <= 0 ||
+                left_range.cols != right_range.rows {
+                None
+              } else {
+                Some((left_range.rows, right_range.cols))
+              }
+            } else {
+              None
+            }
+          "TEXTSPLIT" | "_XLFN.TEXTSPLIT" =>
+            if values.length() >= 2 && values.length() <= 6 {
+              let text = match value_as_string(values[0]) {
+                Ok(value) => value
+                Err(_) => return None
+              }
+              let col_delimiter = match value_as_string(values[1]) {
+                Ok(value) => value
+                Err(_) => return None
+              }
+              if col_delimiter == "" {
+                return None
+              }
+              let row_delimiter = if values.length() >= 3 {
+                match value_as_string(values[2]) {
+                  Ok(value) => value
+                  Err(_) => return None
+                }
+              } else {
+                ""
+              }
+              let ignore_empty = if values.length() >= 4 {
+                match value_as_bool(values[3]) {
+                  Ok(flag) => flag
+                  Err(_) => return None
+                }
+              } else {
+                false
+              }
+              let match_mode = if values.length() >= 5 {
+                match value_as_int(values[4]) {
+                  Ok(num) => num
+                  Err(_) => return None
+                }
+              } else {
+                0
+              }
+              if match_mode != 0 && match_mode != 1 {
+                return None
+              }
+              let ignore_case = match_mode == 1
+              let row_texts = if row_delimiter == "" {
+                [text]
+              } else {
+                split_text_parts(text, row_delimiter, ignore_empty, ignore_case)
+              }
+              let mut max_cols = 0
+              for row_text in row_texts {
+                let cols = split_text_parts(
+                  row_text, col_delimiter, ignore_empty, ignore_case,
+                )
+                if cols.length() > max_cols {
+                  max_cols = cols.length()
+                }
+              }
+              if row_texts.length() == 0 || max_cols == 0 {
+                None
+              } else {
+                Some((row_texts.length(), max_cols))
+              }
+            } else {
+              None
+            }
+          "SORT" | "_XLFN.SORT" =>
             if args.length() >= 1 && args.length() <= 4 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3522,7 +3630,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "UNIQUE" =>
+          "UNIQUE" | "_XLFN.UNIQUE" =>
             if args.length() >= 1 && args.length() <= 3 {
               let by_col = if args.length() >= 2 {
                 match value_as_bool(values[1]) {
@@ -3554,7 +3662,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "FILTER" =>
+          "FILTER" | "_XLFN.FILTER" =>
             if args.length() >= 2 && args.length() <= 3 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3593,7 +3701,52 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "TAKE" =>
+          "XLOOKUP" | "_XLFN.XLOOKUP" =>
+            if args.length() >= 3 && args.length() <= 6 {
+              let lookup_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[1],
+                values[1],
+                ctx,
+              )
+              let return_range = range_from_expr_or_value(
+                workbook,
+                sheet_name,
+                args[2],
+                values[2],
+                ctx,
+              )
+              if lookup_range.rows <= 0 ||
+                lookup_range.cols <= 0 ||
+                return_range.rows <= 0 ||
+                return_range.cols <= 0 {
+                None
+              } else {
+                let is_row = lookup_range.rows == 1
+                let is_col = lookup_range.cols == 1
+                if !is_row && !is_col {
+                  None
+                } else if is_row {
+                  if return_range.cols != lookup_range.cols {
+                    None
+                  } else if return_range.rows <= 1 {
+                    Some((1, 1))
+                  } else {
+                    Some((return_range.rows, 1))
+                  }
+                } else if return_range.rows != lookup_range.rows {
+                  None
+                } else if return_range.cols <= 1 {
+                  Some((1, 1))
+                } else {
+                  Some((1, return_range.cols))
+                }
+              }
+            } else {
+              None
+            }
+          "TAKE" | "_XLFN.TAKE" =>
             if values.length() >= 2 && values.length() <= 3 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3645,7 +3798,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "DROP" =>
+          "DROP" | "_XLFN.DROP" =>
             if values.length() >= 2 && values.length() <= 3 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3681,7 +3834,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "CHOOSECOLS" =>
+          "CHOOSECOLS" | "_XLFN.CHOOSECOLS" =>
             if values.length() >= 2 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3697,7 +3850,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "CHOOSEROWS" =>
+          "CHOOSEROWS" | "_XLFN.CHOOSEROWS" =>
             if values.length() >= 2 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3713,9 +3866,9 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "HSTACK" | "VSTACK" =>
+          "HSTACK" | "_XLFN.HSTACK" | "VSTACK" | "_XLFN.VSTACK" =>
             if values.length() >= 1 {
-              let horizontal = name == "HSTACK"
+              let horizontal = name == "HSTACK" || name == "_XLFN.HSTACK"
               let mut max_rows = 0
               let mut max_cols = 0
               let mut total_rows = 0
@@ -3750,7 +3903,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "EXPAND" =>
+          "EXPAND" | "_XLFN.EXPAND" =>
             if values.length() >= 2 && values.length() <= 4 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3782,7 +3935,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "WRAPROWS" | "WRAPCOLS" =>
+          "WRAPROWS" | "_XLFN.WRAPROWS" | "WRAPCOLS" | "_XLFN.WRAPCOLS" =>
             if values.length() >= 2 && values.length() <= 3 {
               let range = range_from_expr_or_value(
                 workbook,
@@ -3805,7 +3958,7 @@ fn array_shape_from_expr(
                 let total = vector.length()
                 if total == 0 {
                   None
-                } else if name == "WRAPROWS" {
+                } else if name == "WRAPROWS" || name == "_XLFN.WRAPROWS" {
                   let rows = (total + count - 1) / count
                   Some((rows, count))
                 } else {
@@ -3816,7 +3969,7 @@ fn array_shape_from_expr(
             } else {
               None
             }
-          "TOCOL" | "TOROW" =>
+          "TOCOL" | "_XLFN.TOCOL" | "TOROW" | "_XLFN.TOROW" =>
             if values.length() >= 1 && values.length() <= 3 {
               let ignore = if values.length() >= 2 {
                 match value_as_int(values[1]) {
@@ -3846,7 +3999,7 @@ fn array_shape_from_expr(
               )
               match flatten_range_values(range, scan_by_column, ignore) {
                 Ok(list) =>
-                  if name == "TOCOL" {
+                  if name == "TOCOL" || name == "_XLFN.TOCOL" {
                     Some((list.length(), 1))
                   } else {
                     Some((1, list.length()))
@@ -10032,7 +10185,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
-    "RANDARRAY" => randarray_values(values)
+    "RANDARRAY" | "_XLFN.RANDARRAY" => randarray_values(values)
     "RANDBETWEEN" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
@@ -11628,7 +11781,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
-    "TEXTAFTER" | "TEXTBEFORE" =>
+    "TEXTAFTER" | "TEXTBEFORE" | "_XLFN.TEXTAFTER" | "_XLFN.TEXTBEFORE" =>
       if values.length() >= 2 && values.length() <= 6 {
         let text = match value_as_string(values[0]) {
           Ok(value) => value
@@ -11705,7 +11858,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
-    "TEXTSPLIT" =>
+    "TEXTSPLIT" | "_XLFN.TEXTSPLIT" =>
       if values.length() >= 2 && values.length() <= 6 {
         textsplit_values(values)
       } else {
@@ -11737,26 +11890,36 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
-    "SEQUENCE" => sequence_values(values)
-    "TAKE" => take_values(workbook, sheet_name, args, values, ctx)
-    "DROP" => drop_values(workbook, sheet_name, args, values, ctx)
-    "CHOOSECOLS" => choosecols_values(workbook, sheet_name, args, values, ctx)
-    "CHOOSEROWS" => chooserows_values(workbook, sheet_name, args, values, ctx)
-    "HSTACK" => stack_from_values(workbook, sheet_name, args, values, ctx, true)
-    "VSTACK" =>
+    "SEQUENCE" | "_XLFN.SEQUENCE" => sequence_values(values)
+    "TAKE" | "_XLFN.TAKE" =>
+      take_values(workbook, sheet_name, args, values, ctx)
+    "DROP" | "_XLFN.DROP" =>
+      drop_values(workbook, sheet_name, args, values, ctx)
+    "CHOOSECOLS" | "_XLFN.CHOOSECOLS" =>
+      choosecols_values(workbook, sheet_name, args, values, ctx)
+    "CHOOSEROWS" | "_XLFN.CHOOSEROWS" =>
+      chooserows_values(workbook, sheet_name, args, values, ctx)
+    "HSTACK" | "_XLFN.HSTACK" =>
+      stack_from_values(workbook, sheet_name, args, values, ctx, true)
+    "VSTACK" | "_XLFN.VSTACK" =>
       stack_from_values(workbook, sheet_name, args, values, ctx, false)
-    "EXPAND" => expand_values(workbook, sheet_name, args, values, ctx)
-    "WRAPROWS" => wrap_values(workbook, sheet_name, args, values, ctx, true)
-    "WRAPCOLS" => wrap_values(workbook, sheet_name, args, values, ctx, false)
-    "TOCOL" =>
+    "EXPAND" | "_XLFN.EXPAND" =>
+      expand_values(workbook, sheet_name, args, values, ctx)
+    "WRAPROWS" | "_XLFN.WRAPROWS" =>
+      wrap_values(workbook, sheet_name, args, values, ctx, true)
+    "WRAPCOLS" | "_XLFN.WRAPCOLS" =>
+      wrap_values(workbook, sheet_name, args, values, ctx, false)
+    "TOCOL" | "_XLFN.TOCOL" =>
       tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
-    "TOROW" =>
+    "TOROW" | "_XLFN.TOROW" =>
       tocol_torow_values(workbook, sheet_name, args, values, ctx, false)
-    "SORT" => sort_values(workbook, sheet_name, args, values, ctx)
+    "SORT" | "_XLFN.SORT" =>
+      sort_values(workbook, sheet_name, args, values, ctx)
     "SORTBY" | "_XLFN.SORTBY" =>
       sortby_values(workbook, sheet_name, args, values, ctx)
-    "FILTER" => filter_values(workbook, sheet_name, args, values, ctx)
-    "UNIQUE" =>
+    "FILTER" | "_XLFN.FILTER" =>
+      filter_values(workbook, sheet_name, args, values, ctx)
+    "UNIQUE" | "_XLFN.UNIQUE" =>
       if args.length() >= 1 && args.length() <= 3 {
         let by_col = if args.length() >= 2 {
           match value_as_bool(values[1]) {
@@ -12543,7 +12706,7 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
-    "XLOOKUP" =>
+    "XLOOKUP" | "_XLFN.XLOOKUP" =>
       if args.length() >= 3 && args.length() <= 6 {
         let lookup = values[0]
         let lookup_range = range_from_expr_or_value(

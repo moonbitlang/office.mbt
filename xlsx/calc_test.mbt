@@ -4884,6 +4884,64 @@ test "calc spill dynamic array shapes" {
 }
 
 ///|
+test "calc spill matrix and textsplit" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("C1", CellValue::Numeric(5.0))
+  sheet.set_cell_value("C2", CellValue::Numeric(6.0))
+  sheet.set_cell_formula("E1", "MMULT(A1:B2,C1:C2)")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="17")
+  inspect(workbook.calc_cell_value("Sheet1", "E2"), content="39")
+  sheet.set_cell_formula("G1", "TEXTSPLIT(\"a,b;c,d\",\",\",\";\")")
+  inspect(workbook.calc_cell_value("Sheet1", "G1"), content="a")
+  inspect(workbook.calc_cell_value("Sheet1", "H1"), content="b")
+  inspect(workbook.calc_cell_value("Sheet1", "G2"), content="c")
+  inspect(workbook.calc_cell_value("Sheet1", "H2"), content="d")
+  sheet.set_cell_value("A4", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B4", CellValue::Numeric(2.0))
+  sheet.set_cell_value("C4", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A5", CellValue::Numeric(10.0))
+  sheet.set_cell_value("B5", CellValue::Numeric(20.0))
+  sheet.set_cell_value("C5", CellValue::Numeric(30.0))
+  sheet.set_cell_value("A6", CellValue::Numeric(40.0))
+  sheet.set_cell_value("B6", CellValue::Numeric(50.0))
+  sheet.set_cell_value("C6", CellValue::Numeric(60.0))
+  sheet.set_cell_formula("E4", "XLOOKUP(2,A4:C4,A5:C6)")
+  inspect(workbook.calc_cell_value("Sheet1", "E4"), content="20")
+  inspect(workbook.calc_cell_value("Sheet1", "E5"), content="50")
+}
+
+///|
+test "calc xlfn dynamic array functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
+  sheet.set_cell_value("B1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("B2", CellValue::Numeric(0.0))
+  sheet.set_cell_value("B3", CellValue::Numeric(1.0))
+  sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),_xlfn.SEQUENCE(3))")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,2,3")
+  sheet.set_cell_formula("C2", "TEXTJOIN(\",\",TRUE(),_xlfn.SORT(A1:A3))")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1,2,3")
+  sheet.set_cell_formula(
+    "C3", "TEXTJOIN(\",\",TRUE(),_xlfn.FILTER(A1:A3,B1:B3))",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "C3"), content="3,2")
+  sheet.set_cell_formula("C4", "TEXTJOIN(\",\",TRUE(),_xlfn.UNIQUE(A1:A3))")
+  inspect(workbook.calc_cell_value("Sheet1", "C4"), content="3,1,2")
+  sheet.set_cell_formula("C5", "TEXTJOIN(\",\",TRUE(),_xlfn.TOCOL(A1:A3))")
+  inspect(workbook.calc_cell_value("Sheet1", "C5"), content="3,1,2")
+  sheet.set_cell_formula("C6", "TEXTJOIN(\",\",TRUE(),_xlfn.TOROW(A1:A3))")
+  inspect(workbook.calc_cell_value("Sheet1", "C6"), content="3,1,2")
+}
+
+///|
 test "calc row and column range formulas" {
   let workbook = Workbook::new()
   let col_sheet = workbook.add_sheet("Cols")
