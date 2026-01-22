@@ -4742,6 +4742,24 @@ test "calc quoted sheet refs" {
 }
 
 ///|
+test "calc basic formula refs" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_formula("B1", "A1")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1")
+  sheet.set_cell_formula("B2", "A1+A2")
+  inspect(workbook.calc_cell_value("Sheet1", "B2"), content="3")
+  sheet.set_cell_formula("B3", "A1*2")
+  inspect(workbook.calc_cell_value("Sheet1", "B3"), content="2")
+  sheet.set_cell_formula("B4", "=1+1")
+  inspect(workbook.calc_cell_value("Sheet1", "B4"), content="2")
+  sheet.set_cell_formula("B5", "UNSUPPORT(A1)")
+  inspect(workbook.calc_cell_value("Sheet1", "B5"), content="#NAME?")
+}
+
+///|
 test "calc financial functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
