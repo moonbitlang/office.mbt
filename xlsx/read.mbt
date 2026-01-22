@@ -3037,6 +3037,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         vml_drawing_xml,
         vml_drawing_hf_xml,
         images: [],
+        header_footer_images: [],
         charts: [],
         shapes: [],
         form_controls: [],

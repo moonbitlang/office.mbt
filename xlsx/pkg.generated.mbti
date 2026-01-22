@@ -361,6 +361,29 @@ pub fn FormControl::new(String, String, text? : String) -> Self raise XlsxError
 pub impl Eq for FormControl
 pub impl Show for FormControl
 
+type HeaderFooterImage
+
+pub struct HeaderFooterImageOptions {
+  position : HeaderFooterImagePosition
+  data : Bytes
+  extension : String
+  is_footer : Bool
+  first_page : Bool
+  width : String
+  height : String
+}
+pub fn HeaderFooterImageOptions::new(HeaderFooterImagePosition, Bytes, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self
+pub impl Eq for HeaderFooterImageOptions
+pub impl Show for HeaderFooterImageOptions
+
+pub(all) enum HeaderFooterImagePosition {
+  Left
+  Center
+  Right
+}
+pub impl Eq for HeaderFooterImagePosition
+pub impl Show for HeaderFooterImagePosition
+
 pub struct HeaderFooterOptions {
   mut align_with_margins : Bool?
   mut different_first : Bool
@@ -781,8 +804,10 @@ pub fn Workbook::add_data_validation(Self, StringView, DataValidation) -> Unit r
 pub fn Workbook::add_data_validation_list(Self, StringView, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_form_control(Self, StringView, FormControl) -> Unit raise XlsxError
+pub fn Workbook::add_header_footer_image(Self, StringView, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Workbook::add_ignored_errors(Self, StringView, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String) -> Unit raise XlsxError
+pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
@@ -830,6 +855,7 @@ pub fn Workbook::duplicate_row_to(Self, StringView, Int, Int) -> Unit raise Xlsx
 pub fn Workbook::get_active_sheet_index(Self) -> Int
 pub fn Workbook::get_app_props(Self) -> AppProperties
 pub fn Workbook::get_auto_filter(Self, StringView) -> AutoFilter? raise XlsxError
+pub fn Workbook::get_base_color(Self, String, Int, theme_color? : Int) -> String
 pub fn Workbook::get_calc_props(Self) -> CalcPropsOptions
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
@@ -1013,6 +1039,7 @@ pub struct Worksheet {
   sparkline_groups : Array[SparklineGroup]
   pivot_tables : Array[PivotTable]
   images : Array[Image]
+  header_footer_images : Array[HeaderFooterImage]
   charts : Array[Chart]
   shapes : Array[Shape]
   form_controls : Array[FormControl]
@@ -1044,8 +1071,10 @@ pub fn Worksheet::add_data_validation(Self, DataValidation) -> Unit raise XlsxEr
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_form_control(Self, FormControl) -> Unit raise XlsxError
+pub fn Worksheet::add_header_footer_image(Self, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_ignored_errors(Self, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Worksheet::add_image(Self, String, Bytes, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_picture_from_bytes(Self, String, Bytes, String) -> Unit raise XlsxError
 pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_shape(Self, Shape) -> Unit raise XlsxError

@@ -1311,6 +1311,17 @@ fn clone_images(values : ArrayView[Image]) -> Array[Image] {
 }
 
 ///|
+fn clone_header_footer_images(
+  values : ArrayView[HeaderFooterImage],
+) -> Array[HeaderFooterImage] {
+  let out : Array[HeaderFooterImage] = []
+  for value in values {
+    out.push(value)
+  }
+  out
+}
+
+///|
 fn clone_charts(values : ArrayView[Chart]) -> Array[Chart] {
   let out : Array[Chart] = []
   for value in values {
@@ -1413,6 +1424,7 @@ fn clone_worksheet(
     sparkline_groups: clone_sparkline_groups(sheet.sparkline_groups),
     pivot_tables: clone_pivot_tables(sheet.pivot_tables),
     images: clone_images(sheet.images),
+    header_footer_images: clone_header_footer_images(sheet.header_footer_images),
     charts: clone_charts(sheet.charts),
     shapes: clone_shapes(sheet.shapes),
     form_controls: clone_form_controls(sheet.form_controls),
@@ -1901,6 +1913,34 @@ pub fn Workbook::add_image(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_image(reference, data, extension, content_type)
+}
+
+///|
+pub fn Workbook::add_picture_from_bytes(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  data : Bytes,
+  extension : String,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_picture_from_bytes(reference, data, extension)
+}
+
+///|
+pub fn Workbook::add_header_footer_image(
+  self : Workbook,
+  sheet_name : StringView,
+  options : HeaderFooterImageOptions,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_header_footer_image(options)
 }
 
 ///|

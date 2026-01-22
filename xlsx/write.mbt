@@ -605,6 +605,26 @@ fn write_drawing_rels_xml(
 }
 
 ///|
+fn write_vml_rels_xml(image_targets : Array[String]) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
+  )
+  let mut rel_id = 1
+  for target in image_targets {
+    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+    sb.write_view(rel_image)
+    sb.write_view("\" Target=\"")
+    sb.write_view(escape_xml_attr(target))
+    sb.write_view("\"/>\n")
+    rel_id = rel_id + 1
+  }
+  sb.write_view("</Relationships>")
+  sb.to_string()
+}
+
+///|
 fn write_drawing_xml(
   images : Array[(String, Int)],
   charts : Array[(String, Int)],
@@ -2067,6 +2087,79 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+fn vml_shape_id(shape_xml : StringView) -> String? {
+  let xml_str = shape_xml.to_string()
+  let id_key = "id=\""
+  let start = match xml_str.find(id_key) {
+    Some(pos) => pos + id_key.length()
+    None => return None
+  }
+  let rest = xml_str[start:] catch { _ => return None }
+  let end_rel = match rest.find("\"") {
+    Some(pos) => pos
+    None => return None
+  }
+  let end = start + end_rel
+  let slice = xml_str[start:end] catch { _ => return None }
+  Some(slice.to_string())
+}
+
+///|
+fn filter_vml_shapes_by_id(
+  base_xml : String,
+  remove_ids : Array[String],
+) -> String raise XlsxError {
+  if remove_ids.length() == 0 {
+    return base_xml
+  }
+  if !base_xml.contains("<v:shape") {
+    return base_xml
+  }
+  let remove_map : Map[String, Bool] = {}
+  for id in remove_ids {
+    remove_map[id] = true
+  }
+  let shapes = extract_vml_shapes(base_xml)
+  let kept : Array[String] = []
+  for shape in shapes {
+    match vml_shape_id(shape) {
+      Some(id) =>
+        if remove_map.contains(id) {
+          continue
+        } else {
+          kept.push(shape)
+        }
+      None => kept.push(shape)
+    }
+  }
+  let insert_at = match base_xml.find("<v:shape") {
+    Some(pos) => pos
+    None =>
+      match base_xml.find("</xml>") {
+        Some(pos) => pos
+        None => base_xml.length()
+      }
+  }
+  let end = match base_xml.find("</xml>") {
+    Some(pos) => pos
+    None => base_xml.length()
+  }
+  let prefix = base_xml[:insert_at] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+    }
+  let suffix = base_xml[end:] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+    }
+  let sb = StringBuilder::new()
+  sb.write_view(prefix)
+  for shape in kept {
+    sb.write_view(shape)
+  }
+  sb.write_view(suffix)
+  sb.to_string()
+}
+
+///|
 fn merge_vml_drawings(
   base_xml : String,
   comment_xml : String,
@@ -2121,6 +2214,128 @@ fn merge_vml_drawings(
     sb.write_view(shape)
   }
   sb.write_view(suffix)
+  sb.to_string()
+}
+
+///|
+fn merge_vml_drawings_with_shapetype(
+  base_xml : String,
+  extra_xml : String,
+  shape_type_id : StringView,
+) -> String raise XlsxError {
+  if !base_xml.contains("</xml>") {
+    return extra_xml
+  }
+  let mut merged = base_xml
+  let shape_token = "id=\"\{shape_type_id.to_string()}\""
+  if !merged.contains(shape_token) {
+    match extract_vml_shapetype(extra_xml) {
+      Some(shape_type) => {
+        let insert_at = match merged.find("<v:shape") {
+          Some(pos) => pos
+          None =>
+            match merged.find("</xml>") {
+              Some(pos) => pos
+              None => merged.length()
+            }
+        }
+        let prefix = merged[:insert_at] catch {
+            _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+          }
+        let suffix = merged[insert_at:] catch {
+            _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+          }
+        let sb = StringBuilder::new()
+        sb.write_view(prefix)
+        sb.write_view(shape_type)
+        sb.write_view(suffix)
+        merged = sb.to_string()
+      }
+      None => ()
+    }
+  }
+  let shapes = extract_vml_shapes(extra_xml)
+  if shapes.length() == 0 {
+    return merged
+  }
+  let insert_at = match merged.find("</xml>") {
+    Some(pos) => pos
+    None => merged.length()
+  }
+  let prefix = merged[:insert_at] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+    }
+  let suffix = merged[insert_at:] catch {
+      _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+    }
+  let sb = StringBuilder::new()
+  sb.write_view(prefix)
+  for shape in shapes {
+    sb.write_view(shape)
+  }
+  sb.write_view(suffix)
+  sb.to_string()
+}
+
+///|
+fn write_header_footer_vml(
+  sheet_id : Int,
+  images : ArrayView[HeaderFooterImage],
+) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\">\n",
+  )
+  sb.write_view("  <o:shapelayout v:ext=\"edit\">\n")
+  sb.write_view("    <o:idmap v:ext=\"edit\" data=\"\{sheet_id}\"/>\n")
+  sb.write_view("  </o:shapelayout>\n")
+  sb.write_view(
+    "  <v:shapetype id=\"_x0000_t75\" coordsize=\"21600,21600\" o:spt=\"75\" o:preferrelative=\"t\" path=\"m@4@5l@4@11@9@11@9@5xe\" filled=\"f\" stroked=\"f\">\n",
+  )
+  sb.write_view("    <v:stroke joinstyle=\"miter\"/>\n")
+  sb.write_view("    <v:formulas>\n")
+  sb.write_view("      <v:f eqn=\"if lineDrawn pixelLineWidth 0\"/>\n")
+  sb.write_view("      <v:f eqn=\"sum @0 1 0\"/>\n")
+  sb.write_view("      <v:f eqn=\"sum 0 0 @1\"/>\n")
+  sb.write_view("      <v:f eqn=\"prod @2 1 2\"/>\n")
+  sb.write_view("      <v:f eqn=\"prod @3 21600 pixelWidth\"/>\n")
+  sb.write_view("      <v:f eqn=\"prod @3 21600 pixelHeight\"/>\n")
+  sb.write_view("      <v:f eqn=\"sum @0 0 1\"/>\n")
+  sb.write_view("      <v:f eqn=\"prod @6 1 2\"/>\n")
+  sb.write_view("      <v:f eqn=\"prod @7 21600 pixelWidth\"/>\n")
+  sb.write_view("      <v:f eqn=\"sum @8 21600 0\"/>\n")
+  sb.write_view("      <v:f eqn=\"prod @7 21600 pixelHeight\"/>\n")
+  sb.write_view("      <v:f eqn=\"sum @10 21600 0\"/>\n")
+  sb.write_view("    </v:formulas>\n")
+  sb.write_view(
+    "    <v:path o:extrusionok=\"f\" gradientshapeok=\"t\" o:connecttype=\"rect\"/>\n",
+  )
+  sb.write_view("    <o:lock v:ext=\"edit\" aspectratio=\"t\"/>\n")
+  sb.write_view("  </v:shapetype>\n")
+  let mut shape_id = 1025
+  let mut rel_id = 1
+  for image in images {
+    let shape_name = header_footer_image_shape_id(
+      image.position,
+      image.is_footer,
+      image.first_page,
+    )
+    let style = "position:absolute;margin-left:0;margin-top:0;width:\{image.width};height:\{image.height};z-index:1"
+    sb.write_view("  <v:shape id=\"")
+    sb.write_view(escape_xml_attr(shape_name))
+    sb.write_view(
+      "\" o:spid=\"_x0000_s\{shape_id}\" type=\"#_x0000_t75\" style=\"",
+    )
+    sb.write_view(escape_xml_attr(style))
+    sb.write_view("\">\n")
+    sb.write_view("    <v:imagedata o:relid=\"rId\{rel_id}\" o:title=\"\"/>\n")
+    sb.write_view("    <o:lock v:ext=\"edit\" rotation=\"t\"/>\n")
+    sb.write_view("  </v:shape>\n")
+    shape_id = shape_id + 1
+    rel_id = rel_id + 1
+  }
+  sb.write_view("</xml>")
   sb.to_string()
 }
 
@@ -2344,6 +2559,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     }
     let vml_targets : Array[String] = []
     let vml_parts : Array[(Int, String)] = []
+    let vml_image_rels : Array[(Int, Array[String])] = []
     let base_vml = match sheet.vml_drawing_xml() {
       Some(xml) => Some(xml)
       None => None
@@ -2376,7 +2592,53 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       }
       None => None
     }
-    let legacy_drawing_hf_rel_id = match sheet.vml_drawing_hf_xml() {
+    let header_footer_images = sheet.header_footer_images
+    let header_footer_vml = if header_footer_images.length() > 0 {
+      Some(write_header_footer_vml(sheet_id, header_footer_images))
+    } else {
+      None
+    }
+    let header_footer_shape_ids : Array[String] = []
+    if header_footer_images.length() > 0 {
+      for image in header_footer_images {
+        header_footer_shape_ids.push(
+          header_footer_image_shape_id(
+            image.position,
+            image.is_footer,
+            image.first_page,
+          ),
+        )
+      }
+    }
+    let legacy_drawing_hf_xml = match sheet.vml_drawing_hf_xml() {
+      Some(xml) =>
+        match header_footer_vml {
+          Some(extra_xml) => {
+            let filtered = filter_vml_shapes_by_id(xml, header_footer_shape_ids)
+            Some(
+              merge_vml_drawings_with_shapetype(
+                filtered, extra_xml, "_x0000_t75",
+              ),
+            )
+          }
+          None => Some(xml)
+        }
+      None => header_footer_vml
+    }
+    let header_footer_image_targets : Array[String] = []
+    if header_footer_images.length() > 0 {
+      for image in header_footer_images {
+        let file_name = "image\{image_index}.\{image.extension}"
+        image_index = image_index + 1
+        archive.add("xl/media/\{file_name}", image.data)
+        header_footer_image_targets.push("../media/\{file_name}")
+        if !added_extensions.contains(image.extension) {
+          manifest.add_content_default(image.extension, image.content_type)
+          added_extensions.set(image.extension, true)
+        }
+      }
+    }
+    let legacy_drawing_hf_rel_id = match legacy_drawing_hf_xml {
       Some(xml) => {
         let id = rel_id
         rel_id = rel_id + 1
@@ -2384,6 +2646,9 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         vml_index = vml_index + 1
         vml_targets.push("../drawings/vmlDrawing\{vml_id}.vml")
         vml_parts.push((vml_id, xml))
+        if header_footer_image_targets.length() > 0 {
+          vml_image_rels.push((vml_id, header_footer_image_targets))
+        }
         Some(id)
       }
       None => None
@@ -2539,6 +2804,17 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       manifest.add_content_override(
         "/xl/drawings/vmlDrawing\{vml_id}.vml",
         ct_vml,
+      )
+    }
+    for part in vml_image_rels {
+      let (vml_id, targets) = part
+      if targets.length() == 0 {
+        continue
+      }
+      let vml_rels_xml = write_vml_rels_xml(targets)
+      archive.add(
+        "xl/drawings/_rels/vmlDrawing\{vml_id}.vml.rels",
+        @encoding/utf8.encode(vml_rels_xml),
       )
     }
     if !has_drawing {

@@ -59,6 +59,7 @@ pub struct Worksheet {
   sparkline_groups : Array[SparklineGroup]
   pivot_tables : Array[PivotTable]
   images : Array[Image]
+  header_footer_images : Array[HeaderFooterImage]
   charts : Array[Chart]
   shapes : Array[Shape]
   form_controls : Array[FormControl]
@@ -97,6 +98,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     sparkline_groups: [],
     pivot_tables: [],
     images: [],
+    header_footer_images: [],
     charts: [],
     shapes: [],
     form_controls: [],
@@ -1052,6 +1054,79 @@ fn normalize_extension(extension : StringView) -> String raise XlsxError {
     raise XlsxError::UnsupportedFeature(msg="image extension missing")
   }
   trimmed
+}
+
+///|
+fn normalize_image_extension_lower(
+  extension : StringView,
+) -> String raise XlsxError {
+  normalize_extension(extension).to_lower()
+}
+
+///|
+fn check_header_footer_image_size(
+  value : StringView,
+  field_name : StringView,
+) -> Unit raise XlsxError {
+  if value.to_string() == "" {
+    raise XlsxError::InvalidHeaderFooter(msg="\{field_name.to_string()} empty")
+  }
+}
+
+///|
+pub fn Worksheet::add_header_footer_image(
+  self : Worksheet,
+  options : HeaderFooterImageOptions,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let extension = normalize_image_extension_lower(options.extension)
+  let content_type = match image_content_type(extension) {
+    Some(value) => value
+    None =>
+      raise XlsxError::UnsupportedFeature(
+        msg="unsupported header/footer image extension",
+      )
+  }
+  check_header_footer_image_size(options.width, "header/footer width")
+  check_header_footer_image_size(options.height, "header/footer height")
+  let image : HeaderFooterImage = {
+    position: options.position,
+    data: options.data,
+    extension,
+    content_type,
+    is_footer: options.is_footer,
+    first_page: options.first_page,
+    width: options.width,
+    height: options.height,
+  }
+  let updated : Array[HeaderFooterImage] = []
+  for existing in self.header_footer_images {
+    if existing.position == image.position &&
+      existing.is_footer == image.is_footer &&
+      existing.first_page == image.first_page {
+      continue
+    }
+    updated.push(existing)
+  }
+  updated.push(image)
+  self.header_footer_images.clear()
+  self.header_footer_images.append(updated[:])
+}
+
+///|
+pub fn Worksheet::add_picture_from_bytes(
+  self : Worksheet,
+  reference : String,
+  data : Bytes,
+  extension : String,
+) -> Unit raise XlsxError {
+  let ext = normalize_image_extension_lower(extension)
+  let content_type = match image_content_type(ext) {
+    Some(value) => value
+    None =>
+      raise XlsxError::UnsupportedFeature(msg="unsupported picture extension")
+  }
+  self.add_image(reference, data, ext, content_type)
 }
 
 ///|

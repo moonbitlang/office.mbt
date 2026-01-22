@@ -26,3 +26,44 @@ test "picture delete empty cell" {
   workbook.delete_picture("Sheet1", "C3")
   inspect(workbook.get_picture_cells("Sheet1"), content="[]")
 }
+
+///|
+test "picture from bytes add and write" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let img : Bytes = [9, 8, 7, 6]
+  workbook.add_picture_from_bytes("Sheet1", "A1", img, ".png")
+  inspect(
+    workbook.get_pictures("Sheet1", "A1").map(image => image.extension),
+    content="[\"png\"]",
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let stored = match archive.get("xl/media/image1.png") {
+    Some(value) => value
+    None => fail("missing image1.png")
+  }
+  inspect(stored == img, content="true")
+  let types_xml = match archive.get("[Content_Types].xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing content types")
+  }
+  inspect(types_xml.contains("Extension=\"png\""), content="true")
+}
+
+///|
+test "picture from bytes invalid extension" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let result = try
+    workbook.add_picture_from_bytes("Sheet1", "A1", [1, 2], ".nope")
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(
+    result,
+    content="Err(UnsupportedFeature(msg=\"unsupported picture extension\"))",
+  )
+}
