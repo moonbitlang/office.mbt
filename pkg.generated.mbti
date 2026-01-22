@@ -13,7 +13,7 @@ pub async fn open_file(String, password? : String, options? : @xlsx.Options, tra
 
 pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub fn read(BytesView, options? : @xlsx.Options) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub fn read(BytesView, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub fn read_with_password(BytesView, String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 

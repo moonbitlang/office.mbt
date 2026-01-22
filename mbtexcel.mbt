@@ -7,8 +7,12 @@ pub fn new_workbook() -> @xlsx.Workbook {
 pub fn read(
   bytes : BytesView,
   options? : @xlsx.Options = @xlsx.Options::new(),
+  transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
-  @xlsx.read(bytes, options~)
+  match transcoder {
+    Some(value) => @xlsx.read(bytes, options~, transcoder=value)
+    None => @xlsx.read(bytes, options~)
+  }
 }
 
 ///|

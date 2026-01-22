@@ -19,7 +19,7 @@ pub async fn open_file(String, password? : String, options? : Options, transcode
 
 pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub fn read(BytesView, options? : Options) -> Workbook raise XlsxError
+pub fn read(BytesView, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub fn read_with_password(BytesView, String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 

@@ -3253,14 +3253,27 @@ fn read_zip_bytes(
 pub fn read(
   bytes : BytesView,
   options? : Options = Options::new(),
+  transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   if options.password != "" {
-    return read_with_password(bytes, options.password, options~)
+    match transcoder {
+      Some(value) =>
+        return read_with_password(
+          bytes,
+          options.password,
+          options~,
+          transcoder=value,
+        )
+      None => return read_with_password(bytes, options.password, options~)
+    }
   }
   if is_encrypted_package(bytes) {
     raise XlsxError::EncryptedPackage
   }
-  read_zip_bytes(bytes, options~)
+  match transcoder {
+    Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
+    None => read_zip_bytes(bytes, options~)
+  }
 }
 
 ///|
