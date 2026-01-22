@@ -3314,6 +3314,193 @@ fn encode_url_value(value : FormulaValue) -> FormulaValue {
 }
 
 ///|
+let th0 = "ศูนย์"
+
+///|
+let th1 = "หนึ่ง"
+
+///|
+let th2 = "สอง"
+
+///|
+let th3 = "สาม"
+
+///|
+let th4 = "สี่"
+
+///|
+let th5 = "ห้า"
+
+///|
+let th6 = "หก"
+
+///|
+let th7 = "เจ็ด"
+
+///|
+let th8 = "แปด"
+
+///|
+let th9 = "เก้า"
+
+///|
+let th10 = "สิบ"
+
+///|
+let th11 = "เอ็ด"
+
+///|
+let th20 = "ยี่"
+
+///|
+let th1e2 = "ร้อย"
+
+///|
+let th1e3 = "พัน"
+
+///|
+let th1e4 = "หมื่น"
+
+///|
+let th1e5 = "แสน"
+
+///|
+let th1e6 = "ล้าน"
+
+///|
+let thDot0 = "ถ้วน"
+
+///|
+let thBaht = "บาท"
+
+///|
+let thSatang = "สตางค์"
+
+///|
+let thMinus = "ลบ"
+
+///|
+let bahttext_digits : Array[String] = [
+  th0, th1, th2, th3, th4, th5, th6, th7, th8, th9,
+]
+
+///|
+fn bahttext_append_digit(text : String, digit : Int) -> String {
+  if digit >= 0 && digit <= 9 {
+    text + bahttext_digits[digit]
+  } else {
+    text
+  }
+}
+
+///|
+fn bahttext_append_pow10(text : String, digit : Int, pow10 : Int) -> String {
+  let mut out = bahttext_append_digit(text, digit)
+  match pow10 {
+    2 => out = out + th1e2
+    3 => out = out + th1e3
+    4 => out = out + th1e4
+    5 => out = out + th1e5
+    _ => ()
+  }
+  out
+}
+
+///|
+fn bahttext_append_block(text : String, val : Int) -> String {
+  let mut out = text
+  let mut value = val
+  if value >= 100000 {
+    out = bahttext_append_pow10(out, value / 100000, 5)
+    value = value % 100000
+  }
+  if value >= 10000 {
+    out = bahttext_append_pow10(out, value / 10000, 4)
+    value = value % 10000
+  }
+  if value >= 1000 {
+    out = bahttext_append_pow10(out, value / 1000, 3)
+    value = value % 1000
+  }
+  if value >= 100 {
+    out = bahttext_append_pow10(out, value / 100, 2)
+    value = value % 100
+  }
+  if value > 0 {
+    let n10 = value / 10
+    let n1 = value % 10
+    if n10 >= 1 {
+      if n10 >= 3 {
+        out = bahttext_append_digit(out, n10)
+      } else if n10 == 2 {
+        out = out + th20
+      }
+      out = out + th10
+    }
+    if n10 > 0 && n1 == 1 {
+      out = out + th11
+    } else if n1 > 0 {
+      out = bahttext_append_digit(out, n1)
+    }
+  }
+  out
+}
+
+///|
+fn bahttext_split_block(val : Double, size : Double) -> (Double, Int) {
+  let (integer, frac) = modf_double((val + 0.1) / size)
+  let frac_value = frac * size + 0.1
+  (integer, Double::to_int(trunc_double(frac_value)))
+}
+
+///|
+fn bahttext_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() != 1 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let number = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let minus = number < 0.0
+  let num = Double::floor(Double::abs(number) * 100.0 + 0.5)
+  let (baht, satang) = bahttext_split_block(num, 100.0)
+  let mut text = ""
+  let mut baht_value = baht
+  if baht_value == 0.0 {
+    if satang == 0 {
+      text = text + th0
+    }
+  } else {
+    while baht_value > 0.0 {
+      let (next_baht, n_block) = bahttext_split_block(baht_value, 1.0e6)
+      let mut block = ""
+      if n_block > 0 {
+        block = bahttext_append_block(block, n_block)
+      }
+      if next_baht > 0.0 {
+        block = th1e6 + block
+      }
+      text = block + text
+      baht_value = next_baht
+    }
+  }
+  if text.length() > 0 {
+    text = text + thBaht
+  }
+  if satang == 0 {
+    text = text + thDot0
+  } else {
+    text = bahttext_append_block(text, satang)
+    text = text + thSatang
+  }
+  if minus {
+    text = thMinus + text
+  }
+  FormulaValue::String(text)
+}
+
+///|
 fn value_as_int(value : FormulaValue) -> Result[Int, FormulaValue] {
   match value_as_number(value) {
     Ok(num) => Ok(Double::to_int(trunc_double(num)))
@@ -11870,6 +12057,12 @@ fn eval_function(
     "ENCODEURL" =>
       if values.length() == 1 {
         encode_url_value(values[0])
+      } else {
+        FormulaValue::Error(formula_error_value)
+      }
+    "BAHTTEXT" =>
+      if values.length() == 1 {
+        bahttext_values(values)
       } else {
         FormulaValue::Error(formula_error_value)
       }

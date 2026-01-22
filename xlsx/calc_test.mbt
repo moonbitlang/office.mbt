@@ -1453,6 +1453,132 @@ test "calc char clean code unicode choose error functions" {
 }
 
 ///|
+test "calc bahttext function" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "BAHTTEXT(-1.1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A1"),
+    content="ลบหนึ่งบาทสิบสตางค์",
+  )
+  sheet.set_cell_formula("A2", "BAHTTEXT(0)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A2"),
+    content="ศูนย์บาทถ้วน",
+  )
+  sheet.set_cell_formula("A3", "BAHTTEXT(1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A3"),
+    content="หนึ่งบาทถ้วน",
+  )
+  sheet.set_cell_formula("A4", "BAHTTEXT(1.1)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A4"),
+    content="หนึ่งบาทสิบสตางค์",
+  )
+  sheet.set_cell_formula("A5", "BAHTTEXT(2)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A5"),
+    content="สองบาทถ้วน",
+  )
+  sheet.set_cell_formula("A6", "BAHTTEXT(3)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A6"),
+    content="สามบาทถ้วน",
+  )
+  sheet.set_cell_formula("A7", "BAHTTEXT(4)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A7"),
+    content="สี่บาทถ้วน",
+  )
+  sheet.set_cell_formula("A8", "BAHTTEXT(5)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A8"),
+    content="ห้าบาทถ้วน",
+  )
+  sheet.set_cell_formula("A9", "BAHTTEXT(6)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A9"),
+    content="หกบาทถ้วน",
+  )
+  sheet.set_cell_formula("A10", "BAHTTEXT(7)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A10"),
+    content="เจ็ดบาทถ้วน",
+  )
+  sheet.set_cell_formula("A11", "BAHTTEXT(8)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A11"),
+    content="แปดบาทถ้วน",
+  )
+  sheet.set_cell_formula("A12", "BAHTTEXT(9)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A12"),
+    content="เก้าบาทถ้วน",
+  )
+  sheet.set_cell_formula("A13", "BAHTTEXT(10)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A13"),
+    content="สิบบาทถ้วน",
+  )
+  sheet.set_cell_formula("A14", "BAHTTEXT(11)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A14"),
+    content="สิบเอ็ดบาทถ้วน",
+  )
+  sheet.set_cell_formula("A15", "BAHTTEXT(15)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A15"),
+    content="สิบห้าบาทถ้วน",
+  )
+  sheet.set_cell_formula("A16", "BAHTTEXT(20)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A16"),
+    content="ยี่สิบบาทถ้วน",
+  )
+  sheet.set_cell_formula("A17", "BAHTTEXT(100)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A17"),
+    content="หนึ่งร้อยบาทถ้วน",
+  )
+  sheet.set_cell_formula("A18", "BAHTTEXT(130)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A18"),
+    content="หนึ่งร้อยสามสิบบาทถ้วน",
+  )
+  sheet.set_cell_formula("A19", "BAHTTEXT(1000)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A19"),
+    content="หนึ่งพันบาทถ้วน",
+  )
+  sheet.set_cell_formula("A20", "BAHTTEXT(10000)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A20"),
+    content="หนึ่งหมื่นบาทถ้วน",
+  )
+  sheet.set_cell_formula("A21", "BAHTTEXT(100000)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A21"),
+    content="หนึ่งแสนบาทถ้วน",
+  )
+  sheet.set_cell_formula("A22", "BAHTTEXT(1000000)")
+  inspect(
+    workbook.calc_cell_value("Sheet1", "A22"),
+    content="หนึ่งล้านบาทถ้วน",
+  )
+}
+
+///|
+test "calc bahttext error functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "BAHTTEXT()")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
+  sheet.set_cell_formula("A2", "BAHTTEXT(\"\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="#VALUE!")
+}
+
+///|
 test "calc bessel functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
