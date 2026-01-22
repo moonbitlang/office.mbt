@@ -121,6 +121,14 @@ pub fn theme_color(base_color : String, tint : Double) -> String {
 }
 
 ///|
+pub fn excel_date_to_time(
+  excel_date : Double,
+  use_1904_format? : Bool = false,
+) -> @time.ZonedDateTime raise @xlsx.XlsxError {
+  @xlsx.excel_date_to_time(excel_date, use_1904_format~)
+}
+
+///|
 pub async fn open_file(
   path : String,
   password? : String = "",

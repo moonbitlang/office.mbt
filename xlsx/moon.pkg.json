@@ -23,7 +23,8 @@
     "moonbitlang/core/ref",
     "moonbitlang/core/strconv",
     "moonbitlang/core/math",
-    "moonbitlang/core/env"
+    "moonbitlang/core/env",
+    "moonbitlang/x/time"
   ],
   "test-import": [
     "moonbitlang/async"

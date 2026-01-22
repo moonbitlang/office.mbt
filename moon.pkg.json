@@ -1,6 +1,7 @@
 {
   "import": [
     "bobzhang/mbtexcel/xlsx",
+    "moonbitlang/x/time",
     {
       "path": "moonbitlang/async/io",
       "alias": "async/io"

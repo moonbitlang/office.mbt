@@ -46,3 +46,9 @@ test "mbtexcel encrypt decrypt roundtrip" {
   let decrypted = decrypt(encrypted, options=opts)
   assert_eq(decrypted, raw)
 }
+
+///|
+test "mbtexcel excel_date_to_time wrapper" {
+  let t0 = excel_date_to_time(1.0)
+  inspect((t0.year(), t0.month(), t0.day()), content="(1900, 1, 1)")
+}

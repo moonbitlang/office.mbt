@@ -28,6 +28,7 @@ pub suberror XlsxError {
   InvalidWorkbookProperty(msg~ : String)
   InvalidWorkbookProtection(msg~ : String)
   InvalidOptions(msg~ : String)
+  InvalidExcelDate(value~ : Double)
   InvalidSheetBackground(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)
