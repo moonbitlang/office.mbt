@@ -2918,6 +2918,14 @@ fn sortby_values(
   if args.length() < 2 {
     return FormulaValue::Error(formula_error_value)
   }
+  match values[0] {
+    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    FormulaValue::List(list) =>
+      if list.length() == 0 {
+        return FormulaValue::Error(formula_error_value)
+      }
+    _ => ()
+  }
   let range = range_from_expr_or_value(
     workbook,
     sheet_name,
@@ -2930,6 +2938,14 @@ fn sortby_values(
   let key_sets : Array[(Array[FormulaValue], Int)] = []
   let mut idx = 1
   while idx < args.length() {
+    match values[idx] {
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      FormulaValue::List(list) =>
+        if list.length() == 0 {
+          return FormulaValue::Error(formula_error_value)
+        }
+      _ => ()
+    }
     let key_range = range_from_expr_or_value(
       workbook,
       sheet_name,
