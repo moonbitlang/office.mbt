@@ -440,3 +440,187 @@ fn parse_app_properties(xml : StringView) -> AppProperties raise XlsxError {
   }
   props
 }
+
+///|
+let custom_props_namespace = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties"
+
+///|
+let custom_props_vt_namespace = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"
+
+///|
+let custom_props_fmt_id = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"
+
+///|
+fn extract_tag_value(xml : StringView, tag_name : StringView) -> String? {
+  let open = "<\{tag_name.to_string()}>"
+  let close = "</\{tag_name.to_string()}>"
+  let text = xml.to_string()
+  match text.find(open) {
+    None => None
+    Some(start) => {
+      let rest = text[start + open.length():] catch { _ => return None }
+      match rest.find(close) {
+        Some(end) => {
+          let slice = rest[:end] catch { _ => return None }
+          Some(slice.to_string())
+        }
+        None => None
+      }
+    }
+  }
+}
+
+///|
+fn parse_custom_property_value(
+  xml : StringView,
+) -> CustomPropertyValue? raise XlsxError {
+  match extract_tag_value(xml, "vt:lpwstr") {
+    Some(value) =>
+      return Some(CustomPropertyValue::Text(unescape_xml_text(value)))
+    None => ()
+  }
+  match extract_tag_value(xml, "vt:bool") {
+    Some(value) =>
+      return Some(CustomPropertyValue::Boolean(parse_cell_bool(value)))
+    None => ()
+  }
+  match extract_tag_value(xml, "vt:filetime") {
+    Some(value) => return Some(CustomPropertyValue::DateTime(value))
+    None => ()
+  }
+  let int_tags = [
+    "vt:i1", "vt:i2", "vt:i4", "vt:i8", "vt:int", "vt:ui1", "vt:ui2", "vt:ui4", "vt:ui8",
+    "vt:uint",
+  ]
+  for tag in int_tags {
+    match extract_tag_value(xml, tag) {
+      Some(value) =>
+        return Some(
+          CustomPropertyValue::Integer(
+            @strconv.parse_int(value, base=10) catch {
+              _ =>
+                raise XlsxError::InvalidWorkbookProperty(
+                  msg="custom property int invalid",
+                )
+            },
+          ),
+        )
+      None => ()
+    }
+  }
+  let float_tags = ["vt:r4", "vt:r8", "vt:decimal"]
+  for tag in float_tags {
+    match extract_tag_value(xml, tag) {
+      Some(value) =>
+        return Some(
+          CustomPropertyValue::Float(
+            @strconv.parse_double(value) catch {
+              _ =>
+                raise XlsxError::InvalidWorkbookProperty(
+                  msg="custom property number invalid",
+                )
+            },
+          ),
+        )
+      None => ()
+    }
+  }
+  None
+}
+
+///|
+fn write_custom_property_value(
+  sb : StringBuilder,
+  value : CustomPropertyValue,
+) -> Unit {
+  match value {
+    CustomPropertyValue::Integer(number) => {
+      sb.write_view("<vt:i4>")
+      sb.write_view("\{number}")
+      sb.write_view("</vt:i4>")
+    }
+    CustomPropertyValue::Float(number) => {
+      sb.write_view("<vt:r8>")
+      sb.write_view("\{number}")
+      sb.write_view("</vt:r8>")
+    }
+    CustomPropertyValue::Boolean(value) => {
+      sb.write_view("<vt:bool>")
+      sb.write_view(if value { "true" } else { "false" })
+      sb.write_view("</vt:bool>")
+    }
+    CustomPropertyValue::Text(text) => {
+      sb.write_view("<vt:lpwstr>")
+      sb.write_view(escape_xml_text(text))
+      sb.write_view("</vt:lpwstr>")
+    }
+    CustomPropertyValue::DateTime(text) => {
+      sb.write_view("<vt:filetime>")
+      sb.write_view(escape_xml_text(text))
+      sb.write_view("</vt:filetime>")
+    }
+  }
+}
+
+///|
+fn write_custom_properties_xml(props : ArrayView[CustomProperty]) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view("<Properties xmlns=\"")
+  sb.write_view(custom_props_namespace)
+  sb.write_view("\" xmlns:vt=\"")
+  sb.write_view(custom_props_vt_namespace)
+  sb.write_view("\">\n")
+  let mut pid = 2
+  for prop in props {
+    match prop.value {
+      None => ()
+      Some(value) => {
+        sb.write_view("  <property fmtid=\"")
+        sb.write_view(custom_props_fmt_id)
+        sb.write_view("\" pid=\"\{pid}\" name=\"")
+        sb.write_view(escape_xml_attr(prop.name))
+        sb.write_view("\">")
+        write_custom_property_value(sb, value)
+        sb.write_view("</property>\n")
+        pid = pid + 1
+      }
+    }
+  }
+  sb.write_view("</Properties>")
+  sb.to_string()
+}
+
+///|
+fn parse_custom_properties(
+  xml : StringView,
+) -> Array[CustomProperty] raise XlsxError {
+  let properties : Array[CustomProperty] = []
+  let mut first = true
+  for chunk in xml.to_string().split("<property ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="property tag not closed")
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="property tag invalid")
+      }
+    let name = match attr_value(tag, "name") {
+      Some(value) => unescape_xml_text(value)
+      None => raise XlsxError::InvalidXml(msg="property name missing")
+    }
+    let close_tag = "</property>"
+    let body = match text.find(close_tag) {
+      Some(pos) => text[end + 1:pos] catch { _ => "" }
+      None => ""
+    }
+    let value = parse_custom_property_value(body)
+    properties.push({ name, value })
+  }
+  properties
+}

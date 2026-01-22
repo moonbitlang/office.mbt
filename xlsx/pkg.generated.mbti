@@ -38,6 +38,8 @@ pub suberror XlsxError {
   InvalidPageLayout(msg~ : String)
   InvalidHeaderFooter(msg~ : String)
   InvalidSheetProtection(msg~ : String)
+  InvalidWorkbookProperty(msg~ : String)
+  InvalidWorkbookProtection(msg~ : String)
   InvalidSheetBackground(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)
@@ -106,6 +108,26 @@ pub(all) struct AutoFilterOption {
 }
 pub impl Eq for AutoFilterOption
 pub impl Show for AutoFilterOption
+
+pub struct CalcPropsOptions {
+  mut calc_id : UInt?
+  mut calc_mode : String?
+  mut full_calc_on_load : Bool?
+  mut ref_mode : String?
+  mut iterate : Bool?
+  mut iterate_count : UInt?
+  mut iterate_delta : Double?
+  mut full_precision : Bool?
+  mut calc_completed : Bool?
+  mut calc_on_save : Bool?
+  mut concurrent_calc : Bool?
+  mut concurrent_manual_count : UInt?
+  mut force_full_calc : Bool?
+}
+pub fn CalcPropsOptions::new() -> Self
+pub fn CalcPropsOptions::with_values(calc_id? : UInt, calc_mode? : String, full_calc_on_load? : Bool, ref_mode? : String, iterate? : Bool, iterate_count? : UInt, iterate_delta? : Double, full_precision? : Bool, calc_completed? : Bool, calc_on_save? : Bool, concurrent_calc? : Bool, concurrent_manual_count? : UInt, force_full_calc? : Bool) -> Self
+pub impl Eq for CalcPropsOptions
+pub impl Show for CalcPropsOptions
 
 pub struct Cell {
   reference : String
@@ -177,6 +199,24 @@ pub struct CoreProperties {
 }
 pub fn CoreProperties::new() -> Self
 pub fn CoreProperties::with_values(title? : String, subject? : String, creator? : String, keywords? : String, description? : String, last_modified_by? : String, language? : String, identifier? : String, revision? : String, content_status? : String, category? : String, version? : String, created? : String, modified? : String) -> Self
+
+pub struct CustomProperty {
+  name : String
+  value : CustomPropertyValue?
+}
+pub fn CustomProperty::new(String, CustomPropertyValue?) -> Self
+pub impl Eq for CustomProperty
+pub impl Show for CustomProperty
+
+pub(all) enum CustomPropertyValue {
+  Integer(Int)
+  Float(Double)
+  Boolean(Bool)
+  Text(String)
+  DateTime(String)
+}
+pub impl Eq for CustomPropertyValue
+pub impl Show for CustomPropertyValue
 
 pub struct DefinedName {
   name : String
@@ -449,6 +489,11 @@ pub struct Workbook {
   defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
+  custom_properties : Array[CustomProperty]
+  mut workbook_props : WorkbookPropsOptions
+  mut calc_props : CalcPropsOptions
+  mut default_font : String
+  mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
@@ -467,21 +512,28 @@ pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], 
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::app_properties(Self) -> AppProperties
+pub fn Workbook::app_props(Self) -> AppProperties
 pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool) -> String raise XlsxError
 pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> String raise XlsxError
+pub fn Workbook::calc_props(Self) -> CalcPropsOptions
 pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
+pub fn Workbook::custom_properties(Self) -> Array[CustomProperty]
+pub fn Workbook::default_font(Self) -> String
 pub fn Workbook::defined_names(Self) -> ArrayView[DefinedName]
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_defined_name(Self, DefinedName) -> Unit raise XlsxError
 pub fn Workbook::delete_picture(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_sheet(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_table(Self, StringView) -> Unit raise XlsxError
+pub fn Workbook::doc_properties(Self) -> CoreProperties
+pub fn Workbook::get_app_props(Self) -> AppProperties
 pub fn Workbook::get_auto_filter(Self, StringView) -> AutoFilter? raise XlsxError
+pub fn Workbook::get_calc_props(Self) -> CalcPropsOptions
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_hyperlink(Self, StringView, StringView) -> Hyperlink? raise XlsxError
@@ -498,7 +550,10 @@ pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
+pub fn Workbook::get_custom_props(Self) -> Array[CustomProperty]
+pub fn Workbook::get_default_font(Self) -> String
 pub fn Workbook::get_defined_names(Self) -> Array[DefinedName]
+pub fn Workbook::get_doc_props(Self) -> CoreProperties
 pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
 pub fn Workbook::get_merge_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
@@ -509,6 +564,7 @@ pub fn Workbook::get_row(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_tables(Self, StringView) -> Array[Table] raise XlsxError
+pub fn Workbook::get_workbook_props(Self) -> WorkbookPropsOptions
 pub fn Workbook::insert_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::insert_page_break(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::insert_rows(Self, StringView, Int, Int) -> Unit raise XlsxError
@@ -518,6 +574,7 @@ pub fn Workbook::move_sheet(Self, StringView, StringView) -> Unit raise XlsxErro
 pub fn Workbook::new() -> Self
 pub fn Workbook::new_stream_writer(Self, StringView) -> StreamWriter raise XlsxError
 pub fn Workbook::protect_sheet(Self, StringView, SheetProtectionOptions) -> Unit raise XlsxError
+pub fn Workbook::protect_workbook(Self, options? : WorkbookProtectionOptions) -> Unit raise XlsxError
 pub fn Workbook::remove_cell_hyperlink(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::remove_cols(Self, StringView, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::remove_page_break(Self, StringView, StringView) -> Unit raise XlsxError
@@ -527,7 +584,9 @@ pub fn Workbook::row_stream(Self, StringView) -> RowStream raise XlsxError
 pub fn Workbook::row_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::set_active_sheet(Self, Int) -> Unit
 pub fn Workbook::set_app_properties(Self, AppProperties) -> Unit
+pub fn Workbook::set_app_props(Self, AppProperties) -> Unit
 pub fn Workbook::set_auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
+pub fn Workbook::set_calc_props(Self, CalcPropsOptions?) -> Unit raise XlsxError
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_bool(Self, StringView, String, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_cell_default(Self, StringView, String, String) -> Unit raise XlsxError
@@ -550,7 +609,11 @@ pub fn Workbook::set_col_style(Self, StringView, Int, Int) -> Unit raise XlsxErr
 pub fn Workbook::set_col_visible(Self, StringView, Int, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_col_width(Self, StringView, Int, Double) -> Unit raise XlsxError
 pub fn Workbook::set_core_properties(Self, CoreProperties) -> Unit
+pub fn Workbook::set_custom_props(Self, CustomProperty) -> Unit raise XlsxError
+pub fn Workbook::set_default_font(Self, String) -> Unit
 pub fn Workbook::set_defined_name(Self, DefinedName) -> Unit raise XlsxError
+pub fn Workbook::set_doc_properties(Self, CoreProperties) -> Unit
+pub fn Workbook::set_doc_props(Self, CoreProperties) -> Unit
 pub fn Workbook::set_header_footer(Self, StringView, HeaderFooterOptions?) -> Unit raise XlsxError
 pub fn Workbook::set_page_layout(Self, StringView, PageLayoutOptions?) -> Unit raise XlsxError
 pub fn Workbook::set_page_margins(Self, StringView, PageLayoutMarginsOptions?) -> Unit raise XlsxError
@@ -562,6 +625,7 @@ pub fn Workbook::set_row_visible(Self, StringView, Int, Bool) -> Unit raise Xlsx
 pub fn Workbook::set_sheet_background(Self, StringView, Bytes, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_name(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::set_sheet_visible(Self, StringView, Bool, very_hidden? : Bool) -> Unit raise XlsxError
+pub fn Workbook::set_workbook_props(Self, WorkbookPropsOptions?) -> Unit
 pub fn Workbook::sheet(Self, StringView) -> Worksheet?
 pub fn Workbook::sheet_index(Self, StringView) -> Int raise XlsxError
 pub fn Workbook::sheet_name(Self, Int) -> String?
@@ -571,6 +635,33 @@ pub fn Workbook::styles(Self) -> ArrayView[Style]
 pub fn Workbook::unmerge_cell(Self, StringView, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::unmerge_cells(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::unprotect_sheet(Self, StringView, password? : String) -> Unit raise XlsxError
+pub fn Workbook::unprotect_workbook(Self, password? : String) -> Unit raise XlsxError
+pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
+
+pub struct WorkbookPropsOptions {
+  mut date_1904 : Bool?
+  mut filter_privacy : Bool?
+  mut code_name : String?
+}
+pub fn WorkbookPropsOptions::new() -> Self
+pub fn WorkbookPropsOptions::with_values(date_1904? : Bool, filter_privacy? : Bool, code_name? : String) -> Self
+pub impl Eq for WorkbookPropsOptions
+pub impl Show for WorkbookPropsOptions
+
+type WorkbookProtection
+pub impl Eq for WorkbookProtection
+pub impl Show for WorkbookProtection
+
+pub struct WorkbookProtectionOptions {
+  algorithm_name : String
+  password : String
+  lock_structure : Bool
+  lock_windows : Bool
+}
+pub fn WorkbookProtectionOptions::new() -> Self
+pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
+pub impl Eq for WorkbookProtectionOptions
+pub impl Show for WorkbookProtectionOptions
 
 pub struct Worksheet {
   mut name : String

@@ -47,6 +47,10 @@ fn write_workbook_xml(workbook : Workbook) -> String {
   sb.write_view(
     "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
   )
+  match write_workbook_pr_xml(workbook.workbook_props()) {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
   if sheets.length() > 0 {
     let active_index = workbook.active_sheet_index()
     let safe_active = if active_index < 0 || active_index >= sheets.length() {
@@ -108,7 +112,137 @@ fn write_workbook_xml(workbook : Workbook) -> String {
       sb.write_view("  </definedNames>\n")
     }
   }
+  match workbook.workbook_protection {
+    Some(value) => sb.write_view(write_workbook_protection_xml(value))
+    None => ()
+  }
+  match write_calc_pr_xml(workbook.calc_props()) {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
   sb.write_view("</workbook>")
+  sb.to_string()
+}
+
+///|
+fn write_workbook_pr_xml(options : WorkbookPropsOptions) -> String? {
+  if workbook_props_is_empty(options) {
+    return None
+  }
+  let sb = StringBuilder::new()
+  sb.write_view("  <workbookPr")
+  match options.date_1904 {
+    Some(value) => sb.write_view(" date1904=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.filter_privacy {
+    Some(value) => sb.write_view(" filterPrivacy=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.code_name {
+    Some(value) => {
+      sb.write_view(" codeName=\"")
+      sb.write_view(escape_xml_attr(value))
+      sb.write_view("\"")
+    }
+    None => ()
+  }
+  sb.write_view("/>\n")
+  Some(sb.to_string())
+}
+
+///|
+fn write_calc_pr_xml(options : CalcPropsOptions) -> String? {
+  if calc_props_is_empty(options) {
+    return None
+  }
+  let sb = StringBuilder::new()
+  sb.write_view("  <calcPr")
+  match options.calc_id {
+    Some(value) => sb.write_view(" calcId=\"\{value}\"")
+    None => ()
+  }
+  match options.calc_mode {
+    Some(value) => sb.write_view(" calcMode=\"\{value}\"")
+    None => ()
+  }
+  match options.full_calc_on_load {
+    Some(value) => sb.write_view(" fullCalcOnLoad=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.ref_mode {
+    Some(value) => sb.write_view(" refMode=\"\{value}\"")
+    None => ()
+  }
+  match options.iterate {
+    Some(value) => sb.write_view(" iterate=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.iterate_count {
+    Some(value) => sb.write_view(" iterateCount=\"\{value}\"")
+    None => ()
+  }
+  match options.iterate_delta {
+    Some(value) => sb.write_view(" iterateDelta=\"\{value}\"")
+    None => ()
+  }
+  match options.full_precision {
+    Some(value) => sb.write_view(" fullPrecision=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.calc_completed {
+    Some(value) => sb.write_view(" calcCompleted=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.calc_on_save {
+    Some(value) => sb.write_view(" calcOnSave=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.concurrent_calc {
+    Some(value) => sb.write_view(" concurrentCalc=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.concurrent_manual_count {
+    Some(value) => sb.write_view(" concurrentManualCount=\"\{value}\"")
+    None => ()
+  }
+  match options.force_full_calc {
+    Some(value) => sb.write_view(" forceFullCalc=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  sb.write_view("/>\n")
+  Some(sb.to_string())
+}
+
+///|
+fn write_workbook_protection_xml(protection : WorkbookProtection) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("  <workbookProtection")
+  if protection.lock_structure {
+    sb.write_view(" lockStructure=\"1\"")
+  }
+  if protection.lock_windows {
+    sb.write_view(" lockWindows=\"1\"")
+  }
+  if protection.algorithm_name != "" {
+    sb.write_view(" workbookAlgorithmName=\"")
+    sb.write_view(escape_xml_attr(protection.algorithm_name))
+    sb.write_view("\"")
+  }
+  if protection.hash_value != "" {
+    sb.write_view(" workbookHashValue=\"")
+    sb.write_view(escape_xml_attr(protection.hash_value))
+    sb.write_view("\"")
+  }
+  if protection.salt_value != "" {
+    sb.write_view(" workbookSaltValue=\"")
+    sb.write_view(escape_xml_attr(protection.salt_value))
+    sb.write_view("\"")
+  }
+  if protection.spin_count > 0 {
+    sb.write_view(" workbookSpinCount=\"\{protection.spin_count}\"")
+  }
+  sb.write_view("/>\n")
   sb.to_string()
 }
 
@@ -2011,7 +2145,9 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   }
   archive.add(
     "xl/styles.xml",
-    @encoding/utf8.encode(write_styles_xml(workbook.styles())),
+    @encoding/utf8.encode(
+      write_styles_xml(workbook.styles(), workbook.default_font()),
+    ),
   )
   archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))
   archive.add(
@@ -2022,6 +2158,22 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     "docProps/app.xml",
     @encoding/utf8.encode(write_app_properties_xml(workbook.app_properties())),
   )
+  let mut has_custom_props = false
+  for prop in workbook.custom_properties() {
+    if prop.value is Some(_) {
+      has_custom_props = true
+      break
+    }
+  }
+  if has_custom_props {
+    manifest.add_custom_properties()
+    archive.add(
+      "docProps/custom.xml",
+      @encoding/utf8.encode(
+        write_custom_properties_xml(workbook.custom_properties()),
+      ),
+    )
+  }
   archive.add(
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(manifest.workbook_rels_xml()),

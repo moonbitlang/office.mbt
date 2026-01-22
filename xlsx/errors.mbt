@@ -22,6 +22,8 @@ pub suberror XlsxError {
   InvalidPageLayout(msg~ : String)
   InvalidHeaderFooter(msg~ : String)
   InvalidSheetProtection(msg~ : String)
+  InvalidWorkbookProperty(msg~ : String)
+  InvalidWorkbookProtection(msg~ : String)
   InvalidSheetBackground(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)

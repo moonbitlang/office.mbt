@@ -47,3 +47,23 @@ test "invalid style id" {
   let result = try? workbook.set_cell_style("Sheet1", "A1", 1)
   inspect(result, content="Err(InvalidStyleId(index=1))")
 }
+
+///|
+test "default font roundtrip" {
+  let workbook = Workbook::new()
+  workbook.set_default_font("Arial")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("name val=\"Arial\""), content="true")
+  let parsed = read(bytes)
+  inspect(parsed.get_default_font(), content="Arial")
+}

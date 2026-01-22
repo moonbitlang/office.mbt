@@ -5,6 +5,11 @@ pub struct Workbook {
   defined_names : Array[DefinedName]
   mut core_properties : CoreProperties
   mut app_properties : AppProperties
+  custom_properties : Array[CustomProperty]
+  mut workbook_props : WorkbookPropsOptions
+  mut calc_props : CalcPropsOptions
+  mut default_font : String
+  mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
 
@@ -64,6 +69,11 @@ pub fn Workbook::new() -> Workbook {
     defined_names: [],
     core_properties: CoreProperties::new(),
     app_properties: AppProperties::new(),
+    custom_properties: [],
+    workbook_props: WorkbookPropsOptions::new(),
+    calc_props: CalcPropsOptions::new(),
+    default_font: "Calibri",
+    workbook_protection: None,
     active_sheet_index: 0,
   }
 }
@@ -169,6 +179,29 @@ pub fn Workbook::set_core_properties(
 }
 
 ///|
+pub fn Workbook::doc_properties(self : Workbook) -> CoreProperties {
+  self.core_properties
+}
+
+///|
+pub fn Workbook::set_doc_properties(
+  self : Workbook,
+  props : CoreProperties,
+) -> Unit {
+  self.core_properties = props
+}
+
+///|
+pub fn Workbook::get_doc_props(self : Workbook) -> CoreProperties {
+  self.core_properties
+}
+
+///|
+pub fn Workbook::set_doc_props(self : Workbook, props : CoreProperties) -> Unit {
+  self.core_properties = props
+}
+
+///|
 pub fn Workbook::app_properties(self : Workbook) -> AppProperties {
   self.app_properties
 }
@@ -179,6 +212,149 @@ pub fn Workbook::set_app_properties(
   props : AppProperties,
 ) -> Unit {
   self.app_properties = props
+}
+
+///|
+pub fn Workbook::app_props(self : Workbook) -> AppProperties {
+  self.app_properties
+}
+
+///|
+pub fn Workbook::set_app_props(self : Workbook, props : AppProperties) -> Unit {
+  self.app_properties = props
+}
+
+///|
+pub fn Workbook::get_app_props(self : Workbook) -> AppProperties {
+  self.app_properties
+}
+
+///|
+pub fn Workbook::custom_properties(self : Workbook) -> Array[CustomProperty] {
+  let props : Array[CustomProperty] = []
+  for prop in self.custom_properties {
+    props.push(prop)
+  }
+  props
+}
+
+///|
+pub fn Workbook::get_custom_props(self : Workbook) -> Array[CustomProperty] {
+  self.custom_properties()
+}
+
+///|
+pub fn Workbook::set_custom_props(
+  self : Workbook,
+  prop : CustomProperty,
+) -> Unit raise XlsxError {
+  if prop.name == "" {
+    raise XlsxError::InvalidWorkbookProperty(msg="custom property name missing")
+  }
+  let mut index : Int? = None
+  for i, existing in self.custom_properties {
+    if existing.name == prop.name {
+      index = Some(i)
+      break
+    }
+  }
+  match prop.value {
+    None =>
+      match index {
+        Some(i) => {
+          ignore(self.custom_properties.remove(i))
+          ()
+        }
+        None => ()
+      }
+    Some(_) =>
+      match index {
+        Some(i) => self.custom_properties[i] = prop
+        None => self.custom_properties.push(prop)
+      }
+  }
+}
+
+///|
+pub fn Workbook::workbook_props(self : Workbook) -> WorkbookPropsOptions {
+  self.workbook_props
+}
+
+///|
+pub fn Workbook::get_workbook_props(self : Workbook) -> WorkbookPropsOptions {
+  self.workbook_props
+}
+
+///|
+pub fn Workbook::set_workbook_props(
+  self : Workbook,
+  options : WorkbookPropsOptions?,
+) -> Unit {
+  self.workbook_props = match options {
+    Some(value) => value
+    None => WorkbookPropsOptions::new()
+  }
+}
+
+///|
+pub fn Workbook::calc_props(self : Workbook) -> CalcPropsOptions {
+  self.calc_props
+}
+
+///|
+pub fn Workbook::get_calc_props(self : Workbook) -> CalcPropsOptions {
+  self.calc_props
+}
+
+///|
+pub fn Workbook::set_calc_props(
+  self : Workbook,
+  options : CalcPropsOptions?,
+) -> Unit raise XlsxError {
+  let value = match options {
+    Some(opts) => normalize_calc_props(opts)
+    None => CalcPropsOptions::new()
+  }
+  self.calc_props = value
+}
+
+///|
+pub fn Workbook::default_font(self : Workbook) -> String {
+  self.default_font
+}
+
+///|
+pub fn Workbook::get_default_font(self : Workbook) -> String {
+  self.default_font
+}
+
+///|
+pub fn Workbook::set_default_font(self : Workbook, font_name : String) -> Unit {
+  self.default_font = font_name
+}
+
+///|
+pub fn Workbook::protect_workbook(
+  self : Workbook,
+  options? : WorkbookProtectionOptions = WorkbookProtectionOptions::new(),
+) -> Unit raise XlsxError {
+  self.workbook_protection = Some(workbook_protection_from_options(options))
+}
+
+///|
+pub fn Workbook::unprotect_workbook(
+  self : Workbook,
+  password? : String = "",
+) -> Unit raise XlsxError {
+  let protection = match self.workbook_protection {
+    Some(value) => value
+    None =>
+      raise XlsxError::InvalidWorkbookProtection(msg="workbook not protected")
+  }
+  if password != "" {
+    verify_workbook_protection_password(protection, password)
+  }
+  self.workbook_protection = None
 }
 
 ///|

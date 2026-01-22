@@ -8,6 +8,9 @@ let rel_core_properties = "http://schemas.openxmlformats.org/package/2006/relati
 let rel_extended_properties = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"
 
 ///|
+let rel_custom_properties = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties"
+
+///|
 let rel_worksheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
 
 ///|
@@ -51,6 +54,9 @@ let ct_core_props = "application/vnd.openxmlformats-package.core-properties+xml"
 
 ///|
 let ct_app_props = "application/vnd.openxmlformats-officedocument.extended-properties+xml"
+
+///|
+let ct_custom_props = "application/vnd.openxmlformats-officedocument.custom-properties+xml"
 
 ///|
 pub struct WorkbookManifest {
@@ -167,4 +173,24 @@ pub fn WorkbookManifest::add_workbook_relationship(
   target : String,
 ) -> Unit {
   ignore(self.workbook_rels.add_auto(rel_type~, target~))
+}
+
+///|
+pub fn WorkbookManifest::add_root_relationship(
+  self : WorkbookManifest,
+  rel_type : String,
+  target : String,
+) -> Unit {
+  ignore(self.root_rels.add_auto(rel_type~, target~))
+}
+
+///|
+pub fn WorkbookManifest::add_custom_properties(self : WorkbookManifest) -> Unit {
+  self.content_types.add_override("/docProps/custom.xml", ct_custom_props)
+  ignore(
+    self.root_rels.add_auto(
+      rel_type=rel_custom_properties,
+      target="docProps/custom.xml",
+    ),
+  )
 }

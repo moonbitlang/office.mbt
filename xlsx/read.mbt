@@ -71,6 +71,243 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
 }
 
 ///|
+fn parse_workbook_props(
+  xml : StringView,
+) -> WorkbookPropsOptions raise XlsxError {
+  let xml_str = xml.to_string()
+  let marker = "<workbookPr"
+  match xml_str.find(marker) {
+    None => WorkbookPropsOptions::new()
+    Some(start) => {
+      let rest = xml_str[start + marker.length():] catch {
+          _ => raise XlsxError::InvalidXml(msg="workbookPr slice invalid")
+        }
+      let end = match rest.find(">") {
+        Some(pos) => pos
+        None => raise XlsxError::InvalidXml(msg="workbookPr tag not closed")
+      }
+      let tag = rest[:end] catch {
+          _ => raise XlsxError::InvalidXml(msg="workbookPr tag invalid")
+        }
+      let props = WorkbookPropsOptions::new()
+      match attr_value(tag, "date1904") {
+        Some(value) => props.date_1904 = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "filterPrivacy") {
+        Some(value) => props.filter_privacy = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "codeName") {
+        Some(value) => props.code_name = Some(unescape_xml_text(value))
+        None => ()
+      }
+      props
+    }
+  }
+}
+
+///|
+fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
+  let xml_str = xml.to_string()
+  let marker = "<calcPr"
+  match xml_str.find(marker) {
+    None => CalcPropsOptions::new()
+    Some(start) => {
+      let rest = xml_str[start + marker.length():] catch {
+          _ => raise XlsxError::InvalidXml(msg="calcPr slice invalid")
+        }
+      let end = match rest.find(">") {
+        Some(pos) => pos
+        None => raise XlsxError::InvalidXml(msg="calcPr tag not closed")
+      }
+      let tag = rest[:end] catch {
+          _ => raise XlsxError::InvalidXml(msg="calcPr tag invalid")
+        }
+      let props = CalcPropsOptions::new()
+      match attr_value(tag, "calcId") {
+        Some(value) =>
+          props.calc_id = Some(
+            @strconv.parse_uint(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="calcId invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "calcMode") {
+        Some(value) =>
+          match normalize_calc_mode(value) {
+            Some(mode) => props.calc_mode = Some(mode)
+            None => raise XlsxError::InvalidXml(msg="calcMode invalid")
+          }
+        None => ()
+      }
+      match attr_value(tag, "fullCalcOnLoad") {
+        Some(value) => props.full_calc_on_load = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "refMode") {
+        Some(value) =>
+          match normalize_ref_mode(value) {
+            Some(mode) => props.ref_mode = Some(mode)
+            None => raise XlsxError::InvalidXml(msg="refMode invalid")
+          }
+        None => ()
+      }
+      match attr_value(tag, "iterate") {
+        Some(value) => props.iterate = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "iterateCount") {
+        Some(value) =>
+          props.iterate_count = Some(
+            @strconv.parse_uint(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="iterateCount invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "iterateDelta") {
+        Some(value) =>
+          props.iterate_delta = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="iterateDelta invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "fullPrecision") {
+        Some(value) => props.full_precision = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "calcCompleted") {
+        Some(value) => props.calc_completed = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "calcOnSave") {
+        Some(value) => props.calc_on_save = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "concurrentCalc") {
+        Some(value) => props.concurrent_calc = Some(parse_cell_bool(value))
+        None => ()
+      }
+      match attr_value(tag, "concurrentManualCount") {
+        Some(value) =>
+          props.concurrent_manual_count = Some(
+            @strconv.parse_uint(value, base=10) catch {
+              _ =>
+                raise XlsxError::InvalidXml(msg="concurrentManualCount invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "forceFullCalc") {
+        Some(value) => props.force_full_calc = Some(parse_cell_bool(value))
+        None => ()
+      }
+      props
+    }
+  }
+}
+
+///|
+fn parse_workbook_protection(
+  xml : StringView,
+) -> WorkbookProtection? raise XlsxError {
+  let xml_str = xml.to_string()
+  let marker = "<workbookProtection"
+  match xml_str.find(marker) {
+    None => None
+    Some(start) => {
+      let rest = xml_str[start + marker.length():] catch {
+          _ =>
+            raise XlsxError::InvalidXml(msg="workbookProtection slice invalid")
+        }
+      let end = match rest.find(">") {
+        Some(pos) => pos
+        None =>
+          raise XlsxError::InvalidXml(msg="workbookProtection tag not closed")
+      }
+      let tag = rest[:end] catch {
+          _ => raise XlsxError::InvalidXml(msg="workbookProtection tag invalid")
+        }
+      let protection : WorkbookProtection = {
+        lock_structure: false,
+        lock_windows: false,
+        algorithm_name: "",
+        hash_value: "",
+        salt_value: "",
+        spin_count: 0,
+      }
+      match attr_value(tag, "lockStructure") {
+        Some(value) => protection.lock_structure = parse_cell_bool(value)
+        None => ()
+      }
+      match attr_value(tag, "lockWindows") {
+        Some(value) => protection.lock_windows = parse_cell_bool(value)
+        None => ()
+      }
+      match attr_value(tag, "workbookAlgorithmName") {
+        Some(value) => protection.algorithm_name = value.to_string()
+        None => ()
+      }
+      match attr_value(tag, "workbookHashValue") {
+        Some(value) => protection.hash_value = value.to_string()
+        None => ()
+      }
+      match attr_value(tag, "workbookSaltValue") {
+        Some(value) => protection.salt_value = value.to_string()
+        None => ()
+      }
+      match attr_value(tag, "workbookSpinCount") {
+        Some(value) =>
+          protection.spin_count = @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="workbookSpinCount invalid")
+          }
+        None => ()
+      }
+      Some(protection)
+    }
+  }
+}
+
+///|
+fn parse_default_font(xml : StringView) -> String {
+  let xml_str = xml.to_string()
+  let marker = "<fonts"
+  match xml_str.find(marker) {
+    None => "Calibri"
+    Some(start) => {
+      let rest = xml_str[start + marker.length():] catch { _ => "" }
+      match rest.find("<name") {
+        None => "Calibri"
+        Some(name_start) => {
+          let name_rest = rest[name_start + 5:] catch { _ => "" }
+          match name_rest.find(">") {
+            None => "Calibri"
+            Some(end) => {
+              let tag = name_rest[:end] catch { _ => "" }
+              let value_result : Result[String?, Error] = try? attr_value(
+                tag, "val",
+              )
+              match value_result {
+                Ok(value) =>
+                  match value {
+                    Some(text) => unescape_xml_text(text)
+                    None => "Calibri"
+                  }
+                Err(_) => "Calibri"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
 fn parse_defined_names(
   xml : StringView,
   sheet_names : Array[String],
@@ -1869,9 +2106,12 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     Some(value) => parse_shared_strings(decode_utf8(value))
     None => []
   }
-  let styles = match archive.get("xl/styles.xml") {
-    Some(value) => parse_styles(decode_utf8(value))
-    None => [Style::new()]
+  let (styles, default_font) = match archive.get("xl/styles.xml") {
+    Some(value) => {
+      let styles_xml = decode_utf8(value)
+      (parse_styles(styles_xml), parse_default_font(styles_xml))
+    }
+    None => ([Style::new()], "Calibri")
   }
   let core_properties = match archive.get("docProps/core.xml") {
     Some(value) => parse_core_properties(decode_utf8(value))
@@ -1881,6 +2121,13 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     Some(value) => parse_app_properties(decode_utf8(value))
     None => AppProperties::new()
   }
+  let custom_properties = match archive.get("docProps/custom.xml") {
+    Some(value) => parse_custom_properties(decode_utf8(value))
+    None => []
+  }
+  let workbook_props = parse_workbook_props(workbook_xml)
+  let calc_props = parse_calc_props(workbook_xml)
+  let workbook_protection = parse_workbook_protection(workbook_xml)
   let style_count = styles.length()
   let workbook : Workbook = {
     sheets: [],
@@ -1888,6 +2135,11 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
     defined_names,
     core_properties,
     app_properties,
+    custom_properties,
+    workbook_props,
+    calc_props,
+    default_font,
+    workbook_protection,
     active_sheet_index: safe_active_index,
   }
   for i, entry in sheets {

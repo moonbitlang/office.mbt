@@ -25,7 +25,10 @@ pub fn Style::builtin_number_format(id : Int) -> Style {
 }
 
 ///|
-fn write_styles_xml(styles : ArrayView[Style]) -> String {
+fn write_styles_xml(
+  styles : ArrayView[Style],
+  default_font : StringView,
+) -> String {
   let style_list : Array[Style] = []
   for style in styles {
     style_list.push(style)
@@ -65,16 +68,23 @@ fn write_styles_xml(styles : ArrayView[Style]) -> String {
     }
     sb.write_view("  </numFmts>\n")
   }
+  let font_name = if default_font == "" {
+    "Calibri"
+  } else {
+    default_font.to_string()
+  }
+  sb.write_view("  <fonts count=\"1\">\n")
+  sb.write_view("    <font>\n")
+  sb.write_view("      <sz val=\"11\"/>\n")
+  sb.write_view("      <color theme=\"1\"/>\n")
+  sb.write_view("      <name val=\"")
+  sb.write_view(escape_xml_attr(font_name))
+  sb.write_view("\"/>\n")
+  sb.write_view("      <family val=\"2\"/>\n")
+  sb.write_view("      <scheme val=\"minor\"/>\n")
+  sb.write_view("    </font>\n")
+  sb.write_view("  </fonts>\n")
   let base_block =
-    #|  <fonts count="1">
-    #|    <font>
-    #|      <sz val="11"/>
-    #|      <color theme="1"/>
-    #|      <name val="Calibri"/>
-    #|      <family val="2"/>
-    #|      <scheme val="minor"/>
-    #|    </font>
-    #|  </fonts>
     #|  <fills count="2">
     #|    <fill><patternFill patternType="none"/></fill>
     #|    <fill><patternFill patternType="gray125"/></fill>

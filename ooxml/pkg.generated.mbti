@@ -48,6 +48,8 @@ pub struct WorkbookManifest {
 }
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_content_override(Self, String, String) -> Unit
+pub fn WorkbookManifest::add_custom_properties(Self) -> Unit
+pub fn WorkbookManifest::add_root_relationship(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_workbook_relationship(Self, String, String) -> Unit
 pub fn WorkbookManifest::content_types_xml(Self) -> String
 pub fn WorkbookManifest::new(Int, include_shared_strings? : Bool, include_calc_chain? : Bool) -> Self
