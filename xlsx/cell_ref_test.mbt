@@ -7,6 +7,10 @@ test "cell ref helpers" {
   inspect(join_cell_name("ak", 74), content="AK74")
   let join_err : Result[String, Error] = try? join_cell_name("A1", 1)
   inspect(join_err is Err(_), content="true")
+  inspect(column_name_to_number("AK"), content="37")
+  inspect(column_number_to_name(37), content="AK")
+  let name_err : Result[Int, Error] = try? column_name_to_number("A1")
+  inspect(name_err is Err(_), content="true")
   inspect(cell_name_to_coordinates("Z3"), content="(26, 3)")
   inspect(cell_name_to_coordinates("$C$3"), content="(3, 3)")
   let coords_err : Result[(Int, Int), Error] = try? cell_name_to_coordinates(

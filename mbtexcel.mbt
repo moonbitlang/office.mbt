@@ -51,6 +51,16 @@ pub fn coordinates_to_cell_name(
 }
 
 ///|
+pub fn column_name_to_number(name : StringView) -> Int raise @xlsx.XlsxError {
+  @xlsx.column_name_to_number(name)
+}
+
+///|
+pub fn column_number_to_name(col : Int) -> String raise @xlsx.XlsxError {
+  @xlsx.column_number_to_name(col)
+}
+
+///|
 pub fn read(
   bytes : BytesView,
   options? : @xlsx.Options = @xlsx.Options::new(),

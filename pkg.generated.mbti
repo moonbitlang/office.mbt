@@ -10,6 +10,10 @@ import {
 // Values
 pub fn cell_name_to_coordinates(StringView) -> (Int, Int) raise @xlsx.XlsxError
 
+pub fn column_name_to_number(StringView) -> Int raise @xlsx.XlsxError
+
+pub fn column_number_to_name(Int) -> String raise @xlsx.XlsxError
+
 pub fn coordinates_to_cell_name(Int, Int, abs? : Bool) -> String raise @xlsx.XlsxError
 
 pub fn decrypt(BytesView, options? : @xlsx.Options) -> Bytes raise @xlsx.XlsxError
