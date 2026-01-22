@@ -7603,7 +7603,11 @@ fn eval_function(
     "COUPNCD" => coupncd_values(values)
     "COUPNUM" => coupnum_values(values)
     "COUPPCD" => couppcd_values(values)
+    "CUMIPMT" => cumip_values("CUMIPMT", values)
+    "CUMPRINC" => cumip_values("CUMPRINC", values)
     "DURATION" => duration_values(values)
+    "DB" => db_values(values)
+    "DDB" => ddb_values(values)
     "FV" => fv_values(values)
     "FVSCHEDULE" => fvschedule_values(values)
     "DISC" => disc_intrate_values("DISC", values)
@@ -7643,6 +7647,7 @@ fn eval_function(
     "YIELD" => price_yield_values("YIELD", values)
     "YIELDDISC" => yielddisc_values(values)
     "YIELDMAT" => yieldmat_values(values)
+    "VDB" => vdb_values(values)
     "TdotDIST" | "T.DIST" | "_XLFN.T.DIST" => tdist_values(values)
     "TdotDISTdot2T" | "T.DIST.2T" | "_XLFN.T.DIST.2T" => tdist_2t_values(values)
     "TdotDISTdotRT" | "T.DIST.RT" | "_XLFN.T.DIST.RT" => tdist_rt_values(values)
@@ -14960,6 +14965,73 @@ fn ipmt_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
 }
 
 ///|
+fn cumip_values(
+  name : String,
+  values : ArrayView[FormulaValue],
+) -> FormulaValue {
+  if values.length() != 6 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let rate = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let nper = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let pv = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let start = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let end = match value_as_number(values[4]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let typ = match value_as_number(values[5]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if typ != 0.0 && typ != 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  if start < 1.0 || start > end {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let mut total = 0.0
+  let mut per = start
+  while per <= end {
+    let args : Array[FormulaValue] = [
+      FormulaValue::Number(rate),
+      FormulaValue::Number(per),
+      FormulaValue::Number(nper),
+      FormulaValue::Number(pv),
+      FormulaValue::Number(0.0),
+      FormulaValue::Number(typ),
+    ]
+    let result = ipmt_values(
+      if name == "CUMIPMT" {
+        "IPMT"
+      } else {
+        "PPMT"
+      },
+      args,
+    )
+    match result {
+      FormulaValue::Number(num) => total = total + num
+      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      _ => return FormulaValue::Error(formula_error_value)
+    }
+    per = per + 1.0
+  }
+  number_or_num_error(round_significant_digits(total, 15))
+}
+
+///|
 fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
     return FormulaValue::Error(formula_error_value)
@@ -15076,6 +15148,316 @@ fn syd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     (life - per + 1.0) *
     2.0 /
     (life * (life + 1.0))
+  number_or_num_error(round_significant_digits(result, 15))
+}
+
+///|
+fn db_args_invalid(
+  cost : Double,
+  salvage : Double,
+  life : Double,
+  period : Double,
+) -> Bool {
+  cost <= 0.0 || salvage / cost < 0.0 || life <= 0.0 || period < 1.0
+}
+
+///|
+fn db_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let cost = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let salvage = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let life = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let period = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let month = if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    12.0
+  }
+  if cost == 0.0 {
+    return FormulaValue::Number(0.0)
+  }
+  if db_args_invalid(cost, salvage, life, period) || month < 1.0 {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let dr_raw = 1.0 - @math.pow(salvage / cost, 1.0 / life)
+  let dr = Double::round(dr_raw * 1000.0) / 1000.0
+  let mut pd = 0.0
+  let mut depreciation = 0.0
+  let period_int = Double::to_int(trunc_double(period))
+  let life_limit = Double::to_int(trunc_double(life + 1.0))
+  for per in 1..<=period_int {
+    if per == 1 {
+      depreciation = cost * dr * month / 12.0
+    } else if per == life_limit {
+      depreciation = (cost - pd) * dr * (12.0 - month) / 12.0
+    } else {
+      depreciation = (cost - pd) * dr
+    }
+    pd = pd + depreciation
+  }
+  number_or_num_error(round_significant_digits(depreciation, 15))
+}
+
+///|
+fn ddb_double(
+  cost : Double,
+  salvage : Double,
+  life : Double,
+  period : Double,
+  factor : Double,
+) -> Double {
+  let mut pd = 0.0
+  let mut depreciation = 0.0
+  let period_int = Double::to_int(trunc_double(period))
+  for _ in 1..<=period_int {
+    let term = (cost - pd) * (factor / life)
+    let cap = cost - salvage - pd
+    depreciation = if term < cap { term } else { cap }
+    pd = pd + depreciation
+  }
+  depreciation
+}
+
+///|
+fn ddb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 4 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let cost = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let salvage = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let life = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let period = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let factor = if values.length() == 5 {
+    match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  } else {
+    2.0
+  }
+  if cost == 0.0 {
+    return FormulaValue::Number(0.0)
+  }
+  if db_args_invalid(cost, salvage, life, period) ||
+    factor <= 0.0 ||
+    period > life {
+    return FormulaValue::Error(formula_error_na)
+  }
+  let depreciation = ddb_double(cost, salvage, life, period, factor)
+  number_or_num_error(round_significant_digits(depreciation, 15))
+}
+
+///|
+fn prepare_vdb_args(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let cost = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if cost < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let salvage = match value_as_number(values[1]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if salvage < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let life = match value_as_number(values[2]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if life <= 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let start_period = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if start_period < 0.0 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let end_period = match value_as_number(values[4]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  if start_period > end_period {
+    return FormulaValue::Error(formula_error_num)
+  }
+  if end_period > life {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let factor = if values.length() > 5 {
+    match value_as_number(values[5]) {
+      Ok(num) => num
+      Err(_) => return FormulaValue::Error(formula_error_num)
+    }
+  } else {
+    2.0
+  }
+  if factor < 0.0 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  FormulaValue::List([
+    FormulaValue::Number(cost),
+    FormulaValue::Number(salvage),
+    FormulaValue::Number(life),
+    FormulaValue::Number(start_period),
+    FormulaValue::Number(end_period),
+    FormulaValue::Number(factor),
+  ])
+}
+
+///|
+fn vdb_partial(
+  cost : Double,
+  salvage : Double,
+  life : Double,
+  life1 : Double,
+  period : Double,
+  factor : Double,
+) -> Double {
+  let end_int = Double::ceil(period)
+  let mut cs = cost - salvage
+  let mut now_sln = false
+  let mut vdb_total = 0.0
+  let mut ddb = 0.0
+  let mut sln = 0.0
+  let mut term = 0.0
+  let mut i = 1.0
+  while i <= end_int {
+    if !now_sln {
+      ddb = ddb_double(cost, salvage, life, i, factor)
+      sln = cs / (life1 - i + 1.0)
+      if sln > ddb && i != end_int {
+        term = sln
+        now_sln = true
+      } else {
+        term = ddb
+        cs = cs - ddb
+      }
+    } else {
+      term = sln
+    }
+    if i == end_int {
+      term = term * (period + 1.0 - end_int)
+    }
+    vdb_total = vdb_total + term
+    i = i + 1.0
+  }
+  vdb_total
+}
+
+///|
+fn vdb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 5 || values.length() > 7 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let prepared = prepare_vdb_args(values)
+  let list = match prepared {
+    FormulaValue::List(items) => items
+    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let cost = match list[0] {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let salvage = match list[1] {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let life = match list[2] {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let start_period = match list[3] {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let end_period = match list[4] {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let factor = match list[5] {
+    FormulaValue::Number(num) => num
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  let no_switch = if values.length() > 6 {
+    match value_as_bool(values[6]) {
+      Ok(flag) => flag
+      Err(_) => return FormulaValue::Error(formula_error_num)
+    }
+  } else {
+    false
+  }
+  let start_int = Double::floor(start_period)
+  let end_int = Double::ceil(end_period)
+  if no_switch {
+    let mut vdb_total = 0.0
+    let mut i = start_int + 1.0
+    while i <= end_int {
+      let mut term = ddb_double(cost, salvage, life, i, factor)
+      if i == start_int + 1.0 {
+        let upper = if end_period < start_int + 1.0 {
+          end_period
+        } else {
+          start_int + 1.0
+        }
+        term = term * (upper - start_period)
+      } else if i == end_int {
+        term = term * (end_period + 1.0 - end_int)
+      }
+      vdb_total = vdb_total + term
+      i = i + 1.0
+    }
+    return number_or_num_error(round_significant_digits(vdb_total, 15))
+  }
+  let adjusted_cost = cost -
+    vdb_partial(cost, salvage, life, life, start_period, factor)
+  let result = vdb_partial(
+    adjusted_cost,
+    salvage,
+    life,
+    life - start_period,
+    end_period - start_period,
+    factor,
+  )
   number_or_num_error(round_significant_digits(result, 15))
 }
 

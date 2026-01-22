@@ -6576,3 +6576,124 @@ test "calc prob function" {
   sheet.set_cell_formula("E1", "PROB(A2:A9,B2:B9,3)")
   inspect(workbook.calc_cell_value("Sheet1", "E1"), content="#NUM!")
 }
+
+///|
+test "calc cumulative payment functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("CUMIPMT(0.05/12,60,50000,1,12,0)", "-2294.97753732664"),
+    ("CUMIPMT(0.05/12,60,50000,13,24,0)", "-1833.10006657388"),
+    ("CUMPRINC(0.05/12,60,50000,1,12,0)", "-9027.76264907996"),
+    ("CUMPRINC(0.05/12,60,50000,13,24,0)", "-9489.64011983271"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("CUMIPMT()", "#VALUE!"),
+    ("CUMIPMT(0,0,0,0,0,2)", "#N/A"),
+    ("CUMIPMT(0,0,0,-1,0,0)", "#N/A"),
+    ("CUMIPMT(0,0,0,1,0,0)", "#N/A"),
+    ("CUMIPMT(\"\",0,0,0,0,0)", "#VALUE!"),
+    ("CUMIPMT(0,\"\",0,0,0,0)", "#VALUE!"),
+    ("CUMIPMT(0,0,\"\",0,0,0)", "#VALUE!"),
+    ("CUMIPMT(0,0,0,\"\",0,0)", "#VALUE!"),
+    ("CUMIPMT(0,0,0,0,\"\",0)", "#VALUE!"),
+    ("CUMIPMT(0,0,0,0,0,\"\")", "#VALUE!"),
+    ("CUMPRINC()", "#VALUE!"),
+    ("CUMPRINC(0,0,0,0,0,2)", "#N/A"),
+    ("CUMPRINC(0,0,0,-1,0,0)", "#N/A"),
+    ("CUMPRINC(0,0,0,1,0,0)", "#N/A"),
+    ("CUMPRINC(\"\",0,0,0,0,0)", "#VALUE!"),
+    ("CUMPRINC(0,\"\",0,0,0,0)", "#VALUE!"),
+    ("CUMPRINC(0,0,\"\",0,0,0)", "#VALUE!"),
+    ("CUMPRINC(0,0,0,\"\",0,0)", "#VALUE!"),
+    ("CUMPRINC(0,0,0,0,\"\",0)", "#VALUE!"),
+    ("CUMPRINC(0,0,0,0,0,\"\")", "#VALUE!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc depreciation functions db ddb vdb" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let cases : Array[(String, String)] = [
+    ("DB(0,1000,5,1)", "0"),
+    ("DB(10000,1000,5,1)", "3690"),
+    ("DB(10000,1000,5,2)", "2328.39"),
+    ("DB(10000,1000,5,1,6)", "1845"),
+    ("DB(10000,1000,5,6,6)", "238.527124587882"),
+    ("DDB(0,1000,5,1)", "0"),
+    ("DDB(10000,1000,5,1)", "4000"),
+    ("DDB(10000,1000,5,2)", "2400"),
+    ("DDB(10000,1000,5,3)", "1440"),
+    ("DDB(10000,1000,5,4)", "864"),
+    ("DDB(10000,1000,5,5)", "296"),
+    ("VDB(10000,1000,5,0,1)", "4000"),
+    ("VDB(10000,1000,5,1,3)", "3840"),
+    ("VDB(10000,1000,5,3,5)", "1160"),
+    ("VDB(10000,1000,5,3.5,5,2)", "709.6"),
+    ("VDB(10000,1000,5,3,5,0.2,FALSE)", "3600"),
+    ("VDB(10000,1000,5,3,5,0.2,TRUE)", "693.633024"),
+    ("VDB(24000,3000,10,0,0.875,2)", "4200"),
+    ("VDB(24000,3000,10,0.1,1)", "4233.6"),
+    ("VDB(24000,3000,10,0.1,1,1)", "2138.4"),
+    ("VDB(24000,3000,100,50,100,1)", "10377.2944184652"),
+    ("VDB(24000,3000,100,50,100,2)", "5740.07232209081"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "A\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+  let error_cases : Array[(String, String)] = [
+    ("DB()", "#VALUE!"),
+    ("DB(0,0,0,0,0,0)", "#VALUE!"),
+    ("DB(-1,0,0,0)", "#N/A"),
+    ("DB(\"\",0,0,0,0)", "#VALUE!"),
+    ("DB(0,\"\",0,0,0)", "#VALUE!"),
+    ("DB(0,0,\"\",0,0)", "#VALUE!"),
+    ("DB(0,0,0,\"\",0)", "#VALUE!"),
+    ("DB(0,0,0,0,\"\")", "#VALUE!"),
+    ("DDB()", "#VALUE!"),
+    ("DDB(0,0,0,0,0,0)", "#VALUE!"),
+    ("DDB(-1,0,0,0)", "#N/A"),
+    ("DDB(\"\",0,0,0,0)", "#VALUE!"),
+    ("DDB(0,\"\",0,0,0)", "#VALUE!"),
+    ("DDB(0,0,\"\",0,0)", "#VALUE!"),
+    ("DDB(0,0,0,\"\",0)", "#VALUE!"),
+    ("DDB(0,0,0,0,\"\")", "#VALUE!"),
+    ("VDB()", "#VALUE!"),
+    ("VDB(-1,1000,5,0,1)", "#NUM!"),
+    ("VDB(10000,-1,5,0,1)", "#NUM!"),
+    ("VDB(10000,1000,0,0,1)", "#NUM!"),
+    ("VDB(10000,1000,5,-1,1)", "#NUM!"),
+    ("VDB(10000,1000,5,2,1)", "#NUM!"),
+    ("VDB(10000,1000,5,0,6)", "#NUM!"),
+    ("VDB(10000,1000,5,0,1,-0.2)", "#VALUE!"),
+    ("VDB(\"\",1000,5,0,1)", "#VALUE!"),
+    ("VDB(10000,\"\",5,0,1)", "#VALUE!"),
+    ("VDB(10000,1000,\"\",0,1)", "#VALUE!"),
+    ("VDB(10000,1000,5,\"\",1)", "#VALUE!"),
+    ("VDB(10000,1000,5,0,\"\")", "#VALUE!"),
+    ("VDB(10000,1000,5,0,1,\"\")", "#NUM!"),
+    ("VDB(10000,1000,5,0,1,0.2,\"\")", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "B\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
