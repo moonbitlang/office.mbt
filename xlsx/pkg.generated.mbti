@@ -842,6 +842,8 @@ pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxErro
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_rows(Self, StringView) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_sheet_dimension(Self, StringView) -> String raise XlsxError
+pub fn Workbook::get_sheet_list(Self) -> Array[String]
+pub fn Workbook::get_sheet_map(Self) -> Map[Int, String]
 pub fn Workbook::get_sheet_view(Self, StringView, Int) -> SheetViewOptions raise XlsxError
 pub fn Workbook::get_slicers(Self, StringView) -> Array[Slicer] raise XlsxError
 pub fn Workbook::get_style(Self, Int) -> Style raise XlsxError

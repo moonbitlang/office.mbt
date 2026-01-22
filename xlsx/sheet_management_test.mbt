@@ -78,6 +78,27 @@ test "sheet visibility roundtrip" {
 }
 
 ///|
+test "sheet list and map" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart/>
+    #|</c:chartSpace>
+  ignore(workbook.add_chart_sheet("Chart1", chart_xml))
+  ignore(workbook.add_sheet("Sheet2"))
+  inspect(
+    workbook.get_sheet_list(),
+    content="[\"Sheet1\", \"Chart1\", \"Sheet2\"]",
+  )
+  let mapping = workbook.get_sheet_map()
+  inspect(mapping[1], content="Sheet1")
+  inspect(mapping[2], content="Chart1")
+  inspect(mapping[3], content="Sheet2")
+}
+
+///|
 test "cannot hide all sheets" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

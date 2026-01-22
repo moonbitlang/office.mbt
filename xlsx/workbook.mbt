@@ -251,6 +251,24 @@ pub fn Workbook::sheet_name(self : Workbook, index : Int) -> String? {
 }
 
 ///|
+pub fn Workbook::get_sheet_list(self : Workbook) -> Array[String] {
+  let names : Array[String] = []
+  for entry in self.sheet_order {
+    names.push(self.sheet_entry_name(entry))
+  }
+  names
+}
+
+///|
+pub fn Workbook::get_sheet_map(self : Workbook) -> Map[Int, String] {
+  let mapping : Map[Int, String] = {}
+  for index, entry in self.sheet_order {
+    mapping[index + 1] = self.sheet_entry_name(entry)
+  }
+  mapping
+}
+
+///|
 pub fn Workbook::sheet_index(
   self : Workbook,
   name : StringView,
