@@ -2671,13 +2671,37 @@ fn parse_worksheet(
 }
 
 ///|
+fn enforce_unzip_limits(
+  archive : @zip.Archive,
+  options : Options,
+) -> Unit raise XlsxError {
+  let mut total_size = 0
+  for entry in archive.entries() {
+    let size = entry.data.length()
+    total_size = total_size + size
+    if options.unzip_size_limit > 0 && total_size > options.unzip_size_limit {
+      raise XlsxError::InvalidOptions(msg="unzip size limit exceeded")
+    }
+    if options.unzip_xml_size_limit > 0 {
+      let name = entry.name.to_lower()
+      if name.has_suffix(".xml") && size > options.unzip_xml_size_limit {
+        raise XlsxError::InvalidOptions(msg="unzip xml size limit exceeded")
+      }
+    }
+  }
+}
+
+///|
 fn read_zip_bytes(
   bytes : BytesView,
+  options? : Options = Options::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
+  let resolved_options = normalize_unzip_limits(options)
   let archive = @zip.read(bytes) catch {
     err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
   }
+  enforce_unzip_limits(archive, resolved_options)
   let decode = (value : Bytes) => decode_utf8(value, transcoder)
   let workbook_bytes = match archive.get("xl/workbook.xml") {
     Some(value) => value
@@ -2755,6 +2779,7 @@ fn read_zip_bytes(
     theme_colors,
     indexed_colors,
     file_path: None,
+    options: resolved_options,
     workbook_protection,
     active_sheet_index: safe_active_index,
   }
@@ -3224,24 +3249,31 @@ fn read_zip_bytes(
 }
 
 ///|
-pub fn read(bytes : BytesView) -> Workbook raise XlsxError {
+pub fn read(
+  bytes : BytesView,
+  options? : Options = Options::new(),
+) -> Workbook raise XlsxError {
+  if options.password != "" {
+    return read_with_password(bytes, options.password, options~)
+  }
   if is_encrypted_package(bytes) {
     raise XlsxError::EncryptedPackage
   }
-  read_zip_bytes(bytes)
+  read_zip_bytes(bytes, options~)
 }
 
 ///|
 pub fn read_with_password(
   bytes : BytesView,
   password : String,
+  options? : Options = Options::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   if is_encrypted_package(bytes) {
     let decrypted = decrypt_encrypted_package(bytes, password)
     let result : Result[Workbook, Error] = try? (match transcoder {
-      Some(value) => read_zip_bytes(decrypted, transcoder=value)
-      None => read_zip_bytes(decrypted)
+      Some(value) => read_zip_bytes(decrypted, options~, transcoder=value)
+      None => read_zip_bytes(decrypted, options~)
     })
     match result {
       Ok(workbook) => workbook
@@ -3249,8 +3281,8 @@ pub fn read_with_password(
     }
   } else {
     match transcoder {
-      Some(value) => read_zip_bytes(bytes, transcoder=value)
-      None => read_zip_bytes(bytes)
+      Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
+      None => read_zip_bytes(bytes, options~)
     }
   }
 }

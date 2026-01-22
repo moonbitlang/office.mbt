@@ -3,6 +3,7 @@ fn format_cell_value(
   value_type : CellValueType,
   raw : String,
   style : Style?,
+  options : Options,
 ) -> String {
   match value_type {
     CellValueType::String => raw
@@ -12,7 +13,7 @@ fn format_cell_value(
       match style {
         Some(style) =>
           match style.number_format {
-            Some(format) => format_number_with_format(raw, format)
+            Some(format) => format_number_with_format(raw, format, options)
             None => raw
           }
         None => raw
@@ -21,15 +22,22 @@ fn format_cell_value(
 }
 
 ///|
-fn format_number_with_format(raw : String, format : NumberFormat) -> String {
+fn format_number_with_format(
+  raw : String,
+  format : NumberFormat,
+  options : Options,
+) -> String {
   match format {
-    NumberFormat::Builtin(id) => format_number_builtin(raw, id)
+    NumberFormat::Builtin(id) => format_number_builtin(raw, id, options)
     NumberFormat::Custom(code) => format_number_code(raw, code)
   }
 }
 
 ///|
-fn format_number_builtin(raw : String, id : Int) -> String {
+fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
+  let short_date = options.short_date_pattern
+  let long_date = options.long_date_pattern
+  let long_time = options.long_time_pattern
   match id {
     0 => raw
     1 => format_number_simple(raw, 0, false, false)
@@ -38,15 +46,40 @@ fn format_number_builtin(raw : String, id : Int) -> String {
     4 => format_number_simple(raw, 2, true, false)
     9 => format_number_simple(raw, 0, false, true)
     10 => format_number_simple(raw, 2, false, true)
-    14 => format_excel_date(raw, "m/d/yy")
-    15 => format_excel_date(raw, "d-mmm-yy")
+    14 =>
+      if short_date != "" {
+        format_excel_date(raw, short_date)
+      } else {
+        format_excel_date(raw, "m/d/yy")
+      }
+    15 =>
+      if long_date != "" {
+        format_excel_date(raw, long_date)
+      } else {
+        format_excel_date(raw, "d-mmm-yy")
+      }
     16 => format_excel_date(raw, "d-mmm")
     17 => format_excel_date(raw, "mmm-yy")
     18 => format_excel_date(raw, "h:mm am/pm")
     19 => format_excel_date(raw, "h:mm:ss am/pm")
-    20 => format_excel_date(raw, "h:mm")
-    21 => format_excel_date(raw, "h:mm:ss")
-    22 => format_excel_date(raw, "m/d/yy h:mm")
+    20 =>
+      if long_time != "" {
+        format_excel_date(raw, long_time)
+      } else {
+        format_excel_date(raw, "h:mm")
+      }
+    21 =>
+      if long_time != "" {
+        format_excel_date(raw, long_time)
+      } else {
+        format_excel_date(raw, "h:mm:ss")
+      }
+    22 =>
+      if short_date != "" {
+        format_excel_date(raw, "\{short_date} h:mm")
+      } else {
+        format_excel_date(raw, "m/d/yy h:mm")
+      }
     _ => raw
   }
 }
@@ -341,8 +374,97 @@ fn format_date_pattern(
     "m/d/yy h:mm:ss" =>
       "\{month}/\{day}/\{pad_left_int(year % 100, 2)} \{hour}:\{pad_left_int(minute, 2)}:\{pad_left_int(second, 2)}"
     _ =>
-      "\{pad_left_int(year, 4)}-\{pad_left_int(month, 2)}-\{pad_left_int(day, 2)}"
+      format_date_pattern_tokens(
+        normalized, year, month, day, hour, minute, second,
+      )
   }
+}
+
+///|
+fn format_date_pattern_tokens(
+  normalized : String,
+  year : Int,
+  month : Int,
+  day : Int,
+  hour : Int,
+  minute : Int,
+  second : Int,
+) -> String {
+  let use_ampm = normalized.contains("am/pm")
+  let hour_value = if use_ampm { hour12(hour) } else { hour }
+  let len = normalized.length()
+  let sb = StringBuilder::new()
+  let mut i = 0
+  while i < len {
+    if i + 4 < len &&
+      normalized[i] == 'a' &&
+      normalized[i + 1] == 'm' &&
+      normalized[i + 2] == '/' &&
+      normalized[i + 3] == 'p' &&
+      normalized[i + 4] == 'm' {
+      sb.write_view(am_pm(hour))
+      i = i + 5
+      continue
+    }
+    let c = normalized[i]
+    if c == 'y' || c == 'm' || c == 'd' || c == 'h' || c == 's' {
+      let mut j = i
+      while j < len && normalized[j] == c {
+        j = j + 1
+      }
+      let count = j - i
+      let text = match c {
+        'y' =>
+          if count == 2 {
+            pad_left_int(year % 100, 2)
+          } else if count >= 4 {
+            pad_left_int(year, 4)
+          } else {
+            year.to_string()
+          }
+        'm' => {
+          let prev_is_colon = i > 0 && normalized[i - 1] == ':'
+          let next_is_colon = j < len && normalized[j] == ':'
+          let is_minute = prev_is_colon || next_is_colon
+          if is_minute {
+            if count >= 2 {
+              pad_left_int(minute, 2)
+            } else {
+              minute.to_string()
+            }
+          } else if count >= 4 {
+            month_long_name(month)
+          } else if count == 3 {
+            month_short_name(month)
+          } else if count == 2 {
+            pad_left_int(month, 2)
+          } else {
+            month.to_string()
+          }
+        }
+        'd' => if count >= 2 { pad_left_int(day, 2) } else { day.to_string() }
+        'h' =>
+          if count >= 2 {
+            pad_left_int(hour_value, 2)
+          } else {
+            hour_value.to_string()
+          }
+        's' =>
+          if count >= 2 {
+            pad_left_int(second, 2)
+          } else {
+            second.to_string()
+          }
+        _ => ""
+      }
+      sb.write_view(text)
+      i = j
+      continue
+    }
+    sb.write_view(try! normalized[i:i + 1])
+    i = i + 1
+  }
+  sb.to_string()
 }
 
 ///|
@@ -360,6 +482,25 @@ fn month_short_name(month : Int) -> String {
     10 => "Oct"
     11 => "Nov"
     12 => "Dec"
+    _ => ""
+  }
+}
+
+///|
+fn month_long_name(month : Int) -> String {
+  match month {
+    1 => "January"
+    2 => "February"
+    3 => "March"
+    4 => "April"
+    5 => "May"
+    6 => "June"
+    7 => "July"
+    8 => "August"
+    9 => "September"
+    10 => "October"
+    11 => "November"
+    12 => "December"
     _ => ""
   }
 }

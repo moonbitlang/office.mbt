@@ -27,6 +27,7 @@ pub suberror XlsxError {
   InvalidSheetProtection(msg~ : String)
   InvalidWorkbookProperty(msg~ : String)
   InvalidWorkbookProtection(msg~ : String)
+  InvalidOptions(msg~ : String)
   InvalidSheetBackground(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)

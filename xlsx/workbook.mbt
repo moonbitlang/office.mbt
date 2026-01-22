@@ -16,6 +16,7 @@ pub struct Workbook {
   theme_colors : Array[String]?
   indexed_colors : Array[String]?
   mut file_path : String?
+  options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
@@ -163,6 +164,7 @@ pub fn Workbook::new() -> Workbook {
     theme_colors: None,
     indexed_colors: None,
     file_path: None,
+    options: Options::new(),
     workbook_protection: None,
     active_sheet_index: 0,
   }
@@ -1556,14 +1558,20 @@ fn format_cell_value_for_workbook(
   styles : ArrayView[Style],
   cell : Cell,
   raw : Bool,
+  options : Options,
 ) -> String raise XlsxError {
-  if raw {
+  if raw || options.raw_cell_value {
     return cell.value
   }
   if cell.style_id < 0 || cell.style_id >= styles.length() {
     raise XlsxError::InvalidStyleId(index=cell.style_id)
   }
-  format_cell_value(cell.value_type, cell.value, Some(styles[cell.style_id]))
+  format_cell_value(
+    cell.value_type,
+    cell.value,
+    Some(styles[cell.style_id]),
+    options,
+  )
 }
 
 ///|
@@ -1803,7 +1811,12 @@ pub fn Workbook::get_cell_value(
   sheet_name : StringView,
   reference : StringView,
   raw? : Bool = false,
+  options? : Options,
 ) -> String? raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1811,7 +1824,9 @@ pub fn Workbook::get_cell_value(
   let (row, col) = cell_ref_to_rc(reference)
   for cell in sheet.cells() {
     if cell.row == row && cell.col == col {
-      return Some(format_cell_value_for_workbook(self.styles, cell, raw))
+      return Some(
+        format_cell_value_for_workbook(self.styles, cell, raw, resolved_options),
+      )
     }
   }
   None
@@ -1823,7 +1838,12 @@ pub fn Workbook::calc_cell_value(
   sheet_name : StringView,
   reference : StringView,
   raw? : Bool = false,
+  options? : Options,
 ) -> String raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1833,7 +1853,7 @@ pub fn Workbook::calc_cell_value(
   let ctx = CalcContext::new()
   let value = resolve_cell_value(self, sheet.name(), canonical, ctx)
   let (value_type, raw_value) = formula_value_to_cell(value)
-  if raw {
+  if raw || resolved_options.raw_cell_value {
     return raw_value
   }
   let mut style_id = 0
@@ -1846,7 +1866,12 @@ pub fn Workbook::calc_cell_value(
   if style_id < 0 || style_id >= self.styles.length() {
     raise XlsxError::InvalidStyleId(index=style_id)
   }
-  format_cell_value(value_type, raw_value, Some(self.styles[style_id]))
+  format_cell_value(
+    value_type,
+    raw_value,
+    Some(self.styles[style_id]),
+    resolved_options,
+  )
 }
 
 ///|
@@ -1856,9 +1881,14 @@ pub fn Workbook::calc_cell_value_rc(
   row : Int,
   col : Int,
   raw? : Bool = false,
+  options? : Options,
 ) -> String raise XlsxError {
   let reference = cell_ref_from(row, col)
-  self.calc_cell_value(sheet_name, reference, raw~)
+  match options {
+    Some(value) =>
+      self.calc_cell_value(sheet_name, reference, raw~, options=value)
+    None => self.calc_cell_value(sheet_name, reference, raw~)
+  }
 }
 
 ///|
@@ -2718,14 +2748,21 @@ pub fn Workbook::get_cell_value_rc(
   row : Int,
   col : Int,
   raw? : Bool = false,
+  options? : Options,
 ) -> String? raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   for cell in sheet.cells() {
     if cell.row == row && cell.col == col {
-      return Some(format_cell_value_for_workbook(self.styles, cell, raw))
+      return Some(
+        format_cell_value_for_workbook(self.styles, cell, raw, resolved_options),
+      )
     }
   }
   None

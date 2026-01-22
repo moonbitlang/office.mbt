@@ -38,18 +38,25 @@ async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
 pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
   password? : String = "",
+  options? : Options = Options::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let bytes = read_all_bytes(reader)
-  if password == "" {
+  let resolved_password = if password == "" {
+    options.password
+  } else {
+    password
+  }
+  if resolved_password == "" {
     match transcoder {
-      Some(value) => read_zip_bytes(bytes, transcoder=value)
-      None => read_zip_bytes(bytes)
+      Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
+      None => read_zip_bytes(bytes, options~)
     }
   } else {
     match transcoder {
-      Some(value) => read_with_password(bytes, password, transcoder=value)
-      None => read_with_password(bytes, password)
+      Some(value) =>
+        read_with_password(bytes, resolved_password, options~, transcoder=value)
+      None => read_with_password(bytes, resolved_password, options~)
     }
   }
 }
@@ -58,11 +65,12 @@ pub async fn[R : @async/io.Reader] open_reader(
 pub async fn[R : @async/io.Reader] read_zip_reader(
   reader : R,
   password? : String = "",
+  options? : Options = Options::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   match transcoder {
-    Some(value) => open_reader(reader, password~, transcoder=value)
-    None => open_reader(reader, password~)
+    Some(value) => open_reader(reader, password~, options~, transcoder=value)
+    None => open_reader(reader, password~, options~)
   }
 }
 
@@ -70,18 +78,25 @@ pub async fn[R : @async/io.Reader] read_zip_reader(
 pub async fn open_file(
   path : String,
   password? : String = "",
+  options? : Options = Options::new(),
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let bytes = read_file_bytes(path)
-  let workbook = if password == "" {
+  let resolved_password = if password == "" {
+    options.password
+  } else {
+    password
+  }
+  let workbook = if resolved_password == "" {
     match transcoder {
-      Some(value) => read_zip_bytes(bytes, transcoder=value)
-      None => read_zip_bytes(bytes)
+      Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
+      None => read_zip_bytes(bytes, options~)
     }
   } else {
     match transcoder {
-      Some(value) => read_with_password(bytes, password, transcoder=value)
-      None => read_with_password(bytes, password)
+      Some(value) =>
+        read_with_password(bytes, resolved_password, options~, transcoder=value)
+      None => read_with_password(bytes, resolved_password, options~)
     }
   }
   workbook.file_path = Some(path)

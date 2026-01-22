@@ -142,6 +142,101 @@ fn collect_columns(sheet : Worksheet) -> Array[Array[String]] {
 }
 
 ///|
+fn collect_row_entries_with_options(
+  sheet : Worksheet,
+  styles : ArrayView[Style],
+  options : Options,
+) -> Array[RowEntry] raise XlsxError {
+  let cells = sheet.sorted_cells()
+  let row_cells : Map[Int, Array[Cell]] = {}
+  for cell in cells {
+    let entries = match row_cells.get(cell.row) {
+      Some(value) => value
+      None => []
+    }
+    entries.push(cell)
+    row_cells[cell.row] = entries
+  }
+  let row_keys : Array[Int] = []
+  let row_present : Map[Int, Bool] = {}
+  for row, _ in row_cells {
+    row_keys.push(row)
+    row_present[row] = true
+  }
+  for row, _ in sheet.row_dimensions {
+    if !row_present.contains(row) {
+      row_keys.push(row)
+    }
+  }
+  row_keys.sort_by((a, b) => a - b)
+  let entries : Array[RowEntry] = []
+  for row in row_keys {
+    let row_entries = match row_cells.get(row) {
+      Some(value) => value
+      None => []
+    }
+    if row_entries.length() == 0 {
+      entries.push({ row, values: [] })
+      continue
+    }
+    let mut max_col = 0
+    for cell in row_entries {
+      if cell.col > max_col {
+        max_col = cell.col
+      }
+    }
+    let values : Array[String] = Array::make(max_col, "")
+    for cell in row_entries {
+      let formatted = format_cell_value_for_workbook(
+        styles, cell, false, options,
+      )
+      values[cell.col - 1] = formatted
+    }
+    entries.push({ row, values })
+  }
+  entries
+}
+
+///|
+fn collect_columns_with_options(
+  sheet : Worksheet,
+  styles : ArrayView[Style],
+  options : Options,
+) -> Array[Array[String]] raise XlsxError {
+  let max_col = sheet.max_col()
+  if max_col <= 0 {
+    return []
+  }
+  let max_row = max_row_for_columns(sheet)
+  let col_cells : Map[Int, Array[(Int, String)]] = {}
+  for cell in sheet.cells {
+    let formatted = format_cell_value_for_workbook(styles, cell, false, options)
+    let entries = match col_cells.get(cell.col) {
+      Some(value) => value
+      None => []
+    }
+    entries.push((cell.row, formatted))
+    col_cells[cell.col] = entries
+  }
+  let columns : Array[Array[String]] = []
+  for col in 1..<=max_col {
+    let values : Array[String] = Array::make(max_row, "")
+    match col_cells.get(col) {
+      Some(entries) =>
+        for entry in entries {
+          let (row, value) = entry
+          if row >= 1 && row <= max_row {
+            values[row - 1] = value
+          }
+        }
+      None => ()
+    }
+    columns.push(values)
+  }
+  columns
+}
+
+///|
 pub fn Cols::new(sheet : Worksheet) -> Cols {
   { columns: collect_columns(sheet), index: 0 }
 }
@@ -249,22 +344,55 @@ pub fn Workbook::cols(
 pub fn Workbook::get_rows(
   self : Workbook,
   sheet_name : StringView,
+  options? : Options,
 ) -> Array[Array[String]] raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.get_rows()
+  let entries = collect_row_entries_with_options(
+    sheet,
+    self.styles,
+    resolved_options,
+  )
+  let results : Array[Array[String]] = []
+  let mut max_with_values = 0
+  for entry in entries {
+    if entry.values.length() > 0 {
+      let empty = entry.row - max_with_values - 1
+      if empty > 0 {
+        for _ in 0..<empty {
+          results.push([])
+        }
+      }
+      results.push(entry.values)
+      max_with_values = entry.row
+    }
+  }
+  if max_with_values == 0 {
+    []
+  } else {
+    results
+  }
 }
 
 ///|
 pub fn Workbook::get_cols(
   self : Workbook,
   sheet_name : StringView,
+  options? : Options,
 ) -> Array[Array[String]] raise XlsxError {
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.get_cols()
+  collect_columns_with_options(sheet, self.styles, resolved_options)
 }

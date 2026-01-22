@@ -14,15 +14,15 @@ pub fn column_name_to_number(StringView) -> Int raise XlsxError
 
 pub fn column_number_to_name(Int) -> String raise XlsxError
 
-pub async fn open_file(String, password? : String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn open_file(String, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub async fn[R : @io.Reader] open_reader(R, password? : String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub fn read(BytesView) -> Workbook raise XlsxError
+pub fn read(BytesView, options? : Options) -> Workbook raise XlsxError
 
-pub fn read_with_password(BytesView, String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub fn read_with_password(BytesView, String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
+pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
 pub fn write(Workbook) -> Bytes raise XlsxError
 
@@ -57,6 +57,7 @@ pub suberror XlsxError {
   InvalidSheetProtection(msg~ : String)
   InvalidWorkbookProperty(msg~ : String)
   InvalidWorkbookProtection(msg~ : String)
+  InvalidOptions(msg~ : String)
   InvalidSheetBackground(msg~ : String)
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)
@@ -482,6 +483,23 @@ pub enum NumberFormat {
 pub impl Eq for NumberFormat
 pub impl Show for NumberFormat
 
+pub struct Options {
+  max_calc_iterations : UInt
+  password : String
+  raw_cell_value : Bool
+  unzip_size_limit : Int
+  unzip_xml_size_limit : Int
+  tmp_dir : String
+  short_date_pattern : String
+  long_date_pattern : String
+  long_time_pattern : String
+  culture_info : String
+}
+pub fn Options::new() -> Self
+pub fn Options::with_values(max_calc_iterations? : UInt, password? : String, raw_cell_value? : Bool, unzip_size_limit? : Int, unzip_xml_size_limit? : Int, tmp_dir? : String, short_date_pattern? : String, long_date_pattern? : String, long_time_pattern? : String, culture_info? : String) -> Self
+pub impl Eq for Options
+pub impl Show for Options
+
 pub struct PageBreak {
   id : Int
   min : Int
@@ -815,6 +833,7 @@ pub struct Workbook {
   theme_colors : Array[String]?
   indexed_colors : Array[String]?
   mut file_path : String?
+  options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
 }
@@ -847,8 +866,8 @@ pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise Xls
 pub fn Workbook::app_properties(Self) -> AppProperties
 pub fn Workbook::app_props(Self) -> AppProperties
 pub fn Workbook::auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
-pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool) -> String raise XlsxError
-pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> String raise XlsxError
+pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String raise XlsxError
+pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String raise XlsxError
 pub fn Workbook::calc_props(Self) -> CalcPropsOptions
 pub fn Workbook::chart_sheet(Self, StringView) -> ChartSheet?
 pub fn Workbook::chart_sheets(Self) -> ArrayView[ChartSheet]
@@ -890,16 +909,16 @@ pub fn Workbook::get_cell_rich_text(Self, StringView, StringView) -> Array[RichT
 pub fn Workbook::get_cell_style(Self, StringView, StringView) -> Int? raise XlsxError
 pub fn Workbook::get_cell_style_rc(Self, StringView, Int, Int) -> Int? raise XlsxError
 pub fn Workbook::get_cell_type(Self, StringView, StringView) -> CellValueType? raise XlsxError
-pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool) -> String? raise XlsxError
+pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String? raise XlsxError
 pub fn Workbook::get_cell_value_raw(Self, StringView, StringView) -> CellValue? raise XlsxError
 pub fn Workbook::get_cell_value_raw_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
-pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool) -> String? raise XlsxError
+pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String? raise XlsxError
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::get_col_width(Self, StringView, Int) -> Double? raise XlsxError
-pub fn Workbook::get_cols(Self, StringView) -> Array[Array[String]] raise XlsxError
+pub fn Workbook::get_cols(Self, StringView, options? : Options) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_comments(Self, StringView) -> Array[Comment] raise XlsxError
 pub fn Workbook::get_conditional_formats(Self, StringView) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Workbook::get_conditional_style(Self, Int) -> Style raise XlsxError
@@ -924,7 +943,7 @@ pub fn Workbook::get_row_height(Self, StringView, Int) -> Double? raise XlsxErro
 pub fn Workbook::get_row_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::get_row_style(Self, StringView, Int) -> Int? raise XlsxError
 pub fn Workbook::get_row_visible(Self, StringView, Int) -> Bool raise XlsxError
-pub fn Workbook::get_rows(Self, StringView) -> Array[Array[String]] raise XlsxError
+pub fn Workbook::get_rows(Self, StringView, options? : Options) -> Array[Array[String]] raise XlsxError
 pub fn Workbook::get_sheet_dimension(Self, StringView) -> String raise XlsxError
 pub fn Workbook::get_sheet_index(Self, StringView) -> Int raise XlsxError
 pub fn Workbook::get_sheet_list(Self) -> Array[String]

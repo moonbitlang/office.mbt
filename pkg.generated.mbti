@@ -9,15 +9,15 @@ import {
 // Values
 pub fn new_workbook() -> @xlsx.Workbook
 
-pub async fn open_file(String, password? : String, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub async fn open_file(String, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub async fn[R : @io.Reader] open_reader(R, password? : String, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub async fn[R : @io.Reader] open_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub fn read(BytesView) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub fn read(BytesView, options? : @xlsx.Options) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub fn read_with_password(BytesView, String, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub fn read_with_password(BytesView, String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
-pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
+pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub fn utf16_index_to_utf8_offset(StringView, Int) -> Int raise UtfIndexError
 

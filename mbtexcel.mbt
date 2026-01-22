@@ -4,19 +4,24 @@ pub fn new_workbook() -> @xlsx.Workbook {
 }
 
 ///|
-pub fn read(bytes : BytesView) -> @xlsx.Workbook raise @xlsx.XlsxError {
-  @xlsx.read(bytes)
+pub fn read(
+  bytes : BytesView,
+  options? : @xlsx.Options = @xlsx.Options::new(),
+) -> @xlsx.Workbook raise @xlsx.XlsxError {
+  @xlsx.read(bytes, options~)
 }
 
 ///|
 pub fn read_with_password(
   bytes : BytesView,
   password : String,
+  options? : @xlsx.Options = @xlsx.Options::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
   match transcoder {
-    Some(value) => @xlsx.read_with_password(bytes, password, transcoder=value)
-    None => @xlsx.read_with_password(bytes, password)
+    Some(value) =>
+      @xlsx.read_with_password(bytes, password, options~, transcoder=value)
+    None => @xlsx.read_with_password(bytes, password, options~)
   }
 }
 
@@ -37,11 +42,12 @@ pub fn write_with_password(
 pub async fn open_file(
   path : String,
   password? : String = "",
+  options? : @xlsx.Options = @xlsx.Options::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
   match transcoder {
-    Some(value) => @xlsx.open_file(path, password~, transcoder=value)
-    None => @xlsx.open_file(path, password~)
+    Some(value) => @xlsx.open_file(path, password~, options~, transcoder=value)
+    None => @xlsx.open_file(path, password~, options~)
   }
 }
 
@@ -49,11 +55,13 @@ pub async fn open_file(
 pub async fn[R : @async/io.Reader] open_reader(
   reader : R,
   password? : String = "",
+  options? : @xlsx.Options = @xlsx.Options::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
   match transcoder {
-    Some(value) => @xlsx.open_reader(reader, password~, transcoder=value)
-    None => @xlsx.open_reader(reader, password~)
+    Some(value) =>
+      @xlsx.open_reader(reader, password~, options~, transcoder=value)
+    None => @xlsx.open_reader(reader, password~, options~)
   }
 }
 
@@ -61,10 +69,12 @@ pub async fn[R : @async/io.Reader] open_reader(
 pub async fn[R : @async/io.Reader] read_zip_reader(
   reader : R,
   password? : String = "",
+  options? : @xlsx.Options = @xlsx.Options::new(),
   transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError,
 ) -> @xlsx.Workbook raise @xlsx.XlsxError {
   match transcoder {
-    Some(value) => @xlsx.read_zip_reader(reader, password~, transcoder=value)
-    None => @xlsx.read_zip_reader(reader, password~)
+    Some(value) =>
+      @xlsx.read_zip_reader(reader, password~, options~, transcoder=value)
+    None => @xlsx.read_zip_reader(reader, password~, options~)
   }
 }
