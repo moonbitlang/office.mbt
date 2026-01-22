@@ -58,3 +58,21 @@ test "hyperlink updates on insert" {
     ),
   )
 }
+
+///|
+test "hyperlink alias methods" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_hyper_link(
+    "Sheet1",
+    "C3",
+    "https://example.com",
+    HyperlinkType::External,
+  )
+  inspect(
+    workbook.get_cell_hyper_link("Sheet1", "C3"),
+    content=(
+      #|Some({reference: "C3", target: "https://example.com", link_type: External, display: None, tooltip: None})
+    ),
+  )
+}

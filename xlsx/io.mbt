@@ -145,6 +145,14 @@ pub fn Workbook::write_to_buffer(self : Workbook) -> Bytes raise XlsxError {
 }
 
 ///|
+pub async fn[W : @async/io.Writer] Workbook::write(
+  self : Workbook,
+  writer : W,
+) -> Unit raise XlsxError {
+  ignore(self.write_to(writer))
+}
+
+///|
 pub async fn[W : @async/io.Writer] Workbook::write_to(
   self : Workbook,
   writer : W,

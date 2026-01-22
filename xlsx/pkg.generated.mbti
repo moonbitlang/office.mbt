@@ -914,6 +914,7 @@ pub fn Workbook::get_base_color(Self, String, Int, theme_color? : Int) -> String
 pub fn Workbook::get_calc_props(Self) -> CalcPropsOptions
 pub fn Workbook::get_cell(Self, StringView, StringView) -> String? raise XlsxError
 pub fn Workbook::get_cell_formula(Self, StringView, StringView) -> String? raise XlsxError
+pub fn Workbook::get_cell_hyper_link(Self, StringView, StringView) -> Hyperlink? raise XlsxError
 pub fn Workbook::get_cell_hyperlink(Self, StringView, StringView) -> Hyperlink? raise XlsxError
 pub fn Workbook::get_cell_rc(Self, StringView, Int, Int) -> String? raise XlsxError
 pub fn Workbook::get_cell_rich_text(Self, StringView, StringView) -> Array[RichTextRun]? raise XlsxError
@@ -1006,6 +1007,7 @@ pub fn Workbook::set_cell_default(Self, StringView, String, String) -> Unit rais
 pub fn Workbook::set_cell_float(Self, StringView, String, Double, precision? : Int, bit_size? : Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_hyper_link(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_hyperlink(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_int(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise XlsxError
@@ -1067,6 +1069,7 @@ pub fn Workbook::unprotect_workbook(Self, password? : String) -> Unit raise Xlsx
 pub fn Workbook::unset_conditional_format(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::update_linked_value(Self) -> Unit raise XlsxError
 pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
+pub async fn[W : @io.Writer] Workbook::write(Self, W) -> Unit raise XlsxError
 pub async fn[W : @io.Writer] Workbook::write_to(Self, W) -> Int raise XlsxError
 pub fn Workbook::write_to_buffer(Self) -> Bytes raise XlsxError
 

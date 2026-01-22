@@ -1728,6 +1728,26 @@ pub fn Workbook::set_cell_hyperlink(
 }
 
 ///|
+pub fn Workbook::set_cell_hyper_link(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  target : String,
+  link_type : HyperlinkType,
+  display? : String = "",
+  tooltip? : String = "",
+) -> Unit raise XlsxError {
+  self.set_cell_hyperlink(
+    sheet_name,
+    reference,
+    target,
+    link_type,
+    display~,
+    tooltip~,
+  )
+}
+
+///|
 pub fn Workbook::remove_cell_hyperlink(
   self : Workbook,
   sheet_name : StringView,
@@ -1777,6 +1797,15 @@ pub fn Workbook::get_cell_hyperlink(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_hyperlink(reference)
+}
+
+///|
+pub fn Workbook::get_cell_hyper_link(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> Hyperlink? raise XlsxError {
+  self.get_cell_hyperlink(sheet_name, reference)
 }
 
 ///|
