@@ -831,6 +831,19 @@ pub fn Workbook::set_header_footer(
 }
 
 ///|
+pub fn Workbook::set_sheet_props(
+  self : Workbook,
+  sheet_name : StringView,
+  options : SheetPropsOptions?,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_sheet_props(options)
+}
+
+///|
 pub fn Workbook::get_header_footer(
   self : Workbook,
   sheet_name : StringView,
@@ -840,6 +853,18 @@ pub fn Workbook::get_header_footer(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.header_footer()
+}
+
+///|
+pub fn Workbook::get_sheet_props(
+  self : Workbook,
+  sheet_name : StringView,
+) -> SheetPropsOptions raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.sheet_props()
 }
 
 ///|
@@ -1065,6 +1090,68 @@ pub fn Workbook::get_defined_names(self : Workbook) -> Array[DefinedName] {
     names.push(dn)
   }
   names
+}
+
+///|
+pub fn Workbook::group_sheets(
+  self : Workbook,
+  sheets : Array[String],
+) -> Unit raise XlsxError {
+  let active_index = self.active_sheet_index
+  let active_name = if active_index >= 0 &&
+    active_index < self.sheet_order.length() {
+    self.sheet_entry_name(self.sheet_order[active_index])
+  } else {
+    ""
+  }
+  let mut contains_active = false
+  for name in sheets {
+    check_sheet_name(name)
+    if sheet_name_equal(name, active_name) {
+      contains_active = true
+    }
+  }
+  if !contains_active {
+    raise XlsxError::InvalidSheetOperation(
+      msg="group worksheet must contain an active worksheet",
+    )
+  }
+  for name in sheets {
+    let sheet = match self.sheet(name) {
+      Some(value) => value
+      None => raise XlsxError::SheetNotFound(name~)
+    }
+    sheet.ensure_stream_idle()
+    if sheet.sheet_views.length() == 0 {
+      sheet.sheet_views.push(SheetView::new())
+    }
+    for view in sheet.sheet_views {
+      view.tab_selected = true
+    }
+  }
+}
+
+///|
+pub fn Workbook::ungroup_sheets(self : Workbook) -> Unit raise XlsxError {
+  let active_index = self.active_sheet_index
+  for idx, entry in self.sheet_order {
+    if idx == active_index {
+      continue
+    }
+    match entry {
+      SheetEntry::Worksheet(sheet_idx) => {
+        let sheet = self.sheets[sheet_idx]
+        if sheet.sheet_views.length() == 0 {
+          continue
+        }
+        sheet.ensure_stream_idle()
+        for view in sheet.sheet_views {
+          view.tab_selected = false
+        }
+      }
+      SheetEntry::ChartSheet(_) => ()
+    }
+  }
 }
 
 ///|
@@ -1342,6 +1429,7 @@ fn clone_worksheet(
     page_layout: sheet.page_layout,
     header_footer: sheet.header_footer,
     sheet_protection: sheet.sheet_protection,
+    sheet_props: sheet.sheet_props,
     sheet_background: sheet.sheet_background,
     row_breaks: {
       let breaks : Array[PageBreak] = []

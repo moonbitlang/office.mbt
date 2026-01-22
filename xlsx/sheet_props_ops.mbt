@@ -130,6 +130,99 @@ pub fn Worksheet::set_header_footer(
 }
 
 ///|
+pub fn Worksheet::set_sheet_props(
+  self : Worksheet,
+  options : SheetPropsOptions?,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  match options {
+    Some(value) => {
+      let merged = match self.sheet_props {
+        Some(existing) => existing
+        None => SheetPropsOptions::new()
+      }
+      match value.code_name {
+        Some(v) => merged.code_name = Some(v)
+        None => ()
+      }
+      match value.enable_format_conditions_calculation {
+        Some(v) => merged.enable_format_conditions_calculation = Some(v)
+        None => ()
+      }
+      match value.published {
+        Some(v) => merged.published = Some(v)
+        None => ()
+      }
+      match value.auto_page_breaks {
+        Some(v) => merged.auto_page_breaks = Some(v)
+        None => ()
+      }
+      match value.fit_to_page {
+        Some(v) => merged.fit_to_page = Some(v)
+        None => ()
+      }
+      match value.tab_color_indexed {
+        Some(v) => merged.tab_color_indexed = Some(v)
+        None => ()
+      }
+      match value.tab_color_rgb {
+        Some(v) => merged.tab_color_rgb = Some(v)
+        None => ()
+      }
+      match value.tab_color_theme {
+        Some(v) => merged.tab_color_theme = Some(v)
+        None => ()
+      }
+      match value.tab_color_tint {
+        Some(v) => merged.tab_color_tint = Some(v)
+        None => ()
+      }
+      match value.outline_summary_below {
+        Some(v) => merged.outline_summary_below = Some(v)
+        None => ()
+      }
+      match value.outline_summary_right {
+        Some(v) => merged.outline_summary_right = Some(v)
+        None => ()
+      }
+      match value.base_col_width {
+        Some(v) => merged.base_col_width = Some(v)
+        None => ()
+      }
+      match value.default_col_width {
+        Some(v) => merged.default_col_width = Some(v)
+        None => ()
+      }
+      match value.default_row_height {
+        Some(v) => merged.default_row_height = Some(v)
+        None => ()
+      }
+      match value.custom_height {
+        Some(v) => merged.custom_height = Some(v)
+        None => ()
+      }
+      match value.zero_height {
+        Some(v) => merged.zero_height = Some(v)
+        None => ()
+      }
+      match value.thick_top {
+        Some(v) => merged.thick_top = Some(v)
+        None => ()
+      }
+      match value.thick_bottom {
+        Some(v) => merged.thick_bottom = Some(v)
+        None => ()
+      }
+      if merged.default_row_height is None {
+        merged.default_row_height = Some(default_sheet_row_height)
+      }
+      self.sheet_props = Some(merged)
+    }
+    None => ()
+  }
+}
+
+///|
 pub fn Worksheet::protect_sheet(
   self : Worksheet,
   options : SheetProtectionOptions,

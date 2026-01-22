@@ -72,6 +72,7 @@ pub struct Worksheet {
   mut page_layout : PageLayoutOptions?
   mut header_footer : HeaderFooterOptions?
   mut sheet_protection : SheetProtection?
+  mut sheet_props : SheetPropsOptions?
   mut sheet_background : SheetBackground?
   row_breaks : Array[PageBreak]
   col_breaks : Array[PageBreak]
@@ -109,6 +110,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     page_layout: None,
     header_footer: None,
     sheet_protection: None,
+    sheet_props: None,
     sheet_background: None,
     row_breaks: [],
     col_breaks: [],
@@ -239,6 +241,11 @@ pub fn Worksheet::header_footer(self : Worksheet) -> HeaderFooterOptions? {
 ///|
 pub fn Worksheet::sheet_protection(self : Worksheet) -> SheetProtection? {
   self.sheet_protection
+}
+
+///|
+pub fn Worksheet::sheet_props(self : Worksheet) -> SheetPropsOptions {
+  sheet_props_with_defaults(self.sheet_props)
 }
 
 ///|

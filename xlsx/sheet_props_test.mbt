@@ -213,3 +213,66 @@ test "page break insert remove and shift" {
   inspect(sheet.row_breaks().length(), content="0")
   inspect(sheet.col_breaks().length(), content="0")
 }
+
+///|
+test "sheet props roundtrip" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let props = SheetPropsOptions::with_values(
+    code_name="SheetCode",
+    enable_format_conditions_calculation=false,
+    published=false,
+    auto_page_breaks=false,
+    fit_to_page=true,
+    tab_color_rgb="FF0000",
+    tab_color_theme=3,
+    tab_color_tint=0.25,
+    outline_summary_below=false,
+    outline_summary_right=false,
+    base_col_width=9,
+    default_col_width=12.5,
+    default_row_height=18.0,
+    custom_height=true,
+    zero_height=true,
+    thick_top=true,
+    thick_bottom=false,
+  )
+  workbook.set_sheet_props("Sheet1", Some(props))
+  let bytes = write(workbook)
+  let parsed = read(bytes)
+  let parsed_props = parsed.get_sheet_props("Sheet1")
+  inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
+  inspect(
+    parsed_props.enable_format_conditions_calculation,
+    content="Some(false)",
+  )
+  inspect(parsed_props.published, content="Some(false)")
+  inspect(parsed_props.auto_page_breaks, content="Some(false)")
+  inspect(parsed_props.fit_to_page, content="Some(true)")
+  inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
+  inspect(parsed_props.tab_color_theme, content="Some(3)")
+  inspect(parsed_props.tab_color_tint, content="Some(0.25)")
+  inspect(parsed_props.outline_summary_below, content="Some(false)")
+  inspect(parsed_props.outline_summary_right, content="Some(false)")
+  inspect(parsed_props.base_col_width, content="Some(9)")
+  inspect(parsed_props.default_col_width, content="Some(12.5)")
+  inspect(parsed_props.default_row_height, content="Some(18)")
+  inspect(parsed_props.custom_height, content="Some(true)")
+  inspect(parsed_props.zero_height, content="Some(true)")
+  inspect(parsed_props.thick_top, content="Some(true)")
+  inspect(parsed_props.thick_bottom, content="Some(false)")
+}
+
+///|
+test "sheet props defaults on set" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_sheet_props(
+    "Sheet1",
+    Some(SheetPropsOptions::with_values(code_name="OnlyCode")),
+  )
+  let props = workbook.get_sheet_props("Sheet1")
+  inspect(props.code_name, content="Some(\"OnlyCode\")")
+  inspect(props.default_row_height, content="Some(15)")
+  inspect(props.base_col_width, content="Some(8)")
+}

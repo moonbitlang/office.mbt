@@ -145,6 +145,149 @@ pub fn PageLayoutOptions::with_values(
 }
 
 ///|
+pub struct SheetPropsOptions {
+  mut code_name : String?
+  mut enable_format_conditions_calculation : Bool?
+  mut published : Bool?
+  mut auto_page_breaks : Bool?
+  mut fit_to_page : Bool?
+  mut tab_color_indexed : Int?
+  mut tab_color_rgb : String?
+  mut tab_color_theme : Int?
+  mut tab_color_tint : Double?
+  mut outline_summary_below : Bool?
+  mut outline_summary_right : Bool?
+  mut base_col_width : Int?
+  mut default_col_width : Double?
+  mut default_row_height : Double?
+  mut custom_height : Bool?
+  mut zero_height : Bool?
+  mut thick_top : Bool?
+  mut thick_bottom : Bool?
+} derive(Eq, Show)
+
+///|
+pub fn SheetPropsOptions::new() -> SheetPropsOptions {
+  {
+    code_name: None,
+    enable_format_conditions_calculation: None,
+    published: None,
+    auto_page_breaks: None,
+    fit_to_page: None,
+    tab_color_indexed: None,
+    tab_color_rgb: None,
+    tab_color_theme: None,
+    tab_color_tint: None,
+    outline_summary_below: None,
+    outline_summary_right: None,
+    base_col_width: None,
+    default_col_width: None,
+    default_row_height: None,
+    custom_height: None,
+    zero_height: None,
+    thick_top: None,
+    thick_bottom: None,
+  }
+}
+
+///|
+pub fn SheetPropsOptions::with_values(
+  code_name? : String,
+  enable_format_conditions_calculation? : Bool,
+  published? : Bool,
+  auto_page_breaks? : Bool,
+  fit_to_page? : Bool,
+  tab_color_indexed? : Int,
+  tab_color_rgb? : String,
+  tab_color_theme? : Int,
+  tab_color_tint? : Double,
+  outline_summary_below? : Bool,
+  outline_summary_right? : Bool,
+  base_col_width? : Int,
+  default_col_width? : Double,
+  default_row_height? : Double,
+  custom_height? : Bool,
+  zero_height? : Bool,
+  thick_top? : Bool,
+  thick_bottom? : Bool,
+) -> SheetPropsOptions {
+  let opts = SheetPropsOptions::new()
+  match code_name {
+    Some(value) => opts.code_name = Some(value)
+    None => ()
+  }
+  match enable_format_conditions_calculation {
+    Some(value) => opts.enable_format_conditions_calculation = Some(value)
+    None => ()
+  }
+  match published {
+    Some(value) => opts.published = Some(value)
+    None => ()
+  }
+  match auto_page_breaks {
+    Some(value) => opts.auto_page_breaks = Some(value)
+    None => ()
+  }
+  match fit_to_page {
+    Some(value) => opts.fit_to_page = Some(value)
+    None => ()
+  }
+  match tab_color_indexed {
+    Some(value) => opts.tab_color_indexed = Some(value)
+    None => ()
+  }
+  match tab_color_rgb {
+    Some(value) => opts.tab_color_rgb = Some(value)
+    None => ()
+  }
+  match tab_color_theme {
+    Some(value) => opts.tab_color_theme = Some(value)
+    None => ()
+  }
+  match tab_color_tint {
+    Some(value) => opts.tab_color_tint = Some(value)
+    None => ()
+  }
+  match outline_summary_below {
+    Some(value) => opts.outline_summary_below = Some(value)
+    None => ()
+  }
+  match outline_summary_right {
+    Some(value) => opts.outline_summary_right = Some(value)
+    None => ()
+  }
+  match base_col_width {
+    Some(value) => opts.base_col_width = Some(value)
+    None => ()
+  }
+  match default_col_width {
+    Some(value) => opts.default_col_width = Some(value)
+    None => ()
+  }
+  match default_row_height {
+    Some(value) => opts.default_row_height = Some(value)
+    None => ()
+  }
+  match custom_height {
+    Some(value) => opts.custom_height = Some(value)
+    None => ()
+  }
+  match zero_height {
+    Some(value) => opts.zero_height = Some(value)
+    None => ()
+  }
+  match thick_top {
+    Some(value) => opts.thick_top = Some(value)
+    None => ()
+  }
+  match thick_bottom {
+    Some(value) => opts.thick_bottom = Some(value)
+    None => ()
+  }
+  opts
+}
+
+///|
 pub struct HeaderFooterOptions {
   mut align_with_margins : Bool?
   mut different_first : Bool
@@ -418,6 +561,23 @@ let default_page_margins : PageLayoutMarginsOptions = PageLayoutMarginsOptions::
 )
 
 ///|
+let default_sheet_base_col_width = 8
+
+///|
+let default_sheet_row_height = 15.0
+
+///|
+fn default_sheet_props() -> SheetPropsOptions {
+  SheetPropsOptions::with_values(
+    enable_format_conditions_calculation=true,
+    published=true,
+    auto_page_breaks=true,
+    outline_summary_below=true,
+    base_col_width=default_sheet_base_col_width,
+  )
+}
+
+///|
 let default_page_layout : PageLayoutOptions = PageLayoutOptions::with_values(
   size=0,
   orientation="portrait",
@@ -430,6 +590,120 @@ let supported_page_orientation : Array[String] = ["portrait", "landscape"]
 
 ///|
 let supported_page_order : Array[String] = ["overThenDown", "downThenOver"]
+
+///|
+fn sheet_props_with_defaults(options : SheetPropsOptions?) -> SheetPropsOptions {
+  match options {
+    Some(value) => {
+      let merged = default_sheet_props()
+      match value.code_name {
+        Some(v) => merged.code_name = Some(v)
+        None => ()
+      }
+      match value.enable_format_conditions_calculation {
+        Some(v) => merged.enable_format_conditions_calculation = Some(v)
+        None => ()
+      }
+      match value.published {
+        Some(v) => merged.published = Some(v)
+        None => ()
+      }
+      match value.auto_page_breaks {
+        Some(v) => merged.auto_page_breaks = Some(v)
+        None => ()
+      }
+      match value.fit_to_page {
+        Some(v) => merged.fit_to_page = Some(v)
+        None => ()
+      }
+      match value.tab_color_indexed {
+        Some(v) => merged.tab_color_indexed = Some(v)
+        None => ()
+      }
+      match value.tab_color_rgb {
+        Some(v) => merged.tab_color_rgb = Some(v)
+        None => ()
+      }
+      match value.tab_color_theme {
+        Some(v) => merged.tab_color_theme = Some(v)
+        None => ()
+      }
+      match value.tab_color_tint {
+        Some(v) => merged.tab_color_tint = Some(v)
+        None => ()
+      }
+      match value.outline_summary_below {
+        Some(v) => merged.outline_summary_below = Some(v)
+        None => ()
+      }
+      match value.outline_summary_right {
+        Some(v) => merged.outline_summary_right = Some(v)
+        None => ()
+      }
+      match value.base_col_width {
+        Some(v) => merged.base_col_width = Some(v)
+        None => ()
+      }
+      match value.default_col_width {
+        Some(v) => merged.default_col_width = Some(v)
+        None => ()
+      }
+      match value.default_row_height {
+        Some(v) => merged.default_row_height = Some(v)
+        None => ()
+      }
+      match value.custom_height {
+        Some(v) => merged.custom_height = Some(v)
+        None => ()
+      }
+      match value.zero_height {
+        Some(v) => merged.zero_height = Some(v)
+        None => ()
+      }
+      match value.thick_top {
+        Some(v) => merged.thick_top = Some(v)
+        None => ()
+      }
+      match value.thick_bottom {
+        Some(v) => merged.thick_bottom = Some(v)
+        None => ()
+      }
+      merged
+    }
+    None => default_sheet_props()
+  }
+}
+
+///|
+fn sheet_props_has_sheet_pr(options : SheetPropsOptions) -> Bool {
+  options.code_name is Some(_) ||
+  options.enable_format_conditions_calculation is Some(_) ||
+  options.published is Some(_) ||
+  options.auto_page_breaks is Some(_) ||
+  options.fit_to_page is Some(_) ||
+  options.tab_color_indexed is Some(_) ||
+  options.tab_color_rgb is Some(_) ||
+  options.tab_color_theme is Some(_) ||
+  options.tab_color_tint is Some(_) ||
+  options.outline_summary_below is Some(_) ||
+  options.outline_summary_right is Some(_)
+}
+
+///|
+fn sheet_props_has_sheet_format(options : SheetPropsOptions) -> Bool {
+  options.base_col_width is Some(_) ||
+  options.default_col_width is Some(_) ||
+  options.default_row_height is Some(_) ||
+  options.custom_height is Some(_) ||
+  options.zero_height is Some(_) ||
+  options.thick_top is Some(_) ||
+  options.thick_bottom is Some(_)
+}
+
+///|
+fn sheet_props_is_empty(options : SheetPropsOptions) -> Bool {
+  !sheet_props_has_sheet_pr(options) && !sheet_props_has_sheet_format(options)
+}
 
 ///|
 fn page_margins_with_defaults(

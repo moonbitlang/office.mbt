@@ -118,3 +118,57 @@ test "active sheet write and read" {
   let parsed = read(bytes)
   inspect(parsed.active_sheet_index(), content="1")
 }
+
+///|
+test "group and ungroup sheets" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Sheet2"))
+  ignore(workbook.add_sheet("Sheet3"))
+  let bad_group : Result[Unit, Error] = try? workbook.group_sheets([
+    "Sheet2", "Sheet3",
+  ])
+  inspect(bad_group is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+  workbook.group_sheets(["Sheet1", "Sheet2"])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let sheet1_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet1.xml utf8 decode failed")
+      }
+    None => fail("missing sheet1.xml")
+  }
+  let sheet2_xml = match archive.get("xl/worksheets/sheet2.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet2.xml utf8 decode failed")
+      }
+    None => fail("missing sheet2.xml")
+  }
+  let sheet3_xml = match archive.get("xl/worksheets/sheet3.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet3.xml utf8 decode failed")
+      }
+    None => fail("missing sheet3.xml")
+  }
+  inspect(sheet1_xml.contains("tabSelected=\"1\""), content="true")
+  inspect(sheet2_xml.contains("tabSelected=\"1\""), content="true")
+  inspect(sheet3_xml.contains("tabSelected=\"1\""), content="false")
+  workbook.ungroup_sheets()
+  let bytes2 = write(workbook)
+  let archive2 = @zip.read(bytes2) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let sheet2_xml2 = match archive2.get("xl/worksheets/sheet2.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet2.xml utf8 decode failed")
+      }
+    None => fail("missing sheet2.xml")
+  }
+  inspect(sheet2_xml2.contains("tabSelected=\"1\""), content="false")
+}

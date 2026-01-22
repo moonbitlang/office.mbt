@@ -1147,6 +1147,176 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
 }
 
 ///|
+fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
+  let mut options : SheetPropsOptions? = None
+  match tag_attributes_in(xml, "sheetPr") {
+    Some(tag) => {
+      let opts = SheetPropsOptions::new()
+      match attr_value(tag, "codeName") {
+        Some(value) => opts.code_name = Some(unescape_xml_text(value))
+        None => ()
+      }
+      match attr_value(tag, "enableFormatConditionsCalculation") {
+        Some(value) =>
+          opts.enable_format_conditions_calculation = Some(
+            parse_bool_attr(value),
+          )
+        None => ()
+      }
+      match attr_value(tag, "published") {
+        Some(value) => opts.published = Some(parse_bool_attr(value))
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  match tag_attributes_in(xml, "tabColor") {
+    Some(tag) => {
+      let opts = match options {
+        Some(value) => value
+        None => SheetPropsOptions::new()
+      }
+      match attr_value(tag, "indexed") {
+        Some(value) =>
+          opts.tab_color_indexed = Some(
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="tabColor indexed invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "rgb") {
+        Some(value) => opts.tab_color_rgb = Some(value.to_string())
+        None => ()
+      }
+      match attr_value(tag, "theme") {
+        Some(value) =>
+          opts.tab_color_theme = Some(
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="tabColor theme invalid")
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "tint") {
+        Some(value) =>
+          opts.tab_color_tint = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="tabColor tint invalid")
+            },
+          )
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  match tag_attributes_in(xml, "outlinePr") {
+    Some(tag) => {
+      let opts = match options {
+        Some(value) => value
+        None => SheetPropsOptions::new()
+      }
+      match attr_value(tag, "summaryBelow") {
+        Some(value) => opts.outline_summary_below = Some(parse_bool_attr(value))
+        None => ()
+      }
+      match attr_value(tag, "summaryRight") {
+        Some(value) => opts.outline_summary_right = Some(parse_bool_attr(value))
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  match tag_attributes_in(xml, "pageSetUpPr") {
+    Some(tag) => {
+      let opts = match options {
+        Some(value) => value
+        None => SheetPropsOptions::new()
+      }
+      match attr_value(tag, "autoPageBreaks") {
+        Some(value) => opts.auto_page_breaks = Some(parse_bool_attr(value))
+        None => ()
+      }
+      match attr_value(tag, "fitToPage") {
+        Some(value) => opts.fit_to_page = Some(parse_bool_attr(value))
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  match tag_attributes_in(xml, "sheetFormatPr") {
+    Some(tag) => {
+      let opts = match options {
+        Some(value) => value
+        None => SheetPropsOptions::new()
+      }
+      match attr_value(tag, "baseColWidth") {
+        Some(value) =>
+          opts.base_col_width = Some(
+            @strconv.parse_int(value, base=10) catch {
+              _ =>
+                raise XlsxError::InvalidXml(
+                  msg="sheetFormatPr baseColWidth invalid",
+                )
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "defaultColWidth") {
+        Some(value) =>
+          opts.default_col_width = Some(
+            @strconv.parse_double(value) catch {
+              _ =>
+                raise XlsxError::InvalidXml(
+                  msg="sheetFormatPr defaultColWidth invalid",
+                )
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "defaultRowHeight") {
+        Some(value) =>
+          opts.default_row_height = Some(
+            @strconv.parse_double(value) catch {
+              _ =>
+                raise XlsxError::InvalidXml(
+                  msg="sheetFormatPr defaultRowHeight invalid",
+                )
+            },
+          )
+        None => ()
+      }
+      match attr_value(tag, "customHeight") {
+        Some(value) => opts.custom_height = Some(parse_bool_attr(value))
+        None => ()
+      }
+      match attr_value(tag, "zeroHeight") {
+        Some(value) => opts.zero_height = Some(parse_bool_attr(value))
+        None => ()
+      }
+      match attr_value(tag, "thickTop") {
+        Some(value) => opts.thick_top = Some(parse_bool_attr(value))
+        None => ()
+      }
+      match attr_value(tag, "thickBottom") {
+        Some(value) => opts.thick_bottom = Some(parse_bool_attr(value))
+        None => ()
+      }
+      options = Some(opts)
+    }
+    None => ()
+  }
+  match options {
+    Some(value) => if sheet_props_is_empty(value) { None } else { Some(value) }
+    None => None
+  }
+}
+
+///|
 fn parse_page_margins(
   xml : StringView,
 ) -> PageLayoutMarginsOptions? raise XlsxError {
@@ -2249,6 +2419,7 @@ fn parse_worksheet(
   Array[PageBreak],
   Array[PageBreak],
   Array[SheetView],
+  SheetPropsOptions?,
   String?,
   String?,
 ) raise XlsxError {
@@ -2418,12 +2589,13 @@ fn parse_worksheet(
   let row_breaks = parse_page_breaks(xml, "rowBreaks")
   let col_breaks = parse_page_breaks(xml, "colBreaks")
   let sheet_views = parse_sheet_views(xml)
+  let sheet_props = parse_sheet_props(xml)
   let dimension_ref = parse_sheet_dimension(xml)
   let picture_rel_id = parse_picture_rel_id(xml)
   (
     cells, merged_cells, auto_filter, row_dimensions, col_dimensions, page_margins,
     page_layout, header_footer, sheet_protection, row_breaks, col_breaks, sheet_views,
-    dimension_ref, picture_rel_id,
+    sheet_props, dimension_ref, picture_rel_id,
   )
 }
 
@@ -2553,6 +2725,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         row_breaks,
         col_breaks,
         sheet_views,
+        sheet_props,
         dimension_ref,
         picture_rel_id,
       ) = parse_worksheet(sheet_xml, shared_strings, style_count)
@@ -2853,6 +3026,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         page_layout,
         header_footer,
         sheet_protection,
+        sheet_props,
         sheet_background,
         row_breaks,
         col_breaks,

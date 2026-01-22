@@ -734,6 +734,130 @@ fn write_drawing_xml(
 }
 
 ///|
+fn write_sheet_pr_xml(options : SheetPropsOptions) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("  <sheetPr")
+  match options.code_name {
+    Some(value) => {
+      sb.write_view(" codeName=\"")
+      sb.write_view(escape_xml_attr(value))
+      sb.write_view("\"")
+    }
+    None => ()
+  }
+  match options.enable_format_conditions_calculation {
+    Some(value) =>
+      sb.write_view(
+        " enableFormatConditionsCalculation=\"\{bool_attr(value)}\"",
+      )
+    None => ()
+  }
+  match options.published {
+    Some(value) => sb.write_view(" published=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  let has_tab_color = options.tab_color_indexed is Some(_) ||
+    options.tab_color_rgb is Some(_) ||
+    options.tab_color_theme is Some(_) ||
+    options.tab_color_tint is Some(_)
+  let has_outline = options.outline_summary_below is Some(_) ||
+    options.outline_summary_right is Some(_)
+  let has_page_setup = options.auto_page_breaks is Some(_) ||
+    options.fit_to_page is Some(_)
+  if !has_tab_color && !has_outline && !has_page_setup {
+    sb.write_view("/>\n")
+    return sb.to_string()
+  }
+  sb.write_view(">\n")
+  if has_tab_color {
+    sb.write_view("    <tabColor")
+    match options.tab_color_indexed {
+      Some(value) => sb.write_view(" indexed=\"\{value}\"")
+      None => ()
+    }
+    match options.tab_color_rgb {
+      Some(value) => {
+        sb.write_view(" rgb=\"")
+        sb.write_view(escape_xml_attr(value))
+        sb.write_view("\"")
+      }
+      None => ()
+    }
+    match options.tab_color_theme {
+      Some(value) => sb.write_view(" theme=\"\{value}\"")
+      None => ()
+    }
+    match options.tab_color_tint {
+      Some(value) => sb.write_view(" tint=\"\{value}\"")
+      None => ()
+    }
+    sb.write_view("/>\n")
+  }
+  if has_outline {
+    sb.write_view("    <outlinePr")
+    match options.outline_summary_below {
+      Some(value) => sb.write_view(" summaryBelow=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match options.outline_summary_right {
+      Some(value) => sb.write_view(" summaryRight=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    sb.write_view("/>\n")
+  }
+  if has_page_setup {
+    sb.write_view("    <pageSetUpPr")
+    match options.auto_page_breaks {
+      Some(value) => sb.write_view(" autoPageBreaks=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    match options.fit_to_page {
+      Some(value) => sb.write_view(" fitToPage=\"\{bool_attr(value)}\"")
+      None => ()
+    }
+    sb.write_view("/>\n")
+  }
+  sb.write_view("  </sheetPr>\n")
+  sb.to_string()
+}
+
+///|
+fn write_sheet_format_pr_xml(options : SheetPropsOptions) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("  <sheetFormatPr")
+  match options.base_col_width {
+    Some(value) => sb.write_view(" baseColWidth=\"\{value}\"")
+    None => ()
+  }
+  match options.default_col_width {
+    Some(value) => sb.write_view(" defaultColWidth=\"\{value}\"")
+    None => ()
+  }
+  match options.default_row_height {
+    Some(value) => sb.write_view(" defaultRowHeight=\"\{value}\"")
+    None => ()
+  }
+  match options.custom_height {
+    Some(value) => sb.write_view(" customHeight=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.zero_height {
+    Some(value) => sb.write_view(" zeroHeight=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.thick_top {
+    Some(value) => sb.write_view(" thickTop=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  match options.thick_bottom {
+    Some(value) => sb.write_view(" thickBottom=\"\{bool_attr(value)}\"")
+    None => ()
+  }
+  sb.write_view("/>\n")
+  sb.to_string()
+}
+
+///|
 fn write_sheet_views_xml(sheet : Worksheet) -> String? {
   if sheet.sheet_views.length() == 0 {
     return None
@@ -1400,6 +1524,13 @@ fn write_worksheet_xml(
       "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
     )
   }
+  match sheet.sheet_props {
+    Some(options) =>
+      if sheet_props_has_sheet_pr(options) {
+        sb.write_view(write_sheet_pr_xml(options))
+      }
+    None => ()
+  }
   match worksheet_dimension(sheet) {
     Some(value) => {
       sb.write_view("  <dimension ref=\"")
@@ -1410,6 +1541,13 @@ fn write_worksheet_xml(
   }
   match write_sheet_views_xml(sheet) {
     Some(value) => sb.write_view(value)
+    None => ()
+  }
+  match sheet.sheet_props {
+    Some(options) =>
+      if sheet_props_has_sheet_format(options) {
+        sb.write_view(write_sheet_format_pr_xml(options))
+      }
     None => ()
   }
   if sheet.col_dimensions.length() > 0 {
