@@ -2994,9 +2994,27 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
             Some(value) => value
             None => raise XlsxError::MissingPart(path=vml_path)
           }
-          Some(decode_utf8(vml_bytes))
+          Some((decode_utf8(vml_bytes), vml_path))
         }
         None => None
+      }
+      let (vml_drawing_hf_xml, vml_drawing_hf_path) = match vml_drawing_hf_xml {
+        Some((xml, path)) => (Some(xml), Some(path))
+        None => (None, None)
+      }
+      let header_footer_images = match vml_drawing_hf_xml {
+        Some(xml) => {
+          let vml_rels_xml = match vml_drawing_hf_path {
+            Some(path) =>
+              match archive.get(rels_path_for(path, "drawings")) {
+                Some(value) => Some(decode_utf8(value))
+                None => None
+              }
+            None => None
+          }
+          parse_header_footer_images_from_vml(xml, vml_rels_xml, archive)
+        }
+        None => []
       }
       let comments = if rels_xml == "" {
         []
@@ -3037,7 +3055,7 @@ fn read_zip_bytes(bytes : BytesView) -> Workbook raise XlsxError {
         vml_drawing_xml,
         vml_drawing_hf_xml,
         images: [],
-        header_footer_images: [],
+        header_footer_images,
         charts: [],
         shapes: [],
         form_controls: [],

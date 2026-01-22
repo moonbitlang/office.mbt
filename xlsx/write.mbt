@@ -2058,15 +2058,35 @@ fn extract_vml_shapetype(xml : StringView) -> String? raise XlsxError {
 fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
   let shapes : Array[String] = []
   let xml_str = xml.to_string()
-  let mut start = match xml_str.find("<v:shape") {
-    Some(pos) => pos
-    None => return shapes
-  }
-  while start < xml_str.length() {
-    let rest = xml_str[start:] catch {
+  let needle = "<v:shape"
+  let mut start_pos = 0
+  while start_pos < xml_str.length() {
+    let rest = xml_str[start_pos:] catch {
         _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
       }
-    let end_rel = match rest.find("</v:shape>") {
+    let rel = match rest.find(needle) {
+      Some(pos) => pos
+      None => break
+    }
+    let start = start_pos + rel
+    let after = start + needle.length()
+    let next_char = if after < xml_str.length() {
+      xml_str.get_char(after)
+    } else {
+      None
+    }
+    let is_shape = match next_char {
+      Some(' ') | Some('>') | Some('/') => true
+      _ => false
+    }
+    if !is_shape {
+      start_pos = start + 1
+      continue
+    }
+    let shape_rest = xml_str[start:] catch {
+        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
+      }
+    let end_rel = match shape_rest.find("</v:shape>") {
       Some(pos) => pos
       None => break
     }
@@ -2075,13 +2095,7 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
         _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
       }
     shapes.push(slice.to_string())
-    let tail = xml_str[end:] catch {
-        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape tail invalid")
-      }
-    match tail.find("<v:shape") {
-      Some(next) => start = end + next
-      None => break
-    }
+    start_pos = end
   }
   shapes
 }

@@ -241,6 +241,27 @@ pub fn Worksheet::header_footer(self : Worksheet) -> HeaderFooterOptions? {
 }
 
 ///|
+pub fn Worksheet::get_header_footer_images(
+  self : Worksheet,
+) -> Array[HeaderFooterImageOptions] {
+  let images : Array[HeaderFooterImageOptions] = []
+  for image in self.header_footer_images {
+    images.push(
+      HeaderFooterImageOptions::new(
+        image.position,
+        image.data,
+        image.extension,
+        is_footer=image.is_footer,
+        first_page=image.first_page,
+        width=image.width,
+        height=image.height,
+      ),
+    )
+  }
+  images
+}
+
+///|
 pub fn Worksheet::sheet_protection(self : Worksheet) -> SheetProtection? {
   self.sheet_protection
 }

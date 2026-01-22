@@ -856,6 +856,18 @@ pub fn Workbook::get_header_footer(
 }
 
 ///|
+pub fn Workbook::get_header_footer_images(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Array[HeaderFooterImageOptions] raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.get_header_footer_images()
+}
+
+///|
 pub fn Workbook::get_sheet_props(
   self : Workbook,
   sheet_name : StringView,

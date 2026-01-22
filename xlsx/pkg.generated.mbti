@@ -886,6 +886,7 @@ pub fn Workbook::get_defined_names(Self) -> Array[DefinedName]
 pub fn Workbook::get_doc_props(Self) -> CoreProperties
 pub fn Workbook::get_form_controls(Self, StringView) -> Array[FormControl] raise XlsxError
 pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
+pub fn Workbook::get_header_footer_images(Self, StringView) -> Array[HeaderFooterImageOptions] raise XlsxError
 pub fn Workbook::get_merge_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
 pub fn Workbook::get_page_margins(Self, StringView) -> PageLayoutMarginsOptions raise XlsxError
@@ -1124,6 +1125,7 @@ pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
 pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
 pub fn Worksheet::get_form_controls(Self) -> ArrayView[FormControl]
+pub fn Worksheet::get_header_footer_images(Self) -> Array[HeaderFooterImageOptions]
 pub fn Worksheet::get_panes(Self) -> Panes
 pub fn Worksheet::get_picture_cells(Self) -> Array[String] raise XlsxError
 pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError

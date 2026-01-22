@@ -58,6 +58,51 @@ test "header footer image vml and rels" {
 }
 
 ///|
+test "header footer image read roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let img : Bytes = [10, 20, 30]
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Left,
+      img,
+      ".png",
+      width="50pt",
+      height="32pt",
+    ),
+  )
+  let parsed = read(write(workbook))
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  match parsed_sheet.vml_drawing_hf_xml() {
+    Some(xml) => {
+      inspect(xml.contains("v:imagedata"), content="true")
+      inspect(xml.contains("id=\"LH\""), content="true")
+      inspect(xml.contains("width:50pt"), content="true")
+    }
+    None => fail("missing vml drawing hf")
+  }
+  let images = parsed_sheet.get_header_footer_images()
+  inspect(images.length(), content="1")
+  let first = images[0]
+  inspect(
+    (
+      first.position,
+      first.is_footer,
+      first.first_page,
+      first.extension,
+      first.width,
+      first.height,
+    ),
+    content="(Left, false, false, \"png\", \"50pt\", \"32pt\")",
+  )
+  inspect(first.data == img, content="true")
+  inspect(parsed.get_header_footer_images("Sheet1").length(), content="1")
+}
+
+///|
 test "header footer image invalid extension" {
   let sheet = Worksheet::new("Sheet1")
   let result = try
