@@ -3263,7 +3263,19 @@ fn range_from_expr_or_value(
       } else if name == "TRANSPOSE" {
         transpose_range_values_from_expr(workbook, sheet_name, args, ctx)
       } else {
-        range_from_value(value)
+        match value {
+          FormulaValue::List(list) =>
+            match array_shape_from_expr(workbook, sheet_name, expr, ctx) {
+              Some((rows, cols)) =>
+                if rows > 0 && cols > 0 && rows * cols == list.length() {
+                  { rows, cols, values: list }
+                } else {
+                  range_from_value(value)
+                }
+              None => range_from_value(value)
+            }
+          _ => range_from_value(value)
+        }
       }
     _ => range_from_value(value)
   }

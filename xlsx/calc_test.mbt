@@ -6490,6 +6490,21 @@ test "calc spill indirect and anchorarray" {
 }
 
 ///|
+test "calc dynamic array range shapes" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula("A1", "CHOOSECOLS(SEQUENCE(2,3),1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="4")
+  sheet.set_cell_formula("C1", "CHOOSEROWS(SEQUENCE(3,2),2)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="3")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="4")
+  sheet.set_cell_formula("E1", "TAKE(SEQUENCE(3,2),2,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "E1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "E2"), content="3")
+}
+
+///|
 test "calc mode errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
