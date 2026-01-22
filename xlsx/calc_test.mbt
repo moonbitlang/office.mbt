@@ -4760,6 +4760,32 @@ test "calc basic formula refs" {
 }
 
 ///|
+test "calc defined name functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("A1_as_string"))
+  sheet.set_cell_value("B1", CellValue::String("B1_as_string"))
+  sheet.set_cell_value("C1", CellValue::Numeric(123.0))
+  workbook.set_defined_name(DefinedName::new("defined_name1", "Sheet1!A1"))
+  workbook.set_defined_name(
+    DefinedName::new("defined_name1", "Sheet1!B1", scope="Sheet1"),
+  )
+  workbook.set_defined_name(DefinedName::new("defined_name2", "Sheet1!C1"))
+  sheet.set_cell_formula("D1", "defined_name1")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="B1_as_string")
+  sheet.set_cell_formula("D1", "CONCATENATE(\"<\",defined_name1,\">\")")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="<B1_as_string>")
+  sheet.set_cell_formula("D1", "123=defined_name2")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="TRUE")
+  sheet.set_cell_formula("D1", "\"B1_as_string\"=defined_name1")
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="TRUE")
+  sheet.set_cell_formula(
+    "D1", "IF(\"B1_as_string\"=defined_name1,\"YES\",\"NO\")",
+  )
+  inspect(workbook.calc_cell_value("Sheet1", "D1"), content="YES")
+}
+
+///|
 test "calc financial functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

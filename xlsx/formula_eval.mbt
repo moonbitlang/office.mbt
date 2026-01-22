@@ -971,6 +971,57 @@ fn formula_text_value(
 }
 
 ///|
+fn eval_defined_name_ref(
+  workbook : Workbook,
+  sheet_name : String,
+  defined_name : DefinedName,
+  ctx : CalcContext,
+) -> FormulaValue raise XlsxError {
+  let scope_key = defined_name_scope_key(defined_name.scope)
+  let workbook_key = defined_name_scope_key("Workbook")
+  let target_sheet = if scope_key == workbook_key {
+    sheet_name
+  } else {
+    defined_name.scope
+  }
+  let expr = parse_formula_expr(defined_name.refers_to) catch {
+    _ => return FormulaValue::Error(formula_error_value)
+  }
+  eval_expr(workbook, target_sheet, expr, ctx)
+}
+
+///|
+fn defined_name_value(
+  workbook : Workbook,
+  sheet_name : String,
+  name : String,
+  ctx : CalcContext,
+) -> FormulaValue? raise XlsxError {
+  let name_upper = name.to_upper()
+  let sheet_key = defined_name_scope_key(sheet_name)
+  let workbook_key = defined_name_scope_key("Workbook")
+  let mut workbook_match : DefinedName? = None
+  for defined_name in workbook.defined_names {
+    if defined_name.name.to_upper() != name_upper {
+      continue
+    }
+    let scope_key = defined_name_scope_key(defined_name.scope)
+    if scope_key == sheet_key {
+      return Some(
+        eval_defined_name_ref(workbook, sheet_name, defined_name, ctx),
+      )
+    }
+    if scope_key == workbook_key {
+      workbook_match = Some(defined_name)
+    }
+  }
+  match workbook_match {
+    Some(value) => Some(eval_defined_name_ref(workbook, sheet_name, value, ctx))
+    None => None
+  }
+}
+
+///|
 fn anchorarray_values(
   workbook : Workbook,
   sheet_name : String,
@@ -12487,7 +12538,15 @@ fn eval_function(
       } else {
         FormulaValue::Error(formula_error_value)
       }
-    _ => FormulaValue::Error(formula_error_name)
+    _ =>
+      if args.length() == 0 {
+        match defined_name_value(workbook, sheet_name, name, ctx) {
+          Some(value) => value
+          None => FormulaValue::Error(formula_error_name)
+        }
+      } else {
+        FormulaValue::Error(formula_error_name)
+      }
   }
 }
 
