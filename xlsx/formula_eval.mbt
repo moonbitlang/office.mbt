@@ -8398,6 +8398,8 @@ fn eval_function(
       ftest_values(workbook, sheet_name, args, values, ctx)
     "ACCRINT" => accrint_values(values)
     "ACCRINTM" => accrintm_values(values)
+    "AMORDEGRC" => amordegrc_values(values)
+    "AMORLINC" => amorlinc_values(values)
     "COUPDAYBS" => coupdaybs_values(values)
     "COUPDAYS" => coupdays_values(values)
     "COUPDAYSNC" => coupdaysnc_values(values)
@@ -8420,6 +8422,7 @@ fn eval_function(
     "DOLLARDE" => dollar_fraction_values("DOLLARDE", values)
     "DOLLARFR" => dollar_fraction_values("DOLLARFR", values)
     "EFFECT" => effect_values(values)
+    "EUROCONVERT" => euroconvert_values(values)
     "IPMT" => ipmt_values("IPMT", values)
     "ISPMT" => ispmt_values(values)
     "NOMINAL" => nominal_values(values)
@@ -14947,6 +14950,272 @@ fn yearfrac_number(
     FormulaValue::Error(err) => Err(FormulaValue::Error(err))
     _ => Err(FormulaValue::Error(formula_error_value))
   }
+}
+
+///|
+fn round_half_up(value : Double) -> Double {
+  if value < 0.0 {
+    -Double::from_int(Double::to_int(trunc_double(-value + 0.5)))
+  } else {
+    Double::from_int(Double::to_int(trunc_double(value + 0.5)))
+  }
+}
+
+///|
+fn amor_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
+  let normalized = normalize_scalar(value)
+  match normalized {
+    FormulaValue::String(text) => {
+      let trimmed = text.trim().to_string()
+      if trimmed == "" {
+        Err(FormulaValue::Error(formula_error_value))
+      } else {
+        value_as_date_serial(FormulaValue::String(trimmed))
+      }
+    }
+    _ => value_as_date_serial(normalized)
+  }
+}
+
+///|
+priv struct AmorArgs {
+  cost : Double
+  date_purchased : Double
+  first_period : Double
+  salvage : Double
+  period : Int
+  rate : Double
+  basis : Int
+}
+
+///|
+fn prepare_amor_args(
+  values : ArrayView[FormulaValue],
+) -> Result[AmorArgs, FormulaValue] {
+  if values.length() != 6 && values.length() != 7 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let cost = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(_) => return Err(FormulaValue::Error(formula_error_value))
+  }
+  if cost < 0.0 {
+    return Err(FormulaValue::Error(formula_error_value))
+  }
+  let date_purchased = match amor_date_serial(values[1]) {
+    Ok(num) => num
+    Err(err) => return Err(err)
+  }
+  let first_period = match amor_date_serial(values[2]) {
+    Ok(num) => num
+    Err(err) => return Err(err)
+  }
+  if first_period < date_purchased {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  let salvage = match value_as_number(values[3]) {
+    Ok(num) => num
+    Err(_) => return Err(FormulaValue::Error(formula_error_num))
+  }
+  if salvage < 0.0 || salvage > cost {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  let period_value = match value_as_number(values[4]) {
+    Ok(num) => num
+    Err(_) => return Err(FormulaValue::Error(formula_error_num))
+  }
+  if period_value < 0.0 {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  let rate = match value_as_number(values[5]) {
+    Ok(num) => num
+    Err(_) => return Err(FormulaValue::Error(formula_error_num))
+  }
+  if rate < 0.0 {
+    return Err(FormulaValue::Error(formula_error_num))
+  }
+  let basis_value = if values.length() == 7 {
+    match value_as_number(values[6]) {
+      Ok(num) => num
+      Err(_) => return Err(FormulaValue::Error(formula_error_num))
+    }
+  } else {
+    0.0
+  }
+  Ok(AmorArgs::{
+    cost,
+    date_purchased,
+    first_period,
+    salvage,
+    period: Double::to_int(trunc_double(period_value)),
+    rate,
+    basis: Double::to_int(trunc_double(basis_value)),
+  })
+}
+
+///|
+fn amordegrc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let args = match prepare_amor_args(values) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  if args.rate >= 0.5 {
+    return FormulaValue::Error(formula_error_num)
+  }
+  let assets_life = 1.0 / args.rate
+  let mut amor_coeff = 2.5
+  if assets_life < 3.0 {
+    amor_coeff = 1.0
+  } else if assets_life < 5.0 {
+    amor_coeff = 1.5
+  } else if assets_life <= 6.0 {
+    amor_coeff = 2.0
+  }
+  let rate = args.rate * amor_coeff
+  let frac = match
+    yearfrac_number(args.date_purchased, args.first_period, args.basis) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let mut cost = args.cost
+  let mut n_rate = round_half_up(frac * cost * rate)
+  cost = cost - n_rate
+  if args.period == 0 {
+    return number_or_num_error(round_significant_digits(n_rate, 15))
+  }
+  let mut rest = cost - args.salvage
+  for idx in 0..<args.period {
+    n_rate = round_half_up(cost * rate)
+    rest = rest - n_rate
+    if rest < 0.0 {
+      let remaining = args.period - idx
+      if remaining == 1 {
+        return number_or_num_error(
+          round_significant_digits(round_half_up(cost * 0.5), 15),
+        )
+      }
+      return FormulaValue::Number(0.0)
+    }
+    cost = cost - n_rate
+  }
+  number_or_num_error(round_significant_digits(n_rate, 15))
+}
+
+///|
+fn amorlinc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  let args = match prepare_amor_args(values) {
+    Ok(value) => value
+    Err(err) => return err
+  }
+  let frac = match
+    yearfrac_number(args.date_purchased, args.first_period, args.basis) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let rate1 = frac * args.cost * args.rate
+  if args.period == 0 {
+    return number_or_num_error(round_significant_digits(rate1, 15))
+  }
+  let rate2 = args.cost * args.rate
+  if rate2 == 0.0 {
+    return FormulaValue::Number(0.0)
+  }
+  let delta = args.cost - args.salvage
+  let periods = Double::to_int(trunc_double((delta - rate1) / rate2))
+  if args.period <= periods {
+    return number_or_num_error(round_significant_digits(rate2, 15))
+  }
+  if args.period - 1 == periods {
+    let result = delta - rate2 * Double::from_int(periods) - rate1
+    return number_or_num_error(round_significant_digits(result, 15))
+  }
+  FormulaValue::Number(0.0)
+}
+
+///|
+fn euroconvert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
+  if values.length() < 3 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  if values.length() > 5 {
+    return FormulaValue::Error(formula_error_value)
+  }
+  let number = match value_as_number(values[0]) {
+    Ok(num) => num
+    Err(err) => return err
+  }
+  let source_currency = match value_as_string(values[1]) {
+    Ok(text) => text.to_upper()
+    Err(err) => return err
+  }
+  let target_currency = match value_as_string(values[2]) {
+    Ok(text) => text.to_upper()
+    Err(err) => return err
+  }
+  let mut full_precision = false
+  if values.length() >= 4 {
+    full_precision = match value_as_bool(values[3]) {
+      Ok(flag) => flag
+      Err(err) => return err
+    }
+  }
+  let mut triangulation_precision = 0.0
+  if values.length() == 5 {
+    triangulation_precision = match value_as_number(values[4]) {
+      Ok(num) => num
+      Err(err) => return err
+    }
+  }
+  let convert_table : Map[String, (Double, Int)] = {
+    "EUR": (1.0, 2),
+    "ATS": (13.7603, 2),
+    "BEF": (40.3399, 0),
+    "DEM": (1.95583, 2),
+    "ESP": (166.386, 0),
+    "FIM": (5.94573, 2),
+    "FRF": (6.55957, 2),
+    "IEP": (0.787564, 2),
+    "ITL": (1936.27, 0),
+    "LUF": (40.3399, 0),
+    "NLG": (2.20371, 2),
+    "PTE": (200.482, 2),
+    "GRD": (340.750, 2),
+    "SIT": (239.640, 2),
+    "MTL": (0.429300, 2),
+    "CYP": (0.585274, 2),
+    "SKK": (30.1260, 2),
+    "EEK": (15.6466, 2),
+    "LVL": (0.702804, 2),
+    "LTL": (3.45280, 2),
+  }
+  let (source_rate, _source_decimals) = match
+    convert_table.get(source_currency) {
+    Some(value) => value
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  let (target_rate, target_decimals) = match
+    convert_table.get(target_currency) {
+    Some(value) => value
+    None => return FormulaValue::Error(formula_error_value)
+  }
+  if source_currency == target_currency {
+    return FormulaValue::Number(number)
+  }
+  let mut result = if source_currency == "EUR" {
+    number * target_rate
+  } else {
+    let mut intermediate = number / source_rate
+    if triangulation_precision != 0.0 {
+      let ratio = @math.pow(10.0, triangulation_precision)
+      intermediate = Double::round(intermediate * ratio) / ratio
+    }
+    intermediate * target_rate
+  }
+  if !full_precision {
+    let ratio = @math.pow(10.0, Double::from_int(target_decimals))
+    result = Double::round(result * ratio) / ratio
+  }
+  number_or_num_error(round_significant_digits(result, 15))
 }
 
 ///|
