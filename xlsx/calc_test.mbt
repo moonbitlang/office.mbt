@@ -6458,6 +6458,20 @@ test "calc mode functions" {
 }
 
 ///|
+test "calc spill mode.mult" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let values : Array[Double] = [1, 1, 2, 2, 3]
+  for i in 0..<values.length() {
+    let row = i + 1
+    sheet.set_cell_value("A\{row}", CellValue::Numeric(values[i]))
+  }
+  sheet.set_cell_formula("C1", "MODE.MULT(A1:A5)")
+  inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
+  inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2")
+}
+
+///|
 test "calc mode errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

@@ -3612,6 +3612,16 @@ fn array_shape_from_expr(
             } else {
               None
             }
+          "MODE.MULT" =>
+            if values.length() >= 1 {
+              match mode_mult_values(values) {
+                FormulaValue::List(list) => Some((list.length(), 1))
+                FormulaValue::Error(_) => None
+                _ => Some((1, 1))
+              }
+            } else {
+              None
+            }
           "TREND" | "GROWTH" =>
             if values.length() >= 1 && values.length() <= 4 {
               let know_y_range = range_from_expr_or_value(
