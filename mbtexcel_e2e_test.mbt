@@ -318,3 +318,22 @@ test "mbtexcel e2e comments" {
     content="(\"A1\", \"tester\", \"note\")",
   )
 }
+
+///|
+test "mbtexcel e2e conditional format roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
+  opt.criteria = ">"
+  opt.value = "6"
+  workbook.set_conditional_format("Sheet1", "A1:A2", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing sheet xml")
+  }
+  inspect(sheet_xml.contains("conditionalFormatting"), content="true")
+  inspect(sheet_xml.contains("type=\"cellIs\""), content="true")
+  inspect(sheet_xml.contains("<formula>6</formula>"), content="true")
+}

@@ -17,6 +17,7 @@
       "path": "moonbitlang/async/fs",
       "alias": "async/fs"
     },
-    "moonbitlang/core/env"
+    "moonbitlang/core/env",
+    "bobzhang/mbtexcel/zip"
   ]
 }
