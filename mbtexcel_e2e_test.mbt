@@ -337,3 +337,20 @@ test "mbtexcel e2e conditional format roundtrip" {
   inspect(sheet_xml.contains("type=\"cellIs\""), content="true")
   inspect(sheet_xml.contains("<formula>6</formula>"), content="true")
 }
+
+///|
+test "mbtexcel e2e sheet props roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let props = @xlsx.SheetPropsOptions::with_values(
+    code_name="SheetCode",
+    fit_to_page=true,
+    tab_color_rgb="FF0000",
+  )
+  workbook.set_sheet_props("Sheet1", Some(props))
+  let parsed = read(write(workbook))
+  let parsed_props = parsed.get_sheet_props("Sheet1")
+  inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
+  inspect(parsed_props.fit_to_page, content="Some(true)")
+  inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
+}
