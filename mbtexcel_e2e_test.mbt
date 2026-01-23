@@ -701,6 +701,24 @@ test "mbtexcel e2e row and col helpers" {
 }
 
 ///|
+test "mbtexcel e2e merge cells info and calc" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "10")
+  workbook.set_cell("Sheet1", "A2", "5")
+  workbook.set_cell_formula("Sheet1", "B1", "A1+A2")
+  workbook.merge_cells("Sheet1", "A1:B1")
+  let merges = workbook.get_merge_cells_info("Sheet1")
+  inspect(merges.length(), content="1")
+  inspect((merges[0].range_ref, merges[0].value), content="(\"A1:B1\", \"10\")")
+  let merges_wo = workbook.get_merge_cells_info("Sheet1", without_values=true)
+  inspect(merges_wo[0].value, content="")
+  inspect(workbook.calc_cell_value("Sheet1", "B1"), content="15")
+  let parsed = read(write(workbook))
+  inspect(parsed.calc_cell_value("Sheet1", "B1"), content="15")
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

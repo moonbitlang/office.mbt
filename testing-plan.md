@@ -110,6 +110,7 @@ E2E coverage
 - [x] Add e2e tests for form controls and slicers via workbook APIs.
 - [x] Add e2e test for chart sheet roundtrip.
 - [x] Add e2e test for row/col helpers roundtrip.
+- [x] Add e2e test for merge cells info and calc_cell_value.
 
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).
