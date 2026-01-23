@@ -714,6 +714,35 @@ test "mbtexcel e2e delete table and slicer/form control" {
 }
 
 ///|
+test "mbtexcel e2e group and ungroup sheets" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Sheet2"))
+  ignore(workbook.add_sheet("Sheet3"))
+  workbook.set_active_sheet(1)
+  let bad_group : Result[Unit, Error] = try? workbook.group_sheets([
+    "Sheet1", "Sheet3",
+  ])
+  inspect(bad_group is Err(@xlsx.XlsxError::InvalidSheetOperation(_)), content="true")
+  workbook.group_sheets(["Sheet2", "Sheet3"])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let sheet2_xml = match archive.get("xl/worksheets/sheet2.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing sheet2 xml")
+  }
+  inspect(sheet2_xml.contains("tabSelected=\"1\""), content="true")
+  workbook.ungroup_sheets()
+  let bytes2 = write(workbook)
+  let archive2 = @zip.read(bytes2)
+  let sheet3_xml = match archive2.get("xl/worksheets/sheet3.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing sheet3 xml")
+  }
+  inspect(sheet3_xml.contains("tabSelected=\"1\""), content="false")
+}
+
+///|
 test "mbtexcel e2e row and col helpers" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

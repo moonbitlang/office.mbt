@@ -112,6 +112,7 @@ E2E coverage
 - [x] Add e2e test for row/col helpers roundtrip.
 - [x] Add e2e test for merge cells info and calc_cell_value.
 - [x] Add e2e tests for delete_table/delete_form_control/delete_slicer flows.
+- [x] Add e2e test for group_sheets/ungroup_sheets via wrappers.
 
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).
