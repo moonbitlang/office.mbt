@@ -666,6 +666,30 @@ test "mbtexcel e2e vml drawing roundtrip" {
 }
 
 ///|
+test "mbtexcel e2e form control and slicer" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let control = @xlsx.FormControl::new("B2", "Button", text="Click")
+  workbook.add_form_control("Sheet1", control)
+  let slicer = @xlsx.Slicer::new("SlicerE2E")
+  workbook.add_slicer("Sheet1", slicer)
+  inspect(workbook.get_form_controls("Sheet1").length(), content="1")
+  inspect(workbook.get_slicers("Sheet1").length(), content="1")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let vml_xml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing vml drawing")
+  }
+  inspect(vml_xml.contains("ObjectType=\"Button\""), content="true")
+  let slicer_xml = match archive.get("xl/slicers/slicer1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing slicer xml")
+  }
+  inspect(slicer_xml.contains("name=\"SlicerE2E\""), content="true")
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
