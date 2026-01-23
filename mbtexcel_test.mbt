@@ -72,3 +72,39 @@ test "mbtexcel acronym color helpers" {
   let (h, s, l) = rgbto_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
   inspect((h, s, l), content="(0.16666666666666666, 1, 0.5)")
 }
+
+///|
+test "mbtexcel sheet management helpers" {
+  let workbook = new_file()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_sheet_name("Sheet1", "Main")
+  inspect(workbook.sheet_name(0), content="Some(\"Main\")")
+  inspect(workbook.sheet_index("Data"), content="1")
+  let list = workbook.get_sheet_list()
+  inspect(list.contains("Main"), content="true")
+  inspect(list.contains("Data"), content="true")
+  let map = workbook.get_sheet_map()
+  guard map is { 1: "Main", 2: "Data", .. } else {
+    fail("unexpected sheet map")
+  }
+  workbook.delete_sheet("Data")
+  let missing : Result[Int, Error] = try? workbook.sheet_index("Data")
+  inspect(missing is Err(_), content="true")
+}
+
+///|
+test "mbtexcel excel_date_to_time 1904 and invalid" {
+  let t0 = excel_date_to_time(0.0, use_1904_format=true)
+  inspect((t0.year(), t0.month(), t0.day()), content="(1904, 1, 1)")
+  let invalid : Result[@time.ZonedDateTime, Error] = try? excel_date_to_time(
+    -1.0,
+  )
+  inspect(invalid is Err(_), content="true")
+}
+
+///|
+test "mbtexcel theme_color wrapper" {
+  inspect(theme_color("000000", 0.0), content="FF000000")
+  inspect(theme_color("00FF00", 0.2), content="FF33FF33")
+  inspect(theme_color("!!!!!!", 1.0), content="FFFFFFFF")
+}
