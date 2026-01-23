@@ -600,6 +600,57 @@ test "mbtexcel e2e vba project roundtrip" {
 }
 
 ///|
+test "mbtexcel e2e ignored errors roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_ignored_errors("Sheet1", "A1", @xlsx.IgnoredErrorType::EvalError)
+  workbook.add_ignored_errors(
+    "Sheet1",
+    "B2:C3",
+    @xlsx.IgnoredErrorType::NumberStoredAsText,
+  )
+  let parsed = read(write(workbook))
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  let ignored = sheet.ignored_errors()
+  inspect(ignored.length(), content="2")
+  inspect(ignored[0].sqref, content="A1")
+  inspect(ignored[0].eval_error, content="true")
+  inspect(ignored[1].sqref, content="B2:C3")
+  inspect(ignored[1].number_stored_as_text, content="true")
+}
+
+///|
+test "mbtexcel e2e pivot table roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_pivot_table(
+    "Sheet1",
+    "<pivotTableDefinition name=\"PivotE2E\"/>",
+    "<pivotCacheDefinition cacheId=\"1\"/>",
+    cache_records_xml="<pivotCacheRecords count=\"0\"/>",
+  ))
+  let parsed = read(write(workbook))
+  let pivots = parsed.get_pivot_tables("Sheet1")
+  inspect(pivots.length(), content="1")
+  inspect(pivots[0].name, content="PivotE2E")
+  inspect(
+    pivots[0].table_xml,
+    content="<pivotTableDefinition name=\"PivotE2E\"/>",
+  )
+  inspect(
+    pivots[0].cache_definition_xml,
+    content="<pivotCacheDefinition cacheId=\"1\"/>",
+  )
+  inspect(
+    pivots[0].cache_records_xml,
+    content="Some(\"<pivotCacheRecords count=\\\"0\\\"/>\")",
+  )
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
