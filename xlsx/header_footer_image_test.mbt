@@ -103,6 +103,41 @@ test "header footer image read roundtrip" {
 }
 
 ///|
+test "header footer vml merge preserves existing shapes" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let base_vml =
+    #|<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+    #|  <v:shapetype id="_x0000_t75"></v:shapetype>
+    #|  <v:shape id="CH" type="#_x0000_t75"></v:shape>
+    #|</xml>
+  sheet.add_vml_drawing_hf_xml(base_vml)
+  let img : Bytes = [7, 8, 9]
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Left,
+      img,
+      ".png",
+      width="10pt",
+      height="10pt",
+    ),
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let vml_xml = match archive.get("xl/drawings/vmlDrawing1.vml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("vmlDrawing1.vml utf8 decode failed")
+      }
+    None => fail("missing vmlDrawing1.vml")
+  }
+  inspect(vml_xml.contains("id=\"CH\""), content="true")
+  inspect(vml_xml.contains("id=\"LH\""), content="true")
+}
+
+///|
 test "header footer image invalid extension" {
   let sheet = Worksheet::new("Sheet1")
   let result = try
