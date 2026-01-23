@@ -108,3 +108,18 @@ test "mbtexcel theme_color wrapper" {
   inspect(theme_color("00FF00", 0.2), content="FF33FF33")
   inspect(theme_color("!!!!!!", 1.0), content="FFFFFFFF")
 }
+
+///|
+test "mbtexcel row/col visibility and style ranges" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let style_id = workbook.add_style(@xlsx.Style::new())
+  workbook.set_row_style_range("Sheet1", 2, 3, style_id)
+  workbook.set_col_style_range("Sheet1", "B:C", style_id)
+  workbook.set_row_visible("Sheet1", 2, false)
+  workbook.set_col_visible("Sheet1", 3, false)
+  inspect(workbook.get_row_style("Sheet1", 2), content="Some(1)")
+  inspect(workbook.get_col_style("Sheet1", 3), content="Some(1)")
+  inspect(workbook.row_visible("Sheet1", 2), content="false")
+  inspect(workbook.col_visible("Sheet1", 3), content="false")
+}

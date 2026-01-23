@@ -124,3 +124,51 @@ test "mbtexcel e2e multi-feature roundtrip" {
   inspect(validations.length(), content="1")
   inspect(validations[0].sqref, content="F2:F3")
 }
+
+///|
+test "mbtexcel e2e tables sparklines hyperlinks" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "Name")
+  workbook.set_cell("Sheet1", "B1", "Value")
+  workbook.set_cell("Sheet1", "A2", "Alpha")
+  workbook.set_cell_int("Sheet1", "B2", 10)
+  ignore(workbook.add_table("Sheet1", "A1:B2", "Table1", ["Name", "Value"]))
+  workbook.add_sparkline("Sheet1", "C2", "B2:B2")
+  workbook.set_cell_hyperlink(
+    "Sheet1",
+    "A2",
+    "https://example.com",
+    @xlsx.HyperlinkType::External,
+    display="Example",
+  )
+  let parsed = read(write(workbook))
+  inspect(parsed.get_tables("Sheet1").length(), content="1")
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  inspect(sheet.sparkline_groups().length(), content="1")
+  inspect(
+    parsed.get_cell_hyperlink("Sheet1", "A2"),
+    content=(
+      #|Some({reference: "A2", target: "https://example.com", link_type: External, display: Some("Example"), tooltip: None})
+    ),
+  )
+}
+
+///|
+test "mbtexcel e2e stream writer" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let writer = workbook.new_stream_writer("Sheet1")
+  writer.set_row("A1", ["A", "B"])
+  writer.set_row_cells("A2", [
+    @xlsx.StreamCell::new("3", formula="SUM(A1,B1)"),
+    @xlsx.StreamCell::new("4"),
+  ])
+  writer.flush()
+  let parsed = read(write(workbook))
+  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"A\")")
+  inspect(parsed.get_cell_formula("Sheet1", "A2"), content="Some(\"SUM(A1,B1)\")")
+}

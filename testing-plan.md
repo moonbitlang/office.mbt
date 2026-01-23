@@ -83,11 +83,10 @@ Out of scope for now:
 - `moon coverage analyze` (target: >= 90% overall coverage)
 - For long-running tests, consider `#skip` and run a final pass with `--include-skipped`.
 
-## Issue Tracking (bd)
+## Todo Tracking (testing-plan.md only)
 
-- Use `bd` as the local issue tracker for any follow-up work or blocked items.
-- Do **not** run `bd sync`.
-- Create/close issues in `bd` as items are discovered or resolved.
+- Keep all follow-up items in this file.
+- Do **not** use `bd` for tracking.
 
 ## Checklist
 
@@ -101,13 +100,13 @@ Wrapper coverage
 
 E2E coverage
 - [x] Add e2e tests covering multi-sheet + formulas + styles + merges + validations.
-- [ ] Add e2e test for hyperlinks/table/sparkline smoke (if missing).
-- [ ] Add e2e test for stream writer roundtrip (if missing).
+- [x] Add e2e test for hyperlinks/table/sparkline smoke.
+- [x] Add e2e test for stream writer roundtrip.
 - [x] Add e2e test for encrypted workbook roundtrip via wrappers.
 
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).
-- [ ] Add tests for row/col style ranges and hidden flags.
+- [x] Add tests for row/col style ranges and hidden flags.
 - [ ] Add tests for image/header-footer image roundtrip.
 - [ ] Add tests for options (raw cell values, unzip limits).
 
@@ -124,11 +123,16 @@ Bug fixes
 
 Hygiene
 - [x] Commit and push changes in logical chunks.
-- [ ] Create issue to track long-running full test suite (gh CLI timed out).
-- [ ] Create issue to track `bd create` CLI hang (local tracker tooling).
+- [ ] Track long-running full test suite in this plan (no external issue).
 
 ## Notes
 
 - Full `moon test` timed out locally after 300s; filtered tests pass.
 - `gh issue create` and `gh api` hung/timed out when trying to file the issue.
-- `bd create` command hangs locally (even with `--no-daemon`/`--no-db`). Needs investigation.
+
+## Current Todo (Active)
+
+- [ ] Add tests for image/header-footer image roundtrip.
+- [ ] Add tests for options (raw cell values, unzip limits).
+- [ ] Run full `moon test` (use `#skip` for known long tests, then finalize with `--include-skipped`).
+- [ ] Run `moon coverage analyze` and confirm >= 90% overall coverage.
