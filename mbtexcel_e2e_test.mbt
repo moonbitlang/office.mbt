@@ -448,3 +448,36 @@ test "mbtexcel e2e core and app properties" {
   inspect(parsed_app.application, content="mbtexcel")
   inspect(parsed_app.company, content="MoonBit")
 }
+
+///|
+test "mbtexcel e2e page layout and margins" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let margins = @xlsx.PageLayoutMarginsOptions::with_values(
+    top=0.5,
+    bottom=0.6,
+    left=0.7,
+    right=0.8,
+    header=0.9,
+    footer=1.0,
+    horizontally=true,
+    vertically=true,
+  )
+  let layout = @xlsx.PageLayoutOptions::with_values(
+    orientation="landscape",
+    fit_to_width=2,
+    fit_to_height=1,
+    black_and_white=true,
+  )
+  workbook.set_page_margins("Sheet1", Some(margins))
+  workbook.set_page_layout("Sheet1", Some(layout))
+  let parsed = read(write(workbook))
+  let parsed_margins = parsed.get_page_margins("Sheet1")
+  let parsed_layout = parsed.get_page_layout("Sheet1")
+  inspect(parsed_margins.top, content="Some(0.5)")
+  inspect(parsed_margins.footer, content="Some(1)")
+  inspect(parsed_margins.horizontally, content="Some(true)")
+  inspect(parsed_layout.orientation, content="Some(\"landscape\")")
+  inspect(parsed_layout.fit_to_width, content="Some(2)")
+  inspect(parsed_layout.black_and_white, content="Some(true)")
+}
