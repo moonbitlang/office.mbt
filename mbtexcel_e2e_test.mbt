@@ -717,6 +717,24 @@ test "mbtexcel e2e chart and shape via workbook api" {
 }
 
 ///|
+test "mbtexcel e2e chart sheet roundtrip" {
+  let workbook = new_workbook()
+  let chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart/>
+    #|</c:chartSpace>
+  ignore(workbook.add_chart_sheet("Chart1", chart_xml))
+  let parsed = read(write(workbook))
+  let chart = match parsed.chart_sheet("Chart1") {
+    Some(value) => value
+    None => fail("missing chart sheet")
+  }
+  inspect(chart.name(), content="Chart1")
+  inspect(chart.chart_xml().contains("<c:chartSpace"), content="true")
+}
+
+///|
 test "mbtexcel e2e picture via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

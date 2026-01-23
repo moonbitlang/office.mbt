@@ -107,6 +107,8 @@ E2E coverage
 - [x] Add e2e test for VBA project roundtrip via wrapper APIs.
 - [x] Add e2e tests for ignored errors and pivot tables via workbook APIs.
 - [x] Add e2e tests for VML drawing XML (worksheet + header/footer).
+- [x] Add e2e tests for form controls and slicers via workbook APIs.
+- [x] Add e2e test for chart sheet roundtrip.
 
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).
