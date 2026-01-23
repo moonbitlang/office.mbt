@@ -137,6 +137,23 @@ test "mbtexcel read options unzip limits" {
 }
 
 ///|
+test "mbtexcel calc props validation" {
+  let workbook = new_workbook()
+  let bad_mode = @xlsx.CalcPropsOptions::with_values(calc_mode="bad")
+  let result1 : Result[Unit, Error] = try? workbook.set_calc_props(Some(bad_mode))
+  inspect(
+    result1,
+    content="Err(InvalidWorkbookProperty(msg=\"invalid calc mode\"))",
+  )
+  let bad_ref = @xlsx.CalcPropsOptions::with_values(ref_mode="R2C2")
+  let result2 : Result[Unit, Error] = try? workbook.set_calc_props(Some(bad_ref))
+  inspect(
+    result2,
+    content="Err(InvalidWorkbookProperty(msg=\"invalid reference mode\"))",
+  )
+}
+
+///|
 test "mbtexcel workbook protection invalid password" {
   let workbook = new_workbook()
   let opts = @xlsx.WorkbookProtectionOptions::with_values(
