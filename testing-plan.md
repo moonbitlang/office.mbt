@@ -129,7 +129,7 @@ Hygiene
 
 - Full `moon test` timed out locally after 300s; filtered tests pass.
 - `gh issue create` and `gh api` hung/timed out when trying to file the issue.
-- `moon coverage analyze` timed out at 300s; rerun with smaller scope or longer timeout.
+- `moon coverage analyze` timed out at 300s; `moon coverage analyze -p .` timed out at 120s. Rerun with smaller scope or longer timeout.
 
 ## Current Todo (Active)
 
