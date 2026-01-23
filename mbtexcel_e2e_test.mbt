@@ -651,6 +651,21 @@ test "mbtexcel e2e pivot table roundtrip" {
 }
 
 ///|
+test "mbtexcel e2e vml drawing roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_vml_drawing_xml("Sheet1", "<xml>vml</xml>")
+  workbook.add_vml_drawing_hf_xml("Sheet1", "<xml>hf</xml>")
+  let parsed = read(write(workbook))
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  inspect(sheet.vml_drawing_xml(), content="Some(\"<xml>vml</xml>\")")
+  inspect(sheet.vml_drawing_hf_xml(), content="Some(\"<xml>hf</xml>\")")
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
