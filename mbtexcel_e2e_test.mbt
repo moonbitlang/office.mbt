@@ -483,6 +483,83 @@ test "mbtexcel e2e page layout and margins" {
 }
 
 ///|
+test "mbtexcel e2e sheet view panes and dimension" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let view = @xlsx.SheetViewOptions::with_values(
+    show_grid_lines=false,
+    show_row_col_headers=false,
+    top_left_cell="B2",
+    zoom_scale=120.0,
+  )
+  workbook.set_sheet_view("Sheet1", 0, view)
+  let selection = @xlsx.Selection::with_values(
+    sqref="B3",
+    active_cell="B3",
+    pane="bottomRight",
+  )
+  let panes = @xlsx.Panes::with_values(
+    freeze=true,
+    x_split=1,
+    y_split=2,
+    top_left_cell="B3",
+    active_pane="bottomRight",
+    selection=[selection],
+  )
+  workbook.set_panes("Sheet1", panes)
+  workbook.set_sheet_dimension("Sheet1", "A1:C3")
+  let parsed = read(write(workbook))
+  let parsed_view = parsed.get_sheet_view("Sheet1", 0)
+  inspect(parsed_view.show_grid_lines == Some(false), content="true")
+  inspect(parsed_view.top_left_cell == Some("B2"), content="true")
+  inspect(parsed_view.zoom_scale == Some(120.0), content="true")
+  let parsed_panes = parsed.get_panes("Sheet1")
+  inspect(parsed_panes.freeze, content="true")
+  inspect(parsed_panes.x_split, content="1")
+  inspect(parsed_panes.y_split, content="2")
+  inspect(parsed_panes.top_left_cell, content="B3")
+  inspect(parsed.get_sheet_dimension("Sheet1"), content="A1:C3")
+}
+
+///|
+test "mbtexcel e2e calc props and default font" {
+  let workbook = new_workbook()
+  let calc = @xlsx.CalcPropsOptions::with_values(
+    calc_id=123,
+    calc_mode="manual",
+    full_calc_on_load=true,
+    iterate=true,
+    iterate_count=10,
+    iterate_delta=0.001,
+    calc_on_save=true,
+    force_full_calc=true,
+  )
+  workbook.set_calc_props(Some(calc))
+  workbook.set_default_font("Courier New")
+  let parsed = read(write(workbook))
+  let parsed_calc = parsed.get_calc_props()
+  inspect(parsed_calc.calc_id == Some(123), content="true")
+  inspect(parsed_calc.calc_mode == Some("manual"), content="true")
+  inspect(parsed_calc.full_calc_on_load == Some(true), content="true")
+  inspect(parsed_calc.iterate == Some(true), content="true")
+  inspect(parsed_calc.iterate_count == Some(10), content="true")
+  inspect(parsed_calc.iterate_delta == Some(0.001), content="true")
+  inspect(parsed_calc.calc_on_save == Some(true), content="true")
+  inspect(parsed_calc.force_full_calc == Some(true), content="true")
+  inspect(parsed.get_default_font(), content="Courier New")
+}
+
+///|
+test "mbtexcel e2e sheet visibility" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Hidden"))
+  workbook.set_sheet_visible("Hidden", false)
+  let parsed = read(write(workbook))
+  inspect(parsed.sheet_visible("Hidden"), content="false")
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
