@@ -115,6 +115,23 @@ async test "open_reader from pipe" {
 }
 
 ///|
+async test "read_zip_reader from pipe" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "E5", "reader")
+  let bytes = workbook.write_to_buffer()
+  let (reader, writer) = @async/io.pipe()
+  let parsed = @async.with_task_group(fn(group) {
+    group.spawn_bg(() => {
+      defer writer.close()
+      writer.write(bytes)
+    })
+    read_zip_reader(reader)
+  })
+  inspect(parsed.get_cell("Sheet1", "E5"), content="Some(\"reader\")")
+}
+
+///|
 test "write_to_buffer roundtrip" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
