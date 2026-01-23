@@ -265,3 +265,34 @@ test "mbtexcel e2e sheet protection" {
   }
   inspect(sheet.sheet_protection() is Some(_), content="true")
 }
+
+///|
+test "mbtexcel e2e defined names" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let dn = @xlsx.DefinedName::new("MyName", "Sheet1!$A$1")
+  workbook.set_defined_name(dn)
+  let parsed = read(write(workbook))
+  let names = parsed.get_defined_names()
+  inspect(names.length(), content="1")
+  inspect(
+    (names[0].name, names[0].refers_to),
+    content="(\"MyName\", \"Sheet1!$A$1\")",
+  )
+}
+
+///|
+test "mbtexcel e2e row/col insert remove shifts" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "alpha")
+  workbook.set_cell("Sheet1", "B2", "beta")
+  workbook.insert_rows("Sheet1", 1, 1)
+  workbook.insert_cols("Sheet1", 1, 1)
+  inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"alpha\")")
+  inspect(workbook.get_cell("Sheet1", "C3"), content="Some(\"beta\")")
+  workbook.remove_rows("Sheet1", 1, 1)
+  workbook.remove_cols("Sheet1", 1, 1)
+  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"beta\")")
+}
