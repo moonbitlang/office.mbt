@@ -10,5 +10,13 @@
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"
     }
+  ],
+  "test-import": [
+    "moonbitlang/async",
+    {
+      "path": "moonbitlang/async/fs",
+      "alias": "async/fs"
+    },
+    "moonbitlang/core/env"
   ]
 }
