@@ -690,6 +690,30 @@ test "mbtexcel e2e form control and slicer" {
 }
 
 ///|
+test "mbtexcel e2e delete table and slicer/form control" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let table = workbook.add_table("Sheet1", "A1:B2", "TableE2E", ["A", "B"])
+  let control = @xlsx.FormControl::new("C3", "Button", text="Go")
+  workbook.add_form_control("Sheet1", control)
+  let slicer = @xlsx.Slicer::new("SlicerDel")
+  workbook.add_slicer("Sheet1", slicer)
+  inspect(workbook.get_tables("Sheet1").length(), content="1")
+  inspect(workbook.get_form_controls("Sheet1").length(), content="1")
+  inspect(workbook.get_slicers("Sheet1").length(), content="1")
+  workbook.delete_table(table.name)
+  workbook.delete_form_control("Sheet1", "C3")
+  workbook.delete_slicer("SlicerDel")
+  inspect(workbook.get_tables("Sheet1").length(), content="0")
+  inspect(workbook.get_form_controls("Sheet1").length(), content="0")
+  inspect(workbook.get_slicers("Sheet1").length(), content="0")
+  let missing_table : Result[Unit, Error] = try? workbook.delete_table("Nope")
+  inspect(missing_table is Err(_), content="true")
+  let missing_slicer : Result[Unit, Error] = try? workbook.delete_slicer("Nope")
+  inspect(missing_slicer is Err(_), content="true")
+}
+
+///|
 test "mbtexcel e2e row and col helpers" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
