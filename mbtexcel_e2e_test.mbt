@@ -296,3 +296,25 @@ test "mbtexcel e2e row/col insert remove shifts" {
   inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
   inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"beta\")")
 }
+
+///|
+test "mbtexcel e2e comments" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let comment : @xlsx.Comment = {
+    cell: "A1",
+    author: "tester",
+    text: "note",
+    paragraph: [],
+    width: None,
+    height: None,
+  }
+  workbook.add_comment("Sheet1", comment)
+  let parsed = read(write(workbook))
+  let comments = parsed.get_comments("Sheet1")
+  inspect(comments.length(), content="1")
+  inspect(
+    (comments[0].cell, comments[0].author, comments[0].text),
+    content="(\"A1\", \"tester\", \"note\")",
+  )
+}
