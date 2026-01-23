@@ -690,6 +690,17 @@ test "mbtexcel e2e form control and slicer" {
 }
 
 ///|
+test "mbtexcel e2e row and col helpers" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_row("Sheet1", 1, ["A", "B", "C"])
+  workbook.set_col("Sheet1", 2, ["X", "Y"])
+  let parsed = read(write(workbook))
+  inspect(parsed.get_row("Sheet1", 1), content="[\"A\", \"X\", \"C\"]")
+  inspect(parsed.get_col("Sheet1", 2), content="[\"X\", \"Y\"]")
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

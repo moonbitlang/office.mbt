@@ -109,6 +109,7 @@ E2E coverage
 - [x] Add e2e tests for VML drawing XML (worksheet + header/footer).
 - [x] Add e2e tests for form controls and slicers via workbook APIs.
 - [x] Add e2e test for chart sheet roundtrip.
+- [x] Add e2e test for row/col helpers roundtrip.
 
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).
