@@ -402,3 +402,27 @@ test "mbtexcel e2e page breaks" {
   inspect(sheet.row_breaks().length(), content="1")
   inspect(sheet.col_breaks().length(), content="1")
 }
+
+///|
+test "mbtexcel e2e custom properties" {
+  let workbook = new_workbook()
+  workbook.set_custom_props(
+    @xlsx.CustomProperty::new(
+      "Text",
+      Some(@xlsx.CustomPropertyValue::Text("hello")),
+    ),
+  )
+  workbook.set_custom_props(
+    @xlsx.CustomProperty::new(
+      "Count",
+      Some(@xlsx.CustomPropertyValue::Integer(3)),
+    ),
+  )
+  let parsed = read(write(workbook))
+  let props = parsed.get_custom_props()
+  inspect(props.length(), content="2")
+  inspect(
+    (props[0].name, props[1].name),
+    content="(\"Text\", \"Count\")",
+  )
+}
