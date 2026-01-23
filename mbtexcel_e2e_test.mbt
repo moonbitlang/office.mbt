@@ -354,3 +354,37 @@ test "mbtexcel e2e sheet props roundtrip" {
   inspect(parsed_props.fit_to_page, content="Some(true)")
   inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
 }
+
+///|
+test "mbtexcel e2e workbook props roundtrip" {
+  let workbook = new_workbook()
+  let props = @xlsx.WorkbookPropsOptions::with_values(
+    date_1904=true,
+    filter_privacy=true,
+    code_name="BookCode",
+  )
+  workbook.set_workbook_props(Some(props))
+  let parsed = read(write(workbook))
+  let parsed_props = parsed.get_workbook_props()
+  inspect(parsed_props.date_1904, content="Some(true)")
+  inspect(parsed_props.filter_privacy, content="Some(true)")
+  inspect(parsed_props.code_name, content="Some(\"BookCode\")")
+}
+
+///|
+test "mbtexcel e2e workbook protection xml" {
+  let workbook = new_workbook()
+  let opts = @xlsx.WorkbookProtectionOptions::with_values(
+    password="secret",
+    lock_structure=true,
+  )
+  workbook.protect_workbook(options=opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let workbook_xml = match archive.get("xl/workbook.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing workbook xml")
+  }
+  inspect(workbook_xml.contains("workbookProtection"), content="true")
+  inspect(workbook_xml.contains("lockStructure=\"1\""), content="true")
+}
