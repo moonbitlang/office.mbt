@@ -388,3 +388,17 @@ test "mbtexcel e2e workbook protection xml" {
   inspect(workbook_xml.contains("workbookProtection"), content="true")
   inspect(workbook_xml.contains("lockStructure=\"1\""), content="true")
 }
+
+///|
+test "mbtexcel e2e page breaks" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.insert_page_break("Sheet1", "B2")
+  let parsed = read(write(workbook))
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  inspect(sheet.row_breaks().length(), content="1")
+  inspect(sheet.col_breaks().length(), content="1")
+}
