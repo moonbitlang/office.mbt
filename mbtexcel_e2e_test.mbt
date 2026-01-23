@@ -230,3 +230,38 @@ test "mbtexcel e2e sheet background" {
     None => fail("missing background")
   }
 }
+
+///|
+test "mbtexcel e2e auto filter roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let options : Array[@xlsx.AutoFilterOption] = [
+    { column: "B", expression: "x == 10" },
+    { column: "C", expression: "x > 5" },
+  ]
+  workbook.set_auto_filter("Sheet1", "A1:C3", options)
+  let parsed = read(write(workbook))
+  inspect(
+    parsed.get_auto_filter("Sheet1"),
+    content=(
+      #|Some({range_ref: "A1:C3", columns: [{col: 2, filters: Some(["10"]), custom_filters: None}, {col: 3, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "greaterThan", value: "5"}]})}]})
+    ),
+  )
+}
+
+///|
+test "mbtexcel e2e sheet protection" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = @xlsx.SheetProtectionOptions::with_values(
+    password="secret",
+    auto_filter=true,
+  )
+  workbook.protect_sheet("Sheet1", opts)
+  let parsed = read(write(workbook))
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  inspect(sheet.sheet_protection() is Some(_), content="true")
+}
