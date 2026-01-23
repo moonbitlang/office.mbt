@@ -136,3 +136,4 @@ Hygiene
 
 - [ ] Run full `moon test` (use `#skip` for known long tests, then finalize with `--include-skipped`).
 - [ ] Run `moon coverage analyze` and confirm >= 90% overall coverage.
+- [x] Add e2e tests for shapes/charts/pictures via workbook-level APIs (blackbox).

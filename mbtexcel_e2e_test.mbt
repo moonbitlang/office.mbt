@@ -481,3 +481,55 @@ test "mbtexcel e2e page layout and margins" {
   inspect(parsed_layout.fit_to_width, content="Some(2)")
   inspect(parsed_layout.black_and_white, content="Some(true)")
 }
+
+///|
+test "mbtexcel e2e chart and shape via workbook api" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let chart_xml =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+    #|  <c:chart/>
+    #|</c:chartSpace>
+  workbook.add_chart("Sheet1", "C3", chart_xml)
+  let shape = @xlsx.Shape::new("A1", "rect", text="Hello")
+  workbook.add_shape("Sheet1", shape)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart.contains("<c:chartSpace"), content="true")
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("graphicFrame"), content="true")
+  inspect(drawing_xml.contains("prst=\"rect\""), content="true")
+}
+
+///|
+test "mbtexcel e2e picture via workbook api" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let img : Bytes = [1, 2, 3, 4]
+  workbook.add_picture_from_bytes("Sheet1", "B2", img, ".png")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let stored = match archive.get("xl/media/image1.png") {
+    Some(value) => value
+    None => fail("missing image1.png")
+  }
+  inspect(stored == img, content="true")
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("<xdr:pic"), content="true")
+  let types_xml = match archive.get("[Content_Types].xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing content types")
+  }
+  inspect(types_xml.contains("Extension=\"png\""), content="true")
+}
