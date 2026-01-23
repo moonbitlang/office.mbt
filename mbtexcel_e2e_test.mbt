@@ -209,3 +209,24 @@ test "mbtexcel e2e header footer images" {
   )
   inspect(first.data == img, content="true")
 }
+
+///|
+test "mbtexcel e2e sheet background" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bg : Bytes = [1, 2, 3, 4, 5]
+  workbook.set_sheet_background("Sheet1", bg, ".png")
+  let parsed = read(write(workbook))
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  match sheet.sheet_background() {
+    Some(value) => {
+      inspect(value.extension, content="png")
+      inspect(value.content_type, content="image/png")
+      inspect(value.data == bg, content="true")
+    }
+    None => fail("missing background")
+  }
+}
