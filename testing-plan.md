@@ -130,6 +130,7 @@ Hygiene
 - Full `moon test` timed out locally after 300s; filtered tests pass.
 - `gh issue create` and `gh api` hung/timed out when trying to file the issue.
 - `moon coverage analyze` timed out at 300s; `moon coverage analyze -p .` timed out at 120s. Rerun with smaller scope or longer timeout.
+- Conditional formats are not parsed on read yet; e2e test verifies XML output instead.
 
 ## Current Todo (Active)
 
