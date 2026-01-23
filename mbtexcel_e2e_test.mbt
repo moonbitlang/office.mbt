@@ -426,3 +426,25 @@ test "mbtexcel e2e custom properties" {
     content="(\"Text\", \"Count\")",
   )
 }
+
+///|
+test "mbtexcel e2e core and app properties" {
+  let workbook = new_workbook()
+  let core = @xlsx.CoreProperties::with_values(
+    title="Title",
+    creator="Author",
+  )
+  let app = @xlsx.AppProperties::with_values(
+    application="mbtexcel",
+    company="MoonBit",
+  )
+  workbook.set_core_properties(core)
+  workbook.set_app_properties(app)
+  let parsed = read(write(workbook))
+  let parsed_core = parsed.core_properties()
+  let parsed_app = parsed.app_properties()
+  inspect(parsed_core.title, content="Title")
+  inspect(parsed_core.creator, content="Author")
+  inspect(parsed_app.application, content="mbtexcel")
+  inspect(parsed_app.company, content="MoonBit")
+}
