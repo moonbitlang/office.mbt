@@ -560,6 +560,18 @@ test "mbtexcel e2e sheet visibility" {
 }
 
 ///|
+test "mbtexcel e2e active sheet index" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Sheet2"))
+  workbook.set_active_sheet(1)
+  let parsed = read(write(workbook))
+  inspect(parsed.active_sheet_index(), content="1")
+  parsed.set_active_sheet(99)
+  inspect(parsed.active_sheet_index(), content="0")
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
