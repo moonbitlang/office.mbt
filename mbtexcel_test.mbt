@@ -123,3 +123,15 @@ test "mbtexcel row/col visibility and style ranges" {
   inspect(workbook.row_visible("Sheet1", 2), content="false")
   inspect(workbook.col_visible("Sheet1", 3), content="false")
 }
+
+///|
+test "mbtexcel read options unzip limits" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bytes = write(workbook)
+  let opts = @xlsx.Options::with_values(unzip_size_limit=1)
+  let result : Result[@xlsx.Workbook, Error] = try? read(bytes, options=opts)
+  guard result is Err(@xlsx.XlsxError::InvalidOptions(_)) else {
+    fail("expected unzip size limit error")
+  }
+}

@@ -172,3 +172,40 @@ test "mbtexcel e2e stream writer" {
   inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"A\")")
   inspect(parsed.get_cell_formula("Sheet1", "A2"), content="Some(\"SUM(A1,B1)\")")
 }
+
+///|
+test "mbtexcel e2e header footer images" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_header_footer(
+    "Sheet1",
+    Some(@xlsx.HeaderFooterOptions::with_values(odd_header="&L&G")),
+  )
+  let img : Bytes = [10, 20, 30]
+  workbook.add_header_footer_image(
+    "Sheet1",
+    @xlsx.HeaderFooterImageOptions::new(
+      @xlsx.HeaderFooterImagePosition::Left,
+      img,
+      ".png",
+      width="50pt",
+      height="32pt",
+    ),
+  )
+  let parsed = read(write(workbook))
+  let images = parsed.get_header_footer_images("Sheet1")
+  inspect(images.length(), content="1")
+  let first = images[0]
+  inspect(
+    (
+      first.position,
+      first.is_footer,
+      first.first_page,
+      first.extension,
+      first.width,
+      first.height,
+    ),
+    content="(Left, false, false, \"png\", \"50pt\", \"32pt\")",
+  )
+  inspect(first.data == img, content="true")
+}

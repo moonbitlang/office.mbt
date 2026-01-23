@@ -107,8 +107,8 @@ E2E coverage
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).
 - [x] Add tests for row/col style ranges and hidden flags.
-- [ ] Add tests for image/header-footer image roundtrip.
-- [ ] Add tests for options (raw cell values, unzip limits).
+- [x] Add tests for image/header-footer image roundtrip.
+- [x] Add tests for options (raw cell values, unzip limits).
 
 Quality gates
 - [x] Run `moon check`.
@@ -133,7 +133,5 @@ Hygiene
 
 ## Current Todo (Active)
 
-- [ ] Add tests for image/header-footer image roundtrip.
-- [ ] Add tests for options (raw cell values, unzip limits).
 - [ ] Run full `moon test` (use `#skip` for known long tests, then finalize with `--include-skipped`).
 - [ ] Run `moon coverage analyze` and confirm >= 90% overall coverage.
