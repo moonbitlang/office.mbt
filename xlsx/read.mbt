@@ -995,6 +995,45 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
+  let validations : Array[String] = []
+  let body = match extract_tag_body(xml, "dataValidations") {
+    Some(value) => value
+    None => return validations
+  }
+  let mut first = true
+  for chunk in body.split("<dataValidation ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let close_tag = "</dataValidation>"
+    match text.find(close_tag) {
+      Some(pos) => {
+        let end = pos + close_tag.length()
+        let slice = text[:end] catch {
+            _ => raise XlsxError::InvalidXml(msg="dataValidation tag invalid")
+          }
+        validations.push("<dataValidation \{slice.to_string()}")
+      }
+      None => {
+        let end = match text.find("/>") {
+          Some(pos) => pos + 2
+          None =>
+            raise XlsxError::InvalidXml(msg="dataValidation tag not closed")
+        }
+        let slice = text[:end] catch {
+            _ => raise XlsxError::InvalidXml(msg="dataValidation tag invalid")
+          }
+        validations.push("<dataValidation \{slice.to_string()}")
+      }
+    }
+  }
+  validations
+}
+
+///|
 fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
   let xml_str = xml.to_string()
   let marker = "<dimension"
@@ -2854,6 +2893,7 @@ fn read_zip_bytes(
         sheet_xml, "legacyDrawingHF",
       )
       let sparkline_groups = parse_sparkline_groups(sheet_xml)
+      let data_validations = parse_data_validations(sheet_xml)
       let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
@@ -3175,7 +3215,7 @@ fn read_zip_bytes(
         shapes: [],
         form_controls: [],
         slicers: [],
-        data_validations: [],
+        data_validations,
         conditional_formats: [],
         ignored_errors,
         comments,
