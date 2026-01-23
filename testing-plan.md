@@ -104,6 +104,7 @@ E2E coverage
 - [x] Add e2e test for stream writer roundtrip.
 - [x] Add e2e test for encrypted workbook roundtrip via wrappers.
 - [x] Add e2e test for active sheet index roundtrip.
+- [x] Add e2e test for VBA project roundtrip via wrapper APIs.
 
 XLSX package gaps
 - [x] Add explicit tests for workbook/sheet ops (rename, delete, reorder).

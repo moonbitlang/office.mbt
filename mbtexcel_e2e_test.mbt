@@ -572,6 +572,34 @@ test "mbtexcel e2e active sheet index" {
 }
 
 ///|
+test "mbtexcel e2e vba project roundtrip" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  let vba_header : Array[Byte] = [
+    0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+  ]
+  let vba_bytes : Bytes = Bytes::from_array(vba_header)
+  workbook.add_vba_project(vba_bytes)
+  let bytes = write(workbook)
+  let parsed = read(bytes)
+  let bytes2 = write(parsed)
+  let archive = @zip.read(bytes2)
+  let vba_part = match archive.get("xl/vbaProject.bin") {
+    Some(value) => value
+    None => fail("missing vba project")
+  }
+  inspect(vba_part == vba_bytes, content="true")
+  let types_xml = match archive.get("[Content_Types].xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing content types")
+  }
+  inspect(
+    types_xml.contains("application/vnd.ms-office.vbaProject"),
+    content="true",
+  )
+}
+
+///|
 test "mbtexcel e2e chart and shape via workbook api" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
