@@ -8,3 +8,5 @@ target
 ..mi
 *~
 excelize
+__pycache__/
+*.pyc
