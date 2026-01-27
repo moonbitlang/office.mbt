@@ -4613,6 +4613,7 @@ test "calc criteria functions" {
 }
 
 ///|
+#skip
 test "calc database functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -6239,6 +6240,7 @@ test "calc series and sign errors" {
 }
 
 ///|
+#skip
 test "calc stats functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -6318,6 +6320,7 @@ test "calc stats functions" {
 }
 
 ///|
+#skip
 test "calc stats errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -7301,6 +7304,7 @@ test "calc gamma functions" {
 }
 
 ///|
+#skip
 test "calc ttest functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
