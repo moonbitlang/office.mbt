@@ -4613,10 +4613,7 @@ test "calc criteria functions" {
 }
 
 ///|
-#skip
-test "calc database functions" {
-  let workbook = Workbook::new()
-  let sheet = workbook.add_sheet("Sheet1")
+fn set_calc_database_base_data(sheet : Worksheet) -> Unit raise XlsxError {
   sheet.set_cell_value("A1", CellValue::String("Tree"))
   sheet.set_cell_value("B1", CellValue::String("Height"))
   sheet.set_cell_value("C1", CellValue::String("Age"))
@@ -4662,7 +4659,11 @@ test "calc database functions" {
   sheet.set_cell_value("C10", CellValue::Numeric(11.0))
   sheet.set_cell_value("D10", CellValue::Numeric(6.0))
   sheet.set_cell_value("E10", CellValue::Numeric(45.0))
-  let checks : Array[(String, String)] = [
+}
+
+///|
+fn calc_database_checks() -> Array[(String, String)] {
+  [
     ("DAVERAGE(A4:E10,\"Profit\",A1:F3)", "73.25"),
     ("DCOUNT(A4:E10,\"Age\",A1:F2)", "1"),
     ("DCOUNT(A4:E10,,A1:F2)", "2"),
@@ -4686,12 +4687,11 @@ test "calc database functions" {
     ("DVAR(A4:E10,\"Profit\",A1:F3)", "444.25"),
     ("DVARP(A4:E10,\"Profit\",A1:F3)", "333.1875"),
   ]
-  for item in checks {
-    let (formula, expected) = item
-    sheet.set_cell_formula("A11", formula)
-    inspect(workbook.calc_cell_value("Sheet1", "A11"), content=expected)
-  }
-  let error_checks : Array[(String, String)] = [
+}
+
+///|
+fn calc_database_error_checks() -> Array[(String, String)] {
+  [
     ("DAVERAGE()", "#VALUE!"),
     ("DAVERAGE(A4:E10,\"x\",A1:F3)", "#VALUE!"),
     ("DAVERAGE(A4:E10,\"Tree\",A1:F3)", "#DIV/0!"),
@@ -4728,6 +4728,20 @@ test "calc database functions" {
     ("DVARP()", "#VALUE!"),
     ("DVARP(A4:E10,\"x\",A1:F3)", "#VALUE!"),
   ]
+}
+
+///|
+test "calc database functions" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_calc_database_base_data(sheet)
+  let checks = calc_database_checks()
+  for item in checks {
+    let (formula, expected) = item
+    sheet.set_cell_formula("A11", formula)
+    inspect(workbook.calc_cell_value("Sheet1", "A11"), content=expected)
+  }
+  let error_checks = calc_database_error_checks()
   for item in error_checks {
     let (formula, expected) = item
     sheet.set_cell_formula("A11", formula)
@@ -6240,7 +6254,6 @@ test "calc series and sign errors" {
 }
 
 ///|
-#skip
 test "calc stats functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -6320,7 +6333,6 @@ test "calc stats functions" {
 }
 
 ///|
-#skip
 test "calc stats errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -7304,10 +7316,7 @@ test "calc gamma functions" {
 }
 
 ///|
-#skip
-test "calc ttest functions" {
-  let workbook = Workbook::new()
-  let sheet = workbook.add_sheet("Sheet1")
+fn set_ttest_base_data(sheet : Worksheet) -> Unit raise XlsxError {
   let col_a : Array[Double] = [
     4.0, 5.0, 2.0, 5.0, 8.0, 9.0, 3.0, 2.0, 3.0, 8.0, 9.0, 5.0,
   ]
@@ -7323,6 +7332,13 @@ test "calc ttest functions" {
   sheet.set_cell_value("E1", CellValue::Numeric(1.0))
   sheet.set_cell_value("D2", CellValue::Numeric(1.0))
   sheet.set_cell_value("E2", CellValue::Numeric(1.0))
+}
+
+///|
+test "calc ttest functions (part 1)" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
   let cases : Array[(String, String)] = [
     ("TTEST(A1:A12,B1:B12,1,1)", "0.44907068944428"),
     ("TTEST(A1:A12,B1:B12,1,2)", "0.436717306029283"),
@@ -7330,6 +7346,21 @@ test "calc ttest functions" {
     ("TTEST(A1:A12,B1:B12,2,1)", "0.89814137888856"),
     ("TTEST(A1:A12,B1:B12,2,2)", "0.873434612058567"),
     ("TTEST(A1:A12,B1:B12,2,3)", "0.873444030769511"),
+  ]
+  for idx, entry in cases {
+    let (formula, expected) = entry
+    let cell = "C\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc ttest functions (part 2)" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  let cases : Array[(String, String)] = [
     ("T.TEST(A1:A12,B1:B12,1,1)", "0.44907068944428"),
     ("T.TEST(A1:A12,B1:B12,1,2)", "0.436717306029283"),
     ("T.TEST(A1:A12,B1:B12,1,3)", "0.436722015384755"),
@@ -7343,6 +7374,13 @@ test "calc ttest functions" {
     sheet.set_cell_formula(cell, formula)
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
+}
+
+///|
+test "calc ttest errors (TTEST) bad args" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
   let error_cases : Array[(String, String)] = [
     ("TTEST()", "#VALUE!"),
     ("TTEST(\"\",B1:B12,1,1)", "#NUM!"),
@@ -7351,23 +7389,6 @@ test "calc ttest functions" {
     ("TTEST(A1:A12,B1:B12,1,\"\")", "#VALUE!"),
     ("TTEST(A1:A12,B1:B12,0,1)", "#NUM!"),
     ("TTEST(A1:A12,B1:B12,1,0)", "#NUM!"),
-    ("TTEST(A1:A2,B1:B1,1,1)", "#N/A"),
-    ("TTEST(A13:A14,B13:B14,1,1)", "#NUM!"),
-    ("TTEST(A12:A13,B12:B13,1,1)", "#DIV/0!"),
-    ("TTEST(A13:A14,B13:B14,1,2)", "#NUM!"),
-    ("TTEST(D1:D4,E1:E4,1,3)", "#NUM!"),
-    ("T.TEST()", "#VALUE!"),
-    ("T.TEST(\"\",B1:B12,1,1)", "#NUM!"),
-    ("T.TEST(A1:A12,\"\",1,1)", "#NUM!"),
-    ("T.TEST(A1:A12,B1:B12,\"\",1)", "#VALUE!"),
-    ("T.TEST(A1:A12,B1:B12,1,\"\")", "#VALUE!"),
-    ("T.TEST(A1:A12,B1:B12,0,1)", "#NUM!"),
-    ("T.TEST(A1:A12,B1:B12,1,0)", "#NUM!"),
-    ("T.TEST(A1:A2,B1:B1,1,1)", "#N/A"),
-    ("T.TEST(A13:A14,B13:B14,1,1)", "#NUM!"),
-    ("T.TEST(A12:A13,B12:B13,1,1)", "#DIV/0!"),
-    ("T.TEST(A13:A14,B13:B14,1,2)", "#NUM!"),
-    ("T.TEST(D1:D4,E1:E4,1,3)", "#NUM!"),
   ]
   for idx, entry in error_cases {
     let (formula, expected) = entry
@@ -7375,6 +7396,118 @@ test "calc ttest functions" {
     sheet.set_cell_formula(cell, formula)
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
+}
+
+///|
+test "calc ttest errors (TTEST) range mismatch" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "TTEST(A1:A2,B1:B1,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#N/A")
+}
+
+///|
+test "calc ttest errors (TTEST) empty ranges" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "TTEST(A13:A14,B13:B14,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#NUM!")
+}
+
+///|
+test "calc ttest errors (TTEST) div0" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "TTEST(A12:A13,B12:B13,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#DIV/0!")
+}
+
+///|
+test "calc ttest errors (TTEST) empty ranges (tails=2)" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "TTEST(A13:A14,B13:B14,1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#NUM!")
+}
+
+///|
+test "calc ttest errors (TTEST) unequal variance df" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "TTEST(D1:D4,E1:E4,1,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#NUM!")
+}
+
+///|
+test "calc ttest errors (T.TEST) bad args" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  let error_cases : Array[(String, String)] = [
+    ("T.TEST()", "#VALUE!"),
+    ("T.TEST(\"\",B1:B12,1,1)", "#NUM!"),
+    ("T.TEST(A1:A12,\"\",1,1)", "#NUM!"),
+    ("T.TEST(A1:A12,B1:B12,\"\",1)", "#VALUE!"),
+    ("T.TEST(A1:A12,B1:B12,1,\"\")", "#VALUE!"),
+    ("T.TEST(A1:A12,B1:B12,0,1)", "#NUM!"),
+    ("T.TEST(A1:A12,B1:B12,1,0)", "#NUM!"),
+  ]
+  for idx, entry in error_cases {
+    let (formula, expected) = entry
+    let cell = "F\{idx + 1}"
+    sheet.set_cell_formula(cell, formula)
+    inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
+  }
+}
+
+///|
+test "calc ttest errors (T.TEST) range mismatch" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "T.TEST(A1:A2,B1:B1,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#N/A")
+}
+
+///|
+test "calc ttest errors (T.TEST) empty ranges" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "T.TEST(A13:A14,B13:B14,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#NUM!")
+}
+
+///|
+test "calc ttest errors (T.TEST) div0" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "T.TEST(A12:A13,B12:B13,1,1)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#DIV/0!")
+}
+
+///|
+test "calc ttest errors (T.TEST) empty ranges (tails=2)" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "T.TEST(A13:A14,B13:B14,1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#NUM!")
+}
+
+///|
+test "calc ttest errors (T.TEST) unequal variance df" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  set_ttest_base_data(sheet)
+  sheet.set_cell_formula("F1", "T.TEST(D1:D4,E1:E4,1,3)")
+  inspect(workbook.calc_cell_value("Sheet1", "F1"), content="#NUM!")
 }
 
 ///|

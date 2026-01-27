@@ -3386,6 +3386,63 @@ fn effective_range_bounds(
 }
 
 ///|
+fn function_may_spill(name : String) -> Bool {
+  match name {
+    "TRANSPOSE"
+    | "MUNIT"
+    | "_XLFN.MUNIT"
+    | "SEQUENCE"
+    | "_XLFN.SEQUENCE"
+    | "RANDARRAY"
+    | "_XLFN.RANDARRAY"
+    | "MINVERSE"
+    | "MMULT"
+    | "TREND"
+    | "GROWTH"
+    | "XLOOKUP"
+    | "_XLFN.XLOOKUP"
+    | "TEXTSPLIT"
+    | "_XLFN.TEXTSPLIT"
+    | "FREQUENCY"
+    | "MODE.MULT"
+    | "ANCHORARRAY"
+    | "_XLFN.ANCHORARRAY"
+    | "INDIRECT"
+    | "SORT"
+    | "_XLFN.SORT"
+    | "SORTBY"
+    | "_XLFN.SORTBY"
+    | "UNIQUE"
+    | "_XLFN.UNIQUE"
+    | "FILTER"
+    | "_XLFN.FILTER"
+    | "TAKE"
+    | "_XLFN.TAKE"
+    | "DROP"
+    | "_XLFN.DROP"
+    | "CHOOSECOLS"
+    | "_XLFN.CHOOSECOLS"
+    | "CHOOSEROWS"
+    | "_XLFN.CHOOSEROWS"
+    | "HSTACK"
+    | "_XLFN.HSTACK"
+    | "VSTACK"
+    | "_XLFN.VSTACK"
+    | "EXPAND"
+    | "_XLFN.EXPAND"
+    | "WRAPROWS"
+    | "_XLFN.WRAPROWS"
+    | "WRAPCOLS"
+    | "_XLFN.WRAPCOLS"
+    | "TOCOL"
+    | "_XLFN.TOCOL"
+    | "TOROW"
+    | "_XLFN.TOROW" => true
+    _ => false
+  }
+}
+
+///|
 fn array_shape_from_expr(
   workbook : Workbook,
   sheet_name : String,
@@ -3424,6 +3481,8 @@ fn array_shape_from_expr(
           Some(value) => array_shape_from_expr(workbook, sheet_name, value, ctx)
           None => None
         }
+      } else if !function_may_spill(name) {
+        Some((1, 1))
       } else {
         let values : Array[FormulaValue] = []
         for arg in args {

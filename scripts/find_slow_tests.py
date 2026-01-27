@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -176,6 +177,7 @@ def write_markdown_report(
     results: List[TestResult],
     timeout_s: float,
     build_dir: Path,
+    filters: Optional[Dict[str, Any]] = None,
 ) -> None:
     ok = [r for r in results if r.status == "ok"]
     timeouts = [r for r in results if r.status == "timeout"]
@@ -200,6 +202,8 @@ def write_markdown_report(
     lines.append(f"- Generated at: `{time.strftime('%Y-%m-%d %H:%M:%S %z')}`")
     lines.append(f"- Build metadata: `{build_dir}`")
     lines.append(f"- Per-test timeout: `{timeout_s:.1f}s`")
+    if filters:
+        lines.append(f"- Filters: `{filters}`")
     lines.append(f"- p50/p95/p99 computed from OK tests (including `#skip` tests).")
     lines.append("")
     lines.append("## Summary")
@@ -299,6 +303,24 @@ def main() -> int:
         default="docs/slow-tests.md",
         help="Markdown report path (default: docs/slow-tests.md)",
     )
+    ap.add_argument(
+        "--package",
+        action="append",
+        default=[],
+        help="Restrict to a package (repeatable). Use '.' for the root package.",
+    )
+    ap.add_argument(
+        "--file",
+        action="append",
+        default=[],
+        help="Restrict to test files matching this glob (repeatable), e.g. 'calc_test.mbt'.",
+    )
+    ap.add_argument(
+        "--name",
+        action="append",
+        default=[],
+        help="Restrict to test names matching this glob (repeatable), e.g. '*ttest*'.",
+    )
     args = ap.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -338,6 +360,21 @@ def main() -> int:
     cases = list(uniq.values())
     cases.sort(key=lambda c: (c.package, c.suite, c.filename, c.index))
 
+    package_filters = set(args.package) if args.package else None
+    file_filters = list(args.file) if args.file else None
+    name_filters = list(args.name) if args.name else None
+
+    def keep(c: TestCase) -> bool:
+        if package_filters is not None and c.package not in package_filters:
+            return False
+        if file_filters is not None and not any(fnmatch(c.filename, pat) for pat in file_filters):
+            return False
+        if name_filters is not None and not any(fnmatch(c.name, pat) for pat in name_filters):
+            return False
+        return True
+
+    cases = [c for c in cases if keep(c)]
+
     results: List[TestResult] = []
 
     for c in cases:
@@ -358,6 +395,7 @@ def main() -> int:
         results=results,
         timeout_s=float(args.timeout),
         build_dir=test_root,
+        filters={k: v for k, v in {"package": args.package, "file": args.file, "name": args.name}.items() if v},
     )
 
     # Print a compact summary for CI / humans.

@@ -170,7 +170,10 @@ test "mbtexcel e2e stream writer" {
   writer.flush()
   let parsed = read(write(workbook))
   inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"A\")")
-  inspect(parsed.get_cell_formula("Sheet1", "A2"), content="Some(\"SUM(A1,B1)\")")
+  inspect(
+    parsed.get_cell_formula("Sheet1", "A2"),
+    content="Some(\"SUM(A1,B1)\")",
+  )
 }
 
 ///|
@@ -421,19 +424,13 @@ test "mbtexcel e2e custom properties" {
   let parsed = read(write(workbook))
   let props = parsed.get_custom_props()
   inspect(props.length(), content="2")
-  inspect(
-    (props[0].name, props[1].name),
-    content="(\"Text\", \"Count\")",
-  )
+  inspect((props[0].name, props[1].name), content="(\"Text\", \"Count\")")
 }
 
 ///|
 test "mbtexcel e2e core and app properties" {
   let workbook = new_workbook()
-  let core = @xlsx.CoreProperties::with_values(
-    title="Title",
-    creator="Author",
-  )
+  let core = @xlsx.CoreProperties::with_values(title="Title", creator="Author")
   let app = @xlsx.AppProperties::with_values(
     application="mbtexcel",
     company="MoonBit",
@@ -626,12 +623,14 @@ test "mbtexcel e2e ignored errors roundtrip" {
 test "mbtexcel e2e pivot table roundtrip" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
-  ignore(workbook.add_pivot_table(
-    "Sheet1",
-    "<pivotTableDefinition name=\"PivotE2E\"/>",
-    "<pivotCacheDefinition cacheId=\"1\"/>",
-    cache_records_xml="<pivotCacheRecords count=\"0\"/>",
-  ))
+  ignore(
+    workbook.add_pivot_table(
+      "Sheet1",
+      "<pivotTableDefinition name=\"PivotE2E\"/>",
+      "<pivotCacheDefinition cacheId=\"1\"/>",
+      cache_records_xml="<pivotCacheRecords count=\"0\"/>",
+    ),
+  )
   let parsed = read(write(workbook))
   let pivots = parsed.get_pivot_tables("Sheet1")
   inspect(pivots.length(), content="1")
@@ -723,7 +722,10 @@ test "mbtexcel e2e group and ungroup sheets" {
   let bad_group : Result[Unit, Error] = try? workbook.group_sheets([
     "Sheet1", "Sheet3",
   ])
-  inspect(bad_group is Err(@xlsx.XlsxError::InvalidSheetOperation(_)), content="true")
+  inspect(
+    bad_group is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
   workbook.group_sheets(["Sheet2", "Sheet3"])
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
