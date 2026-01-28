@@ -27,7 +27,7 @@ References:
 - [x] Add picture `name` / `alt_text` options (partial parity with Excelize `GraphicOptions` in `excelize/xmlDrawing.go`)
 - [x] Add picture lock-aspect option (partial `GraphicOptions` parity)
 - [x] Follow-up: picture positioning (oneCell/twoCell) (more `GraphicOptions` parity)
-- [ ] Follow-up: picture autofit options (AutoFit / AutoFitIgnoreAspect) (more `GraphicOptions` parity)
+- [x] Follow-up: picture autofit options (AutoFit / AutoFitIgnoreAspect) (more `GraphicOptions` parity)
 - [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
 
 ### Sparklines

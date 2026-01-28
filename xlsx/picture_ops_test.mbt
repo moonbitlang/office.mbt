@@ -177,6 +177,46 @@ test "picture positioning twoCell" {
 }
 
 ///|
+async test "picture autofit preserves aspect" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_col_width(1, 1.0)
+  sheet.set_row_height(1, 10.0)
+  workbook.add_picture("Sheet1", "A1", "excelize/logo.png", auto_fit=true)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("cx=\"76200\""), content="true")
+  inspect(drawing_xml.contains("cy=\"76200\""), content="true")
+}
+
+///|
+async test "picture autofit ignore aspect" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_col_width(1, 1.0)
+  sheet.set_row_height(1, 10.0)
+  workbook.add_picture(
+    "Sheet1",
+    "A1",
+    "excelize/logo.png",
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("cx=\"76200\""), content="true")
+  inspect(drawing_xml.contains("cy=\"114300\""), content="true")
+}
+
+///|
 test "picture options validation" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

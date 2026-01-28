@@ -23,6 +23,8 @@ pub struct Image {
   offset_y : Int
   scale_x : Double
   scale_y : Double
+  width_emu : Int
+  height_emu : Int
   hyperlink : String
   hyperlink_type : HyperlinkType
   name : String
@@ -1387,6 +1389,140 @@ fn normalize_picture_options(
 }
 
 ///|
+let picture_emu_per_pixel = 9525
+
+///|
+let default_picture_width_px = 200
+
+///|
+let default_picture_height_px = 160
+
+///|
+let default_col_width_pixels = 64
+
+///|
+let default_row_height_pixels = 20
+
+///|
+fn convert_col_width_to_pixels(width : Double) -> Int {
+  if width == 0.0 {
+    return 0
+  }
+  let pixels = width * 8.0 + 0.5
+  pixels.to_int()
+}
+
+///|
+fn convert_row_height_to_pixels(height : Double) -> Int {
+  if height == 0.0 {
+    return 0
+  }
+  Double::ceil(4.0 / 3.4 * height).to_int()
+}
+
+///|
+fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
+  match self.col_dimensions.get(col) {
+    Some(dim) =>
+      if dim.hidden {
+        0
+      } else {
+        match dim.width {
+          Some(width) => convert_col_width_to_pixels(width)
+          None => {
+            let props = sheet_props_with_defaults(self.sheet_props)
+            match props.default_col_width {
+              Some(w) => convert_col_width_to_pixels(w)
+              None =>
+                match props.base_col_width {
+                  Some(v) =>
+                    convert_col_width_to_pixels(Double::from_int(v)) + 5
+                  None => default_col_width_pixels
+                }
+            }
+          }
+        }
+      }
+    None => {
+      let props = sheet_props_with_defaults(self.sheet_props)
+      match props.default_col_width {
+        Some(w) => convert_col_width_to_pixels(w)
+        None =>
+          match props.base_col_width {
+            Some(v) => convert_col_width_to_pixels(Double::from_int(v)) + 5
+            None => default_col_width_pixels
+          }
+      }
+    }
+  }
+}
+
+///|
+fn Worksheet::row_height_pixels(self : Worksheet, row : Int) -> Int {
+  match self.row_dimensions.get(row) {
+    Some(dim) =>
+      if dim.hidden {
+        0
+      } else {
+        match dim.height {
+          Some(height) => convert_row_height_to_pixels(height)
+          None => {
+            let props = sheet_props_with_defaults(self.sheet_props)
+            match props.default_row_height {
+              Some(h) => convert_row_height_to_pixels(h)
+              None => default_row_height_pixels
+            }
+          }
+        }
+      }
+    None => {
+      let props = sheet_props_with_defaults(self.sheet_props)
+      match props.default_row_height {
+        Some(h) => convert_row_height_to_pixels(h)
+        None => default_row_height_pixels
+      }
+    }
+  }
+}
+
+///|
+fn Worksheet::merged_rect_for_cell(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> (Int, Int, Int, Int)? raise XlsxError {
+  for range_ref in self.merged_cells {
+    let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+    if cell_in_bounds(row, col, min_row, min_col, max_row, max_col) {
+      return Some((min_row, min_col, max_row, max_col))
+    }
+  }
+  None
+}
+
+///|
+fn Worksheet::anchor_cell_size_pixels(
+  self : Worksheet,
+  row : Int,
+  col : Int,
+) -> (Int, Int, Int, Int) raise XlsxError {
+  match self.merged_rect_for_cell(row, col) {
+    Some((min_row, min_col, max_row, max_col)) => {
+      let mut cell_width = 0
+      let mut cell_height = 0
+      for c in min_col..<=max_col {
+        cell_width = cell_width + self.col_width_pixels(c)
+      }
+      for r in min_row..<=max_row {
+        cell_height = cell_height + self.row_height_pixels(r)
+      }
+      (min_row, min_col, cell_width, cell_height)
+    }
+    None => (row, col, self.col_width_pixels(col), self.row_height_pixels(row))
+  }
+}
+
+///|
 pub fn Worksheet::add_header_footer_image(
   self : Worksheet,
   options : HeaderFooterImageOptions,
@@ -1441,6 +1577,8 @@ pub fn Worksheet::add_picture_from_bytes(
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
+  auto_fit? : Bool = false,
+  auto_fit_ignore_aspect? : Bool = false,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let ext = normalize_image_extension_lower(extension)
@@ -1463,6 +1601,8 @@ pub fn Worksheet::add_picture_from_bytes(
     name~,
     alt_text~,
     lock_aspect_ratio~,
+    auto_fit~,
+    auto_fit_ignore_aspect~,
     positioning~,
   )
 }
@@ -1481,6 +1621,8 @@ pub async fn Worksheet::add_picture(
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
+  auto_fit? : Bool = false,
+  auto_fit_ignore_aspect? : Bool = false,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
@@ -1505,6 +1647,8 @@ pub async fn Worksheet::add_picture(
     name~,
     alt_text~,
     lock_aspect_ratio~,
+    auto_fit~,
+    auto_fit_ignore_aspect~,
     positioning~,
   )
 }
@@ -1525,9 +1669,11 @@ pub fn Worksheet::add_image(
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
+  auto_fit? : Bool = false,
+  auto_fit_ignore_aspect? : Bool = false,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
-  let (_row, _col) = cell_ref_to_rc(reference)
+  let (row, col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
   let (
     normalized_offset_x,
@@ -1539,8 +1685,49 @@ pub fn Worksheet::add_image(
   ) = normalize_picture_options(
     offset_x, offset_y, scale_x, scale_y, hyperlink, hyperlink_type,
   )
+  let (anchor_row, anchor_col, cell_width_px, cell_height_px) = if auto_fit {
+    self.anchor_cell_size_pixels(row, col)
+  } else {
+    (row, col, 0, 0)
+  }
+  let (img_w_px, img_h_px) = match
+    image_dimensions_px(data[:], ext.to_lower()) {
+    Some((w, h)) => (w, h)
+    None => (default_picture_width_px, default_picture_height_px)
+  }
+  let mut base_w_px = Double::from_int(img_w_px)
+  let mut base_h_px = Double::from_int(img_h_px)
+  if auto_fit {
+    let cw = Double::from_int(cell_width_px)
+    let ch = Double::from_int(cell_height_px)
+    if auto_fit_ignore_aspect {
+      base_w_px = cw
+      base_h_px = ch
+    } else if cw < base_w_px || ch < base_h_px {
+      let asp_w = cw / base_w_px
+      let asp_h = ch / base_h_px
+      let asp = if asp_w < asp_h { asp_w } else { asp_h }
+      base_w_px = base_w_px * asp
+      base_h_px = base_h_px * asp
+    }
+  }
+  let width_emu = (Double::from_int(picture_emu_per_pixel) *
+    base_w_px *
+    normalized_scale_x)
+    .round()
+    .to_int()
+  let height_emu = (Double::from_int(picture_emu_per_pixel) *
+    base_h_px *
+    normalized_scale_y)
+    .round()
+    .to_int()
+  let stored_reference = if auto_fit {
+    cell_ref_from(anchor_row, anchor_col)
+  } else {
+    reference
+  }
   self.images.push({
-    reference,
+    reference: stored_reference,
     data,
     extension: ext,
     content_type,
@@ -1548,6 +1735,8 @@ pub fn Worksheet::add_image(
     offset_y: normalized_offset_y,
     scale_x: normalized_scale_x,
     scale_y: normalized_scale_y,
+    width_emu,
+    height_emu,
     hyperlink: normalized_hyperlink,
     hyperlink_type: normalized_hyperlink_type,
     name,
@@ -1568,6 +1757,8 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     offset_y: image.offset_y,
     scale_x: image.scale_x,
     scale_y: image.scale_y,
+    width_emu: image.width_emu,
+    height_emu: image.height_emu,
     hyperlink: image.hyperlink,
     hyperlink_type: image.hyperlink_type,
     name: image.name,

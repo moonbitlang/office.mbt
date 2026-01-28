@@ -656,17 +656,6 @@ priv struct DrawingHyperlink {
 let emu_per_pixel = 9525
 
 ///|
-let default_image_width_emu = 1905000
-
-///|
-let default_image_height_emu = 1524000
-
-///|
-fn scaled_emu(value : Int, scale : Double) -> Int {
-  (Double::from_int(value) * scale).round().to_int()
-}
-
-///|
 fn write_drawing_xml(
   images : Array[DrawingImage],
   charts : Array[(String, Int)],
@@ -687,8 +676,8 @@ fn write_drawing_xml(
     obj_id = obj_id + 1
     let col_off = image.offset_x * emu_per_pixel
     let row_off = image.offset_y * emu_per_pixel
-    let cx = scaled_emu(default_image_width_emu, image.scale_x)
-    let cy = scaled_emu(default_image_height_emu, image.scale_y)
+    let cx = image.width_emu
+    let cy = image.height_emu
     let picture_name = if image.name == "" {
       "Image \{pic_id}"
     } else {
