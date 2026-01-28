@@ -60,6 +60,10 @@ pub struct Sparkline {
 ///|
 pub struct SparklineGroupOptions {
   mut display_empty_cells_as : String
+  mut date_axis : Bool
+  mut line_weight : Double?
+  mut manual_max : Int?
+  mut manual_min : Int?
   mut markers : Bool
   mut high : Bool
   mut low : Bool
@@ -83,6 +87,10 @@ pub struct SparklineGroupOptions {
 pub fn SparklineGroupOptions::new() -> SparklineGroupOptions {
   {
     display_empty_cells_as: "",
+    date_axis: false,
+    line_weight: None,
+    manual_max: None,
+    manual_min: None,
     markers: false,
     high: false,
     low: false,
@@ -116,6 +124,8 @@ pub struct SparklineOptions {
   ranges : Array[String]
   mut sparkline_type : SparklineType
   mut style : Int
+  mut weight : Double?
+  mut date_axis : Bool
   mut markers : Bool
   mut high : Bool
   mut low : Bool
@@ -123,8 +133,12 @@ pub struct SparklineOptions {
   mut last : Bool
   mut negative : Bool
   mut axis : Bool
+  mut hidden : Bool
   mut reverse : Bool
   mut series_color : String?
+  mut manual_max : Int?
+  mut manual_min : Int?
+  mut empty_cells : String?
 } derive(Eq, Show)
 
 ///|
@@ -151,6 +165,8 @@ pub fn SparklineOptions::new(
     ranges: rs,
     sparkline_type: SparklineType::Line,
     style: 0,
+    weight: None,
+    date_axis: false,
     markers: false,
     high: false,
     low: false,
@@ -158,8 +174,12 @@ pub fn SparklineOptions::new(
     last: false,
     negative: false,
     axis: false,
+    hidden: false,
     reverse: false,
     series_color: None,
+    manual_max: None,
+    manual_min: None,
+    empty_cells: None,
   }
 }
 
@@ -177,6 +197,30 @@ pub fn SparklineOptions::set_style(
   style : Int,
 ) -> Unit {
   self.style = style
+}
+
+///|
+pub fn SparklineOptions::set_weight(
+  self : SparklineOptions,
+  weight : Double,
+) -> Unit raise XlsxError {
+  if weight <= 0.0 {
+    raise XlsxError::InvalidSparkline(msg="sparkline weight must be > 0")
+  }
+  self.weight = Some(weight)
+}
+
+///|
+pub fn SparklineOptions::clear_weight(self : SparklineOptions) -> Unit {
+  self.weight = None
+}
+
+///|
+pub fn SparklineOptions::set_date_axis(
+  self : SparklineOptions,
+  date_axis : Bool,
+) -> Unit {
+  self.date_axis = date_axis
 }
 
 ///|
@@ -224,6 +268,14 @@ pub fn SparklineOptions::set_axis(self : SparklineOptions, axis : Bool) -> Unit 
 }
 
 ///|
+pub fn SparklineOptions::set_hidden(
+  self : SparklineOptions,
+  hidden : Bool,
+) -> Unit {
+  self.hidden = hidden
+}
+
+///|
 pub fn SparklineOptions::set_reverse(
   self : SparklineOptions,
   reverse : Bool,
@@ -242,6 +294,48 @@ pub fn SparklineOptions::set_series_color(
 ///|
 pub fn SparklineOptions::clear_series_color(self : SparklineOptions) -> Unit {
   self.series_color = None
+}
+
+///|
+pub fn SparklineOptions::set_manual_max(
+  self : SparklineOptions,
+  max : Int,
+) -> Unit {
+  self.manual_max = Some(max)
+}
+
+///|
+pub fn SparklineOptions::clear_manual_max(self : SparklineOptions) -> Unit {
+  self.manual_max = None
+}
+
+///|
+pub fn SparklineOptions::set_manual_min(
+  self : SparklineOptions,
+  min : Int,
+) -> Unit {
+  self.manual_min = Some(min)
+}
+
+///|
+pub fn SparklineOptions::clear_manual_min(self : SparklineOptions) -> Unit {
+  self.manual_min = None
+}
+
+///|
+pub fn SparklineOptions::set_empty_cells(
+  self : SparklineOptions,
+  mode : StringView,
+) -> Unit raise XlsxError {
+  match mode.to_string() {
+    "gap" | "zero" | "span" => self.empty_cells = Some(mode.to_string())
+    _ => raise XlsxError::InvalidSparkline(msg="sparkline empty cells invalid")
+  }
+}
+
+///|
+pub fn SparklineOptions::clear_empty_cells(self : SparklineOptions) -> Unit {
+  self.empty_cells = None
 }
 
 ///|
@@ -672,6 +766,21 @@ fn write_sparkline_ext_xml(groups : ArrayView[SparklineGroup]) -> String {
       sb.write_view(escape_xml_attr(group.options.display_empty_cells_as))
       sb.write_view("\"")
     }
+    if group.options.date_axis {
+      sb.write_view(" dateAxis=\"\{bool_attr(true)}\"")
+    }
+    match group.options.line_weight {
+      Some(value) => sb.write_view(" lineWeight=\"\{value}\"")
+      None => ()
+    }
+    match group.options.manual_max {
+      Some(value) => sb.write_view(" manualMax=\"\{value}\"")
+      None => ()
+    }
+    match group.options.manual_min {
+      Some(value) => sb.write_view(" manualMin=\"\{value}\"")
+      None => ()
+    }
     if group.options.markers {
       sb.write_view(" markers=\"\{bool_attr(true)}\"")
     }
@@ -810,6 +919,37 @@ fn parse_sparkline_groups(
       Some(value) => options.display_empty_cells_as = value.to_string()
       None => ()
     }
+    match attr_value(tag, "dateAxis") {
+      Some(value) => options.date_axis = parse_bool_attr(value)
+      None => ()
+    }
+    match attr_value(tag, "lineWeight") {
+      Some(value) =>
+        options.line_weight = Some(
+          @strconv.parse_double(value.to_string()) catch {
+            _ => raise XlsxError::InvalidXml(msg="sparkline lineWeight invalid")
+          },
+        )
+      None => ()
+    }
+    match attr_value(tag, "manualMax") {
+      Some(value) =>
+        options.manual_max = Some(
+          @strconv.parse_int(value.to_string(), base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="sparkline manualMax invalid")
+          },
+        )
+      None => ()
+    }
+    match attr_value(tag, "manualMin") {
+      Some(value) =>
+        options.manual_min = Some(
+          @strconv.parse_int(value.to_string(), base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="sparkline manualMin invalid")
+          },
+        )
+      None => ()
+    }
     match attr_value(tag, "markers") {
       Some(value) => options.markers = parse_bool_attr(value)
       None => ()
@@ -931,7 +1071,14 @@ fn sparkline_group_options_from_sparkline_options(
 ) -> SparklineGroupOptions raise XlsxError {
   let preset = sparkline_preset(opts.style)
   let group_opts = SparklineGroupOptions::new()
-  group_opts.display_empty_cells_as = "gap"
+  group_opts.display_empty_cells_as = match opts.empty_cells {
+    Some(value) => value
+    None => "gap"
+  }
+  group_opts.date_axis = opts.date_axis
+  group_opts.line_weight = opts.weight
+  group_opts.manual_max = opts.manual_max
+  group_opts.manual_min = opts.manual_min
   group_opts.high = opts.high
   group_opts.low = opts.low
   group_opts.first = opts.first
@@ -939,6 +1086,7 @@ fn sparkline_group_options_from_sparkline_options(
   group_opts.negative = opts.negative
   group_opts.display_x_axis = opts.axis
   group_opts.markers = opts.markers
+  group_opts.display_hidden = opts.hidden
   group_opts.right_to_left = opts.reverse
   group_opts.color_axis = Some({
     rgb: Some("FF000000"),

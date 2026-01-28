@@ -85,3 +85,46 @@ test "sparkline options style out of range" {
     content="Err(InvalidSparkline(msg=\"sparkline style out of range\"))",
   )
 }
+
+///|
+test "sparkline options followups" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  opts.set_date_axis(true)
+  opts.set_hidden(true)
+  opts.set_weight(2.0)
+  opts.set_manual_min(1)
+  opts.set_manual_max(9)
+  opts.set_empty_cells("zero")
+  sheet.add_sparkline_options(opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet1.xml utf8 decode failed")
+      }
+    None => fail("missing sheet1.xml")
+  }
+  inspect(sheet_xml.contains("dateAxis=\"1\""), content="true")
+  inspect(sheet_xml.contains("displayHidden=\"1\""), content="true")
+  inspect(sheet_xml.contains("lineWeight=\"2"), content="true")
+  inspect(sheet_xml.contains("manualMin=\"1\""), content="true")
+  inspect(sheet_xml.contains("manualMax=\"9\""), content="true")
+  inspect(sheet_xml.contains("displayEmptyCellsAs=\"zero\""), content="true")
+  let parsed = read(bytes)
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  let group = parsed_sheet.sparkline_groups()[0]
+  inspect(group.options.date_axis, content="true")
+  inspect(group.options.display_hidden, content="true")
+  inspect(group.options.line_weight, content="Some(2)")
+  inspect(group.options.manual_min, content="Some(1)")
+  inspect(group.options.manual_max, content="Some(9)")
+  inspect(group.options.display_empty_cells_as, content="zero")
+}

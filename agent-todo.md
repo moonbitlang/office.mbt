@@ -30,7 +30,7 @@ References:
 
 ### Sparklines
 - [x] Add `SparklineOptions` basic parity (style presets, markers/high/low/first/last/negative, axis, reverse, seriesColor) and round-trip via `SparklineGroupOptions`
-- [ ] Follow-ups: date axis, hidden, weight, manual min/max, empty cell modes (Excelize `SparklineOptions` in `excelize/xmlWorksheet.go`)
+- [x] Follow-ups: date axis, hidden, weight, manual min/max, empty cell modes (Excelize `SparklineOptions` in `excelize/xmlWorksheet.go`)
 
 ### Pivot tables & slicers
 - [ ] Add `PivotTableOptions` builder (Excelize `PivotTableOptions` in `excelize/pivotTable.go`)
