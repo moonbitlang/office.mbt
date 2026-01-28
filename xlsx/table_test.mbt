@@ -70,3 +70,53 @@ test "table columns mismatch" {
     content="Err(InvalidTable(msg=\"table columns do not match range\"))",
   )
 }
+
+///|
+test "table style flags and header row" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  ignore(
+    sheet.add_table(
+      "A1:B2",
+      "Table1",
+      ["Name", "Value"],
+      show_first_column=true,
+      show_last_column=true,
+      show_row_stripes=false,
+      show_column_stripes=true,
+      show_header_row=false,
+    ),
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let table_xml = match archive.get("xl/tables/table1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("table1.xml utf8 decode failed")
+      }
+    None => fail("missing table1.xml")
+  }
+  inspect(table_xml.contains("ref=\"A2:B2\""), content="true")
+  inspect(table_xml.contains("headerRowCount=\"0\""), content="true")
+  inspect(table_xml.contains("<autoFilter "), content="false")
+  inspect(
+    table_xml.contains(
+      "showFirstColumn=\"1\" showLastColumn=\"1\" showRowStripes=\"0\" showColumnStripes=\"1\"",
+    ),
+    content="true",
+  )
+  let parsed = read(bytes)
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing sheet")
+  }
+  let table = parsed_sheet.tables()[0]
+  inspect(table.range_ref, content="A2:B2")
+  inspect(table.show_header_row, content="false")
+  inspect(table.show_first_column, content="true")
+  inspect(table.show_last_column, content="true")
+  inspect(table.show_row_stripes, content="false")
+  inspect(table.show_column_stripes, content="true")
+}

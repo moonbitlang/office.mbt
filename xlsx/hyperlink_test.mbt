@@ -87,7 +87,7 @@ test "hyperlink opts helper" {
     "A1",
     "https://example.com",
     HyperlinkType::External,
-    opts=opts,
+    opts~,
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {

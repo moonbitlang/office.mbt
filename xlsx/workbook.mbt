@@ -1297,6 +1297,11 @@ fn clone_tables(values : ArrayView[Table]) -> Array[Table] {
       range_ref: value.range_ref,
       columns,
       style_name: value.style_name,
+      show_first_column: value.show_first_column,
+      show_last_column: value.show_last_column,
+      show_row_stripes: value.show_row_stripes,
+      show_column_stripes: value.show_column_stripes,
+      show_header_row: value.show_header_row,
     })
   }
   out
@@ -2638,12 +2643,28 @@ pub fn Workbook::add_table(
   columns : ArrayView[String],
   display_name? : String = "",
   style_name? : String = "TableStyleMedium9",
+  show_first_column? : Bool = false,
+  show_last_column? : Bool = false,
+  show_row_stripes? : Bool = true,
+  show_column_stripes? : Bool = false,
+  show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.add_table(range_ref, name, columns, display_name~, style_name~)
+  sheet.add_table(
+    range_ref,
+    name,
+    columns,
+    display_name~,
+    style_name~,
+    show_first_column~,
+    show_last_column~,
+    show_row_stripes~,
+    show_column_stripes~,
+    show_header_row~,
+  )
 }
 
 ///|

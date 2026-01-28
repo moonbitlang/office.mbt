@@ -920,7 +920,7 @@ pub struct StreamWriter {
   styles : Array[Style]
   mut closed : Bool
 }
-pub fn StreamWriter::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
+pub fn StreamWriter::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Table raise XlsxError
 pub fn StreamWriter::flush(Self) -> Unit raise XlsxError
 pub fn StreamWriter::insert_page_break(Self, StringView) -> Unit raise XlsxError
 pub fn StreamWriter::merge_cell(Self, StringView, StringView) -> Unit raise XlsxError
@@ -948,8 +948,13 @@ pub struct Table {
   range_ref : String
   columns : Array[String]
   style_name : String
+  show_first_column : Bool
+  show_last_column : Bool
+  show_row_stripes : Bool
+  show_column_stripes : Bool
+  show_header_row : Bool
 }
-pub fn Table::new(String, String, ArrayView[String], display_name? : String, style_name? : String) -> Self raise XlsxError
+pub fn Table::new(String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Self raise XlsxError
 
 pub struct Workbook {
   sheets : Array[Worksheet]
@@ -997,7 +1002,7 @@ pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type?
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_options(Self, StringView, SparklineOptions) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
-pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
+pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Table raise XlsxError
 pub fn Workbook::add_vba_project(Self, Bytes) -> Unit raise XlsxError
 pub fn Workbook::add_vbaproject(Self, Bytes) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError
@@ -1285,7 +1290,7 @@ pub fn Worksheet::add_slicer(Self, Slicer) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline(Self, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline_options(Self, SparklineOptions) -> Unit raise XlsxError
-pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
+pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Table raise XlsxError
 pub fn Worksheet::add_vml_drawing_hf_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::add_vml_drawing_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::auto_filter(Self) -> AutoFilter?

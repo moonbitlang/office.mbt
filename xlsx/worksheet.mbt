@@ -957,8 +957,24 @@ pub fn Worksheet::add_table(
   columns : ArrayView[String],
   display_name? : String = "",
   style_name? : String = "TableStyleMedium9",
+  show_first_column? : Bool = false,
+  show_last_column? : Bool = false,
+  show_row_stripes? : Bool = true,
+  show_column_stripes? : Bool = false,
+  show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
-  let table = Table::new(name, range_ref, columns, display_name~, style_name~)
+  let table = Table::new(
+    name,
+    range_ref,
+    columns,
+    display_name~,
+    style_name~,
+    show_first_column~,
+    show_last_column~,
+    show_row_stripes~,
+    show_column_stripes~,
+    show_header_row~,
+  )
   self.tables.push(table)
   table
 }
@@ -3485,6 +3501,11 @@ fn adjust_table_after_row_insert(
     range_ref,
     columns: clone_table_columns(table.columns),
     style_name: table.style_name,
+    show_first_column: table.show_first_column,
+    show_last_column: table.show_last_column,
+    show_row_stripes: table.show_row_stripes,
+    show_column_stripes: table.show_column_stripes,
+    show_header_row: table.show_header_row,
   }
 }
 
@@ -3503,6 +3524,11 @@ fn adjust_table_after_row_remove(
         range_ref,
         columns: clone_table_columns(table.columns),
         style_name: table.style_name,
+        show_first_column: table.show_first_column,
+        show_last_column: table.show_last_column,
+        show_row_stripes: table.show_row_stripes,
+        show_column_stripes: table.show_column_stripes,
+        show_header_row: table.show_header_row,
       })
     None => None
   }
@@ -3537,6 +3563,11 @@ fn adjust_table_after_col_insert(
     range_ref: "\{start_ref}:\{end_ref}",
     columns,
     style_name: table.style_name,
+    show_first_column: table.show_first_column,
+    show_last_column: table.show_last_column,
+    show_row_stripes: table.show_row_stripes,
+    show_column_stripes: table.show_column_stripes,
+    show_header_row: table.show_header_row,
   }
 }
 
@@ -3571,6 +3602,11 @@ fn adjust_table_after_col_remove(
         range_ref: "\{start_ref}:\{end_ref}",
         columns,
         style_name: table.style_name,
+        show_first_column: table.show_first_column,
+        show_last_column: table.show_last_column,
+        show_row_stripes: table.show_row_stripes,
+        show_column_stripes: table.show_column_stripes,
+        show_header_row: table.show_header_row,
       })
     }
     None => None

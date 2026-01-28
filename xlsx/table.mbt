@@ -6,6 +6,11 @@ pub struct Table {
   range_ref : String
   columns : Array[String]
   style_name : String
+  show_first_column : Bool
+  show_last_column : Bool
+  show_row_stripes : Bool
+  show_column_stripes : Bool
+  show_header_row : Bool
 }
 
 ///|
@@ -15,14 +20,33 @@ pub fn Table::new(
   columns : ArrayView[String],
   display_name? : String = "",
   style_name? : String = "TableStyleMedium9",
+  show_first_column? : Bool = false,
+  show_last_column? : Bool = false,
+  show_row_stripes? : Bool = true,
+  show_column_stripes? : Bool = false,
+  show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
   if name == "" {
     raise XlsxError::InvalidTable(msg="table name is empty")
   }
   let display = if display_name == "" { name } else { display_name }
   let style = if style_name == "" { "TableStyleMedium9" } else { style_name }
-  let normalized_ref = normalize_range_ref(range_ref)
-  let (_min_row, min_col, _max_row, max_col) = parse_range_ref(range_ref)
+  let normalized_input_ref = normalize_range_ref(range_ref)
+  let (min_row, min_col, max_row, max_col) = parse_range_ref(
+    normalized_input_ref,
+  )
+  let normalized_ref = if show_header_row {
+    normalized_input_ref
+  } else {
+    let adjusted_max_row = if min_row == max_row {
+      max_row + 1
+    } else {
+      max_row
+    }
+    normalize_range_ref(
+      "\{cell_ref_from(min_row + 1, min_col)}:\{cell_ref_from(adjusted_max_row, max_col)}",
+    )
+  }
   let expected_cols = max_col - min_col + 1
   let column_names : Array[String] = []
   for column in columns {
@@ -41,11 +65,24 @@ pub fn Table::new(
     range_ref: normalized_ref,
     columns: column_names,
     style_name: style,
+    show_first_column,
+    show_last_column,
+    show_row_stripes,
+    show_column_stripes,
+    show_header_row,
   }
 }
 
 ///|
 fn write_table_xml(table_id : Int, table : Table) -> String {
+  fn bool_attr(value : Bool) -> String {
+    if value {
+      "1"
+    } else {
+      "0"
+    }
+  }
+
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -56,10 +93,14 @@ fn write_table_xml(table_id : Int, table : Table) -> String {
   sb.write_view(escape_xml_attr(table.display_name))
   sb.write_view("\" ref=\"")
   sb.write_view(escape_xml_attr(table.range_ref))
-  sb.write_view("\" totalsRowShown=\"0\">\n")
-  sb.write_view("  <autoFilter ref=\"")
-  sb.write_view(escape_xml_attr(table.range_ref))
-  sb.write_view("\"/>\n")
+  if !table.show_header_row {
+    sb.write_view("\" headerRowCount=\"0\" totalsRowShown=\"0\">\n")
+  } else {
+    sb.write_view("\" totalsRowShown=\"0\">\n")
+    sb.write_view("  <autoFilter ref=\"")
+    sb.write_view(escape_xml_attr(table.range_ref))
+    sb.write_view("\"/>\n")
+  }
   sb.write_view("  <tableColumns count=\"\{table.columns.length()}\">\n")
   for i, name in table.columns {
     let id = i + 1
@@ -71,7 +112,7 @@ fn write_table_xml(table_id : Int, table : Table) -> String {
   sb.write_view("  <tableStyleInfo name=\"")
   sb.write_view(escape_xml_attr(table.style_name))
   sb.write_view(
-    "\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/>\n",
+    "\" showFirstColumn=\"\{bool_attr(table.show_first_column)}\" showLastColumn=\"\{bool_attr(table.show_last_column)}\" showRowStripes=\"\{bool_attr(table.show_row_stripes)}\" showColumnStripes=\"\{bool_attr(table.show_column_stripes)}\"/>\n",
   )
   sb.write_view("</table>")
   sb.to_string()
@@ -112,26 +153,60 @@ fn parse_table_columns(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
-fn parse_table_style(xml : StringView) -> String raise XlsxError {
+fn parse_table_style(
+  xml : StringView,
+) -> (String, Bool, Bool, Bool, Bool) raise XlsxError {
+  fn parse_bool_attr(value : StringView) -> Bool {
+    match value.to_string() {
+      "1" => true
+      "true" => true
+      "TRUE" => true
+      _ => false
+    }
+  }
+
   let text = xml.to_string()
   let start = match text.find("<tableStyleInfo ") {
     Some(pos) => pos
-    None => return "TableStyleMedium9"
+    None => return ("TableStyleMedium9", false, false, true, false)
   }
-  let rest = text[start:] catch { _ => return "TableStyleMedium9" }
+  let rest = text[start:] catch {
+      _ => return ("TableStyleMedium9", false, false, true, false)
+    }
   let end = match rest.find("/>") {
     Some(pos) => pos
     None =>
       match rest.find(">") {
         Some(pos) => pos
-        None => return "TableStyleMedium9"
+        None => return ("TableStyleMedium9", false, false, true, false)
       }
   }
-  let tag = rest[:end] catch { _ => return "TableStyleMedium9" }
-  match attr_value(tag, "name") {
+  let tag = rest[:end] catch {
+      _ => return ("TableStyleMedium9", false, false, true, false)
+    }
+  let style_name = match attr_value(tag, "name") {
     Some(value) => unescape_xml_text(value)
     None => "TableStyleMedium9"
   }
+  let show_first_column = match attr_value(tag, "showFirstColumn") {
+    Some(value) => parse_bool_attr(value)
+    None => false
+  }
+  let show_last_column = match attr_value(tag, "showLastColumn") {
+    Some(value) => parse_bool_attr(value)
+    None => false
+  }
+  let show_row_stripes = match attr_value(tag, "showRowStripes") {
+    Some(value) => parse_bool_attr(value)
+    None => true
+  }
+  let show_column_stripes = match attr_value(tag, "showColumnStripes") {
+    Some(value) => parse_bool_attr(value)
+    None => false
+  }
+  (
+    style_name, show_first_column, show_last_column, show_row_stripes, show_column_stripes,
+  )
 }
 
 ///|
@@ -174,18 +249,34 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
     Some(value) => unescape_xml_text(value)
     None => raise XlsxError::InvalidXml(msg="table ref missing")
   }
+  let show_header_row = match attr_value(tag, "headerRowCount") {
+    Some(value) => value.to_string() != "0"
+    None => true
+  }
   let columns = parse_table_columns(xml)
   let (_min_row, min_col, _max_row, max_col) = parse_range_ref(ref_value)
   let expected_cols = max_col - min_col + 1
   if columns.length() != expected_cols {
     raise XlsxError::InvalidTable(msg="table columns do not match range")
   }
+  let (
+    style_name,
+    show_first_column,
+    show_last_column,
+    show_row_stripes,
+    show_column_stripes,
+  ) = parse_table_style(xml)
   {
     id,
     name,
     display_name,
     range_ref: normalize_range_ref(ref_value),
     columns,
-    style_name: parse_table_style(xml),
+    style_name,
+    show_first_column,
+    show_last_column,
+    show_row_stripes,
+    show_column_stripes,
+    show_header_row,
   }
 }

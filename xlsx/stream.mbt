@@ -329,9 +329,25 @@ pub fn StreamWriter::add_table(
   columns : ArrayView[String],
   display_name? : String = "",
   style_name? : String = "TableStyleMedium9",
+  show_first_column? : Bool = false,
+  show_last_column? : Bool = false,
+  show_row_stripes? : Bool = true,
+  show_column_stripes? : Bool = false,
+  show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
   self.ensure_open()
-  self.sheet.add_table(range_ref, name, columns, display_name~, style_name~)
+  self.sheet.add_table(
+    range_ref,
+    name,
+    columns,
+    display_name~,
+    style_name~,
+    show_first_column~,
+    show_last_column~,
+    show_row_stripes~,
+    show_column_stripes~,
+    show_header_row~,
+  )
 }
 
 ///|
