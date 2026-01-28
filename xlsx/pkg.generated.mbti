@@ -150,6 +150,16 @@ pub(all) struct AutoFilterOption {
 pub impl Eq for AutoFilterOption
 pub impl Show for AutoFilterOption
 
+pub struct Border {
+  typ : String
+  mut color : String?
+  mut style : Int?
+}
+pub fn Border::new(String) -> Self
+pub fn Border::with_values(String, color? : String, style? : Int) -> Self
+pub impl Eq for Border
+pub impl Show for Border
+
 pub struct CalcPropsOptions {
   mut calc_id : UInt?
   mut calc_mode : String?
@@ -1033,12 +1043,15 @@ pub struct Style {
   number_format : NumberFormat?
   font : Font?
   fill : Fill?
+  border : Array[Border]?
 }
+pub fn Style::border(Array[Border]) -> Self
 pub fn Style::builtin_number_format(Int) -> Self
 pub fn Style::fill(Fill) -> Self
 pub fn Style::font(Font) -> Self
 pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
+pub fn Style::with_border(Self, Array[Border]) -> Self
 pub fn Style::with_fill(Self, Fill) -> Self
 pub fn Style::with_font(Self, Font) -> Self
 pub impl Eq for Style

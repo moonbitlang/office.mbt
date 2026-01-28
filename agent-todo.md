@@ -21,7 +21,7 @@ References:
 - [ ] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
   - [x] Font (cell styles + conditional styles)
   - [x] Fill (pattern/solid + conditional fill)
-  - [ ] Border
+  - [x] Border (basic left/right/top/bottom + conditional border)
   - [ ] Alignment
   - [ ] Protection
 

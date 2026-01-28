@@ -582,6 +582,121 @@ fn parse_fills(xml : StringView) -> Array[Fill] raise XlsxError {
 }
 
 ///|
+fn parse_border_entry(xml : StringView) -> Array[Border] raise XlsxError {
+  let border_styles : Array[String] = [
+    "none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair", "mediumDashed",
+    "dashDot", "mediumDashDot", "dashDotDot", "mediumDashDotDot", "slantDashDot",
+  ]
+  fn parse_side(
+    xml : StringView,
+    side : StringView,
+  ) -> Border? raise XlsxError {
+    let tag = match tag_attributes_in(xml, side) {
+      Some(value) => value
+      None => return None
+    }
+    let style_name = match attr_value(tag, "style") {
+      Some(value) => unescape_xml_text(value)
+      None => "none"
+    }
+    let mut style = 0
+    for i in 0..<border_styles.length() {
+      if border_styles[i] == style_name {
+        style = i
+      }
+    }
+    let mut color : String? = None
+    match extract_tag_body_from(xml, side) {
+      Some(body) =>
+        match tag_attributes_in(body, "color") {
+          Some(color_tag) =>
+            match attr_value(color_tag, "rgb") {
+              Some(value) => color = Some(unescape_xml_text(value))
+              None => ()
+            }
+          None => ()
+        }
+      None => ()
+    }
+    match color {
+      Some(rgb) => {
+        let normalized = if rgb.length() == 8 && rgb.has_prefix("FF") {
+          (rgb[2:] catch { _ => rgb }).to_string()
+        } else {
+          rgb.to_string()
+        }
+        Some(Border::with_values(side.to_string(), color=normalized, style~))
+      }
+      None =>
+        if style > 0 {
+          Some(Border::with_values(side.to_string(), style~))
+        } else {
+          None
+        }
+    }
+  }
+
+  let borders : Array[Border] = []
+  match parse_side(xml, "left") {
+    Some(b) => borders.push(b)
+    None => ()
+  }
+  match parse_side(xml, "right") {
+    Some(b) => borders.push(b)
+    None => ()
+  }
+  match parse_side(xml, "top") {
+    Some(b) => borders.push(b)
+    None => ()
+  }
+  match parse_side(xml, "bottom") {
+    Some(b) => borders.push(b)
+    None => ()
+  }
+  borders
+}
+
+///|
+fn parse_borders(xml : StringView) -> Array[Array[Border]] raise XlsxError {
+  let borders : Array[Array[Border]] = []
+  let body = match extract_tag_body(xml, "borders") {
+    Some(value) => value
+    None => {
+      borders.push([])
+      return borders
+    }
+  }
+  let mut first = true
+  for chunk in body.split("<border") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let open_end = match text.find(">") {
+      Some(pos) => pos
+      None => continue
+    }
+    let open_tag = text[:open_end] catch { _ => "" }
+    if open_tag.has_suffix("/") {
+      borders.push([])
+      continue
+    }
+    let rest = text[open_end + 1:] catch { _ => "" }
+    let end = match rest.find("</border>") {
+      Some(pos) => pos
+      None => continue
+    }
+    let content = rest[:end] catch { _ => "" }
+    borders.push(parse_border_entry(content))
+  }
+  if borders.length() == 0 {
+    borders.push([])
+  }
+  borders
+}
+
+///|
 fn parse_pivot_table_name(xml : StringView) -> String raise XlsxError {
   match tag_attributes_in(xml, "pivotTableDefinition") {
     Some(tag) =>
@@ -1011,6 +1126,7 @@ fn parse_cell_xfs(
   num_fmts : Map[Int, String],
   fonts : ArrayView[Font],
   fills : ArrayView[Fill],
+  borders : ArrayView[Array[Border]],
 ) -> Array[Style] raise XlsxError {
   let styles : Array[Style] = []
   let body = match extract_tag_body(xml, "cellXfs") {
@@ -1073,6 +1189,19 @@ fn parse_cell_xfs(
     }
     if fill_id > 1 && fill_id < fills.length() {
       style = style.with_fill(fills[fill_id])
+    }
+    let border_id = match attr_value(tag, "borderId") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="borderId invalid")
+        }
+      None => 0
+    }
+    if border_id > 0 && border_id < borders.length() {
+      let border = borders[border_id]
+      if border.length() > 0 {
+        style = style.with_border(border)
+      }
     }
     styles.push(style)
   }
@@ -1179,6 +1308,15 @@ fn parse_dxfs(
       }
       None => ()
     }
+    match extract_tag_body(tag, "border") {
+      Some(border_body) => {
+        let border = parse_border_entry(border_body)
+        if border.length() > 0 {
+          style = style.with_border(border)
+        }
+      }
+      None => ()
+    }
     styles.push(style)
   }
   styles
@@ -1191,7 +1329,8 @@ fn parse_styles(
   let num_fmts = parse_num_fmts(xml)
   let fonts = parse_fonts(xml)
   let fills = parse_fills(xml)
-  let styles = parse_cell_xfs(xml, num_fmts, fonts, fills)
+  let borders = parse_borders(xml)
+  let styles = parse_cell_xfs(xml, num_fmts, fonts, fills, borders)
   let conditional_styles = parse_dxfs(xml, num_fmts, fonts)
   (styles, conditional_styles)
 }

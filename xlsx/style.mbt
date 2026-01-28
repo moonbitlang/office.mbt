@@ -96,15 +96,46 @@ pub fn Fill::solid(color : String) -> Fill {
 }
 
 ///|
+pub struct Border {
+  typ : String
+  mut color : String?
+  mut style : Int?
+} derive(Eq, Show)
+
+///|
+pub fn Border::new(typ : String) -> Border {
+  { typ, color: None, style: None }
+}
+
+///|
+pub fn Border::with_values(
+  typ : String,
+  color? : String,
+  style? : Int,
+) -> Border {
+  let border = Border::new(typ)
+  match color {
+    Some(v) => border.color = Some(v)
+    None => ()
+  }
+  match style {
+    Some(v) => border.style = Some(v)
+    None => ()
+  }
+  border
+}
+
+///|
 pub struct Style {
   number_format : NumberFormat?
   font : Font?
   fill : Fill?
+  border : Array[Border]?
 } derive(Eq, Show)
 
 ///|
 pub fn Style::new() -> Style {
-  { number_format: None, font: None, fill: None }
+  { number_format: None, font: None, fill: None, border: None }
 }
 
 ///|
@@ -113,32 +144,63 @@ pub fn Style::number_format(format_code : String) -> Style {
     number_format: Some(NumberFormat::Custom(format_code)),
     font: None,
     fill: None,
+    border: None,
   }
 }
 
 ///|
 pub fn Style::builtin_number_format(id : Int) -> Style {
-  { number_format: Some(NumberFormat::Builtin(id)), font: None, fill: None }
+  {
+    number_format: Some(NumberFormat::Builtin(id)),
+    font: None,
+    fill: None,
+    border: None,
+  }
 }
 
 ///|
 pub fn Style::font(font : Font) -> Style {
-  { number_format: None, font: Some(font), fill: None }
+  { number_format: None, font: Some(font), fill: None, border: None }
 }
 
 ///|
 pub fn Style::with_font(self : Style, font : Font) -> Style {
-  { number_format: self.number_format, font: Some(font), fill: self.fill }
+  {
+    number_format: self.number_format,
+    font: Some(font),
+    fill: self.fill,
+    border: self.border,
+  }
 }
 
 ///|
 pub fn Style::fill(fill : Fill) -> Style {
-  { number_format: None, font: None, fill: Some(fill) }
+  { number_format: None, font: None, fill: Some(fill), border: None }
 }
 
 ///|
 pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
-  { number_format: self.number_format, font: self.font, fill: Some(fill) }
+  {
+    number_format: self.number_format,
+    font: self.font,
+    fill: Some(fill),
+    border: self.border,
+  }
+}
+
+///|
+pub fn Style::border(border : Array[Border]) -> Style {
+  { number_format: None, font: None, fill: None, border: Some(border) }
+}
+
+///|
+pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
+  {
+    number_format: self.number_format,
+    font: self.font,
+    fill: self.fill,
+    border: Some(border),
+  }
 }
 
 ///|
@@ -369,10 +431,119 @@ fn write_styles_xml(
     }
   }
   sb.write_view("  </fills>\n")
+
+  // Border collection: id 0 is the workbook default border.
+  let border_styles : Array[String] = [
+    "none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair", "mediumDashed",
+    "dashDot", "mediumDashDot", "dashDotDot", "mediumDashDotDot", "slantDashDot",
+  ]
+  let borders : Array[Array[(String, Int, String?)]] = [
+    [
+      ("left", 0, None),
+      ("right", 0, None),
+      ("top", 0, None),
+      ("bottom", 0, None),
+      ("diagonal", 0, None),
+    ],
+  ]
+  let border_ids : Map[String, Int] = {}
+  fn normalize_border_key(lines : ArrayView[(String, Int, String?)]) -> String {
+    let sb = StringBuilder::new()
+    let mut first = true
+    for line in lines {
+      let (_, style, color) = line
+      if first {
+        first = false
+      } else {
+        sb.write_char('|')
+      }
+      sb.write_view(style.to_string())
+      sb.write_char(',')
+      match color {
+        Some(v) => sb.write_view(v)
+        None => ()
+      }
+    }
+    sb.to_string()
+  }
+
+  border_ids[normalize_border_key(borders[0])] = 0
+  fn border_lines_for_style(
+    borders : ArrayView[Border],
+  ) -> Array[(String, Int, String?)] {
+    let sides : Array[String] = ["left", "right", "top", "bottom"]
+    let lines : Array[(String, Int, String?)] = []
+    for side in sides {
+      let mut style = 0
+      let mut color : String? = None
+      for b in borders {
+        if b.typ == side {
+          style = match b.style {
+            Some(v) => v
+            None => 0
+          }
+          color = b.color
+        }
+      }
+      if style < 0 || style >= border_styles.length() {
+        style = 0
+      }
+      lines.push((side, style, color))
+    }
+    lines.push(("diagonal", 0, None))
+    lines
+  }
+
+  for style in style_list {
+    match style.border {
+      Some(border) => {
+        let lines = border_lines_for_style(border)
+        let key = normalize_border_key(lines)
+        if !border_ids.contains(key) {
+          border_ids[key] = borders.length()
+          borders.push(lines)
+        }
+      }
+      None => ()
+    }
+  }
+  sb.write_view("  <borders count=\"\{borders.length()}\">\n")
+  for entry in borders {
+    sb.write_view("    <border>")
+    for line in entry {
+      let (side, style, color) = line
+      if side == "diagonal" {
+        sb.write_view("<diagonal/>")
+        continue
+      }
+      if style <= 0 {
+        sb.write_view("<\{side}/>")
+        continue
+      }
+      let style_name = border_styles[style]
+      sb.write_view("<\{side} style=\"")
+      sb.write_view(escape_xml_attr(style_name))
+      sb.write_view("\">")
+      match color {
+        Some(value) => {
+          let normalized = value.replace_all(old="#", new="")
+          let rgb = if normalized.length() == 6 {
+            "FF" + normalized
+          } else {
+            normalized
+          }
+          sb.write_view("<color rgb=\"")
+          sb.write_view(escape_xml_attr(rgb))
+          sb.write_view("\"/>")
+        }
+        None => ()
+      }
+      sb.write_view("</\{side}>")
+    }
+    sb.write_view("</border>\n")
+  }
+  sb.write_view("  </borders>\n")
   let base_block =
-    #|  <borders count="1">
-    #|    <border><left/><right/><top/><bottom/><diagonal/></border>
-    #|  </borders>
     #|  <cellStyleXfs count="1">
     #|    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
     #|  </cellStyleXfs>
@@ -422,8 +593,18 @@ fn write_styles_xml(
       None => 0
     }
     let apply_fill = fill_id != 0
+    let border_id = match style.border {
+      Some(border) =>
+        match
+          border_ids.get(normalize_border_key(border_lines_for_style(border))) {
+          Some(id) => id
+          None => 0
+        }
+      None => 0
+    }
+    let apply_border = border_id != 0
     sb.write_view(
-      "    <xf numFmtId=\"\{num_fmt_id}\" fontId=\"\{font_id}\" fillId=\"\{fill_id}\" borderId=\"0\" xfId=\"0\"",
+      "    <xf numFmtId=\"\{num_fmt_id}\" fontId=\"\{font_id}\" fillId=\"\{fill_id}\" borderId=\"\{border_id}\" xfId=\"0\"",
     )
     if apply {
       sb.write_view(" applyNumberFormat=\"1\"")
@@ -433,6 +614,9 @@ fn write_styles_xml(
     }
     if apply_fill {
       sb.write_view(" applyFill=\"1\"")
+    }
+    if apply_border {
+      sb.write_view(" applyBorder=\"1\"")
     }
     sb.write_view("/>\n")
   }
@@ -469,11 +653,25 @@ fn write_styles_xml(
           }
         None => false
       }
+      let has_border = match style.border {
+        Some(border) => {
+          let lines = border_lines_for_style(border)
+          let mut any = false
+          for line in lines {
+            let (_, s, c) = line
+            if s > 0 || c != None {
+              any = true
+            }
+          }
+          any
+        }
+        None => false
+      }
       let has_num_fmt = match style.number_format {
         Some(_) => true
         None => false
       }
-      if !has_num_fmt && !has_font && !has_fill {
+      if !has_num_fmt && !has_font && !has_fill && !has_border {
         sb.write_view("    <dxf/>\n")
         continue
       }
@@ -570,6 +768,45 @@ fn write_styles_xml(
               }
               sb.write_view("</patternFill></fill>")
             }
+          }
+        None => ()
+      }
+      match style.border {
+        Some(border) =>
+          if has_border {
+            let lines = border_lines_for_style(border)
+            sb.write_view("<border>")
+            for line in lines {
+              let (side, style, color) = line
+              if side == "diagonal" {
+                sb.write_view("<diagonal/>")
+                continue
+              }
+              if style <= 0 {
+                sb.write_view("<\{side}/>")
+                continue
+              }
+              let style_name = border_styles[style]
+              sb.write_view("<\{side} style=\"")
+              sb.write_view(escape_xml_attr(style_name))
+              sb.write_view("\">")
+              match color {
+                Some(value) => {
+                  let normalized = value.replace_all(old="#", new="")
+                  let rgb = if normalized.length() == 6 {
+                    "FF" + normalized
+                  } else {
+                    normalized
+                  }
+                  sb.write_view("<color rgb=\"")
+                  sb.write_view(escape_xml_attr(rgb))
+                  sb.write_view("\"/>")
+                }
+                None => ()
+              }
+              sb.write_view("</\{side}>")
+            }
+            sb.write_view("</border>")
           }
         None => ()
       }

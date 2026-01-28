@@ -223,3 +223,68 @@ test "conditional style fill write + roundtrip" {
   let parsed = read(bytes)
   assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
 }
+
+///|
+test "cell style border write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let borders : Array[Border] = [
+    Border::with_values("left", style=1, color="FF0000"),
+    Border::with_values("top", style=2, color="00FF00"),
+  ]
+  let style_id = workbook.new_style(Style::border(borders))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("<borders count=\"2\">"), content="true")
+  inspect(styles_xml.contains("<left style=\"thin\">"), content="true")
+  inspect(styles_xml.contains("<top style=\"medium\">"), content="true")
+  inspect(styles_xml.contains("color rgb=\"FFFF0000\""), content="true")
+  inspect(styles_xml.contains("color rgb=\"FF00FF00\""), content="true")
+  inspect(styles_xml.contains("borderId=\"1\""), content="true")
+  inspect(styles_xml.contains("applyBorder=\"1\""), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::border(borders))
+}
+
+///|
+test "conditional style border write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let borders : Array[Border] = [
+    Border::with_values("bottom", style=5, color="0000FF"),
+  ]
+  let style_id = workbook.new_conditional_style(Style::border(borders))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(styles_xml.contains("<dxf><border>"), content="true")
+  inspect(styles_xml.contains("<bottom style=\"thick\">"), content="true")
+  inspect(styles_xml.contains("color rgb=\"FF0000FF\""), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::border(borders))
+}
