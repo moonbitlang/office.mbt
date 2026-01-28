@@ -26,7 +26,7 @@ References:
   - [x] Protection (locked/hidden + conditional protection)
 
 ### Charts
-- [ ] Add high-level chart builder types (partial parity with Excelize `Chart*` types in `excelize/xmlChart.go` / `excelize/chart.go`)
+- [x] Add high-level chart builder types (partial parity with Excelize `Chart*` types in `excelize/xmlChart.go` / `excelize/chart.go`)
 
 ### Drawings: pictures & shapes
 - [x] Add picture `name` / `alt_text` options (partial parity with Excelize `GraphicOptions` in `excelize/xmlDrawing.go`)

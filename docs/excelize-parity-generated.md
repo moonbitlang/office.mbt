@@ -4,14 +4,14 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `39e252e`
+- mbtexcel: `ba85806`
 
 
 ## API name parity (normalized)
 
 - Excelize exported funcs + `(*File)` methods: 169
 
-- MoonBit exported names scanned from `.mbti`: 362
+- MoonBit exported names scanned from `.mbti`: 375
 
 - Missing Excelize API names in MoonBit (by normalized name): 0
 
@@ -22,18 +22,7 @@ This section compares **exported Go type names** to **exported MoonBit type name
 It is intentionally conservative and may report false positives (e.g. types that exist but are not public, or types that are intentionally modeled differently).
 
 
-- Missing exported Excelize types (filtered to key feature files): 18
-
-
-### `excelize/chart.go`
-
-- `chart_dash_type` (Excelize `ChartDashType`)
-
-- `chart_line_type` (Excelize `ChartLineType`)
-
-- `chart_tick_label_position_type` (Excelize `ChartTickLabelPositionType`)
-
-- `chart_type` (Excelize `ChartType`)
+- Missing exported Excelize types (filtered to key feature files): 3
 
 
 ### `excelize/pivotTable.go`
@@ -46,28 +35,3 @@ It is intentionally conservative and may report false positives (e.g. types that
 ### `excelize/slicer.go`
 
 - `slicer_options` (Excelize `SlicerOptions`)
-
-
-### `excelize/xmlChart.go`
-
-- `chart_axis` (Excelize `ChartAxis`)
-
-- `chart_data_label` (Excelize `ChartDataLabel`)
-
-- `chart_data_point` (Excelize `ChartDataPoint`)
-
-- `chart_dimension` (Excelize `ChartDimension`)
-
-- `chart_legend` (Excelize `ChartLegend`)
-
-- `chart_line` (Excelize `ChartLine`)
-
-- `chart_marker` (Excelize `ChartMarker`)
-
-- `chart_num_fmt` (Excelize `ChartNumFmt`)
-
-- `chart_plot_area` (Excelize `ChartPlotArea`)
-
-- `chart_series` (Excelize `ChartSeries`)
-
-- `chart_up_down_bar` (Excelize `ChartUpDownBar`)
