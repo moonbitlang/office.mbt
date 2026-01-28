@@ -1614,6 +1614,91 @@ pub fn Worksheet::add_picture_from_bytes(
 }
 
 ///|
+pub fn Worksheet::add_picture_from_bytes_with_options(
+  self : Worksheet,
+  reference : String,
+  data : Bytes,
+  extension : String,
+  options : GraphicOptions,
+) -> Unit raise XlsxError {
+  let offset_x = match options.offset_x {
+    Some(value) => value
+    None => 0
+  }
+  let offset_y = match options.offset_y {
+    Some(value) => value
+    None => 0
+  }
+  let scale_x = match options.scale_x {
+    Some(value) => value
+    None => 1.0
+  }
+  let scale_y = match options.scale_y {
+    Some(value) => value
+    None => 1.0
+  }
+  let hyperlink = match options.hyperlink {
+    Some(value) => value
+    None => ""
+  }
+  let hyperlink_type = match options.hyperlink_type {
+    Some(value) => value
+    None => HyperlinkType::Unset
+  }
+  let name = match options.name {
+    Some(value) => value
+    None => ""
+  }
+  let alt_text = match options.alt_text {
+    Some(value) => value
+    None => ""
+  }
+  let lock_aspect_ratio = match options.lock_aspect_ratio {
+    Some(value) => value
+    None => false
+  }
+  let auto_fit = match options.auto_fit {
+    Some(value) => value
+    None => false
+  }
+  let auto_fit_ignore_aspect = match options.auto_fit_ignore_aspect {
+    Some(value) => value
+    None => false
+  }
+  let print_object = match options.print_object {
+    Some(value) => value
+    None => true
+  }
+  let locked = match options.locked {
+    Some(value) => value
+    None => true
+  }
+  let positioning = match options.positioning {
+    Some(value) => value
+    None => PicturePositioning::OneCell
+  }
+  self.add_picture_from_bytes(
+    reference,
+    data,
+    extension,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+    name~,
+    alt_text~,
+    lock_aspect_ratio~,
+    auto_fit~,
+    auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
+    positioning~,
+  )
+}
+
+///|
 pub async fn Worksheet::add_picture(
   self : Worksheet,
   reference : String,
@@ -1646,6 +1731,89 @@ pub async fn Worksheet::add_picture(
     reference,
     bytes,
     extension,
+    offset_x~,
+    offset_y~,
+    scale_x~,
+    scale_y~,
+    hyperlink~,
+    hyperlink_type~,
+    name~,
+    alt_text~,
+    lock_aspect_ratio~,
+    auto_fit~,
+    auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
+    positioning~,
+  )
+}
+
+///|
+pub async fn Worksheet::add_picture_with_options(
+  self : Worksheet,
+  reference : String,
+  path : String,
+  options : GraphicOptions,
+) -> Unit raise XlsxError {
+  let offset_x = match options.offset_x {
+    Some(value) => value
+    None => 0
+  }
+  let offset_y = match options.offset_y {
+    Some(value) => value
+    None => 0
+  }
+  let scale_x = match options.scale_x {
+    Some(value) => value
+    None => 1.0
+  }
+  let scale_y = match options.scale_y {
+    Some(value) => value
+    None => 1.0
+  }
+  let hyperlink = match options.hyperlink {
+    Some(value) => value
+    None => ""
+  }
+  let hyperlink_type = match options.hyperlink_type {
+    Some(value) => value
+    None => HyperlinkType::Unset
+  }
+  let name = match options.name {
+    Some(value) => value
+    None => ""
+  }
+  let alt_text = match options.alt_text {
+    Some(value) => value
+    None => ""
+  }
+  let lock_aspect_ratio = match options.lock_aspect_ratio {
+    Some(value) => value
+    None => false
+  }
+  let auto_fit = match options.auto_fit {
+    Some(value) => value
+    None => false
+  }
+  let auto_fit_ignore_aspect = match options.auto_fit_ignore_aspect {
+    Some(value) => value
+    None => false
+  }
+  let print_object = match options.print_object {
+    Some(value) => value
+    None => true
+  }
+  let locked = match options.locked {
+    Some(value) => value
+    None => true
+  }
+  let positioning = match options.positioning {
+    Some(value) => value
+    None => PicturePositioning::OneCell
+  }
+  self.add_picture(
+    reference,
+    path,
     offset_x~,
     offset_y~,
     scale_x~,

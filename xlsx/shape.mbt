@@ -1,4 +1,29 @@
 ///|
+pub struct ShapeLine {
+  mut color : String?
+  mut width : Double?
+} derive(Eq, Show)
+
+///|
+pub fn ShapeLine::new() -> ShapeLine {
+  { color: None, width: None }
+}
+
+///|
+pub fn ShapeLine::with_values(color? : String, width? : Double) -> ShapeLine {
+  let line = ShapeLine::new()
+  match color {
+    Some(value) => line.color = Some(value)
+    None => ()
+  }
+  match width {
+    Some(value) => line.width = Some(value)
+    None => ()
+  }
+  line
+}
+
+///|
 pub struct Shape {
   reference : String
   shape_type : String

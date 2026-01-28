@@ -113,6 +113,54 @@ test "picture options write drawing and rels" {
 }
 
 ///|
+test "picture options via GraphicOptions" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let img : Bytes = [9, 1, 2, 3]
+  let opts = GraphicOptions::with_values(
+    offset_x=10,
+    offset_y=20,
+    scale_x=0.5,
+    scale_y=2.0,
+    hyperlink="https://example.com",
+    hyperlink_type=HyperlinkType::External,
+    name="Logo",
+    alt_text="Excel Logo",
+    lock_aspect_ratio=true,
+    print_object=false,
+    locked=false,
+    positioning=PicturePositioning::Absolute,
+  )
+  workbook.add_picture_from_bytes_with_options(
+    "Sheet1", "C3", img, ".png", opts,
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("<xdr:col>2</xdr:col>"), content="true")
+  inspect(drawing_xml.contains("<xdr:row>2</xdr:row>"), content="true")
+  inspect(
+    drawing_xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
+  )
+  inspect(drawing_xml.contains("name=\"Logo\""), content="true")
+  inspect(drawing_xml.contains("descr=\"Excel Logo\""), content="true")
+  inspect(drawing_xml.contains("noChangeAspect=\"1\""), content="true")
+  inspect(drawing_xml.contains("fLocksWithSheet=\"0\""), content="true")
+  inspect(drawing_xml.contains("fPrintsWithSheet=\"0\""), content="true")
+  inspect(drawing_xml.contains("<a:hlinkClick"), content="true")
+  let drawing_rels = match archive.get("xl/drawings/_rels/drawing1.xml.rels") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing rels")
+  }
+  inspect(drawing_rels.contains("https://example.com"), content="true")
+  inspect(drawing_rels.contains("TargetMode=\"External\""), content="true")
+}
+
+///|
 test "picture clientData flags" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

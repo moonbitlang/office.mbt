@@ -474,6 +474,27 @@ pub(all) enum FormulaType {
 pub impl Eq for FormulaType
 pub impl Show for FormulaType
 
+pub struct GraphicOptions {
+  mut offset_x : Int?
+  mut offset_y : Int?
+  mut scale_x : Double?
+  mut scale_y : Double?
+  mut hyperlink : String?
+  mut hyperlink_type : HyperlinkType?
+  mut name : String?
+  mut alt_text : String?
+  mut lock_aspect_ratio : Bool?
+  mut auto_fit : Bool?
+  mut auto_fit_ignore_aspect : Bool?
+  mut print_object : Bool?
+  mut locked : Bool?
+  mut positioning : PicturePositioning?
+}
+pub fn GraphicOptions::new() -> Self
+pub fn GraphicOptions::with_values(offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self
+pub impl Eq for GraphicOptions
+pub impl Show for GraphicOptions
+
 type HeaderFooterImage
 
 pub struct HeaderFooterImageOptions {
@@ -570,6 +591,7 @@ pub(all) enum IgnoredErrorType {
 pub impl Eq for IgnoredErrorType
 pub impl Show for IgnoredErrorType
 
+#alias(Picture)
 pub struct Image {
   reference : String
   data : Bytes
@@ -798,6 +820,15 @@ pub struct Shape {
 pub fn Shape::new(String, String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
 pub impl Eq for Shape
 pub impl Show for Shape
+
+pub struct ShapeLine {
+  mut color : String?
+  mut width : Double?
+}
+pub fn ShapeLine::new() -> Self
+pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
+pub impl Eq for ShapeLine
+pub impl Show for ShapeLine
 
 pub struct SheetBackground {
   data : Bytes
@@ -1141,8 +1172,11 @@ pub fn Workbook::add_form_control(Self, StringView, FormControl) -> Unit raise X
 pub fn Workbook::add_header_footer_image(Self, StringView, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Workbook::add_ignored_errors(Self, StringView, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
+pub fn Workbook::add_image_with_options(Self, StringView, String, Bytes, String, String, GraphicOptions) -> Unit raise XlsxError
 pub async fn Workbook::add_picture(Self, StringView, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
 pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
+pub fn Workbook::add_picture_from_bytes_with_options(Self, StringView, String, Bytes, String, GraphicOptions) -> Unit raise XlsxError
+pub async fn Workbook::add_picture_with_options(Self, StringView, String, String, GraphicOptions) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
@@ -1434,6 +1468,8 @@ pub fn Worksheet::add_ignored_errors(Self, String, IgnoredErrorType) -> Unit rai
 pub fn Worksheet::add_image(Self, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
 pub async fn Worksheet::add_picture(Self, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
 pub fn Worksheet::add_picture_from_bytes(Self, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
+pub fn Worksheet::add_picture_from_bytes_with_options(Self, String, Bytes, String, GraphicOptions) -> Unit raise XlsxError
+pub async fn Worksheet::add_picture_with_options(Self, String, String, GraphicOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_shape(Self, Shape) -> Unit raise XlsxError
