@@ -628,6 +628,7 @@ pub impl Show for Panes
 pub(all) enum PicturePositioning {
   OneCell
   TwoCell
+  Absolute
 }
 pub impl Eq for PicturePositioning
 pub impl Show for PicturePositioning

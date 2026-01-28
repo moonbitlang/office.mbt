@@ -699,6 +699,21 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
+      PicturePositioning::Absolute => {
+        sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
       PicturePositioning::OneCell => {
         sb.write_view("  <xdr:oneCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
@@ -757,6 +772,7 @@ fn write_drawing_xml(
     sb.write_view("    <xdr:clientData/>\n")
     match image.positioning {
       PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
       PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
     }
   }

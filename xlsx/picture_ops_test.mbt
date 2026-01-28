@@ -177,6 +177,30 @@ test "picture positioning twoCell" {
 }
 
 ///|
+test "picture positioning absolute" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_picture_from_bytes(
+    "Sheet1",
+    "A1",
+    [9, 9],
+    ".png",
+    positioning=PicturePositioning::Absolute,
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(
+    drawing_xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
+  )
+  inspect(drawing_xml.contains("<xdr:oneCellAnchor>"), content="false")
+}
+
+///|
 async test "picture autofit preserves aspect" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
