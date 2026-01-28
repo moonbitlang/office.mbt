@@ -823,6 +823,12 @@ fn write_drawing_xml(
     let row_idx = row - 1
     let shape_id = obj_id
     obj_id = obj_id + 1
+    let cx = (Double::from_int(shape.width * emu_per_pixel) * shape.scale_x)
+      .round()
+      .to_int()
+    let cy = (Double::from_int(shape.height * emu_per_pixel) * shape.scale_y)
+      .round()
+      .to_int()
     sb.write_view("  <xdr:oneCellAnchor>\n")
     sb.write_view("    <xdr:from>\n")
     sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -830,7 +836,7 @@ fn write_drawing_xml(
     sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
     sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
     sb.write_view("    </xdr:from>\n")
-    sb.write_view("    <xdr:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("    <xdr:sp>\n")
     sb.write_view("      <xdr:nvSpPr>\n")
     sb.write_view(
@@ -839,19 +845,86 @@ fn write_drawing_xml(
     sb.write_view("        <xdr:cNvSpPr/>\n")
     sb.write_view("      </xdr:nvSpPr>\n")
     sb.write_view("      <xdr:spPr>\n")
+    sb.write_view("        <a:xfrm>\n")
+    sb.write_view("          <a:off x=\"0\" y=\"0\"/>\n")
+    sb.write_view("          <a:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+    sb.write_view("        </a:xfrm>\n")
     sb.write_view("        <a:prstGeom prst=\"")
     sb.write_view(escape_xml_attr(shape.shape_type.to_lower()))
     sb.write_view("\"><a:avLst/></a:prstGeom>\n")
     sb.write_view("      </xdr:spPr>\n")
-    if shape.text != "" {
+    if shape.paragraph.length() > 0 || shape.text != "" {
       sb.write_view("      <xdr:txBody>\n")
       sb.write_view("        <a:bodyPr/>\n")
       sb.write_view("        <a:lstStyle/>\n")
-      sb.write_view("        <a:p>\n")
-      sb.write_view("          <a:r><a:t>")
-      sb.write_view(escape_xml_text(shape.text))
-      sb.write_view("</a:t></a:r>\n")
-      sb.write_view("        </a:p>\n")
+      let runs = if shape.paragraph.length() > 0 {
+        shape.paragraph[:]
+      } else {
+        [{ text: shape.text, font: None }]
+      }
+      for run in runs {
+        sb.write_view("        <a:p>\n")
+        sb.write_view("          <a:r>\n")
+        match run.font {
+          Some(font) => {
+            sb.write_view("            <a:rPr")
+            sb.write_view(" lang=\"en-US\"")
+            if font.bold {
+              sb.write_view(" b=\"1\"")
+            }
+            if font.italic {
+              sb.write_view(" i=\"1\"")
+            }
+            match font.underline {
+              Some(value) => sb.write_view(" u=\"\{escape_xml_attr(value)}\"")
+              None => ()
+            }
+            match font.size {
+              Some(size) =>
+                sb.write_view(" sz=\"\{(size * 100.0).round().to_int()}\"")
+              None => ()
+            }
+            sb.write_view(">")
+            match font.family {
+              Some(family) => {
+                sb.write_view("<a:latin typeface=\"")
+                sb.write_view(escape_xml_attr(family))
+                sb.write_view("\"/>")
+                sb.write_view("<a:ea typeface=\"")
+                sb.write_view(escape_xml_attr(family))
+                sb.write_view("\"/>")
+                sb.write_view("<a:cs typeface=\"")
+                sb.write_view(escape_xml_attr(family))
+                sb.write_view("\"/>")
+              }
+              None => ()
+            }
+            match font.color {
+              Some(color) => {
+                let normalized = color.replace_all(old="#", new="").to_upper()
+                sb.write_view("<a:solidFill><a:srgbClr val=\"")
+                sb.write_view(escape_xml_attr(normalized))
+                sb.write_view("\"/></a:solidFill>")
+              }
+              None => ()
+            }
+            sb.write_view("</a:rPr>\n")
+          }
+          None => sb.write_view("            <a:rPr lang=\"en-US\"/>\n")
+        }
+        let text_value = if run.text == "" { " " } else { run.text }
+        if text_value.has_prefix(" ") ||
+          text_value.has_suffix(" ") ||
+          text_value.contains("\n") {
+          sb.write_view("            <a:t xml:space=\"preserve\">")
+        } else {
+          sb.write_view("            <a:t>")
+        }
+        sb.write_view(escape_xml_text(text_value))
+        sb.write_view("</a:t>\n")
+        sb.write_view("          </a:r>\n")
+        sb.write_view("        </a:p>\n")
+      }
       sb.write_view("      </xdr:txBody>\n")
     }
     sb.write_view("    </xdr:sp>\n")
