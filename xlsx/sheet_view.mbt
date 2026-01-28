@@ -113,6 +113,9 @@ pub struct SheetViewOptions {
 } derive(Eq, Show)
 
 ///|
+pub type ViewOptions = SheetViewOptions
+
+///|
 pub fn SheetViewOptions::new() -> SheetViewOptions {
   {
     default_grid_color: None,

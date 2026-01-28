@@ -5,6 +5,9 @@ pub(all) struct AutoFilterOption {
 } derive(Eq, Show)
 
 ///|
+pub type AutoFilterOptions = AutoFilterOption
+
+///|
 pub struct AutoFilterCustomFilter {
   operator : String
   value : String

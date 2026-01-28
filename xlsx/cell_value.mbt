@@ -7,6 +7,9 @@ pub(all) enum CellValueType {
 } derive(Eq, Show)
 
 ///|
+pub type CellType = CellValueType
+
+///|
 pub(all) enum CellValue {
   String(String)
   Numeric(Double)

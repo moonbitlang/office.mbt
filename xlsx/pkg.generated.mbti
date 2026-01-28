@@ -159,6 +159,7 @@ pub struct AutoFilterCustomFilters {
 pub impl Eq for AutoFilterCustomFilters
 pub impl Show for AutoFilterCustomFilters
 
+#alias(AutoFilterOptions)
 pub(all) struct AutoFilterOption {
   column : String
   expression : String
@@ -219,6 +220,7 @@ pub(all) enum CellValue {
 pub impl Eq for CellValue
 pub impl Show for CellValue
 
+#alias(CellType)
 pub(all) enum CellValueType {
   String
   Number
@@ -900,6 +902,7 @@ type SheetView
 pub impl Eq for SheetView
 pub impl Show for SheetView
 
+#alias(ViewOptions)
 pub struct SheetViewOptions {
   mut default_grid_color : Bool?
   mut right_to_left : Bool?
