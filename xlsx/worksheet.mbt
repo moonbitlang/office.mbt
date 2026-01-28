@@ -28,6 +28,7 @@ pub struct Image {
   name : String
   alt_text : String
   lock_aspect_ratio : Bool
+  positioning : PicturePositioning
 }
 
 ///|
@@ -1440,6 +1441,7 @@ pub fn Worksheet::add_picture_from_bytes(
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
+  positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let ext = normalize_image_extension_lower(extension)
   let content_type = match image_content_type(ext) {
@@ -1461,6 +1463,7 @@ pub fn Worksheet::add_picture_from_bytes(
     name~,
     alt_text~,
     lock_aspect_ratio~,
+    positioning~,
   )
 }
 
@@ -1478,6 +1481,7 @@ pub async fn Worksheet::add_picture(
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
+  positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let extension = match extension_from_path(path) {
@@ -1501,6 +1505,7 @@ pub async fn Worksheet::add_picture(
     name~,
     alt_text~,
     lock_aspect_ratio~,
+    positioning~,
   )
 }
 
@@ -1520,6 +1525,7 @@ pub fn Worksheet::add_image(
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
+  positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
@@ -1547,6 +1553,7 @@ pub fn Worksheet::add_image(
     name,
     alt_text,
     lock_aspect_ratio,
+    positioning,
   })
 }
 
@@ -1566,6 +1573,7 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     name: image.name,
     alt_text: image.alt_text,
     lock_aspect_ratio: image.lock_aspect_ratio,
+    positioning: image.positioning,
   }
 }
 

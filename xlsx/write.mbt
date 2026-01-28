@@ -694,14 +694,33 @@ fn write_drawing_xml(
     } else {
       image.name
     }
-    sb.write_view("  <xdr:oneCellAnchor>\n")
-    sb.write_view("    <xdr:from>\n")
-    sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-    sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
-    sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-    sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
-    sb.write_view("    </xdr:from>\n")
-    sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+    match image.positioning {
+      PicturePositioning::TwoCell => {
+        sb.write_view("  <xdr:twoCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::OneCell => {
+        sb.write_view("  <xdr:oneCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+      }
+    }
     sb.write_view("    <xdr:pic>\n")
     sb.write_view("      <xdr:nvPicPr>\n")
     match item.hyperlink_rel_id {
@@ -747,7 +766,10 @@ fn write_drawing_xml(
     sb.write_view("      </xdr:spPr>\n")
     sb.write_view("    </xdr:pic>\n")
     sb.write_view("    <xdr:clientData/>\n")
-    sb.write_view("  </xdr:oneCellAnchor>\n")
+    match image.positioning {
+      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+    }
   }
   for chart in charts {
     let (reference, rel_id) = chart
