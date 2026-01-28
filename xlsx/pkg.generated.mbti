@@ -724,8 +724,12 @@ pub struct Shape {
   height : Int
   scale_x : Double
   scale_y : Double
+  fill_color : String
+  fill_transparency : Int
+  line_color : String
+  line_width : Double
 }
-pub fn Shape::new(String, String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double) -> Self raise XlsxError
+pub fn Shape::new(String, String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double) -> Self raise XlsxError
 pub impl Eq for Shape
 pub impl Show for Shape
 

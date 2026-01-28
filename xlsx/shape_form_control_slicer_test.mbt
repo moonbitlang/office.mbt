@@ -74,6 +74,39 @@ test "shape size and rich text paragraphs" {
 }
 
 ///|
+test "shape fill and line" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let shape = Shape::new(
+    "C3",
+    "rect",
+    text="Styled",
+    width=160,
+    height=160,
+    fill_color="8EB9FF",
+    fill_transparency=60,
+    line_color="4286F4",
+    line_width=1.2,
+  )
+  sheet.add_shape(shape)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  inspect(drawing_xml.contains("val=\"8EB9FF\""), content="true")
+  inspect(drawing_xml.contains("alpha val=\"40000\""), content="true")
+  inspect(drawing_xml.contains("w=\"15240\""), content="true")
+  inspect(drawing_xml.contains("val=\"4286F4\""), content="true")
+}
+
+///|
 test "form control add/get/delete and vml" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

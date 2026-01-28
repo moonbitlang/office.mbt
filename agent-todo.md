@@ -31,7 +31,7 @@ References:
 - [x] Follow-up: picture `PrintObject` / `Locked` flags (writes `xdr:clientData` attrs) (more `GraphicOptions` parity)
 - [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
   - [x] Size (width/height + scale) and basic rich-text paragraphs
-  - [ ] Fill (color/pattern/transparency) and line (color/width)
+  - [x] Solid fill (color + transparency) and line (color + width)
 
 ### Sparklines
 - [x] Add `SparklineOptions` basic parity (style presets, markers/high/low/first/last/negative, axis, reverse, seriesColor) and round-trip via `SparklineGroupOptions`

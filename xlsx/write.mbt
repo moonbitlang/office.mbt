@@ -849,6 +849,34 @@ fn write_drawing_xml(
     sb.write_view("          <a:off x=\"0\" y=\"0\"/>\n")
     sb.write_view("          <a:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("        </a:xfrm>\n")
+    if shape.fill_color != "" {
+      let fill = shape.fill_color.replace_all(old="#", new="").to_upper()
+      sb.write_view("        <a:solidFill><a:srgbClr val=\"")
+      sb.write_view(escape_xml_attr(fill))
+      if shape.fill_transparency > 0 {
+        let alpha = (100 - shape.fill_transparency) * 1000
+        sb.write_view(
+          "\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n",
+        )
+      } else {
+        sb.write_view("\"/></a:solidFill>\n")
+      }
+    }
+    if shape.line_color != "" || shape.line_width != 1.0 {
+      sb.write_view("        <a:ln")
+      if shape.line_width != 1.0 {
+        let w = (shape.line_width * 12700.0).round().to_int()
+        sb.write_view(" w=\"\{w}\"")
+      }
+      if shape.line_color == "" {
+        sb.write_view("/>\n")
+      } else {
+        let line = shape.line_color.replace_all(old="#", new="").to_upper()
+        sb.write_view("><a:solidFill><a:srgbClr val=\"")
+        sb.write_view(escape_xml_attr(line))
+        sb.write_view("\"/></a:solidFill></a:ln>\n")
+      }
+    }
     sb.write_view("        <a:prstGeom prst=\"")
     sb.write_view(escape_xml_attr(shape.shape_type.to_lower()))
     sb.write_view("\"><a:avLst/></a:prstGeom>\n")
