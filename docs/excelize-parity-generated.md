@@ -4,7 +4,7 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `cddd199`
+- mbtexcel: `bc0a8b9`
 
 
 ## API name parity (normalized)
@@ -22,12 +22,7 @@ This section compares **exported Go type names** to **exported MoonBit type name
 It is intentionally conservative and may report false positives (e.g. types that exist but are not public, or types that are intentionally modeled differently).
 
 
-- Missing exported Excelize types (filtered to key feature files): 24
-
-
-### `excelize/cell.go`
-
-- `cell_type` (Excelize `CellType`)
+- Missing exported Excelize types (filtered to key feature files): 21
 
 
 ### `excelize/chart.go`
@@ -85,13 +80,3 @@ It is intentionally conservative and may report false positives (e.g. types that
 - `picture` (Excelize `Picture`)
 
 - `shape_line` (Excelize `ShapeLine`)
-
-
-### `excelize/xmlTable.go`
-
-- `auto_filter_options` (Excelize `AutoFilterOptions`)
-
-
-### `excelize/xmlWorksheet.go`
-
-- `view_options` (Excelize `ViewOptions`)
