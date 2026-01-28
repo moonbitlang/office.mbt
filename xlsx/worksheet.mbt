@@ -39,6 +39,13 @@ pub struct Image {
 pub struct Chart {
   reference : String
   xml : String
+  offset_x : Int
+  offset_y : Int
+  width_emu : Int
+  height_emu : Int
+  print_object : Bool
+  locked : Bool
+  positioning : PicturePositioning
 }
 
 ///|
@@ -1953,6 +1960,21 @@ fn image_with_reference(image : Image, reference : String) -> Image {
 }
 
 ///|
+fn chart_with_reference(chart : Chart, reference : String) -> Chart {
+  {
+    reference,
+    xml: chart.xml,
+    offset_x: chart.offset_x,
+    offset_y: chart.offset_y,
+    width_emu: chart.width_emu,
+    height_emu: chart.height_emu,
+    print_object: chart.print_object,
+    locked: chart.locked,
+    positioning: chart.positioning,
+  }
+}
+
+///|
 pub fn Worksheet::get_pictures(
   self : Worksheet,
   cell : StringView,
@@ -2011,7 +2033,84 @@ pub fn Worksheet::add_chart(
   xml : String,
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
-  self.charts.push({ reference, xml })
+  self.charts.push({
+    reference,
+    xml,
+    offset_x: 0,
+    offset_y: 0,
+    width_emu: picture_emu_per_pixel * 480,
+    height_emu: picture_emu_per_pixel * 260,
+    print_object: true,
+    locked: true,
+    positioning: PicturePositioning::OneCell,
+  })
+}
+
+///|
+pub fn Worksheet::add_chart_with_options(
+  self : Worksheet,
+  reference : String,
+  opts : ChartOptions,
+) -> Unit raise XlsxError {
+  let (_row, _col) = cell_ref_to_rc(reference)
+  let offset_x = match opts.format.offset_x {
+    Some(value) => value
+    None => 0
+  }
+  let offset_y = match opts.format.offset_y {
+    Some(value) => value
+    None => 0
+  }
+  let scale_x = match opts.format.scale_x {
+    Some(value) => value
+    None => 1.0
+  }
+  let scale_y = match opts.format.scale_y {
+    Some(value) => value
+    None => 1.0
+  }
+  if offset_x < 0 || offset_y < 0 {
+    raise XlsxError::InvalidSheetOperation(msg="chart offset must be >= 0")
+  }
+  if scale_x <= 0.0 || scale_y <= 0.0 {
+    raise XlsxError::InvalidSheetOperation(msg="chart scale must be > 0")
+  }
+  let print_object = match opts.format.print_object {
+    Some(value) => value
+    None => true
+  }
+  let locked = match opts.format.locked {
+    Some(value) => value
+    None => true
+  }
+  let positioning = match opts.format.positioning {
+    Some(value) => value
+    None => PicturePositioning::OneCell
+  }
+  let width_emu = (Double::from_int(
+      picture_emu_per_pixel * opts.dimension.width,
+    ) *
+    scale_x)
+    .round()
+    .to_int()
+  let height_emu = (Double::from_int(
+      picture_emu_per_pixel * opts.dimension.height,
+    ) *
+    scale_y)
+    .round()
+    .to_int()
+  let xml = chart_options_to_xml(opts)
+  self.charts.push({
+    reference,
+    xml,
+    offset_x,
+    offset_y,
+    width_emu,
+    height_emu,
+    print_object,
+    locked,
+    positioning,
+  })
 }
 
 ///|
@@ -3062,7 +3161,7 @@ pub fn Worksheet::insert_rows(
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_row_insert(chart.reference, row, count)
-    updated_charts.push({ reference, xml: chart.xml })
+    updated_charts.push(chart_with_reference(chart, reference))
   }
   self.charts.clear()
   self.charts.append(updated_charts[:])
@@ -3190,7 +3289,8 @@ pub fn Worksheet::remove_rows(
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     match adjust_cell_after_row_remove(chart.reference, row, count) {
-      Some(reference) => updated_charts.push({ reference, xml: chart.xml })
+      Some(reference) =>
+        updated_charts.push(chart_with_reference(chart, reference))
       None => ()
     }
   }
@@ -3630,7 +3730,7 @@ pub fn Worksheet::insert_cols(
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_col_insert(chart.reference, col, count)
-    updated_charts.push({ reference, xml: chart.xml })
+    updated_charts.push(chart_with_reference(chart, reference))
   }
   self.charts.clear()
   self.charts.append(updated_charts[:])
@@ -3758,7 +3858,8 @@ pub fn Worksheet::remove_cols(
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     match adjust_cell_after_col_remove(chart.reference, col, count) {
-      Some(reference) => updated_charts.push({ reference, xml: chart.xml })
+      Some(reference) =>
+        updated_charts.push(chart_with_reference(chart, reference))
       None => ()
     }
   }

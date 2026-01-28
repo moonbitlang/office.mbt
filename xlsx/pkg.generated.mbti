@@ -14,6 +14,8 @@ pub fn cell_ref_from(Int, Int) -> String raise XlsxError
 
 pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
 
+pub fn chart_options_to_xml(ChartOptions) -> String raise XlsxError
+
 pub fn column_name_to_number(StringView) -> Int raise XlsxError
 
 pub fn column_number_to_name(Int) -> String raise XlsxError
@@ -233,7 +235,186 @@ pub impl Show for CellValueType
 pub struct Chart {
   reference : String
   xml : String
+  offset_x : Int
+  offset_y : Int
+  width_emu : Int
+  height_emu : Int
+  print_object : Bool
+  locked : Bool
+  positioning : PicturePositioning
 }
+
+pub(all) struct ChartAxis {
+  none : Bool
+  major_grid_lines : Bool
+  minor_grid_lines : Bool
+  major_unit : Double
+  tick_label_position : ChartTickLabelPositionType
+  tick_label_skip : Int
+  reverse_order : Bool
+  secondary : Bool
+  maximum : Double?
+  minimum : Double?
+  log_base : Double
+  num_fmt : ChartNumFmt
+  title : String
+  ax_id : Int
+}
+pub fn ChartAxis::new() -> Self
+pub impl Eq for ChartAxis
+pub impl Show for ChartAxis
+
+pub(all) enum ChartDashType {
+  Unset
+  Solid
+  Dot
+  Dash
+  LgDash
+  SashDot
+  LgDashDot
+  LgDashDotDot
+  SysDash
+  SysDot
+  SysDashDot
+  SysDashDotDot
+}
+pub impl Eq for ChartDashType
+pub impl Show for ChartDashType
+
+pub(all) struct ChartDataLabel {
+  alignment : String
+}
+pub fn ChartDataLabel::new(alignment? : String) -> Self
+pub impl Eq for ChartDataLabel
+pub impl Show for ChartDataLabel
+
+pub(all) enum ChartDataLabelPositionType {
+  Center
+  Left
+  Right
+  Top
+  Bottom
+  BestFit
+  InEnd
+  OutEnd
+}
+pub impl Eq for ChartDataLabelPositionType
+pub impl Show for ChartDataLabelPositionType
+
+pub(all) struct ChartDataPoint {
+  index : Int
+  fill_color : String
+}
+pub fn ChartDataPoint::new(Int, fill_color? : String) -> Self
+pub impl Eq for ChartDataPoint
+pub impl Show for ChartDataPoint
+
+pub(all) struct ChartDimension {
+  width : Int
+  height : Int
+}
+pub fn ChartDimension::new() -> Self
+pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
+pub impl Eq for ChartDimension
+pub impl Show for ChartDimension
+
+pub(all) struct ChartLegend {
+  position : String
+  show_legend_key : Bool
+}
+pub fn ChartLegend::new(position? : String, show_legend_key? : Bool) -> Self
+pub impl Eq for ChartLegend
+pub impl Show for ChartLegend
+
+pub(all) struct ChartLine {
+  typ : ChartLineType
+  dash : ChartDashType
+  color : String
+  smooth : Bool
+  width : Double
+}
+pub fn ChartLine::new() -> Self
+pub impl Eq for ChartLine
+pub impl Show for ChartLine
+
+pub(all) enum ChartLineType {
+  Unset
+  Solid
+  NoLine
+  Automatic
+}
+pub impl Eq for ChartLineType
+pub impl Show for ChartLineType
+
+pub(all) struct ChartMarker {
+  symbol : String
+  size : Int
+}
+pub fn ChartMarker::new(symbol? : String, size? : Int) -> Self
+pub impl Eq for ChartMarker
+pub impl Show for ChartMarker
+
+pub(all) struct ChartNumFmt {
+  custom_num_fmt : String
+  source_linked : Bool
+}
+pub fn ChartNumFmt::new(custom_num_fmt? : String, source_linked? : Bool) -> Self
+pub impl Eq for ChartNumFmt
+pub impl Show for ChartNumFmt
+
+pub(all) struct ChartOptions {
+  typ : ChartType
+  series : Array[ChartSeries]
+  mut format : GraphicOptions
+  mut dimension : ChartDimension
+  mut legend : ChartLegend
+  mut title : String
+  mut vary_colors : Bool
+  mut x_axis : ChartAxis
+  mut y_axis : ChartAxis
+  mut plot_area : ChartPlotArea
+  mut show_blanks_as : String
+  mut gap_width : Int?
+  mut overlap : Int?
+}
+pub fn ChartOptions::new(ChartType) -> Self
+pub fn ChartOptions::set_dimension(Self, ChartDimension) -> Unit
+pub fn ChartOptions::set_format(Self, GraphicOptions) -> Unit
+pub fn ChartOptions::set_gap_width(Self, Int?) -> Unit
+pub fn ChartOptions::set_legend(Self, ChartLegend) -> Unit
+pub fn ChartOptions::set_overlap(Self, Int?) -> Unit
+pub fn ChartOptions::set_plot_area(Self, ChartPlotArea) -> Unit
+pub fn ChartOptions::set_show_blanks_as(Self, String) -> Unit
+pub fn ChartOptions::set_title(Self, String) -> Unit
+pub fn ChartOptions::set_vary_colors(Self, Bool) -> Unit
+pub fn ChartOptions::set_x_axis(Self, ChartAxis) -> Unit
+pub fn ChartOptions::set_y_axis(Self, ChartAxis) -> Unit
+pub impl Eq for ChartOptions
+pub impl Show for ChartOptions
+
+pub(all) struct ChartPlotArea {
+  show_val : Bool
+  num_fmt : ChartNumFmt
+  up_bars : ChartUpDownBar
+  down_bars : ChartUpDownBar
+}
+pub fn ChartPlotArea::new() -> Self
+pub impl Eq for ChartPlotArea
+pub impl Show for ChartPlotArea
+
+pub(all) struct ChartSeries {
+  name : String
+  categories : String
+  values : String
+  line : ChartLine
+  marker : ChartMarker
+  data_label : ChartDataLabel
+  data_label_position : ChartDataLabelPositionType
+  data_point : Array[ChartDataPoint]
+}
+pub fn ChartSeries::new(String, String, name? : String) -> Self raise XlsxError
+pub impl Eq for ChartSeries
+pub impl Show for ChartSeries
 
 pub struct ChartSheet {
   mut name : String
@@ -245,6 +426,85 @@ pub fn ChartSheet::name(Self) -> String
 pub fn ChartSheet::new(String, String) -> Self
 pub fn ChartSheet::set_state(Self, SheetState) -> Unit
 pub fn ChartSheet::state(Self) -> SheetState
+
+pub(all) enum ChartTickLabelPositionType {
+  NextToAxis
+  High
+  Low
+  NoTickLabels
+}
+pub impl Eq for ChartTickLabelPositionType
+pub impl Show for ChartTickLabelPositionType
+
+pub(all) enum ChartType {
+  Area
+  AreaStacked
+  AreaPercentStacked
+  Area3D
+  Area3DStacked
+  Area3DPercentStacked
+  Bar
+  BarStacked
+  BarPercentStacked
+  Bar3DClustered
+  Bar3DStacked
+  Bar3DPercentStacked
+  Bar3DConeClustered
+  Bar3DConeStacked
+  Bar3DConePercentStacked
+  Bar3DPyramidClustered
+  Bar3DPyramidStacked
+  Bar3DPyramidPercentStacked
+  Bar3DCylinderClustered
+  Bar3DCylinderStacked
+  Bar3DCylinderPercentStacked
+  Col
+  ColStacked
+  ColPercentStacked
+  Col3D
+  Col3DClustered
+  Col3DStacked
+  Col3DPercentStacked
+  Col3DCone
+  Col3DConeClustered
+  Col3DConeStacked
+  Col3DConePercentStacked
+  Col3DPyramid
+  Col3DPyramidClustered
+  Col3DPyramidStacked
+  Col3DPyramidPercentStacked
+  Col3DCylinder
+  Col3DCylinderClustered
+  Col3DCylinderStacked
+  Col3DCylinderPercentStacked
+  Doughnut
+  Line
+  Line3D
+  Pie
+  Pie3D
+  PieOfPie
+  BarOfPie
+  Radar
+  Scatter
+  Surface3D
+  WireframeSurface3D
+  Contour
+  WireframeContour
+  Bubble
+  Bubble3D
+  StockHighLowClose
+  StockOpenHighLowClose
+}
+pub impl Eq for ChartType
+pub impl Show for ChartType
+
+pub(all) struct ChartUpDownBar {
+  fill_color : String
+  border : ChartLine
+}
+pub fn ChartUpDownBar::new() -> Self
+pub impl Eq for ChartUpDownBar
+pub impl Show for ChartUpDownBar
 
 pub struct ColDimension {
   width : Double?
@@ -1163,6 +1423,7 @@ pub struct Workbook {
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_chart_sheet(Self, String, String) -> ChartSheet raise XlsxError
+pub fn Workbook::add_chart_with_options(Self, StringView, String, ChartOptions) -> Unit raise XlsxError
 pub fn Workbook::add_comment(Self, StringView, Comment) -> Unit raise XlsxError
 pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::add_data_validation(Self, StringView, DataValidation) -> Unit raise XlsxError
@@ -1457,6 +1718,7 @@ pub struct Worksheet {
   mut vml_drawing_hf_xml : String?
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
+pub fn Worksheet::add_chart_with_options(Self, String, ChartOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_comment(Self, Comment) -> Unit raise XlsxError
 pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation(Self, DataValidation) -> Unit raise XlsxError

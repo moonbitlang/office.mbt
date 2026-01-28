@@ -646,6 +646,19 @@ priv struct DrawingImage {
 }
 
 ///|
+priv struct DrawingChart {
+  reference : String
+  offset_x : Int
+  offset_y : Int
+  width_emu : Int
+  height_emu : Int
+  print_object : Bool
+  locked : Bool
+  positioning : PicturePositioning
+  rel_id : Int
+}
+
+///|
 priv struct DrawingHyperlink {
   rel_id : Int
   target : String
@@ -658,7 +671,7 @@ let emu_per_pixel = 9525
 ///|
 fn write_drawing_xml(
   images : Array[DrawingImage],
-  charts : Array[(String, Int)],
+  charts : Array[DrawingChart],
   shapes : Array[Shape],
 ) -> String raise XlsxError {
   let sb = StringBuilder::new()
@@ -779,20 +792,57 @@ fn write_drawing_xml(
     }
   }
   for chart in charts {
-    let (reference, rel_id) = chart
-    let (row, col) = cell_ref_to_rc(reference)
+    let (row, col) = cell_ref_to_rc(chart.reference)
     let col_idx = col - 1
     let row_idx = row - 1
     let frame_id = obj_id
     obj_id = obj_id + 1
-    sb.write_view("  <xdr:oneCellAnchor>\n")
-    sb.write_view("    <xdr:from>\n")
-    sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-    sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
-    sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-    sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
-    sb.write_view("    </xdr:from>\n")
-    sb.write_view("    <xdr:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    let col_off = chart.offset_x * emu_per_pixel
+    let row_off = chart.offset_y * emu_per_pixel
+    let cx = chart.width_emu
+    let cy = chart.height_emu
+    match chart.positioning {
+      PicturePositioning::TwoCell => {
+        sb.write_view("  <xdr:twoCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::Absolute => {
+        sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::OneCell => {
+        sb.write_view("  <xdr:oneCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+      }
+    }
     sb.write_view("    <xdr:graphicFrame>\n")
     sb.write_view("      <xdr:nvGraphicFramePr>\n")
     sb.write_view(
@@ -802,20 +852,26 @@ fn write_drawing_xml(
     sb.write_view("      </xdr:nvGraphicFramePr>\n")
     sb.write_view("      <xdr:xfrm>\n")
     sb.write_view("        <a:off x=\"0\" y=\"0\"/>\n")
-    sb.write_view("        <a:ext cx=\"1905000\" cy=\"1524000\"/>\n")
+    sb.write_view("        <a:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("      </xdr:xfrm>\n")
     sb.write_view("      <a:graphic>\n")
     sb.write_view(
       "        <a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">\n",
     )
     sb.write_view(
-      "          <c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"rId\{rel_id}\"/>\n",
+      "          <c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"rId\{chart.rel_id}\"/>\n",
     )
     sb.write_view("        </a:graphicData>\n")
     sb.write_view("      </a:graphic>\n")
     sb.write_view("    </xdr:graphicFrame>\n")
-    sb.write_view("    <xdr:clientData/>\n")
-    sb.write_view("  </xdr:oneCellAnchor>\n")
+    sb.write_view(
+      "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(chart.locked)}\" fPrintsWithSheet=\"\{bool_attr(chart.print_object)}\"/>\n",
+    )
+    match chart.positioning {
+      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+    }
   }
   for shape in shapes {
     let (row, col) = cell_ref_to_rc(shape.reference)
@@ -3120,7 +3176,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     let chart_targets : Array[(Int, String)] = []
     let drawing_images : Array[DrawingImage] = []
     let drawing_hyperlinks : Array[DrawingHyperlink] = []
-    let drawing_charts : Array[(String, Int)] = []
+    let drawing_charts : Array[DrawingChart] = []
     let drawing_shapes : Array[Shape] = []
     let mut rel_id = 1
     for image in sheet.images() {
@@ -3152,7 +3208,17 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       chart_index = chart_index + 1
       archive.add("xl/charts/\{file_name}", @encoding/utf8.encode(chart.xml))
       chart_targets.push((rel_id, "../charts/\{file_name}"))
-      drawing_charts.push((chart.reference, rel_id))
+      drawing_charts.push({
+        reference: chart.reference,
+        offset_x: chart.offset_x,
+        offset_y: chart.offset_y,
+        width_emu: chart.width_emu,
+        height_emu: chart.height_emu,
+        print_object: chart.print_object,
+        locked: chart.locked,
+        positioning: chart.positioning,
+        rel_id,
+      })
       rel_id = rel_id + 1
       manifest.add_content_override("/xl/charts/\{file_name}", ct_chart)
     }
@@ -3194,7 +3260,19 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       ct_drawing,
     )
     let drawing_images : Array[DrawingImage] = []
-    let drawing_charts : Array[(String, Int)] = [("A1", 1)]
+    let drawing_charts : Array[DrawingChart] = [
+      {
+        reference: "A1",
+        offset_x: 0,
+        offset_y: 0,
+        width_emu: emu_per_pixel * 480,
+        height_emu: emu_per_pixel * 260,
+        print_object: true,
+        locked: true,
+        positioning: PicturePositioning::OneCell,
+        rel_id: 1,
+      },
+    ]
     let drawing_xml = write_drawing_xml(drawing_images, drawing_charts, [])
     archive.add(
       "xl/drawings/drawing\{drawing_id}.xml",

@@ -2359,6 +2359,20 @@ pub fn Workbook::add_chart(
 }
 
 ///|
+pub fn Workbook::add_chart_with_options(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  opts : ChartOptions,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_chart_with_options(reference, opts)
+}
+
+///|
 pub fn Workbook::delete_chart(
   self : Workbook,
   sheet_name : StringView,
