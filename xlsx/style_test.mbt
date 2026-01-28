@@ -158,3 +158,68 @@ test "conditional style font write + roundtrip" {
   let parsed = read(bytes)
   assert_eq(parsed.get_conditional_style(0), Style::font(font))
 }
+
+///|
+test "cell style fill write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let fill = Fill::solid("FF0000")
+  let style_id = workbook.new_style(Style::fill(fill))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("<fills count=\"3\">"), content="true")
+  inspect(
+    styles_xml.contains(
+      "patternFill patternType=\"solid\"><fgColor rgb=\"FFFF0000\"/>",
+    ),
+    content="true",
+  )
+  inspect(styles_xml.contains("fillId=\"2\""), content="true")
+  inspect(styles_xml.contains("applyFill=\"1\""), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+}
+
+///|
+test "conditional style fill write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let fill = Fill::solid("00FF00")
+  let style_id = workbook.new_conditional_style(Style::fill(fill))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(
+    styles_xml.contains(
+      "<dxf><fill><patternFill patternType=\"solid\"><bgColor rgb=\"FF00FF00\"/>",
+    ),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+}

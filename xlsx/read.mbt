@@ -484,6 +484,104 @@ fn parse_fonts(xml : StringView) -> Array[Font] raise XlsxError {
 }
 
 ///|
+fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
+  let fill = Fill::new()
+  let patterns : Array[String] = [
+    "none", "solid", "mediumGray", "darkGray", "lightGray", "darkHorizontal", "darkVertical",
+    "darkDown", "darkUp", "darkGrid", "darkTrellis", "lightHorizontal", "lightVertical",
+    "lightDown", "lightUp", "lightGrid", "lightTrellis", "gray125", "gray0625",
+  ]
+  match tag_attributes_in(xml, "patternFill") {
+    Some(tag) => {
+      let pattern_type = match attr_value(tag, "patternType") {
+        Some(value) => unescape_xml_text(value)
+        None => "none"
+      }
+      let mut pattern = 0
+      let mut found = false
+      for i in 0..<patterns.length() {
+        if patterns[i] == pattern_type {
+          pattern = i
+          found = true
+        }
+      }
+      fill.typ = Some("pattern")
+      if found {
+        fill.pattern = Some(pattern)
+      } else {
+        fill.pattern = Some(0)
+      }
+      let mut color : String? = None
+      match tag_attributes_in(xml, "fgColor") {
+        Some(color_tag) =>
+          match attr_value(color_tag, "rgb") {
+            Some(value) => color = Some(unescape_xml_text(value))
+            None => ()
+          }
+        None => ()
+      }
+      if color == None {
+        match tag_attributes_in(xml, "bgColor") {
+          Some(color_tag) =>
+            match attr_value(color_tag, "rgb") {
+              Some(value) => color = Some(unescape_xml_text(value))
+              None => ()
+            }
+          None => ()
+        }
+      }
+      match color {
+        Some(rgb) => {
+          let normalized = if rgb.length() == 8 && rgb.has_prefix("FF") {
+            (rgb[2:] catch { _ => rgb }).to_string()
+          } else {
+            rgb.to_string()
+          }
+          fill.colors = Some([normalized])
+        }
+        None => ()
+      }
+      fill
+    }
+    None => fill
+  }
+}
+
+///|
+fn parse_fills(xml : StringView) -> Array[Fill] raise XlsxError {
+  let fills : Array[Fill] = []
+  let body = match extract_tag_body(xml, "fills") {
+    Some(value) => value
+    None => return fills
+  }
+  let mut first = true
+  for chunk in body.split("<fill") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let open_end = match text.find(">") {
+      Some(pos) => pos
+      None => continue
+    }
+    let open_tag = text[:open_end] catch { _ => "" }
+    if open_tag.has_suffix("/") {
+      fills.push(Fill::new())
+      continue
+    }
+    let rest = text[open_end + 1:] catch { _ => "" }
+    let end = match rest.find("</fill>") {
+      Some(pos) => pos
+      None => continue
+    }
+    let content = rest[:end] catch { _ => "" }
+    fills.push(parse_fill_entry(content))
+  }
+  fills
+}
+
+///|
 fn parse_pivot_table_name(xml : StringView) -> String raise XlsxError {
   match tag_attributes_in(xml, "pivotTableDefinition") {
     Some(tag) =>
@@ -912,6 +1010,7 @@ fn parse_cell_xfs(
   xml : StringView,
   num_fmts : Map[Int, String],
   fonts : ArrayView[Font],
+  fills : ArrayView[Fill],
 ) -> Array[Style] raise XlsxError {
   let styles : Array[Style] = []
   let body = match extract_tag_body(xml, "cellXfs") {
@@ -964,6 +1063,16 @@ fn parse_cell_xfs(
     }
     if font_id > 0 && font_id < fonts.length() {
       style = style.with_font(fonts[font_id])
+    }
+    let fill_id = match attr_value(tag, "fillId") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="fillId invalid")
+        }
+      None => 0
+    }
+    if fill_id > 1 && fill_id < fills.length() {
+      style = style.with_fill(fills[fill_id])
     }
     styles.push(style)
   }
@@ -1060,6 +1169,16 @@ fn parse_dxfs(
       }
       None => ()
     }
+    match extract_tag_body(tag, "fill") {
+      Some(fill_body) => {
+        let fill = parse_fill_entry(fill_body)
+        match fill.typ {
+          Some(_) => style = style.with_fill(fill)
+          None => ()
+        }
+      }
+      None => ()
+    }
     styles.push(style)
   }
   styles
@@ -1071,7 +1190,8 @@ fn parse_styles(
 ) -> (Array[Style], Array[Style]) raise XlsxError {
   let num_fmts = parse_num_fmts(xml)
   let fonts = parse_fonts(xml)
-  let styles = parse_cell_xfs(xml, num_fmts, fonts)
+  let fills = parse_fills(xml)
+  let styles = parse_cell_xfs(xml, num_fmts, fonts, fills)
   let conditional_styles = parse_dxfs(xml, num_fmts, fonts)
   (styles, conditional_styles)
 }

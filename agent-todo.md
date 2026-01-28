@@ -20,7 +20,7 @@ References:
 ### Styles / formatting
 - [ ] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
   - [x] Font (cell styles + conditional styles)
-  - [ ] Fill
+  - [x] Fill (pattern/solid + conditional fill)
   - [ ] Border
   - [ ] Alignment
   - [ ] Protection

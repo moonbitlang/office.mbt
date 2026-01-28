@@ -64,34 +64,81 @@ pub fn Font::with_values(
 }
 
 ///|
+pub struct Fill {
+  mut typ : String?
+  mut pattern : Int?
+  mut colors : Array[String]?
+} derive(Eq, Show)
+
+///|
+pub fn Fill::new() -> Fill {
+  { typ: None, pattern: None, colors: None }
+}
+
+///|
+pub fn Fill::pattern(pattern? : Int, color? : String) -> Fill {
+  let fill = Fill::new()
+  fill.typ = Some("pattern")
+  match pattern {
+    Some(v) => fill.pattern = Some(v)
+    None => ()
+  }
+  match color {
+    Some(v) => fill.colors = Some([v])
+    None => ()
+  }
+  fill
+}
+
+///|
+pub fn Fill::solid(color : String) -> Fill {
+  Fill::pattern(pattern=1, color~)
+}
+
+///|
 pub struct Style {
   number_format : NumberFormat?
   font : Font?
+  fill : Fill?
 } derive(Eq, Show)
 
 ///|
 pub fn Style::new() -> Style {
-  { number_format: None, font: None }
+  { number_format: None, font: None, fill: None }
 }
 
 ///|
 pub fn Style::number_format(format_code : String) -> Style {
-  { number_format: Some(NumberFormat::Custom(format_code)), font: None }
+  {
+    number_format: Some(NumberFormat::Custom(format_code)),
+    font: None,
+    fill: None,
+  }
 }
 
 ///|
 pub fn Style::builtin_number_format(id : Int) -> Style {
-  { number_format: Some(NumberFormat::Builtin(id)), font: None }
+  { number_format: Some(NumberFormat::Builtin(id)), font: None, fill: None }
 }
 
 ///|
 pub fn Style::font(font : Font) -> Style {
-  { number_format: None, font: Some(font) }
+  { number_format: None, font: Some(font), fill: None }
 }
 
 ///|
 pub fn Style::with_font(self : Style, font : Font) -> Style {
-  { number_format: self.number_format, font: Some(font) }
+  { number_format: self.number_format, font: Some(font), fill: self.fill }
+}
+
+///|
+pub fn Style::fill(fill : Fill) -> Style {
+  { number_format: None, font: None, fill: Some(fill) }
+}
+
+///|
+pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
+  { number_format: self.number_format, font: self.font, fill: Some(fill) }
 }
 
 ///|
@@ -250,11 +297,79 @@ fn write_styles_xml(
     sb.write_view("    </font>\n")
   }
   sb.write_view("  </fonts>\n")
+
+  // Fill collection: id 0/1 are the workbook default fills.
+  let fill_patterns : Array[String] = [
+    "none", "solid", "mediumGray", "darkGray", "lightGray", "darkHorizontal", "darkVertical",
+    "darkDown", "darkUp", "darkGrid", "darkTrellis", "lightHorizontal", "lightVertical",
+    "lightDown", "lightUp", "lightGrid", "lightTrellis", "gray125", "gray0625",
+  ]
+  let fills : Array[(Int, String?)] = [(0, None), (17, None)]
+  let fill_ids : Map[String, Int] = {}
+  fn normalize_fill_key(pattern : Int, color : String?) -> String {
+    let c = match color {
+      Some(v) => v
+      None => ""
+    }
+    "\{pattern}|\{c}"
+  }
+
+  fill_ids[normalize_fill_key(0, None)] = 0
+  fill_ids[normalize_fill_key(17, None)] = 1
+  for style in style_list {
+    match style.fill {
+      Some(fill) =>
+        match fill.typ {
+          Some(t) =>
+            if t == "pattern" {
+              let pattern = match fill.pattern {
+                Some(v) => v
+                None => 1
+              }
+              if pattern >= 0 && pattern < fill_patterns.length() {
+                let color = match fill.colors {
+                  Some(colors) => colors.get(0)
+                  None => None
+                }
+                let key = normalize_fill_key(pattern, color)
+                if !fill_ids.contains(key) {
+                  fill_ids[key] = fills.length()
+                  fills.push((pattern, color))
+                }
+              }
+            }
+          None => ()
+        }
+      None => ()
+    }
+  }
+  sb.write_view("  <fills count=\"\{fills.length()}\">\n")
+  for entry in fills {
+    let (pattern, color) = entry
+    let pattern_type = fill_patterns[pattern]
+    match color {
+      Some(value) => {
+        let normalized = value.replace_all(old="#", new="")
+        let rgb = if normalized.length() == 6 {
+          "FF" + normalized
+        } else {
+          normalized
+        }
+        sb.write_view("    <fill><patternFill patternType=\"")
+        sb.write_view(escape_xml_attr(pattern_type))
+        sb.write_view("\"><fgColor rgb=\"")
+        sb.write_view(escape_xml_attr(rgb))
+        sb.write_view("\"/></patternFill></fill>\n")
+      }
+      None => {
+        sb.write_view("    <fill><patternFill patternType=\"")
+        sb.write_view(escape_xml_attr(pattern_type))
+        sb.write_view("\"/></fill>\n")
+      }
+    }
+  }
+  sb.write_view("  </fills>\n")
   let base_block =
-    #|  <fills count="2">
-    #|    <fill><patternFill patternType="none"/></fill>
-    #|    <fill><patternFill patternType="gray125"/></fill>
-    #|  </fills>
     #|  <borders count="1">
     #|    <border><left/><right/><top/><bottom/><diagonal/></border>
     #|  </borders>
@@ -282,14 +397,42 @@ fn write_styles_xml(
       None => 0
     }
     let apply_font = font_id != 0
+    let fill_id = match style.fill {
+      Some(fill) =>
+        match fill.typ {
+          Some(t) =>
+            if t == "pattern" {
+              let pattern = match fill.pattern {
+                Some(v) => v
+                None => 1
+              }
+              let color = match fill.colors {
+                Some(colors) => colors.get(0)
+                None => None
+              }
+              match fill_ids.get(normalize_fill_key(pattern, color)) {
+                Some(id) => id
+                None => 0
+              }
+            } else {
+              0
+            }
+          None => 0
+        }
+      None => 0
+    }
+    let apply_fill = fill_id != 0
     sb.write_view(
-      "    <xf numFmtId=\"\{num_fmt_id}\" fontId=\"\{font_id}\" fillId=\"0\" borderId=\"0\" xfId=\"0\"",
+      "    <xf numFmtId=\"\{num_fmt_id}\" fontId=\"\{font_id}\" fillId=\"\{fill_id}\" borderId=\"0\" xfId=\"0\"",
     )
     if apply {
       sb.write_view(" applyNumberFormat=\"1\"")
     }
     if apply_font {
       sb.write_view(" applyFont=\"1\"")
+    }
+    if apply_fill {
+      sb.write_view(" applyFill=\"1\"")
     }
     sb.write_view("/>\n")
   }
@@ -318,11 +461,19 @@ fn write_styles_xml(
           }
         None => false
       }
+      let has_fill = match style.fill {
+        Some(fill) =>
+          match fill.typ {
+            Some(t) => t == "pattern"
+            None => false
+          }
+        None => false
+      }
       let has_num_fmt = match style.number_format {
         Some(_) => true
         None => false
       }
-      if !has_num_fmt && !has_font {
+      if !has_num_fmt && !has_font && !has_fill {
         sb.write_view("    <dxf/>\n")
         continue
       }
@@ -384,6 +535,41 @@ fn write_styles_xml(
             }
             sb.write_view("<family val=\"2\"/>")
             sb.write_view("</font>")
+          }
+        None => ()
+      }
+      match style.fill {
+        Some(fill) =>
+          if has_fill {
+            let pattern = match fill.pattern {
+              Some(v) => v
+              None => 1
+            }
+            if pattern >= 0 && pattern < fill_patterns.length() {
+              let pattern_type = fill_patterns[pattern]
+              let color = match fill.colors {
+                Some(colors) => colors.get(0)
+                None => None
+              }
+              sb.write_view("<fill><patternFill patternType=\"")
+              sb.write_view(escape_xml_attr(pattern_type))
+              sb.write_view("\">")
+              match color {
+                Some(value) => {
+                  let normalized = value.replace_all(old="#", new="")
+                  let rgb = if normalized.length() == 6 {
+                    "FF" + normalized
+                  } else {
+                    normalized
+                  }
+                  sb.write_view("<bgColor rgb=\"")
+                  sb.write_view(escape_xml_attr(rgb))
+                  sb.write_view("\"/>")
+                }
+                None => ()
+              }
+              sb.write_view("</patternFill></fill>")
+            }
           }
         None => ()
       }
