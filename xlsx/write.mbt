@@ -839,9 +839,20 @@ fn write_drawing_xml(
     sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("    <xdr:sp>\n")
     sb.write_view("      <xdr:nvSpPr>\n")
-    sb.write_view(
-      "        <xdr:cNvPr id=\"\{shape_id}\" name=\"Shape \{shape_id}\"/>\n",
-    )
+    let shape_name = if shape.name == "" {
+      "Shape \{shape_id}"
+    } else {
+      shape.name
+    }
+    sb.write_view("        <xdr:cNvPr id=\"\{shape_id}\" name=\"")
+    sb.write_view(escape_xml_attr(shape_name))
+    sb.write_view("\"")
+    if shape.alt_text != "" {
+      sb.write_view(" descr=\"")
+      sb.write_view(escape_xml_attr(shape.alt_text))
+      sb.write_view("\"")
+    }
+    sb.write_view("/>\n")
     sb.write_view("        <xdr:cNvSpPr/>\n")
     sb.write_view("      </xdr:nvSpPr>\n")
     sb.write_view("      <xdr:spPr>\n")
@@ -956,7 +967,9 @@ fn write_drawing_xml(
       sb.write_view("      </xdr:txBody>\n")
     }
     sb.write_view("    </xdr:sp>\n")
-    sb.write_view("    <xdr:clientData/>\n")
+    sb.write_view(
+      "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(shape.locked)}\" fPrintsWithSheet=\"\{bool_attr(shape.print_object)}\"/>\n",
+    )
     sb.write_view("  </xdr:oneCellAnchor>\n")
   }
   sb.write_view("</xdr:wsDr>")

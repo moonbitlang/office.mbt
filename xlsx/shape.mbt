@@ -12,6 +12,10 @@ pub struct Shape {
   fill_transparency : Int
   line_color : String
   line_width : Double
+  name : String
+  alt_text : String
+  print_object : Bool
+  locked : Bool
 } derive(Eq, Show)
 
 ///|
@@ -31,6 +35,10 @@ pub fn Shape::new(
   fill_transparency? : Int = 0,
   line_color? : String = "",
   line_width? : Double = 1.0,
+  name? : String = "",
+  alt_text? : String = "",
+  print_object? : Bool = true,
+  locked? : Bool = true,
 ) -> Shape raise XlsxError {
   if reference == "" {
     raise XlsxError::InvalidSheetOperation(msg="shape reference empty")
@@ -66,5 +74,9 @@ pub fn Shape::new(
     fill_transparency,
     line_color,
     line_width,
+    name,
+    alt_text,
+    print_object,
+    locked,
   }
 }

@@ -107,6 +107,37 @@ test "shape fill and line" {
 }
 
 ///|
+test "shape name, alt text, and clientData flags" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let shape = Shape::new(
+    "D4",
+    "rect",
+    text="Meta",
+    name="Shape 1",
+    alt_text="Shape",
+    locked=false,
+    print_object=false,
+  )
+  sheet.add_shape(shape)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  inspect(drawing_xml.contains("name=\"Shape 1\""), content="true")
+  inspect(drawing_xml.contains("descr=\"Shape\""), content="true")
+  inspect(drawing_xml.contains("fLocksWithSheet=\"0\""), content="true")
+  inspect(drawing_xml.contains("fPrintsWithSheet=\"0\""), content="true")
+}
+
+///|
 test "form control add/get/delete and vml" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

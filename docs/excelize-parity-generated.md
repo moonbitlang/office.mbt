@@ -4,7 +4,7 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `a0d34a4`
+- mbtexcel: `bfb8782`
 
 
 ## API name parity (normalized)
