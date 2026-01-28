@@ -730,7 +730,13 @@ fn write_drawing_xml(
         sb.write_view("/>\n")
       }
     }
-    sb.write_view("        <xdr:cNvPicPr/>\n")
+    if image.lock_aspect_ratio {
+      sb.write_view("        <xdr:cNvPicPr>\n")
+      sb.write_view("          <a:picLocks noChangeAspect=\"1\"/>\n")
+      sb.write_view("        </xdr:cNvPicPr>\n")
+    } else {
+      sb.write_view("        <xdr:cNvPicPr/>\n")
+    }
     sb.write_view("      </xdr:nvPicPr>\n")
     sb.write_view("      <xdr:blipFill>\n")
     sb.write_view("        <a:blip r:embed=\"rId\{item.rel_id}\"/>\n")

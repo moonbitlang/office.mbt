@@ -135,6 +135,27 @@ test "picture name and alt text" {
 }
 
 ///|
+test "picture lock aspect ratio" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_picture_from_bytes(
+    "Sheet1",
+    "A1",
+    [9, 9],
+    ".png",
+    lock_aspect_ratio=true,
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("<a:picLocks"), content="true")
+  inspect(drawing_xml.contains("noChangeAspect=\"1\""), content="true")
+}
+
+///|
 test "picture options validation" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

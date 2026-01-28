@@ -2045,6 +2045,7 @@ pub fn Workbook::add_image(
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
   name? : String = "",
   alt_text? : String = "",
+  lock_aspect_ratio? : Bool = false,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2063,6 +2064,7 @@ pub fn Workbook::add_image(
     hyperlink_type~,
     name~,
     alt_text~,
+    lock_aspect_ratio~,
   )
 }
 
@@ -2080,6 +2082,7 @@ pub async fn Workbook::add_picture(
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
   name? : String = "",
   alt_text? : String = "",
+  lock_aspect_ratio? : Bool = false,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2096,6 +2099,7 @@ pub async fn Workbook::add_picture(
     hyperlink_type~,
     name~,
     alt_text~,
+    lock_aspect_ratio~,
   )
 }
 
@@ -2114,6 +2118,7 @@ pub fn Workbook::add_picture_from_bytes(
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
   name? : String = "",
   alt_text? : String = "",
+  lock_aspect_ratio? : Bool = false,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2131,6 +2136,7 @@ pub fn Workbook::add_picture_from_bytes(
     hyperlink_type~,
     name~,
     alt_text~,
+    lock_aspect_ratio~,
   )
 }
 

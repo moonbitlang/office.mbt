@@ -531,6 +531,7 @@ pub struct Image {
   hyperlink_type : HyperlinkType
   name : String
   alt_text : String
+  lock_aspect_ratio : Bool
 }
 
 pub struct MergeCell {
@@ -1035,9 +1036,9 @@ pub fn Workbook::add_data_validation_xml(Self, StringView, String) -> Unit raise
 pub fn Workbook::add_form_control(Self, StringView, FormControl) -> Unit raise XlsxError
 pub fn Workbook::add_header_footer_image(Self, StringView, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Workbook::add_ignored_errors(Self, StringView, String, IgnoredErrorType) -> Unit raise XlsxError
-pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String) -> Unit raise XlsxError
-pub async fn Workbook::add_picture(Self, StringView, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String) -> Unit raise XlsxError
-pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String) -> Unit raise XlsxError
+pub fn Workbook::add_image(Self, StringView, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool) -> Unit raise XlsxError
+pub async fn Workbook::add_picture(Self, StringView, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool) -> Unit raise XlsxError
+pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
@@ -1326,9 +1327,9 @@ pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_form_control(Self, FormControl) -> Unit raise XlsxError
 pub fn Worksheet::add_header_footer_image(Self, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_ignored_errors(Self, String, IgnoredErrorType) -> Unit raise XlsxError
-pub fn Worksheet::add_image(Self, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String) -> Unit raise XlsxError
-pub async fn Worksheet::add_picture(Self, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String) -> Unit raise XlsxError
-pub fn Worksheet::add_picture_from_bytes(Self, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String) -> Unit raise XlsxError
+pub fn Worksheet::add_image(Self, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool) -> Unit raise XlsxError
+pub async fn Worksheet::add_picture(Self, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool) -> Unit raise XlsxError
+pub fn Worksheet::add_picture_from_bytes(Self, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool) -> Unit raise XlsxError
 pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_shape(Self, Shape) -> Unit raise XlsxError

@@ -27,6 +27,7 @@ pub struct Image {
   hyperlink_type : HyperlinkType
   name : String
   alt_text : String
+  lock_aspect_ratio : Bool
 }
 
 ///|
@@ -1438,6 +1439,7 @@ pub fn Worksheet::add_picture_from_bytes(
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
   name? : String = "",
   alt_text? : String = "",
+  lock_aspect_ratio? : Bool = false,
 ) -> Unit raise XlsxError {
   let ext = normalize_image_extension_lower(extension)
   let content_type = match image_content_type(ext) {
@@ -1458,6 +1460,7 @@ pub fn Worksheet::add_picture_from_bytes(
     hyperlink_type~,
     name~,
     alt_text~,
+    lock_aspect_ratio~,
   )
 }
 
@@ -1474,6 +1477,7 @@ pub async fn Worksheet::add_picture(
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
   name? : String = "",
   alt_text? : String = "",
+  lock_aspect_ratio? : Bool = false,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let extension = match extension_from_path(path) {
@@ -1496,6 +1500,7 @@ pub async fn Worksheet::add_picture(
     hyperlink_type~,
     name~,
     alt_text~,
+    lock_aspect_ratio~,
   )
 }
 
@@ -1514,6 +1519,7 @@ pub fn Worksheet::add_image(
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
   name? : String = "",
   alt_text? : String = "",
+  lock_aspect_ratio? : Bool = false,
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
@@ -1540,6 +1546,7 @@ pub fn Worksheet::add_image(
     hyperlink_type: normalized_hyperlink_type,
     name,
     alt_text,
+    lock_aspect_ratio,
   })
 }
 
@@ -1558,6 +1565,7 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     hyperlink_type: image.hyperlink_type,
     name: image.name,
     alt_text: image.alt_text,
+    lock_aspect_ratio: image.lock_aspect_ratio,
   }
 }
 
