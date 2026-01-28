@@ -6,7 +6,7 @@ logic to MoonBit in `xlsx/`.
 ## Scope of comparison
 
 - Excelize snapshot: `excelize@37b730a` (see `git -C excelize rev-parse HEAD`)
-- mbtexcel snapshot: `mbtexcel@7487cfe` (see `git rev-parse HEAD`)
+- mbtexcel snapshot: current checkout (see `git rev-parse HEAD`)
 
 When I say “parity” below, I mean **end-user features and ergonomics**, not just
 “there exists an API method with the same name”.

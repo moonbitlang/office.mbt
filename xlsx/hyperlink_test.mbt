@@ -76,3 +76,37 @@ test "hyperlink alias methods" {
     ),
   )
 }
+
+///|
+test "hyperlink opts helper" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = HyperlinkOpts::with_values(tooltip="Tip")
+  workbook.set_cell_hyperlink_opts(
+    "Sheet1",
+    "A1",
+    "https://example.com",
+    HyperlinkType::External,
+    opts=opts,
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet1.xml utf8 decode failed")
+      }
+    None => fail("missing sheet1.xml")
+  }
+  inspect(sheet_xml.contains("tooltip=\"Tip\""), content="true")
+  inspect(sheet_xml.contains("display="), content="false")
+  let parsed = read(bytes)
+  inspect(
+    parsed.get_cell_hyperlink("Sheet1", "A1"),
+    content=(
+      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: None, tooltip: Some("Tip")})
+    ),
+  )
+}

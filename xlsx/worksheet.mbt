@@ -711,6 +711,25 @@ pub fn Worksheet::set_cell_hyperlink(
 }
 
 ///|
+pub fn Worksheet::set_cell_hyperlink_opts(
+  self : Worksheet,
+  reference : String,
+  target : String,
+  link_type : HyperlinkType,
+  opts? : HyperlinkOpts = HyperlinkOpts::new(),
+) -> Unit raise XlsxError {
+  let display = match opts.display {
+    Some(value) => value
+    None => ""
+  }
+  let tooltip = match opts.tooltip {
+    Some(value) => value
+    None => ""
+  }
+  self.set_cell_hyperlink(reference, target, link_type, display~, tooltip~)
+}
+
+///|
 pub fn Worksheet::get_cell_hyperlink(
   self : Worksheet,
   reference : StringView,

@@ -1744,6 +1744,22 @@ pub fn Workbook::set_cell_hyperlink(
 }
 
 ///|
+pub fn Workbook::set_cell_hyperlink_opts(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  target : String,
+  link_type : HyperlinkType,
+  opts? : HyperlinkOpts = HyperlinkOpts::new(),
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_hyperlink_opts(reference, target, link_type, opts~)
+}
+
+///|
 pub fn Workbook::set_cell_hyper_link(
   self : Workbook,
   sheet_name : StringView,

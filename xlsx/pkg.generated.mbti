@@ -449,6 +449,15 @@ pub struct Hyperlink {
 pub impl Eq for Hyperlink
 pub impl Show for Hyperlink
 
+pub struct HyperlinkOpts {
+  mut display : String?
+  mut tooltip : String?
+}
+pub fn HyperlinkOpts::new() -> Self
+pub fn HyperlinkOpts::with_values(display? : String, tooltip? : String) -> Self
+pub impl Eq for HyperlinkOpts
+pub impl Show for HyperlinkOpts
+
 pub(all) enum HyperlinkType {
   External
   Location
@@ -1130,6 +1139,7 @@ pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : Str
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_hyper_link(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_hyperlink(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_hyperlink_opts(Self, StringView, String, String, HyperlinkType, opts? : HyperlinkOpts) -> Unit raise XlsxError
 pub fn Workbook::set_cell_int(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rc(Self, StringView, Int, Int, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_rich_text(Self, StringView, String, ArrayView[RichTextRun]) -> Unit raise XlsxError
@@ -1361,6 +1371,7 @@ pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_hyperlink(Self, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_hyperlink_opts(Self, String, String, HyperlinkType, opts? : HyperlinkOpts) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_rc(Self, Int, Int, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_rich_text(Self, String, ArrayView[RichTextRun]) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_style(Self, String, Int) -> Unit raise XlsxError
