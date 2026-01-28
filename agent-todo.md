@@ -46,7 +46,7 @@ References:
 
 ### Pivot tables & slicers
 - [x] Add `PivotTableOptions` builder (Excelize `PivotTableOptions` in `excelize/pivotTable.go`)
-- [ ] Add `SlicerOptions` builder (Excelize `SlicerOptions` in `excelize/slicer.go`)
+- [x] Add `SlicerOptions` builder (Excelize `SlicerOptions` in `excelize/slicer.go`)
 
 ### Cells: formula/hyperlink opts
 - [x] Add `FormulaOpts` parity where meaningful (Excelize `FormulaOpts` in `excelize/cell.go`)
