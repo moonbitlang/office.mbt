@@ -829,14 +829,48 @@ fn write_drawing_xml(
     let cy = (Double::from_int(shape.height * emu_per_pixel) * shape.scale_y)
       .round()
       .to_int()
-    sb.write_view("  <xdr:oneCellAnchor>\n")
-    sb.write_view("    <xdr:from>\n")
-    sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-    sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
-    sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-    sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
-    sb.write_view("    </xdr:from>\n")
-    sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+    match shape.positioning {
+      PicturePositioning::TwoCell => {
+        sb.write_view("  <xdr:twoCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{cx}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{cy}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::Absolute => {
+        sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{cx}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{cy}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::OneCell => {
+        sb.write_view("  <xdr:oneCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>0</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+      }
+    }
     sb.write_view("    <xdr:sp>\n")
     sb.write_view("      <xdr:nvSpPr>\n")
     let shape_name = if shape.name == "" {
@@ -970,7 +1004,11 @@ fn write_drawing_xml(
     sb.write_view(
       "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(shape.locked)}\" fPrintsWithSheet=\"\{bool_attr(shape.print_object)}\"/>\n",
     )
-    sb.write_view("  </xdr:oneCellAnchor>\n")
+    match shape.positioning {
+      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+    }
   }
   sb.write_view("</xdr:wsDr>")
   sb.to_string()

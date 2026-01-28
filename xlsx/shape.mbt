@@ -16,6 +16,7 @@ pub struct Shape {
   alt_text : String
   print_object : Bool
   locked : Bool
+  positioning : PicturePositioning
 } derive(Eq, Show)
 
 ///|
@@ -39,6 +40,7 @@ pub fn Shape::new(
   alt_text? : String = "",
   print_object? : Bool = true,
   locked? : Bool = true,
+  positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Shape raise XlsxError {
   if reference == "" {
     raise XlsxError::InvalidSheetOperation(msg="shape reference empty")
@@ -78,5 +80,6 @@ pub fn Shape::new(
     alt_text,
     print_object,
     locked,
+    positioning,
   }
 }

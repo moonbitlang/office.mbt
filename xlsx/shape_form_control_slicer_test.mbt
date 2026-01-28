@@ -138,6 +138,50 @@ test "shape name, alt text, and clientData flags" {
 }
 
 ///|
+test "shape positioning twoCell" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let shape = Shape::new("E5", "rect", positioning=PicturePositioning::TwoCell)
+  sheet.add_shape(shape)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  inspect(drawing_xml.contains("<xdr:twoCellAnchor>"), content="true")
+  inspect(drawing_xml.contains("<xdr:oneCellAnchor>"), content="false")
+}
+
+///|
+test "shape positioning absolute" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let shape = Shape::new("F6", "rect", positioning=PicturePositioning::Absolute)
+  sheet.add_shape(shape)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  inspect(
+    drawing_xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
+  )
+}
+
+///|
 test "form control add/get/delete and vml" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

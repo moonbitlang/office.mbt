@@ -732,8 +732,9 @@ pub struct Shape {
   alt_text : String
   print_object : Bool
   locked : Bool
+  positioning : PicturePositioning
 }
-pub fn Shape::new(String, String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool) -> Self raise XlsxError
+pub fn Shape::new(String, String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
 pub impl Eq for Shape
 pub impl Show for Shape
 

@@ -33,6 +33,7 @@ References:
   - [x] Size (width/height + scale) and basic rich-text paragraphs
   - [x] Solid fill (color + transparency) and line (color + width)
   - [x] Name/alt text + `xdr:clientData` flags
+  - [x] Positioning (oneCell/twoCell/absolute)
 
 ### Sparklines
 - [x] Add `SparklineOptions` basic parity (style presets, markers/high/low/first/last/negative, axis, reverse, seriesColor) and round-trip via `SparklineGroupOptions`
