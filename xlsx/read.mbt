@@ -697,6 +697,27 @@ fn parse_borders(xml : StringView) -> Array[Array[Border]] raise XlsxError {
 }
 
 ///|
+fn parse_protection_entry(xml : StringView) -> Protection? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "protection") {
+    Some(value) => value
+    None => return None
+  }
+  let protection = Protection::new()
+  match attr_value(tag, "hidden") {
+    Some(value) => protection.hidden = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match attr_value(tag, "locked") {
+    Some(value) => protection.locked = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match (protection.hidden, protection.locked) {
+    (None, None) => None
+    _ => Some(protection)
+  }
+}
+
+///|
 fn parse_pivot_table_name(xml : StringView) -> String raise XlsxError {
   match tag_attributes_in(xml, "pivotTableDefinition") {
     Some(tag) =>
@@ -1143,17 +1164,35 @@ fn parse_cell_xfs(
       continue
     }
     let text = chunk.to_string()
-    let end = match text.find("/>") {
+    let open_end = match text.find(">") {
       Some(pos) => pos
-      None =>
-        match text.find(">") {
-          Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="xf tag not closed")
-        }
+      None => raise XlsxError::InvalidXml(msg="xf tag not closed")
     }
-    let tag = text[:end] catch {
+    let open_tag = text[:open_end] catch {
         _ => raise XlsxError::InvalidXml(msg="xf tag invalid")
       }
+    let self_closing = open_tag.has_suffix("/")
+    let tag = if self_closing {
+      open_tag[:open_tag.length() - 1] catch {
+        _ => raise XlsxError::InvalidXml(msg="xf tag invalid")
+      }
+    } else {
+      open_tag
+    }
+    let xf_body = if self_closing {
+      ""
+    } else {
+      let rest = text[open_end + 1:] catch {
+          _ => raise XlsxError::InvalidXml(msg="xf body invalid")
+        }
+      let close = match rest.find("</xf>") {
+        Some(pos) => pos
+        None => raise XlsxError::InvalidXml(msg="xf close missing")
+      }
+      (rest[:close] catch {
+        _ => raise XlsxError::InvalidXml(msg="xf body invalid")
+      }).to_string()
+    }
     let num_fmt_id = match attr_value(tag, "numFmtId") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
@@ -1201,6 +1240,12 @@ fn parse_cell_xfs(
       let border = borders[border_id]
       if border.length() > 0 {
         style = style.with_border(border)
+      }
+    }
+    if !self_closing {
+      match parse_protection_entry(xf_body) {
+        Some(protection) => style = style.with_protection(protection)
+        None => ()
       }
     }
     styles.push(style)
@@ -1315,6 +1360,10 @@ fn parse_dxfs(
           style = style.with_border(border)
         }
       }
+      None => ()
+    }
+    match parse_protection_entry(tag) {
+      Some(protection) => style = style.with_protection(protection)
       None => ()
     }
     styles.push(style)

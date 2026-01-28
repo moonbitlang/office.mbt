@@ -126,16 +126,48 @@ pub fn Border::with_values(
 }
 
 ///|
+pub struct Protection {
+  mut hidden : Bool?
+  mut locked : Bool?
+} derive(Eq, Show)
+
+///|
+pub fn Protection::new() -> Protection {
+  { hidden: None, locked: None }
+}
+
+///|
+pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Protection {
+  let protection = Protection::new()
+  match hidden {
+    Some(v) => protection.hidden = Some(v)
+    None => ()
+  }
+  match locked {
+    Some(v) => protection.locked = Some(v)
+    None => ()
+  }
+  protection
+}
+
+///|
 pub struct Style {
   number_format : NumberFormat?
   font : Font?
   fill : Fill?
   border : Array[Border]?
+  protection : Protection?
 } derive(Eq, Show)
 
 ///|
 pub fn Style::new() -> Style {
-  { number_format: None, font: None, fill: None, border: None }
+  {
+    number_format: None,
+    font: None,
+    fill: None,
+    border: None,
+    protection: None,
+  }
 }
 
 ///|
@@ -145,6 +177,7 @@ pub fn Style::number_format(format_code : String) -> Style {
     font: None,
     fill: None,
     border: None,
+    protection: None,
   }
 }
 
@@ -155,12 +188,19 @@ pub fn Style::builtin_number_format(id : Int) -> Style {
     font: None,
     fill: None,
     border: None,
+    protection: None,
   }
 }
 
 ///|
 pub fn Style::font(font : Font) -> Style {
-  { number_format: None, font: Some(font), fill: None, border: None }
+  {
+    number_format: None,
+    font: Some(font),
+    fill: None,
+    border: None,
+    protection: None,
+  }
 }
 
 ///|
@@ -170,12 +210,19 @@ pub fn Style::with_font(self : Style, font : Font) -> Style {
     font: Some(font),
     fill: self.fill,
     border: self.border,
+    protection: self.protection,
   }
 }
 
 ///|
 pub fn Style::fill(fill : Fill) -> Style {
-  { number_format: None, font: None, fill: Some(fill), border: None }
+  {
+    number_format: None,
+    font: None,
+    fill: Some(fill),
+    border: None,
+    protection: None,
+  }
 }
 
 ///|
@@ -185,12 +232,19 @@ pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
     font: self.font,
     fill: Some(fill),
     border: self.border,
+    protection: self.protection,
   }
 }
 
 ///|
 pub fn Style::border(border : Array[Border]) -> Style {
-  { number_format: None, font: None, fill: None, border: Some(border) }
+  {
+    number_format: None,
+    font: None,
+    fill: None,
+    border: Some(border),
+    protection: None,
+  }
 }
 
 ///|
@@ -200,6 +254,29 @@ pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
     font: self.font,
     fill: self.fill,
     border: Some(border),
+    protection: self.protection,
+  }
+}
+
+///|
+pub fn Style::protection(protection : Protection) -> Style {
+  {
+    number_format: None,
+    font: None,
+    fill: None,
+    border: None,
+    protection: Some(protection),
+  }
+}
+
+///|
+pub fn Style::with_protection(self : Style, protection : Protection) -> Style {
+  {
+    number_format: self.number_format,
+    font: self.font,
+    fill: self.fill,
+    border: self.border,
+    protection: Some(protection),
   }
 }
 
@@ -603,6 +680,15 @@ fn write_styles_xml(
       None => 0
     }
     let apply_border = border_id != 0
+    let protection = style.protection
+    let apply_protection = match protection {
+      Some(p) =>
+        match (p.hidden, p.locked) {
+          (None, None) => false
+          _ => true
+        }
+      None => false
+    }
     sb.write_view(
       "    <xf numFmtId=\"\{num_fmt_id}\" fontId=\"\{font_id}\" fillId=\"\{fill_id}\" borderId=\"\{border_id}\" xfId=\"0\"",
     )
@@ -618,7 +704,38 @@ fn write_styles_xml(
     if apply_border {
       sb.write_view(" applyBorder=\"1\"")
     }
-    sb.write_view("/>\n")
+    if apply_protection {
+      sb.write_view(" applyProtection=\"1\"")
+    }
+    if !apply_protection {
+      sb.write_view("/>\n")
+    } else {
+      sb.write_view(">")
+      match protection {
+        Some(p) => {
+          sb.write_view("<protection")
+          match p.locked {
+            Some(v) => {
+              sb.write_view(" locked=\"")
+              sb.write_view(if v { "1" } else { "0" })
+              sb.write_view("\"")
+            }
+            None => ()
+          }
+          match p.hidden {
+            Some(v) => {
+              sb.write_view(" hidden=\"")
+              sb.write_view(if v { "1" } else { "0" })
+              sb.write_view("\"")
+            }
+            None => ()
+          }
+          sb.write_view("/>")
+        }
+        None => ()
+      }
+      sb.write_view("</xf>\n")
+    }
   }
   sb.write_view("  </cellXfs>\n")
   sb.write_view("  <cellStyles count=\"1\">\n")
@@ -667,11 +784,23 @@ fn write_styles_xml(
         }
         None => false
       }
+      let has_protection = match style.protection {
+        Some(p) =>
+          match (p.hidden, p.locked) {
+            (None, None) => false
+            _ => true
+          }
+        None => false
+      }
       let has_num_fmt = match style.number_format {
         Some(_) => true
         None => false
       }
-      if !has_num_fmt && !has_font && !has_fill && !has_border {
+      if !has_num_fmt &&
+        !has_font &&
+        !has_fill &&
+        !has_border &&
+        !has_protection {
         sb.write_view("    <dxf/>\n")
         continue
       }
@@ -807,6 +936,30 @@ fn write_styles_xml(
               sb.write_view("</\{side}>")
             }
             sb.write_view("</border>")
+          }
+        None => ()
+      }
+      match style.protection {
+        Some(p) =>
+          if has_protection {
+            sb.write_view("<protection")
+            match p.locked {
+              Some(v) => {
+                sb.write_view(" locked=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match p.hidden {
+              Some(v) => {
+                sb.write_view(" hidden=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            sb.write_view("/>")
           }
         None => ()
       }

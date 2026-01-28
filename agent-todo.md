@@ -23,7 +23,7 @@ References:
   - [x] Fill (pattern/solid + conditional fill)
   - [x] Border (basic left/right/top/bottom + conditional border)
   - [ ] Alignment
-  - [ ] Protection
+  - [x] Protection (locked/hidden + conditional protection)
 
 ### Charts
 - [ ] Add high-level chart builder types (partial parity with Excelize `Chart*` types in `excelize/xmlChart.go` / `excelize/chart.go`)

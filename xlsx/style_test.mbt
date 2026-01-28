@@ -288,3 +288,62 @@ test "conditional style border write + roundtrip" {
   let parsed = read(bytes)
   assert_eq(parsed.get_conditional_style(0), Style::border(borders))
 }
+
+///|
+test "cell style protection write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let protection = Protection::with_values(hidden=true, locked=false)
+  let style_id = workbook.new_style(Style::protection(protection))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("applyProtection=\"1\""), content="true")
+  inspect(
+    styles_xml.contains("<protection locked=\"0\" hidden=\"1\"/>"),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::protection(protection))
+}
+
+///|
+test "conditional style protection write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let protection = Protection::with_values(hidden=true)
+  let style_id = workbook.new_conditional_style(Style::protection(protection))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(
+    styles_xml.contains("<dxf><protection hidden=\"1\"/>"),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::protection(protection))
+}

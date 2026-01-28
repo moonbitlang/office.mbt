@@ -679,6 +679,15 @@ pub struct PivotTable {
 }
 pub fn PivotTable::new(String, String, cache_records_xml? : String, name? : String) -> Self raise XlsxError
 
+pub struct Protection {
+  mut hidden : Bool?
+  mut locked : Bool?
+}
+pub fn Protection::new() -> Self
+pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Self
+pub impl Eq for Protection
+pub impl Show for Protection
+
 pub(all) struct RichTextFont {
   bold : Bool
   italic : Bool
@@ -1044,6 +1053,7 @@ pub struct Style {
   font : Font?
   fill : Fill?
   border : Array[Border]?
+  protection : Protection?
 }
 pub fn Style::border(Array[Border]) -> Self
 pub fn Style::builtin_number_format(Int) -> Self
@@ -1051,9 +1061,11 @@ pub fn Style::fill(Fill) -> Self
 pub fn Style::font(Font) -> Self
 pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
+pub fn Style::protection(Protection) -> Self
 pub fn Style::with_border(Self, Array[Border]) -> Self
 pub fn Style::with_fill(Self, Fill) -> Self
 pub fn Style::with_font(Self, Font) -> Self
+pub fn Style::with_protection(Self, Protection) -> Self
 pub impl Eq for Style
 pub impl Show for Style
 
