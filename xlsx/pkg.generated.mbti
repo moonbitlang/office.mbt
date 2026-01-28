@@ -1251,10 +1251,42 @@ pub impl Show for SheetViewOptions
 
 pub struct Slicer {
   name : String
+  cell : String
+  table_sheet : String
+  table_name : String
+  caption : String
+  width : Int
+  height : Int
+  display_header : Bool?
+  item_desc : Bool
+  format : GraphicOptions
 }
 pub fn Slicer::new(String) -> Self raise XlsxError
 pub impl Eq for Slicer
 pub impl Show for Slicer
+
+pub(all) struct SlicerOptions {
+  name : String
+  cell : String
+  table_sheet : String
+  table_name : String
+  mut caption : String
+  mut macro_name : String
+  mut width : Int
+  mut height : Int
+  mut display_header : Bool?
+  mut item_desc : Bool
+  mut format : GraphicOptions
+}
+pub fn SlicerOptions::new(String, String, String, String) -> Self raise XlsxError
+pub fn SlicerOptions::set_caption(Self, String) -> Unit
+pub fn SlicerOptions::set_display_header(Self, Bool?) -> Unit
+pub fn SlicerOptions::set_format(Self, GraphicOptions) -> Unit
+pub fn SlicerOptions::set_item_desc(Self, Bool) -> Unit
+pub fn SlicerOptions::set_macro_name(Self, String) -> Unit
+pub fn SlicerOptions::set_size(Self, Int, Int) -> Unit raise XlsxError
+pub impl Eq for SlicerOptions
+pub impl Show for SlicerOptions
 
 pub struct Sparkline {
   range_ref : String
@@ -1482,6 +1514,7 @@ pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_rec
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
 pub fn Workbook::add_slicer(Self, StringView, Slicer) -> Unit raise XlsxError
+pub fn Workbook::add_slicer_with_options(Self, StringView, SlicerOptions) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_options(Self, StringView, SparklineOptions) -> Unit raise XlsxError

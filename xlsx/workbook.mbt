@@ -2480,6 +2480,58 @@ pub fn Workbook::add_slicer(
 }
 
 ///|
+pub fn Workbook::add_slicer_with_options(
+  self : Workbook,
+  sheet_name : StringView,
+  opts : SlicerOptions,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let mut has_source = false
+  let tables = self.get_tables(opts.table_sheet)
+  for table in tables {
+    if table.name == opts.table_name {
+      has_source = true
+      if !table.columns.contains(opts.name) {
+        raise XlsxError::InvalidSheetOperation(
+          msg="slicer field not found in table",
+        )
+      }
+      break
+    }
+  }
+  if !has_source {
+    let pivots = self.get_pivot_tables(opts.table_sheet)
+    for pivot in pivots {
+      if pivot.name == opts.table_name {
+        has_source = true
+        break
+      }
+    }
+  }
+  if !has_source {
+    raise XlsxError::InvalidSheetOperation(
+      msg="slicer source table/pivot not found",
+    )
+  }
+  let slicer = {
+    name: opts.name,
+    cell: opts.cell,
+    table_sheet: opts.table_sheet,
+    table_name: opts.table_name,
+    caption: opts.caption,
+    width: opts.width,
+    height: opts.height,
+    display_header: opts.display_header,
+    item_desc: opts.item_desc,
+    format: opts.format,
+  }
+  sheet.add_slicer(slicer)
+}
+
+///|
 pub fn Workbook::get_slicers(
   self : Workbook,
   sheet_name : StringView,

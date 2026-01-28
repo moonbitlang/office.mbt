@@ -245,3 +245,24 @@ test "slicer add/get/delete and xml" {
   workbook.delete_slicer("Slicer1")
   inspect(workbook.get_slicers("Sheet1").length(), content="0")
 }
+
+///|
+test "slicer options builder write" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(
+    workbook.add_table("Sheet1", "A1:C4", "Table1", ["Region", "Type", "Sales"]),
+  )
+  let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
+  opts.set_caption("Region")
+  opts.set_display_header(Some(false))
+  workbook.add_slicer_with_options("Sheet1", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let slicer_xml = match archive.get("xl/slicers/slicer1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing slicer1.xml")
+  }
+  inspect(slicer_xml.contains("caption=\"Region\""), content="true")
+  inspect(slicer_xml.contains("showCaption=\"0\""), content="true")
+}
