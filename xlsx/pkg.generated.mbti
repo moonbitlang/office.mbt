@@ -808,16 +808,84 @@ pub struct Sparkline {
   location : String
 }
 
+pub struct SparklineColor {
+  rgb : String?
+  theme : Int?
+  tint : Double?
+}
+pub fn SparklineColor::rgb(StringView) -> Self raise XlsxError
+pub fn SparklineColor::theme(Int, tint? : Double) -> Self
+pub impl Eq for SparklineColor
+pub impl Show for SparklineColor
+
 pub struct SparklineGroup {
   sparkline_type : SparklineType
   sparklines : Array[Sparkline]
+  options : SparklineGroupOptions
 }
+
+pub struct SparklineGroupOptions {
+  mut display_empty_cells_as : String
+  mut markers : Bool
+  mut high : Bool
+  mut low : Bool
+  mut first : Bool
+  mut last : Bool
+  mut negative : Bool
+  mut display_x_axis : Bool
+  mut display_hidden : Bool
+  mut right_to_left : Bool
+  mut color_series : SparklineColor?
+  mut color_negative : SparklineColor?
+  mut color_axis : SparklineColor?
+  mut color_markers : SparklineColor?
+  mut color_first : SparklineColor?
+  mut color_last : SparklineColor?
+  mut color_high : SparklineColor?
+  mut color_low : SparklineColor?
+}
+pub fn SparklineGroupOptions::new() -> Self
+pub impl Eq for SparklineGroupOptions
+pub impl Show for SparklineGroupOptions
+
+pub struct SparklineOptions {
+  locations : Array[String]
+  ranges : Array[String]
+  mut sparkline_type : SparklineType
+  mut style : Int
+  mut markers : Bool
+  mut high : Bool
+  mut low : Bool
+  mut first : Bool
+  mut last : Bool
+  mut negative : Bool
+  mut axis : Bool
+  mut reverse : Bool
+  mut series_color : String?
+}
+pub fn SparklineOptions::clear_series_color(Self) -> Unit
+pub fn SparklineOptions::new(ArrayView[String], ArrayView[String]) -> Self raise XlsxError
+pub fn SparklineOptions::set_axis(Self, Bool) -> Unit
+pub fn SparklineOptions::set_first(Self, Bool) -> Unit
+pub fn SparklineOptions::set_high(Self, Bool) -> Unit
+pub fn SparklineOptions::set_last(Self, Bool) -> Unit
+pub fn SparklineOptions::set_low(Self, Bool) -> Unit
+pub fn SparklineOptions::set_markers(Self, Bool) -> Unit
+pub fn SparklineOptions::set_negative(Self, Bool) -> Unit
+pub fn SparklineOptions::set_reverse(Self, Bool) -> Unit
+pub fn SparklineOptions::set_series_color(Self, String) -> Unit
+pub fn SparklineOptions::set_style(Self, Int) -> Unit
+pub fn SparklineOptions::set_type(Self, SparklineType) -> Unit
+pub impl Eq for SparklineOptions
+pub impl Show for SparklineOptions
 
 pub(all) enum SparklineType {
   Line
   Column
   WinLoss
 }
+pub impl Eq for SparklineType
+pub impl Show for SparklineType
 
 pub struct StreamCell {
   value : String
@@ -918,6 +986,7 @@ pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
 pub fn Workbook::add_slicer(Self, StringView, Slicer) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
+pub fn Workbook::add_sparkline_options(Self, StringView, SparklineOptions) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
 pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Workbook::add_vba_project(Self, Bytes) -> Unit raise XlsxError
@@ -1205,6 +1274,7 @@ pub fn Worksheet::add_shape(Self, Shape) -> Unit raise XlsxError
 pub fn Worksheet::add_slicer(Self, Slicer) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline(Self, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Worksheet::add_sparkline_group(Self, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
+pub fn Worksheet::add_sparkline_options(Self, SparklineOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String) -> Table raise XlsxError
 pub fn Worksheet::add_vml_drawing_hf_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::add_vml_drawing_xml(Self, String) -> Unit raise XlsxError

@@ -1312,7 +1312,11 @@ fn clone_sparkline_groups(
     for sparkline in value.sparklines {
       sparklines.push(sparkline)
     }
-    out.push({ sparkline_type: value.sparkline_type, sparklines })
+    out.push({
+      sparkline_type: value.sparkline_type,
+      sparklines,
+      options: value.options,
+    })
   }
   out
 }
@@ -2692,6 +2696,19 @@ pub fn Workbook::add_sparkline_group(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_sparkline_group(locations, ranges, sparkline_type~)
+}
+
+///|
+pub fn Workbook::add_sparkline_options(
+  self : Workbook,
+  sheet_name : StringView,
+  options : SparklineOptions,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_sparkline_options(options)
 }
 
 ///|

@@ -990,14 +990,21 @@ pub fn Worksheet::add_sparkline_group(
   if locations.length() != ranges.length() {
     raise XlsxError::InvalidSparkline(msg="sparkline inputs mismatch")
   }
-  let sparklines : Array[Sparkline] = []
-  for i, location in locations {
-    let (row, col) = cell_ref_to_rc(location)
-    let canonical_loc = cell_ref_from(row, col)
-    let normalized_range = normalize_range_ref(ranges[i])
-    sparklines.push({ range_ref: normalized_range, location: canonical_loc })
-  }
-  self.sparkline_groups.push({ sparkline_type, sparklines })
+  let sparklines = build_sparklines(locations, ranges)
+  self.sparkline_groups.push({
+    sparkline_type,
+    sparklines,
+    options: SparklineGroupOptions::new(),
+  })
+}
+
+///|
+pub fn Worksheet::add_sparkline_options(
+  self : Worksheet,
+  options : SparklineOptions,
+) -> Unit raise XlsxError {
+  let group = build_sparkline_group_from_options(options)
+  self.sparkline_groups.push(group)
 }
 
 ///|
@@ -3567,7 +3574,11 @@ fn adjust_sparkline_group_after_row_insert(
     let location = adjust_cell_after_row_insert(sparkline.location, row, count)
     updated.push({ range_ref, location })
   }
-  { sparkline_type: group.sparkline_type, sparklines: updated }
+  {
+    sparkline_type: group.sparkline_type,
+    sparklines: updated,
+    options: group.options,
+  }
 }
 
 ///|
@@ -3589,7 +3600,11 @@ fn adjust_sparkline_group_after_row_remove(
       _ => ()
     }
   }
-  { sparkline_type: group.sparkline_type, sparklines: updated }
+  {
+    sparkline_type: group.sparkline_type,
+    sparklines: updated,
+    options: group.options,
+  }
 }
 
 ///|
@@ -3608,7 +3623,11 @@ fn adjust_sparkline_group_after_col_insert(
     let location = adjust_cell_after_col_insert(sparkline.location, col, count)
     updated.push({ range_ref, location })
   }
-  { sparkline_type: group.sparkline_type, sparklines: updated }
+  {
+    sparkline_type: group.sparkline_type,
+    sparklines: updated,
+    options: group.options,
+  }
 }
 
 ///|
@@ -3630,7 +3649,11 @@ fn adjust_sparkline_group_after_col_remove(
       _ => ()
     }
   }
-  { sparkline_type: group.sparkline_type, sparklines: updated }
+  {
+    sparkline_type: group.sparkline_type,
+    sparklines: updated,
+    options: group.options,
+  }
 }
 
 ///|
