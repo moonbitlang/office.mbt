@@ -4,14 +4,14 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `bc0a8b9`
+- mbtexcel: `39e252e`
 
 
 ## API name parity (normalized)
 
 - Excelize exported funcs + `(*File)` methods: 169
 
-- MoonBit exported names scanned from `.mbti`: 359
+- MoonBit exported names scanned from `.mbti`: 362
 
 - Missing Excelize API names in MoonBit (by normalized name): 0
 
@@ -22,7 +22,7 @@ This section compares **exported Go type names** to **exported MoonBit type name
 It is intentionally conservative and may report false positives (e.g. types that exist but are not public, or types that are intentionally modeled differently).
 
 
-- Missing exported Excelize types (filtered to key feature files): 21
+- Missing exported Excelize types (filtered to key feature files): 18
 
 
 ### `excelize/chart.go`
@@ -71,12 +71,3 @@ It is intentionally conservative and may report false positives (e.g. types that
 - `chart_series` (Excelize `ChartSeries`)
 
 - `chart_up_down_bar` (Excelize `ChartUpDownBar`)
-
-
-### `excelize/xmlDrawing.go`
-
-- `graphic_options` (Excelize `GraphicOptions`)
-
-- `picture` (Excelize `Picture`)
-
-- `shape_line` (Excelize `ShapeLine`)
