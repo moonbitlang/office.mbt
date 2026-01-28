@@ -45,7 +45,7 @@ References:
 - [x] Follow-ups: date axis, hidden, weight, manual min/max, empty cell modes (Excelize `SparklineOptions` in `excelize/xmlWorksheet.go`)
 
 ### Pivot tables & slicers
-- [ ] Add `PivotTableOptions` builder (Excelize `PivotTableOptions` in `excelize/pivotTable.go`)
+- [x] Add `PivotTableOptions` builder (Excelize `PivotTableOptions` in `excelize/pivotTable.go`)
 - [ ] Add `SlicerOptions` builder (Excelize `SlicerOptions` in `excelize/slicer.go`)
 
 ### Cells: formula/hyperlink opts
