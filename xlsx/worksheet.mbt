@@ -25,6 +25,8 @@ pub struct Image {
   scale_y : Double
   width_emu : Int
   height_emu : Int
+  print_object : Bool
+  locked : Bool
   hyperlink : String
   hyperlink_type : HyperlinkType
   name : String
@@ -1579,6 +1581,8 @@ pub fn Worksheet::add_picture_from_bytes(
   lock_aspect_ratio? : Bool = false,
   auto_fit? : Bool = false,
   auto_fit_ignore_aspect? : Bool = false,
+  print_object? : Bool = true,
+  locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let ext = normalize_image_extension_lower(extension)
@@ -1603,6 +1607,8 @@ pub fn Worksheet::add_picture_from_bytes(
     lock_aspect_ratio~,
     auto_fit~,
     auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
     positioning~,
   )
 }
@@ -1623,6 +1629,8 @@ pub async fn Worksheet::add_picture(
   lock_aspect_ratio? : Bool = false,
   auto_fit? : Bool = false,
   auto_fit_ignore_aspect? : Bool = false,
+  print_object? : Bool = true,
+  locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
@@ -1649,6 +1657,8 @@ pub async fn Worksheet::add_picture(
     lock_aspect_ratio~,
     auto_fit~,
     auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
     positioning~,
   )
 }
@@ -1671,6 +1681,8 @@ pub fn Worksheet::add_image(
   lock_aspect_ratio? : Bool = false,
   auto_fit? : Bool = false,
   auto_fit_ignore_aspect? : Bool = false,
+  print_object? : Bool = true,
+  locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
@@ -1737,6 +1749,8 @@ pub fn Worksheet::add_image(
     scale_y: normalized_scale_y,
     width_emu,
     height_emu,
+    print_object,
+    locked,
     hyperlink: normalized_hyperlink,
     hyperlink_type: normalized_hyperlink_type,
     name,
@@ -1759,6 +1773,8 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     scale_y: image.scale_y,
     width_emu: image.width_emu,
     height_emu: image.height_emu,
+    print_object: image.print_object,
+    locked: image.locked,
     hyperlink: image.hyperlink,
     hyperlink_type: image.hyperlink_type,
     name: image.name,

@@ -769,7 +769,9 @@ fn write_drawing_xml(
     sb.write_view("        <a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>\n")
     sb.write_view("      </xdr:spPr>\n")
     sb.write_view("    </xdr:pic>\n")
-    sb.write_view("    <xdr:clientData/>\n")
+    sb.write_view(
+      "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(image.locked)}\" fPrintsWithSheet=\"\{bool_attr(image.print_object)}\"/>\n",
+    )
     match image.positioning {
       PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
       PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")

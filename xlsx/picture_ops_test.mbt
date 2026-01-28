@@ -113,6 +113,28 @@ test "picture options write drawing and rels" {
 }
 
 ///|
+test "picture clientData flags" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.add_picture_from_bytes(
+    "Sheet1",
+    "A1",
+    [9, 9],
+    ".png",
+    locked=false,
+    print_object=false,
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("fLocksWithSheet=\"0\""), content="true")
+  inspect(drawing_xml.contains("fPrintsWithSheet=\"0\""), content="true")
+}
+
+///|
 test "picture name and alt text" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

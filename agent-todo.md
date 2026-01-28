@@ -28,6 +28,7 @@ References:
 - [x] Add picture lock-aspect option (partial `GraphicOptions` parity)
 - [x] Follow-up: picture positioning (oneCell/twoCell/absolute) (more `GraphicOptions` parity)
 - [x] Follow-up: picture autofit options (AutoFit / AutoFitIgnoreAspect) (more `GraphicOptions` parity)
+- [x] Follow-up: picture `PrintObject` / `Locked` flags (writes `xdr:clientData` attrs) (more `GraphicOptions` parity)
 - [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
 
 ### Sparklines

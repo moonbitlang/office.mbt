@@ -2048,6 +2048,8 @@ pub fn Workbook::add_image(
   lock_aspect_ratio? : Bool = false,
   auto_fit? : Bool = false,
   auto_fit_ignore_aspect? : Bool = false,
+  print_object? : Bool = true,
+  locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
@@ -2070,6 +2072,8 @@ pub fn Workbook::add_image(
     lock_aspect_ratio~,
     auto_fit~,
     auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
     positioning~,
   )
 }
@@ -2091,6 +2095,8 @@ pub async fn Workbook::add_picture(
   lock_aspect_ratio? : Bool = false,
   auto_fit? : Bool = false,
   auto_fit_ignore_aspect? : Bool = false,
+  print_object? : Bool = true,
+  locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
@@ -2111,6 +2117,8 @@ pub async fn Workbook::add_picture(
     lock_aspect_ratio~,
     auto_fit~,
     auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
     positioning~,
   )
 }
@@ -2133,6 +2141,8 @@ pub fn Workbook::add_picture_from_bytes(
   lock_aspect_ratio? : Bool = false,
   auto_fit? : Bool = false,
   auto_fit_ignore_aspect? : Bool = false,
+  print_object? : Bool = true,
+  locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
@@ -2154,6 +2164,8 @@ pub fn Workbook::add_picture_from_bytes(
     lock_aspect_ratio~,
     auto_fit~,
     auto_fit_ignore_aspect~,
+    print_object~,
+    locked~,
     positioning~,
   )
 }
