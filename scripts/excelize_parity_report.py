@@ -94,7 +94,11 @@ def _collect_moon_types(mbti_paths: list[pathlib.Path]) -> set[str]:
     types: set[str] = set()
     for p in mbti_paths:
         txt = _read_text(p)
-        for m in re.finditer(r"^pub\s+(?:struct|enum|trait|type)\s+([A-Za-z0-9_]+)\b", txt, re.M):
+        for m in re.finditer(
+            r"^pub(?:\(all\))?\s+(?:struct|enum|trait|type)\s+([A-Za-z0-9_]+)\b",
+            txt,
+            re.M,
+        ):
             name = m.group(1)
             if name and name[0].isupper():
                 types.add(_camel_to_snake(name))
