@@ -979,6 +979,44 @@ pub struct PivotTable {
 }
 pub fn PivotTable::new(String, String, cache_records_xml? : String, name? : String) -> Self raise XlsxError
 
+pub(all) struct PivotTableField {
+  data : String
+  name : String
+  subtotal : String
+  num_fmt : Int
+  compact : Bool
+  outline : Bool
+  show_all : Bool
+  insert_blank_row : Bool
+  default_subtotal : Bool
+}
+pub fn PivotTableField::new(String) -> Self raise XlsxError
+pub impl Eq for PivotTableField
+pub impl Show for PivotTableField
+
+pub(all) struct PivotTableOptions {
+  data_range : String
+  pivot_table_range : String
+  name : String
+  rows : Array[PivotTableField]
+  columns : Array[PivotTableField]
+  data : Array[PivotTableField]
+  filter : Array[PivotTableField]
+  row_grand_totals : Bool
+  col_grand_totals : Bool
+  show_drill : Bool
+  classic_layout : Bool
+  show_row_headers : Bool
+  show_col_headers : Bool
+  show_row_stripes : Bool
+  show_col_stripes : Bool
+  show_last_column : Bool
+  pivot_table_style_name : String
+}
+pub fn PivotTableOptions::new(String, String) -> Self raise XlsxError
+pub impl Eq for PivotTableOptions
+pub impl Show for PivotTableOptions
+
 pub struct Protection {
   mut hidden : Bool?
   mut locked : Bool?
@@ -1439,6 +1477,7 @@ pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String,
 pub fn Workbook::add_picture_from_bytes_with_options(Self, StringView, String, Bytes, String, GraphicOptions) -> Unit raise XlsxError
 pub async fn Workbook::add_picture_with_options(Self, StringView, String, String, GraphicOptions) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
+pub fn Workbook::add_pivot_table_with_options(Self, PivotTableOptions) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError

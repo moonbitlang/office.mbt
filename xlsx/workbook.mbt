@@ -2989,6 +2989,82 @@ pub fn Workbook::add_pivot_table(
 }
 
 ///|
+pub fn Workbook::add_pivot_table_with_options(
+  self : Workbook,
+  opts : PivotTableOptions,
+) -> PivotTable raise XlsxError {
+  let (data_sheet, data_ref) = split_sheet_range(opts.data_range)
+  let (pivot_sheet, pivot_ref) = split_sheet_range(opts.pivot_table_range)
+  let (header_row, min_col, _max_row, max_col) = parse_range_ref(data_ref)
+  let field_names : Array[String] = []
+  let mut col = min_col
+  while col <= max_col {
+    let axis = cell_ref_from(header_row, col)
+    let value = match
+      self.get_cell_value(data_sheet, axis, options=self.options) {
+      Some(text) => text
+      None => ""
+    }
+    if value == "" {
+      raise XlsxError::InvalidPivotTable(msg="pivot field name empty")
+    }
+    field_names.push(value)
+    col = col + 1
+  }
+  let field_index : Map[String, Int] = {}
+  for i, name in field_names {
+    field_index[name] = i
+  }
+  fn resolve_field_index(
+    field_index : Map[String, Int],
+    name : String,
+  ) -> Int raise XlsxError {
+    match field_index.get(name) {
+      Some(idx) => idx
+      None =>
+        raise XlsxError::InvalidPivotTable(msg="pivot field not found: \{name}")
+    }
+  }
+
+  let row_fields : Array[Int] = []
+  for field in opts.rows {
+    row_fields.push(resolve_field_index(field_index, field.data))
+  }
+  let col_fields : Array[Int] = []
+  for field in opts.columns {
+    col_fields.push(resolve_field_index(field_index, field.data))
+  }
+  let page_fields : Array[Int] = []
+  for field in opts.filter {
+    page_fields.push(resolve_field_index(field_index, field.data))
+  }
+  let data_fields : Array[(Int, PivotTableField)] = []
+  for field in opts.data {
+    let idx = resolve_field_index(field_index, field.data)
+    data_fields.push((idx, field))
+  }
+  let mut pivot_name = opts.name
+  if pivot_name == "" {
+    pivot_name = "PivotTable1"
+  }
+  let cache_id_guess = 1
+  let cache_xml = write_pivot_cache_definition_xml(
+    data_sheet, data_ref, field_names,
+  )
+  let table_xml = write_pivot_table_definition_xml(
+    pivot_name, cache_id_guess, pivot_ref, field_names, row_fields, col_fields, page_fields,
+    data_fields, opts,
+  )
+  self.add_pivot_table_xml(
+    pivot_sheet,
+    table_xml,
+    cache_xml,
+    cache_records_xml="",
+    name=pivot_name,
+  )
+}
+
+///|
 pub fn Workbook::get_pivot_tables(
   self : Workbook,
   sheet_name : StringView,
