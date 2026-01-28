@@ -19,6 +19,11 @@ References:
 
 ### Styles / formatting
 - [ ] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
+  - [x] Font (cell styles + conditional styles)
+  - [ ] Fill
+  - [ ] Border
+  - [ ] Alignment
+  - [ ] Protection
 
 ### Charts
 - [ ] Add high-level chart builder types (partial parity with Excelize `Chart*` types in `excelize/xmlChart.go` / `excelize/chart.go`)

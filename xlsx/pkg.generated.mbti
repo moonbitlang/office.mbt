@@ -393,6 +393,19 @@ pub fn DefinedName::new(String, String, scope? : String, comment? : String) -> S
 pub impl Eq for DefinedName
 pub impl Show for DefinedName
 
+pub struct Font {
+  mut bold : Bool?
+  mut italic : Bool?
+  mut underline : String?
+  mut size : Double?
+  mut color : String?
+  mut family : String?
+}
+pub fn Font::new() -> Self
+pub fn Font::with_values(bold? : Bool, italic? : Bool, underline? : String, size? : Double, color? : String, family? : String) -> Self
+pub impl Eq for Font
+pub impl Show for Font
+
 pub struct FormControl {
   cell : String
   control_type : String
@@ -1007,10 +1020,13 @@ pub fn StreamWriter::set_row_cells(Self, String, ArrayView[StreamCell], row_opts
 
 pub struct Style {
   number_format : NumberFormat?
+  font : Font?
 }
 pub fn Style::builtin_number_format(Int) -> Self
+pub fn Style::font(Font) -> Self
 pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
+pub fn Style::with_font(Self, Font) -> Self
 pub impl Eq for Style
 pub impl Show for Style
 

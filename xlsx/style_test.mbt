@@ -95,3 +95,66 @@ test "default font roundtrip" {
   let parsed = read(bytes)
   inspect(parsed.get_default_font(), content="Arial")
 }
+
+///|
+test "cell style font write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let font = Font::with_values(
+    bold=true,
+    size=14.0,
+    color="FF0000",
+    family="Arial",
+  )
+  let style_id = workbook.new_style(Style::font(font))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("<fonts count=\"2\">"), content="true")
+  inspect(styles_xml.contains("<b/>"), content="true")
+  inspect(styles_xml.contains("sz val=\"14"), content="true")
+  inspect(styles_xml.contains("color rgb=\"FFFF0000\""), content="true")
+  inspect(styles_xml.contains("name val=\"Arial\""), content="true")
+  inspect(styles_xml.contains("fontId=\"1\""), content="true")
+  inspect(styles_xml.contains("applyFont=\"1\""), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::font(font))
+}
+
+///|
+test "conditional style font write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let font = Font::with_values(bold=true)
+  let style_id = workbook.new_conditional_style(Style::font(font))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(styles_xml.contains("<dxf><font><b/>"), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::font(font))
+}

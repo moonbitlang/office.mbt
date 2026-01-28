@@ -390,6 +390,100 @@ fn parse_default_font(xml : StringView) -> String {
 }
 
 ///|
+fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
+  let font = Font::new()
+  match tag_attributes_in(xml, "b") {
+    Some(_) => font.bold = Some(true)
+    None => ()
+  }
+  match tag_attributes_in(xml, "i") {
+    Some(_) => font.italic = Some(true)
+    None => ()
+  }
+  match tag_attributes_in(xml, "u") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => font.underline = Some(unescape_xml_text(value))
+        None => font.underline = Some("single")
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "sz") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) =>
+          font.size = Some(
+            @strconv.parse_double(value) catch {
+              _ => raise XlsxError::InvalidXml(msg="font sz invalid")
+            },
+          )
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "name") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => font.family = Some(unescape_xml_text(value))
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "color") {
+    Some(tag) =>
+      match attr_value(tag, "rgb") {
+        Some(value) => {
+          let rgb = unescape_xml_text(value)
+          let normalized = if rgb.length() == 8 && rgb.has_prefix("FF") {
+            (rgb[2:] catch { _ => rgb }).to_string()
+          } else {
+            rgb.to_string()
+          }
+          font.color = Some(normalized)
+        }
+        None => ()
+      }
+    None => ()
+  }
+  font
+}
+
+///|
+fn parse_fonts(xml : StringView) -> Array[Font] raise XlsxError {
+  let fonts : Array[Font] = []
+  let body = match extract_tag_body(xml, "fonts") {
+    Some(value) => value
+    None => {
+      fonts.push(Font::new())
+      return fonts
+    }
+  }
+  let mut first = true
+  for chunk in body.split("<font") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let open_end = match text.find(">") {
+      Some(pos) => pos
+      None => continue
+    }
+    let rest = text[open_end + 1:] catch { _ => "" }
+    let end = match rest.find("</font>") {
+      Some(pos) => pos
+      None => continue
+    }
+    let content = rest[:end] catch { _ => "" }
+    fonts.push(parse_font_entry(content))
+  }
+  if fonts.length() == 0 {
+    fonts.push(Font::new())
+  }
+  fonts
+}
+
+///|
 fn parse_pivot_table_name(xml : StringView) -> String raise XlsxError {
   match tag_attributes_in(xml, "pivotTableDefinition") {
     Some(tag) =>
@@ -817,6 +911,7 @@ fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
 fn parse_cell_xfs(
   xml : StringView,
   num_fmts : Map[Int, String],
+  fonts : ArrayView[Font],
 ) -> Array[Style] raise XlsxError {
   let styles : Array[Style] = []
   let body = match extract_tag_body(xml, "cellXfs") {
@@ -851,7 +946,7 @@ fn parse_cell_xfs(
         }
       None => 0
     }
-    let style = match num_fmts.get(num_fmt_id) {
+    let mut style = match num_fmts.get(num_fmt_id) {
       Some(code) => Style::number_format(code)
       None =>
         if num_fmt_id == 0 {
@@ -859,6 +954,16 @@ fn parse_cell_xfs(
         } else {
           Style::builtin_number_format(num_fmt_id)
         }
+    }
+    let font_id = match attr_value(tag, "fontId") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="fontId invalid")
+        }
+      None => 0
+    }
+    if font_id > 0 && font_id < fonts.length() {
+      style = style.with_font(fonts[font_id])
     }
     styles.push(style)
   }
@@ -872,6 +977,7 @@ fn parse_cell_xfs(
 fn parse_dxfs(
   xml : StringView,
   num_fmts : Map[Int, String],
+  fonts : ArrayView[Font],
 ) -> Array[Style] raise XlsxError {
   let styles : Array[Style] = []
   let xml_str = xml.to_string()
@@ -919,7 +1025,7 @@ fn parse_dxfs(
     let tag = text[:end] catch {
         _ => raise XlsxError::InvalidXml(msg="dxf tag invalid")
       }
-    let style = match tag_attributes_in(tag, "numFmt") {
+    let mut style = match tag_attributes_in(tag, "numFmt") {
       Some(num_fmt_tag) => {
         let num_fmt_id = match attr_value(num_fmt_tag, "numFmtId") {
           Some(value) =>
@@ -944,6 +1050,16 @@ fn parse_dxfs(
       }
       None => Style::new()
     }
+    match extract_tag_body(tag, "font") {
+      Some(font_body) => {
+        let font = parse_font_entry(font_body)
+        // Only attach a non-default font. A default font in a dxf is typically redundant.
+        if fonts.length() == 0 || font != fonts[0] {
+          style = style.with_font(font)
+        }
+      }
+      None => ()
+    }
     styles.push(style)
   }
   styles
@@ -954,8 +1070,9 @@ fn parse_styles(
   xml : StringView,
 ) -> (Array[Style], Array[Style]) raise XlsxError {
   let num_fmts = parse_num_fmts(xml)
-  let styles = parse_cell_xfs(xml, num_fmts)
-  let conditional_styles = parse_dxfs(xml, num_fmts)
+  let fonts = parse_fonts(xml)
+  let styles = parse_cell_xfs(xml, num_fmts, fonts)
+  let conditional_styles = parse_dxfs(xml, num_fmts, fonts)
   (styles, conditional_styles)
 }
 
