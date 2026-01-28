@@ -2562,16 +2562,67 @@ fn parse_worksheet(
     }
     let cell_type = attr_value(tag, "t")
     let rest = try! text[end + 1:]
-    let formula = match rest.find("<f>") {
-      Some(pos) => {
-        let f_rest = try! rest[pos + 3:]
-        let f_end = match f_rest.find("</f>") {
-          Some(end) => end
-          None => raise XlsxError::InvalidXml(msg="formula not closed")
+    let formula_start = match rest.find("<f>") {
+      Some(pos) => Some(pos)
+      None =>
+        match rest.find("<f ") {
+          Some(pos) => Some(pos)
+          None =>
+            match rest.find("<f/") {
+              Some(pos) => Some(pos)
+              None => None
+            }
         }
-        Some(unescape_xml_text(try! f_rest[:f_end]))
+    }
+    let (formula, formula_type, formula_ref, formula_shared_index) = match
+      formula_start {
+      Some(pos) => {
+        let f_rest = try! rest[pos:]
+        let open_end = match f_rest.find(">") {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="formula tag not closed")
+        }
+        let open_tag = try! f_rest[:open_end]
+        let open_chars = open_tag.to_array()
+        let mut last = open_chars.length() - 1
+        while last >= 0 && is_attr_space(open_chars[last]) {
+          last = last - 1
+        }
+        let is_self_closing = last >= 0 && open_chars[last] == '/'
+        let kind = match attr_value(open_tag, "t") {
+          Some(value) =>
+            match formula_type_from_ooxml(value) {
+              Some(parsed) => Some(parsed)
+              None => raise XlsxError::InvalidXml(msg="formula type invalid")
+            }
+          None => None
+        }
+        let ref_value = match attr_value(open_tag, "ref") {
+          Some(value) => Some(unescape_xml_text(value))
+          None => None
+        }
+        let si_value = match attr_value(open_tag, "si") {
+          Some(value) =>
+            Some(
+              @strconv.parse_int(value, base=10) catch {
+                _ => raise XlsxError::InvalidXml(msg="formula si invalid")
+              },
+            )
+          None => None
+        }
+        if is_self_closing {
+          (Some(""), kind, ref_value, si_value)
+        } else {
+          let after_open = try! f_rest[open_end + 1:]
+          let close_end = match after_open.find("</f>") {
+            Some(value) => value
+            None => raise XlsxError::InvalidXml(msg="formula not closed")
+          }
+          let content = unescape_xml_text(try! after_open[:close_end])
+          (Some(content), kind, ref_value, si_value)
+        }
       }
-      None => None
+      None => (None, None, None, None)
     }
     let raw_value_opt = match rest.find("<v>") {
       Some(pos) => {
@@ -2685,6 +2736,9 @@ fn parse_worksheet(
       value_type,
       rich_text,
       formula,
+      formula_type,
+      formula_ref,
+      formula_shared_index,
       style_id,
     })
   }

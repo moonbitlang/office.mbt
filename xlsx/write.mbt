@@ -349,7 +349,10 @@ fn collect_formula_cells(workbook : Workbook) -> Array[(Int, String)] {
     let sheet_id = i + 1
     for cell in sheet.cells() {
       match cell.formula {
-        Some(_) => formula_cells.push((sheet_id, cell.reference))
+        Some(value) =>
+          if value != "" {
+            formula_cells.push((sheet_id, cell.reference))
+          }
         None => ()
       }
     }
@@ -1713,7 +1716,28 @@ fn write_worksheet_xml(
             CellValueType::Number => ()
           }
           sb.write_view(">")
-          sb.write_view("<f>")
+          sb.write_view("<f")
+          match cell.formula_type {
+            Some(kind) => {
+              sb.write_view(" t=\"")
+              sb.write_view(formula_type_to_ooxml(kind))
+              sb.write_view("\"")
+            }
+            None => ()
+          }
+          match cell.formula_ref {
+            Some(value) => {
+              sb.write_view(" ref=\"")
+              sb.write_view(escape_xml_attr(value))
+              sb.write_view("\"")
+            }
+            None => ()
+          }
+          match cell.formula_shared_index {
+            Some(si) => sb.write_view(" si=\"\{si}\"")
+            None => ()
+          }
+          sb.write_view(">")
           sb.write_view(escape_xml_text(formula))
           sb.write_view("</f>")
           if cell.value != "" {

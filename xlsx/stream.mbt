@@ -294,6 +294,9 @@ pub fn StreamWriter::set_row_cells(
       value_type: cell.value_type,
       rich_text: cell.rich_text,
       formula: cell.formula,
+      formula_type: None,
+      formula_ref: None,
+      formula_shared_index: None,
       style_id: cell.style_id,
     })
     col = col + 1

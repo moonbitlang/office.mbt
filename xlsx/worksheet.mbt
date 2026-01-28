@@ -7,6 +7,9 @@ pub struct Cell {
   value_type : CellValueType
   rich_text : Array[RichTextRun]?
   formula : String?
+  formula_type : FormulaType?
+  formula_ref : String?
+  formula_shared_index : Int?
   style_id : Int
 }
 
@@ -424,6 +427,9 @@ pub fn Worksheet::set_cell(
         value_type: CellValueType::String,
         rich_text: None,
         formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -437,6 +443,9 @@ pub fn Worksheet::set_cell(
     value_type: CellValueType::String,
     rich_text: None,
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -476,6 +485,9 @@ pub fn Worksheet::set_cell_value(
         value_type,
         rich_text: None,
         formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -489,6 +501,9 @@ pub fn Worksheet::set_cell_value(
     value_type,
     rich_text: None,
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -563,6 +578,9 @@ pub fn Worksheet::set_cell_rich_text(
         value_type: CellValueType::String,
         rich_text: Some(stored_runs),
         formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -576,6 +594,9 @@ pub fn Worksheet::set_cell_rich_text(
     value_type: CellValueType::String,
     rich_text: Some(stored_runs),
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -630,6 +651,9 @@ pub fn Worksheet::set_cell_formula(
         value_type: CellValueType::String,
         rich_text: None,
         formula: Some(formula),
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -643,6 +667,9 @@ pub fn Worksheet::set_cell_formula(
     value_type: CellValueType::String,
     rich_text: None,
     formula: Some(formula),
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -655,10 +682,187 @@ pub fn Worksheet::get_cell_formula(
   let (row, col) = cell_ref_to_rc(reference)
   for cell in self.cells {
     if cell.row == row && cell.col == col {
-      return cell.formula
+      return match cell.formula {
+        Some(value) => if value == "" { None } else { Some(value) }
+        None => None
+      }
     }
   }
   None
+}
+
+///|
+pub fn Worksheet::set_cell_formula_opts(
+  self : Worksheet,
+  reference : String,
+  formula : String,
+  opts? : FormulaOpts = FormulaOpts::new(),
+  value? : String = "",
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let formula_kind = opts.formula_type
+  match formula_kind {
+    None => self.set_cell_formula(reference, formula, value~)
+    Some(FormulaType::Normal) =>
+      self.set_cell_formula(reference, formula, value~)
+    Some(FormulaType::DataTable) =>
+      raise XlsxError::UnsupportedFeature(
+        msg="dataTable formula type unsupported",
+      )
+    Some(FormulaType::Array) => {
+      let range_ref = match opts.range_ref {
+        Some(value) => normalize_range_ref(value)
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="array formula ref missing",
+          )
+      }
+      let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+      let (master_row, master_col) = cell_ref_to_rc(reference)
+      let canonical_master = cell_ref_from(master_row, master_col)
+      if canonical_master != cell_ref_from(min_row, min_col) {
+        raise XlsxError::InvalidSheetOperation(
+          msg="array formula master must be top-left of ref",
+        )
+      }
+      fn set_formula_cell(
+        sheet : Worksheet,
+        row : Int,
+        col : Int,
+        formula : String,
+        formula_ref : String,
+        value : String,
+      ) -> Unit raise XlsxError {
+        let canonical = cell_ref_from(row, col)
+        for i, cell in sheet.cells {
+          if cell.row == row && cell.col == col {
+            sheet.cells[i] = {
+              reference: canonical,
+              row,
+              col,
+              value,
+              value_type: CellValueType::String,
+              rich_text: None,
+              formula: Some(formula),
+              formula_type: Some(FormulaType::Array),
+              formula_ref: Some(formula_ref),
+              formula_shared_index: None,
+              style_id: cell.style_id,
+            }
+            return
+          }
+        }
+        sheet.cells.push({
+          reference: canonical,
+          row,
+          col,
+          value,
+          value_type: CellValueType::String,
+          rich_text: None,
+          formula: Some(formula),
+          formula_type: Some(FormulaType::Array),
+          formula_ref: Some(formula_ref),
+          formula_shared_index: None,
+          style_id: 0,
+        })
+      }
+
+      for row in min_row..<=max_row {
+        for col in min_col..<=max_col {
+          if row == min_row && col == min_col {
+            set_formula_cell(self, row, col, formula, range_ref, value)
+          } else {
+            set_formula_cell(self, row, col, "", range_ref, "")
+          }
+        }
+      }
+    }
+    Some(FormulaType::Shared) => {
+      let range_ref = match opts.range_ref {
+        Some(value) => normalize_range_ref(value)
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="shared formula ref missing",
+          )
+      }
+      let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
+      let (master_row, master_col) = cell_ref_to_rc(reference)
+      let canonical_master = cell_ref_from(master_row, master_col)
+      if canonical_master != cell_ref_from(min_row, min_col) {
+        raise XlsxError::InvalidSheetOperation(
+          msg="shared formula master must be top-left of ref",
+        )
+      }
+      let mut max_si = -1
+      for cell in self.cells {
+        match cell.formula_shared_index {
+          Some(si) => if si > max_si { max_si = si }
+          None => ()
+        }
+      }
+      let shared_index = max_si + 1
+      fn set_shared_cell(
+        sheet : Worksheet,
+        row : Int,
+        col : Int,
+        formula : String,
+        formula_ref : String?,
+        shared_index : Int,
+        value : String,
+      ) -> Unit raise XlsxError {
+        let canonical = cell_ref_from(row, col)
+        for i, cell in sheet.cells {
+          if cell.row == row && cell.col == col {
+            sheet.cells[i] = {
+              reference: canonical,
+              row,
+              col,
+              value,
+              value_type: CellValueType::String,
+              rich_text: None,
+              formula: Some(formula),
+              formula_type: Some(FormulaType::Shared),
+              formula_ref,
+              formula_shared_index: Some(shared_index),
+              style_id: cell.style_id,
+            }
+            return
+          }
+        }
+        sheet.cells.push({
+          reference: canonical,
+          row,
+          col,
+          value,
+          value_type: CellValueType::String,
+          rich_text: None,
+          formula: Some(formula),
+          formula_type: Some(FormulaType::Shared),
+          formula_ref,
+          formula_shared_index: Some(shared_index),
+          style_id: 0,
+        })
+      }
+
+      for row in min_row..<=max_row {
+        for col in min_col..<=max_col {
+          if row == min_row && col == min_col {
+            set_shared_cell(
+              self,
+              row,
+              col,
+              formula,
+              Some(range_ref),
+              shared_index,
+              value,
+            )
+          } else {
+            set_shared_cell(self, row, col, "", None, shared_index, "")
+          }
+        }
+      }
+    }
+  }
 }
 
 ///|
@@ -836,6 +1040,9 @@ pub fn Worksheet::set_cell_style(
         value_type: cell.value_type,
         rich_text: cell.rich_text,
         formula: cell.formula,
+        formula_type: cell.formula_type,
+        formula_ref: cell.formula_ref,
+        formula_shared_index: cell.formula_shared_index,
         style_id,
       }
       return
@@ -849,6 +1056,9 @@ pub fn Worksheet::set_cell_style(
     value_type: CellValueType::String,
     rich_text: None,
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id,
   })
 }
@@ -889,6 +1099,9 @@ pub fn Worksheet::set_cell_style_rc(
         value_type: cell.value_type,
         rich_text: cell.rich_text,
         formula: cell.formula,
+        formula_type: cell.formula_type,
+        formula_ref: cell.formula_ref,
+        formula_shared_index: cell.formula_shared_index,
         style_id,
       }
       return
@@ -902,6 +1115,9 @@ pub fn Worksheet::set_cell_style_rc(
     value_type: CellValueType::String,
     rich_text: None,
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id,
   })
 }
@@ -1751,6 +1967,9 @@ pub fn Worksheet::set_cell_rc(
         value_type: CellValueType::String,
         rich_text: None,
         formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -1764,6 +1983,9 @@ pub fn Worksheet::set_cell_rc(
     value_type: CellValueType::String,
     rich_text: None,
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -1789,6 +2011,9 @@ pub fn Worksheet::set_cell_value_rc(
         value_type,
         rich_text: None,
         formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -1802,6 +2027,9 @@ pub fn Worksheet::set_cell_value_rc(
     value_type,
     rich_text: None,
     formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -1826,6 +2054,9 @@ pub fn Worksheet::set_cell_formula_rc(
         value_type: CellValueType::String,
         rich_text: None,
         formula: Some(formula),
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
         style_id: cell.style_id,
       }
       return
@@ -1839,6 +2070,9 @@ pub fn Worksheet::set_cell_formula_rc(
     value_type: CellValueType::String,
     rich_text: None,
     formula: Some(formula),
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
     style_id: 0,
   })
 }
@@ -2375,6 +2609,9 @@ pub fn Worksheet::insert_rows(
         value_type: cell.value_type,
         rich_text: cell.rich_text,
         formula: cell.formula,
+        formula_type: cell.formula_type,
+        formula_ref: cell.formula_ref,
+        formula_shared_index: cell.formula_shared_index,
         style_id: cell.style_id,
       }
     }
@@ -2490,6 +2727,9 @@ pub fn Worksheet::remove_rows(
       value_type: cell.value_type,
       rich_text: cell.rich_text,
       formula: cell.formula,
+      formula_type: cell.formula_type,
+      formula_ref: cell.formula_ref,
+      formula_shared_index: cell.formula_shared_index,
       style_id: cell.style_id,
     })
   }
@@ -2897,6 +3137,9 @@ pub fn Worksheet::duplicate_row_to(
       value_type: cell.value_type,
       rich_text: cell.rich_text,
       formula: cell.formula,
+      formula_type: cell.formula_type,
+      formula_ref: cell.formula_ref,
+      formula_shared_index: cell.formula_shared_index,
       style_id: cell.style_id,
     })
   }
@@ -2934,6 +3177,9 @@ pub fn Worksheet::insert_cols(
         value_type: cell.value_type,
         rich_text: cell.rich_text,
         formula: cell.formula,
+        formula_type: cell.formula_type,
+        formula_ref: cell.formula_ref,
+        formula_shared_index: cell.formula_shared_index,
         style_id: cell.style_id,
       }
     }
@@ -3049,6 +3295,9 @@ pub fn Worksheet::remove_cols(
       value_type: cell.value_type,
       rich_text: cell.rich_text,
       formula: cell.formula,
+      formula_type: cell.formula_type,
+      formula_ref: cell.formula_ref,
+      formula_shared_index: cell.formula_shared_index,
       style_id: cell.style_id,
     })
   }

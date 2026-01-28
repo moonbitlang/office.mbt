@@ -37,7 +37,7 @@ References:
 - [ ] Add `SlicerOptions` builder (Excelize `SlicerOptions` in `excelize/slicer.go`)
 
 ### Cells: formula/hyperlink opts
-- [ ] Add `FormulaOpts` parity where meaningful (Excelize `FormulaOpts` in `excelize/cell.go`)
+- [x] Add `FormulaOpts` parity where meaningful (Excelize `FormulaOpts` in `excelize/cell.go`)
 - [x] Add `HyperlinkOpts`-like API for richer hyperlinks (Excelize `HyperlinkOpts` in `excelize/cell.go`)
 
 ### Conditional formatting

@@ -1973,6 +1973,22 @@ pub fn Workbook::set_cell_formula(
 }
 
 ///|
+pub fn Workbook::set_cell_formula_opts(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : String,
+  formula : String,
+  opts? : FormulaOpts = FormulaOpts::new(),
+  value? : String = "",
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.set_cell_formula_opts(reference, formula, opts~, value~)
+}
+
+///|
 pub fn Workbook::get_cell_formula(
   self : Workbook,
   sheet_name : StringView,

@@ -178,6 +178,9 @@ pub struct Cell {
   value_type : CellValueType
   rich_text : Array[RichTextRun]?
   formula : String?
+  formula_type : FormulaType?
+  formula_ref : String?
+  formula_shared_index : Int?
   style_id : Int
 }
 
@@ -398,6 +401,26 @@ pub struct FormControl {
 pub fn FormControl::new(String, String, text? : String) -> Self raise XlsxError
 pub impl Eq for FormControl
 pub impl Show for FormControl
+
+pub struct FormulaOpts {
+  mut formula_type : FormulaType?
+  mut range_ref : String?
+}
+pub fn FormulaOpts::array(String) -> Self
+pub fn FormulaOpts::new() -> Self
+pub fn FormulaOpts::shared(String) -> Self
+pub fn FormulaOpts::with_values(formula_type? : FormulaType, range_ref? : String) -> Self
+pub impl Eq for FormulaOpts
+pub impl Show for FormulaOpts
+
+pub(all) enum FormulaType {
+  Normal
+  Array
+  Shared
+  DataTable
+}
+pub impl Eq for FormulaType
+pub impl Show for FormulaType
 
 type HeaderFooterImage
 
@@ -1143,6 +1166,7 @@ pub fn Workbook::set_cell_bool(Self, StringView, String, Bool) -> Unit raise Xls
 pub fn Workbook::set_cell_default(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_float(Self, StringView, String, Double, precision? : Int, bit_size? : Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_formula_opts(Self, StringView, String, String, opts? : FormulaOpts, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_rc(Self, StringView, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_hyper_link(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_hyperlink(Self, StringView, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
@@ -1376,6 +1400,7 @@ pub fn Worksheet::rows(Self) -> Rows
 pub fn Worksheet::set_auto_filter(Self, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
 pub fn Worksheet::set_cell(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula(Self, String, String, value? : String) -> Unit raise XlsxError
+pub fn Worksheet::set_cell_formula_opts(Self, String, String, opts? : FormulaOpts, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_formula_rc(Self, Int, Int, String, value? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_hyperlink(Self, String, String, HyperlinkType, display? : String, tooltip? : String) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_hyperlink_opts(Self, String, String, HyperlinkType, opts? : HyperlinkOpts) -> Unit raise XlsxError
