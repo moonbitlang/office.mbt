@@ -28,7 +28,8 @@ References:
 - [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
 
 ### Sparklines
-- [ ] Add `SparklineOptions` (markers/axis/reverse/style/colors/empty cells) and write/read full sparklineGroup attributes (Excelize `SparklineOptions` in `excelize/xmlWorksheet.go` + `excelize/sparkline.go`)
+- [x] Add `SparklineOptions` basic parity (style presets, markers/high/low/first/last/negative, axis, reverse, seriesColor) and round-trip via `SparklineGroupOptions`
+- [ ] Follow-ups: date axis, hidden, weight, manual min/max, empty cell modes (Excelize `SparklineOptions` in `excelize/xmlWorksheet.go`)
 
 ### Pivot tables & slicers
 - [ ] Add `PivotTableOptions` builder (Excelize `PivotTableOptions` in `excelize/pivotTable.go`)
@@ -43,4 +44,3 @@ References:
 
 ### Tables
 - [ ] Expand `xlsx.Table` options (row/col stripes, first/last column emphasis, etc.) (Excelize `Table` in `excelize/table.go` / `excelize/xmlTable.go`)
-

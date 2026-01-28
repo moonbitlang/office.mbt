@@ -63,19 +63,19 @@ Impact:
 - Feature coverage is enough for basic “put a simple shape with text” cases,
   but not the richer formatting supported by Excelize.
 
-### 4) Sparklines: only type + (location, range)
+### 4) Sparklines: partial `SparklineOptions` parity
 
 - Excelize supports rich sparkline options like style presets, markers, axis,
   series color, reverse direction, etc via `SparklineOptions`
   (`excelize/sparkline.go`).
-- mbtexcel supports only:
-  - `SparklineType` (Line/Column/WinLoss)
-  - `Sparkline` `(range_ref, location)`
-  - grouping via `SparklineGroup` (`xlsx/pkg.generated.mbti`)
+- mbtexcel supports:
+  - `SparklineOptions` builder (type/style/markers/high/low/first/last/negative/axis/reverse/seriesColor)
+  - round-tripping those settings via `SparklineGroupOptions` on `SparklineGroup`
 
 Impact:
-- You can create sparklines, but not configure the full set of formatting knobs
-  Excelize provides.
+- You can configure common sparkline formatting, but some Excelize options are
+  still not implemented (e.g. date axis, hidden, weight, manual min/max, empty
+  cell display modes beyond the current default).
 
 ### 5) Pivot tables: XML-driven (no `PivotTableOptions` builder)
 

@@ -95,7 +95,11 @@ def _collect_moon_types(mbti_paths: list[pathlib.Path]) -> set[str]:
     for p in mbti_paths:
         txt = _read_text(p)
         for m in re.finditer(r"^pub\s+(?:struct|enum|trait|type)\s+([A-Za-z0-9_]+)\b", txt, re.M):
-            types.add(m.group(1).lower())
+            name = m.group(1)
+            if name and name[0].isupper():
+                types.add(_camel_to_snake(name))
+            else:
+                types.add(name.lower())
     return types
 
 
@@ -193,4 +197,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

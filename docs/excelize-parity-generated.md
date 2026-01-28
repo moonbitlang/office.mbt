@@ -4,14 +4,14 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `7487cfe`
+- mbtexcel: `ecd1862`
 
 
 ## API name parity (normalized)
 
 - Excelize exported funcs + `(*File)` methods: 169
 
-- MoonBit exported names scanned from `.mbti`: 318
+- MoonBit exported names scanned from `.mbti`: 333
 
 - Missing Excelize API names in MoonBit (by normalized name): 0
 
@@ -22,7 +22,7 @@ This section compares **exported Go type names** to **exported MoonBit type name
 It is intentionally conservative and may report false positives (e.g. types that exist but are not public, or types that are intentionally modeled differently).
 
 
-- Missing exported Excelize types (filtered to key feature files): 40
+- Missing exported Excelize types (filtered to key feature files): 33
 
 
 ### `excelize/cell.go`
@@ -117,19 +117,5 @@ It is intentionally conservative and may report false positives (e.g. types that
 ### `excelize/xmlWorksheet.go`
 
 - `conditional_format_options` (Excelize `ConditionalFormatOptions`)
-
-- `data_validation` (Excelize `DataValidation`)
-
-- `header_footer_options` (Excelize `HeaderFooterOptions`)
-
-- `page_layout_margins_options` (Excelize `PageLayoutMarginsOptions`)
-
-- `page_layout_options` (Excelize `PageLayoutOptions`)
-
-- `sheet_props_options` (Excelize `SheetPropsOptions`)
-
-- `sheet_protection_options` (Excelize `SheetProtectionOptions`)
-
-- `sparkline_options` (Excelize `SparklineOptions`)
 
 - `view_options` (Excelize `ViewOptions`)
