@@ -151,12 +151,93 @@ pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Protection {
 }
 
 ///|
+pub struct Alignment {
+  mut horizontal : String?
+  mut vertical : String?
+  mut wrap_text : Bool?
+  mut text_rotation : Int?
+  mut indent : Int?
+  mut shrink_to_fit : Bool?
+  mut justify_last_line : Bool?
+  mut reading_order : Int?
+  mut relative_indent : Int?
+} derive(Eq, Show)
+
+///|
+pub fn Alignment::new() -> Alignment {
+  {
+    horizontal: None,
+    vertical: None,
+    wrap_text: None,
+    text_rotation: None,
+    indent: None,
+    shrink_to_fit: None,
+    justify_last_line: None,
+    reading_order: None,
+    relative_indent: None,
+  }
+}
+
+///|
+pub fn Alignment::with_values(
+  horizontal? : String,
+  vertical? : String,
+  wrap_text? : Bool,
+  text_rotation? : Int,
+  indent? : Int,
+  shrink_to_fit? : Bool,
+  justify_last_line? : Bool,
+  reading_order? : Int,
+  relative_indent? : Int,
+) -> Alignment {
+  let align = Alignment::new()
+  match horizontal {
+    Some(v) => align.horizontal = Some(v)
+    None => ()
+  }
+  match vertical {
+    Some(v) => align.vertical = Some(v)
+    None => ()
+  }
+  match wrap_text {
+    Some(v) => align.wrap_text = Some(v)
+    None => ()
+  }
+  match text_rotation {
+    Some(v) => align.text_rotation = Some(v)
+    None => ()
+  }
+  match indent {
+    Some(v) => align.indent = Some(v)
+    None => ()
+  }
+  match shrink_to_fit {
+    Some(v) => align.shrink_to_fit = Some(v)
+    None => ()
+  }
+  match justify_last_line {
+    Some(v) => align.justify_last_line = Some(v)
+    None => ()
+  }
+  match reading_order {
+    Some(v) => align.reading_order = Some(v)
+    None => ()
+  }
+  match relative_indent {
+    Some(v) => align.relative_indent = Some(v)
+    None => ()
+  }
+  align
+}
+
+///|
 pub struct Style {
   number_format : NumberFormat?
   font : Font?
   fill : Fill?
   border : Array[Border]?
   protection : Protection?
+  alignment : Alignment?
 } derive(Eq, Show)
 
 ///|
@@ -167,6 +248,7 @@ pub fn Style::new() -> Style {
     fill: None,
     border: None,
     protection: None,
+    alignment: None,
   }
 }
 
@@ -178,6 +260,7 @@ pub fn Style::number_format(format_code : String) -> Style {
     fill: None,
     border: None,
     protection: None,
+    alignment: None,
   }
 }
 
@@ -189,6 +272,7 @@ pub fn Style::builtin_number_format(id : Int) -> Style {
     fill: None,
     border: None,
     protection: None,
+    alignment: None,
   }
 }
 
@@ -200,6 +284,7 @@ pub fn Style::font(font : Font) -> Style {
     fill: None,
     border: None,
     protection: None,
+    alignment: None,
   }
 }
 
@@ -211,6 +296,7 @@ pub fn Style::with_font(self : Style, font : Font) -> Style {
     fill: self.fill,
     border: self.border,
     protection: self.protection,
+    alignment: self.alignment,
   }
 }
 
@@ -222,6 +308,7 @@ pub fn Style::fill(fill : Fill) -> Style {
     fill: Some(fill),
     border: None,
     protection: None,
+    alignment: None,
   }
 }
 
@@ -233,6 +320,7 @@ pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
     fill: Some(fill),
     border: self.border,
     protection: self.protection,
+    alignment: self.alignment,
   }
 }
 
@@ -244,6 +332,7 @@ pub fn Style::border(border : Array[Border]) -> Style {
     fill: None,
     border: Some(border),
     protection: None,
+    alignment: None,
   }
 }
 
@@ -255,6 +344,7 @@ pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
     fill: self.fill,
     border: Some(border),
     protection: self.protection,
+    alignment: self.alignment,
   }
 }
 
@@ -266,6 +356,7 @@ pub fn Style::protection(protection : Protection) -> Style {
     fill: None,
     border: None,
     protection: Some(protection),
+    alignment: None,
   }
 }
 
@@ -277,6 +368,31 @@ pub fn Style::with_protection(self : Style, protection : Protection) -> Style {
     fill: self.fill,
     border: self.border,
     protection: Some(protection),
+    alignment: self.alignment,
+  }
+}
+
+///|
+pub fn Style::alignment(alignment : Alignment) -> Style {
+  {
+    number_format: None,
+    font: None,
+    fill: None,
+    border: None,
+    protection: None,
+    alignment: Some(alignment),
+  }
+}
+
+///|
+pub fn Style::with_alignment(self : Style, alignment : Alignment) -> Style {
+  {
+    number_format: self.number_format,
+    font: self.font,
+    fill: self.fill,
+    border: self.border,
+    protection: self.protection,
+    alignment: Some(alignment),
   }
 }
 
@@ -689,6 +805,26 @@ fn write_styles_xml(
         }
       None => false
     }
+    let alignment = style.alignment
+    let apply_alignment = match alignment {
+      Some(a) =>
+        match
+          (
+            a.horizontal,
+            a.vertical,
+            a.wrap_text,
+            a.text_rotation,
+            a.indent,
+            a.shrink_to_fit,
+            a.justify_last_line,
+            a.reading_order,
+            a.relative_indent,
+          ) {
+          (None, None, None, None, None, None, None, None, None) => false
+          _ => true
+        }
+      None => false
+    }
     sb.write_view(
       "    <xf numFmtId=\"\{num_fmt_id}\" fontId=\"\{font_id}\" fillId=\"\{fill_id}\" borderId=\"\{border_id}\" xfId=\"0\"",
     )
@@ -704,13 +840,73 @@ fn write_styles_xml(
     if apply_border {
       sb.write_view(" applyBorder=\"1\"")
     }
+    if apply_alignment {
+      sb.write_view(" applyAlignment=\"1\"")
+    }
     if apply_protection {
       sb.write_view(" applyProtection=\"1\"")
     }
-    if !apply_protection {
+    let needs_children = apply_alignment || apply_protection
+    if !needs_children {
       sb.write_view("/>\n")
     } else {
       sb.write_view(">")
+      match alignment {
+        Some(a) =>
+          if apply_alignment {
+            sb.write_view("<alignment")
+            match a.horizontal {
+              Some(v) => sb.write_view(" horizontal=\"\{escape_xml_attr(v)}\"")
+              None => ()
+            }
+            match a.vertical {
+              Some(v) => sb.write_view(" vertical=\"\{escape_xml_attr(v)}\"")
+              None => ()
+            }
+            match a.wrap_text {
+              Some(v) => {
+                sb.write_view(" wrapText=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match a.text_rotation {
+              Some(v) => sb.write_view(" textRotation=\"\{v}\"")
+              None => ()
+            }
+            match a.indent {
+              Some(v) => sb.write_view(" indent=\"\{v}\"")
+              None => ()
+            }
+            match a.shrink_to_fit {
+              Some(v) => {
+                sb.write_view(" shrinkToFit=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match a.justify_last_line {
+              Some(v) => {
+                sb.write_view(" justifyLastLine=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match a.reading_order {
+              Some(v) => sb.write_view(" readingOrder=\"\{v}\"")
+              None => ()
+            }
+            match a.relative_indent {
+              Some(v) => sb.write_view(" relativeIndent=\"\{v}\"")
+              None => ()
+            }
+            sb.write_view("/>")
+          }
+        None => ()
+      }
       match protection {
         Some(p) => {
           sb.write_view("<protection")
@@ -792,6 +988,25 @@ fn write_styles_xml(
           }
         None => false
       }
+      let has_alignment = match style.alignment {
+        Some(a) =>
+          match
+            (
+              a.horizontal,
+              a.vertical,
+              a.wrap_text,
+              a.text_rotation,
+              a.indent,
+              a.shrink_to_fit,
+              a.justify_last_line,
+              a.reading_order,
+              a.relative_indent,
+            ) {
+            (None, None, None, None, None, None, None, None, None) => false
+            _ => true
+          }
+        None => false
+      }
       let has_num_fmt = match style.number_format {
         Some(_) => true
         None => false
@@ -800,7 +1015,8 @@ fn write_styles_xml(
         !has_font &&
         !has_fill &&
         !has_border &&
-        !has_protection {
+        !has_protection &&
+        !has_alignment {
         sb.write_view("    <dxf/>\n")
         continue
       }
@@ -936,6 +1152,62 @@ fn write_styles_xml(
               sb.write_view("</\{side}>")
             }
             sb.write_view("</border>")
+          }
+        None => ()
+      }
+      match style.alignment {
+        Some(a) =>
+          if has_alignment {
+            sb.write_view("<alignment")
+            match a.horizontal {
+              Some(v) => sb.write_view(" horizontal=\"\{escape_xml_attr(v)}\"")
+              None => ()
+            }
+            match a.vertical {
+              Some(v) => sb.write_view(" vertical=\"\{escape_xml_attr(v)}\"")
+              None => ()
+            }
+            match a.wrap_text {
+              Some(v) => {
+                sb.write_view(" wrapText=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match a.text_rotation {
+              Some(v) => sb.write_view(" textRotation=\"\{v}\"")
+              None => ()
+            }
+            match a.indent {
+              Some(v) => sb.write_view(" indent=\"\{v}\"")
+              None => ()
+            }
+            match a.shrink_to_fit {
+              Some(v) => {
+                sb.write_view(" shrinkToFit=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match a.justify_last_line {
+              Some(v) => {
+                sb.write_view(" justifyLastLine=\"")
+                sb.write_view(if v { "1" } else { "0" })
+                sb.write_view("\"")
+              }
+              None => ()
+            }
+            match a.reading_order {
+              Some(v) => sb.write_view(" readingOrder=\"\{v}\"")
+              None => ()
+            }
+            match a.relative_indent {
+              Some(v) => sb.write_view(" relativeIndent=\"\{v}\"")
+              None => ()
+            }
+            sb.write_view("/>")
           }
         None => ()
       }

@@ -102,6 +102,22 @@ pub impl Eq for XlsxError
 pub impl Show for XlsxError
 
 // Types and methods
+pub struct Alignment {
+  mut horizontal : String?
+  mut vertical : String?
+  mut wrap_text : Bool?
+  mut text_rotation : Int?
+  mut indent : Int?
+  mut shrink_to_fit : Bool?
+  mut justify_last_line : Bool?
+  mut reading_order : Int?
+  mut relative_indent : Int?
+}
+pub fn Alignment::new() -> Self
+pub fn Alignment::with_values(horizontal? : String, vertical? : String, wrap_text? : Bool, text_rotation? : Int, indent? : Int, shrink_to_fit? : Bool, justify_last_line? : Bool, reading_order? : Int, relative_indent? : Int) -> Self
+pub impl Eq for Alignment
+pub impl Show for Alignment
+
 pub struct AppProperties {
   mut application : String
   mut doc_security : Int?
@@ -1054,7 +1070,9 @@ pub struct Style {
   fill : Fill?
   border : Array[Border]?
   protection : Protection?
+  alignment : Alignment?
 }
+pub fn Style::alignment(Alignment) -> Self
 pub fn Style::border(Array[Border]) -> Self
 pub fn Style::builtin_number_format(Int) -> Self
 pub fn Style::fill(Fill) -> Self
@@ -1062,6 +1080,7 @@ pub fn Style::font(Font) -> Self
 pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
 pub fn Style::protection(Protection) -> Self
+pub fn Style::with_alignment(Self, Alignment) -> Self
 pub fn Style::with_border(Self, Array[Border]) -> Self
 pub fn Style::with_fill(Self, Fill) -> Self
 pub fn Style::with_font(Self, Font) -> Self

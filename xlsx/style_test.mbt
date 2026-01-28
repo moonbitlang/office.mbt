@@ -347,3 +347,71 @@ test "conditional style protection write + roundtrip" {
   let parsed = read(bytes)
   assert_eq(parsed.get_conditional_style(0), Style::protection(protection))
 }
+
+///|
+test "cell style alignment write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let alignment = Alignment::with_values(
+    horizontal="center",
+    vertical="center",
+    wrap_text=true,
+    text_rotation=45,
+    indent=2,
+    shrink_to_fit=true,
+  )
+  let style_id = workbook.new_style(Style::alignment(alignment))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("applyAlignment=\"1\""), content="true")
+  inspect(styles_xml.contains("horizontal=\"center\""), content="true")
+  inspect(styles_xml.contains("vertical=\"center\""), content="true")
+  inspect(styles_xml.contains("wrapText=\"1\""), content="true")
+  inspect(styles_xml.contains("textRotation=\"45\""), content="true")
+  inspect(styles_xml.contains("indent=\"2\""), content="true")
+  inspect(styles_xml.contains("shrinkToFit=\"1\""), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
+}
+
+///|
+test "conditional style alignment write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let alignment = Alignment::with_values(wrap_text=true)
+  let style_id = workbook.new_conditional_style(Style::alignment(alignment))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(
+    styles_xml.contains("<dxf><alignment wrapText=\"1\"/>"),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::alignment(alignment))
+}

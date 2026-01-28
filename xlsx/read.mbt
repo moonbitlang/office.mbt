@@ -718,6 +718,86 @@ fn parse_protection_entry(xml : StringView) -> Protection? raise XlsxError {
 }
 
 ///|
+fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
+  let tag = match tag_attributes_in(xml, "alignment") {
+    Some(value) => value
+    None => return None
+  }
+  let alignment = Alignment::new()
+  match attr_value(tag, "horizontal") {
+    Some(value) => alignment.horizontal = Some(unescape_xml_text(value))
+    None => ()
+  }
+  match attr_value(tag, "vertical") {
+    Some(value) => alignment.vertical = Some(unescape_xml_text(value))
+    None => ()
+  }
+  match attr_value(tag, "wrapText") {
+    Some(value) => alignment.wrap_text = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match attr_value(tag, "textRotation") {
+    Some(value) =>
+      alignment.text_rotation = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="textRotation invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "indent") {
+    Some(value) =>
+      alignment.indent = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="indent invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "shrinkToFit") {
+    Some(value) => alignment.shrink_to_fit = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match attr_value(tag, "justifyLastLine") {
+    Some(value) => alignment.justify_last_line = Some(parse_bool_attr(value))
+    None => ()
+  }
+  match attr_value(tag, "readingOrder") {
+    Some(value) =>
+      alignment.reading_order = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="readingOrder invalid")
+        },
+      )
+    None => ()
+  }
+  match attr_value(tag, "relativeIndent") {
+    Some(value) =>
+      alignment.relative_indent = Some(
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="relativeIndent invalid")
+        },
+      )
+    None => ()
+  }
+  match
+    (
+      alignment.horizontal,
+      alignment.vertical,
+      alignment.wrap_text,
+      alignment.text_rotation,
+      alignment.indent,
+      alignment.shrink_to_fit,
+      alignment.justify_last_line,
+      alignment.reading_order,
+      alignment.relative_indent,
+    ) {
+    (None, None, None, None, None, None, None, None, None) => None
+    _ => Some(alignment)
+  }
+}
+
+///|
 fn parse_pivot_table_name(xml : StringView) -> String raise XlsxError {
   match tag_attributes_in(xml, "pivotTableDefinition") {
     Some(tag) =>
@@ -1247,6 +1327,10 @@ fn parse_cell_xfs(
         Some(protection) => style = style.with_protection(protection)
         None => ()
       }
+      match parse_alignment_entry(xf_body) {
+        Some(alignment) => style = style.with_alignment(alignment)
+        None => ()
+      }
     }
     styles.push(style)
   }
@@ -1364,6 +1448,10 @@ fn parse_dxfs(
     }
     match parse_protection_entry(tag) {
       Some(protection) => style = style.with_protection(protection)
+      None => ()
+    }
+    match parse_alignment_entry(tag) {
+      Some(alignment) => style = style.with_alignment(alignment)
       None => ()
     }
     styles.push(style)

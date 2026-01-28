@@ -22,7 +22,7 @@ References:
   - [x] Font (cell styles + conditional styles)
   - [x] Fill (pattern/solid + conditional fill)
   - [x] Border (basic left/right/top/bottom + conditional border)
-  - [ ] Alignment
+  - [x] Alignment (basic + conditional alignment)
   - [x] Protection (locked/hidden + conditional protection)
 
 ### Charts
