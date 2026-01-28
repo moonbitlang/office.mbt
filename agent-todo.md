@@ -1,0 +1,46 @@
+# Agent TODOs (Excelize parity)
+
+This file tracks incremental parity work vs the vendored Excelize snapshot in
+`excelize/`.
+
+References:
+- Human-written gap summary: `docs/excelize-parity.md`
+- Generated (names-only) report: `docs/excelize-parity-generated.md` (regen via `python3 scripts/excelize_parity_report.py --out docs/excelize-parity-generated.md`)
+
+## Workflow (per item)
+
+1. Add/extend MoonBit API (+ docs if needed)
+2. Add focused tests (prefer snapshots via `inspect`)
+3. Run `moon info && moon fmt`
+4. Run `moon test` (use `moon test --update` if snapshots legitimately change)
+5. Commit with a detailed message and push to `origin/main`
+
+## Feature worklist
+
+### Styles / formatting
+- [ ] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
+
+### Charts
+- [ ] Add high-level chart builder types (partial parity with Excelize `Chart*` types in `excelize/xmlChart.go` / `excelize/chart.go`)
+
+### Drawings: pictures & shapes
+- [ ] Add `GraphicOptions`-like picture options (alt text/name/lock aspect/positioning) (Excelize `GraphicOptions` in `excelize/xmlDrawing.go`)
+- [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
+
+### Sparklines
+- [ ] Add `SparklineOptions` (markers/axis/reverse/style/colors/empty cells) and write/read full sparklineGroup attributes (Excelize `SparklineOptions` in `excelize/xmlWorksheet.go` + `excelize/sparkline.go`)
+
+### Pivot tables & slicers
+- [ ] Add `PivotTableOptions` builder (Excelize `PivotTableOptions` in `excelize/pivotTable.go`)
+- [ ] Add `SlicerOptions` builder (Excelize `SlicerOptions` in `excelize/slicer.go`)
+
+### Cells: formula/hyperlink opts
+- [ ] Add `FormulaOpts` parity where meaningful (Excelize `FormulaOpts` in `excelize/cell.go`)
+- [ ] Add `HyperlinkOpts`-like API for richer hyperlinks (Excelize `HyperlinkOpts` in `excelize/cell.go`)
+
+### Conditional formatting
+- [ ] Add higher-level `ConditionalFormatOptions` parity (Excelize `ConditionalFormatOptions` in `excelize/xmlWorksheet.go`)
+
+### Tables
+- [ ] Expand `xlsx.Table` options (row/col stripes, first/last column emphasis, etc.) (Excelize `Table` in `excelize/table.go` / `excelize/xmlTable.go`)
+
