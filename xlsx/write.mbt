@@ -686,6 +686,11 @@ fn write_drawing_xml(
     let row_off = image.offset_y * emu_per_pixel
     let cx = scaled_emu(default_image_width_emu, image.scale_x)
     let cy = scaled_emu(default_image_height_emu, image.scale_y)
+    let picture_name = if image.name == "" {
+      "Image \{pic_id}"
+    } else {
+      image.name
+    }
     sb.write_view("  <xdr:oneCellAnchor>\n")
     sb.write_view("    <xdr:from>\n")
     sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -698,16 +703,29 @@ fn write_drawing_xml(
     sb.write_view("      <xdr:nvPicPr>\n")
     match item.hyperlink_rel_id {
       Some(link_id) => {
-        sb.write_view(
-          "        <xdr:cNvPr id=\"\{pic_id}\" name=\"Image \{pic_id}\">\n",
-        )
+        sb.write_view("        <xdr:cNvPr id=\"\{pic_id}\" name=\"")
+        sb.write_view(escape_xml_attr(picture_name))
+        sb.write_view("\"")
+        if image.alt_text != "" {
+          sb.write_view(" descr=\"")
+          sb.write_view(escape_xml_attr(image.alt_text))
+          sb.write_view("\"")
+        }
+        sb.write_view(">\n")
         sb.write_view("          <a:hlinkClick r:id=\"rId\{link_id}\"/>\n")
         sb.write_view("        </xdr:cNvPr>\n")
       }
-      None =>
-        sb.write_view(
-          "        <xdr:cNvPr id=\"\{pic_id}\" name=\"Image \{pic_id}\"/>\n",
-        )
+      None => {
+        sb.write_view("        <xdr:cNvPr id=\"\{pic_id}\" name=\"")
+        sb.write_view(escape_xml_attr(picture_name))
+        sb.write_view("\"")
+        if image.alt_text != "" {
+          sb.write_view(" descr=\"")
+          sb.write_view(escape_xml_attr(image.alt_text))
+          sb.write_view("\"")
+        }
+        sb.write_view("/>\n")
+      }
     }
     sb.write_view("        <xdr:cNvPicPr/>\n")
     sb.write_view("      </xdr:nvPicPr>\n")

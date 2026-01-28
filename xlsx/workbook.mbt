@@ -2027,6 +2027,8 @@ pub fn Workbook::add_image(
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  name? : String = "",
+  alt_text? : String = "",
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2043,6 +2045,8 @@ pub fn Workbook::add_image(
     scale_y~,
     hyperlink~,
     hyperlink_type~,
+    name~,
+    alt_text~,
   )
 }
 
@@ -2058,6 +2062,8 @@ pub async fn Workbook::add_picture(
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  name? : String = "",
+  alt_text? : String = "",
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2072,6 +2078,8 @@ pub async fn Workbook::add_picture(
     scale_y~,
     hyperlink~,
     hyperlink_type~,
+    name~,
+    alt_text~,
   )
 }
 
@@ -2088,6 +2096,8 @@ pub fn Workbook::add_picture_from_bytes(
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  name? : String = "",
+  alt_text? : String = "",
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2103,6 +2113,8 @@ pub fn Workbook::add_picture_from_bytes(
     scale_y~,
     hyperlink~,
     hyperlink_type~,
+    name~,
+    alt_text~,
   )
 }
 

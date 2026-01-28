@@ -22,6 +22,8 @@ pub struct Image {
   scale_y : Double
   hyperlink : String
   hyperlink_type : HyperlinkType
+  name : String
+  alt_text : String
 }
 
 ///|
@@ -1218,6 +1220,8 @@ pub fn Worksheet::add_picture_from_bytes(
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  name? : String = "",
+  alt_text? : String = "",
 ) -> Unit raise XlsxError {
   let ext = normalize_image_extension_lower(extension)
   let content_type = match image_content_type(ext) {
@@ -1236,6 +1240,8 @@ pub fn Worksheet::add_picture_from_bytes(
     scale_y~,
     hyperlink~,
     hyperlink_type~,
+    name~,
+    alt_text~,
   )
 }
 
@@ -1250,6 +1256,8 @@ pub async fn Worksheet::add_picture(
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  name? : String = "",
+  alt_text? : String = "",
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let extension = match extension_from_path(path) {
@@ -1270,6 +1278,8 @@ pub async fn Worksheet::add_picture(
     scale_y~,
     hyperlink~,
     hyperlink_type~,
+    name~,
+    alt_text~,
   )
 }
 
@@ -1286,6 +1296,8 @@ pub fn Worksheet::add_image(
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
   hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  name? : String = "",
+  alt_text? : String = "",
 ) -> Unit raise XlsxError {
   let (_row, _col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
@@ -1310,6 +1322,8 @@ pub fn Worksheet::add_image(
     scale_y: normalized_scale_y,
     hyperlink: normalized_hyperlink,
     hyperlink_type: normalized_hyperlink_type,
+    name,
+    alt_text,
   })
 }
 
@@ -1326,6 +1340,8 @@ fn image_with_reference(image : Image, reference : String) -> Image {
     scale_y: image.scale_y,
     hyperlink: image.hyperlink,
     hyperlink_type: image.hyperlink_type,
+    name: image.name,
+    alt_text: image.alt_text,
   }
 }
 

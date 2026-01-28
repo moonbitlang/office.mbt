@@ -24,7 +24,8 @@ References:
 - [ ] Add high-level chart builder types (partial parity with Excelize `Chart*` types in `excelize/xmlChart.go` / `excelize/chart.go`)
 
 ### Drawings: pictures & shapes
-- [ ] Add `GraphicOptions`-like picture options (alt text/name/lock aspect/positioning) (Excelize `GraphicOptions` in `excelize/xmlDrawing.go`)
+- [x] Add picture `name` / `alt_text` options (partial parity with Excelize `GraphicOptions` in `excelize/xmlDrawing.go`)
+- [ ] Follow-ups: picture positioning/lock-aspect/autofit flags (more `GraphicOptions` parity)
 - [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
 
 ### Sparklines
