@@ -3087,6 +3087,142 @@ pub fn Workbook::get_merge_cells_info(
 pub fn Workbook::add_table(
   self : Workbook,
   sheet_name : StringView,
+  options : TableOptions,
+) -> Table raise XlsxError {
+  fn table_name_exists(workbook : Workbook, name : StringView) -> Bool {
+    let target = name.to_string().to_lower()
+    for sheet in workbook.sheets {
+      for table in sheet.tables {
+        if table.name.to_lower() == target {
+          return true
+        }
+      }
+    }
+    false
+  }
+
+  fn next_table_name(workbook : Workbook) -> String {
+    let mut max_id = 0
+    for sheet in workbook.sheets {
+      for table in sheet.tables {
+        let name = table.name
+        if !name.has_prefix("Table") {
+          continue
+        }
+        let suffix = name["Table".length():] catch { _ => "" }
+        if suffix == "" {
+          continue
+        }
+        let id = @strconv.parse_int(suffix, base=10) catch { _ => continue }
+        if id > max_id {
+          max_id = id
+        }
+      }
+    }
+    "Table\{max_id + 1}"
+  }
+
+  fn intersects_existing_tables(
+    sheet : Worksheet,
+    min_row : Int,
+    min_col : Int,
+    max_row : Int,
+    max_col : Int,
+  ) -> Bool raise XlsxError {
+    for table in sheet.tables() {
+      let (t_min_row, t_min_col, t_max_row, t_max_col) = parse_range_ref(
+        table.range_ref,
+      )
+      let disjoint = max_row < t_min_row ||
+        min_row > t_max_row ||
+        max_col < t_min_col ||
+        min_col > t_max_col
+      if !disjoint {
+        return true
+      }
+    }
+    false
+  }
+
+  ignore(check_sheet_name(sheet_name))
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  let show_header_row = match options.show_header_row {
+    Some(v) => v
+    None => true
+  }
+  let show_row_stripes = match options.show_row_stripes {
+    Some(v) => v
+    None => true
+  }
+  let style_name = if options.style_name == "" {
+    "TableStyleMedium9"
+  } else {
+    options.style_name
+  }
+  let normalized = normalize_range_ref(options.range_ref)
+  let (min_row0, min_col, max_row0, max_col) = parse_range_ref(normalized)
+  let max_row = if min_row0 == max_row0 { max_row0 + 1 } else { max_row0 }
+  if intersects_existing_tables(sheet, min_row0, min_col, max_row, max_col) {
+    raise XlsxError::InvalidTable(msg="table range intersects existing table")
+  }
+  let range_ref = normalize_range_ref(
+    "\{cell_ref_from(min_row0, min_col)}:\{cell_ref_from(max_row, max_col)}",
+  )
+  let header_row = if show_header_row { min_row0 } else { min_row0 + 1 }
+  let column_names : Array[String] = []
+  let seen : Array[String] = []
+  let mut idx = 0
+  let mut col = min_col
+  while col <= max_col {
+    idx = idx + 1
+    let cell = cell_ref_from(header_row, col)
+    let raw = match self.get_cell_value(sheet_name, cell, raw=true) {
+      Some(v) => v
+      None => ""
+    }
+    let mut name = raw
+    if name == "" || seen.contains(name.to_lower()) {
+      name = "Column\{idx}"
+      if show_header_row {
+        self.set_cell(sheet_name, cell, name)
+      }
+    }
+    seen.push(name.to_lower())
+    column_names.push(name)
+    col = col + 1
+  }
+  let mut table_name = options.name
+  if table_name == "" {
+    table_name = next_table_name(self)
+  } else {
+    check_defined_name(table_name) catch {
+      _ => raise XlsxError::InvalidTable(msg="table name invalid")
+    }
+  }
+  if table_name_exists(self, table_name) {
+    raise XlsxError::InvalidTable(msg="table name exists")
+  }
+  sheet.add_table(
+    range_ref,
+    table_name,
+    column_names,
+    display_name=table_name,
+    style_name~,
+    show_first_column=options.show_first_column,
+    show_last_column=options.show_last_column,
+    show_row_stripes~,
+    show_column_stripes=options.show_column_stripes,
+    show_header_row~,
+  )
+}
+
+///|
+pub fn Workbook::add_table_with_columns(
+  self : Workbook,
+  sheet_name : StringView,
   range_ref : String,
   name : String,
   columns : ArrayView[String],

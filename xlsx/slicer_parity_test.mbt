@@ -3,7 +3,9 @@ test "slicer duplicate names and cache reuse" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
-    workbook.add_table("Sheet1", "A1:B4", "Table1", ["Column1", "Column2"]),
+    workbook.add_table_with_columns("Sheet1", "A1:B4", "Table1", [
+      "Column1", "Column2",
+    ]),
   )
   let s1 = SlicerOptions::new("Column1", "E1", "Sheet1", "Table1")
   s1.set_caption("Column1")

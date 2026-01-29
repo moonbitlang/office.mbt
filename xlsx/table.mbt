@@ -14,6 +14,89 @@ pub struct Table {
 }
 
 ///|
+pub(all) struct TableOptions {
+  range_ref : String
+  mut name : String
+  mut style_name : String
+  mut show_first_column : Bool
+  mut show_last_column : Bool
+  mut show_row_stripes : Bool?
+  mut show_column_stripes : Bool
+  mut show_header_row : Bool?
+} derive(Eq, Show)
+
+///|
+pub fn TableOptions::new(range_ref : String) -> TableOptions raise XlsxError {
+  if range_ref == "" {
+    raise XlsxError::InvalidTable(msg="table range empty")
+  }
+  ignore(parse_range_ref(normalize_range_ref(range_ref)))
+  {
+    range_ref: normalize_range_ref(range_ref),
+    name: "",
+    style_name: "",
+    show_first_column: false,
+    show_last_column: false,
+    show_row_stripes: None,
+    show_column_stripes: false,
+    show_header_row: None,
+  }
+}
+
+///|
+pub fn TableOptions::set_name(self : TableOptions, name : String) -> Unit {
+  self.name = name
+}
+
+///|
+pub fn TableOptions::set_style_name(
+  self : TableOptions,
+  style_name : String,
+) -> Unit {
+  self.style_name = style_name
+}
+
+///|
+pub fn TableOptions::set_show_first_column(
+  self : TableOptions,
+  value : Bool,
+) -> Unit {
+  self.show_first_column = value
+}
+
+///|
+pub fn TableOptions::set_show_last_column(
+  self : TableOptions,
+  value : Bool,
+) -> Unit {
+  self.show_last_column = value
+}
+
+///|
+pub fn TableOptions::set_show_row_stripes(
+  self : TableOptions,
+  value : Bool?,
+) -> Unit {
+  self.show_row_stripes = value
+}
+
+///|
+pub fn TableOptions::set_show_column_stripes(
+  self : TableOptions,
+  value : Bool,
+) -> Unit {
+  self.show_column_stripes = value
+}
+
+///|
+pub fn TableOptions::set_show_header_row(
+  self : TableOptions,
+  value : Bool?,
+) -> Unit {
+  self.show_header_row = value
+}
+
+///|
 pub fn Table::new(
   name : String,
   range_ref : String,

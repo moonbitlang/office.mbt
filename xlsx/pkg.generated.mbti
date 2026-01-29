@@ -1650,6 +1650,27 @@ pub struct Table {
 }
 pub fn Table::new(String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Self raise XlsxError
 
+pub(all) struct TableOptions {
+  range_ref : String
+  mut name : String
+  mut style_name : String
+  mut show_first_column : Bool
+  mut show_last_column : Bool
+  mut show_row_stripes : Bool?
+  mut show_column_stripes : Bool
+  mut show_header_row : Bool?
+}
+pub fn TableOptions::new(String) -> Self raise XlsxError
+pub fn TableOptions::set_name(Self, String) -> Unit
+pub fn TableOptions::set_show_column_stripes(Self, Bool) -> Unit
+pub fn TableOptions::set_show_first_column(Self, Bool) -> Unit
+pub fn TableOptions::set_show_header_row(Self, Bool?) -> Unit
+pub fn TableOptions::set_show_last_column(Self, Bool) -> Unit
+pub fn TableOptions::set_show_row_stripes(Self, Bool?) -> Unit
+pub fn TableOptions::set_style_name(Self, String) -> Unit
+pub impl Eq for TableOptions
+pub impl Show for TableOptions
+
 pub struct Workbook {
   sheets : Array[Worksheet]
   chart_sheets : Array[ChartSheet]
@@ -1710,7 +1731,8 @@ pub fn Workbook::add_sparkline_basic(Self, StringView, String, String, sparkline
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_options(Self, StringView, SparklineOptions) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int
-pub fn Workbook::add_table(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Table raise XlsxError
+pub fn Workbook::add_table(Self, StringView, TableOptions) -> Table raise XlsxError
+pub fn Workbook::add_table_with_columns(Self, StringView, String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Table raise XlsxError
 pub fn Workbook::add_vba_project(Self, Bytes) -> Unit raise XlsxError
 pub fn Workbook::add_vbaproject(Self, Bytes) -> Unit raise XlsxError
 pub fn Workbook::add_vml_drawing_hf_xml(Self, StringView, String) -> Unit raise XlsxError

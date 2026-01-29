@@ -3,8 +3,12 @@ test "table list and delete" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
-  ignore(workbook.add_table("Sheet1", "A1:B2", "Table1", ["A", "B"]))
-  ignore(workbook.add_table("Sheet2", "C1:D2", "Table2", ["C", "D"]))
+  ignore(
+    workbook.add_table_with_columns("Sheet1", "A1:B2", "Table1", ["A", "B"]),
+  )
+  ignore(
+    workbook.add_table_with_columns("Sheet2", "C1:D2", "Table2", ["C", "D"]),
+  )
   inspect(
     workbook.get_tables("Sheet1").map(table => table.name),
     content="[\"Table1\"]",

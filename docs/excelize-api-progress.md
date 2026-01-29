@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `9520e9f`
-- Progress: **13/169**
+- mbtexcel: `242fce6`
+- Progress: **14/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -18,7 +18,7 @@
 - [x] `add_shape`
 - [x] `add_slicer`
 - [x] `add_sparkline`
-- [ ] `add_table`
+- [x] `add_table`
 - [ ] `add_vba_project`
 - [ ] `auto_filter`
 - [ ] `calc_cell_value`

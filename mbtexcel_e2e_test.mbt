@@ -133,7 +133,11 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
   workbook.set_cell("Sheet1", "B1", "Value")
   workbook.set_cell("Sheet1", "A2", "Alpha")
   workbook.set_cell_int("Sheet1", "B2", 10)
-  ignore(workbook.add_table("Sheet1", "A1:B2", "Table1", ["Name", "Value"]))
+  ignore(
+    workbook.add_table_with_columns("Sheet1", "A1:B2", "Table1", [
+      "Name", "Value",
+    ]),
+  )
   let spark_opts = @xlsx.SparklineOptions::new(["C2"], ["B2:B2"])
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_cell_hyperlink(
@@ -669,7 +673,11 @@ test "mbtexcel e2e vml drawing roundtrip" {
 test "mbtexcel e2e form control and slicer" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
-  ignore(workbook.add_table("Sheet1", "A1:B2", "Table1", ["SlicerE2E", "B"]))
+  ignore(
+    workbook.add_table_with_columns("Sheet1", "A1:B2", "Table1", [
+      "SlicerE2E", "B",
+    ]),
+  )
   let control = @xlsx.FormControl::new("B2", "Button", text="Click")
   workbook.add_form_control("Sheet1", control)
   let slicer_opts = @xlsx.SlicerOptions::new(
@@ -697,7 +705,7 @@ test "mbtexcel e2e form control and slicer" {
 test "mbtexcel e2e delete table and slicer/form control" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
-  let table = workbook.add_table("Sheet1", "A1:B2", "TableE2E", [
+  let table = workbook.add_table_with_columns("Sheet1", "A1:B2", "TableE2E", [
     "SlicerDel", "B",
   ])
   let control = @xlsx.FormControl::new("C3", "Button", text="Go")

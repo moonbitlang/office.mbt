@@ -71,7 +71,9 @@ test "insert and remove rows adjust ranges" {
   workbook.set_cell("Sheet1", "A1", "a")
   workbook.set_cell("Sheet1", "B3", "b")
   workbook.merge_cells("Sheet1", "A1:B2")
-  ignore(workbook.add_table("Sheet1", "C1:D3", "Table1", ["c1", "c2"]))
+  ignore(
+    workbook.add_table_with_columns("Sheet1", "C1:D3", "Table1", ["c1", "c2"]),
+  )
   let spark_opts = SparklineOptions::new(["E1"], ["A1:A3"])
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_row_height("Sheet1", 3, 15.0)
@@ -119,7 +121,9 @@ test "insert and remove cols adjust ranges" {
   workbook.set_cell("Sheet1", "A1", "a")
   workbook.set_cell("Sheet1", "C1", "c")
   workbook.merge_cells("Sheet1", "A1:C1")
-  ignore(workbook.add_table("Sheet1", "B1:C3", "Table1", ["b1", "c1"]))
+  ignore(
+    workbook.add_table_with_columns("Sheet1", "B1:C3", "Table1", ["b1", "c1"]),
+  )
   let spark_opts = SparklineOptions::new(["D1"], ["A1:C1"])
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_col_width("Sheet1", 3, 11.0)

@@ -373,7 +373,9 @@ test "slicer add/get/delete and xml" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
-    workbook.add_table("Sheet1", "A1:C4", "Table1", ["Region", "Type", "Sales"]),
+    workbook.add_table_with_columns("Sheet1", "A1:C4", "Table1", [
+      "Region", "Type", "Sales",
+    ]),
   )
   let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
   opts.set_caption("Region")
@@ -444,7 +446,9 @@ test "slicer options builder write" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
-    workbook.add_table("Sheet1", "A1:C4", "Table1", ["Region", "Type", "Sales"]),
+    workbook.add_table_with_columns("Sheet1", "A1:C4", "Table1", [
+      "Region", "Type", "Sales",
+    ]),
   )
   let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
   opts.set_caption("Region")
