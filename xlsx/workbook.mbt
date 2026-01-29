@@ -1645,6 +1645,7 @@ pub fn Workbook::set_cell(
   reference : String,
   value : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None =>
@@ -1666,6 +1667,7 @@ pub fn Workbook::set_cell_value(
   reference : String,
   value : CellValue,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None =>
@@ -1758,6 +1760,7 @@ pub fn Workbook::set_cell_rich_text(
   reference : String,
   runs : ArrayView[RichTextRun],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1775,6 +1778,7 @@ pub fn Workbook::set_cell_hyperlink(
   display? : String = "",
   tooltip? : String = "",
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1791,6 +1795,7 @@ pub fn Workbook::set_cell_hyperlink_opts(
   link_type : HyperlinkType,
   opts? : HyperlinkOpts = HyperlinkOpts::new(),
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1824,6 +1829,7 @@ pub fn Workbook::remove_cell_hyperlink(
   sheet_name : StringView,
   reference : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1837,6 +1843,7 @@ pub fn Workbook::get_cell(
   sheet_name : StringView,
   reference : StringView,
 ) -> String? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1850,6 +1857,7 @@ pub fn Workbook::get_cell_rich_text(
   sheet_name : StringView,
   reference : StringView,
 ) -> Array[RichTextRun]? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1863,6 +1871,7 @@ pub fn Workbook::get_cell_hyperlink(
   sheet_name : StringView,
   reference : StringView,
 ) -> Hyperlink? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1885,6 +1894,7 @@ pub fn Workbook::get_cell_value_raw(
   sheet_name : StringView,
   reference : StringView,
 ) -> CellValue? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1898,6 +1908,7 @@ pub fn Workbook::get_cell_type(
   sheet_name : StringView,
   reference : StringView,
 ) -> CellValueType? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1913,6 +1924,7 @@ pub fn Workbook::get_cell_value(
   raw? : Bool = false,
   options? : Options,
 ) -> String? raise XlsxError {
+  check_sheet_name(sheet_name)
   let resolved_options = match options {
     Some(value) => value
     None => self.options
@@ -1940,6 +1952,7 @@ pub fn Workbook::calc_cell_value(
   raw? : Bool = false,
   options? : Options,
 ) -> String raise XlsxError {
+  check_sheet_name(sheet_name)
   let resolved_options = match options {
     Some(value) => value
     None => self.options
@@ -1999,6 +2012,7 @@ pub fn Workbook::set_cell_formula(
   formula : String,
   value? : String = "",
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2015,6 +2029,7 @@ pub fn Workbook::set_cell_formula_opts(
   opts? : FormulaOpts = FormulaOpts::new(),
   value? : String = "",
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2028,6 +2043,7 @@ pub fn Workbook::get_cell_formula(
   sheet_name : StringView,
   reference : StringView,
 ) -> String? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2042,6 +2058,7 @@ pub fn Workbook::set_cell_style(
   reference : String,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -2056,6 +2073,7 @@ pub fn Workbook::get_cell_style(
   sheet_name : StringView,
   reference : StringView,
 ) -> Int? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
