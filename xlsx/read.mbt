@@ -3541,23 +3541,9 @@ fn drawing_axis_span_emu(
 }
 
 ///|
-fn parse_drawing_images(
+fn parse_drawing_anchors(
   drawing_xml : StringView,
-  drawing_rels_xml : StringView,
-  sheet : Worksheet,
-  archive : @zip.Archive,
-) -> Array[Image] raise XlsxError {
-  let images : Array[Image] = []
-  let image_targets = if drawing_rels_xml.to_string() == "" {
-    {}
-  } else {
-    parse_relationship_targets(drawing_rels_xml, rel_image)
-  }
-  let hyperlink_targets = if drawing_rels_xml.to_string() == "" {
-    {}
-  } else {
-    parse_relationship_targets(drawing_rels_xml, rel_hyperlink)
-  }
+) -> Array[(String, PicturePositioning)] raise XlsxError {
   let xml_str = drawing_xml.to_string()
   let anchors : Array[(String, PicturePositioning)] = []
   let mut first_one = true
@@ -3610,6 +3596,28 @@ fn parse_drawing_images(
     }
     anchors.push((full, positioning))
   }
+  anchors
+}
+
+///|
+fn parse_drawing_images(
+  drawing_xml : StringView,
+  drawing_rels_xml : StringView,
+  sheet : Worksheet,
+  archive : @zip.Archive,
+) -> Array[Image] raise XlsxError {
+  let images : Array[Image] = []
+  let image_targets = if drawing_rels_xml.to_string() == "" {
+    {}
+  } else {
+    parse_relationship_targets(drawing_rels_xml, rel_image)
+  }
+  let hyperlink_targets = if drawing_rels_xml.to_string() == "" {
+    {}
+  } else {
+    parse_relationship_targets(drawing_rels_xml, rel_hyperlink)
+  }
+  let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
     let pic_body = match extract_tag_body_from(anchor_xml[:], "xdr:pic") {
@@ -3800,6 +3808,152 @@ fn parse_drawing_images(
     })
   }
   images
+}
+
+///|
+fn parse_drawing_charts(
+  drawing_xml : StringView,
+  drawing_rels_xml : StringView,
+  sheet : Worksheet,
+  archive : @zip.Archive,
+) -> Array[Chart] raise XlsxError {
+  let charts : Array[Chart] = []
+  let chart_targets = if drawing_rels_xml.to_string() == "" {
+    {}
+  } else {
+    parse_relationship_targets(drawing_rels_xml, rel_chart)
+  }
+  let anchors = parse_drawing_anchors(drawing_xml)
+  for entry in anchors {
+    let (anchor_xml, positioning) = entry
+    let chart_tag = match tag_attributes_in(anchor_xml[:], "c:chart") {
+      Some(value) => value
+      None => continue
+    }
+    let rel_id = match attr_value(chart_tag, "r:id") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing chart rel id missing")
+    }
+    let target = match chart_targets.get(rel_id.to_string()) {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing chart target missing")
+    }
+    let chart_path = resolve_rel_target(target, "drawings")
+    let chart_bytes = match archive.get(chart_path) {
+      Some(value) => value
+      None => raise XlsxError::MissingPart(path=chart_path)
+    }
+    let xml = @encoding/utf8.decode(chart_bytes) catch {
+      _ => raise XlsxError::InvalidXml(msg="drawing chart xml decode failed")
+    }
+    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing anchor from missing")
+    }
+    let col_idx0 = parse_xml_int_tag(
+      from_body[:],
+      "xdr:col",
+      "drawing col invalid",
+    )
+    let row_idx0 = parse_xml_int_tag(
+      from_body[:],
+      "xdr:row",
+      "drawing row invalid",
+    )
+    let col_off_emu = parse_xml_int_tag(
+      from_body[:],
+      "xdr:colOff",
+      "drawing colOff invalid",
+    )
+    let row_off_emu = parse_xml_int_tag(
+      from_body[:],
+      "xdr:rowOff",
+      "drawing rowOff invalid",
+    )
+    let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let offset_x = col_off_emu / picture_emu_per_pixel
+    let offset_y = row_off_emu / picture_emu_per_pixel
+    let (width_emu, height_emu) = match positioning {
+      PicturePositioning::OneCell => {
+        let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="drawing ext missing")
+        }
+        let cx = match attr_value(ext_tag, "cx") {
+          Some(value) =>
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="drawing cx invalid")
+            }
+          None => raise XlsxError::InvalidXml(msg="drawing cx missing")
+        }
+        let cy = match attr_value(ext_tag, "cy") {
+          Some(value) =>
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="drawing cy invalid")
+            }
+          None => raise XlsxError::InvalidXml(msg="drawing cy missing")
+        }
+        (cx, cy)
+      }
+      _ => {
+        let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="drawing anchor to missing")
+        }
+        let to_col_idx0 = parse_xml_int_tag(
+          to_body[:],
+          "xdr:col",
+          "drawing to col invalid",
+        )
+        let to_row_idx0 = parse_xml_int_tag(
+          to_body[:],
+          "xdr:row",
+          "drawing to row invalid",
+        )
+        let to_col_off = parse_xml_int_tag(
+          to_body[:],
+          "xdr:colOff",
+          "drawing to colOff invalid",
+        )
+        let to_row_off = parse_xml_int_tag(
+          to_body[:],
+          "xdr:rowOff",
+          "drawing to rowOff invalid",
+        )
+        let cx = drawing_axis_span_emu(
+          sheet, "col", col_idx0, col_off_emu, to_col_idx0, to_col_off,
+        )
+        let cy = drawing_axis_span_emu(
+          sheet, "row", row_idx0, row_off_emu, to_row_idx0, to_row_off,
+        )
+        (cx, cy)
+      }
+    }
+    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+      Some(value) => value
+      None => ""
+    }
+    let locked = match attr_value(client_tag, "fLocksWithSheet") {
+      Some(value) => parse_bool_attr(value)
+      None => true
+    }
+    let print_object = match attr_value(client_tag, "fPrintsWithSheet") {
+      Some(value) => parse_bool_attr(value)
+      None => true
+    }
+    charts.push({
+      reference,
+      xml,
+      offset_x,
+      offset_y,
+      width_emu,
+      height_emu,
+      print_object,
+      locked,
+      positioning,
+    })
+  }
+  charts
 }
 
 ///|
@@ -4963,6 +5117,10 @@ fn read_zip_bytes(
             drawing_xml, drawing_rels_xml, sheet, archive,
           )
           sheet.images.append(drawing_images[:])
+          let drawing_charts = parse_drawing_charts(
+            drawing_xml, drawing_rels_xml, sheet, archive,
+          )
+          sheet.charts.append(drawing_charts[:])
         }
         None => ()
       }
