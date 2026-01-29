@@ -3656,6 +3656,7 @@ pub fn Workbook::set_cell_rc(
   col : Int,
   value : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3671,6 +3672,7 @@ pub fn Workbook::set_cell_value_rc(
   col : Int,
   value : CellValue,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3685,6 +3687,7 @@ pub fn Workbook::get_cell_rc(
   row : Int,
   col : Int,
 ) -> String? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3699,6 +3702,7 @@ pub fn Workbook::get_cell_value_raw_rc(
   row : Int,
   col : Int,
 ) -> CellValue? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3715,6 +3719,7 @@ pub fn Workbook::get_cell_value_rc(
   raw? : Bool = false,
   options? : Options,
 ) -> String? raise XlsxError {
+  check_sheet_name(sheet_name)
   let resolved_options = match options {
     Some(value) => value
     None => self.options
