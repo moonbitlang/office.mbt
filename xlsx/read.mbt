@@ -3957,6 +3957,216 @@ fn parse_drawing_charts(
 }
 
 ///|
+fn parse_drawing_shapes(
+  drawing_xml : StringView,
+) -> Array[Shape] raise XlsxError {
+  let shapes : Array[Shape] = []
+  let anchors = parse_drawing_anchors(drawing_xml)
+  for entry in anchors {
+    let (anchor_xml, positioning) = entry
+    if anchor_xml.contains("<mc:AlternateContent") {
+      continue
+    }
+    let sp_body = match extract_tag_body_from(anchor_xml[:], "xdr:sp") {
+      Some(value) => value
+      None => continue
+    }
+    if !sp_body.contains("<a:prstGeom") {
+      continue
+    }
+    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing anchor from missing")
+    }
+    let col_idx0 = parse_xml_int_tag(
+      from_body[:],
+      "xdr:col",
+      "drawing col invalid",
+    )
+    let row_idx0 = parse_xml_int_tag(
+      from_body[:],
+      "xdr:row",
+      "drawing row invalid",
+    )
+    let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let c_nv_pr_tag = match tag_attributes_in(sp_body[:], "xdr:cNvPr") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing shape cNvPr missing")
+    }
+    let name = match attr_value(c_nv_pr_tag, "name") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let alt_text = match attr_value(c_nv_pr_tag, "descr") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let macro_name = match attr_value(c_nv_pr_tag, "macro") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+      Some(value) => value
+      None => ""
+    }
+    let locked = match attr_value(client_tag, "fLocksWithSheet") {
+      Some(value) => parse_bool_attr(value)
+      None => true
+    }
+    let print_object = match attr_value(client_tag, "fPrintsWithSheet") {
+      Some(value) => parse_bool_attr(value)
+      None => true
+    }
+    let sppr_body = match extract_tag_body_from(sp_body[:], "xdr:spPr") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing shape spPr missing")
+    }
+    let xfrm_body = match extract_tag_body_from(sppr_body[:], "a:xfrm") {
+      Some(value) => value
+      None => sppr_body
+    }
+    let ext_tag = match tag_attributes_in(xfrm_body[:], "a:ext") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing shape ext missing")
+    }
+    let cx = match attr_value(ext_tag, "cx") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="drawing shape cx invalid")
+        }
+      None => raise XlsxError::InvalidXml(msg="drawing shape cx missing")
+    }
+    let cy = match attr_value(ext_tag, "cy") {
+      Some(value) =>
+        @strconv.parse_int(value, base=10) catch {
+          _ => raise XlsxError::InvalidXml(msg="drawing shape cy invalid")
+        }
+      None => raise XlsxError::InvalidXml(msg="drawing shape cy missing")
+    }
+    let width = (cx.to_double() / picture_emu_per_pixel.to_double())
+      .round()
+      .to_int()
+    let height = (cy.to_double() / picture_emu_per_pixel.to_double())
+      .round()
+      .to_int()
+    let geom_tag = match tag_attributes_in(sppr_body[:], "a:prstGeom") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing shape prstGeom missing")
+    }
+    let shape_type = match attr_value(geom_tag, "prst") {
+      Some(value) => unescape_xml_text(value)
+      None => raise XlsxError::InvalidXml(msg="drawing shape prst missing")
+    }
+    let mut fill_color = ""
+    let mut fill_transparency = 0
+    match extract_tag_body_from(sppr_body[:], "a:solidFill") {
+      Some(fill_body) =>
+        match tag_attributes_in(fill_body[:], "a:srgbClr") {
+          Some(tag) =>
+            match attr_value(tag, "val") {
+              Some(value) => {
+                fill_color = unescape_xml_text(value)
+                match tag_attributes_in(fill_body[:], "a:alpha") {
+                  Some(alpha_tag) =>
+                    match attr_value(alpha_tag, "val") {
+                      Some(alpha) =>
+                        try @strconv.parse_int(alpha, base=10) catch {
+                          _ => ()
+                        } noraise {
+                          value => {
+                            let visible = value / 1000
+                            let transparency = 100 - visible
+                            if transparency >= 0 && transparency <= 100 {
+                              fill_transparency = transparency
+                            }
+                          }
+                        }
+                      None => ()
+                    }
+                  None => ()
+                }
+              }
+              None => ()
+            }
+          None => ()
+        }
+      None => ()
+    }
+    let mut line_color = ""
+    let mut line_width = 1.0
+    match tag_attributes_in(sppr_body[:], "a:ln") {
+      Some(tag) => {
+        match attr_value(tag, "w") {
+          Some(value) =>
+            try @strconv.parse_int(value, base=10) catch {
+              _ => ()
+            } noraise {
+              value => line_width = value.to_double() / 12700.0
+            }
+          None => ()
+        }
+        match extract_tag_body_from(sppr_body[:], "a:ln") {
+          Some(ln_body) =>
+            match tag_attributes_in(ln_body[:], "a:srgbClr") {
+              Some(color_tag) =>
+                match attr_value(color_tag, "val") {
+                  Some(value) => line_color = unescape_xml_text(value)
+                  None => ()
+                }
+              None => ()
+            }
+          None => ()
+        }
+      }
+      None => ()
+    }
+    let paragraph : Array[RichTextRun] = []
+    match extract_tag_body_from(sp_body[:], "xdr:txBody") {
+      Some(tx_body) => {
+        let tx = tx_body.to_string()
+        let mut first = true
+        for chunk in tx.split("<a:t>") {
+          if first {
+            first = false
+            continue
+          }
+          let part = chunk.to_string()
+          let end = match part.find("</a:t>") {
+            Some(pos) => pos
+            None => continue
+          }
+          let text = part[:end] catch { _ => "" }
+          paragraph.push({ text: unescape_xml_text(text), font: None })
+        }
+      }
+      None => ()
+    }
+    let text = ""
+    shapes.push({
+      reference,
+      shape_type,
+      macro_name,
+      text,
+      paragraph,
+      width,
+      height,
+      scale_x: 1.0,
+      scale_y: 1.0,
+      fill_color,
+      fill_transparency,
+      line_color,
+      line_width,
+      name,
+      alt_text,
+      print_object,
+      locked,
+      positioning,
+    })
+  }
+  shapes
+}
+
+///|
 fn parse_relationship_targets(
   xml : StringView,
   rel_type : StringView,
@@ -5121,6 +5331,8 @@ fn read_zip_bytes(
             drawing_xml, drawing_rels_xml, sheet, archive,
           )
           sheet.charts.append(drawing_charts[:])
+          let drawing_shapes = parse_drawing_shapes(drawing_xml)
+          sheet.shapes.append(drawing_shapes[:])
         }
         None => ()
       }
