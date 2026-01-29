@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `299d6cd`
-- Progress: **55/169**
+- mbtexcel: `34b6a71`
+- Progress: **59/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -60,10 +60,10 @@
 - [x] `get_col_visible`
 - [x] `get_col_width`
 - [x] `get_cols`
-- [ ] `get_comments`
-- [ ] `get_conditional_formats`
-- [ ] `get_conditional_style`
-- [ ] `get_custom_props`
+- [x] `get_comments`
+- [x] `get_conditional_formats`
+- [x] `get_conditional_style`
+- [x] `get_custom_props`
 - [ ] `get_data_validations`
 - [ ] `get_default_font`
 - [ ] `get_defined_name`
