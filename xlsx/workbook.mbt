@@ -3453,6 +3453,7 @@ pub fn Workbook::add_sparkline(
   sheet_name : StringView,
   options : SparklineOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3468,6 +3469,7 @@ pub fn Workbook::add_sparkline_group(
   ranges : ArrayView[String],
   sparkline_type? : SparklineType = SparklineType::Line,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3481,6 +3483,7 @@ pub fn Workbook::add_sparkline_options(
   sheet_name : StringView,
   options : SparklineOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3496,6 +3499,7 @@ pub fn Workbook::add_sparkline_basic(
   range_ref : String,
   sparkline_type? : SparklineType = SparklineType::Line,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
