@@ -99,6 +99,7 @@ pub fn Workbook::set_sheet_row(
   cell : StringView,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -119,6 +120,7 @@ pub fn Workbook::set_sheet_col(
   cell : StringView,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -171,6 +173,7 @@ pub fn Workbook::set_col_width_range(
   columns : StringView,
   width : Double,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -188,6 +191,7 @@ pub fn Workbook::set_col_visible_range(
   columns : StringView,
   visible : Bool,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -205,6 +209,7 @@ pub fn Workbook::set_col_outline_level_range(
   columns : StringView,
   level : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -222,6 +227,7 @@ pub fn Workbook::set_col_style_range(
   columns : StringView,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
