@@ -1,28 +1,49 @@
 ///|
 pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
+  let text = reference.to_string()
+  let chars = text.to_array()
+  let mut idx = 0
+  if idx < chars.length() && chars[idx] == '$' {
+    idx = idx + 1
+  }
   let mut col = 0
-  let row_sb = StringBuilder::new()
-  let mut seen_digit = false
-  for c in reference {
-    if !seen_digit && c.is_ascii_alphabetic() {
+  let mut has_col = false
+  while idx < chars.length() {
+    let c = chars[idx]
+    if c.is_ascii_alphabetic() {
       let upper = c.to_ascii_uppercase()
       col = col * 26 + (upper.to_int() - 'A'.to_int() + 1)
-    } else if c.is_ascii_digit() {
-      seen_digit = true
-      row_sb.write_char(c)
-    } else {
-      raise XlsxError::InvalidCellRef(value=reference.to_string())
+      has_col = true
+      idx = idx + 1
+      continue
     }
+    break
+  }
+  if !has_col {
+    raise XlsxError::InvalidCellRef(value=text)
+  }
+  if idx < chars.length() && chars[idx] == '$' {
+    idx = idx + 1
+  }
+  let row_sb = StringBuilder::new()
+  while idx < chars.length() {
+    let c = chars[idx]
+    if c.is_ascii_digit() {
+      row_sb.write_char(c)
+      idx = idx + 1
+      continue
+    }
+    raise XlsxError::InvalidCellRef(value=text)
   }
   let row_text = row_sb.to_string()
   if col == 0 || row_text == "" {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise XlsxError::InvalidCellRef(value=text)
   }
   let row = @strconv.parse_int(row_text, base=10) catch {
-    _ => raise XlsxError::InvalidCellRef(value=reference.to_string())
+    _ => raise XlsxError::InvalidCellRef(value=text)
   }
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise XlsxError::InvalidCellRef(value=text)
   }
   (row, col)
 }

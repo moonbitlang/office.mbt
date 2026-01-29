@@ -2813,11 +2813,22 @@ pub fn Workbook::set_auto_filter(
   range_ref : String,
   options : ArrayView[AutoFilterOption],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_auto_filter(range_ref, options)
+  match sheet.auto_filter() {
+    Some(filter) => {
+      let abs_range = auto_filter_abs_range_ref(filter.range_ref)
+      let refers_to = "'\{escape_sheet_name(sheet_name)}'!\{abs_range}"
+      upsert_defined_name_for_scope(
+        self, "_xlnm._FilterDatabase", sheet_name, refers_to,
+      )
+    }
+    None => ()
+  }
 }
 
 ///|
@@ -2825,11 +2836,13 @@ pub fn Workbook::clear_auto_filter(
   self : Workbook,
   sheet_name : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.clear_auto_filter()
+  remove_defined_name_for_scope(self, "_xlnm._FilterDatabase", sheet_name)
 }
 
 ///|
@@ -2837,11 +2850,88 @@ pub fn Workbook::get_auto_filter(
   self : Workbook,
   sheet_name : StringView,
 ) -> AutoFilter? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.auto_filter()
+}
+
+///|
+fn abs_cell_ref_from_rc(row : Int, col : Int) -> String raise XlsxError {
+  let base = cell_ref_from(row, col)
+  let chars = base.to_array()
+  let mut split = 0
+  while split < chars.length() && chars[split].is_ascii_alphabetic() {
+    split = split + 1
+  }
+  let col_text = base[:split] catch {
+      _ => raise XlsxError::InvalidCellRef(value=base)
+    }
+  let row_text = base[split:] catch {
+      _ => raise XlsxError::InvalidCellRef(value=base)
+    }
+  "$\{col_text}$\{row_text}"
+}
+
+///|
+fn auto_filter_abs_range_ref(range_ref : StringView) -> String raise XlsxError {
+  let normalized = normalize_range_ref(range_ref)
+  let (min_row, min_col, max_row, max_col) = parse_range_ref(normalized)
+  let start_ref = abs_cell_ref_from_rc(min_row, min_col)
+  let end_ref = abs_cell_ref_from_rc(max_row, max_col)
+  "\{start_ref}:\{end_ref}"
+}
+
+///|
+fn upsert_defined_name_for_scope(
+  workbook : Workbook,
+  name : String,
+  scope : StringView,
+  refers_to : String,
+) -> Unit {
+  let normalized_scope = normalize_defined_name_scope(scope)
+  let scope_key = defined_name_scope_key(normalized_scope)
+  for i, dn in workbook.defined_names {
+    if dn.name == name && defined_name_scope_key(dn.scope) == scope_key {
+      workbook.defined_names[i] = {
+        name,
+        refers_to,
+        scope: normalized_scope,
+        comment: dn.comment,
+      }
+      return
+    }
+  }
+  workbook.defined_names.push({
+    name,
+    refers_to,
+    scope: normalized_scope,
+    comment: "",
+  })
+}
+
+///|
+fn remove_defined_name_for_scope(
+  workbook : Workbook,
+  name : String,
+  scope : StringView,
+) -> Unit {
+  if workbook.defined_names.length() == 0 {
+    return
+  }
+  let normalized_scope = normalize_defined_name_scope(scope)
+  let scope_key = defined_name_scope_key(normalized_scope)
+  let updated : Array[DefinedName] = []
+  for dn in workbook.defined_names {
+    if dn.name == name && defined_name_scope_key(dn.scope) == scope_key {
+      continue
+    }
+    updated.push(dn)
+  }
+  workbook.defined_names.clear()
+  workbook.defined_names.append(updated[:])
 }
 
 ///|

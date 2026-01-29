@@ -3163,9 +3163,14 @@ fn parse_auto_filter(xml : StringView) -> AutoFilter? raise XlsxError {
   }
   let range_ref = normalize_range_ref(ref_value)
   let (_min_row, min_col, _max_row, _max_col) = parse_range_ref(range_ref)
-  let columns = match extract_tag_body(xml, "autoFilter") {
-    Some(body) => parse_auto_filter_columns(body, min_col)
-    None => []
+  let self_closing = tag.trim().has_suffix("/")
+  let columns = if self_closing {
+    []
+  } else {
+    match extract_tag_body(xml, "autoFilter") {
+      Some(body) => parse_auto_filter_columns(body, min_col)
+      None => []
+    }
   }
   Some({ range_ref, columns })
 }
