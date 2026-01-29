@@ -238,6 +238,7 @@ pub fn Workbook::new_stream_writer(
   self : Workbook,
   sheet_name : StringView,
 ) -> StreamWriter raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -813,6 +814,7 @@ pub fn Workbook::set_page_margins(
   sheet_name : StringView,
   options : PageLayoutMarginsOptions?,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -825,6 +827,7 @@ pub fn Workbook::get_page_margins(
   self : Workbook,
   sheet_name : StringView,
 ) -> PageLayoutMarginsOptions raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -838,6 +841,7 @@ pub fn Workbook::set_page_layout(
   sheet_name : StringView,
   options : PageLayoutOptions?,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -850,6 +854,7 @@ pub fn Workbook::get_page_layout(
   self : Workbook,
   sheet_name : StringView,
 ) -> PageLayoutOptions raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -863,6 +868,7 @@ pub fn Workbook::set_header_footer(
   sheet_name : StringView,
   options : HeaderFooterOptions?,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -876,6 +882,7 @@ pub fn Workbook::set_sheet_props(
   sheet_name : StringView,
   options : SheetPropsOptions?,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -888,6 +895,7 @@ pub fn Workbook::get_header_footer(
   self : Workbook,
   sheet_name : StringView,
 ) -> HeaderFooterOptions? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -900,6 +908,7 @@ pub fn Workbook::get_header_footer_images(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[HeaderFooterImageOptions] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -912,6 +921,7 @@ pub fn Workbook::get_sheet_props(
   self : Workbook,
   sheet_name : StringView,
 ) -> SheetPropsOptions raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -926,6 +936,7 @@ pub fn Workbook::set_sheet_view(
   view_index : Int,
   options : SheetViewOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -939,6 +950,7 @@ pub fn Workbook::get_sheet_view(
   sheet_name : StringView,
   view_index : Int,
 ) -> SheetViewOptions raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -952,6 +964,7 @@ pub fn Workbook::set_panes(
   sheet_name : StringView,
   panes : Panes,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -964,6 +977,7 @@ pub fn Workbook::get_panes(
   self : Workbook,
   sheet_name : StringView,
 ) -> Panes raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -977,6 +991,7 @@ pub fn Workbook::set_sheet_dimension(
   sheet_name : StringView,
   range_ref : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -989,6 +1004,7 @@ pub fn Workbook::get_sheet_dimension(
   self : Workbook,
   sheet_name : StringView,
 ) -> String raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1005,6 +1021,7 @@ pub fn Workbook::protect_sheet(
   sheet_name : StringView,
   options : SheetProtectionOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1018,6 +1035,7 @@ pub fn Workbook::unprotect_sheet(
   sheet_name : StringView,
   password? : String = "",
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1032,6 +1050,7 @@ pub fn Workbook::set_sheet_background(
   data : Bytes,
   extension : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1044,6 +1063,7 @@ pub fn Workbook::clear_sheet_background(
   self : Workbook,
   sheet_name : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1057,6 +1077,7 @@ pub fn Workbook::insert_page_break(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -1070,6 +1091,7 @@ pub fn Workbook::remove_page_break(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
