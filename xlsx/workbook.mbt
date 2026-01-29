@@ -3732,6 +3732,7 @@ pub fn Workbook::set_cell_style_rc(
   col : Int,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -3747,6 +3748,7 @@ pub fn Workbook::get_cell_style_rc(
   row : Int,
   col : Int,
 ) -> Int? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3763,6 +3765,7 @@ pub fn Workbook::set_cell_formula_rc(
   formula : String,
   value? : String = "",
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3777,6 +3780,7 @@ pub fn Workbook::set_row(
   row : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3790,6 +3794,7 @@ pub fn Workbook::get_row(
   sheet_name : StringView,
   row : Int,
 ) -> Array[String] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3804,6 +3809,7 @@ pub fn Workbook::set_col(
   col : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3817,6 +3823,7 @@ pub fn Workbook::get_col(
   sheet_name : StringView,
   col : Int,
 ) -> Array[String] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3831,6 +3838,7 @@ pub fn Workbook::set_row_height(
   row : Int,
   height : Double,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3844,6 +3852,7 @@ pub fn Workbook::get_row_height(
   sheet_name : StringView,
   row : Int,
 ) -> Double? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3858,6 +3867,7 @@ pub fn Workbook::set_row_visible(
   row : Int,
   visible : Bool,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3871,6 +3881,7 @@ pub fn Workbook::row_visible(
   sheet_name : StringView,
   row : Int,
 ) -> Bool raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3885,6 +3896,7 @@ pub fn Workbook::set_row_outline_level(
   row : Int,
   level : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3898,6 +3910,7 @@ pub fn Workbook::row_outline_level(
   sheet_name : StringView,
   row : Int,
 ) -> Int raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3923,6 +3936,7 @@ pub fn Workbook::set_row_style_range(
   end : Int,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -3937,6 +3951,7 @@ pub fn Workbook::get_row_style(
   sheet_name : StringView,
   row : Int,
 ) -> Int? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3951,6 +3966,7 @@ pub fn Workbook::set_col_width(
   col : Int,
   width : Double,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3964,6 +3980,7 @@ pub fn Workbook::get_col_width(
   sheet_name : StringView,
   col : Int,
 ) -> Double? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3978,6 +3995,7 @@ pub fn Workbook::set_col_visible(
   col : Int,
   visible : Bool,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3991,6 +4009,7 @@ pub fn Workbook::col_visible(
   sheet_name : StringView,
   col : Int,
 ) -> Bool raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4005,6 +4024,7 @@ pub fn Workbook::set_col_outline_level(
   col : Int,
   level : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4018,6 +4038,7 @@ pub fn Workbook::col_outline_level(
   sheet_name : StringView,
   col : Int,
 ) -> Int raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4032,6 +4053,7 @@ pub fn Workbook::set_col_style(
   col : Int,
   style_id : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
@@ -4046,6 +4068,7 @@ pub fn Workbook::get_col_style(
   sheet_name : StringView,
   col : Int,
 ) -> Int? raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4060,6 +4083,7 @@ pub fn Workbook::insert_rows(
   row : Int,
   count : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4079,6 +4103,7 @@ pub fn Workbook::remove_rows(
   row : Int,
   count : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4108,6 +4133,7 @@ pub fn Workbook::insert_cols(
   col : Int,
   count : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4127,6 +4153,7 @@ pub fn Workbook::remove_cols(
   col : Int,
   count : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -4165,6 +4192,7 @@ pub fn Workbook::duplicate_row_to(
   row : Int,
   target_row : Int,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
