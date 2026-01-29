@@ -47,6 +47,7 @@ test "conditional format data bar x14 extLst roundtrip" {
   }
   inspect(opts.length(), content="1")
   inspect(opts[0].format_type, content="data_bar")
+  inspect(opts[0].criteria, content="=")
   inspect(opts[0].bar_direction, content="rightToLeft")
   inspect(opts[0].bar_solid, content="true")
   inspect(opts[0].bar_border_color, content="#0000FF")

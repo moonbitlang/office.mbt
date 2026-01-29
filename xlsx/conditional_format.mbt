@@ -1077,8 +1077,14 @@ fn parse_cf_rule(
         None => ()
       }
     }
-    "duplicateValues" => opt.format_type = "duplicate"
-    "uniqueValues" => opt.format_type = "unique"
+    "duplicateValues" => {
+      opt.format_type = "duplicate"
+      opt.criteria = "="
+    }
+    "uniqueValues" => {
+      opt.format_type = "unique"
+      opt.criteria = "="
+    }
     "top10" => {
       let bottom = match attr_value(tag, "bottom") {
         Some(value) => parse_xml_bool(value)
@@ -1138,13 +1144,14 @@ fn parse_cf_rule(
           None => ()
         }
       }
+      opt.criteria = "="
       if types.length() == 2 {
         opt.format_type = "2_color_scale"
         opt.min_type = types[0]
         opt.max_type = types[1]
         if values.length() >= 2 {
-          opt.min_value = values[0]
-          opt.max_value = values[1]
+          opt.min_value = if values[0] == "0" { "" } else { values[0] }
+          opt.max_value = if values[1] == "0" { "" } else { values[1] }
         }
         if rgb_values.length() >= 2 {
           opt.min_color = rgb_values[0]
@@ -1158,9 +1165,9 @@ fn parse_cf_rule(
           opt.max_type = types[2]
         }
         if values.length() >= 3 {
-          opt.min_value = values[0]
-          opt.mid_value = values[1]
-          opt.max_value = values[2]
+          opt.min_value = if values[0] == "0" { "" } else { values[0] }
+          opt.mid_value = if values[1] == "0" { "" } else { values[1] }
+          opt.max_value = if values[2] == "0" { "" } else { values[2] }
         }
         if rgb_values.length() >= 3 {
           opt.min_color = rgb_values[0]
@@ -1171,6 +1178,7 @@ fn parse_cf_rule(
     }
     "dataBar" => {
       opt.format_type = "data_bar"
+      opt.criteria = "="
       let data_blocks = extract_tag_blocks(xml, "dataBar")
       if data_blocks.length() == 0 {
         raise XlsxError::InvalidXml(msg="dataBar missing")
