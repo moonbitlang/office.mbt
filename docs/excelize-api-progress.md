@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `4aa2196`
-- Progress: **84/169**
+- mbtexcel: `27407d5`
+- Progress: **98/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -89,18 +89,18 @@
 - [x] `get_sheet_props`
 - [x] `get_sheet_view`
 - [x] `get_sheet_visible`
-- [ ] `get_slicers`
-- [ ] `get_style`
-- [ ] `get_tables`
-- [ ] `get_workbook_props`
-- [ ] `group_sheets`
-- [ ] `hsl_to_rgb`
-- [ ] `insert_cols`
-- [ ] `insert_page_break`
-- [ ] `insert_rows`
-- [ ] `join_cell_name`
-- [ ] `merge_cell`
-- [ ] `move_sheet`
+- [x] `get_slicers`
+- [x] `get_style`
+- [x] `get_tables`
+- [x] `get_workbook_props`
+- [x] `group_sheets`
+- [x] `hsl_to_rgb`
+- [x] `insert_cols`
+- [x] `insert_page_break`
+- [x] `insert_rows`
+- [x] `join_cell_name`
+- [x] `merge_cell`
+- [x] `move_sheet`
 - [ ] `new_conditional_style`
 - [ ] `new_data_validation`
 - [ ] `new_file`
@@ -116,8 +116,8 @@
 - [ ] `remove_col`
 - [ ] `remove_page_break`
 - [ ] `remove_row`
-- [ ] `rgb_to_hsl`
-- [ ] `rows`
+- [x] `rgb_to_hsl`
+- [x] `rows`
 - [ ] `save`
 - [ ] `save_as`
 - [ ] `search_sheet`
