@@ -719,9 +719,7 @@ pub fn Worksheet::set_cell_formula_opts(
     Some(FormulaType::Normal) =>
       self.set_cell_formula(reference, formula, value~)
     Some(FormulaType::DataTable) =>
-      raise XlsxError::UnsupportedFeature(
-        msg="dataTable formula type unsupported",
-      )
+      self.set_cell_formula(reference, formula, value~)
     Some(FormulaType::Array) => {
       let range_ref = match opts.range_ref {
         Some(value) => normalize_range_ref(value)

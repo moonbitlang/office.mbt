@@ -92,3 +92,28 @@ test "formula opts shared writes typed formula" {
   inspect(parsed.get_cell_formula("Sheet1", "C1"), content="Some(\"A1+B1\")")
   inspect(parsed.get_cell_formula("Sheet1", "C2"), content="None")
 }
+
+///|
+test "formula opts dataTable behaves like normal formula" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_formula_opts(
+    "A1",
+    "SUM(1,2)",
+    opts=FormulaOpts::with_values(formula_type=FormulaType::DataTable),
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet1.xml utf8 decode failed")
+      }
+    None => fail("missing sheet1.xml")
+  }
+  inspect(sheet_xml.contains("t=\"dataTable\""), content="false")
+  let parsed = read(bytes)
+  inspect(parsed.get_cell_formula("Sheet1", "A1"), content="Some(\"SUM(1,2)\")")
+}
