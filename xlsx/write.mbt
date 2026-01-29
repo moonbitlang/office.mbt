@@ -577,7 +577,19 @@ let ct_pivot_cache_def = "application/vnd.openxmlformats-officedocument.spreadsh
 let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
 
 ///|
+let ct_workbook = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
+
+///|
 let ct_workbook_macro = "application/vnd.ms-excel.sheet.macroEnabled.main+xml"
+
+///|
+let ct_workbook_addin_macro = "application/vnd.ms-excel.addin.macroEnabled.main+xml"
+
+///|
+let ct_workbook_template = "application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml"
+
+///|
+let ct_workbook_template_macro = "application/vnd.ms-excel.template.macroEnabled.main+xml"
 
 ///|
 let ct_vba_project = "application/vnd.ms-office.vbaProject"
@@ -3438,6 +3450,38 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     include_shared_strings=include_shared,
     include_calc_chain~,
   )
+  let mut has_path_content_type = false
+  match workbook.file_path {
+    Some(path) =>
+      match extension_from_path(path) {
+        Some(ext) =>
+          match ext {
+            "xlsx" => {
+              manifest.set_workbook_content_type(ct_workbook)
+              has_path_content_type = true
+            }
+            "xlsm" => {
+              manifest.set_workbook_content_type(ct_workbook_macro)
+              has_path_content_type = true
+            }
+            "xlam" => {
+              manifest.set_workbook_content_type(ct_workbook_addin_macro)
+              has_path_content_type = true
+            }
+            "xltx" => {
+              manifest.set_workbook_content_type(ct_workbook_template)
+              has_path_content_type = true
+            }
+            "xltm" => {
+              manifest.set_workbook_content_type(ct_workbook_template_macro)
+              has_path_content_type = true
+            }
+            _ => ()
+          }
+        None => ()
+      }
+    None => ()
+  }
   for i, _sheet in workbook.chart_sheets() {
     let sheet_id = i + 1
     manifest.add_content_override(
@@ -3451,7 +3495,9 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   }
   match workbook.vba_project {
     Some(_) => {
-      manifest.set_workbook_content_type(ct_workbook_macro)
+      if !has_path_content_type {
+        manifest.set_workbook_content_type(ct_workbook_macro)
+      }
       manifest.add_content_default("bin", ct_vba_project)
       manifest.add_workbook_relationship(rel_vba_project, "vbaProject.bin")
     }

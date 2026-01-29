@@ -98,6 +98,135 @@ async test "open file save and save_as" {
 }
 
 ///|
+async test "save_as rejects unsupported extension" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let result : Result[Unit, Error] = try? workbook.save_as("bad.foo")
+  match result {
+    Err(XlsxError::InvalidSheetOperation(msg~)) =>
+      inspect(msg, content="unsupported workbook file format")
+    _ => fail("expected unsupported workbook file format error")
+  }
+}
+
+///|
+async test "save_as sets workbook content type by extension" {
+  let stamp = @env.now().to_string()
+  let path_xltx = "mbtexcel_type_\{stamp}.xltx"
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.save_as(path_xltx)
+  let types_xml = {
+    let data = @async/fs.read_file(path_xltx) catch {
+      err => fail("read file failed: \{err}")
+    }
+    let archive = @zip.read(data.binary()) catch {
+      err => fail("zip read failed: \{err}")
+    }
+    match archive.get("[Content_Types].xml") {
+      Some(value) =>
+        @encoding/utf8.decode(value) catch {
+          _ => fail("content types utf8 decode failed")
+        }
+      None => fail("missing content types")
+    }
+  }
+  inspect(
+    types_xml.contains(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml",
+    ),
+    content="true",
+  )
+  @async/fs.remove(path_xltx) catch {
+    err => fail("remove file failed: \{err}")
+  }
+  let path_xlam = "mbtexcel_type_\{stamp}.xlam"
+  let workbook2 = Workbook::new()
+  ignore(workbook2.add_sheet("Sheet1"))
+  workbook2.save_as(path_xlam)
+  let types_xml2 = {
+    let data = @async/fs.read_file(path_xlam) catch {
+      err => fail("read file failed: \{err}")
+    }
+    let archive = @zip.read(data.binary()) catch {
+      err => fail("zip read failed: \{err}")
+    }
+    match archive.get("[Content_Types].xml") {
+      Some(value) =>
+        @encoding/utf8.decode(value) catch {
+          _ => fail("content types utf8 decode failed")
+        }
+      None => fail("missing content types")
+    }
+  }
+  inspect(
+    types_xml2.contains("application/vnd.ms-excel.addin.macroEnabled.main+xml"),
+    content="true",
+  )
+  @async/fs.remove(path_xlam) catch {
+    err => fail("remove file failed: \{err}")
+  }
+  let path_xltm = "mbtexcel_type_\{stamp}.xltm"
+  let workbook3 = Workbook::new()
+  ignore(workbook3.add_sheet("Sheet1"))
+  workbook3.save_as(path_xltm)
+  let types_xml3 = {
+    let data = @async/fs.read_file(path_xltm) catch {
+      err => fail("read file failed: \{err}")
+    }
+    let archive = @zip.read(data.binary()) catch {
+      err => fail("zip read failed: \{err}")
+    }
+    match archive.get("[Content_Types].xml") {
+      Some(value) =>
+        @encoding/utf8.decode(value) catch {
+          _ => fail("content types utf8 decode failed")
+        }
+      None => fail("missing content types")
+    }
+  }
+  inspect(
+    types_xml3.contains(
+      "application/vnd.ms-excel.template.macroEnabled.main+xml",
+    ),
+    content="true",
+  )
+  @async/fs.remove(path_xltm) catch {
+    err => fail("remove file failed: \{err}")
+  }
+  let path_vba_xlsx = "mbtexcel_type_\{stamp}_vba.xlsx"
+  let workbook4 = Workbook::new()
+  ignore(workbook4.add_sheet("Sheet1"))
+  let vba_header : Array[Byte] = [
+    0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+  ]
+  workbook4.add_vba_project(Bytes::from_array(vba_header))
+  workbook4.save_as(path_vba_xlsx)
+  let types_xml4 = {
+    let data = @async/fs.read_file(path_vba_xlsx) catch {
+      err => fail("read file failed: \{err}")
+    }
+    let archive = @zip.read(data.binary()) catch {
+      err => fail("zip read failed: \{err}")
+    }
+    match archive.get("[Content_Types].xml") {
+      Some(value) =>
+        @encoding/utf8.decode(value) catch {
+          _ => fail("content types utf8 decode failed")
+        }
+      None => fail("missing content types")
+    }
+  }
+  inspect(
+    types_xml4.contains("application/vnd.ms-excel.sheet.macroEnabled.main+xml"),
+    content="false",
+  )
+  @async/fs.remove(path_vba_xlsx) catch {
+    err => fail("remove file failed: \{err}")
+  }
+}
+
+///|
 async test "open_reader from pipe" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

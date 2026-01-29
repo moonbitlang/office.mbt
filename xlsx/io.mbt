@@ -182,12 +182,36 @@ pub async fn Workbook::save_as(
   path : String,
   options? : Options,
 ) -> Unit raise XlsxError {
-  let bytes = write_bytes(self, options)
-  @async/fs.write_file(path, bytes, create=0o644) catch {
-    err =>
-      raise XlsxError::InvalidSheetOperation(msg="write file failed: \{err}")
+  let extension = match extension_from_path(path) {
+    Some(value) => value
+    None =>
+      raise XlsxError::InvalidSheetOperation(
+        msg="workbook file extension missing",
+      )
   }
+  if extension != "xlsx" &&
+    extension != "xlsm" &&
+    extension != "xlam" &&
+    extension != "xltm" &&
+    extension != "xltx" {
+    raise XlsxError::InvalidSheetOperation(
+      msg="unsupported workbook file format",
+    )
+  }
+  let prev_path = self.file_path
   self.file_path = Some(path)
+  let bytes = write_bytes(self, options) catch {
+    err => {
+      self.file_path = prev_path
+      raise err
+    }
+  }
+  @async/fs.write_file(path, bytes, create=0o644) catch {
+    err => {
+      self.file_path = prev_path
+      raise XlsxError::InvalidSheetOperation(msg="write file failed: \{err}")
+    }
+  }
 }
 
 ///|
