@@ -2429,6 +2429,7 @@ pub fn Workbook::add_shape(
   sheet_name : StringView,
   shape : Shape,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
