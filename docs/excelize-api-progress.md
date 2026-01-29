@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `ae51508`
-- Progress: **27/169**
+- mbtexcel: `ac27ea1`
+- Progress: **37/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -31,16 +31,16 @@
 - [x] `coordinates_to_cell_name`
 - [x] `copy_sheet`
 - [x] `decrypt`
-- [ ] `delete_chart`
-- [ ] `delete_comment`
-- [ ] `delete_data_validation`
-- [ ] `delete_defined_name`
-- [ ] `delete_form_control`
-- [ ] `delete_picture`
-- [ ] `delete_pivot_table`
-- [ ] `delete_sheet`
-- [ ] `delete_slicer`
-- [ ] `delete_table`
+- [x] `delete_chart`
+- [x] `delete_comment`
+- [x] `delete_data_validation`
+- [x] `delete_defined_name`
+- [x] `delete_form_control`
+- [x] `delete_picture`
+- [x] `delete_pivot_table`
+- [x] `delete_sheet`
+- [x] `delete_slicer`
+- [x] `delete_table`
 - [ ] `duplicate_row`
 - [ ] `duplicate_row_to`
 - [x] `encrypt`
