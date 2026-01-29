@@ -227,6 +227,26 @@ test "picture from bytes extension requires dot" {
 }
 
 ///|
+test "picture from bytes invalid cell and sheet" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bad_cell : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
+    "Sheet1",
+    "A",
+    [1],
+    ".png",
+  )
+  inspect(bad_cell is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_sheet : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
+    "SheetN",
+    "A1",
+    [1],
+    ".png",
+  )
+  inspect(bad_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
+}
+
+///|
 test "picture options write drawing and rels" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
