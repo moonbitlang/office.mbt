@@ -3389,6 +3389,7 @@ pub fn Workbook::add_table_with_columns(
   show_column_stripes? : Bool = false,
   show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3412,6 +3413,7 @@ pub fn Workbook::get_tables(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[Table] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
