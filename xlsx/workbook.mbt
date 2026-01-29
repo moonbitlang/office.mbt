@@ -2126,6 +2126,7 @@ pub fn Workbook::add_image(
   locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2162,6 +2163,7 @@ pub fn Workbook::add_image_with_options(
   content_type : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2377,6 +2379,7 @@ pub fn Workbook::add_header_footer_image(
   sheet_name : StringView,
   options : HeaderFooterImageOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2390,6 +2393,7 @@ pub fn Workbook::get_pictures(
   sheet_name : StringView,
   cell : StringView,
 ) -> Array[Image] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2402,6 +2406,7 @@ pub fn Workbook::get_picture_cells(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[String] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2415,6 +2420,7 @@ pub fn Workbook::delete_picture(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2429,6 +2435,7 @@ pub fn Workbook::add_chart(
   reference : String,
   xml : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2443,6 +2450,7 @@ pub fn Workbook::add_chart_with_options(
   reference : String,
   opts : ChartOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2456,6 +2464,7 @@ pub fn Workbook::delete_chart(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2483,6 +2492,7 @@ pub fn Workbook::add_vml_drawing_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2496,6 +2506,7 @@ pub fn Workbook::add_vml_drawing_hf_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2509,6 +2520,7 @@ pub fn Workbook::add_form_control(
   sheet_name : StringView,
   control : FormControl,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2521,6 +2533,7 @@ pub fn Workbook::get_form_controls(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[FormControl] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2538,6 +2551,7 @@ pub fn Workbook::delete_form_control(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
