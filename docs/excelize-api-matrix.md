@@ -710,7 +710,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `README.mbt.md:17`
 - `mbtexcel_e2e_test.mbt:117`
 - `mbtexcel_e2e_test.mbt:179`
-- (more: 7 additional hits)
+- (more: 10 additional hits)
 
 ## `get_cell_hyper_link`
 
@@ -791,7 +791,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/add_table_parity_test.mbt:10`
 - `xlsx/add_table_parity_test.mbt:11`
 - `xlsx/add_table_parity_test.mbt:36`
-- (more: 14 additional hits)
+- (more: 20 additional hits)
 
 ## `get_col_outline_level`
 
@@ -1634,9 +1634,9 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `mbtexcel_e2e_test.mbt:75`
-- `xlsx/io_password_test.mbt:18`
-- `xlsx/io_password_test.mbt:43`
-- (more: 3 additional hits)
+- `xlsx/excelize_fixture_bad_workbook_test.mbt:3`
+- `xlsx/excelize_fixture_calc_chain_test.mbt:3`
+- (more: 8 additional hits)
 
 ## `open_reader`
 
@@ -1820,6 +1820,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `xlsx/compat_test.mbt:41`
 - `xlsx/compat_test.mbt:43`
+- `xlsx/excelize_fixture_shared_strings_test.mbt:4`
+- (more: 4 additional hits)
 
 ## `set_active_sheet`
 
@@ -1836,7 +1838,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `mbtexcel_e2e_test.mbt:569`
 - `mbtexcel_e2e_test.mbt:572`
 - `mbtexcel_e2e_test.mbt:738`
-- (more: 3 additional hits)
+- (more: 4 additional hits)
 
 ## `set_app_props`
 
@@ -1929,7 +1931,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `README.mbt.md:13`
 - `mbtexcel_e2e_test.mbt:92`
 - `mbtexcel_e2e_test.mbt:781`
-- (more: 1808 additional hits)
+- (more: 1810 additional hits)
 
 ## `set_cell_hyper_link`
 
@@ -2621,7 +2623,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `README.mbt.md:14`
 - `mbtexcel_e2e_test.mbt:35`
 - `mbtexcel_e2e_test.mbt:40`
-- (more: 221 additional hits)
+- (more: 223 additional hits)
 
 ## `write_to`
 

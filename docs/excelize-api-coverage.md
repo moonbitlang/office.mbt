@@ -4,7 +4,7 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `490e428`
+- mbtexcel: `0d636f9`
 
 
 ## Summary
