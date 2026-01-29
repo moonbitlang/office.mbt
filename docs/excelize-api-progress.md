@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `82e556a`
-- Progress: **39/169**
+- mbtexcel: `c51f930`
+- Progress: **40/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -44,7 +44,7 @@
 - [x] `duplicate_row`
 - [x] `duplicate_row_to`
 - [x] `encrypt`
-- [ ] `excel_date_to_time`
+- [x] `excel_date_to_time`
 - [ ] `get_active_sheet_index`
 - [ ] `get_app_props`
 - [ ] `get_base_color`
