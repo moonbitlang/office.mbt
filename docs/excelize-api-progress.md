@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `ac27ea1`
-- Progress: **37/169**
+- mbtexcel: `82e556a`
+- Progress: **39/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -41,8 +41,8 @@
 - [x] `delete_sheet`
 - [x] `delete_slicer`
 - [x] `delete_table`
-- [ ] `duplicate_row`
-- [ ] `duplicate_row_to`
+- [x] `duplicate_row`
+- [x] `duplicate_row_to`
 - [x] `encrypt`
 - [ ] `excel_date_to_time`
 - [ ] `get_active_sheet_index`
