@@ -2696,6 +2696,7 @@ pub fn Workbook::add_data_validation_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2709,6 +2710,7 @@ pub fn Workbook::add_data_validation(
   sheet_name : StringView,
   dv : DataValidation,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2724,6 +2726,7 @@ pub fn Workbook::add_data_validation_list(
   values : ArrayView[String],
   allow_blank? : Bool = true,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2736,6 +2739,7 @@ pub fn Workbook::get_data_validations(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[DataValidation] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2749,6 +2753,7 @@ pub fn Workbook::delete_data_validation(
   sheet_name : StringView,
   sqrefs? : Array[String] = [],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())

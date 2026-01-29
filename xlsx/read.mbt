@@ -2151,6 +2151,104 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
+fn parse_data_validations_x14(
+  xml : StringView,
+) -> Array[String] raise XlsxError {
+  let validations : Array[String] = []
+  let xml_str = xml.to_string()
+  if !xml_str.contains("<x14:dataValidation") {
+    return validations
+  }
+  let mut first = true
+  for chunk in xml_str.split("<x14:dataValidation ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let close_tag = "</x14:dataValidation>"
+    let end = match text.find(close_tag) {
+      Some(pos) => pos + close_tag.length()
+      None =>
+        raise XlsxError::InvalidXml(msg="x14:dataValidation tag not closed")
+    }
+    let slice = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="x14:dataValidation tag invalid")
+      }
+    let full = "<x14:dataValidation \{slice.to_string()}"
+    let open_end = match full.find(">") {
+      Some(pos) => pos
+      None =>
+        raise XlsxError::InvalidXml(msg="x14:dataValidation open tag missing")
+    }
+    let attrs = full["<x14:dataValidation ".length():open_end] catch {
+        _ =>
+          raise XlsxError::InvalidXml(msg="x14:dataValidation open tag invalid")
+      }
+    let allow_blank = match attr_value(attrs, "allowBlank") {
+      Some(value) => value
+      None => "0"
+    }
+    let typ = match attr_value(attrs, "type") {
+      Some(value) => value
+      None => ""
+    }
+    let sqref = match extract_tag_body_from(full, "xm:sqref") {
+      Some(value) => unescape_xml_text(value)
+      None =>
+        raise XlsxError::InvalidXml(msg="x14:dataValidation sqref missing")
+    }
+    let mut formula1 = ""
+    match extract_tag_body_from(full, "x14:formula1") {
+      Some(value) => {
+        let body = value.to_string()
+        match extract_tag_body_from(body[:], "xm:f") {
+          Some(f) => formula1 = unescape_xml_text(f)
+          None => formula1 = unescape_xml_text(value)
+        }
+      }
+      None => ()
+    }
+    let mut formula2 = ""
+    match extract_tag_body_from(full, "x14:formula2") {
+      Some(value) => {
+        let body = value.to_string()
+        match extract_tag_body_from(body[:], "xm:f") {
+          Some(f) => formula2 = unescape_xml_text(f)
+          None => formula2 = unescape_xml_text(value)
+        }
+      }
+      None => ()
+    }
+    let sb = StringBuilder::new()
+    sb.write_view("<dataValidation allowBlank=\"")
+    sb.write_view(escape_xml_attr(allow_blank))
+    sb.write_view("\"")
+    if typ != "" {
+      sb.write_view(" type=\"")
+      sb.write_view(escape_xml_attr(typ))
+      sb.write_view("\"")
+    }
+    sb.write_view(" sqref=\"")
+    sb.write_view(escape_xml_attr(sqref))
+    sb.write_view("\">")
+    if formula1 != "" {
+      sb.write_view("<formula1>")
+      sb.write_view(escape_xml_text(formula1))
+      sb.write_view("</formula1>")
+    }
+    if formula2 != "" {
+      sb.write_view("<formula2>")
+      sb.write_view(escape_xml_text(formula2))
+      sb.write_view("</formula2>")
+    }
+    sb.write_view("</dataValidation>")
+    validations.push(sb.to_string())
+  }
+  validations
+}
+
+///|
 fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
   let xml_str = xml.to_string()
   let marker = "<dimension"
@@ -4101,6 +4199,9 @@ fn read_zip_bytes(
       )
       let sparkline_groups = parse_sparkline_groups(sheet_xml)
       let data_validations = parse_data_validations(sheet_xml)
+      for dv in parse_data_validations_x14(sheet_xml) {
+        data_validations.push(dv)
+      }
       let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {

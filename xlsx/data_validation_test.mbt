@@ -60,3 +60,70 @@ test "data validation delete by sqref" {
   inspect(sqrefs.contains("A1 A3"), content="true")
   inspect(sqrefs.contains("B1"), content="true")
 }
+
+///|
+test "data validation workbook invalid sheet name" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let dv = DataValidation::new(true)
+  dv.set_sqref("A1")
+  dv.set_drop_list(["Yes"])
+  let add_result : Result[Unit, Error] = try? workbook.add_data_validation(
+    "Sheet:1", dv,
+  )
+  inspect(add_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  let get_result : Result[Array[DataValidation], Error] = try? workbook.get_data_validations(
+    "Sheet:1",
+  )
+  inspect(get_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+}
+
+///|
+test "data validation read x14 extLst" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let out = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data)
+      let ext =
+        #|<extLst>
+        #|  <ext uri="{2F02F2B1-0A8B-4F0A-8C2A-25A9A1B30E6B}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">
+        #|    <x14:dataValidations>
+        #|      <x14:dataValidation type="list" allowBlank="1">
+        #|        <x14:formula1><xm:f>Sheet1!$B$1:$B$5</xm:f></x14:formula1>
+        #|        <xm:sqref>A7:B8</xm:sqref>
+        #|      </x14:dataValidation>
+        #|    </x14:dataValidations>
+        #|  </ext>
+        #|</extLst>
+      let modified = xml.replace_all(
+        old="</worksheet>",
+        new="\{ext}\n</worksheet>",
+      )
+      out.add(
+        entry.name,
+        @encoding/utf8.encode(modified),
+        compression=entry.compression,
+        data_descriptor=entry.data_descriptor,
+      )
+    } else {
+      out.add(
+        entry.name,
+        entry.data,
+        compression=entry.compression,
+        data_descriptor=entry.data_descriptor,
+      )
+    }
+  }
+  let new_bytes = @zip.write(out)
+  let parsed = read(new_bytes)
+  let dvs = parsed.get_data_validations("Sheet1")
+  inspect(dvs.length(), content="1")
+  inspect(dvs[0].validation_type, content="list")
+  inspect(dvs[0].allow_blank, content="true")
+  inspect(dvs[0].sqref, content="A7:B8")
+  inspect(dvs[0].formula1, content="Sheet1!$B$1:$B$5")
+}
