@@ -1,6 +1,6 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `95ba0cf`
+- mbtexcel: `490e428`
 - Progress: **169/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)

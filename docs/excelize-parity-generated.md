@@ -4,14 +4,14 @@
 
 - Excelize: `excelize@37b730a`
 
-- mbtexcel: `6a6eb0f`
+- mbtexcel: `490e428`
 
 
 ## API name parity (normalized)
 
 - Excelize exported funcs + `(*File)` methods: 169
 
-- MoonBit exported names scanned from `.mbti`: 447
+- MoonBit exported names scanned from `.mbti`: 458
 
 - Missing Excelize API names in MoonBit (by normalized name): 0
 

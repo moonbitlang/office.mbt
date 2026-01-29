@@ -17,10 +17,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 18 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:785`
+- `mbtexcel_e2e_test.mbt:802`
 - `xlsx/chart_test.mbt:10`
 - `xlsx/chart_test.mbt:45`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `add_chart_sheet`
 
@@ -34,7 +34,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 5 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:811`
+- `mbtexcel_e2e_test.mbt:828`
 - `xlsx/chart_sheet_test.mbt:10`
 - `xlsx/sheet_management_test.mbt:89`
 
@@ -50,10 +50,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 10 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:315`
+- `mbtexcel_e2e_test.mbt:320`
 - `xlsx/comment_test.mbt:22`
 - `xlsx/comment_test.mbt:69`
-- (more: 1 additional hits)
+- (more: 4 additional hits)
 
 ## `add_data_validation`
 
@@ -70,7 +70,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `mbtexcel_e2e_test.mbt:102`
 - `xlsx/data_validation_test.mbt:8`
 - `xlsx/data_validation_test.mbt:49`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `add_form_control`
 
@@ -84,10 +84,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:672`
-- `mbtexcel_e2e_test.mbt:697`
-- `xlsx/shape_form_control_slicer_test.mbt:213`
-- (more: 3 additional hits)
+- `mbtexcel_e2e_test.mbt:682`
+- `mbtexcel_e2e_test.mbt:712`
+- `xlsx/form_control_test.mbt:104`
+- (more: 9 additional hits)
 
 ## `add_header_footer_image`
 
@@ -101,10 +101,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 3 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:188`
+- `mbtexcel_e2e_test.mbt:193`
 - `xlsx/header_footer_image_test.mbt:9`
 - `xlsx/header_footer_image_test.mbt:65`
-- (more: 2 additional hits)
+- (more: 10 additional hits)
 
 ## `add_ignored_errors`
 
@@ -118,10 +118,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 9 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:603`
-- `mbtexcel_e2e_test.mbt:604`
+- `mbtexcel_e2e_test.mbt:608`
+- `mbtexcel_e2e_test.mbt:609`
 - `xlsx/ignored_errors_test.mbt:5`
-- (more: 3 additional hits)
+- (more: 8 additional hits)
 
 ## `add_picture`
 
@@ -135,9 +135,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 43 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `xlsx/picture_ops_test.mbt:420`
-- `xlsx/picture_ops_test.mbt:437`
-- `xlsx/picture_ops_test.mbt:497`
+- `xlsx/picture_ops_test.mbt:457`
+- `xlsx/picture_ops_test.mbt:474`
+- `xlsx/picture_ops_test.mbt:558`
+- (more: 1 additional hits)
 
 ## `add_picture_from_bytes`
 
@@ -151,10 +152,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 10 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:826`
+- `mbtexcel_e2e_test.mbt:843`
 - `xlsx/picture_ops_test.mbt:35`
 - `xlsx/picture_ops_test.mbt:77`
-- (more: 16 additional hits)
+- (more: 22 additional hits)
 
 ## `add_pivot_table`
 
@@ -168,8 +169,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 24 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:627`
-- `xlsx/pivot_test.mbt:140`
+- `xlsx/pivot_test.mbt:174`
+- `xlsx/pivot_test.mbt:220`
+- `xlsx/pivot_test.mbt:247`
+- (more: 3 additional hits)
 
 ## `add_shape`
 
@@ -183,10 +186,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 10 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:787`
+- `mbtexcel_e2e_test.mbt:804`
 - `xlsx/shape_form_control_slicer_test.mbt:6`
 - `xlsx/shape_form_control_slicer_test.mbt:79`
-- (more: 4 additional hits)
+- (more: 7 additional hits)
 
 ## `add_slicer`
 
@@ -200,9 +203,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 20 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:674`
-- `mbtexcel_e2e_test.mbt:699`
-- `xlsx/shape_form_control_slicer_test.mbt:375`
+- `mbtexcel_e2e_test.mbt:687`
+- `mbtexcel_e2e_test.mbt:716`
+- `xlsx/shape_form_control_slicer_test.mbt:382`
+- (more: 3 additional hits)
 
 ## `add_sparkline`
 
@@ -216,10 +220,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 34 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:137`
-- `xlsx/row_col_dimensions_test.mbt:75`
-- `xlsx/row_col_dimensions_test.mbt:122`
-- (more: 2 additional hits)
+- `mbtexcel_e2e_test.mbt:142`
+- `xlsx/row_col_dimensions_test.mbt:78`
+- `xlsx/row_col_dimensions_test.mbt:128`
+- (more: 3 additional hits)
 
 ## `add_table`
 
@@ -233,9 +237,9 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 38 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:136`
-- `mbtexcel_e2e_test.mbt:695`
-- `xlsx/row_col_dimensions_test.mbt:74`
+- `xlsx/add_table_parity_test.mbt:6`
+- `xlsx/add_table_parity_test.mbt:27`
+- `xlsx/add_table_parity_test.mbt:33`
 - (more: 9 additional hits)
 
 ## `add_vba_project`
@@ -250,7 +254,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 3 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:579`
+- `mbtexcel_e2e_test.mbt:584`
 - `xlsx/vba_project_test.mbt:50`
 - `xlsx/vba_project_test.mbt:66`
 
@@ -266,8 +270,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 14 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `xlsx/compat_test.mbt:23`
-- `xlsx/compat_test.mbt:24`
+- `xlsx/auto_filter_parity_test.mbt:5`
+- `xlsx/auto_filter_parity_test.mbt:35`
+- `xlsx/auto_filter_parity_test.mbt:43`
+- (more: 2 additional hits)
 
 ## `calc_cell_value`
 
@@ -281,10 +287,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 107 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:771`
-- `mbtexcel_e2e_test.mbt:773`
+- `mbtexcel_e2e_test.mbt:788`
+- `mbtexcel_e2e_test.mbt:790`
 - `xlsx/calc_test.mbt:9`
-- (more: 1832 additional hits)
+- (more: 1833 additional hits)
 
 ## `cell_name_to_coordinates`
 
@@ -342,6 +348,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 17 additional hits)
 
 **MoonBit calls (tests/docs)**
+- `xlsx/iterators_excelize_parity_test.mbt:51`
+- `xlsx/iterators_excelize_parity_test.mbt:93`
 - `xlsx/iterators_test.mbt:86`
 
 ## `column_name_to_number`
@@ -433,6 +441,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `xlsx/chart_test.mbt:48`
 - `xlsx/chart_test.mbt:50`
+- `xlsx/sheet_name_drawing_chart_form_test.mbt:76`
 
 ## `delete_comment`
 
@@ -488,8 +497,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:704`
-- `xlsx/shape_form_control_slicer_test.mbt:367`
+- `mbtexcel_e2e_test.mbt:721`
+- `xlsx/form_control_test.mbt:203`
+- `xlsx/form_control_test.mbt:207`
+- (more: 3 additional hits)
 
 ## `delete_picture`
 
@@ -505,6 +516,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `xlsx/picture_ops_test.mbt:14`
 - `xlsx/picture_ops_test.mbt:26`
+- `xlsx/sheet_name_drawing_chart_form_test.mbt:54`
 
 ## `delete_pivot_table`
 
@@ -519,6 +531,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `xlsx/pivot_test.mbt:150`
+- `xlsx/sheet_name_pivot_ops_test.mbt:19`
 
 ## `delete_sheet`
 
@@ -548,9 +561,9 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 1 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:705`
-- `mbtexcel_e2e_test.mbt:711`
-- `xlsx/shape_form_control_slicer_test.mbt:405`
+- `mbtexcel_e2e_test.mbt:722`
+- `mbtexcel_e2e_test.mbt:728`
+- `xlsx/shape_form_control_slicer_test.mbt:440`
 
 ## `delete_table`
 
@@ -564,9 +577,9 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 3 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:703`
-- `mbtexcel_e2e_test.mbt:709`
-- `xlsx/table_ops_test.mbt:16`
+- `mbtexcel_e2e_test.mbt:720`
+- `mbtexcel_e2e_test.mbt:726`
+- `xlsx/table_ops_test.mbt:20`
 - (more: 1 additional hits)
 
 ## `duplicate_row`
@@ -598,6 +611,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `xlsx/duplicate_row_test.mbt:20`
+- `xlsx/sheet_name_row_col_ops_test.mbt:102`
 
 ## `encrypt`
 
@@ -677,7 +691,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetCalcProps` in `excelize/workbook_test.go:70`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:537`
+- `mbtexcel_e2e_test.mbt:542`
 - `xlsx/compat_test.mbt:58`
 - `xlsx/workbook_props_test.mbt:32`
 
@@ -695,8 +709,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `README.mbt.md:17`
 - `mbtexcel_e2e_test.mbt:117`
-- `mbtexcel_e2e_test.mbt:174`
-- (more: 6 additional hits)
+- `mbtexcel_e2e_test.mbt:179`
+- (more: 7 additional hits)
 
 ## `get_cell_hyper_link`
 
@@ -727,7 +741,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/rich_text_test.mbt:40`
 - `xlsx/rich_text_test.mbt:84`
 - `xlsx/rich_text_test.mbt:156`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `get_cell_style`
 
@@ -742,6 +756,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `mbtexcel_e2e_test.mbt:120`
+- `xlsx/sheet_name_cell_ops_test.mbt:131`
 - `xlsx/style_test.mbt:85`
 
 ## `get_cell_type`
@@ -759,7 +774,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/cell_value_test.mbt:78`
 - `xlsx/cell_value_test.mbt:79`
 - `xlsx/cell_value_test.mbt:80`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `get_cell_value`
 
@@ -773,10 +788,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 72 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `xlsx/cell_value_test.mbt:29`
-- `xlsx/cell_value_test.mbt:31`
-- `xlsx/cell_value_test.mbt:44`
-- (more: 9 additional hits)
+- `xlsx/add_table_parity_test.mbt:10`
+- `xlsx/add_table_parity_test.mbt:11`
+- `xlsx/add_table_parity_test.mbt:36`
+- (more: 14 additional hits)
 
 ## `get_col_outline_level`
 
@@ -838,7 +853,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/col_range_test.mbt:27`
 - `xlsx/col_range_test.mbt:28`
 - `xlsx/col_range_test.mbt:29`
-- (more: 4 additional hits)
+- (more: 5 additional hits)
 
 ## `get_cols`
 
@@ -852,9 +867,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
+- `xlsx/iterators_excelize_parity_test.mbt:60`
+- `xlsx/iterators_excelize_parity_test.mbt:99`
 - `xlsx/iterators_test.mbt:107`
-- `xlsx/options_test.mbt:11`
-- `xlsx/options_test.mbt:12`
+- (more: 2 additional hits)
 
 ## `get_comments`
 
@@ -868,7 +884,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 7 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:317`
+- `mbtexcel_e2e_test.mbt:322`
 - `xlsx/comment_test.mbt:24`
 - `xlsx/comment_test.mbt:30`
 - (more: 2 additional hits)
@@ -886,6 +902,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `xlsx/conditional_format_test.mbt:13`
+- `xlsx/sheet_name_conditional_merge_test.mbt:30`
 
 ## `get_conditional_style`
 
@@ -916,7 +933,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 3 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:425`
+- `mbtexcel_e2e_test.mbt:430`
 - `xlsx/doc_props_test.mbt:75`
 
 ## `get_data_validations`
@@ -934,6 +951,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `mbtexcel_e2e_test.mbt:123`
 - `xlsx/data_validation_test.mbt:9`
 - `xlsx/data_validation_test.mbt:55`
+- (more: 2 additional hits)
 
 ## `get_default_font`
 
@@ -946,7 +964,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetDefaultFont` in `excelize/styles_test.go:620`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:546`
+- `mbtexcel_e2e_test.mbt:551`
 - `xlsx/style_test.mbt:140`
 
 ## `get_defined_name`
@@ -988,10 +1006,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 15 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:675`
-- `mbtexcel_e2e_test.mbt:701`
-- `mbtexcel_e2e_test.mbt:707`
-- (more: 3 additional hits)
+- `mbtexcel_e2e_test.mbt:688`
+- `mbtexcel_e2e_test.mbt:718`
+- `mbtexcel_e2e_test.mbt:724`
+- (more: 6 additional hits)
 
 ## `get_header_footer`
 
@@ -1004,6 +1022,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetHeaderFooter` in `excelize/sheet_test.go:284`
 
 **MoonBit calls (tests/docs)**
+- `xlsx/sheet_name_sheet_ops_test.mbt:47`
 - `xlsx/sheet_props_test.mbt:72`
 - `xlsx/sheet_props_test.mbt:87`
 
@@ -1022,6 +1041,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `mbtexcel_e2e_test.mbt:121`
 - `xlsx/merge_cells_test.mbt:43`
 - `xlsx/merge_cells_test.mbt:45`
+- (more: 1 additional hits)
 
 ## `get_page_layout`
 
@@ -1034,7 +1054,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetPageLayout` in `excelize/sheet_test.go:241`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:473`
+- `mbtexcel_e2e_test.mbt:478`
+- `xlsx/sheet_name_sheet_ops_test.mbt:32`
 - `xlsx/sheet_props_test.mbt:26`
 
 ## `get_page_margins`
@@ -1048,7 +1069,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetPageMargins` in `excelize/sheetpr_test.go:42`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:472`
+- `mbtexcel_e2e_test.mbt:477`
+- `xlsx/sheet_name_sheet_ops_test.mbt:17`
 - `xlsx/sheet_props_test.mbt:21`
 
 ## `get_panes`
@@ -1063,10 +1085,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 2 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:513`
+- `mbtexcel_e2e_test.mbt:518`
+- `xlsx/sheet_name_sheet_ops_test.mbt:101`
 - `xlsx/sheet_view_test.mbt:81`
-- `xlsx/sheet_view_test.mbt:161`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `get_picture_cells`
 
@@ -1083,6 +1105,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/picture_ops_test.mbt:13`
 - `xlsx/picture_ops_test.mbt:19`
 - `xlsx/picture_ops_test.mbt:27`
+- (more: 1 additional hits)
 
 ## `get_pictures`
 
@@ -1099,6 +1122,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/picture_ops_test.mbt:10`
 - `xlsx/picture_ops_test.mbt:16`
 - `xlsx/picture_ops_test.mbt:37`
+- (more: 1 additional hits)
 
 ## `get_pivot_tables`
 
@@ -1112,9 +1136,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 9 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:635`
+- `mbtexcel_e2e_test.mbt:640`
 - `xlsx/pivot_test.mbt:147`
 - `xlsx/pivot_test.mbt:151`
+- (more: 1 additional hits)
 
 ## `get_row_height`
 
@@ -1130,8 +1155,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `xlsx/duplicate_row_test.mbt:39`
 - `xlsx/row_col_dimensions_test.mbt:16`
-- `xlsx/row_col_dimensions_test.mbt:96`
-- (more: 2 additional hits)
+- `xlsx/row_col_dimensions_test.mbt:99`
+- (more: 3 additional hits)
 
 ## `get_row_outline_level`
 
@@ -1173,9 +1198,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 14 additional hits)
 
 **MoonBit calls (tests/docs)**
+- `xlsx/iterators_excelize_parity_test.mbt:53`
+- `xlsx/iterators_excelize_parity_test.mbt:86`
 - `xlsx/iterators_test.mbt:105`
-- `xlsx/options_test.mbt:8`
-- `xlsx/options_test.mbt:10`
+- (more: 2 additional hits)
 
 ## `get_sheet_dimension`
 
@@ -1189,9 +1215,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 5 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:518`
+- `mbtexcel_e2e_test.mbt:523`
+- `xlsx/sheet_name_sheet_ops_test.mbt:115`
 - `xlsx/sheet_view_test.mbt:99`
-- `xlsx/sheet_view_test.mbt:115`
+- (more: 1 additional hits)
 
 ## `get_sheet_index`
 
@@ -1220,6 +1247,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `mbtexcel_test.mbt:83`
+- `xlsx/chart_sheet_test.mbt:84`
 - `xlsx/sheet_management_test.mbt:92`
 
 ## `get_sheet_map`
@@ -1260,9 +1288,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetSheetProps` in `excelize/sheetpr_test.go:107`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:355`
+- `mbtexcel_e2e_test.mbt:360`
+- `xlsx/sheet_name_sheet_ops_test.mbt:70`
 - `xlsx/sheet_props_test.mbt:243`
-- `xlsx/sheet_props_test.mbt:274`
+- (more: 1 additional hits)
 
 ## `get_sheet_view`
 
@@ -1276,9 +1305,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 2 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:509`
+- `mbtexcel_e2e_test.mbt:514`
+- `xlsx/sheet_name_sheet_ops_test.mbt:86`
 - `xlsx/sheet_view_test.mbt:18`
-- `xlsx/sheet_view_test.mbt:148`
+- (more: 1 additional hits)
 
 ## `get_sheet_visible`
 
@@ -1305,10 +1335,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 15 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:676`
-- `mbtexcel_e2e_test.mbt:702`
-- `mbtexcel_e2e_test.mbt:708`
-- (more: 2 additional hits)
+- `mbtexcel_e2e_test.mbt:689`
+- `mbtexcel_e2e_test.mbt:719`
+- `mbtexcel_e2e_test.mbt:725`
+- (more: 4 additional hits)
 
 ## `get_style`
 
@@ -1339,10 +1369,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 2 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:146`
-- `mbtexcel_e2e_test.mbt:700`
-- `mbtexcel_e2e_test.mbt:706`
-- (more: 3 additional hits)
+- `mbtexcel_e2e_test.mbt:151`
+- `mbtexcel_e2e_test.mbt:717`
+- `mbtexcel_e2e_test.mbt:723`
+- (more: 4 additional hits)
 
 ## `get_workbook_props`
 
@@ -1355,7 +1385,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `GetWorkbookProps` in `excelize/workbook_test.go:35`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:371`
+- `mbtexcel_e2e_test.mbt:376`
 - `xlsx/workbook_props_test.mbt:28`
 
 ## `group_sheets`
@@ -1370,8 +1400,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 1 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:722`
-- `mbtexcel_e2e_test.mbt:729`
+- `mbtexcel_e2e_test.mbt:739`
+- `mbtexcel_e2e_test.mbt:746`
 - `xlsx/sheet_management_test.mbt:128`
 - (more: 1 additional hits)
 
@@ -1400,10 +1430,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 46 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:294`
+- `mbtexcel_e2e_test.mbt:299`
 - `xlsx/auto_filter_test.mbt:49`
 - `xlsx/hyperlink_test.mbt:52`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `insert_page_break`
 
@@ -1417,9 +1447,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 11 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:399`
+- `mbtexcel_e2e_test.mbt:404`
+- `xlsx/sheet_name_sheet_ops_test.mbt:150`
 - `xlsx/sheet_props_test.mbt:201`
-- `xlsx/sheet_props_test.mbt:202`
+- (more: 1 additional hits)
 
 ## `insert_rows`
 
@@ -1433,10 +1464,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 48 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:293`
+- `mbtexcel_e2e_test.mbt:298`
 - `xlsx/hyperlink_test.mbt:44`
-- `xlsx/row_col_dimensions_test.mbt:77`
-- (more: 2 additional hits)
+- `xlsx/row_col_dimensions_test.mbt:80`
+- (more: 3 additional hits)
 
 ## `join_cell_name`
 
@@ -1467,7 +1498,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `mbtexcel_e2e_test.mbt:95`
 - `xlsx/merge_cells_test.mbt:42`
-- `xlsx/stream_test.mbt:98`
+- `xlsx/sheet_name_conditional_merge_test.mbt:46`
+- (more: 1 additional hits)
 
 ## `move_sheet`
 
@@ -1567,10 +1599,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 21 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:164`
+- `mbtexcel_e2e_test.mbt:169`
+- `xlsx/sheet_name_sheet_ops_test.mbt:5`
 - `xlsx/stream_test.mbt:5`
-- `xlsx/stream_test.mbt:26`
-- (more: 5 additional hits)
+- (more: 6 additional hits)
 
 ## `new_style`
 
@@ -1604,7 +1636,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `mbtexcel_e2e_test.mbt:75`
 - `xlsx/io_password_test.mbt:18`
 - `xlsx/io_password_test.mbt:43`
-- (more: 2 additional hits)
+- (more: 3 additional hits)
 
 ## `open_reader`
 
@@ -1634,10 +1666,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 7 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:263`
+- `mbtexcel_e2e_test.mbt:268`
 - `mbtexcel_test.mbt:181`
-- `xlsx/sheet_props_test.mbt:95`
-- (more: 1 additional hits)
+- `xlsx/sheet_name_sheet_ops_test.mbt:122`
+- (more: 2 additional hits)
 
 ## `protect_workbook`
 
@@ -1651,7 +1683,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:384`
+- `mbtexcel_e2e_test.mbt:389`
 - `mbtexcel_test.mbt:167`
 - `xlsx/workbook_protection_test.mbt:8`
 
@@ -1694,6 +1726,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 7 additional hits)
 
 **MoonBit calls (tests/docs)**
+- `xlsx/sheet_name_sheet_ops_test.mbt:157`
 - `xlsx/sheet_props_test.mbt:212`
 
 ## `remove_row`
@@ -1739,10 +1772,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 47 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `xlsx/iterators_test.mbt:8`
-- `xlsx/iterators_test.mbt:33`
-- `xlsx/iterators_test.mbt:54`
-- (more: 4 additional hits)
+- `xlsx/iterators_excelize_parity_test.mbt:49`
+- `xlsx/iterators_excelize_parity_test.mbt:78`
+- `xlsx/iterators_excelize_parity_test.mbt:96`
+- (more: 7 additional hits)
 
 ## `save`
 
@@ -1800,10 +1833,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 9 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:564`
-- `mbtexcel_e2e_test.mbt:567`
-- `mbtexcel_e2e_test.mbt:721`
-- (more: 2 additional hits)
+- `mbtexcel_e2e_test.mbt:569`
+- `mbtexcel_e2e_test.mbt:572`
+- `mbtexcel_e2e_test.mbt:738`
+- (more: 3 additional hits)
 
 ## `set_app_props`
 
@@ -1830,7 +1863,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 2 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:534`
+- `mbtexcel_e2e_test.mbt:539`
 - `mbtexcel_test.mbt:143`
 - `mbtexcel_test.mbt:151`
 - (more: 3 additional hits)
@@ -1895,8 +1928,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `README.mbt.md:13`
 - `mbtexcel_e2e_test.mbt:92`
-- `mbtexcel_e2e_test.mbt:764`
-- (more: 1807 additional hits)
+- `mbtexcel_e2e_test.mbt:781`
+- (more: 1808 additional hits)
 
 ## `set_cell_hyper_link`
 
@@ -1944,7 +1977,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/rich_text_test.mbt:38`
 - `xlsx/rich_text_test.mbt:81`
 - `xlsx/rich_text_test.mbt:105`
-- (more: 2 additional hits)
+- (more: 3 additional hits)
 
 ## `set_cell_str`
 
@@ -1976,7 +2009,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `mbtexcel_e2e_test.mbt:98`
 - `xlsx/cell_value_test.mbt:28`
 - `xlsx/cell_value_test.mbt:42`
-- (more: 25 additional hits)
+- (more: 26 additional hits)
 
 ## `set_cell_uint`
 
@@ -2006,7 +2039,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/calc_test.mbt:5`
 - `xlsx/calc_test.mbt:6`
 - `xlsx/calc_test.mbt:7`
-- (more: 526 additional hits)
+- (more: 538 additional hits)
 
 ## `set_col_outline_level`
 
@@ -2068,10 +2101,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 19 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `xlsx/picture_ops_test.mbt:418`
-- `xlsx/picture_ops_test.mbt:435`
+- `xlsx/picture_ops_test.mbt:455`
+- `xlsx/picture_ops_test.mbt:472`
 - `xlsx/row_col_dimensions_test.mbt:10`
-- (more: 3 additional hits)
+- (more: 4 additional hits)
 
 ## `set_conditional_format`
 
@@ -2085,10 +2118,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 40 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:332`
+- `mbtexcel_e2e_test.mbt:337`
 - `xlsx/conditional_format_test.mbt:8`
 - `xlsx/conditional_format_test.mbt:43`
-- (more: 13 additional hits)
+- (more: 14 additional hits)
 
 ## `set_custom_props`
 
@@ -2102,8 +2135,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:412`
-- `mbtexcel_e2e_test.mbt:418`
+- `mbtexcel_e2e_test.mbt:417`
+- `mbtexcel_e2e_test.mbt:423`
 - `xlsx/doc_props_test.mbt:52`
 - (more: 6 additional hits)
 
@@ -2117,7 +2150,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `SetDefaultFont` in `excelize/styles_test.go:627`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:535`
+- `mbtexcel_e2e_test.mbt:540`
 - `xlsx/style_test.mbt:126`
 
 ## `set_defined_name`
@@ -2132,7 +2165,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 21 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:277`
+- `mbtexcel_e2e_test.mbt:282`
 - `xlsx/calc_test.mbt:4803`
 - `xlsx/calc_test.mbt:4804`
 - (more: 6 additional hits)
@@ -2162,10 +2195,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 5 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:183`
+- `mbtexcel_e2e_test.mbt:188`
 - `xlsx/header_footer_image_test.mbt:5`
-- `xlsx/sheet_props_test.mbt:69`
-- (more: 2 additional hits)
+- `xlsx/header_footer_image_test.mbt:192`
+- (more: 4 additional hits)
 
 ## `set_page_layout`
 
@@ -2179,10 +2212,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:470`
+- `mbtexcel_e2e_test.mbt:475`
+- `xlsx/sheet_name_sheet_ops_test.mbt:24`
 - `xlsx/sheet_props_test.mbt:18`
-- `xlsx/sheet_props_test.mbt:47`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `set_page_margins`
 
@@ -2196,7 +2229,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 1 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:469`
+- `mbtexcel_e2e_test.mbt:474`
+- `xlsx/sheet_name_sheet_ops_test.mbt:9`
 - `xlsx/sheet_props_test.mbt:12`
 
 ## `set_panes`
@@ -2211,10 +2245,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 8 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:506`
+- `mbtexcel_e2e_test.mbt:511`
+- `xlsx/sheet_name_sheet_ops_test.mbt:93`
 - `xlsx/sheet_view_test.mbt:80`
-- `xlsx/sheet_view_test.mbt:146`
-- (more: 2 additional hits)
+- (more: 3 additional hits)
 
 ## `set_row_height`
 
@@ -2231,7 +2265,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `xlsx/duplicate_row_test.mbt:32`
 - `xlsx/iterators_test.mbt:6`
 - `xlsx/iterators_test.mbt:29`
-- (more: 4 additional hits)
+- (more: 5 additional hits)
 
 ## `set_row_outline_level`
 
@@ -2293,7 +2327,8 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:221`
+- `mbtexcel_e2e_test.mbt:226`
+- `xlsx/sheet_name_sheet_ops_test.mbt:134`
 - `xlsx/sheet_props_test.mbt:138`
 
 ## `set_sheet_background_from_bytes`
@@ -2322,6 +2357,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `xlsx/compat_test.mbt:6`
+- `xlsx/sheet_name_workbook_compat_test.mbt:11`
 
 ## `set_sheet_dimension`
 
@@ -2334,10 +2370,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `SetSheetDimension` in `excelize/sheet_test.go:828`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:507`
+- `mbtexcel_e2e_test.mbt:512`
+- `xlsx/sheet_name_sheet_ops_test.mbt:108`
 - `xlsx/sheet_view_test.mbt:98`
-- `xlsx/sheet_view_test.mbt:113`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `set_sheet_name`
 
@@ -2367,9 +2403,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 10 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:353`
+- `mbtexcel_e2e_test.mbt:358`
+- `xlsx/sheet_name_sheet_ops_test.mbt:62`
 - `xlsx/sheet_props_test.mbt:240`
-- `xlsx/sheet_props_test.mbt:270`
+- (more: 1 additional hits)
 
 ## `set_sheet_row`
 
@@ -2384,6 +2421,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `xlsx/compat_test.mbt:5`
+- `xlsx/sheet_name_workbook_compat_test.mbt:5`
 
 ## `set_sheet_view`
 
@@ -2397,10 +2435,10 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 4 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:492`
+- `mbtexcel_e2e_test.mbt:497`
+- `xlsx/sheet_name_sheet_ops_test.mbt:77`
 - `xlsx/sheet_view_test.mbt:17`
-- `xlsx/sheet_view_test.mbt:59`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `set_sheet_visible`
 
@@ -2414,7 +2452,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - (more: 5 additional hits)
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:554`
+- `mbtexcel_e2e_test.mbt:559`
 - `xlsx/sheet_management_test.mbt:69`
 - `xlsx/sheet_management_test.mbt:105`
 
@@ -2429,7 +2467,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `SetWorkbookProps` in `excelize/workbook_test.go:31`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:369`
+- `mbtexcel_e2e_test.mbt:374`
 - `xlsx/workbook_props_test.mbt:9`
 
 ## `set_zip_writer`
@@ -2487,7 +2525,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `UngroupSheets` in `excelize/sheet_test.go:371`
 
 **MoonBit calls (tests/docs)**
-- `mbtexcel_e2e_test.mbt:737`
+- `mbtexcel_e2e_test.mbt:754`
 - `xlsx/sheet_management_test.mbt:161`
 
 ## `unmerge_cell`
@@ -2503,6 +2541,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `xlsx/merge_cells_test.mbt:44`
+- `xlsx/sheet_name_conditional_merge_test.mbt:60`
 
 ## `unprotect_sheet`
 
@@ -2517,9 +2556,9 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 
 **MoonBit calls (tests/docs)**
 - `mbtexcel_test.mbt:182`
+- `xlsx/sheet_name_sheet_ops_test.mbt:127`
 - `xlsx/sheet_props_test.mbt:105`
-- `xlsx/sheet_props_test.mbt:113`
-- (more: 1 additional hits)
+- (more: 2 additional hits)
 
 ## `unprotect_workbook`
 
@@ -2551,6 +2590,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 **MoonBit calls (tests/docs)**
 - `xlsx/conditional_format_test.mbt:21`
 - `xlsx/conditional_format_test.mbt:24`
+- `xlsx/sheet_name_conditional_merge_test.mbt:32`
 
 ## `update_linked_value`
 
@@ -2581,7 +2621,7 @@ to its Go definition + Go test usage, and to MoonBit test/doc call sites.
 - `README.mbt.md:14`
 - `mbtexcel_e2e_test.mbt:35`
 - `mbtexcel_e2e_test.mbt:40`
-- (more: 210 additional hits)
+- (more: 221 additional hits)
 
 ## `write_to`
 
