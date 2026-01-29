@@ -3444,6 +3444,323 @@ fn parse_pivot_table_part_ids(
 }
 
 ///|
+fn parse_sheet_slicer_rel_ids(
+  xml : StringView,
+) -> Array[String] raise XlsxError {
+  let ids : Array[String] = []
+  let xml_str = xml.to_string()
+  let mut first = true
+  for chunk in xml_str.split("<x14:slicer ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="x14:slicer tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="x14:slicer tag invalid")
+      }
+    let id = match attr_value(tag, "r:id") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="x14:slicer id missing")
+    }
+    ids.push(id)
+  }
+  ids
+}
+
+///|
+priv struct ParsedSlicerPartEntry {
+  name : String
+  cache : String
+  caption : String
+  display_header : Bool?
+}
+
+///|
+fn parse_slicer_part_entries(
+  xml : StringView,
+) -> Array[ParsedSlicerPartEntry] raise XlsxError {
+  let entries : Array[ParsedSlicerPartEntry] = []
+  let xml_str = xml.to_string()
+  let mut first = true
+  for chunk in xml_str.split("<slicer ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("/>") {
+      Some(pos) => pos
+      None =>
+        match text.find(">") {
+          Some(pos) => pos
+          None => raise XlsxError::InvalidXml(msg="slicer tag not closed")
+        }
+    }
+    let tag = text[:end] catch {
+        _ => raise XlsxError::InvalidXml(msg="slicer tag invalid")
+      }
+    let name = match attr_value(tag, "name") {
+      Some(value) => unescape_xml_text(value)
+      None => raise XlsxError::InvalidXml(msg="slicer name missing")
+    }
+    let cache = match attr_value(tag, "cache") {
+      Some(value) => unescape_xml_text(value)
+      None => raise XlsxError::InvalidXml(msg="slicer cache missing")
+    }
+    let caption = match attr_value(tag, "caption") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let display_header = match attr_value(tag, "showCaption") {
+      Some(value) => Some(parse_bool_attr(value))
+      None => None
+    }
+    entries.push({ name, cache, caption, display_header })
+  }
+  entries
+}
+
+///|
+priv struct SlicerCacheDef {
+  name : String
+  source_name : String
+  item_desc : Bool
+  table_id : Int?
+  table_column : Int?
+  pivot_tab_id : Int?
+  pivot_table_name : String?
+}
+
+///|
+fn parse_slicer_cache_definition(
+  xml : StringView,
+) -> SlicerCacheDef raise XlsxError {
+  let tag = match tag_attributes_in(xml, "slicerCacheDefinition") {
+    Some(value) => value
+    None => raise XlsxError::InvalidXml(msg="slicerCacheDefinition missing")
+  }
+  let name = match attr_value(tag, "name") {
+    Some(value) => unescape_xml_text(value)
+    None => raise XlsxError::InvalidXml(msg="slicer cache name missing")
+  }
+  let source_name = match attr_value(tag, "sourceName") {
+    Some(value) => unescape_xml_text(value)
+    None => ""
+  }
+  let mut item_desc = false
+  let mut table_id : Int? = None
+  let mut table_column : Int? = None
+  let mut pivot_tab_id : Int? = None
+  let mut pivot_table_name : String? = None
+  match tag_attributes_in(xml, "x15:tableSlicerCache") {
+    Some(cache_tag) => {
+      match attr_value(cache_tag, "tableId") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="slicer cache tableId invalid")
+          } noraise {
+            val => table_id = Some(val)
+          }
+        None => ()
+      }
+      match attr_value(cache_tag, "column") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="slicer cache column invalid")
+          } noraise {
+            val => table_column = Some(val)
+          }
+        None => ()
+      }
+      match attr_value(cache_tag, "sortOrder") {
+        Some(value) =>
+          if unescape_xml_text(value) == "descending" {
+            item_desc = true
+          }
+        None => ()
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(xml, "tabular") {
+    Some(tabular_tag) =>
+      match attr_value(tabular_tag, "sortOrder") {
+        Some(value) =>
+          if unescape_xml_text(value) == "descending" {
+            item_desc = true
+          }
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "pivotTable") {
+    Some(pivot_tag) => {
+      match attr_value(pivot_tag, "tabId") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="slicer cache tabId invalid")
+          } noraise {
+            val => pivot_tab_id = Some(val)
+          }
+        None => ()
+      }
+      match attr_value(pivot_tag, "name") {
+        Some(value) => pivot_table_name = Some(unescape_xml_text(value))
+        None => ()
+      }
+    }
+    None => ()
+  }
+  {
+    name,
+    source_name,
+    item_desc,
+    table_id,
+    table_column,
+    pivot_tab_id,
+    pivot_table_name,
+  }
+}
+
+///|
+fn parse_slicer_cache_definitions(
+  workbook_rels_xml : StringView,
+  archive : @zip.Archive,
+  decode : (Bytes) -> String raise XlsxError,
+) -> Map[String, SlicerCacheDef] raise XlsxError {
+  let defs : Map[String, SlicerCacheDef] = {}
+  let targets = parse_relationship_targets(workbook_rels_xml, rel_slicer_cache)
+  for _rel_id, target in targets {
+    let cache_path = resolve_workbook_rel_target(target)
+    let cache_bytes = match archive.get(cache_path) {
+      Some(value) => value
+      None => raise XlsxError::MissingPart(path=cache_path)
+    }
+    let cache_xml = decode(cache_bytes)
+    let def = parse_slicer_cache_definition(cache_xml)
+    defs[def.name] = def
+  }
+  defs
+}
+
+///|
+fn resolve_slicer_sources_after_read(
+  workbook : Workbook,
+  slicer_cache_defs : Map[String, SlicerCacheDef],
+) -> Unit {
+  fn worksheet_name_from_tab_id(workbook : Workbook, tab_id : Int) -> String? {
+    let count = workbook.sheets.length()
+    if count == 0 {
+      return None
+    }
+    let candidates : Array[Int] = []
+    candidates.push(tab_id)
+    candidates.push(tab_id + 1)
+    candidates.push(tab_id - 1)
+    for id in candidates {
+      if id >= 1 && id <= count {
+        return Some(workbook.sheets[id - 1].name)
+      }
+    }
+    None
+  }
+
+  let table_by_id : Map[Int, (String, Table)] = {}
+  for sheet in workbook.sheets {
+    for table in sheet.tables() {
+      if table.id > 0 {
+        table_by_id[table.id] = (sheet.name, table)
+      }
+    }
+  }
+  for sheet in workbook.sheets {
+    let slicers = sheet.slicers
+    let mut i = 0
+    while i < slicers.length() {
+      let slicer = slicers[i]
+      match slicer_cache_defs.get(slicer.cache) {
+        Some(def) => {
+          let mut table_sheet = slicer.table_sheet
+          let mut table_name = slicer.table_name
+          let mut source_name = slicer.source_name
+          let mut item_desc = slicer.item_desc
+          if def.source_name != "" {
+            source_name = def.source_name
+          }
+          item_desc = def.item_desc
+          match def.table_id {
+            Some(table_id) =>
+              match table_by_id.get(table_id) {
+                Some((sheet_name, table)) => {
+                  table_sheet = sheet_name
+                  table_name = table.name
+                  match def.table_column {
+                    Some(col) => {
+                      let idx = col - 1
+                      if idx >= 0 && idx < table.columns.length() {
+                        source_name = table.columns[idx]
+                      }
+                    }
+                    None => ()
+                  }
+                }
+                None => ()
+              }
+            None => ()
+          }
+          match def.pivot_table_name {
+            Some(pivot_name) => if table_name == "" { table_name = pivot_name }
+            None => ()
+          }
+          match def.pivot_tab_id {
+            Some(tab_id) =>
+              match worksheet_name_from_tab_id(workbook, tab_id) {
+                Some(sheet_name) =>
+                  if table_sheet == "" {
+                    table_sheet = sheet_name
+                  }
+                None => ()
+              }
+            None => ()
+          }
+          if table_sheet != slicer.table_sheet ||
+            table_name != slicer.table_name ||
+            source_name != slicer.source_name ||
+            item_desc != slicer.item_desc {
+            slicers[i] = {
+              name: slicer.name,
+              cache: slicer.cache,
+              source_name,
+              cell: slicer.cell,
+              table_sheet,
+              table_name,
+              caption: slicer.caption,
+              macro_name: slicer.macro_name,
+              width: slicer.width,
+              height: slicer.height,
+              display_header: slicer.display_header,
+              item_desc,
+              format: slicer.format,
+            }
+          }
+        }
+        None => ()
+      }
+      i = i + 1
+    }
+  }
+}
+
+///|
 fn parse_legacy_drawing_rel_id(
   xml : StringView,
   tag_name : StringView,
@@ -4164,6 +4481,171 @@ fn parse_drawing_shapes(
     })
   }
   shapes
+}
+
+///|
+priv struct SlicerAnchorInfo {
+  cell : String
+  offset_x : Int
+  offset_y : Int
+  width : Int
+  height : Int
+  positioning : PicturePositioning
+  macro_name : String
+  alt_text : String
+  locked : Bool
+  print_object : Bool
+}
+
+///|
+fn parse_drawing_slicer_anchors(
+  drawing_xml : StringView,
+  sheet : Worksheet,
+) -> Map[String, SlicerAnchorInfo] raise XlsxError {
+  let out : Map[String, SlicerAnchorInfo] = {}
+  let anchors = parse_drawing_anchors(drawing_xml)
+  for entry in anchors {
+    let (anchor_xml, positioning) = entry
+    let slicer_tag = match tag_attributes_in(anchor_xml[:], "sle:slicer") {
+      Some(value) => value
+      None => continue
+    }
+    let slicer_name = match attr_value(slicer_tag, "name") {
+      Some(value) => unescape_xml_text(value)
+      None => continue
+    }
+    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+      Some(value) => value
+      None => raise XlsxError::InvalidXml(msg="drawing slicer from missing")
+    }
+    let col_idx0 = parse_xml_int_tag(
+      from_body[:],
+      "xdr:col",
+      "drawing slicer col invalid",
+    )
+    let row_idx0 = parse_xml_int_tag(
+      from_body[:],
+      "xdr:row",
+      "drawing slicer row invalid",
+    )
+    let col_off_emu = parse_xml_int_tag(
+      from_body[:],
+      "xdr:colOff",
+      "drawing slicer colOff invalid",
+    )
+    let row_off_emu = parse_xml_int_tag(
+      from_body[:],
+      "xdr:rowOff",
+      "drawing slicer rowOff invalid",
+    )
+    let cell = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
+    let offset_x = col_off_emu / picture_emu_per_pixel
+    let offset_y = row_off_emu / picture_emu_per_pixel
+    let (width_emu, height_emu) = match positioning {
+      PicturePositioning::OneCell => {
+        let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="drawing slicer ext missing")
+        }
+        let cx = match attr_value(ext_tag, "cx") {
+          Some(value) =>
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="drawing slicer cx invalid")
+            }
+          None => raise XlsxError::InvalidXml(msg="drawing slicer cx missing")
+        }
+        let cy = match attr_value(ext_tag, "cy") {
+          Some(value) =>
+            @strconv.parse_int(value, base=10) catch {
+              _ => raise XlsxError::InvalidXml(msg="drawing slicer cy invalid")
+            }
+          None => raise XlsxError::InvalidXml(msg="drawing slicer cy missing")
+        }
+        (cx, cy)
+      }
+      _ => {
+        let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
+          Some(value) => value
+          None => raise XlsxError::InvalidXml(msg="drawing slicer to missing")
+        }
+        let to_col_idx0 = parse_xml_int_tag(
+          to_body[:],
+          "xdr:col",
+          "drawing slicer to col invalid",
+        )
+        let to_row_idx0 = parse_xml_int_tag(
+          to_body[:],
+          "xdr:row",
+          "drawing slicer to row invalid",
+        )
+        let to_col_off = parse_xml_int_tag(
+          to_body[:],
+          "xdr:colOff",
+          "drawing slicer to colOff invalid",
+        )
+        let to_row_off = parse_xml_int_tag(
+          to_body[:],
+          "xdr:rowOff",
+          "drawing slicer to rowOff invalid",
+        )
+        let cx = drawing_axis_span_emu(
+          sheet, "col", col_idx0, col_off_emu, to_col_idx0, to_col_off,
+        )
+        let cy = drawing_axis_span_emu(
+          sheet, "row", row_idx0, row_off_emu, to_row_idx0, to_row_off,
+        )
+        (cx, cy)
+      }
+    }
+    let width = (width_emu.to_double() / picture_emu_per_pixel.to_double())
+      .round()
+      .to_int()
+    let height = (height_emu.to_double() / picture_emu_per_pixel.to_double())
+      .round()
+      .to_int()
+    let graphic_frame_tag = match
+      tag_attributes_in(anchor_xml[:], "xdr:graphicFrame") {
+      Some(value) => value
+      None => ""
+    }
+    let macro_name = match attr_value(graphic_frame_tag, "macro") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let c_nv_pr_tag = match tag_attributes_in(anchor_xml[:], "xdr:cNvPr") {
+      Some(value) => value
+      None => ""
+    }
+    let alt_text = match attr_value(c_nv_pr_tag, "descr") {
+      Some(value) => unescape_xml_text(value)
+      None => ""
+    }
+    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+      Some(value) => value
+      None => ""
+    }
+    let locked = match attr_value(client_tag, "fLocksWithSheet") {
+      Some(value) => parse_bool_attr(value)
+      None => true
+    }
+    let print_object = match attr_value(client_tag, "fPrintsWithSheet") {
+      Some(value) => parse_bool_attr(value)
+      None => true
+    }
+    out[slicer_name] = {
+      cell,
+      offset_x,
+      offset_y,
+      width,
+      height,
+      positioning,
+      macro_name,
+      alt_text,
+      locked,
+      print_object,
+    }
+  }
+  out
 }
 
 ///|
@@ -4894,6 +5376,9 @@ fn read_zip_bytes(
     Some(value) => decode(value)
     None => raise XlsxError::MissingPart(path="xl/_rels/workbook.xml.rels")
   }
+  let slicer_cache_defs = parse_slicer_cache_definitions(
+    workbook_rels, archive, decode,
+  )
   let vba_targets = parse_relationship_targets(workbook_rels, rel_vba_project)
   match first_relationship_target(vba_targets) {
     Some(target) => {
@@ -4952,6 +5437,7 @@ fn read_zip_bytes(
       let hyperlink_elements = parse_hyperlink_elements(sheet_xml)
       let table_part_ids = parse_table_part_ids(sheet_xml)
       let pivot_part_ids = parse_pivot_table_part_ids(sheet_xml)
+      let slicer_rel_ids = parse_sheet_slicer_rel_ids(sheet_xml)
       let drawing_rel_id = parse_legacy_drawing_rel_id(sheet_xml, "drawing")
       let legacy_drawing_rel_id = parse_legacy_drawing_rel_id(
         sheet_xml, "legacyDrawing",
@@ -4975,6 +5461,7 @@ fn read_zip_bytes(
       }
       let needs_rels = table_part_ids.length() > 0 ||
         pivot_part_ids.length() > 0 ||
+        slicer_rel_ids.length() > 0 ||
         needs_hyperlink_rels ||
         drawing_rel_id is Some(_) ||
         legacy_drawing_rel_id is Some(_) ||
@@ -4989,6 +5476,35 @@ fn read_zip_bytes(
         decode(rels_bytes)
       } else {
         ""
+      }
+      let slicer_part_entries = if slicer_rel_ids.length() == 0 {
+        []
+      } else {
+        if rels_xml == "" {
+          raise XlsxError::InvalidXml(msg="slicer relationship missing")
+        }
+        let rel_targets = parse_relationship_targets(rels_xml, rel_slicer)
+        let parsed : Array[ParsedSlicerPartEntry] = []
+        let seen_paths : Map[String, Bool] = {}
+        for rel_id in slicer_rel_ids {
+          let target = match rel_targets.get(rel_id) {
+            Some(value) => value
+            None =>
+              raise XlsxError::InvalidXml(msg="slicer relationship missing")
+          }
+          let slicer_path = resolve_rel_target(target, "worksheets")
+          if seen_paths.contains(slicer_path) {
+            continue
+          }
+          seen_paths[slicer_path] = true
+          let slicer_bytes = match archive.get(slicer_path) {
+            Some(value) => value
+            None => raise XlsxError::MissingPart(path=slicer_path)
+          }
+          let slicer_xml = decode(slicer_bytes)
+          parsed.append(parse_slicer_part_entries(slicer_xml)[:])
+        }
+        parsed
       }
       let sheet_background = match picture_rel_id {
         Some(rel_id) => {
@@ -5300,6 +5816,7 @@ fn read_zip_bytes(
         state,
         stream_state: StreamState::Idle,
       }
+      let mut slicer_anchor_info : Map[String, SlicerAnchorInfo] = {}
       match drawing_rel_id {
         Some(rel_id) => {
           if rels_xml == "" {
@@ -5318,6 +5835,11 @@ fn read_zip_bytes(
             None => raise XlsxError::MissingPart(path=drawing_path)
           }
           let drawing_xml = decode(drawing_bytes)
+          if slicer_part_entries.length() > 0 {
+            slicer_anchor_info = parse_drawing_slicer_anchors(
+              drawing_xml, sheet,
+            )
+          }
           let drawing_rels_xml = match
             archive.get(rels_path_for(drawing_path, "drawings")) {
             Some(value) => decode(value)
@@ -5335,6 +5857,71 @@ fn read_zip_bytes(
           sheet.shapes.append(drawing_shapes[:])
         }
         None => ()
+      }
+      for entry in slicer_part_entries {
+        let cache_def = slicer_cache_defs.get(entry.cache)
+        let source_name = match cache_def {
+          Some(def) =>
+            if def.source_name != "" {
+              def.source_name
+            } else {
+              entry.name
+            }
+          None => entry.name
+        }
+        let item_desc = match cache_def {
+          Some(def) => def.item_desc
+          None => false
+        }
+        let mut cell = ""
+        let mut width = 200
+        let mut height = 200
+        let mut macro_name = ""
+        let format = GraphicOptions::new()
+        match slicer_anchor_info.get(entry.name) {
+          Some(info) => {
+            cell = info.cell
+            if info.width > 0 {
+              width = info.width
+            }
+            if info.height > 0 {
+              height = info.height
+            }
+            macro_name = info.macro_name
+            if info.offset_x != 0 {
+              format.offset_x = Some(info.offset_x)
+            }
+            if info.offset_y != 0 {
+              format.offset_y = Some(info.offset_y)
+            }
+            if info.alt_text != "" {
+              format.alt_text = Some(info.alt_text)
+            }
+            format.positioning = Some(info.positioning)
+            format.locked = Some(info.locked)
+            format.print_object = Some(info.print_object)
+          }
+          None => {
+            format.positioning = Some(PicturePositioning::TwoCell)
+            format.locked = Some(true)
+            format.print_object = Some(true)
+          }
+        }
+        sheet.slicers.push({
+          name: entry.name,
+          cache: entry.cache,
+          source_name,
+          cell,
+          table_sheet: "",
+          table_name: "",
+          caption: entry.caption,
+          macro_name,
+          width,
+          height,
+          display_header: entry.display_header,
+          item_desc,
+          format,
+        })
       }
       workbook.sheets.push(sheet)
       workbook.sheet_order.push(
@@ -5399,6 +5986,7 @@ fn read_zip_bytes(
       )
     }
   }
+  resolve_slicer_sources_after_read(workbook, slicer_cache_defs)
   workbook
 }
 
