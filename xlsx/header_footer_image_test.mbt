@@ -160,3 +160,123 @@ test "header footer image invalid extension" {
     content="Err(UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
   )
 }
+
+///|
+test "header footer image multiple positions and first page" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_header_footer(
+    Some(
+      HeaderFooterOptions::with_values(
+        different_first=true,
+        odd_header="&L&G&C&G&R&G",
+        odd_footer="&L&G&C&G&R&G",
+        first_header="&L&G&C&G&R&G",
+        first_footer="&L&G&C&G&R&G",
+      ),
+    ),
+  )
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Left,
+      [1, 2, 3],
+      ".png",
+      width="10pt",
+      height="11pt",
+    ),
+  )
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Center,
+      [4, 5],
+      ".gif",
+      is_footer=true,
+      width="12pt",
+      height="13pt",
+    ),
+  )
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Right,
+      [6],
+      ".jpg",
+      first_page=true,
+      width="14pt",
+      height="15pt",
+    ),
+  )
+  let bytes = write(workbook)
+  let parsed = read(bytes)
+  let images = parsed.get_header_footer_images("Sheet1")
+  inspect(images.length(), content="3")
+  let ids : Array[String] = []
+  for img in images {
+    let suffix = if img.first_page { "FIRST" } else { "" }
+    let mid = if img.is_footer { "F" } else { "H" }
+    let base = match img.position {
+      HeaderFooterImagePosition::Left => "L"
+      HeaderFooterImagePosition::Center => "C"
+      HeaderFooterImagePosition::Right => "R"
+    }
+    ids.push("\{base}\{mid}\{suffix}")
+  }
+  inspect(ids.contains("LH"), content="true")
+  inspect(ids.contains("CFF"), content="false")
+  inspect(ids.contains("CFFIRST"), content="false")
+  inspect(ids.contains("CF"), content="true")
+  inspect(ids.contains("RHFIRST"), content="true")
+}
+
+///|
+test "header footer image replaces same slot" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Left,
+      [9],
+      ".png",
+      width="10pt",
+      height="10pt",
+    ),
+  )
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Left,
+      [8, 7],
+      ".jpg",
+      width="10pt",
+      height="10pt",
+    ),
+  )
+  let parsed = read(write(workbook))
+  let images = parsed.get_header_footer_images("Sheet1")
+  inspect(images.length(), content="1")
+  inspect(
+    (
+      images[0].position,
+      images[0].is_footer,
+      images[0].first_page,
+      images[0].extension,
+    ),
+    content="(Left, false, false, \"jpg\")",
+  )
+  inspect(images[0].data == [8, 7], content="true")
+}
+
+///|
+test "header footer image workbook missing sheet" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let result : Result[Unit, Error] = try? workbook.add_header_footer_image(
+    "SheetN",
+    HeaderFooterImageOptions::new(
+      HeaderFooterImagePosition::Left,
+      [1],
+      ".png",
+      width="10pt",
+      height="10pt",
+    ),
+  )
+  inspect(result is Err(XlsxError::SheetNotFound(_)), content="true")
+}
