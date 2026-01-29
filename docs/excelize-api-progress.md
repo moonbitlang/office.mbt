@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `abf45a6`
-- Progress: **155/169**
+- mbtexcel: `95ba0cf`
+- Progress: **169/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -160,17 +160,17 @@
 - [x] `set_sheet_props`
 - [x] `set_sheet_row`
 - [x] `set_sheet_view`
-- [ ] `set_sheet_visible`
-- [ ] `set_workbook_props`
-- [ ] `set_zip_writer`
-- [ ] `split_cell_name`
-- [ ] `theme_color`
-- [ ] `ungroup_sheets`
-- [ ] `unmerge_cell`
-- [ ] `unprotect_sheet`
-- [ ] `unprotect_workbook`
-- [ ] `unset_conditional_format`
-- [ ] `update_linked_value`
-- [ ] `write`
-- [ ] `write_to`
-- [ ] `write_to_buffer`
+- [x] `set_sheet_visible`
+- [x] `set_workbook_props`
+- [x] `set_zip_writer`
+- [x] `split_cell_name`
+- [x] `theme_color`
+- [x] `ungroup_sheets`
+- [x] `unmerge_cell`
+- [x] `unprotect_sheet`
+- [x] `unprotect_workbook`
+- [x] `unset_conditional_format`
+- [x] `update_linked_value`
+- [x] `write`
+- [x] `write_to`
+- [x] `write_to_buffer`
