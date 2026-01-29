@@ -2255,6 +2255,53 @@ fn parse_data_validations_x14(
 }
 
 ///|
+fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError {
+  let formats : Array[String] = []
+  let xml_str = xml.to_string()
+  if !xml_str.contains("<conditionalFormatting") {
+    return formats
+  }
+  let mut first = true
+  for chunk in xml_str.split("<conditionalFormatting") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let close_tag = "</conditionalFormatting>"
+    match text.find(close_tag) {
+      Some(pos) => {
+        let end = pos + close_tag.length()
+        let slice = text[:end] catch {
+            _ =>
+              raise XlsxError::InvalidXml(
+                msg="conditionalFormatting tag invalid",
+              )
+          }
+        formats.push("<conditionalFormatting\{slice.to_string()}")
+      }
+      None => {
+        let end = match text.find("/>") {
+          Some(pos) => pos + 2
+          None =>
+            raise XlsxError::InvalidXml(
+              msg="conditionalFormatting tag not closed",
+            )
+        }
+        let slice = text[:end] catch {
+            _ =>
+              raise XlsxError::InvalidXml(
+                msg="conditionalFormatting tag invalid",
+              )
+          }
+        formats.push("<conditionalFormatting\{slice.to_string()}")
+      }
+    }
+  }
+  formats
+}
+
+///|
 fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
   let xml_str = xml.to_string()
   let marker = "<dimension"
@@ -4231,6 +4278,7 @@ fn read_zip_bytes(
       for dv in parse_data_validations_x14(sheet_xml) {
         data_validations.push(dv)
       }
+      let conditional_formats = parse_conditional_formats(sheet_xml)
       let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
@@ -4557,7 +4605,7 @@ fn read_zip_bytes(
         form_controls,
         slicers: [],
         data_validations,
-        conditional_formats: [],
+        conditional_formats,
         ignored_errors,
         comments,
         row_dimensions,
