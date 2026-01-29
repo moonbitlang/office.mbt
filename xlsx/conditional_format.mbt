@@ -1284,6 +1284,40 @@ fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
 fn parse_conditional_format_xml(
   xml : StringView,
 ) -> (String, Array[ConditionalFormatOptions]) raise XlsxError {
+  fn extract_cf_rule_blocks(xml : StringView) -> Array[String] raise XlsxError {
+    let rules : Array[String] = []
+    let xml_str = xml.to_string()
+    let mut first = true
+    for chunk in xml_str.split("<cfRule") {
+      if first {
+        first = false
+        continue
+      }
+      let text = chunk.to_string()
+      let close_tag = "</cfRule>"
+      match text.find(close_tag) {
+        Some(pos) => {
+          let end = pos + close_tag.length()
+          let slice = text[:end] catch {
+              _ => raise XlsxError::InvalidXml(msg="cfRule tag invalid")
+            }
+          rules.push("<cfRule\{slice.to_string()}")
+        }
+        None => {
+          let end = match text.find("/>") {
+            Some(pos) => pos + 2
+            None => raise XlsxError::InvalidXml(msg="cfRule tag not closed")
+          }
+          let slice = text[:end] catch {
+              _ => raise XlsxError::InvalidXml(msg="cfRule tag invalid")
+            }
+          rules.push("<cfRule\{slice.to_string()}")
+        }
+      }
+    }
+    rules
+  }
+
   let tag = match tag_attributes_in(xml, "conditionalFormatting") {
     Some(value) => value
     None => raise XlsxError::InvalidXml(msg="conditionalFormatting missing")
@@ -1294,9 +1328,41 @@ fn parse_conditional_format_xml(
       raise XlsxError::InvalidXml(msg="conditionalFormatting sqref missing")
   }
   let master_cell = master_cell_from_sqref(sqref)
-  let rules = extract_tag_blocks(xml, "cfRule")
+  let rules = extract_cf_rule_blocks(xml)
   let opts : Array[ConditionalFormatOptions] = []
   for rule in rules {
+    let tag = match tag_attributes_in(rule, "cfRule") {
+      Some(value) => value
+      None => continue
+    }
+    let rule_type = match attr_value(tag, "type") {
+      Some(value) => value.to_string()
+      None => continue
+    }
+    let supported = match rule_type {
+      "cellIs"
+      | "timePeriod"
+      | "containsText"
+      | "notContainsText"
+      | "beginsWith"
+      | "endsWith"
+      | "aboveAverage"
+      | "duplicateValues"
+      | "uniqueValues"
+      | "top10"
+      | "containsBlanks"
+      | "notContainsBlanks"
+      | "containsErrors"
+      | "notContainsErrors"
+      | "colorScale"
+      | "dataBar"
+      | "expression"
+      | "iconSet" => true
+      _ => false
+    }
+    if !supported {
+      continue
+    }
     opts.push(parse_cf_rule(rule, master_cell))
   }
   (sqref, opts)
