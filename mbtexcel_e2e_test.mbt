@@ -134,7 +134,8 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
   workbook.set_cell("Sheet1", "A2", "Alpha")
   workbook.set_cell_int("Sheet1", "B2", 10)
   ignore(workbook.add_table("Sheet1", "A1:B2", "Table1", ["Name", "Value"]))
-  workbook.add_sparkline("Sheet1", "C2", "B2:B2")
+  let spark_opts = @xlsx.SparklineOptions::new(["C2"], ["B2:B2"])
+  workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_cell_hyperlink(
     "Sheet1",
     "A2",

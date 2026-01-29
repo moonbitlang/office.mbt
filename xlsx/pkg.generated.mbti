@@ -1705,7 +1705,8 @@ pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
 pub fn Workbook::add_slicer(Self, StringView, SlicerOptions) -> Unit raise XlsxError
 pub fn Workbook::add_slicer_raw(Self, StringView, Slicer) -> Unit raise XlsxError
 pub fn Workbook::add_slicer_with_options(Self, StringView, SlicerOptions) -> Unit raise XlsxError
-pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
+pub fn Workbook::add_sparkline(Self, StringView, SparklineOptions) -> Unit raise XlsxError
+pub fn Workbook::add_sparkline_basic(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_options(Self, StringView, SparklineOptions) -> Unit raise XlsxError
 pub fn Workbook::add_style(Self, Style) -> Int

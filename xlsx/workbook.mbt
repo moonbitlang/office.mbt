@@ -3158,15 +3158,13 @@ pub fn Workbook::delete_table(
 pub fn Workbook::add_sparkline(
   self : Workbook,
   sheet_name : StringView,
-  location : String,
-  range_ref : String,
-  sparkline_type? : SparklineType = SparklineType::Line,
+  options : SparklineOptions,
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  sheet.add_sparkline(location, range_ref, sparkline_type~)
+  sheet.add_sparkline_options(options)
 }
 
 ///|
@@ -3195,6 +3193,21 @@ pub fn Workbook::add_sparkline_options(
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_sparkline_options(options)
+}
+
+///|
+pub fn Workbook::add_sparkline_basic(
+  self : Workbook,
+  sheet_name : StringView,
+  location : String,
+  range_ref : String,
+  sparkline_type? : SparklineType = SparklineType::Line,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_sparkline(location, range_ref, sparkline_type~)
 }
 
 ///|
