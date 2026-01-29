@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `27407d5`
-- Progress: **98/169**
+- mbtexcel: `15a12b1`
+- Progress: **115/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -101,25 +101,25 @@
 - [x] `join_cell_name`
 - [x] `merge_cell`
 - [x] `move_sheet`
-- [ ] `new_conditional_style`
-- [ ] `new_data_validation`
-- [ ] `new_file`
-- [ ] `new_sheet`
-- [ ] `new_stack`
-- [ ] `new_stream_writer`
-- [ ] `new_style`
-- [ ] `open_file`
-- [ ] `open_reader`
-- [ ] `protect_sheet`
-- [ ] `protect_workbook`
-- [ ] `read_zip_reader`
-- [ ] `remove_col`
-- [ ] `remove_page_break`
-- [ ] `remove_row`
+- [x] `new_conditional_style`
+- [x] `new_data_validation`
+- [x] `new_file`
+- [x] `new_sheet`
+- [x] `new_stack`
+- [x] `new_stream_writer`
+- [x] `new_style`
+- [x] `open_file`
+- [x] `open_reader`
+- [x] `protect_sheet`
+- [x] `protect_workbook`
+- [x] `read_zip_reader`
+- [x] `remove_col`
+- [x] `remove_page_break`
+- [x] `remove_row`
 - [x] `rgb_to_hsl`
 - [x] `rows`
-- [ ] `save`
-- [ ] `save_as`
+- [x] `save`
+- [x] `save_as`
 - [ ] `search_sheet`
 - [ ] `set_active_sheet`
 - [ ] `set_app_props`
