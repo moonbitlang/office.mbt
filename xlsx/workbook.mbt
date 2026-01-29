@@ -2613,6 +2613,7 @@ pub fn Workbook::add_comment(
   sheet_name : StringView,
   comment : Comment,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2626,6 +2627,7 @@ pub fn Workbook::delete_comment(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2638,6 +2640,7 @@ pub fn Workbook::get_comments(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[Comment] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())

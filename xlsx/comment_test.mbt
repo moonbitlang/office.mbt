@@ -97,3 +97,22 @@ test "comment author truncation" {
   }
   inspect(author_len, content="255")
 }
+
+///|
+test "comment duplicate + invalid sheet name" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let comment : Comment = {
+    cell: "A1",
+    author: "Alice",
+    text: "Hello",
+    paragraph: [],
+    width: None,
+    height: None,
+  }
+  workbook.add_comment("Sheet1", comment)
+  let dup : Result[Unit, Error] = try? workbook.add_comment("Sheet1", comment)
+  inspect(dup is Err(XlsxError::CommentAlreadyExists(_)), content="true")
+  let bad : Result[Unit, Error] = try? workbook.add_comment("Sheet:1", comment)
+  inspect(bad is Err(XlsxError::InvalidSheetName(_)), content="true")
+}
