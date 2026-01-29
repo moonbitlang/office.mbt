@@ -3071,19 +3071,31 @@ pub fn Workbook::add_pivot_table_xml(
 ///|
 pub fn Workbook::add_pivot_table(
   self : Workbook,
-  sheet_name : StringView,
-  table_xml : String,
-  cache_definition_xml : String,
-  cache_records_xml? : String = "",
-  name? : String = "",
+  opts : PivotTableOptions,
 ) -> PivotTable raise XlsxError {
-  self.add_pivot_table_xml(
-    sheet_name,
-    table_xml,
-    cache_definition_xml,
-    cache_records_xml~,
-    name~,
-  )
+  self.add_pivot_table_with_options(opts)
+}
+
+///|
+fn Workbook::next_pivot_table_name(self : Workbook) -> String {
+  let mut max_id = 0
+  for sheet in self.sheets {
+    for pivot in sheet.pivot_tables {
+      let name = pivot.name
+      if !name.has_prefix("PivotTable") {
+        continue
+      }
+      let suffix = name["PivotTable".length():] catch { _ => "" }
+      if suffix == "" {
+        continue
+      }
+      let id = @strconv.parse_int(suffix, base=10) catch { _ => continue }
+      if id > max_id {
+        max_id = id
+      }
+    }
+  }
+  "PivotTable\{max_id + 1}"
 }
 
 ///|
@@ -3098,7 +3110,10 @@ pub fn Workbook::add_pivot_table_with_options(
   }
   let (data_sheet, data_ref) = split_sheet_range(opts.data_range)
   let (pivot_sheet, pivot_ref) = split_sheet_range(opts.pivot_table_range)
-  let (header_row, min_col, _max_row, max_col) = parse_range_ref(data_ref)
+  let (header_row, min_col, max_row, max_col) = parse_range_ref(data_ref)
+  if max_row <= header_row || max_col <= min_col {
+    raise XlsxError::InvalidPivotTable(msg="pivot data range invalid")
+  }
   let field_names : Array[String] = []
   let mut col = min_col
   while col <= max_col {
@@ -3148,7 +3163,10 @@ pub fn Workbook::add_pivot_table_with_options(
   }
   let mut pivot_name = opts.name
   if pivot_name == "" {
-    pivot_name = "PivotTable1"
+    pivot_name = self.next_pivot_table_name()
+  }
+  if pivot_name.length() > 255 {
+    raise XlsxError::InvalidPivotTable(msg="pivot table name too long")
   }
   let cache_id_guess = 1
   let cache_xml = write_pivot_cache_definition_xml(

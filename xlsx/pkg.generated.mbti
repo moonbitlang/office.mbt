@@ -1694,7 +1694,7 @@ pub async fn Workbook::add_picture(Self, StringView, String, String, offset_x? :
 pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
 pub fn Workbook::add_picture_from_bytes_with_options(Self, StringView, String, Bytes, String, GraphicOptions) -> Unit raise XlsxError
 pub async fn Workbook::add_picture_with_options(Self, StringView, String, String, GraphicOptions) -> Unit raise XlsxError
-pub fn Workbook::add_pivot_table(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
+pub fn Workbook::add_pivot_table(Self, PivotTableOptions) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_with_options(Self, PivotTableOptions) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError

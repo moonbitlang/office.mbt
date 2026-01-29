@@ -137,7 +137,7 @@ test "pivot table add/get/delete" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
-    workbook.add_pivot_table(
+    workbook.add_pivot_table_xml(
       "Sheet1",
       "<pivotTableDefinition name=\"PivotA\"/>",
       "<pivotCacheDefinition/>",
@@ -171,7 +171,7 @@ test "pivot table options builder write" {
   opts.rows.push(PivotTableField::new("Region"))
   opts.columns.push(PivotTableField::new("Type"))
   opts.data.push(PivotTableField::new("Sales"))
-  let pivot = workbook.add_pivot_table_with_options(opts)
+  let pivot = workbook.add_pivot_table(opts)
   inspect(pivot.name, content="PivotTable1")
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
@@ -217,7 +217,7 @@ test "pivot table options compactData classic layout invalid" {
   opts.compact_data = true
   opts.classic_layout = true
   let result : Result[Unit, Error] = try
-    ignore(workbook.add_pivot_table_with_options(opts))
+    ignore(workbook.add_pivot_table(opts))
   catch {
     err => Err(err)
   } noraise {
@@ -229,4 +229,58 @@ test "pivot table options compactData classic layout invalid" {
       #|Err(InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))
     ),
   )
+}
+
+///|
+test "pivot table options default name increments" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("Region"))
+  sheet.set_cell_value("B1", CellValue::String("Type"))
+  sheet.set_cell_value("C1", CellValue::String("Sales"))
+  sheet.set_cell_value("A2", CellValue::String("East"))
+  sheet.set_cell_value("B2", CellValue::String("A"))
+  sheet.set_cell_value("C2", CellValue::Numeric(10.0))
+  let opts1 = PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E2:H10")
+  opts1.rows.push(PivotTableField::new("Region"))
+  opts1.data.push(PivotTableField::new("Sales"))
+  let pivot1 = workbook.add_pivot_table(opts1)
+  inspect(pivot1.name, content="PivotTable1")
+  let opts2 = PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E20:H30")
+  opts2.rows.push(PivotTableField::new("Region"))
+  opts2.data.push(PivotTableField::new("Sales"))
+  let pivot2 = workbook.add_pivot_table(opts2)
+  inspect(pivot2.name, content="PivotTable2")
+}
+
+///|
+test "pivot table options name length and data range validation" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", CellValue::String("Region"))
+  sheet.set_cell_value("B1", CellValue::String("Sales"))
+  sheet.set_cell_value("A2", CellValue::String("East"))
+  sheet.set_cell_value("B2", CellValue::Numeric(10.0))
+  let long = "c".repeat(256)
+  let opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
+  opts.name = long
+  opts.rows.push(PivotTableField::new("Region"))
+  opts.data.push(PivotTableField::new("Sales"))
+  let name_result : Result[Unit, Error] = try
+    ignore(workbook.add_pivot_table(opts))
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(name_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
+  let bad_opts = PivotTableOptions::new("Sheet1!A1:A1", "Sheet1!E2:H10")
+  let range_result : Result[Unit, Error] = try
+    ignore(workbook.add_pivot_table(bad_opts))
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(range_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
 }

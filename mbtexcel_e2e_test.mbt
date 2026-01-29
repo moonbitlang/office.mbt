@@ -624,7 +624,7 @@ test "mbtexcel e2e pivot table roundtrip" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
-    workbook.add_pivot_table(
+    workbook.add_pivot_table_xml(
       "Sheet1",
       "<pivotTableDefinition name=\"PivotE2E\"/>",
       "<pivotCacheDefinition cacheId=\"1\"/>",
