@@ -201,6 +201,15 @@ pub fn WorkbookManifest::add_workbook_relationship(
 }
 
 ///|
+pub fn WorkbookManifest::add_workbook_relationship_with_id(
+  self : WorkbookManifest,
+  rel_type : String,
+  target : String,
+) -> String {
+  self.workbook_rels.add_auto(rel_type~, target~)
+}
+
+///|
 pub fn WorkbookManifest::add_root_relationship(
   self : WorkbookManifest,
   rel_type : String,

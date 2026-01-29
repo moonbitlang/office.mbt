@@ -372,7 +372,12 @@ test "form control add/get/delete and vml" {
 test "slicer add/get/delete and xml" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.add_slicer("Sheet1", Slicer::new("Slicer1"))
+  ignore(
+    workbook.add_table("Sheet1", "A1:C4", "Table1", ["Region", "Type", "Sales"]),
+  )
+  let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
+  opts.set_caption("Region")
+  workbook.add_slicer("Sheet1", opts)
   inspect(workbook.get_slicers("Sheet1").length(), content="1")
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -385,7 +390,9 @@ test "slicer add/get/delete and xml" {
       }
     None => fail("missing slicer1.xml")
   }
-  inspect(slicer_xml.contains("name=\"Slicer1\""), content="true")
+  inspect(slicer_xml.contains("<slicers"), content="true")
+  inspect(slicer_xml.contains("name=\"Region\""), content="true")
+  inspect(slicer_xml.contains("cache=\"Slicer_"), content="true")
   let cache_xml = match archive.get("xl/slicerCaches/slicerCache1.xml") {
     Some(value) =>
       @encoding/utf8.decode(value) catch {
@@ -393,7 +400,9 @@ test "slicer add/get/delete and xml" {
       }
     None => fail("missing slicerCache1.xml")
   }
-  inspect(cache_xml.contains("name=\"Slicer1\""), content="true")
+  inspect(cache_xml.contains("slicerCacheDefinition"), content="true")
+  inspect(cache_xml.contains("sourceName=\"Region\""), content="true")
+  inspect(cache_xml.contains("tableSlicerCache"), content="true")
   let rels_xml = match archive.get("xl/worksheets/_rels/sheet1.xml.rels") {
     Some(value) =>
       @encoding/utf8.decode(value) catch {
@@ -402,7 +411,31 @@ test "slicer add/get/delete and xml" {
     None => fail("missing sheet1.xml.rels")
   }
   inspect(rels_xml.contains("relationships/slicer"), content="true")
-  workbook.delete_slicer("Slicer1")
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("sheet1.xml utf8 decode failed")
+      }
+    None => fail("missing sheet1.xml")
+  }
+  inspect(sheet_xml.contains("slicerList"), content="true")
+  let workbook_xml = match archive.get("xl/workbook.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("workbook.xml utf8 decode failed")
+      }
+    None => fail("missing workbook.xml")
+  }
+  inspect(workbook_xml.contains("slicerCaches"), content="true")
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  inspect(drawing_xml.contains("office/drawing/2010/slicer"), content="true")
+  workbook.delete_slicer("Region")
   inspect(workbook.get_slicers("Sheet1").length(), content="0")
 }
 
@@ -416,7 +449,7 @@ test "slicer options builder write" {
   let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
   opts.set_caption("Region")
   opts.set_display_header(Some(false))
-  workbook.add_slicer_with_options("Sheet1", opts)
+  workbook.add_slicer("Sheet1", opts)
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
   let slicer_xml = match archive.get("xl/slicers/slicer1.xml") {

@@ -1409,10 +1409,13 @@ pub impl Show for SheetViewOptions
 
 pub struct Slicer {
   name : String
+  cache : String
+  source_name : String
   cell : String
   table_sheet : String
   table_name : String
   caption : String
+  macro_name : String
   width : Int
   height : Int
   display_header : Bool?
@@ -1699,7 +1702,8 @@ pub fn Workbook::add_pivot_table_with_options(Self, PivotTableOptions) -> PivotT
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
-pub fn Workbook::add_slicer(Self, StringView, Slicer) -> Unit raise XlsxError
+pub fn Workbook::add_slicer(Self, StringView, SlicerOptions) -> Unit raise XlsxError
+pub fn Workbook::add_slicer_raw(Self, StringView, Slicer) -> Unit raise XlsxError
 pub fn Workbook::add_slicer_with_options(Self, StringView, SlicerOptions) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline(Self, StringView, String, String, sparkline_type? : SparklineType) -> Unit raise XlsxError
 pub fn Workbook::add_sparkline_group(Self, StringView, ArrayView[String], ArrayView[String], sparkline_type? : SparklineType) -> Unit raise XlsxError

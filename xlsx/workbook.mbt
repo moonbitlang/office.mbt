@@ -2509,30 +2509,110 @@ pub fn Workbook::delete_form_control(
 pub fn Workbook::add_slicer(
   self : Workbook,
   sheet_name : StringView,
-  slicer : Slicer,
-) -> Unit raise XlsxError {
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
-  }
-  sheet.add_slicer(slicer)
-}
-
-///|
-pub fn Workbook::add_slicer_with_options(
-  self : Workbook,
-  sheet_name : StringView,
   opts : SlicerOptions,
 ) -> Unit raise XlsxError {
+  fn slicer_cache_stub(value : StringView) -> String {
+    let name = value.to_string()
+    let sb = StringBuilder::new()
+    for i, ch in name {
+      let code = ch.to_int()
+      let is_letter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+      let is_digit = code >= 48 && code <= 57
+      if is_letter {
+        sb.write_view(ch.to_string())
+      } else if i > 0 && (is_digit || ch == '.') {
+        sb.write_view(ch.to_string())
+      } else {
+        sb.write_view("_")
+      }
+    }
+    sb.to_string()
+  }
+
+  fn gen_slicer_cache_name(
+    workbook : Workbook,
+    field_name : StringView,
+  ) -> String {
+    let base = "Slicer_" + slicer_cache_stub(field_name)
+    let existing : Array[String] = []
+    for dn in workbook.defined_names {
+      if normalize_defined_name_scope(dn.scope) == "Workbook" {
+        existing.push(dn.name.to_lower())
+      }
+    }
+    let mut cnt = 0
+    while cnt < 1000000 {
+      let candidate = if cnt == 0 { base } else { "\{base}\{cnt}" }
+      if !existing.contains(candidate.to_lower()) {
+        return candidate
+      }
+      cnt = cnt + 1
+    }
+    base
+  }
+
+  fn gen_slicer_name(workbook : Workbook, base_name : StringView) -> String {
+    let base = base_name.to_string()
+    let existing : Array[String] = []
+    for sheet in workbook.sheets {
+      for slicer in sheet.slicers() {
+        existing.push(slicer.name.to_lower())
+      }
+    }
+    let mut cnt = 0
+    while cnt < 1000000 {
+      let candidate = if cnt == 0 { base } else { "\{base} \{cnt}" }
+      if !existing.contains(candidate.to_lower()) {
+        return candidate
+      }
+      cnt = cnt + 1
+    }
+    base
+  }
+
+  fn pivot_cache_field_names(
+    cache_definition_xml : StringView,
+  ) -> Array[String] {
+    let xml = cache_definition_xml.to_string()
+    let out : Array[String] = []
+    let needle = "<cacheField name=\""
+    let mut pos = 0
+    while pos < xml.length() {
+      let tail = xml[pos:] catch { _ => break }
+      let rel = match tail.find(needle) {
+        Some(v) => v
+        None => break
+      }
+      let after = pos + rel + needle.length()
+      let rest = xml[after:] catch { _ => break }
+      let end = match rest.find("\"") {
+        Some(v) => v
+        None => break
+      }
+      let name = rest[:end] catch { _ => break }
+      out.push(name.to_string())
+      pos = after + end + 1
+    }
+    out
+  }
+
+  ignore(check_sheet_name(sheet_name))
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
+  ignore(check_sheet_name(opts.table_sheet))
+  match self.sheet(opts.table_sheet) {
+    Some(_) => ()
+    None => raise XlsxError::SheetNotFound(name=opts.table_sheet)
+  }
   let mut has_source = false
+  let mut is_table_slicer = false
   let tables = self.get_tables(opts.table_sheet)
   for table in tables {
     if table.name == opts.table_name {
       has_source = true
+      is_table_slicer = true
       if !table.columns.contains(opts.name) {
         raise XlsxError::InvalidSheetOperation(
           msg="slicer field not found in table",
@@ -2546,26 +2626,95 @@ pub fn Workbook::add_slicer_with_options(
     for pivot in pivots {
       if pivot.name == opts.table_name {
         has_source = true
+        let fields = pivot_cache_field_names(pivot.cache_definition_xml)
+        let mut found = false
+        for field in fields {
+          if field.to_lower() == opts.name.to_lower() {
+            found = true
+            break
+          }
+        }
+        if !found {
+          raise XlsxError::InvalidSheetOperation(
+            msg="slicer field not found in pivot cache",
+          )
+        }
         break
       }
     }
   }
   if !has_source {
-    raise XlsxError::InvalidSheetOperation(
-      msg="slicer source table/pivot not found",
-    )
+    raise XlsxError::TableNotFound(name=opts.table_name)
+  }
+  let mut cache_name = ""
+  for ws in self.sheets {
+    for existing in ws.slicers() {
+      if existing.table_sheet == opts.table_sheet &&
+        existing.table_name == opts.table_name &&
+        (if is_table_slicer {
+          existing.source_name.to_lower() == opts.name.to_lower()
+        } else {
+          true
+        }) {
+        cache_name = existing.cache
+        break
+      }
+    }
+    if cache_name != "" {
+      break
+    }
+  }
+  if cache_name == "" {
+    cache_name = gen_slicer_cache_name(self, opts.name)
+    self.set_defined_name(DefinedName::new(cache_name, "#N/A"))
+  }
+  let slicer_name = gen_slicer_name(self, opts.name)
+  let format = opts.format
+  if format.positioning is None {
+    format.positioning = Some(PicturePositioning::TwoCell)
+  }
+  if format.print_object is None {
+    format.print_object = Some(true)
+  }
+  if format.locked is None {
+    format.locked = Some(true)
   }
   let slicer = {
-    name: opts.name,
+    name: slicer_name,
+    cache: cache_name,
+    source_name: opts.name,
     cell: opts.cell,
     table_sheet: opts.table_sheet,
     table_name: opts.table_name,
     caption: opts.caption,
+    macro_name: opts.macro_name,
     width: opts.width,
     height: opts.height,
     display_header: opts.display_header,
     item_desc: opts.item_desc,
-    format: opts.format,
+    format,
+  }
+  sheet.add_slicer(slicer)
+}
+
+///|
+pub fn Workbook::add_slicer_with_options(
+  self : Workbook,
+  sheet_name : StringView,
+  opts : SlicerOptions,
+) -> Unit raise XlsxError {
+  self.add_slicer(sheet_name, opts)
+}
+
+///|
+pub fn Workbook::add_slicer_raw(
+  self : Workbook,
+  sheet_name : StringView,
+  slicer : Slicer,
+) -> Unit raise XlsxError {
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_slicer(slicer)
 }

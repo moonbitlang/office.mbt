@@ -668,10 +668,14 @@ test "mbtexcel e2e vml drawing roundtrip" {
 test "mbtexcel e2e form control and slicer" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_table("Sheet1", "A1:B2", "Table1", ["SlicerE2E", "B"]))
   let control = @xlsx.FormControl::new("B2", "Button", text="Click")
   workbook.add_form_control("Sheet1", control)
-  let slicer = @xlsx.Slicer::new("SlicerE2E")
-  workbook.add_slicer("Sheet1", slicer)
+  let slicer_opts = @xlsx.SlicerOptions::new(
+    "SlicerE2E", "E1", "Sheet1", "Table1",
+  )
+  slicer_opts.set_caption("SlicerE2E")
+  workbook.add_slicer("Sheet1", slicer_opts)
   inspect(workbook.get_form_controls("Sheet1").length(), content="1")
   inspect(workbook.get_slicers("Sheet1").length(), content="1")
   let bytes = write(workbook)
@@ -692,11 +696,15 @@ test "mbtexcel e2e form control and slicer" {
 test "mbtexcel e2e delete table and slicer/form control" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
-  let table = workbook.add_table("Sheet1", "A1:B2", "TableE2E", ["A", "B"])
+  let table = workbook.add_table("Sheet1", "A1:B2", "TableE2E", [
+    "SlicerDel", "B",
+  ])
   let control = @xlsx.FormControl::new("C3", "Button", text="Go")
   workbook.add_form_control("Sheet1", control)
-  let slicer = @xlsx.Slicer::new("SlicerDel")
-  workbook.add_slicer("Sheet1", slicer)
+  let slicer_opts = @xlsx.SlicerOptions::new(
+    "SlicerDel", "E1", "Sheet1", "TableE2E",
+  )
+  workbook.add_slicer("Sheet1", slicer_opts)
   inspect(workbook.get_tables("Sheet1").length(), content="1")
   inspect(workbook.get_form_controls("Sheet1").length(), content="1")
   inspect(workbook.get_slicers("Sheet1").length(), content="1")

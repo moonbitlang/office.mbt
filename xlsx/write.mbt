@@ -39,7 +39,53 @@ fn collect_shared_strings(
 fn write_workbook_xml(
   workbook : Workbook,
   chartsheet_rel_start : Int,
+  slicer_cache_rel_ids_x14 : ArrayView[String],
+  slicer_cache_rel_ids_x15 : ArrayView[String],
 ) -> String {
+  fn write_workbook_ext_lst_xml(
+    slicer_cache_rel_ids_x14 : ArrayView[String],
+    slicer_cache_rel_ids_x15 : ArrayView[String],
+  ) -> String? {
+    if slicer_cache_rel_ids_x14.length() == 0 &&
+      slicer_cache_rel_ids_x15.length() == 0 {
+      return None
+    }
+    let sb = StringBuilder::new()
+    sb.write_view("  <extLst>\n")
+    if slicer_cache_rel_ids_x14.length() > 0 {
+      sb.write_view(
+        "    <ext uri=\"{BBE1A952-AA13-448e-AADC-164F8A28A991}\">\n",
+      )
+      sb.write_view(
+        "      <x14:slicerCaches xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\">\n",
+      )
+      for id in slicer_cache_rel_ids_x14 {
+        sb.write_view("        <x14:slicerCache r:id=\"")
+        sb.write_view(escape_xml_attr(id))
+        sb.write_view("\"/>\n")
+      }
+      sb.write_view("      </x14:slicerCaches>\n")
+      sb.write_view("    </ext>\n")
+    }
+    if slicer_cache_rel_ids_x15.length() > 0 {
+      sb.write_view(
+        "    <ext uri=\"{46BE6895-7355-4a93-B00E-2C351335B9C9}\">\n",
+      )
+      sb.write_view(
+        "      <x15:slicerCaches xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\">\n",
+      )
+      for id in slicer_cache_rel_ids_x15 {
+        sb.write_view("        <x14:slicerCache r:id=\"")
+        sb.write_view(escape_xml_attr(id))
+        sb.write_view("\"/>\n")
+      }
+      sb.write_view("      </x15:slicerCaches>\n")
+      sb.write_view("    </ext>\n")
+    }
+    sb.write_view("  </extLst>\n")
+    Some(sb.to_string())
+  }
+
   let sheets = workbook.sheet_order
   let worksheet_count = workbook.sheets().length()
   let sb = StringBuilder::new()
@@ -129,6 +175,13 @@ fn write_workbook_xml(
   }
   match write_calc_pr_xml(workbook.calc_props()) {
     Some(value) => sb.write_view(value)
+    None => ()
+  }
+  match
+    write_workbook_ext_lst_xml(
+      slicer_cache_rel_ids_x14, slicer_cache_rel_ids_x15,
+    ) {
+    Some(xml) => sb.write_view(xml)
     None => ()
   }
   sb.write_view("</workbook>")
@@ -491,6 +544,9 @@ let rel_vml = "http://schemas.openxmlformats.org/officeDocument/2006/relationshi
 let rel_slicer = "http://schemas.microsoft.com/office/2007/relationships/slicer"
 
 ///|
+let rel_slicer_cache = "http://schemas.microsoft.com/office/2007/relationships/slicerCache"
+
+///|
 let rel_vba_project = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
 
 ///|
@@ -746,6 +802,26 @@ priv struct DrawingHyperlink {
 }
 
 ///|
+priv struct DrawingSlicer {
+  slicer : Slicer
+  is_table_slicer : Bool
+}
+
+///|
+priv struct ResolvedSlicerCache {
+  cache_id : Int
+  cache_name : String
+  source_name : String
+  item_desc : Bool
+  is_table_slicer : Bool
+  table_id : Int?
+  table_column : Int?
+  pivot_cache_id : Int?
+  pivot_sheet_id : Int?
+  pivot_table_name : String?
+}
+
+///|
 let emu_per_pixel = 9525
 
 ///|
@@ -791,6 +867,7 @@ fn write_drawing_xml(
   images : Array[DrawingImage],
   charts : Array[DrawingChart],
   shapes : Array[Shape],
+  slicers : Array[DrawingSlicer],
 ) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -1235,6 +1312,223 @@ fn write_drawing_xml(
       "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(shape.locked)}\" fPrintsWithSheet=\"\{bool_attr(shape.print_object)}\"/>\n",
     )
     match shape.positioning {
+      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+    }
+  }
+  for item in slicers {
+    let slicer = item.slicer
+    let (row, col) = cell_ref_to_rc(slicer.cell)
+    let col_idx = col - 1
+    let row_idx = row - 1
+    let frame_id = obj_id
+    obj_id = obj_id + 1
+    let offset_x = match slicer.format.offset_x {
+      Some(v) => v
+      None => 0
+    }
+    let offset_y = match slicer.format.offset_y {
+      Some(v) => v
+      None => 0
+    }
+    let col_off = offset_x * emu_per_pixel
+    let row_off = offset_y * emu_per_pixel
+    let scale_x = match slicer.format.scale_x {
+      Some(v) => if v <= 0.0 { 1.0 } else { v }
+      None => 1.0
+    }
+    let scale_y = match slicer.format.scale_y {
+      Some(v) => if v <= 0.0 { 1.0 } else { v }
+      None => 1.0
+    }
+    let cx = (slicer.width.to_double() * scale_x * emu_per_pixel.to_double())
+      .round()
+      .to_int()
+    let cy = (slicer.height.to_double() * scale_y * emu_per_pixel.to_double())
+      .round()
+      .to_int()
+    let positioning = match slicer.format.positioning {
+      Some(v) => v
+      None => PicturePositioning::TwoCell
+    }
+    match positioning {
+      PicturePositioning::TwoCell => {
+        sb.write_view("  <xdr:twoCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, col_off + cx, row_idx, row_off + cy)
+        }
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::Absolute => {
+        sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, col_off + cx, row_idx, row_off + cy)
+        }
+        sb.write_view("    <xdr:to>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:to>\n")
+      }
+      PicturePositioning::OneCell => {
+        sb.write_view("  <xdr:oneCellAnchor>\n")
+        sb.write_view("    <xdr:from>\n")
+        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
+        sb.write_view("    </xdr:from>\n")
+        sb.write_view("    <xdr:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
+      }
+    }
+    let alt_text = match slicer.format.alt_text {
+      Some(v) => v
+      None => ""
+    }
+    sb.write_view(
+      "    <mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">\n",
+    )
+    if item.is_table_slicer {
+      sb.write_view(
+        "      <mc:Choice Requires=\"sle15\" xmlns:sle15=\"http://schemas.microsoft.com/office/drawing/2012/slicer\">\n",
+      )
+    } else {
+      sb.write_view(
+        "      <mc:Choice Requires=\"a14\" xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\">\n",
+      )
+    }
+    sb.write_view("        <xdr:graphicFrame")
+    if slicer.macro_name != "" {
+      sb.write_view(" macro=\"")
+      sb.write_view(escape_xml_attr(slicer.macro_name))
+      sb.write_view("\"")
+    }
+    sb.write_view(">\n")
+    sb.write_view("          <xdr:nvGraphicFramePr>\n")
+    sb.write_view("            <xdr:cNvPr id=\"\{frame_id}\" name=\"")
+    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_view("\"")
+    if alt_text != "" {
+      sb.write_view(" descr=\"")
+      sb.write_view(escape_xml_attr(alt_text))
+      sb.write_view("\"")
+    }
+    sb.write_view("/>\n")
+    sb.write_view("            <xdr:cNvGraphicFramePr/>\n")
+    sb.write_view("          </xdr:nvGraphicFramePr>\n")
+    sb.write_view("          <xdr:xfrm>\n")
+    sb.write_view("            <a:off x=\"0\" y=\"0\"/>\n")
+    sb.write_view("            <a:ext cx=\"0\" cy=\"0\"/>\n")
+    sb.write_view("          </xdr:xfrm>\n")
+    sb.write_view("          <a:graphic>\n")
+    sb.write_view(
+      "            <a:graphicData uri=\"http://schemas.microsoft.com/office/drawing/2010/slicer\">\n",
+    )
+    sb.write_view(
+      "              <sle:slicer xmlns:sle=\"http://schemas.microsoft.com/office/drawing/2010/slicer\" name=\"",
+    )
+    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_view("\"/>\n")
+    sb.write_view("            </a:graphicData>\n")
+    sb.write_view("          </a:graphic>\n")
+    sb.write_view("        </xdr:graphicFrame>\n")
+    sb.write_view("      </mc:Choice>\n")
+    sb.write_view("      <mc:Fallback>\n")
+    sb.write_view("        <xdr:sp")
+    if slicer.macro_name != "" {
+      sb.write_view(" macro=\"")
+      sb.write_view(escape_xml_attr(slicer.macro_name))
+      sb.write_view("\"")
+    }
+    sb.write_view(">\n")
+    sb.write_view("          <xdr:nvSpPr>\n")
+    sb.write_view("            <xdr:cNvPr id=\"\{frame_id}\"")
+    if alt_text != "" {
+      sb.write_view(" descr=\"")
+      sb.write_view(escape_xml_attr(alt_text))
+      sb.write_view("\"")
+    }
+    sb.write_view("/>\n")
+    sb.write_view("            <xdr:cNvSpPr txBox=\"1\"/>\n")
+    sb.write_view("          </xdr:nvSpPr>\n")
+    sb.write_view("          <xdr:spPr>\n")
+    sb.write_view("            <a:xfrm>\n")
+    sb.write_view("              <a:off x=\"2914650\" y=\"152400\"/>\n")
+    sb.write_view("              <a:ext cx=\"1828800\" cy=\"2238375\"/>\n")
+    sb.write_view("            </a:xfrm>\n")
+    sb.write_view(
+      "            <a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill>\n",
+    )
+    sb.write_view(
+      "            <a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>\n",
+    )
+    sb.write_view(
+      "            <a:ln w=\"1\"><a:solidFill><a:prstClr val=\"black\"/></a:solidFill></a:ln>\n",
+    )
+    sb.write_view("          </xdr:spPr>\n")
+    sb.write_view("          <xdr:txBody>\n")
+    sb.write_view(
+      "            <a:bodyPr vertOverflow=\"clip\" horzOverflow=\"clip\"/>\n",
+    )
+    sb.write_view("            <a:p><a:r><a:t>")
+    sb.write_view(
+      escape_xml_text(
+        "This shape represents a table slicer. Table slicers are not supported in this version of Excel.",
+      ),
+    )
+    sb.write_view("</a:t></a:r></a:p>\n")
+    sb.write_view("            <a:p><a:r><a:t>")
+    sb.write_view(
+      escape_xml_text(
+        "If the shape was modified in an earlier version of Excel, or if the workbook was saved in Excel 2007 or earlier, the slicer can't be used.",
+      ),
+    )
+    sb.write_view("</a:t></a:r></a:p>\n")
+    sb.write_view("          </xdr:txBody>\n")
+    sb.write_view("        </xdr:sp>\n")
+    sb.write_view("      </mc:Fallback>\n")
+    sb.write_view("    </mc:AlternateContent>\n")
+    let locked = match slicer.format.locked {
+      Some(v) => v
+      None => true
+    }
+    let print_object = match slicer.format.print_object {
+      Some(v) => v
+      None => true
+    }
+    sb.write_view(
+      "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(locked)}\" fPrintsWithSheet=\"\{bool_attr(print_object)}\"/>\n",
+    )
+    match positioning {
       PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
       PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
       PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
@@ -2014,14 +2308,67 @@ fn write_worksheet_xml(
   picture_rel_id : Int?,
   table_rel_ids : ArrayView[Int],
   pivot_rel_ids : ArrayView[Int],
+  slicer_rel_ids_x14 : ArrayView[Int],
+  slicer_rel_ids_x15 : ArrayView[Int],
   legacy_drawing_rel_id : Int?,
   legacy_drawing_hf_rel_id : Int?,
 ) -> String raise XlsxError {
+  fn write_worksheet_ext_lst_xml(
+    slicer_rel_ids_x14 : ArrayView[Int],
+    slicer_rel_ids_x15 : ArrayView[Int],
+    sparkline_groups : ArrayView[SparklineGroup],
+  ) -> String? {
+    let has_slicers = slicer_rel_ids_x14.length() > 0 ||
+      slicer_rel_ids_x15.length() > 0
+    let has_sparklines = sparkline_groups.length() > 0
+    if !has_slicers && !has_sparklines {
+      return None
+    }
+    if has_sparklines && !has_slicers {
+      return Some(write_sparkline_ext_xml(sparkline_groups))
+    }
+    let sb = StringBuilder::new()
+    sb.write_view("  <extLst>\n")
+    if has_sparklines {
+      sb.write_view(write_sparkline_ext_block_xml(sparkline_groups))
+    }
+    if slicer_rel_ids_x14.length() > 0 {
+      sb.write_view(
+        "    <ext uri=\"{A8765BA9-456A-4dab-B4F3-ACF838C121DE}\">\n",
+      )
+      sb.write_view(
+        "      <x14:slicerList xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\">\n",
+      )
+      for rel_id in slicer_rel_ids_x14 {
+        sb.write_view("        <x14:slicer r:id=\"rId\{rel_id}\"/>\n")
+      }
+      sb.write_view("      </x14:slicerList>\n")
+      sb.write_view("    </ext>\n")
+    }
+    if slicer_rel_ids_x15.length() > 0 {
+      sb.write_view(
+        "    <ext uri=\"{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}\">\n",
+      )
+      sb.write_view(
+        "      <x14:slicerList xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\">\n",
+      )
+      for rel_id in slicer_rel_ids_x15 {
+        sb.write_view("        <x14:slicer r:id=\"rId\{rel_id}\"/>\n")
+      }
+      sb.write_view("      </x14:slicerList>\n")
+      sb.write_view("    </ext>\n")
+    }
+    sb.write_view("  </extLst>\n")
+    Some(sb.to_string())
+  }
+
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   let needs_rels = drawing_rel_id is Some(_) ||
     table_rel_ids.length() > 0 ||
     pivot_rel_ids.length() > 0 ||
+    slicer_rel_ids_x14.length() > 0 ||
+    slicer_rel_ids_x15.length() > 0 ||
     hyperlink_rel_ids.length() > 0 ||
     legacy_drawing_rel_id is Some(_) ||
     legacy_drawing_hf_rel_id is Some(_) ||
@@ -2353,8 +2700,14 @@ fn write_worksheet_xml(
     Some(rel_id) => sb.write_view("  <picture r:id=\"rId\{rel_id}\"/>\n")
     None => ()
   }
-  if sheet.sparkline_groups().length() > 0 {
-    sb.write_view(write_sparkline_ext_xml(sheet.sparkline_groups()))
+  match
+    write_worksheet_ext_lst_xml(
+      slicer_rel_ids_x14,
+      slicer_rel_ids_x15,
+      sheet.sparkline_groups(),
+    ) {
+    Some(xml) => sb.write_view(xml)
+    None => ()
   }
   sb.write_view("</worksheet>")
   sb.to_string()
@@ -3106,10 +3459,6 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   }
   let archive = @zip.Archive::new()
   archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
-  archive.add(
-    "xl/workbook.xml",
-    @encoding/utf8.encode(write_workbook_xml(workbook, chartsheet_rel_start)),
-  )
   let tables_by_sheet : Array[Array[(Int, Table)]] = []
   let mut next_table_id = 1
   for sheet in workbook.sheets() {
@@ -3167,21 +3516,132 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     }
     pivots_by_sheet.push(sheet_pivots)
   }
+  let table_lookup : Map[String, (Int, Table)] = {}
+  for i, sheet in workbook.sheets() {
+    let sheet_key = normalize_sheet_name(sheet.name())
+    for entry in tables_by_sheet[i] {
+      let (table_id, table) = entry
+      table_lookup["\{sheet_key}|\{table.name.to_lower()}"] = (table_id, table)
+    }
+  }
+  let pivot_lookup : Map[String, (Int, Int, PivotTable)] = {}
+  for i, sheet in workbook.sheets() {
+    let sheet_key = normalize_sheet_name(sheet.name())
+    let sheet_id = i + 1
+    for entry in pivots_by_sheet[i] {
+      let (_pivot_id, cache_id, pivot) = entry
+      if pivot.name != "" {
+        pivot_lookup["\{sheet_key}|\{pivot.name.to_lower()}"] = (
+          cache_id, sheet_id, pivot,
+        )
+      }
+    }
+  }
+  let slicer_cache_id_by_name : Map[String, Int] = {}
+  let slicer_cache_rel_id_by_name : Map[String, String] = {}
+  let resolved_slicer_caches : Array[ResolvedSlicerCache] = []
+  let workbook_slicer_cache_rel_ids_x14 : Array[String] = []
+  let workbook_slicer_cache_rel_ids_x15 : Array[String] = []
+  let mut next_slicer_cache_id = 1
+  for sheet in workbook.sheets() {
+    for slicer in sheet.slicers() {
+      let cache_name = slicer.cache
+      if slicer_cache_id_by_name.contains(cache_name) {
+        continue
+      }
+      let cache_id = next_slicer_cache_id
+      next_slicer_cache_id = next_slicer_cache_id + 1
+      slicer_cache_id_by_name[cache_name] = cache_id
+      let source_sheet_key = normalize_sheet_name(slicer.table_sheet)
+      let source_key = "\{source_sheet_key}|\{slicer.table_name.to_lower()}"
+      match table_lookup.get(source_key) {
+        Some((table_id, table)) => {
+          let mut column : Int? = None
+          for i, col_name in table.columns {
+            if col_name.to_lower() == slicer.source_name.to_lower() {
+              column = Some(i + 1)
+              break
+            }
+          }
+          let col = match column {
+            Some(v) => v
+            None =>
+              raise XlsxError::InvalidSheetOperation(
+                msg="slicer table field missing",
+              )
+          }
+          let rel_id = manifest.add_workbook_relationship_with_id(
+            rel_slicer_cache,
+            "slicerCaches/slicerCache\{cache_id}.xml",
+          )
+          slicer_cache_rel_id_by_name[cache_name] = rel_id
+          workbook_slicer_cache_rel_ids_x15.push(rel_id)
+          resolved_slicer_caches.push({
+            cache_id,
+            cache_name,
+            source_name: slicer.source_name,
+            item_desc: slicer.item_desc,
+            is_table_slicer: true,
+            table_id: Some(table_id),
+            table_column: Some(col),
+            pivot_cache_id: None,
+            pivot_sheet_id: None,
+            pivot_table_name: None,
+          })
+        }
+        None =>
+          match pivot_lookup.get(source_key) {
+            Some((pivot_cache_id, pivot_sheet_id, pivot)) => {
+              let rel_id = manifest.add_workbook_relationship_with_id(
+                rel_slicer_cache,
+                "slicerCaches/slicerCache\{cache_id}.xml",
+              )
+              slicer_cache_rel_id_by_name[cache_name] = rel_id
+              workbook_slicer_cache_rel_ids_x14.push(rel_id)
+              resolved_slicer_caches.push({
+                cache_id,
+                cache_name,
+                source_name: slicer.source_name,
+                item_desc: slicer.item_desc,
+                is_table_slicer: false,
+                table_id: None,
+                table_column: None,
+                pivot_cache_id: Some(pivot_cache_id),
+                pivot_sheet_id: Some(pivot_sheet_id),
+                pivot_table_name: Some(pivot.name),
+              })
+            }
+            None =>
+              raise XlsxError::InvalidSheetOperation(
+                msg="slicer source missing",
+              )
+          }
+      }
+    }
+  }
+  archive.add(
+    "xl/workbook.xml",
+    @encoding/utf8.encode(
+      write_workbook_xml(
+        workbook, chartsheet_rel_start, workbook_slicer_cache_rel_ids_x14, workbook_slicer_cache_rel_ids_x15,
+      ),
+    ),
+  )
   let added_extensions : Map[String, Bool] = {}
   let mut image_index = 1
   let mut chart_index = 1
   let mut vml_index = 1
   let mut comment_index = 1
   let mut drawing_index = sheet_count + 1
-  let mut slicer_index = 1
-  let mut slicer_cache_index = 1
+  let mut slicer_part_index = 1
   for i, sheet in workbook.sheets() {
     let sheet_id = i + 1
     let sheet_tables = tables_by_sheet[i]
     let sheet_pivots = pivots_by_sheet[i]
     let has_drawing = sheet.images().length() > 0 ||
       sheet.charts().length() > 0 ||
-      sheet.shapes().length() > 0
+      sheet.shapes().length() > 0 ||
+      sheet.slicers().length() > 0
     let mut rel_id = 1
     let drawing_rel_id = if has_drawing {
       let id = rel_id
@@ -3206,18 +3666,36 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       pivot_targets.push("../pivotTables/pivotTable\{pivot_id}.xml")
       rel_id = rel_id + 1
     }
-    let sheet_slicers : Array[(Int, Int, Slicer)] = []
-    for slicer in sheet.slicers() {
-      let slicer_id = slicer_index
-      slicer_index = slicer_index + 1
-      let cache_id = slicer_cache_index
-      slicer_cache_index = slicer_cache_index + 1
-      sheet_slicers.push((slicer_id, cache_id, slicer))
-    }
     let slicer_targets : Array[String] = []
-    for entry in sheet_slicers {
-      let (slicer_id, _cache_id, _slicer) = entry
-      slicer_targets.push("../slicers/slicer\{slicer_id}.xml")
+    let slicer_rel_ids_x14 : Array[Int] = []
+    let slicer_rel_ids_x15 : Array[Int] = []
+    let pivot_slicers : Array[Slicer] = []
+    let table_slicers : Array[Slicer] = []
+    for slicer in sheet.slicers() {
+      let source_sheet_key = normalize_sheet_name(slicer.table_sheet)
+      let source_key = "\{source_sheet_key}|\{slicer.table_name.to_lower()}"
+      if table_lookup.contains(source_key) {
+        table_slicers.push(slicer)
+      } else {
+        pivot_slicers.push(slicer)
+      }
+    }
+    let mut pivot_slicer_part_id : Int? = None
+    let mut table_slicer_part_id : Int? = None
+    if pivot_slicers.length() > 0 {
+      let part_id = slicer_part_index
+      slicer_part_index = slicer_part_index + 1
+      pivot_slicer_part_id = Some(part_id)
+      slicer_rel_ids_x14.push(rel_id)
+      slicer_targets.push("../slicers/slicer\{part_id}.xml")
+      rel_id = rel_id + 1
+    }
+    if table_slicers.length() > 0 {
+      let part_id = slicer_part_index
+      slicer_part_index = slicer_part_index + 1
+      table_slicer_part_id = Some(part_id)
+      slicer_rel_ids_x15.push(rel_id)
+      slicer_targets.push("../slicers/slicer\{part_id}.xml")
       rel_id = rel_id + 1
     }
     let hyperlink_targets : Array[String] = []
@@ -3384,6 +3862,8 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       picture_rel_id,
       table_rel_ids,
       pivot_rel_ids,
+      slicer_rel_ids_x14,
+      slicer_rel_ids_x15,
       legacy_drawing_rel_id,
       legacy_drawing_hf_rel_id,
     )
@@ -3467,26 +3947,33 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         None => ()
       }
     }
-    for entry in sheet_slicers {
-      let (slicer_id, cache_id, slicer) = entry
-      let slicer_xml = write_slicer_xml(slicer, cache_id)
-      archive.add(
-        "xl/slicers/slicer\{slicer_id}.xml",
-        @encoding/utf8.encode(slicer_xml),
-      )
-      manifest.add_content_override(
-        "/xl/slicers/slicer\{slicer_id}.xml",
-        ct_slicer,
-      )
-      let cache_xml = write_slicer_cache_xml(slicer, cache_id)
-      archive.add(
-        "xl/slicerCaches/slicerCache\{cache_id}.xml",
-        @encoding/utf8.encode(cache_xml),
-      )
-      manifest.add_content_override(
-        "/xl/slicerCaches/slicerCache\{cache_id}.xml",
-        ct_slicer_cache,
-      )
+    match pivot_slicer_part_id {
+      Some(part_id) => {
+        let slicers_xml = write_slicers_part_xml(pivot_slicers)
+        archive.add(
+          "xl/slicers/slicer\{part_id}.xml",
+          @encoding/utf8.encode(slicers_xml),
+        )
+        manifest.add_content_override(
+          "/xl/slicers/slicer\{part_id}.xml",
+          ct_slicer,
+        )
+      }
+      None => ()
+    }
+    match table_slicer_part_id {
+      Some(part_id) => {
+        let slicers_xml = write_slicers_part_xml(table_slicers)
+        archive.add(
+          "xl/slicers/slicer\{part_id}.xml",
+          @encoding/utf8.encode(slicers_xml),
+        )
+        manifest.add_content_override(
+          "/xl/slicers/slicer\{part_id}.xml",
+          ct_slicer,
+        )
+      }
+      None => ()
     }
     for part in comment_parts {
       let (comment_id, xml) = part
@@ -3527,6 +4014,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     let drawing_hyperlinks : Array[DrawingHyperlink] = []
     let drawing_charts : Array[DrawingChart] = []
     let drawing_shapes : Array[Shape] = []
+    let drawing_slicers : Array[DrawingSlicer] = []
     let mut rel_id = 1
     for image in sheet.images() {
       let file_name = "image\{image_index}.\{image.extension}"
@@ -3578,11 +4066,18 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     for shape in sheet.shapes() {
       drawing_shapes.push(shape)
     }
+    for slicer in sheet.slicers() {
+      let source_sheet_key = normalize_sheet_name(slicer.table_sheet)
+      let source_key = "\{source_sheet_key}|\{slicer.table_name.to_lower()}"
+      let is_table_slicer = table_lookup.contains(source_key)
+      drawing_slicers.push({ slicer, is_table_slicer })
+    }
     let drawing_xml = write_drawing_xml(
       Some(sheet),
       drawing_images,
       drawing_charts,
       drawing_shapes,
+      drawing_slicers,
     )
     archive.add(
       "xl/drawings/drawing\{sheet_id}.xml",
@@ -3594,6 +4089,70 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     archive.add(
       "xl/drawings/_rels/drawing\{sheet_id}.xml.rels",
       @encoding/utf8.encode(drawing_rels_xml),
+    )
+  }
+  for entry in resolved_slicer_caches {
+    let cache_id = entry.cache_id
+    let cache_xml = if entry.is_table_slicer {
+      let table_id = match entry.table_id {
+        Some(v) => v
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="slicer cache table id missing",
+          )
+      }
+      let column = match entry.table_column {
+        Some(v) => v
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="slicer cache table column missing",
+          )
+      }
+      write_slicer_cache_xml_table(
+        entry.cache_name,
+        entry.source_name,
+        table_id,
+        column,
+        entry.item_desc,
+      )
+    } else {
+      let pivot_cache_id = match entry.pivot_cache_id {
+        Some(v) => v
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="slicer cache pivot id missing",
+          )
+      }
+      let pivot_sheet_id = match entry.pivot_sheet_id {
+        Some(v) => v
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="slicer cache pivot sheet id missing",
+          )
+      }
+      let pivot_name = match entry.pivot_table_name {
+        Some(v) => v
+        None =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="slicer cache pivot name missing",
+          )
+      }
+      write_slicer_cache_xml_pivot(
+        entry.cache_name,
+        entry.source_name,
+        pivot_sheet_id,
+        pivot_name,
+        pivot_cache_id,
+        entry.item_desc,
+      )
+    }
+    archive.add(
+      "xl/slicerCaches/slicerCache\{cache_id}.xml",
+      @encoding/utf8.encode(cache_xml),
+    )
+    manifest.add_content_override(
+      "/xl/slicerCaches/slicerCache\{cache_id}.xml",
+      ct_slicer_cache,
     )
   }
   for i, sheet in workbook.chart_sheets() {
@@ -3625,7 +4184,13 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         rel_id: 1,
       },
     ]
-    let drawing_xml = write_drawing_xml(None, drawing_images, drawing_charts, [])
+    let drawing_xml = write_drawing_xml(
+      None,
+      drawing_images,
+      drawing_charts,
+      [],
+      [],
+    )
     archive.add(
       "xl/drawings/drawing\{drawing_id}.xml",
       @encoding/utf8.encode(drawing_xml),

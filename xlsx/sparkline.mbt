@@ -852,6 +852,14 @@ fn write_sparkline_color_xml(
 fn write_sparkline_ext_xml(groups : ArrayView[SparklineGroup]) -> String {
   let sb = StringBuilder::new()
   sb.write_view("  <extLst>\n")
+  sb.write_view(write_sparkline_ext_block_xml(groups))
+  sb.write_view("  </extLst>\n")
+  sb.to_string()
+}
+
+///|
+fn write_sparkline_ext_block_xml(groups : ArrayView[SparklineGroup]) -> String {
+  let sb = StringBuilder::new()
   sb.write_view("    <ext uri=\"")
   sb.write_view(sparkline_ext_uri)
   sb.write_view("\">\n")
@@ -936,7 +944,6 @@ fn write_sparkline_ext_xml(groups : ArrayView[SparklineGroup]) -> String {
   }
   sb.write_view("      </x14:sparklineGroups>\n")
   sb.write_view("    </ext>\n")
-  sb.write_view("  </extLst>\n")
   sb.to_string()
 }
 
