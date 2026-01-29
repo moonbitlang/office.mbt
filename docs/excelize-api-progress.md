@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `21e21f3`
-- Progress: **4/169**
+- mbtexcel: `617d2cd`
+- Progress: **5/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -9,7 +9,7 @@
 - [x] `add_chart_sheet`
 - [x] `add_comment`
 - [x] `add_data_validation`
-- [ ] `add_form_control`
+- [x] `add_form_control`
 - [ ] `add_header_footer_image`
 - [ ] `add_ignored_errors`
 - [ ] `add_picture`

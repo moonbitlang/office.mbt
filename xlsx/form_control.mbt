@@ -22,6 +22,29 @@ pub struct FormControl {
 let max_form_control_value = 30000
 
 ///|
+fn normalize_form_control_type(
+  control_type : StringView,
+) -> (String, String) raise XlsxError {
+  let lower = control_type.to_string().to_lower()
+  let normalized = lower
+    .replace_all(old=" ", new="")
+    .replace_all(old="_", new="")
+  match normalized {
+    "button" => ("Button", "Button")
+    "checkbox" => ("CheckBox", "Checkbox")
+    "radiobutton" | "optionbutton" | "radio" => ("OptionButton", "Radio")
+    "scroll" | "scrollbar" => ("ScrollBar", "Scroll")
+    "spin" | "spinbutton" | "spinner" => ("SpinButton", "Spin")
+    "gbox" | "groupbox" => ("GroupBox", "GBox")
+    "label" => ("Label", "Label")
+    _ =>
+      raise XlsxError::InvalidSheetOperation(
+        msg="unsupported form control type",
+      )
+  }
+}
+
+///|
 pub fn FormControl::new(
   cell : String,
   control_type : String,
@@ -33,10 +56,11 @@ pub fn FormControl::new(
   if control_type == "" {
     raise XlsxError::InvalidSheetOperation(msg="form control type empty")
   }
+  let (canonical_type, _) = normalize_form_control_type(control_type)
   ignore(cell_ref_to_rc(cell))
   {
     cell,
-    control_type,
+    control_type: canonical_type,
     text,
     macro_name: None,
     checked: None,
@@ -394,17 +418,28 @@ fn write_form_controls_vml(
   sb.write_view("  </v:shapetype>\n")
   let mut shape_id = 2048
   for control in controls {
+    let (_, object_type) = normalize_form_control_type(control.control_type)
     let (row, col) = cell_ref_to_rc(control.cell)
     let row0 = row - 1
     let col0 = col - 1
-    let width_px = match control.width {
+    let base_width_px = match control.width {
       Some(v) => v
       None => 140
     }
-    let height_px = match control.height {
+    let base_height_px = match control.height {
       Some(v) => v
       None => 60
     }
+    let scale_x = match control.format.scale_x {
+      Some(v) => if v <= 0.0 { 1.0 } else { v }
+      None => 1.0
+    }
+    let scale_y = match control.format.scale_y {
+      Some(v) => if v <= 0.0 { 1.0 } else { v }
+      None => 1.0
+    }
+    let width_px = (Double::from_int(base_width_px) * scale_x).to_int()
+    let height_px = (Double::from_int(base_height_px) * scale_y).to_int()
     let mut col_end0 = col0
     let mut x2 = width_px
     let mut cur_col = col
@@ -422,8 +457,6 @@ fn write_form_controls_vml(
       row_end0 = row_end0 + 1
     }
     let anchor = "\{col0}, 0, \{row0}, 0, \{col_end0}, \{x2}, \{row_end0}, \{y2}"
-    let width_pt = Double::from_int(width_px) * 0.75
-    let height_pt = Double::from_int(height_px) * 0.75
     let preset = form_control_vml_preset(control.control_type)
     sb.write_view("  <v:shape id=\"_x0000_s\{shape_id}\" type=\"#_x0000_t201\"")
     match preset {
@@ -452,7 +485,7 @@ fn write_form_controls_vml(
       None => ()
     }
     sb.write_view(
-      " style=\"position:absolute;73.5pt;width:\{width_pt}pt;height:\{height_pt}pt;z-index:2;mso-wrap-style:tight\" o:insetmode=\"auto\">\n",
+      " style=\"position:absolute;73.5pt;width:108pt;height:59.25pt;z-index:1;mso-wrap-style:tight\" o:insetmode=\"auto\">\n",
     )
     sb.write_view("    <v:path o:connecttype=\"none\"/>\n")
     match preset {
@@ -534,7 +567,7 @@ fn write_form_controls_vml(
       sb.write_view("    </v:textbox>\n")
     }
     sb.write_view("    <x:ClientData ObjectType=\"")
-    sb.write_view(escape_xml_attr(control.control_type))
+    sb.write_view(escape_xml_attr(object_type))
     sb.write_view("\">\n")
     sb.write_view("      <x:Anchor>\{anchor}</x:Anchor>\n")
     match preset {
@@ -629,7 +662,7 @@ fn write_form_controls_vml(
       Some(true) => sb.write_view("      <x:Horiz/>\n")
       _ => ()
     }
-    if control.control_type == "Scroll" {
+    if control.control_type == "ScrollBar" {
       sb.write_view("      <x:Dx>15</x:Dx>\n")
     }
     match control.checked {
@@ -858,13 +891,50 @@ fn parse_form_controls_vml(
       continue
     }
     let body = cd[end_tag + 1:] catch { _ => continue }
-    let row0 = match extract_xml_text_tag(body, "x:Row") {
-      Some(v) => @strconv.parse_int(v, base=10) catch { _ => continue }
-      None => continue
+    let mut row0_opt : Int? = None
+    let mut col0_opt : Int? = None
+    match extract_xml_text_tag(body, "x:Row") {
+      Some(v) =>
+        match (try? @strconv.parse_int(v, base=10)) {
+          Ok(value) => row0_opt = Some(value)
+          Err(_) => ()
+        }
+      None => ()
     }
-    let col0 = match extract_xml_text_tag(body, "x:Column") {
-      Some(v) => @strconv.parse_int(v, base=10) catch { _ => continue }
-      None => continue
+    match extract_xml_text_tag(body, "x:Column") {
+      Some(v) =>
+        match (try? @strconv.parse_int(v, base=10)) {
+          Ok(value) => col0_opt = Some(value)
+          Err(_) => ()
+        }
+      None => ()
+    }
+    let (row0, col0) = match (row0_opt, col0_opt) {
+      (Some(r), Some(c)) => (r, c)
+      _ =>
+        match extract_xml_text_tag(body, "x:Anchor") {
+          Some(anchor) => {
+            let parts : Array[StringView] = []
+            for part in anchor.split(",") {
+              parts.push(part)
+            }
+            if parts.length() < 4 {
+              continue
+            }
+            let col0 = match
+              (try? @strconv.parse_int(parts[0].trim(), base=10)) {
+              Ok(value) => value
+              Err(_) => continue
+            }
+            let row0 = match
+              (try? @strconv.parse_int(parts[2].trim(), base=10)) {
+              Ok(value) => value
+              Err(_) => continue
+            }
+            (row0, col0)
+          }
+          None => continue
+        }
     }
     let cell = cell_ref_from(row0 + 1, col0 + 1)
     let (textbox_text, paragraph) = parse_vml_textbox(chunk)

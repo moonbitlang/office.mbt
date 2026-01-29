@@ -2194,7 +2194,7 @@ pub fn Worksheet::delete_form_control(
     }
   }
   if !removed {
-    raise XlsxError::InvalidSheetOperation(msg="form control not found")
+    return
   }
   self.form_controls.clear()
   for control in remaining {

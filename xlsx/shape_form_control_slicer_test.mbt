@@ -323,7 +323,7 @@ test "form control add/get/delete and vml" {
   for control in controls {
     if control.control_type == "CheckBox" {
       parsed_checkbox = Some(control)
-    } else if control.control_type == "Scroll" {
+    } else if control.control_type == "ScrollBar" {
       parsed_scrollbar = Some(control)
     } else if control.cell == "E5" {
       parsed_rich_button = Some(control)
