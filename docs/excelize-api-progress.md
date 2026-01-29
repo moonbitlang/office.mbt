@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `15a12b1`
-- Progress: **115/169**
+- mbtexcel: `abf45a6`
+- Progress: **155/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -120,46 +120,46 @@
 - [x] `rows`
 - [x] `save`
 - [x] `save_as`
-- [ ] `search_sheet`
-- [ ] `set_active_sheet`
-- [ ] `set_app_props`
-- [ ] `set_calc_props`
-- [ ] `set_cell_bool`
-- [ ] `set_cell_default`
-- [ ] `set_cell_float`
-- [ ] `set_cell_formula`
-- [ ] `set_cell_hyper_link`
-- [ ] `set_cell_int`
-- [ ] `set_cell_rich_text`
-- [ ] `set_cell_str`
-- [ ] `set_cell_style`
-- [ ] `set_cell_uint`
-- [ ] `set_cell_value`
-- [ ] `set_col_outline_level`
-- [ ] `set_col_style`
-- [ ] `set_col_visible`
-- [ ] `set_col_width`
-- [ ] `set_conditional_format`
-- [ ] `set_custom_props`
-- [ ] `set_default_font`
-- [ ] `set_defined_name`
-- [ ] `set_doc_props`
-- [ ] `set_header_footer`
-- [ ] `set_page_layout`
-- [ ] `set_page_margins`
-- [ ] `set_panes`
-- [ ] `set_row_height`
-- [ ] `set_row_outline_level`
-- [ ] `set_row_style`
-- [ ] `set_row_visible`
-- [ ] `set_sheet_background`
-- [ ] `set_sheet_background_from_bytes`
-- [ ] `set_sheet_col`
-- [ ] `set_sheet_dimension`
-- [ ] `set_sheet_name`
-- [ ] `set_sheet_props`
-- [ ] `set_sheet_row`
-- [ ] `set_sheet_view`
+- [x] `search_sheet`
+- [x] `set_active_sheet`
+- [x] `set_app_props`
+- [x] `set_calc_props`
+- [x] `set_cell_bool`
+- [x] `set_cell_default`
+- [x] `set_cell_float`
+- [x] `set_cell_formula`
+- [x] `set_cell_hyper_link`
+- [x] `set_cell_int`
+- [x] `set_cell_rich_text`
+- [x] `set_cell_str`
+- [x] `set_cell_style`
+- [x] `set_cell_uint`
+- [x] `set_cell_value`
+- [x] `set_col_outline_level`
+- [x] `set_col_style`
+- [x] `set_col_visible`
+- [x] `set_col_width`
+- [x] `set_conditional_format`
+- [x] `set_custom_props`
+- [x] `set_default_font`
+- [x] `set_defined_name`
+- [x] `set_doc_props`
+- [x] `set_header_footer`
+- [x] `set_page_layout`
+- [x] `set_page_margins`
+- [x] `set_panes`
+- [x] `set_row_height`
+- [x] `set_row_outline_level`
+- [x] `set_row_style`
+- [x] `set_row_visible`
+- [x] `set_sheet_background`
+- [x] `set_sheet_background_from_bytes`
+- [x] `set_sheet_col`
+- [x] `set_sheet_dimension`
+- [x] `set_sheet_name`
+- [x] `set_sheet_props`
+- [x] `set_sheet_row`
+- [x] `set_sheet_view`
 - [ ] `set_sheet_visible`
 - [ ] `set_workbook_props`
 - [ ] `set_zip_writer`
