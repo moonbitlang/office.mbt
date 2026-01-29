@@ -54,6 +54,9 @@ References:
 
 ### Conditional formatting
 - [x] Add higher-level `ConditionalFormatOptions` parity (Excelize `ConditionalFormatOptions` in `excelize/xmlWorksheet.go`)
+- [x] Read x14 conditional formatting from worksheet `extLst` (iconSet + dataBar advanced props) and expose via `get_conditional_formats`
+- [x] Write x14 data bar advanced props (direction/solid/border) with deterministic `<x14:id>` linkage
+- [x] Match Excelize `SetConditionalFormat` range normalization for reversed/row/col refs (`A2:A1,B:B,2:2` -> `A2:A1 B1:B1048576 A2:XFD2`)
 
 ### Tables
 - [x] Expand `xlsx.Table` options (row/col stripes, first/last column emphasis, etc.) (Excelize `Table` in `excelize/table.go` / `excelize/xmlTable.go`)

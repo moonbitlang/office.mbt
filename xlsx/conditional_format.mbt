@@ -528,21 +528,13 @@ fn prepare_conditional_format_range(
       let (_end_start, end_ref) = parse_range_ref_token(parts[1])
       (start_ref, end_ref)
     }
-    let (row1, col1) = cell_ref_to_rc(start_ref)
-    let (row2, col2) = cell_ref_to_rc(end_ref)
-    let min_row = if row1 < row2 { row1 } else { row2 }
-    let max_row = if row1 > row2 { row1 } else { row2 }
-    let min_col = if col1 < col2 { col1 } else { col2 }
-    let max_col = if col1 > col2 { col1 } else { col2 }
-    let start_cell = cell_ref_from(min_row, min_col)
-    let end_cell = cell_ref_from(max_row, max_col)
-    let normalized = if start_cell == end_cell {
-      start_cell
-    } else {
-      "\{start_cell}:\{end_cell}"
-    }
     if master_cell == "" {
-      master_cell = start_cell
+      master_cell = start_ref
+    }
+    let normalized = if start_ref == end_ref {
+      start_ref
+    } else {
+      "\{start_ref}:\{end_ref}"
     }
     sqrefs.push(normalized)
   }
