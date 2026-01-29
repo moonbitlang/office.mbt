@@ -1364,6 +1364,25 @@ fn normalize_image_extension_lower(
 }
 
 ///|
+fn normalize_extension_lower_requires_dot(
+  extension : StringView,
+  unsupported_msg : StringView,
+) -> String raise XlsxError {
+  let raw = extension.to_string()
+  if !raw.has_prefix(".") || raw.length() <= 1 {
+    raise XlsxError::UnsupportedFeature(msg=unsupported_msg.to_string())
+  }
+  let view = raw[1:] catch {
+      _ => raise XlsxError::UnsupportedFeature(msg=unsupported_msg.to_string())
+    }
+  let trimmed = view.to_string()
+  if trimmed == "" {
+    raise XlsxError::UnsupportedFeature(msg=unsupported_msg.to_string())
+  }
+  trimmed.to_lower()
+}
+
+///|
 fn check_header_footer_image_size(
   value : StringView,
   field_name : StringView,
@@ -1411,6 +1430,12 @@ let default_col_width_pixels = 64
 
 ///|
 let default_row_height_pixels : Int = convert_row_height_to_pixels(15.0)
+
+///|
+let max_graphic_name_length = 254
+
+///|
+let max_graphic_alt_text_length = 65535
 
 ///|
 fn convert_col_width_to_pixels(width : Double) -> Int {
@@ -1536,7 +1561,10 @@ pub fn Worksheet::add_header_footer_image(
   options : HeaderFooterImageOptions,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  let extension = normalize_image_extension_lower(options.extension)
+  let extension = normalize_extension_lower_requires_dot(
+    options.extension,
+    "unsupported header/footer image extension",
+  )
   let content_type = match image_content_type(extension) {
     Some(value) => value
     None =>
@@ -1591,7 +1619,9 @@ pub fn Worksheet::add_picture_from_bytes(
   locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
-  let ext = normalize_image_extension_lower(extension)
+  let ext = normalize_extension_lower_requires_dot(
+    extension, "unsupported picture extension",
+  )
   let content_type = match image_content_type(ext) {
     Some(value) => value
     None =>
@@ -1736,7 +1766,7 @@ pub async fn Worksheet::add_picture(
   self.add_picture_from_bytes(
     reference,
     bytes,
-    extension,
+    ".\{extension}",
     offset_x~,
     offset_y~,
     scale_x~,
@@ -1861,6 +1891,18 @@ pub fn Worksheet::add_image(
 ) -> Unit raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
+  if name != "" && name.length() > max_graphic_name_length {
+    raise XlsxError::GraphicNameTooLong(
+      len=name.length(),
+      limit=max_graphic_name_length,
+    )
+  }
+  if alt_text != "" && alt_text.length() > max_graphic_alt_text_length {
+    raise XlsxError::GraphicAltTextTooLong(
+      len=alt_text.length(),
+      limit=max_graphic_alt_text_length,
+    )
+  }
   let (
     normalized_offset_x,
     normalized_offset_y,

@@ -2225,6 +2225,7 @@ pub async fn Workbook::add_picture(
   locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2257,6 +2258,7 @@ pub async fn Workbook::add_picture_with_options(
   path : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2286,6 +2288,7 @@ pub fn Workbook::add_picture_from_bytes(
   locked? : Bool = true,
   positioning? : PicturePositioning = PicturePositioning::OneCell,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2320,6 +2323,7 @@ pub fn Workbook::add_picture_from_bytes_with_options(
   extension : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())

@@ -210,6 +210,23 @@ test "picture from bytes invalid extension" {
 }
 
 ///|
+test "picture from bytes extension requires dot" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let result = try
+    workbook.add_picture_from_bytes("Sheet1", "A1", [1, 2], "png")
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(
+    result,
+    content="Err(UnsupportedFeature(msg=\"unsupported picture extension\"))",
+  )
+}
+
+///|
 test "picture options write drawing and rels" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -483,6 +500,48 @@ test "picture options validation" {
     result2,
     content="Err(InvalidHyperlink(msg=\"picture hyperlink type missing\"))",
   )
+  let bad_sheet : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
+    "Sheet:1",
+    "A1",
+    [1],
+    ".png",
+  )
+  inspect(bad_sheet is Err(XlsxError::InvalidSheetName(_)), content="true")
+  let long_name = "s".repeat(255)
+  let name_result : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
+    "Sheet1",
+    "A1",
+    [1],
+    ".png",
+    name=long_name,
+  )
+  inspect(name_result is Err(XlsxError::GraphicNameTooLong(..)), content="true")
+  let long_alt = "a".repeat(65536)
+  let alt_result : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
+    "Sheet1",
+    "A1",
+    [1],
+    ".png",
+    alt_text=long_alt,
+  )
+  inspect(
+    alt_result is Err(XlsxError::GraphicAltTextTooLong(..)),
+    content="true",
+  )
+}
+
+///|
+async test "picture invalid sheet name (from file path)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let result = try
+    workbook.add_picture("Sheet:1", "A1", "excelize/logo.png")
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(result is Err(XlsxError::InvalidSheetName(_)), content="true")
 }
 
 ///|

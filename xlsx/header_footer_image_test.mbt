@@ -162,6 +162,30 @@ test "header footer image invalid extension" {
 }
 
 ///|
+test "header footer image extension requires dot" {
+  let sheet = Worksheet::new("Sheet1")
+  let result = try
+    sheet.add_header_footer_image(
+      HeaderFooterImageOptions::new(
+        HeaderFooterImagePosition::Left,
+        [1, 2],
+        "png",
+        width="10pt",
+        height="10pt",
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(
+    result,
+    content="Err(UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
+  )
+}
+
+///|
 test "header footer image multiple positions and first page" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

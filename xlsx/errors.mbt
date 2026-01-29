@@ -33,6 +33,8 @@ pub suberror XlsxError {
   InvalidHyperlink(msg~ : String)
   HyperlinkLimitExceeded(limit~ : Int)
   CellTextTooLong(len~ : Int)
+  GraphicNameTooLong(len~ : Int, limit~ : Int)
+  GraphicAltTextTooLong(len~ : Int, limit~ : Int)
   CommentAlreadyExists(cell~ : String)
   TableNotFound(name~ : String)
   StreamModeConflict(msg~ : String)
