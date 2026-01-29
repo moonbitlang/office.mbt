@@ -3052,6 +3052,7 @@ pub fn Workbook::add_ignored_errors(
   range_ref : String,
   error_type : IgnoredErrorType,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3065,6 +3066,7 @@ pub fn Workbook::add_conditional_format_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3079,6 +3081,7 @@ pub fn Workbook::set_conditional_format(
   range_ref : String,
   options : ArrayView[ConditionalFormatOptions],
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3091,6 +3094,7 @@ pub fn Workbook::get_conditional_formats(
   self : Workbook,
   sheet_name : StringView,
 ) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3104,6 +3108,7 @@ pub fn Workbook::unset_conditional_format(
   sheet_name : StringView,
   range_ref : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3117,6 +3122,7 @@ pub fn Workbook::merge_cells(
   sheet_name : StringView,
   range_ref : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3143,6 +3149,7 @@ pub fn Workbook::unmerge_cells(
   sheet_name : StringView,
   range_ref : String,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3168,6 +3175,7 @@ pub fn Workbook::get_merge_cells(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[String] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3186,6 +3194,7 @@ pub fn Workbook::get_merge_cells_info(
   without_values? : Bool = false,
   options? : Options,
 ) -> Array[MergeCell] raise XlsxError {
+  check_sheet_name(sheet_name)
   let resolved_options = match options {
     Some(value) => value
     None => self.options
