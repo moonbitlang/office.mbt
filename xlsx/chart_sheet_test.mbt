@@ -48,3 +48,74 @@ test "chart sheet write and read" {
   inspect(parsed_chart.name(), content="Chart1")
   inspect(parsed_chart.chart_xml().contains("<c:chartSpace"), content="true")
 }
+
+///|
+test "chart sheet with options (excelize-like)" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell("A2", "Small")
+  sheet.set_cell("A3", "Normal")
+  sheet.set_cell("A4", "Large")
+  sheet.set_cell("B1", "Apple")
+  sheet.set_cell("C1", "Orange")
+  sheet.set_cell("D1", "Pear")
+  sheet.set_cell("B2", "2")
+  sheet.set_cell("C2", "3")
+  sheet.set_cell("D2", "3")
+  sheet.set_cell("B3", "5")
+  sheet.set_cell("C3", "2")
+  sheet.set_cell("D3", "4")
+  sheet.set_cell("B4", "6")
+  sheet.set_cell("C4", "7")
+  sheet.set_cell("D4", "8")
+  let opts = ChartOptions::new(ChartType::Col3DClustered)
+  opts.title = "Fruit 3D Clustered Column Chart"
+  opts.series.push(
+    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$2:$D$2", name="Sheet1!$A$2"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$3:$D$3", name="Sheet1!$A$3"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$4:$D$4", name="Sheet1!$A$4"),
+  )
+  ignore(workbook.add_chart_sheet_with_options("Chart1", opts))
+  let mut sheet_idx = 0
+  for i, name in workbook.get_sheet_list() {
+    if name == "Chart1" {
+      sheet_idx = i
+      break
+    }
+  }
+  workbook.set_active_sheet(sheet_idx)
+  let result : Result[Unit, Error] = try? workbook.set_cell_value(
+    "Chart1",
+    "A1",
+    CellValue::Bool(true),
+  )
+  guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
+    fail("expected chartsheet not-a-worksheet error")
+  }
+  inspect(msg.contains("not a worksheet"), content="true")
+  let exists_result : Result[ChartSheet, Error] = try? workbook.add_chart_sheet_with_options(
+    "Sheet1", opts,
+  )
+  inspect(
+    exists_result is Err(XlsxError::SheetAlreadyExists(_)),
+    content="true",
+  )
+  let name_result : Result[ChartSheet, Error] = try? workbook.add_chart_sheet_with_options(
+    "Sheet:1", opts,
+  )
+  inspect(name_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(
+    chart_part.contains("<a:t>Fruit 3D Clustered Column Chart</a:t>"),
+    content="true",
+  )
+}

@@ -224,6 +224,16 @@ pub fn Workbook::add_chart_sheet(
 }
 
 ///|
+pub fn Workbook::add_chart_sheet_with_options(
+  self : Workbook,
+  name : String,
+  opts : ChartOptions,
+) -> ChartSheet raise XlsxError {
+  let xml = chart_options_to_xml(opts)
+  self.add_chart_sheet(name, xml)
+}
+
+///|
 pub fn Workbook::new_stream_writer(
   self : Workbook,
   sheet_name : StringView,
@@ -1637,7 +1647,14 @@ pub fn Workbook::set_cell(
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None =>
+      match self.sheet_entry(sheet_name) {
+        Some(SheetEntry::ChartSheet(_)) =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="sheet \{sheet_name.to_string()} is not a worksheet",
+          )
+        _ => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+      }
   }
   sheet.set_cell(reference, value)
 }
@@ -1651,7 +1668,14 @@ pub fn Workbook::set_cell_value(
 ) -> Unit raise XlsxError {
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None =>
+      match self.sheet_entry(sheet_name) {
+        Some(SheetEntry::ChartSheet(_)) =>
+          raise XlsxError::InvalidSheetOperation(
+            msg="sheet \{sheet_name.to_string()} is not a worksheet",
+          )
+        _ => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+      }
   }
   sheet.set_cell_value(reference, value)
 }

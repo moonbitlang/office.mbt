@@ -1676,6 +1676,7 @@ pub struct Workbook {
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::add_chart_sheet(Self, String, String) -> ChartSheet raise XlsxError
+pub fn Workbook::add_chart_sheet_with_options(Self, String, ChartOptions) -> ChartSheet raise XlsxError
 pub fn Workbook::add_chart_with_options(Self, StringView, String, ChartOptions) -> Unit raise XlsxError
 pub fn Workbook::add_comment(Self, StringView, Comment) -> Unit raise XlsxError
 pub fn Workbook::add_conditional_format_xml(Self, StringView, String) -> Unit raise XlsxError
