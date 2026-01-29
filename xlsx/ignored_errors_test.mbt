@@ -37,3 +37,60 @@ test "ignored errors invalid range" {
     _ => fail("expected ignored errors range error")
   }
 }
+
+///|
+test "ignored errors workbook parity (all types + errors)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let types : Array[IgnoredErrorType] = [
+    IgnoredErrorType::EvalError,
+    IgnoredErrorType::TwoDigitTextYear,
+    IgnoredErrorType::NumberStoredAsText,
+    IgnoredErrorType::Formula,
+    IgnoredErrorType::FormulaRange,
+    IgnoredErrorType::UnlockedFormula,
+    IgnoredErrorType::EmptyCellReference,
+    IgnoredErrorType::ListDataValidation,
+    IgnoredErrorType::CalculatedColumn,
+  ]
+  for t in types {
+    workbook.add_ignored_errors("Sheet1", "A1", t)
+  }
+  workbook.add_ignored_errors("Sheet1", "A1", IgnoredErrorType::EvalError)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing sheet xml")
+  }
+  inspect(sheet_xml.contains("evalError=\"1\""), content="true")
+  inspect(sheet_xml.contains("twoDigitTextYear=\"1\""), content="true")
+  inspect(sheet_xml.contains("numberStoredAsText=\"1\""), content="true")
+  inspect(sheet_xml.contains("formula=\"1\""), content="true")
+  inspect(sheet_xml.contains("formulaRange=\"1\""), content="true")
+  inspect(sheet_xml.contains("unlockedFormula=\"1\""), content="true")
+  inspect(sheet_xml.contains("emptyCellReference=\"1\""), content="true")
+  inspect(sheet_xml.contains("listDataValidation=\"1\""), content="true")
+  inspect(sheet_xml.contains("calculatedColumn=\"1\""), content="true")
+  let parsed = read(bytes)
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing parsed sheet")
+  }
+  inspect(sheet.ignored_errors().length(), content="9")
+  let missing_sheet : Result[Unit, Error] = try? parsed.add_ignored_errors(
+    "SheetN",
+    "A1",
+    IgnoredErrorType::EvalError,
+  )
+  inspect(missing_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
+  let blank_range : Result[Unit, Error] = try? parsed.add_ignored_errors(
+    "Sheet1",
+    "",
+    IgnoredErrorType::EvalError,
+  )
+  inspect(
+    blank_range is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+}
