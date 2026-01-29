@@ -3482,6 +3482,9 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       }
     None => ()
   }
+  if has_path_content_type {
+    manifest.add_content_default("bin", ct_vba_project)
+  }
   for i, _sheet in workbook.chart_sheets() {
     let sheet_id = i + 1
     manifest.add_content_override(

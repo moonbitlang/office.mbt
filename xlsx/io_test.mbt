@@ -137,6 +137,10 @@ async test "save_as sets workbook content type by extension" {
     ),
     content="true",
   )
+  inspect(
+    types_xml.contains("application/vnd.ms-office.vbaProject"),
+    content="true",
+  )
   @async/fs.remove(path_xltx) catch {
     err => fail("remove file failed: \{err}")
   }
