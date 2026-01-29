@@ -1991,6 +1991,8 @@ pub struct Worksheet {
   slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  x14_data_bars : Map[String, X14DataBarProps]
+  mut x14_cf_rule_id_counter : Int
   ignored_errors : Array[IgnoredError]
   comments : Array[Comment]
   mut auto_filter : AutoFilter?
@@ -2160,6 +2162,15 @@ pub fn Worksheet::unprotect_sheet(Self, password? : String) -> Unit raise XlsxEr
 pub fn Worksheet::unset_conditional_format(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
+
+pub(all) struct X14DataBarProps {
+  sqref : String
+  bar_direction : String
+  bar_solid : Bool
+  bar_border_color : String
+}
+pub impl Eq for X14DataBarProps
+pub impl Show for X14DataBarProps
 
 // Type aliases
 

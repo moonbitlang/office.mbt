@@ -2329,18 +2329,102 @@ fn write_worksheet_xml(
     slicer_rel_ids_x14 : ArrayView[Int],
     slicer_rel_ids_x15 : ArrayView[Int],
     sparkline_groups : ArrayView[SparklineGroup],
+    x14_data_bars : Map[String, X14DataBarProps],
   ) -> String? {
+    fn write_x14_conditional_formattings_ext_block_xml(
+      x14_data_bars : Map[String, X14DataBarProps],
+    ) -> String? {
+      let by_sqref : Map[String, Array[String]] = {}
+      for id, props in x14_data_bars {
+        if props.bar_direction == "" &&
+          !props.bar_solid &&
+          props.bar_border_color == "" {
+          continue
+        }
+        match by_sqref.get(props.sqref) {
+          Some(ids) => {
+            ids.push(id)
+            by_sqref[props.sqref] = ids
+          }
+          None => by_sqref[props.sqref] = [id]
+        }
+      }
+      if by_sqref.length() == 0 {
+        return None
+      }
+      let sb = StringBuilder::new()
+      sb.write_view(
+        "    <ext uri=\"{78C0D931-6437-407d-A8EE-F0AAD7539E65}\">\n",
+      )
+      sb.write_view(
+        "      <x14:conditionalFormattings xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" xmlns:xm=\"http://schemas.microsoft.com/office/excel/2006/main\">\n",
+      )
+      for sqref, ids in by_sqref {
+        sb.write_view("        <x14:conditionalFormatting>\n")
+        sb.write_view("          <xm:sqref>")
+        sb.write_view(escape_xml_text(sqref))
+        sb.write_view("</xm:sqref>\n")
+        for id in ids {
+          let props = match x14_data_bars.get(id) {
+            Some(value) => value
+            None => continue
+          }
+          sb.write_view("          <x14:cfRule type=\"dataBar\" id=\"")
+          sb.write_view(escape_xml_attr(id))
+          sb.write_view("\">\n")
+          sb.write_view("            <x14:dataBar maxLength=\"100\"")
+          if props.bar_direction != "" {
+            sb.write_view(" direction=\"")
+            sb.write_view(escape_xml_attr(props.bar_direction))
+            sb.write_view("\"")
+          }
+          sb.write_view(" gradient=\"")
+          sb.write_view(if props.bar_solid { "0" } else { "1" })
+          sb.write_view("\"")
+          if props.bar_border_color != "" {
+            sb.write_view(" border=\"1\"")
+          }
+          sb.write_view(">\n")
+          sb.write_view("              <x14:cfvo type=\"autoMin\"/>\n")
+          sb.write_view("              <x14:cfvo type=\"autoMax\"/>\n")
+          if props.bar_border_color != "" {
+            sb.write_view("              <x14:borderColor rgb=\"")
+            sb.write_view(palette_color(props.bar_border_color))
+            sb.write_view("\"/>\n")
+          }
+          sb.write_view(
+            "              <x14:negativeFillColor rgb=\"FFFF0000\"/>\n",
+          )
+          sb.write_view("              <x14:axisColor rgb=\"FFFF0000\"/>\n")
+          sb.write_view("            </x14:dataBar>\n")
+          sb.write_view("          </x14:cfRule>\n")
+        }
+        sb.write_view("        </x14:conditionalFormatting>\n")
+      }
+      sb.write_view("      </x14:conditionalFormattings>\n")
+      sb.write_view("    </ext>\n")
+      Some(sb.to_string())
+    }
+
+    let cond_fmt_ext = write_x14_conditional_formattings_ext_block_xml(
+      x14_data_bars,
+    )
+    let has_conditional = cond_fmt_ext is Some(_)
     let has_slicers = slicer_rel_ids_x14.length() > 0 ||
       slicer_rel_ids_x15.length() > 0
     let has_sparklines = sparkline_groups.length() > 0
-    if !has_slicers && !has_sparklines {
+    if !has_slicers && !has_sparklines && !has_conditional {
       return None
     }
-    if has_sparklines && !has_slicers {
+    if has_sparklines && !has_slicers && !has_conditional {
       return Some(write_sparkline_ext_xml(sparkline_groups))
     }
     let sb = StringBuilder::new()
     sb.write_view("  <extLst>\n")
+    match cond_fmt_ext {
+      Some(block) => sb.write_view(block)
+      None => ()
+    }
     if has_sparklines {
       sb.write_view(write_sparkline_ext_block_xml(sparkline_groups))
     }
@@ -2717,6 +2801,7 @@ fn write_worksheet_xml(
       slicer_rel_ids_x14,
       slicer_rel_ids_x15,
       sheet.sparkline_groups(),
+      sheet.x14_data_bars,
     ) {
     Some(xml) => sb.write_view(xml)
     None => ()

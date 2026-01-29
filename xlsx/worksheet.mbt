@@ -90,6 +90,8 @@ pub struct Worksheet {
   slicers : Array[Slicer]
   data_validations : Array[String]
   conditional_formats : Array[String]
+  x14_data_bars : Map[String, X14DataBarProps]
+  mut x14_cf_rule_id_counter : Int
   ignored_errors : Array[IgnoredError]
   comments : Array[Comment]
   mut auto_filter : AutoFilter?
@@ -129,6 +131,8 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     slicers: [],
     data_validations: [],
     conditional_formats: [],
+    x14_data_bars: {},
+    x14_cf_rule_id_counter: 1,
     ignored_errors: [],
     comments: [],
     auto_filter: None,
@@ -2394,6 +2398,60 @@ pub fn Worksheet::add_conditional_format_xml(
 }
 
 ///|
+let ext_uri_conditional_formatting_rule_id = "{B025F937-C7B1-47D3-B67F-A62EFF666E3E}"
+
+///|
+let ns_spreadsheet_x14 = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+
+///|
+fn pad_left_dec(value : Int, width : Int) -> String {
+  let text = value.to_string()
+  if text.length() >= width {
+    return text
+  }
+  let padding = width - text.length()
+  String::repeat("0", padding) + text
+}
+
+///|
+fn Worksheet::next_x14_cf_rule_id(self : Worksheet) -> String {
+  let mut counter = self.x14_cf_rule_id_counter
+  while true {
+    let suffix = pad_left_dec(counter, 12)
+    let id = "{00000000-0000-0000-0000-\{suffix}}"
+    counter = counter + 1
+    if self.x14_data_bars.get(id) is None {
+      self.x14_cf_rule_id_counter = counter
+      return id
+    }
+  }
+  "{00000000-0000-0000-0000-000000000000}"
+}
+
+///|
+fn inject_x14_id_ext_lst_into_cf_rule(
+  rule_xml : String,
+  id : StringView,
+) -> String raise XlsxError {
+  if rule_xml.contains("<extLst>") {
+    return rule_xml
+  }
+  let close_tag = "</cfRule>"
+  match rule_xml.find(close_tag) {
+    Some(pos) => {
+      let before = rule_xml[:pos] catch {
+          _ => raise XlsxError::InvalidXml(msg="cfRule slice invalid")
+        }
+      let after = rule_xml[pos:] catch {
+          _ => raise XlsxError::InvalidXml(msg="cfRule slice invalid")
+        }
+      "\{before}<extLst><ext uri=\"\{ext_uri_conditional_formatting_rule_id}\" xmlns:x14=\"\{ns_spreadsheet_x14}\"><x14:id>\{escape_xml_text(id)}</x14:id></ext></extLst>\{after}"
+    }
+    None => raise XlsxError::InvalidXml(msg="cfRule tag invalid")
+  }
+}
+
+///|
 pub fn Worksheet::set_conditional_format(
   self : Worksheet,
   range_ref : String,
@@ -2418,7 +2476,34 @@ pub fn Worksheet::set_conditional_format(
     priority = priority + count
   }
   let rules = conditional_format_rules_xml(options, priority, master_cell)
-  let xml = conditional_format_xml(sqref, rules)
+  let updated_rules : Array[String] = []
+  for i, opt in options {
+    let mut rule = rules[i]
+    if opt.format_type.to_string().to_lower() == "data_bar" {
+      let direction = opt.bar_direction.to_string()
+      let has_direction = direction == "leftToRight" ||
+        direction == "rightToLeft"
+      let needs_x14 = opt.bar_solid ||
+        has_direction ||
+        opt.bar_border_color != ""
+      if needs_x14 {
+        let id = self.next_x14_cf_rule_id()
+        self.x14_data_bars[id] = {
+          sqref,
+          bar_direction: if has_direction {
+            direction
+          } else {
+            ""
+          },
+          bar_solid: opt.bar_solid,
+          bar_border_color: opt.bar_border_color,
+        }
+        rule = inject_x14_id_ext_lst_into_cf_rule(rule, id)
+      }
+    }
+    updated_rules.push(rule)
+  }
+  let xml = conditional_format_xml(sqref, updated_rules)
   self.conditional_formats.push(xml)
 }
 
@@ -2428,7 +2513,7 @@ pub fn Worksheet::get_conditional_formats(
 ) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError {
   let formats : Map[String, Array[ConditionalFormatOptions]] = {}
   for xml in self.conditional_formats {
-    let (sqref, opts) = parse_conditional_format_xml(xml)
+    let (sqref, opts) = parse_conditional_format_xml(xml, self.x14_data_bars)
     match formats.get(sqref) {
       Some(existing) => {
         existing.append(opts[:])
@@ -2475,6 +2560,50 @@ pub fn Worksheet::unset_conditional_format(
   }
   self.conditional_formats.clear()
   self.conditional_formats.append(updated[:])
+  if self.x14_data_bars.length() > 0 {
+    let prior : Map[String, X14DataBarProps] = {}
+    for id, props in self.x14_data_bars {
+      prior[id] = props
+    }
+    let referenced : Map[String, X14DataBarProps] = {}
+    for xml in self.conditional_formats {
+      let tag = match tag_attributes_in(xml, "conditionalFormatting") {
+        Some(value) => value
+        None => continue
+      }
+      let sqref = match attr_value(tag, "sqref") {
+        Some(value) => unescape_xml_text(value)
+        None => continue
+      }
+      let mut first = true
+      for chunk in xml.split("<x14:id>") {
+        if first {
+          first = false
+          continue
+        }
+        let text = chunk.to_string()
+        let end = match text.find("</x14:id>") {
+          Some(pos) => pos
+          None => continue
+        }
+        let id = unescape_xml_text(text[:end] catch { _ => "" })
+        match prior.get(id) {
+          Some(props) =>
+            referenced[id] = {
+              sqref,
+              bar_direction: props.bar_direction,
+              bar_solid: props.bar_solid,
+              bar_border_color: props.bar_border_color,
+            }
+          None => ()
+        }
+      }
+    }
+    self.x14_data_bars.clear()
+    for id, props in referenced {
+      self.x14_data_bars[id] = props
+    }
+  }
 }
 
 ///|

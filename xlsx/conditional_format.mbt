@@ -27,6 +27,14 @@ pub(all) struct ConditionalFormatOptions {
 } derive(Eq, Show)
 
 ///|
+pub(all) struct X14DataBarProps {
+  sqref : String
+  bar_direction : String
+  bar_solid : Bool
+  bar_border_color : String
+} derive(Eq, Show)
+
+///|
 pub fn ConditionalFormatOptions::new(
   format_type : String,
 ) -> ConditionalFormatOptions {
@@ -926,11 +934,14 @@ fn extract_tag_blocks(
   let blocks : Array[String] = []
   for i in 1..<parts.length() {
     let fragment = "\{open_tag}\{parts[i].to_string()}"
-    let end_pos = match fragment.find(close_tag) {
-      Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="tag close missing")
+    let end = match fragment.find(close_tag) {
+      Some(pos) => pos + close_tag.length()
+      None =>
+        match fragment.find("/>") {
+          Some(pos) => pos + 2
+          None => raise XlsxError::InvalidXml(msg="tag close missing")
+        }
     }
-    let end = end_pos + close_tag.length()
     let slice = fragment[:end] catch {
         _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
       }
@@ -979,6 +990,7 @@ fn color_text_from_rgb(rgb : StringView) -> String {
 fn parse_cf_rule(
   xml : StringView,
   master_cell : StringView,
+  x14_data_bars : Map[String, X14DataBarProps],
 ) -> ConditionalFormatOptions raise XlsxError {
   let tag = match tag_attributes_in(xml, "cfRule") {
     Some(value) => value
@@ -1211,6 +1223,37 @@ fn parse_cf_rule(
           None => ()
         }
       }
+      let ext_blocks = extract_tag_blocks(xml, "extLst")
+      if ext_blocks.length() > 0 {
+        let mut rule_id : String? = None
+        for ext in ext_blocks {
+          match extract_tag_body_from(ext, "x14:id") {
+            Some(value) => {
+              rule_id = Some(unescape_xml_text(value))
+              break
+            }
+            None => ()
+          }
+        }
+        match rule_id {
+          Some(id) =>
+            match x14_data_bars.get(id) {
+              Some(props) => {
+                if props.bar_direction != "" {
+                  opt.bar_direction = props.bar_direction
+                }
+                if props.bar_border_color != "" {
+                  opt.bar_border_color = props.bar_border_color
+                }
+                if props.bar_solid {
+                  opt.bar_solid = true
+                }
+              }
+              None => ()
+            }
+          None => ()
+        }
+      }
     }
     "expression" => {
       opt.format_type = "formula"
@@ -1283,6 +1326,7 @@ fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
 ///|
 fn parse_conditional_format_xml(
   xml : StringView,
+  x14_data_bars : Map[String, X14DataBarProps],
 ) -> (String, Array[ConditionalFormatOptions]) raise XlsxError {
   fn extract_cf_rule_blocks(xml : StringView) -> Array[String] raise XlsxError {
     let rules : Array[String] = []
@@ -1363,7 +1407,7 @@ fn parse_conditional_format_xml(
     if !supported {
       continue
     }
-    opts.push(parse_cf_rule(rule, master_cell))
+    opts.push(parse_cf_rule(rule, master_cell, x14_data_bars))
   }
   (sqref, opts)
 }

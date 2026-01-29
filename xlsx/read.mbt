@@ -2413,14 +2413,25 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
 }
 
 ///|
-fn parse_conditional_formats_x14(
+fn color_text_from_rgb_x14(rgb : StringView) -> String {
+  let text = rgb.to_string()
+  if text.has_prefix("FF") && text.length() == 8 {
+    let rest = text[2:] catch { _ => text }
+    "#\{rest}"
+  } else {
+    "#\{text}"
+  }
+}
+
+///|
+fn parse_x14_conditional_formatting_blocks(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
-  let formats : Array[String] = []
+  let blocks : Array[String] = []
   let xml_str = xml.to_string()
   let needle = "<x14:conditionalFormatting"
   if !xml_str.contains(needle) {
-    return formats
+    return blocks
   }
   let close_tag = "</x14:conditionalFormatting>"
   let mut search_from = 0
@@ -2477,7 +2488,118 @@ fn parse_conditional_formats_x14(
         (slice.to_string(), end)
       }
     }
+    blocks.push(full)
     search_from = start + consumed
+  }
+  blocks
+}
+
+///|
+fn parse_x14_data_bars(
+  xml : StringView,
+) -> Map[String, X14DataBarProps] raise XlsxError {
+  let bars : Map[String, X14DataBarProps] = {}
+  let blocks = parse_x14_conditional_formatting_blocks(xml)
+  if blocks.length() == 0 {
+    return bars
+  }
+  for full in blocks {
+    let sqref = match extract_tag_body_from(full, "xm:sqref") {
+      Some(value) => unescape_xml_text(value)
+      None =>
+        match extract_tag_body_from(full, "sqref") {
+          Some(value) => unescape_xml_text(value)
+          None => continue
+        }
+    }
+    if !full.contains("<x14:cfRule") {
+      continue
+    }
+    let mut rule_first = true
+    for rule_chunk in full.split("<x14:cfRule") {
+      if rule_first {
+        rule_first = false
+        continue
+      }
+      let rule_text = rule_chunk.to_string()
+      let rule_close = "</x14:cfRule>"
+      let rule_full = match rule_text.find(rule_close) {
+        Some(pos) => {
+          let end = pos + rule_close.length()
+          let slice = rule_text[:end] catch {
+              _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+            }
+          "<x14:cfRule\{slice.to_string()}"
+        }
+        None => {
+          let end = match rule_text.find("/>") {
+            Some(pos) => pos + 2
+            None => raise XlsxError::InvalidXml(msg="x14:cfRule tag not closed")
+          }
+          let slice = rule_text[:end] catch {
+              _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+            }
+          "<x14:cfRule\{slice.to_string()}"
+        }
+      }
+      let open_end = match rule_full.find(">") {
+        Some(pos) => pos
+        None => continue
+      }
+      let attrs = rule_full["<x14:cfRule".length():open_end] catch {
+          _ => raise XlsxError::InvalidXml(msg="x14:cfRule open tag invalid")
+        }
+      let typ = match attr_value(attrs, "type") {
+        Some(value) => value.to_string()
+        None => ""
+      }
+      if typ != "dataBar" {
+        continue
+      }
+      let id = match attr_value(attrs, "id") {
+        Some(value) => value.to_string()
+        None => continue
+      }
+      let mut bar_direction = ""
+      let mut bar_solid = false
+      let mut bar_border_color = ""
+      match tag_attributes_in(rule_full, "x14:dataBar") {
+        Some(tag) => {
+          match attr_value(tag, "direction") {
+            Some(value) => bar_direction = value.to_string()
+            None => ()
+          }
+          match attr_value(tag, "gradient") {
+            Some(value) => bar_solid = !parse_xml_bool(value)
+            None => ()
+          }
+        }
+        None => ()
+      }
+      match tag_attributes_in(rule_full, "x14:borderColor") {
+        Some(tag) =>
+          match attr_value(tag, "rgb") {
+            Some(value) => bar_border_color = color_text_from_rgb_x14(value)
+            None => ()
+          }
+        None => ()
+      }
+      bars[id] = { sqref, bar_direction, bar_solid, bar_border_color }
+    }
+  }
+  bars
+}
+
+///|
+fn parse_conditional_formats_x14(
+  xml : StringView,
+) -> Array[String] raise XlsxError {
+  let formats : Array[String] = []
+  let blocks = parse_x14_conditional_formatting_blocks(xml)
+  if blocks.length() == 0 {
+    return formats
+  }
+  for full in blocks {
     let sqref = match extract_tag_body_from(full, "xm:sqref") {
       Some(value) => unescape_xml_text(value)
       None =>
@@ -5740,6 +5862,7 @@ fn read_zip_bytes(
       for cf in parse_conditional_formats_x14(sheet_xml) {
         conditional_formats.push(cf)
       }
+      let x14_data_bars = parse_x14_data_bars(sheet_xml)
       let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
@@ -6098,6 +6221,8 @@ fn read_zip_bytes(
         slicers: [],
         data_validations,
         conditional_formats,
+        x14_data_bars,
+        x14_cf_rule_id_counter: 1,
         ignored_errors,
         comments,
         row_dimensions,

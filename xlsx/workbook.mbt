@@ -1452,6 +1452,17 @@ fn clone_ignored_errors(
 }
 
 ///|
+fn clone_x14_data_bars(
+  values : Map[String, X14DataBarProps],
+) -> Map[String, X14DataBarProps] {
+  let out : Map[String, X14DataBarProps] = {}
+  for key, value in values {
+    out[key] = value
+  }
+  out
+}
+
+///|
 fn clone_sheet_views(values : ArrayView[SheetView]) -> Array[SheetView] {
   let out : Array[SheetView] = []
   for view in values {
@@ -1514,6 +1525,8 @@ fn clone_worksheet(
     slicers: clone_slicers(sheet.slicers),
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
+    x14_data_bars: clone_x14_data_bars(sheet.x14_data_bars),
+    x14_cf_rule_id_counter: sheet.x14_cf_rule_id_counter,
     ignored_errors: clone_ignored_errors(sheet.ignored_errors),
     comments: clone_comments(sheet.comments),
     auto_filter: match sheet.auto_filter {
