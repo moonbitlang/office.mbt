@@ -84,6 +84,7 @@ test "chart options write" {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing drawing")
   }
+  inspect(drawing_xml.contains("<xdr:twoCellAnchor>"), content="true")
   inspect(drawing_xml.contains("<xdr:col>2</xdr:col>"), content="true")
   inspect(drawing_xml.contains("<xdr:row>2</xdr:row>"), content="true")
   inspect(
@@ -98,4 +99,896 @@ test "chart options write" {
   inspect(drawing_xml.contains("cy=\"2476500\""), content="true")
   inspect(drawing_xml.contains("fLocksWithSheet=\"0\""), content="true")
   inspect(drawing_xml.contains("fPrintsWithSheet=\"0\""), content="true")
+}
+
+///|
+test "chart size twoCellAnchor computes to cell" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell("A2", "Small")
+  sheet.set_cell("A3", "Normal")
+  sheet.set_cell("A4", "Large")
+  sheet.set_cell("B1", "Apple")
+  sheet.set_cell("C1", "Orange")
+  sheet.set_cell("D1", "Pear")
+  sheet.set_cell("B2", "2")
+  sheet.set_cell("C2", "3")
+  sheet.set_cell("D2", "3")
+  sheet.set_cell("B3", "5")
+  sheet.set_cell("C3", "2")
+  sheet.set_cell("D3", "4")
+  sheet.set_cell("B4", "6")
+  sheet.set_cell("C4", "7")
+  sheet.set_cell("D4", "8")
+  let opts = ChartOptions::new(ChartType::Col3DClustered)
+  opts.dimension = ChartDimension::with_values(640, 480)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$2:$D$2", name="Sheet1!$A$2"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$3:$D$3", name="Sheet1!$A$3"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$4:$D$4", name="Sheet1!$A$4"),
+  )
+  workbook.add_chart_with_options("Sheet1", "E4", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing drawing")
+  }
+  inspect(drawing_xml.contains("<xdr:col>4</xdr:col>"), content="true")
+  inspect(drawing_xml.contains("<xdr:row>3</xdr:row>"), content="true")
+  inspect(drawing_xml.contains("<xdr:to>"), content="true")
+  inspect(drawing_xml.contains("<xdr:col>14</xdr:col>"), content="true")
+  inspect(drawing_xml.contains("<xdr:row>29</xdr:row>"), content="true")
+}
+
+///|
+test "chart options combo (col + line) secondary axis" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  let combo = ChartOptions::new(ChartType::Line)
+  combo.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Series2"),
+  )
+  combo.y_axis.secondary = true
+  opts.add_combo_chart(combo)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:barChart>"), content="true")
+  inspect(chart_part.contains("<c:lineChart>"), content="true")
+  inspect(chart_part.contains("Sheet1!$B$2:$B$4"), content="true")
+  inspect(chart_part.contains("Sheet1!$C$2:$C$4"), content="true")
+  inspect(chart_part.contains("axPos val=\"r\""), content="true")
+  inspect(chart_part.contains("axId val=\"3\""), content="true")
+  inspect(chart_part.contains("axId val=\"4\""), content="true")
+}
+
+///|
+test "chart options combo (scatter + col)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Scatter)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  let combo = ChartOptions::new(ChartType::Col)
+  combo.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Series2"),
+  )
+  opts.add_combo_chart(combo)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:scatterChart>"), content="true")
+  inspect(chart_part.contains("<c:barChart>"), content="true")
+  inspect(
+    chart_part.contains("<c:scatterStyle val=\"lineMarker\""),
+    content="true",
+  )
+  inspect(chart_part.contains("axId val=\"1\""), content="true")
+  inspect(chart_part.contains("axId val=\"2\""), content="true")
+  inspect(chart_part.contains("axId val=\"3\""), content="true")
+  inspect(chart_part.contains("axId val=\"4\""), content="true")
+}
+
+///|
+test "chart options combo (stock + line) uses dateAx" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::StockOpenHighLowClose)
+  opts.plot_area.up_bars.fill_color = "00FF00"
+  opts.plot_area.down_bars.fill_color = "FF0000"
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Open"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="High"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Low"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
+  )
+  let combo = ChartOptions::new(ChartType::Line)
+  combo.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$F$2:$F$4", name="MA"),
+  )
+  opts.add_combo_chart(combo)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:stockChart>"), content="true")
+  inspect(chart_part.contains("<c:lineChart>"), content="true")
+  inspect(chart_part.contains("<c:dateAx>"), content="true")
+  inspect(chart_part.contains("<c:hiLowLines/>"), content="true")
+  inspect(chart_part.contains("<c:upDownBars>"), content="true")
+  inspect(chart_part.contains("<c:gapWidth val=\"150\"/>"), content="true")
+  inspect(chart_part.contains("val=\"00FF00\""), content="true")
+  inspect(chart_part.contains("val=\"FF0000\""), content="true")
+  inspect(chart_part.contains("Sheet1!$F$2:$F$4"), content="true")
+}
+
+///|
+test "chart options legend none omits legend" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.legend.position = "none"
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:legend>"), content="false")
+}
+
+///|
+test "chart options legend font emits txPr" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.legend.position = "right"
+  opts.legend.font = Some(
+    Font::with_values(
+      bold=true,
+      underline="sng",
+      size=9.0,
+      color="#123456",
+      family="Arial",
+    ),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:legend>"), content="true")
+  inspect(chart_part.contains("<c:txPr>"), content="true")
+  inspect(chart_part.contains("b=\"1\""), content="true")
+  inspect(chart_part.contains("u=\"sng\""), content="true")
+  inspect(chart_part.contains("sz=\"900\""), content="true")
+  inspect(chart_part.contains("<a:latin typeface=\"Arial\""), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"123456\""), content="true")
+}
+
+///|
+test "chart options plotArea fill + dTable" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.plot_area.fill_color = "#112233"
+  opts.plot_area.fill_transparency = 25
+  opts.plot_area.show_data_table = true
+  opts.plot_area.show_data_table_keys = true
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:plotArea>"), content="true")
+  inspect(chart_part.contains("<c:spPr>"), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"112233\""), content="true")
+  inspect(chart_part.contains("alpha val=\"75000\""), content="true")
+  inspect(chart_part.contains("<c:dTable>"), content="true")
+  inspect(chart_part.contains("showKeys val=\"1\""), content="true")
+}
+
+///|
+test "chart options series data label font + fill emits txPr/spPr" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  series.data_label.font = Font::with_values(
+    bold=true,
+    underline="sng",
+    size=10.0,
+    color="#00AA00",
+    family="Arial",
+  )
+  series.data_label.fill_color = "#112233"
+  series.data_label.fill_transparency = 60
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:dLbls>"), content="true")
+  inspect(chart_part.contains("<c:txPr>"), content="true")
+  inspect(chart_part.contains("b=\"1\""), content="true")
+  inspect(chart_part.contains("u=\"sng\""), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"00AA00\""), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"112233\""), content="true")
+  inspect(chart_part.contains("alpha val=\"40000\""), content="true")
+}
+
+///|
+test "chart options chart root fill + border emits spPr" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.fill_color = "#112233"
+  opts.fill_transparency = 25
+  opts.border.color = "#445566"
+  opts.border.width = 1.5
+  opts.border.dash = ChartDashType::Dot
+  opts.border.transparency = 60
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:chart>"), content="true")
+  inspect(chart_part.contains("<c:spPr>"), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"112233\""), content="true")
+  inspect(chart_part.contains("alpha val=\"75000\""), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"445566\""), content="true")
+  inspect(chart_part.contains("alpha val=\"40000\""), content="true")
+  inspect(chart_part.contains("w=\"19050\""), content="true")
+  inspect(chart_part.contains("prstDash val=\"dot\""), content="true")
+}
+
+///|
+test "chart options stacked + axis + blanks + gap/overlap" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::ColStacked)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.gap_width = Some(200)
+  opts.overlap = Some(-20)
+  opts.show_blanks_as = "zero"
+  opts.x_axis.title = "X Axis"
+  opts.x_axis.major_grid_lines = true
+  opts.y_axis.title = "Y Axis"
+  opts.y_axis.minor_grid_lines = true
+  opts.y_axis.tick_label_position = ChartTickLabelPositionType::High
+  opts.y_axis.num_fmt = ChartNumFmt::new(
+    custom_num_fmt="0.00",
+    source_linked=false,
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:barChart>"), content="true")
+  inspect(chart_part.contains("<c:grouping val=\"stacked\"/>"), content="true")
+  inspect(chart_part.contains("<c:gapWidth val=\"200\"/>"), content="true")
+  inspect(chart_part.contains("<c:overlap val=\"-20\"/>"), content="true")
+  inspect(chart_part.contains("<c:dispBlanksAs val=\"zero\"/>"), content="true")
+  inspect(chart_part.contains("<c:majorGridlines/>"), content="true")
+  inspect(chart_part.contains("<c:minorGridlines/>"), content="true")
+  inspect(chart_part.contains("<a:t>X Axis</a:t>"), content="true")
+  inspect(chart_part.contains("<a:t>Y Axis</a:t>"), content="true")
+  inspect(chart_part.contains("tickLblPos val=\"high\""), content="true")
+  inspect(
+    chart_part.contains("formatCode=\"0.00\" sourceLinked=\"0\""),
+    content="true",
+  )
+}
+
+///|
+test "chart options rich title + axis title runs" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let font : RichTextFont = {
+    bold: true,
+    italic: false,
+    strike: false,
+    outline: false,
+    shadow: false,
+    condense: false,
+    extend: false,
+    underline: Some("single"),
+    size: Some(12.0),
+    color: Some("#FF0000"),
+    color_theme: None,
+    color_indexed: None,
+    color_tint: None,
+    charset: None,
+    family_number: None,
+    scheme: None,
+    vert_align: None,
+    family: Some("Calibri"),
+  }
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.title_rich = Some([
+    { text: "Hello ", font: None },
+    { text: "World", font: Some(font) },
+  ])
+  opts.x_axis.title_rich = Some([
+    { text: "X ", font: None },
+    { text: "Axis", font: Some(font) },
+  ])
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("xml:space=\"preserve\">Hello"), content="true")
+  inspect(chart_part.contains("<a:t>World</a:t>"), content="true")
+  inspect(chart_part.contains("b=\"1\""), content="true")
+  inspect(chart_part.contains("u=\"single\""), content="true")
+  inspect(chart_part.contains("<a:latin typeface=\"Calibri\""), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"FF0000\""), content="true")
+  inspect(chart_part.contains("xml:space=\"preserve\">X "), content="true")
+  inspect(chart_part.contains("<a:t>Axis</a:t>"), content="true")
+}
+
+///|
+test "chart options axis txPr font + alignment" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.x_axis.font = Font::with_values(
+    bold=true,
+    underline="sng",
+    size=10.0,
+    color="#00AA00",
+    family="Arial",
+  )
+  opts.x_axis.alignment = Alignment::with_values(
+    text_rotation=45,
+    vertical="vert270",
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:txPr>"), content="true")
+  inspect(chart_part.contains("rot=\"2700000\""), content="true")
+  inspect(chart_part.contains("vert=\"vert270\""), content="true")
+  inspect(chart_part.contains("b=\"1\""), content="true")
+  inspect(chart_part.contains("u=\"sng\""), content="true")
+  inspect(chart_part.contains("sz=\"1000\""), content="true")
+  inspect(chart_part.contains("<a:latin typeface=\"Arial\""), content="true")
+  inspect(chart_part.contains("<a:srgbClr val=\"00AA00\""), content="true")
+}
+
+///|
+test "chart options pie has no axes" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Pie)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:pieChart>"), content="true")
+  inspect(chart_part.contains("<c:catAx>"), content="false")
+  inspect(chart_part.contains("<c:valAx>"), content="false")
+}
+
+///|
+test "chart options pie3D has no axes" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Pie3D)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:pie3DChart>"), content="true")
+  inspect(chart_part.contains("<c:catAx>"), content="false")
+  inspect(chart_part.contains("<c:valAx>"), content="false")
+}
+
+///|
+test "chart options doughnut holeSize" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Doughnut)
+  opts.hole_size = Some(60)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:doughnutChart>"), content="true")
+  inspect(chart_part.contains("holeSize val=\"60\""), content="true")
+  inspect(chart_part.contains("<c:catAx>"), content="false")
+}
+
+///|
+test "chart options ofPie splitPos" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::PieOfPie)
+  opts.plot_area.second_plot_values = 5
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:ofPieChart>"), content="true")
+  inspect(chart_part.contains("splitPos val=\"5\""), content="true")
+}
+
+///|
+test "chart options plotArea dLbls flags" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Pie)
+  opts.plot_area.show_cat_name = true
+  opts.plot_area.show_ser_name = true
+  opts.plot_area.show_percent = true
+  opts.plot_area.show_leader_lines = true
+  opts.plot_area.show_val = true
+  opts.plot_area.show_bubble_size = true
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("showCatName val=\"1\""), content="true")
+  inspect(chart_part.contains("showSerName val=\"1\""), content="true")
+  inspect(chart_part.contains("showPercent val=\"1\""), content="true")
+  inspect(chart_part.contains("showLeaderLines val=\"1\""), content="true")
+  inspect(chart_part.contains("showBubbleSize val=\"1\""), content="true")
+  inspect(chart_part.contains("showVal val=\"1\""), content="true")
+}
+
+///|
+test "chart options pieOfPie has no axes" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::PieOfPie)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:ofPieChart>"), content="true")
+  inspect(chart_part.contains("ofPieType val=\"pie\""), content="true")
+  inspect(chart_part.contains("<c:catAx>"), content="false")
+  inspect(chart_part.contains("<c:valAx>"), content="false")
+}
+
+///|
+test "chart options barOfPie emits ofPieType bar" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::BarOfPie)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:ofPieChart>"), content="true")
+  inspect(chart_part.contains("ofPieType val=\"bar\""), content="true")
+}
+
+///|
+test "chart options line3D emits line3DChart" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Line3D)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:line3DChart>"), content="true")
+  inspect(chart_part.contains("<c:catAx>"), content="true")
+  inspect(chart_part.contains("<c:valAx>"), content="true")
+}
+
+///|
+test "chart options series styling emits spPr/marker/dLbls/dPt" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Line)
+  opts.plot_area.show_val = true
+  opts.plot_area.num_fmt = ChartNumFmt::new(
+    custom_num_fmt="0.00",
+    source_linked=false,
+  )
+  opts.legend.show_legend_key = true
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  series.line.color = "#FF0000"
+  series.line.transparency = 50
+  series.line.width = 2.5
+  series.line.dash = ChartDashType::Dash
+  series.line.smooth = true
+  series.marker.symbol = "circle"
+  series.marker.size = 7
+  series.marker.fill_color = "#112233"
+  series.marker.fill_transparency = 60
+  series.marker.border.color = "#445566"
+  series.marker.border.width = 1.5
+  series.marker.border.dash = ChartDashType::Dot
+  series.marker.border.transparency = 25
+  series.data_label_position = ChartDataLabelPositionType::Top
+  series.data_point.push(ChartDataPoint::new(0, fill_color="00FF00"))
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:dLbls>"), content="true")
+  inspect(chart_part.contains("showLegendKey val=\"1\""), content="true")
+  inspect(chart_part.contains("showVal val=\"1\""), content="true")
+  inspect(
+    chart_part.contains("formatCode=\"0.00\" sourceLinked=\"0\""),
+    content="true",
+  )
+  inspect(chart_part.contains("<c:marker>"), content="true")
+  inspect(chart_part.contains("symbol val=\"circle\""), content="true")
+  inspect(chart_part.contains("size val=\"7\""), content="true")
+  inspect(chart_part.contains("<c:smooth val=\"1\"/>"), content="true")
+  inspect(chart_part.contains("srgbClr val=\"FF0000\""), content="true")
+  inspect(chart_part.contains("alpha val=\"50000\""), content="true")
+  inspect(chart_part.contains("w=\"31750\""), content="true")
+  inspect(chart_part.contains("prstDash val=\"dash\""), content="true")
+  inspect(chart_part.contains("srgbClr val=\"112233\""), content="true")
+  inspect(chart_part.contains("alpha val=\"40000\""), content="true")
+  inspect(chart_part.contains("srgbClr val=\"445566\""), content="true")
+  inspect(chart_part.contains("alpha val=\"75000\""), content="true")
+  inspect(chart_part.contains("w=\"19050\""), content="true")
+  inspect(chart_part.contains("prstDash val=\"dot\""), content="true")
+  inspect(chart_part.contains("<c:dPt>"), content="true")
+  inspect(chart_part.contains("srgbClr val=\"00FF00\""), content="true")
+  inspect(chart_part.contains("dLblPos val=\"t\""), content="true")
+}
+
+///|
+test "chart options col3D cone emits shape" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col3DConeClustered)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:bar3DChart>"), content="true")
+  inspect(chart_part.contains("barDir val=\"col\""), content="true")
+  inspect(chart_part.contains("shape val=\"cone\""), content="true")
+}
+
+///|
+test "chart options surface3D wireframe emits serAx" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::WireframeSurface3D)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:surface3DChart>"), content="true")
+  inspect(chart_part.contains("wireframe val=\"1\""), content="true")
+  inspect(chart_part.contains("<c:serAx>"), content="true")
+}
+
+///|
+test "chart options scatter uses xVal/yVal" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Scatter)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:scatterChart>"), content="true")
+  inspect(
+    chart_part.contains("scatterStyle val=\"lineMarker\""),
+    content="true",
+  )
+  inspect(chart_part.contains("<c:xVal>"), content="true")
+  inspect(chart_part.contains("<c:yVal>"), content="true")
+  inspect(chart_part.contains("<c:valAx>"), content="true")
+}
+
+///|
+test "chart options radar emits radarStyle" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Radar)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:radarChart>"), content="true")
+  inspect(chart_part.contains("radarStyle val=\"standard\""), content="true")
+}
+
+///|
+test "chart options bubble3D uses bubbleSize" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Bubble3D)
+  opts.bubble_scale = Some(200)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  series.set_bubble_size("Sheet1!$C$2:$C$4")
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:bubbleChart>"), content="true")
+  inspect(chart_part.contains("bubble3D val=\"1\""), content="true")
+  inspect(chart_part.contains("bubbleScale val=\"200\""), content="true")
+  inspect(chart_part.contains("<c:bubbleSize>"), content="true")
+  inspect(chart_part.contains("Sheet1!$C$2:$C$4"), content="true")
+}
+
+///|
+test "chart options bubble missing size errors" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Bubble)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  let result : Result[Unit, Error] = try? workbook.add_chart_with_options(
+    "Sheet1", "C3", opts,
+  )
+  guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
+    fail("expected bubble size error")
+  }
+  inspect(msg, content="bubble size missing")
+}
+
+///|
+test "chart options stock high-low-close" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::StockHighLowClose)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Low"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Close"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:stockChart>"), content="true")
+  inspect(chart_part.contains("<c:hiLowLines/>"), content="true")
+  inspect(chart_part.contains("<c:dateAx>"), content="true")
+  inspect(chart_part.contains("Sheet1!$D$2:$D$4"), content="true")
+}
+
+///|
+test "chart options stock open-high-low-close uses upDownBars" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::StockOpenHighLowClose)
+  opts.plot_area.up_bars.fill_color = "00FF00"
+  opts.plot_area.down_bars.fill_color = "FF0000"
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Open"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="High"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Low"),
+  )
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:stockChart>"), content="true")
+  inspect(chart_part.contains("<c:upDownBars>"), content="true")
+  inspect(chart_part.contains("<c:gapWidth val=\"150\"/>"), content="true")
+  inspect(chart_part.contains("val=\"00FF00\""), content="true")
+  inspect(chart_part.contains("val=\"FF0000\""), content="true")
+}
+
+///|
+test "chart options stock invalid series count" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::StockHighLowClose)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
+  )
+  let result : Result[Unit, Error] = try? workbook.add_chart_with_options(
+    "Sheet1", "C3", opts,
+  )
+  guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
+    fail("expected stock series count error")
+  }
+  inspect(msg.contains("stock chart requires"), content="true")
+}
+
+///|
+test "chart data label alignment emits txPr paragraph align" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(ChartType::Col)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  let align = Alignment::with_values(horizontal="center", text_rotation=45)
+  series.data_label.alignment = align
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:dLbls>"), content="true")
+  inspect(chart_part.contains("algn=\"ctr\""), content="true")
+  inspect(chart_part.contains("rot=\"2700000\""), content="true")
 }

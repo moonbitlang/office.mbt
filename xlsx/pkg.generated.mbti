@@ -245,24 +245,42 @@ pub struct Chart {
 }
 
 pub(all) struct ChartAxis {
-  none : Bool
-  major_grid_lines : Bool
-  minor_grid_lines : Bool
-  major_unit : Double
-  tick_label_position : ChartTickLabelPositionType
-  tick_label_skip : Int
-  reverse_order : Bool
-  secondary : Bool
-  maximum : Double?
-  minimum : Double?
-  log_base : Double
-  num_fmt : ChartNumFmt
-  title : String
-  ax_id : Int
+  mut none : Bool
+  mut major_grid_lines : Bool
+  mut minor_grid_lines : Bool
+  mut major_unit : Double
+  mut tick_label_position : ChartTickLabelPositionType
+  mut tick_label_skip : Int
+  mut reverse_order : Bool
+  mut secondary : Bool
+  mut maximum : Double?
+  mut minimum : Double?
+  mut alignment : Alignment
+  mut font : Font
+  mut log_base : Double
+  mut num_fmt : ChartNumFmt
+  mut title : String
+  mut title_rich : Array[RichTextRun]?
+  mut ax_id : Int
 }
 pub fn ChartAxis::new() -> Self
 pub impl Eq for ChartAxis
 pub impl Show for ChartAxis
+
+pub(all) struct ChartComboOptions {
+  typ : ChartType
+  series : Array[ChartSeries]
+  mut x_axis : ChartAxis
+  mut y_axis : ChartAxis
+  mut plot_area : ChartPlotArea
+  mut vary_colors : Bool
+  mut gap_width : Int?
+  mut overlap : Int?
+  mut hole_size : Int?
+  mut bubble_scale : Int?
+}
+pub impl Eq for ChartComboOptions
+pub impl Show for ChartComboOptions
 
 pub(all) enum ChartDashType {
   Unset
@@ -282,9 +300,12 @@ pub impl Eq for ChartDashType
 pub impl Show for ChartDashType
 
 pub(all) struct ChartDataLabel {
-  alignment : String
+  mut font : Font
+  mut alignment : Alignment
+  mut fill_color : String
+  mut fill_transparency : Int
 }
-pub fn ChartDataLabel::new(alignment? : String) -> Self
+pub fn ChartDataLabel::new() -> Self
 pub impl Eq for ChartDataLabel
 pub impl Show for ChartDataLabel
 
@@ -319,19 +340,21 @@ pub impl Eq for ChartDimension
 pub impl Show for ChartDimension
 
 pub(all) struct ChartLegend {
-  position : String
-  show_legend_key : Bool
+  mut position : String
+  mut show_legend_key : Bool
+  mut font : Font?
 }
 pub fn ChartLegend::new(position? : String, show_legend_key? : Bool) -> Self
 pub impl Eq for ChartLegend
 pub impl Show for ChartLegend
 
 pub(all) struct ChartLine {
-  typ : ChartLineType
-  dash : ChartDashType
-  color : String
-  smooth : Bool
-  width : Double
+  mut typ : ChartLineType
+  mut dash : ChartDashType
+  mut color : String
+  mut transparency : Int
+  mut smooth : Bool
+  mut width : Double
 }
 pub fn ChartLine::new() -> Self
 pub impl Eq for ChartLine
@@ -347,8 +370,11 @@ pub impl Eq for ChartLineType
 pub impl Show for ChartLineType
 
 pub(all) struct ChartMarker {
-  symbol : String
-  size : Int
+  mut symbol : String
+  mut size : Int
+  mut fill_color : String
+  mut fill_transparency : Int
+  mut border : ChartLine
 }
 pub fn ChartMarker::new(symbol? : String, size? : Int) -> Self
 pub impl Eq for ChartMarker
@@ -365,10 +391,15 @@ pub impl Show for ChartNumFmt
 pub(all) struct ChartOptions {
   typ : ChartType
   series : Array[ChartSeries]
+  combo_charts : Array[ChartComboOptions]
   mut format : GraphicOptions
   mut dimension : ChartDimension
   mut legend : ChartLegend
   mut title : String
+  mut title_rich : Array[RichTextRun]?
+  mut fill_color : String
+  mut fill_transparency : Int
+  mut border : ChartLine
   mut vary_colors : Bool
   mut x_axis : ChartAxis
   mut y_axis : ChartAxis
@@ -376,7 +407,10 @@ pub(all) struct ChartOptions {
   mut show_blanks_as : String
   mut gap_width : Int?
   mut overlap : Int?
+  mut hole_size : Int?
+  mut bubble_scale : Int?
 }
+pub fn ChartOptions::add_combo_chart(Self, Self) -> Unit
 pub fn ChartOptions::new(ChartType) -> Self
 pub fn ChartOptions::set_dimension(Self, ChartDimension) -> Unit
 pub fn ChartOptions::set_format(Self, GraphicOptions) -> Unit
@@ -393,10 +427,20 @@ pub impl Eq for ChartOptions
 pub impl Show for ChartOptions
 
 pub(all) struct ChartPlotArea {
-  show_val : Bool
-  num_fmt : ChartNumFmt
-  up_bars : ChartUpDownBar
-  down_bars : ChartUpDownBar
+  mut show_val : Bool
+  mut show_cat_name : Bool
+  mut show_ser_name : Bool
+  mut show_percent : Bool
+  mut show_leader_lines : Bool
+  mut show_bubble_size : Bool
+  mut show_data_table : Bool
+  mut show_data_table_keys : Bool
+  mut second_plot_values : Int
+  mut num_fmt : ChartNumFmt
+  mut up_bars : ChartUpDownBar
+  mut down_bars : ChartUpDownBar
+  mut fill_color : String
+  mut fill_transparency : Int
 }
 pub fn ChartPlotArea::new() -> Self
 pub impl Eq for ChartPlotArea
@@ -406,13 +450,17 @@ pub(all) struct ChartSeries {
   name : String
   categories : String
   values : String
-  line : ChartLine
-  marker : ChartMarker
-  data_label : ChartDataLabel
-  data_label_position : ChartDataLabelPositionType
+  mut bubble_size : String?
+  mut fill_color : String
+  mut fill_transparency : Int
+  mut line : ChartLine
+  mut marker : ChartMarker
+  mut data_label : ChartDataLabel
+  mut data_label_position : ChartDataLabelPositionType
   data_point : Array[ChartDataPoint]
 }
 pub fn ChartSeries::new(String, String, name? : String) -> Self raise XlsxError
+pub fn ChartSeries::set_bubble_size(Self, String) -> Unit raise XlsxError
 pub impl Eq for ChartSeries
 pub impl Show for ChartSeries
 
@@ -499,8 +547,8 @@ pub impl Eq for ChartType
 pub impl Show for ChartType
 
 pub(all) struct ChartUpDownBar {
-  fill_color : String
-  border : ChartLine
+  mut fill_color : String
+  mut border : ChartLine
 }
 pub fn ChartUpDownBar::new() -> Self
 pub impl Eq for ChartUpDownBar
@@ -560,9 +608,30 @@ pub(all) struct ConditionalFormatOptions {
   mut stop_if_true : Bool
 }
 pub fn ConditionalFormatOptions::new(String) -> Self
+pub fn ConditionalFormatOptions::set_above_average(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_bar_border_color(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_bar_color(Self, String) -> Unit
 pub fn ConditionalFormatOptions::set_bar_direction(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_bar_only(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_bar_solid(Self, Bool) -> Unit
+pub fn ConditionalFormatOptions::set_criteria(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_format(Self, Int?) -> Unit
+pub fn ConditionalFormatOptions::set_icon_style(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_icons_only(Self, Bool) -> Unit
+pub fn ConditionalFormatOptions::set_max_color(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_max_type(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_max_value(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_mid_color(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_mid_type(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_mid_value(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_min_color(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_min_type(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_min_value(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_percent(Self, Bool) -> Unit
+pub fn ConditionalFormatOptions::set_reverse_icons(Self, Bool) -> Unit
+pub fn ConditionalFormatOptions::set_stop_if_true(Self, Bool) -> Unit
+pub fn ConditionalFormatOptions::set_type(Self, String) -> Unit
+pub fn ConditionalFormatOptions::set_value(Self, String) -> Unit
 pub impl Eq for ConditionalFormatOptions
 pub impl Show for ConditionalFormatOptions
 
@@ -684,24 +753,49 @@ pub impl Show for DefinedName
 pub struct Fill {
   mut typ : String?
   mut pattern : Int?
+  mut shading : Int?
   mut colors : Array[String]?
+  mut transparency : Int?
+  mut fg_theme : Int?
+  mut fg_indexed : Int?
+  mut fg_tint : Double?
+  mut bg_theme : Int?
+  mut bg_indexed : Int?
+  mut bg_tint : Double?
 }
+pub fn Fill::gradient(String, String, shading? : Int, transparency? : Int) -> Self
 pub fn Fill::new() -> Self
-pub fn Fill::pattern(pattern? : Int, color? : String) -> Self
-pub fn Fill::solid(String) -> Self
+pub fn Fill::pattern(pattern? : Int, color? : String, transparency? : Int) -> Self
+pub fn Fill::solid(String, transparency? : Int) -> Self
+pub fn Fill::solid_bg_indexed(Int, tint? : Double) -> Self
+pub fn Fill::solid_bg_theme(Int, tint? : Double) -> Self
+pub fn Fill::solid_indexed(Int, tint? : Double) -> Self
+pub fn Fill::solid_theme(Int, tint? : Double) -> Self
 pub impl Eq for Fill
 pub impl Show for Fill
 
 pub struct Font {
   mut bold : Bool?
   mut italic : Bool?
+  mut strike : Bool?
+  mut outline : Bool?
+  mut shadow : Bool?
+  mut condense : Bool?
+  mut extend : Bool?
   mut underline : String?
   mut size : Double?
   mut color : String?
+  mut color_theme : Int?
+  mut color_indexed : Int?
+  mut color_tint : Double?
+  mut charset : Int?
+  mut family_number : Int?
+  mut scheme : String?
+  mut vert_align : String?
   mut family : String?
 }
 pub fn Font::new() -> Self
-pub fn Font::with_values(bold? : Bool, italic? : Bool, underline? : String, size? : Double, color? : String, family? : String) -> Self
+pub fn Font::with_values(bold? : Bool, italic? : Bool, strike? : Bool, outline? : Bool, shadow? : Bool, condense? : Bool, extend? : Bool, underline? : String, size? : Double, color? : String, color_theme? : Int, color_indexed? : Int, color_tint? : Double, charset? : Int, family_number? : Int, scheme? : String, vert_align? : String, family? : String) -> Self
 pub impl Eq for Font
 pub impl Show for Font
 
@@ -709,10 +803,52 @@ pub struct FormControl {
   cell : String
   control_type : String
   text : String
+  mut macro_name : String?
+  mut checked : Bool?
+  mut cell_link : String?
+  mut width : Int?
+  mut height : Int?
+  mut current_val : Int?
+  mut min_val : Int?
+  mut max_val : Int?
+  mut inc_change : Int?
+  mut page_change : Int?
+  mut horizontally : Bool?
+  mut format : GraphicOptions
+  mut paragraph : Array[RichTextRun]
 }
+pub fn FormControl::clear_cell_link(Self) -> Unit
+pub fn FormControl::clear_checked(Self) -> Unit
+pub fn FormControl::clear_current_val(Self) -> Unit
+pub fn FormControl::clear_height(Self) -> Unit
+pub fn FormControl::clear_horizontally(Self) -> Unit
+pub fn FormControl::clear_inc_change(Self) -> Unit
+pub fn FormControl::clear_macro_name(Self) -> Unit
+pub fn FormControl::clear_max_val(Self) -> Unit
+pub fn FormControl::clear_min_val(Self) -> Unit
+pub fn FormControl::clear_page_change(Self) -> Unit
+pub fn FormControl::clear_paragraph(Self) -> Unit
+pub fn FormControl::clear_width(Self) -> Unit
 pub fn FormControl::new(String, String, text? : String) -> Self raise XlsxError
+pub fn FormControl::set_cell_link(Self, StringView) -> Unit raise XlsxError
+pub fn FormControl::set_checked(Self, Bool) -> Unit
+pub fn FormControl::set_current_val(Self, Int) -> Unit raise XlsxError
+pub fn FormControl::set_format(Self, GraphicOptions) -> Unit
+pub fn FormControl::set_height(Self, Int) -> Unit raise XlsxError
+pub fn FormControl::set_horizontally(Self, Bool) -> Unit
+pub fn FormControl::set_inc_change(Self, Int) -> Unit raise XlsxError
+pub fn FormControl::set_macro_name(Self, StringView) -> Unit
+pub fn FormControl::set_max_val(Self, Int) -> Unit raise XlsxError
+pub fn FormControl::set_min_val(Self, Int) -> Unit raise XlsxError
+pub fn FormControl::set_page_change(Self, Int) -> Unit raise XlsxError
+pub fn FormControl::set_paragraph(Self, Array[RichTextRun]) -> Unit
+pub fn FormControl::set_width(Self, Int) -> Unit raise XlsxError
 pub impl Eq for FormControl
 pub impl Show for FormControl
+
+type FormControlVmlPreset
+pub impl Eq for FormControlVmlPreset
+pub impl Show for FormControlVmlPreset
 
 pub struct FormulaOpts {
   mut formula_type : FormulaType?
@@ -981,14 +1117,14 @@ pub fn PivotTable::new(String, String, cache_records_xml? : String, name? : Stri
 
 pub(all) struct PivotTableField {
   data : String
-  name : String
-  subtotal : String
-  num_fmt : Int
-  compact : Bool
-  outline : Bool
-  show_all : Bool
-  insert_blank_row : Bool
-  default_subtotal : Bool
+  mut name : String
+  mut subtotal : String
+  mut num_fmt : Int
+  mut compact : Bool
+  mut outline : Bool
+  mut show_all : Bool
+  mut insert_blank_row : Bool
+  mut default_subtotal : Bool
 }
 pub fn PivotTableField::new(String) -> Self raise XlsxError
 pub impl Eq for PivotTableField
@@ -997,21 +1133,28 @@ pub impl Show for PivotTableField
 pub(all) struct PivotTableOptions {
   data_range : String
   pivot_table_range : String
-  name : String
+  mut name : String
   rows : Array[PivotTableField]
   columns : Array[PivotTableField]
   data : Array[PivotTableField]
   filter : Array[PivotTableField]
-  row_grand_totals : Bool
-  col_grand_totals : Bool
-  show_drill : Bool
-  classic_layout : Bool
-  show_row_headers : Bool
-  show_col_headers : Bool
-  show_row_stripes : Bool
-  show_col_stripes : Bool
-  show_last_column : Bool
-  pivot_table_style_name : String
+  mut row_grand_totals : Bool
+  mut col_grand_totals : Bool
+  mut show_drill : Bool
+  mut use_auto_formatting : Bool
+  mut page_over_then_down : Bool
+  mut merge_item : Bool
+  mut classic_layout : Bool
+  mut compact_data : Bool
+  mut show_error : Bool
+  mut show_row_headers : Bool
+  mut show_col_headers : Bool
+  mut show_row_stripes : Bool
+  mut show_col_stripes : Bool
+  mut show_last_column : Bool
+  mut field_print_titles : Bool
+  mut item_print_titles : Bool
+  mut pivot_table_style_name : String
 }
 pub fn PivotTableOptions::new(String, String) -> Self raise XlsxError
 pub impl Eq for PivotTableOptions
@@ -1029,9 +1172,21 @@ pub impl Show for Protection
 pub(all) struct RichTextFont {
   bold : Bool
   italic : Bool
+  strike : Bool
+  outline : Bool
+  shadow : Bool
+  condense : Bool
+  extend : Bool
   underline : String?
   size : Double?
   color : String?
+  color_theme : Int?
+  color_indexed : Int?
+  color_tint : Double?
+  charset : Int?
+  family_number : Int?
+  scheme : String?
+  vert_align : String?
   family : String?
 }
 pub impl Eq for RichTextFont
@@ -1099,6 +1254,7 @@ pub impl Show for Selection
 pub struct Shape {
   reference : String
   shape_type : String
+  macro_name : String
   text : String
   paragraph : Array[RichTextRun]
   width : Int
@@ -1115,7 +1271,7 @@ pub struct Shape {
   locked : Bool
   positioning : PicturePositioning
 }
-pub fn Shape::new(String, String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
+pub fn Shape::new(String, String, macro_name? : String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
 pub impl Eq for Shape
 pub impl Show for Shape
 
@@ -1354,13 +1510,26 @@ pub struct SparklineOptions {
   mut hidden : Bool
   mut reverse : Bool
   mut series_color : String?
+  mut negative_color : String?
+  mut markers_color : String?
+  mut first_color : String?
+  mut last_color : String?
+  mut high_color : String?
+  mut low_color : String?
   mut manual_max : Int?
   mut manual_min : Int?
   mut empty_cells : String?
 }
 pub fn SparklineOptions::clear_empty_cells(Self) -> Unit
+pub fn SparklineOptions::clear_first_color(Self) -> Unit
+pub fn SparklineOptions::clear_high_color(Self) -> Unit
+pub fn SparklineOptions::clear_hight_color(Self) -> Unit
+pub fn SparklineOptions::clear_last_color(Self) -> Unit
+pub fn SparklineOptions::clear_low_color(Self) -> Unit
 pub fn SparklineOptions::clear_manual_max(Self) -> Unit
 pub fn SparklineOptions::clear_manual_min(Self) -> Unit
+pub fn SparklineOptions::clear_markers_color(Self) -> Unit
+pub fn SparklineOptions::clear_negative_color(Self) -> Unit
 pub fn SparklineOptions::clear_series_color(Self) -> Unit
 pub fn SparklineOptions::clear_weight(Self) -> Unit
 pub fn SparklineOptions::new(ArrayView[String], ArrayView[String]) -> Self raise XlsxError
@@ -1368,14 +1537,21 @@ pub fn SparklineOptions::set_axis(Self, Bool) -> Unit
 pub fn SparklineOptions::set_date_axis(Self, Bool) -> Unit
 pub fn SparklineOptions::set_empty_cells(Self, StringView) -> Unit raise XlsxError
 pub fn SparklineOptions::set_first(Self, Bool) -> Unit
+pub fn SparklineOptions::set_first_color(Self, String) -> Unit
 pub fn SparklineOptions::set_hidden(Self, Bool) -> Unit
 pub fn SparklineOptions::set_high(Self, Bool) -> Unit
+pub fn SparklineOptions::set_high_color(Self, String) -> Unit
+pub fn SparklineOptions::set_hight_color(Self, String) -> Unit
 pub fn SparklineOptions::set_last(Self, Bool) -> Unit
+pub fn SparklineOptions::set_last_color(Self, String) -> Unit
 pub fn SparklineOptions::set_low(Self, Bool) -> Unit
+pub fn SparklineOptions::set_low_color(Self, String) -> Unit
 pub fn SparklineOptions::set_manual_max(Self, Int) -> Unit
 pub fn SparklineOptions::set_manual_min(Self, Int) -> Unit
 pub fn SparklineOptions::set_markers(Self, Bool) -> Unit
+pub fn SparklineOptions::set_markers_color(Self, String) -> Unit
 pub fn SparklineOptions::set_negative(Self, Bool) -> Unit
+pub fn SparklineOptions::set_negative_color(Self, String) -> Unit
 pub fn SparklineOptions::set_reverse(Self, Bool) -> Unit
 pub fn SparklineOptions::set_series_color(Self, String) -> Unit
 pub fn SparklineOptions::set_style(Self, Int) -> Unit
@@ -1439,6 +1615,8 @@ pub struct Style {
 pub fn Style::alignment(Alignment) -> Self
 pub fn Style::border(Array[Border]) -> Self
 pub fn Style::builtin_number_format(Int) -> Self
+pub fn Style::excelize_currency_num_fmt(Int, decimal_places? : Int, neg_red? : Bool) -> Self raise XlsxError
+pub fn Style::excelize_custom_num_fmt(StringView) -> Self raise XlsxError
 pub fn Style::fill(Fill) -> Self
 pub fn Style::font(Font) -> Self
 pub fn Style::new() -> Self
@@ -1481,8 +1659,13 @@ pub struct Workbook {
   mut workbook_props : WorkbookPropsOptions
   mut calc_props : CalcPropsOptions
   mut default_font : String
+  default_table_style : String
+  default_pivot_style : String
   theme_colors : Array[String]?
+  theme_xml : String?
   indexed_colors : Array[String]?
+  mru_colors_xml : String?
+  styles_ext_lst_xml : String?
   mut file_path : String?
   mut zip_writer : ((@zip.Archive) -> Bytes raise)?
   mut charset_transcoder : ((String, Bytes) -> String raise XlsxError)?

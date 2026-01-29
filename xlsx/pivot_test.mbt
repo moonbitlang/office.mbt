@@ -181,6 +181,23 @@ test "pivot table options builder write" {
   }
   inspect(pivot_xml.contains("pivotTableDefinition"), content="true")
   inspect(pivot_xml.contains("name=\"PivotTable1\""), content="true")
+  inspect(pivot_xml.contains("rowGrandTotals=\"1\""), content="true")
+  inspect(pivot_xml.contains("colGrandTotals=\"1\""), content="true")
+  inspect(pivot_xml.contains("showDrill=\"1\""), content="true")
+  inspect(pivot_xml.contains("useAutoFormatting=\"0\""), content="true")
+  inspect(pivot_xml.contains("pageOverThenDown=\"0\""), content="true")
+  inspect(pivot_xml.contains("mergeItem=\"0\""), content="true")
+  inspect(pivot_xml.contains("compactData=\"0\""), content="true")
+  inspect(pivot_xml.contains("gridDropZones=\"0\""), content="true")
+  inspect(pivot_xml.contains("showError=\"0\""), content="true")
+  inspect(pivot_xml.contains("fieldPrintTitles=\"0\""), content="true")
+  inspect(pivot_xml.contains("itemPrintTitles=\"0\""), content="true")
+  inspect(pivot_xml.contains("<rowItems count=\"1\">"), content="true")
+  inspect(pivot_xml.contains("<colItems count=\"1\">"), content="true")
+  inspect(pivot_xml.contains("axis=\"axisRow\""), content="true")
+  inspect(pivot_xml.contains("axis=\"axisCol\""), content="true")
+  inspect(pivot_xml.contains("dataField=\"1\""), content="true")
+  inspect(pivot_xml.contains("<items count=\"1\">"), content="true")
   let cache_xml = match archive.get("xl/pivotCache/pivotCacheDefinition1.xml") {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing pivotCacheDefinition1.xml")
@@ -190,4 +207,26 @@ test "pivot table options builder write" {
   inspect(cache_xml.contains("sheet=\"Sheet1\""), content="true")
   inspect(cache_xml.contains("cacheFields count=\"3\""), content="true")
   inspect(cache_xml.contains("cacheField name=\"Region\""), content="true")
+}
+
+///|
+test "pivot table options compactData classic layout invalid" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = PivotTableOptions::new("Sheet1!A1:C4", "Sheet1!E2:H10")
+  opts.compact_data = true
+  opts.classic_layout = true
+  let result : Result[Unit, Error] = try
+    ignore(workbook.add_pivot_table_with_options(opts))
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(
+    result,
+    content=(
+      #|Err(InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))
+    ),
+  )
 }

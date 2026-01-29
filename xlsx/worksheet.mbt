@@ -1410,7 +1410,7 @@ let default_picture_height_px = 160
 let default_col_width_pixels = 64
 
 ///|
-let default_row_height_pixels = 20
+let default_row_height_pixels : Int = convert_row_height_to_pixels(15.0)
 
 ///|
 fn convert_col_width_to_pixels(width : Double) -> Int {
@@ -1444,8 +1444,7 @@ fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
               Some(w) => convert_col_width_to_pixels(w)
               None =>
                 match props.base_col_width {
-                  Some(v) =>
-                    convert_col_width_to_pixels(Double::from_int(v)) + 5
+                  Some(v) => convert_col_width_to_pixels(Double::from_int(v))
                   None => default_col_width_pixels
                 }
             }
@@ -1458,7 +1457,7 @@ fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
         Some(w) => convert_col_width_to_pixels(w)
         None =>
           match props.base_col_width {
-            Some(v) => convert_col_width_to_pixels(Double::from_int(v)) + 5
+            Some(v) => convert_col_width_to_pixels(Double::from_int(v))
             None => default_col_width_pixels
           }
       }
@@ -2042,7 +2041,7 @@ pub fn Worksheet::add_chart(
     height_emu: picture_emu_per_pixel * 260,
     print_object: true,
     locked: true,
-    positioning: PicturePositioning::OneCell,
+    positioning: PicturePositioning::TwoCell,
   })
 }
 
@@ -2085,7 +2084,7 @@ pub fn Worksheet::add_chart_with_options(
   }
   let positioning = match opts.format.positioning {
     Some(value) => value
-    None => PicturePositioning::OneCell
+    None => PicturePositioning::TwoCell
   }
   let width_emu = (Double::from_int(
       picture_emu_per_pixel * opts.dimension.width,

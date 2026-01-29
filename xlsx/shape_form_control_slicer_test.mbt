@@ -2,7 +2,7 @@
 test "shape write" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new("A1", "rect", text="Hello")
+  let shape = Shape::new("A1", "rect", macro_name="MyMacro", text="Hello")
   sheet.add_shape(shape)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -17,6 +17,7 @@ test "shape write" {
   }
   inspect(drawing_xml.contains("<xdr:sp>"), content="true")
   inspect(drawing_xml.contains("prst=\"rect\""), content="true")
+  inspect(drawing_xml.contains("macro=\"MyMacro\""), content="true")
   inspect(drawing_xml.contains("Hello"), content="true")
   inspect(drawing_xml.contains("cx=\"1524000\""), content="true")
   inspect(drawing_xml.contains("cy=\"1524000\""), content="true")
@@ -32,9 +33,21 @@ test "shape size and rich text paragraphs" {
       font: Some({
         bold: false,
         italic: false,
+        strike: false,
+        outline: false,
+        shadow: false,
+        condense: false,
+        extend: false,
         underline: None,
         size: None,
         color: Some("CD5C5C"),
+        color_theme: None,
+        color_indexed: None,
+        color_tint: None,
+        charset: None,
+        family_number: None,
+        scheme: None,
+        vert_align: None,
         family: None,
       }),
     },
@@ -43,9 +56,21 @@ test "shape size and rich text paragraphs" {
       font: Some({
         bold: true,
         italic: true,
+        strike: false,
+        outline: false,
+        shadow: false,
+        condense: false,
+        extend: false,
         underline: Some("sng"),
         size: Some(18.0),
         color: Some("2980B9"),
+        color_theme: None,
+        color_indexed: None,
+        color_tint: None,
+        charset: None,
+        family_number: None,
+        scheme: None,
+        vert_align: None,
         family: Some("Times New Roman"),
       }),
     },
@@ -189,10 +214,58 @@ test "form control add/get/delete and vml" {
     "Sheet1",
     FormControl::new("B2", "Button", text="Click"),
   )
-  workbook.add_form_control("Sheet1", FormControl::new("C3", "CheckBox"))
-  inspect(workbook.get_form_controls("Sheet1").length(), content="2")
-  workbook.delete_form_control("Sheet1", "C3")
-  inspect(workbook.get_form_controls("Sheet1").length(), content="1")
+  let rich_button = FormControl::new("E5", "Button", text="Button 1")
+  rich_button.set_paragraph([
+    {
+      text: "C1=A1+B1",
+      font: Some({
+        bold: true,
+        italic: true,
+        strike: false,
+        outline: false,
+        shadow: false,
+        condense: false,
+        extend: false,
+        underline: Some("single"),
+        size: Some(14.0),
+        color: Some("777777"),
+        color_theme: None,
+        color_indexed: None,
+        color_tint: None,
+        charset: None,
+        family_number: None,
+        scheme: None,
+        vert_align: None,
+        family: Some("Times New Roman"),
+      }),
+    },
+  ])
+  workbook.add_form_control("Sheet1", rich_button)
+  let checkbox = FormControl::new("C3", "CheckBox", text="Agree")
+  checkbox.set_width(140)
+  checkbox.set_height(60)
+  checkbox.set_macro_name("DoThing")
+  checkbox.set_cell_link("A1")
+  checkbox.set_checked(true)
+  workbook.add_form_control("Sheet1", checkbox)
+  let scrollbar = FormControl::new("D4", "Scroll")
+  scrollbar.set_width(140)
+  scrollbar.set_height(20)
+  scrollbar.set_cell_link("A1")
+  scrollbar.set_current_val(50)
+  scrollbar.set_min_val(10)
+  scrollbar.set_max_val(100)
+  scrollbar.set_inc_change(1)
+  scrollbar.set_page_change(1)
+  scrollbar.set_horizontally(true)
+  scrollbar.set_format(
+    GraphicOptions::with_values(
+      print_object=false,
+      positioning=PicturePositioning::Absolute,
+    ),
+  )
+  workbook.add_form_control("Sheet1", scrollbar)
+  inspect(workbook.get_form_controls("Sheet1").length(), content="4")
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{err}")
@@ -206,6 +279,93 @@ test "form control add/get/delete and vml" {
   }
   inspect(vml_xml.contains("ObjectType=\"Button\""), content="true")
   inspect(vml_xml.contains("Click"), content="true")
+  inspect(vml_xml.contains("o:button=\"t\""), content="true")
+  inspect(vml_xml.contains("buttonFace [67]"), content="true")
+  inspect(
+    vml_xml.contains("<x:Anchor>2, 0, 2, 0, 4, 12, 5, 6</x:Anchor>"),
+    content="true",
+  )
+  inspect(
+    vml_xml.contains("<x:FmlaMacro>DoThing</x:FmlaMacro>"),
+    content="true",
+  )
+  inspect(vml_xml.contains("<x:FmlaLink>A1</x:FmlaLink>"), content="true")
+  inspect(vml_xml.contains("<x:Checked>1</x:Checked>"), content="true")
+  inspect(vml_xml.contains("fillcolor=\"window [65]\""), content="true")
+  inspect(vml_xml.contains("strokecolor=\"windowText [64]\""), content="true")
+  inspect(vml_xml.contains("ObjectType=\"Scroll\""), content="true")
+  inspect(vml_xml.contains("<x:Val>50</x:Val>"), content="true")
+  inspect(vml_xml.contains("<x:Min>10</x:Min>"), content="true")
+  inspect(vml_xml.contains("<x:Max>100</x:Max>"), content="true")
+  inspect(vml_xml.contains("<x:Inc>1</x:Inc>"), content="true")
+  inspect(vml_xml.contains("<x:Page>1</x:Page>"), content="true")
+  inspect(vml_xml.contains("<x:Horiz"), content="true")
+  inspect(vml_xml.contains("<x:Dx>15</x:Dx>"), content="true")
+  inspect(
+    vml_xml.contains("face=\"Times New Roman\" size=\"280\" color=\"#777777\""),
+    content="true",
+  )
+  inspect(vml_xml.contains("<b>"), content="true")
+  inspect(vml_xml.contains("<i>"), content="true")
+  inspect(vml_xml.contains("<u>"), content="true")
+  inspect(
+    vml_xml.contains("<x:PrintObject>False</x:PrintObject>"),
+    content="true",
+  )
+  inspect(vml_xml.contains("<x:MoveWithCells"), content="true")
+  inspect(vml_xml.contains("<x:SizeWithCells"), content="true")
+  let parsed = read(bytes)
+  let controls = parsed.get_form_controls("Sheet1")
+  inspect(controls.length(), content="4")
+  let mut parsed_checkbox : FormControl? = None
+  let mut parsed_scrollbar : FormControl? = None
+  let mut parsed_rich_button : FormControl? = None
+  for control in controls {
+    if control.control_type == "CheckBox" {
+      parsed_checkbox = Some(control)
+    } else if control.control_type == "Scroll" {
+      parsed_scrollbar = Some(control)
+    } else if control.cell == "E5" {
+      parsed_rich_button = Some(control)
+    }
+  }
+  match parsed_checkbox {
+    Some(control) => {
+      inspect(control.text, content="Agree")
+      inspect(control.macro_name, content="Some(\"DoThing\")")
+      inspect(control.cell_link, content="Some(\"A1\")")
+      inspect(control.checked, content="Some(true)")
+    }
+    None => fail("missing parsed checkbox")
+  }
+  match parsed_scrollbar {
+    Some(control) => {
+      inspect(control.cell_link, content="Some(\"A1\")")
+      inspect(control.current_val, content="Some(50)")
+      inspect(control.min_val, content="Some(10)")
+      inspect(control.max_val, content="Some(100)")
+      inspect(control.inc_change, content="Some(1)")
+      inspect(control.page_change, content="Some(1)")
+      inspect(control.horizontally, content="Some(true)")
+      inspect(control.format.print_object, content="Some(false)")
+      inspect(control.format.positioning, content="Some(Absolute)")
+    }
+    None => fail("missing parsed scrollbar")
+  }
+  match parsed_rich_button {
+    Some(control) => {
+      inspect(control.text, content="Button 1")
+      inspect(control.paragraph.length(), content="1")
+      inspect(control.paragraph[0].text, content="C1=A1+B1")
+      inspect(
+        control.paragraph[0].font,
+        content="Some({bold: true, italic: true, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: Some(\"single\"), size: Some(14), color: Some(\"#777777\"), color_theme: None, color_indexed: None, color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: Some(\"Times New Roman\")})",
+      )
+    }
+    None => fail("missing parsed rich button")
+  }
+  workbook.delete_form_control("Sheet1", "C3")
+  inspect(workbook.get_form_controls("Sheet1").length(), content="3")
 }
 
 ///|

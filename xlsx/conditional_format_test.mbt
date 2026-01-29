@@ -3,8 +3,8 @@ test "conditional format set/get/unset" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let opt = ConditionalFormatOptions::new("cell")
-  opt.criteria = ">"
-  opt.value = "6"
+  opt.set_criteria(">")
+  opt.set_value("6")
   sheet.set_conditional_format("A1:A2", [opt])
   let xml = sheet.conditional_formats()[0]
   inspect(xml.contains("type=\"cellIs\""), content="true")
@@ -30,24 +30,24 @@ test "conditional format color scale, data bar, icon set" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let scale = ConditionalFormatOptions::new("3_color_scale")
-  scale.criteria = "="
-  scale.min_type = "num"
-  scale.mid_type = "num"
-  scale.max_type = "num"
-  scale.min_value = "-10"
-  scale.mid_value = "0"
-  scale.max_value = "10"
-  scale.min_color = "ff0000"
-  scale.mid_color = "00ff00"
-  scale.max_color = "0000ff"
+  scale.set_criteria("=")
+  scale.set_min_type("num")
+  scale.set_mid_type("num")
+  scale.set_max_type("num")
+  scale.set_min_value("-10")
+  scale.set_mid_value("0")
+  scale.set_max_value("10")
+  scale.set_min_color("ff0000")
+  scale.set_mid_color("00ff00")
+  scale.set_max_color("0000ff")
   sheet.set_conditional_format("B1:B2", [scale])
   let data_bar = ConditionalFormatOptions::new("data_bar")
-  data_bar.min_type = "min"
-  data_bar.max_type = "max"
-  data_bar.bar_color = "#638EC6"
+  data_bar.set_min_type("min")
+  data_bar.set_max_type("max")
+  data_bar.set_bar_color("#638EC6")
   sheet.set_conditional_format("C1:C2", [data_bar])
   let icons = ConditionalFormatOptions::new("icon_set")
-  icons.icon_style = "3Stars"
+  icons.set_icon_style("3Stars")
   sheet.set_conditional_format("D1:D2", [icons])
   let formats = sheet.conditional_formats()
   inspect(formats[0].contains("colorScale"), content="true")
@@ -68,4 +68,19 @@ test "conditional format invalid type" {
   guard result is Err(XlsxError::InvalidConditionalFormat(_)) else {
     fail("expected invalid type")
   }
+}
+
+///|
+test "conditional format setters: stopIfTrue and dxfId" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.set_criteria(">")
+  opt.set_value("1")
+  opt.set_format(Some(3))
+  opt.set_stop_if_true(true)
+  sheet.set_conditional_format("A1:A2", [opt])
+  let xml = sheet.conditional_formats()[0]
+  inspect(xml.contains("dxfId=\"3\""), content="true")
+  inspect(xml.contains("stopIfTrue=\"1\""), content="true")
 }

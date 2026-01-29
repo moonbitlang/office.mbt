@@ -262,6 +262,54 @@ fn write_shared_strings_xml(
   values : Array[SharedStringEntry],
   total_count : Int,
 ) -> String {
+  fn write_rich_text_color(sb : StringBuilder, font : RichTextFont) -> Unit {
+    let tint = match font.color_tint {
+      Some(v) => if v == 0.0 { None } else { Some(v) }
+      None => None
+    }
+    match font.color_theme {
+      Some(value) => {
+        sb.write_view("<color theme=\"\{value}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>")
+        return
+      }
+      None => ()
+    }
+    match font.color_indexed {
+      Some(value) => {
+        sb.write_view("<color indexed=\"\{value}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>")
+        return
+      }
+      None => ()
+    }
+    match font.color {
+      Some(color) => {
+        let normalized = color.replace_all(old="#", new="")
+        let rgb = if normalized.length() == 6 {
+          "FF" + normalized
+        } else {
+          normalized
+        }
+        sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>")
+      }
+      None => ()
+    }
+  }
+
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
@@ -282,6 +330,21 @@ fn write_shared_strings_xml(
               if font.italic {
                 sb.write_view("<i/>")
               }
+              if font.strike {
+                sb.write_view("<strike/>")
+              }
+              if font.outline {
+                sb.write_view("<outline/>")
+              }
+              if font.shadow {
+                sb.write_view("<shadow/>")
+              }
+              if font.condense {
+                sb.write_view("<condense/>")
+              }
+              if font.extend {
+                sb.write_view("<extend/>")
+              }
               match font.underline {
                 Some(value) =>
                   sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
@@ -291,21 +354,38 @@ fn write_shared_strings_xml(
                 Some(size) => sb.write_view("<sz val=\"\{size}\"/>")
                 None => ()
               }
+              match font.charset {
+                Some(value) => sb.write_view("<charset val=\"\{value}\"/>")
+                None => ()
+              }
+              match font.family_number {
+                Some(value) => sb.write_view("<family val=\"\{value}\"/>")
+                None => ()
+              }
               match font.family {
                 Some(family) =>
                   sb.write_view("<rFont val=\"\{escape_xml_attr(family)}\"/>")
                 None => ()
               }
               match font.color {
-                Some(color) => {
-                  let normalized = color.replace_all(old="#", new="")
-                  let rgb = if normalized.length() == 6 {
-                    "FF" + normalized
-                  } else {
-                    normalized
+                Some(_) => write_rich_text_color(sb, font)
+                None =>
+                  if font.color_theme is Some(_) ||
+                    font.color_indexed is Some(_) ||
+                    font.color_tint is Some(_) {
+                    write_rich_text_color(sb, font)
                   }
-                  sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"/>")
-                }
+              }
+              match font.vert_align {
+                Some(value) =>
+                  sb.write_view(
+                    "<vertAlign val=\"\{escape_xml_attr(value)}\"/>",
+                  )
+                None => ()
+              }
+              match font.scheme {
+                Some(value) =>
+                  sb.write_view("<scheme val=\"\{escape_xml_attr(value)}\"/>")
                 None => ()
               }
               sb.write_view("</rPr>")
@@ -669,7 +749,45 @@ priv struct DrawingHyperlink {
 let emu_per_pixel = 9525
 
 ///|
+fn two_cell_axis_to(
+  sheet : Worksheet,
+  axis : StringView,
+  start_idx0 : Int,
+  start_off_emu : Int,
+  size_emu : Int,
+) -> (Int, Int) {
+  let mut idx0 = start_idx0
+  let mut remaining = start_off_emu + size_emu
+  let mut steps = 0
+  while steps < 2000000 {
+    let idx1 = idx0 + 1
+    let cell_size_px = if axis == "col" {
+      sheet.col_width_pixels(idx1)
+    } else {
+      sheet.row_height_pixels(idx1)
+    }
+    let cell_size_emu = cell_size_px * emu_per_pixel
+    if cell_size_emu <= 0 {
+      idx0 = idx0 + 1
+      steps = steps + 1
+      continue
+    }
+    if remaining < cell_size_emu {
+      return (idx0, remaining)
+    }
+    if remaining == cell_size_emu {
+      return (idx0 + 1, 0)
+    }
+    remaining = remaining - cell_size_emu
+    idx0 = idx0 + 1
+    steps = steps + 1
+  }
+  (start_idx0, start_off_emu + size_emu)
+}
+
+///|
 fn write_drawing_xml(
+  sheet : Worksheet?,
   images : Array[DrawingImage],
   charts : Array[DrawingChart],
   shapes : Array[Shape],
@@ -705,11 +823,19 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, col_off + cx, row_idx, row_off + cy)
+        }
         sb.write_view("    <xdr:to>\n")
-        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
-        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
       PicturePositioning::Absolute => {
@@ -720,11 +846,19 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, col_off + cx, row_idx, row_off + cy)
+        }
         sb.write_view("    <xdr:to>\n")
-        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
-        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
       PicturePositioning::OneCell => {
@@ -810,11 +944,19 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, col_off + cx, row_idx, row_off + cy)
+        }
         sb.write_view("    <xdr:to>\n")
-        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
-        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
       PicturePositioning::Absolute => {
@@ -825,11 +967,19 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>\{row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, col_off, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, row_off, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, col_off + cx, row_idx, row_off + cy)
+        }
         sb.write_view("    <xdr:to>\n")
-        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>\{col_off + cx}</xdr:colOff>\n")
-        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>\{row_off + cy}</xdr:rowOff>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
       PicturePositioning::OneCell => {
@@ -894,11 +1044,19 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, 0, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, 0, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, cx, row_idx, cy)
+        }
         sb.write_view("    <xdr:to>\n")
-        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>\{cx}</xdr:colOff>\n")
-        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>\{cy}</xdr:rowOff>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
       PicturePositioning::Absolute => {
@@ -909,11 +1067,19 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
         sb.write_view("      <xdr:rowOff>0</xdr:rowOff>\n")
         sb.write_view("    </xdr:from>\n")
+        let (to_col_idx, to_col_off, to_row_idx, to_row_off) = match sheet {
+          Some(s) => {
+            let (tc, tco) = two_cell_axis_to(s, "col", col_idx, 0, cx)
+            let (tr, tro) = two_cell_axis_to(s, "row", row_idx, 0, cy)
+            (tc, tco, tr, tro)
+          }
+          None => (col_idx, cx, row_idx, cy)
+        }
         sb.write_view("    <xdr:to>\n")
-        sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
-        sb.write_view("      <xdr:colOff>\{cx}</xdr:colOff>\n")
-        sb.write_view("      <xdr:row>\{row_idx}</xdr:row>\n")
-        sb.write_view("      <xdr:rowOff>\{cy}</xdr:rowOff>\n")
+        sb.write_view("      <xdr:col>\{to_col_idx}</xdr:col>\n")
+        sb.write_view("      <xdr:colOff>\{to_col_off}</xdr:colOff>\n")
+        sb.write_view("      <xdr:row>\{to_row_idx}</xdr:row>\n")
+        sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
       PicturePositioning::OneCell => {
@@ -937,6 +1103,11 @@ fn write_drawing_xml(
     sb.write_view("        <xdr:cNvPr id=\"\{shape_id}\" name=\"")
     sb.write_view(escape_xml_attr(shape_name))
     sb.write_view("\"")
+    if shape.macro_name != "" {
+      sb.write_view(" macro=\"")
+      sb.write_view(escape_xml_attr(shape.macro_name))
+      sb.write_view("\"")
+    }
     if shape.alt_text != "" {
       sb.write_view(" descr=\"")
       sb.write_view(escape_xml_attr(shape.alt_text))
@@ -1003,6 +1174,9 @@ fn write_drawing_xml(
             }
             if font.italic {
               sb.write_view(" i=\"1\"")
+            }
+            if font.strike {
+              sb.write_view(" strike=\"sngStrike\"")
             }
             match font.underline {
               Some(value) => sb.write_view(" u=\"\{escape_xml_attr(value)}\"")
@@ -2205,6 +2379,54 @@ fn truncate_comment_content(comment : Comment) -> (String, Array[RichTextRun]) {
 
 ///|
 fn write_comments_xml(comments : ArrayView[Comment]) -> String {
+  fn write_rich_text_color(sb : StringBuilder, font : RichTextFont) -> Unit {
+    let tint = match font.color_tint {
+      Some(v) => if v == 0.0 { None } else { Some(v) }
+      None => None
+    }
+    match font.color_theme {
+      Some(value) => {
+        sb.write_view("<color theme=\"\{value}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>")
+        return
+      }
+      None => ()
+    }
+    match font.color_indexed {
+      Some(value) => {
+        sb.write_view("<color indexed=\"\{value}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>")
+        return
+      }
+      None => ()
+    }
+    match font.color {
+      Some(color) => {
+        let normalized = color.replace_all(old="#", new="")
+        let rgb = if normalized.length() == 6 {
+          "FF" + normalized
+        } else {
+          normalized
+        }
+        sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>")
+      }
+      None => ()
+    }
+  }
+
   let authors : Array[String] = []
   let author_ids : Map[String, Int] = {}
   for comment in comments {
@@ -2278,6 +2500,21 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
           if font.italic {
             sb.write_view("<i/>")
           }
+          if font.strike {
+            sb.write_view("<strike/>")
+          }
+          if font.outline {
+            sb.write_view("<outline/>")
+          }
+          if font.shadow {
+            sb.write_view("<shadow/>")
+          }
+          if font.condense {
+            sb.write_view("<condense/>")
+          }
+          if font.extend {
+            sb.write_view("<extend/>")
+          }
           match font.underline {
             Some(value) =>
               sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
@@ -2287,21 +2524,36 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
             Some(size) => sb.write_view("<sz val=\"\{size}\"/>")
             None => ()
           }
+          match font.charset {
+            Some(value) => sb.write_view("<charset val=\"\{value}\"/>")
+            None => ()
+          }
+          match font.family_number {
+            Some(value) => sb.write_view("<family val=\"\{value}\"/>")
+            None => ()
+          }
           match font.family {
             Some(family) =>
               sb.write_view("<rFont val=\"\{escape_xml_attr(family)}\"/>")
             None => ()
           }
           match font.color {
-            Some(color) => {
-              let normalized = color.replace_all(old="#", new="")
-              let rgb = if normalized.length() == 6 {
-                "FF" + normalized
-              } else {
-                normalized
+            Some(_) => write_rich_text_color(sb, font)
+            None =>
+              if font.color_theme is Some(_) ||
+                font.color_indexed is Some(_) ||
+                font.color_tint is Some(_) {
+                write_rich_text_color(sb, font)
               }
-              sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"/>")
-            }
+          }
+          match font.vert_align {
+            Some(value) =>
+              sb.write_view("<vertAlign val=\"\{escape_xml_attr(value)}\"/>")
+            None => ()
+          }
+          match font.scheme {
+            Some(value) =>
+              sb.write_view("<scheme val=\"\{escape_xml_attr(value)}\"/>")
             None => ()
           }
           sb.write_view("</rPr>")
@@ -2719,6 +2971,103 @@ let default_theme_xml =
   #|</a:theme>
 
 ///|
+fn write_theme_xml(theme_colors : Array[String]?) -> String {
+  match theme_colors {
+    Some(colors) =>
+      if colors.length() >= 10 {
+        // Order matches parse_theme_colors: lt1, dk1, lt2, dk2, accent1..accent6.
+        let lt1 = normalize_rgb_hex(colors[0])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let dk1 = normalize_rgb_hex(colors[1])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let lt2 = normalize_rgb_hex(colors[2])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let dk2 = normalize_rgb_hex(colors[3])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let a1 = normalize_rgb_hex(colors[4])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let a2 = normalize_rgb_hex(colors[5])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let a3 = normalize_rgb_hex(colors[6])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let a4 = normalize_rgb_hex(colors[7])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let a5 = normalize_rgb_hex(colors[8])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let a6 = normalize_rgb_hex(colors[9])
+          .replace_all(old="#", new="")
+          .to_upper()
+        let sb = StringBuilder::new()
+        sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        sb.write_view(
+          "<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office Theme\">\n",
+        )
+        sb.write_view("  <a:themeElements>\n")
+        sb.write_view("    <a:clrScheme name=\"Office\">\n")
+        sb.write_view("      <a:dk1><a:srgbClr val=\"")
+        sb.write_view(dk1)
+        sb.write_view("\"/></a:dk1>\n")
+        sb.write_view("      <a:lt1><a:srgbClr val=\"")
+        sb.write_view(lt1)
+        sb.write_view("\"/></a:lt1>\n")
+        sb.write_view("      <a:dk2><a:srgbClr val=\"")
+        sb.write_view(dk2)
+        sb.write_view("\"/></a:dk2>\n")
+        sb.write_view("      <a:lt2><a:srgbClr val=\"")
+        sb.write_view(lt2)
+        sb.write_view("\"/></a:lt2>\n")
+        sb.write_view("      <a:accent1><a:srgbClr val=\"")
+        sb.write_view(a1)
+        sb.write_view("\"/></a:accent1>\n")
+        sb.write_view("      <a:accent2><a:srgbClr val=\"")
+        sb.write_view(a2)
+        sb.write_view("\"/></a:accent2>\n")
+        sb.write_view("      <a:accent3><a:srgbClr val=\"")
+        sb.write_view(a3)
+        sb.write_view("\"/></a:accent3>\n")
+        sb.write_view("      <a:accent4><a:srgbClr val=\"")
+        sb.write_view(a4)
+        sb.write_view("\"/></a:accent4>\n")
+        sb.write_view("      <a:accent5><a:srgbClr val=\"")
+        sb.write_view(a5)
+        sb.write_view("\"/></a:accent5>\n")
+        sb.write_view("      <a:accent6><a:srgbClr val=\"")
+        sb.write_view(a6)
+        sb.write_view("\"/></a:accent6>\n")
+        sb.write_view("      <a:hlink><a:srgbClr val=\"0000FF\"/></a:hlink>\n")
+        sb.write_view(
+          "      <a:folHlink><a:srgbClr val=\"800080\"/></a:folHlink>\n",
+        )
+        sb.write_view("    </a:clrScheme>\n")
+        sb.write_view("    <a:fontScheme name=\"Office\">\n")
+        sb.write_view(
+          "      <a:majorFont><a:latin typeface=\"Calibri\"/></a:majorFont>\n",
+        )
+        sb.write_view(
+          "      <a:minorFont><a:latin typeface=\"Calibri\"/></a:minorFont>\n",
+        )
+        sb.write_view("    </a:fontScheme>\n")
+        sb.write_view("    <a:fmtScheme name=\"Office\"/>\n")
+        sb.write_view("  </a:themeElements>\n")
+        sb.write_view("</a:theme>\n")
+        sb.to_string()
+      } else {
+        default_theme_xml
+      }
+    None => default_theme_xml
+  }
+}
+
+///|
 pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
   let (shared_strings, string_map, rich_text_map, total_count) = collect_shared_strings(
     workbook,
@@ -2893,7 +3242,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       None
     }
     let form_control_vml_xml = if sheet.form_controls().length() > 0 {
-      Some(write_form_controls_vml(sheet_id, sheet.form_controls()))
+      Some(write_form_controls_vml(sheet_id, sheet, sheet.form_controls()))
     } else {
       None
     }
@@ -3230,7 +3579,10 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
       drawing_shapes.push(shape)
     }
     let drawing_xml = write_drawing_xml(
-      drawing_images, drawing_charts, drawing_shapes,
+      Some(sheet),
+      drawing_images,
+      drawing_charts,
+      drawing_shapes,
     )
     archive.add(
       "xl/drawings/drawing\{sheet_id}.xml",
@@ -3273,7 +3625,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         rel_id: 1,
       },
     ]
-    let drawing_xml = write_drawing_xml(drawing_images, drawing_charts, [])
+    let drawing_xml = write_drawing_xml(None, drawing_images, drawing_charts, [])
     archive.add(
       "xl/drawings/drawing\{drawing_id}.xml",
       @encoding/utf8.encode(drawing_xml),
@@ -3329,10 +3681,23 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
         workbook.styles(),
         workbook.conditional_styles(),
         workbook.default_font(),
+        workbook.default_table_style,
+        workbook.default_pivot_style,
+        workbook.indexed_colors,
+        workbook.mru_colors_xml,
+        workbook.styles_ext_lst_xml,
       ),
     ),
   )
-  archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(default_theme_xml))
+  archive.add(
+    "xl/theme/theme1.xml",
+    @encoding/utf8.encode(
+      match workbook.theme_xml {
+        Some(xml) => xml
+        None => write_theme_xml(workbook.theme_colors)
+      },
+    ),
+  )
   archive.add(
     "docProps/core.xml",
     @encoding/utf8.encode(write_core_properties_xml(workbook.core_properties())),

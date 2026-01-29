@@ -37,9 +37,21 @@ test "comment roundtrip" {
   let font : RichTextFont = {
     bold: true,
     italic: false,
+    strike: false,
+    outline: false,
+    shadow: false,
+    condense: false,
+    extend: false,
     underline: None,
     size: Some(11.0),
     color: None,
+    color_theme: None,
+    color_indexed: None,
+    color_tint: None,
+    charset: None,
+    family_number: None,
+    scheme: None,
+    vert_align: None,
     family: None,
   }
   let runs : Array[RichTextRun] = [
@@ -59,7 +71,7 @@ test "comment roundtrip" {
   inspect(
     parsed.get_comments("Sheet1"),
     content=(
-      #|[{cell: "B2", author: "Bob", text: "Note 1", paragraph: [{text: "Note", font: Some({bold: true, italic: false, underline: None, size: Some(11), color: None, family: None})}, {text: " 1", font: None}], width: None, height: None}]
+      #|[{cell: "B2", author: "Bob", text: "Note 1", paragraph: [{text: "Note", font: Some({bold: true, italic: false, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: None, size: Some(11), color: None, color_theme: None, color_indexed: None, color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: None})}, {text: " 1", font: None}], width: None, height: None}]
     ),
   )
 }

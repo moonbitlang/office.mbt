@@ -8,9 +8,21 @@ pub enum NumberFormat {
 pub struct Font {
   mut bold : Bool?
   mut italic : Bool?
+  mut strike : Bool?
+  mut outline : Bool?
+  mut shadow : Bool?
+  mut condense : Bool?
+  mut extend : Bool?
   mut underline : String?
   mut size : Double?
   mut color : String?
+  mut color_theme : Int?
+  mut color_indexed : Int?
+  mut color_tint : Double?
+  mut charset : Int?
+  mut family_number : Int?
+  mut scheme : String?
+  mut vert_align : String?
   mut family : String?
 } derive(Eq, Show)
 
@@ -19,9 +31,21 @@ pub fn Font::new() -> Font {
   {
     bold: None,
     italic: None,
+    strike: None,
+    outline: None,
+    shadow: None,
+    condense: None,
+    extend: None,
     underline: None,
     size: None,
     color: None,
+    color_theme: None,
+    color_indexed: None,
+    color_tint: None,
+    charset: None,
+    family_number: None,
+    scheme: None,
+    vert_align: None,
     family: None,
   }
 }
@@ -30,9 +54,21 @@ pub fn Font::new() -> Font {
 pub fn Font::with_values(
   bold? : Bool,
   italic? : Bool,
+  strike? : Bool,
+  outline? : Bool,
+  shadow? : Bool,
+  condense? : Bool,
+  extend? : Bool,
   underline? : String,
   size? : Double,
   color? : String,
+  color_theme? : Int,
+  color_indexed? : Int,
+  color_tint? : Double,
+  charset? : Int,
+  family_number? : Int,
+  scheme? : String,
+  vert_align? : String,
   family? : String,
 ) -> Font {
   let font = Font::new()
@@ -42,6 +78,26 @@ pub fn Font::with_values(
   }
   match italic {
     Some(v) => font.italic = Some(v)
+    None => ()
+  }
+  match strike {
+    Some(v) => font.strike = Some(v)
+    None => ()
+  }
+  match outline {
+    Some(v) => font.outline = Some(v)
+    None => ()
+  }
+  match shadow {
+    Some(v) => font.shadow = Some(v)
+    None => ()
+  }
+  match condense {
+    Some(v) => font.condense = Some(v)
+    None => ()
+  }
+  match extend {
+    Some(v) => font.extend = Some(v)
     None => ()
   }
   match underline {
@@ -56,6 +112,34 @@ pub fn Font::with_values(
     Some(v) => font.color = Some(v)
     None => ()
   }
+  match color_theme {
+    Some(v) => font.color_theme = Some(v)
+    None => ()
+  }
+  match color_indexed {
+    Some(v) => font.color_indexed = Some(v)
+    None => ()
+  }
+  match color_tint {
+    Some(v) => font.color_tint = Some(v)
+    None => ()
+  }
+  match charset {
+    Some(v) => font.charset = Some(v)
+    None => ()
+  }
+  match family_number {
+    Some(v) => font.family_number = Some(v)
+    None => ()
+  }
+  match scheme {
+    Some(v) => font.scheme = Some(v)
+    None => ()
+  }
+  match vert_align {
+    Some(v) => font.vert_align = Some(v)
+    None => ()
+  }
   match family {
     Some(v) => font.family = Some(v)
     None => ()
@@ -67,16 +151,40 @@ pub fn Font::with_values(
 pub struct Fill {
   mut typ : String?
   mut pattern : Int?
+  mut shading : Int?
   mut colors : Array[String]?
+  mut transparency : Int?
+  mut fg_theme : Int?
+  mut fg_indexed : Int?
+  mut fg_tint : Double?
+  mut bg_theme : Int?
+  mut bg_indexed : Int?
+  mut bg_tint : Double?
 } derive(Eq, Show)
 
 ///|
 pub fn Fill::new() -> Fill {
-  { typ: None, pattern: None, colors: None }
+  {
+    typ: None,
+    pattern: None,
+    shading: None,
+    colors: None,
+    transparency: None,
+    fg_theme: None,
+    fg_indexed: None,
+    fg_tint: None,
+    bg_theme: None,
+    bg_indexed: None,
+    bg_tint: None,
+  }
 }
 
 ///|
-pub fn Fill::pattern(pattern? : Int, color? : String) -> Fill {
+pub fn Fill::pattern(
+  pattern? : Int,
+  color? : String,
+  transparency? : Int,
+) -> Fill {
   let fill = Fill::new()
   fill.typ = Some("pattern")
   match pattern {
@@ -87,12 +195,254 @@ pub fn Fill::pattern(pattern? : Int, color? : String) -> Fill {
     Some(v) => fill.colors = Some([v])
     None => ()
   }
+  match transparency {
+    Some(v) => fill.transparency = Some(v)
+    None => ()
+  }
   fill
 }
 
 ///|
-pub fn Fill::solid(color : String) -> Fill {
-  Fill::pattern(pattern=1, color~)
+pub fn Fill::solid(color : String, transparency? : Int) -> Fill {
+  Fill::pattern(pattern=1, color~, transparency?)
+}
+
+///|
+priv struct GradientVariant {
+  bottom : Double
+  degree : Double
+  left : Double
+  right : Double
+  top : Double
+  typ : String
+  stops : Array[Double]
+}
+
+///|
+let fill_gradient_variants : Array[GradientVariant] = [
+  {
+    bottom: 0.0,
+    degree: 90.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 270.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 90.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 0.5, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 0.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 180.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 0.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 0.5, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 45.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 255.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 45.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 0.5, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 135.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 315.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 135.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "",
+    stops: [0.0, 0.5, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 0.0,
+    left: 0.0,
+    right: 0.0,
+    top: 0.0,
+    typ: "path",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.0,
+    degree: 0.0,
+    left: 1.0,
+    right: 1.0,
+    top: 0.0,
+    typ: "path",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 1.0,
+    degree: 0.0,
+    left: 0.0,
+    right: 0.0,
+    top: 1.0,
+    typ: "path",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 1.0,
+    degree: 0.0,
+    left: 1.0,
+    right: 1.0,
+    top: 1.0,
+    typ: "path",
+    stops: [0.0, 1.0],
+  },
+  {
+    bottom: 0.5,
+    degree: 0.0,
+    left: 0.5,
+    right: 0.5,
+    top: 0.5,
+    typ: "path",
+    stops: [0.0, 1.0],
+  },
+]
+
+///|
+pub fn Fill::gradient(
+  color1 : String,
+  color2 : String,
+  shading? : Int = 0,
+  transparency? : Int,
+) -> Fill {
+  let fill = Fill::new()
+  fill.typ = Some("gradient")
+  fill.shading = Some(shading)
+  fill.colors = Some([color1, color2])
+  match transparency {
+    Some(v) => fill.transparency = Some(v)
+    None => ()
+  }
+  fill
+}
+
+///|
+pub fn Fill::solid_theme(theme : Int, tint? : Double) -> Fill {
+  let fill = Fill::new()
+  fill.typ = Some("pattern")
+  fill.pattern = Some(1)
+  fill.fg_theme = Some(theme)
+  match tint {
+    Some(v) => fill.fg_tint = Some(v)
+    None => ()
+  }
+  fill
+}
+
+///|
+pub fn Fill::solid_indexed(indexed : Int, tint? : Double) -> Fill {
+  let fill = Fill::new()
+  fill.typ = Some("pattern")
+  fill.pattern = Some(1)
+  fill.fg_indexed = Some(indexed)
+  match tint {
+    Some(v) => fill.fg_tint = Some(v)
+    None => ()
+  }
+  fill
+}
+
+///|
+pub fn Fill::solid_bg_theme(theme : Int, tint? : Double) -> Fill {
+  let fill = Fill::new()
+  fill.typ = Some("pattern")
+  fill.pattern = Some(1)
+  fill.bg_theme = Some(theme)
+  match tint {
+    Some(v) => fill.bg_tint = Some(v)
+    None => ()
+  }
+  fill
+}
+
+///|
+pub fn Fill::solid_bg_indexed(indexed : Int, tint? : Double) -> Fill {
+  let fill = Fill::new()
+  fill.typ = Some("pattern")
+  fill.pattern = Some(1)
+  fill.bg_indexed = Some(indexed)
+  match tint {
+    Some(v) => fill.bg_tint = Some(v)
+    None => ()
+  }
+  fill
 }
 
 ///|
@@ -101,6 +451,13 @@ pub struct Border {
   mut color : String?
   mut style : Int?
 } derive(Eq, Show)
+
+///|
+priv struct BorderXmlEntry {
+  diagonal_up : Bool
+  diagonal_down : Bool
+  lines : Array[(String, Int, String?)]
+}
 
 ///|
 pub fn Border::new(typ : String) -> Border {
@@ -277,6 +634,48 @@ pub fn Style::builtin_number_format(id : Int) -> Style {
 }
 
 ///|
+pub fn Style::excelize_custom_num_fmt(
+  format_code : StringView,
+) -> Style raise XlsxError {
+  if format_code == "" {
+    raise XlsxError::InvalidOptions(msg="custom number format can not be empty")
+  }
+  Style::number_format(format_code.to_string())
+}
+
+///|
+pub fn Style::excelize_currency_num_fmt(
+  num_fmt : Int,
+  decimal_places? : Int = 2,
+  neg_red? : Bool = false,
+) -> Style raise XlsxError {
+  if decimal_places < 0 || decimal_places > 30 {
+    raise XlsxError::InvalidOptions(msg="decimal places must be in [0, 30]")
+  }
+  let base = match excelize_currency_num_fmt_code(num_fmt) {
+    Some(v) => v
+    None =>
+      raise XlsxError::InvalidOptions(
+        msg="unknown excelize currency number format",
+      )
+  }
+  let code = if decimal_places == 2 {
+    base
+  } else {
+    let mut dp = "0"
+    if decimal_places > 0 {
+      dp += "."
+      for _ in 0..<decimal_places {
+        dp += "0"
+      }
+    }
+    base.replace_all(old="0.00", new=dp)
+  }
+  let full = if neg_red { code + ";[Red]" + code } else { code }
+  Style::number_format(full)
+}
+
+///|
 pub fn Style::font(font : Font) -> Style {
   {
     number_format: None,
@@ -401,6 +800,11 @@ fn write_styles_xml(
   styles : ArrayView[Style],
   conditional_styles : ArrayView[Style],
   default_font : StringView,
+  default_table_style : StringView,
+  default_pivot_style : StringView,
+  indexed_colors : Array[String]?,
+  mru_colors_xml : String?,
+  styles_ext_lst_xml : String?,
 ) -> String {
   let style_list : Array[Style] = []
   for style in styles {
@@ -484,6 +888,26 @@ fn write_styles_xml(
       Some(v) => if v { "1" } else { "0" }
       None => "0"
     }
+    let strike = match font.strike {
+      Some(v) => if v { "1" } else { "0" }
+      None => "0"
+    }
+    let outline = match font.outline {
+      Some(v) => if v { "1" } else { "0" }
+      None => "0"
+    }
+    let shadow = match font.shadow {
+      Some(v) => if v { "1" } else { "0" }
+      None => "0"
+    }
+    let condense = match font.condense {
+      Some(v) => if v { "1" } else { "0" }
+      None => "0"
+    }
+    let extend = match font.extend {
+      Some(v) => if v { "1" } else { "0" }
+      None => "0"
+    }
     let underline = match font.underline {
       Some(v) => v.to_string()
       None => ""
@@ -492,7 +916,83 @@ fn write_styles_xml(
       Some(v) => v.to_string()
       None => ""
     }
-    "\{family}|\{size}|\{bold}|\{italic}|\{underline}|\{color}"
+    let color_theme = match font.color_theme {
+      Some(v) => v.to_string()
+      None => ""
+    }
+    let color_indexed = match font.color_indexed {
+      Some(v) => v.to_string()
+      None => ""
+    }
+    let color_tint = match font.color_tint {
+      Some(v) => v.to_string()
+      None => ""
+    }
+    let charset = match font.charset {
+      Some(v) => v.to_string()
+      None => ""
+    }
+    let family_number = match font.family_number {
+      Some(v) => v.to_string()
+      None => "2"
+    }
+    let scheme = match font.scheme {
+      Some(v) => v.to_string()
+      None => ""
+    }
+    let vert_align = match font.vert_align {
+      Some(v) => v.to_string()
+      None => ""
+    }
+    "\{family}|\{size}|\{bold}|\{italic}|\{strike}|\{outline}|\{shadow}|\{condense}|\{extend}|\{underline}|\{color}|\{color_theme}|\{color_indexed}|\{color_tint}|\{charset}|\{family_number}|\{scheme}|\{vert_align}"
+  }
+
+  fn write_font_color(sb : StringBuilder, font : Font) -> Unit {
+    let tint = match font.color_tint {
+      Some(v) => if v == 0.0 { None } else { Some(v) }
+      None => None
+    }
+    match font.color_theme {
+      Some(value) => {
+        sb.write_view("      <color theme=\"\{value}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>\n")
+        return
+      }
+      None => ()
+    }
+    match font.color_indexed {
+      Some(value) => {
+        sb.write_view("      <color indexed=\"\{value}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>\n")
+        return
+      }
+      None => ()
+    }
+    match font.color {
+      Some(value) => {
+        let normalized = value.replace_all(old="#", new="")
+        let rgb = if normalized.length() == 6 {
+          "FF" + normalized
+        } else {
+          normalized
+        }
+        sb.write_view("      <color rgb=\"\{escape_xml_attr(rgb)}\"")
+        match tint {
+          Some(v) => sb.write_view(" tint=\"\{v}\"")
+          None => ()
+        }
+        sb.write_view("/>\n")
+      }
+      None => sb.write_view("      <color theme=\"1\"/>\n")
+    }
   }
 
   let default_key = normalize_font_key(fonts[0], font_name)
@@ -520,6 +1020,26 @@ fn write_styles_xml(
       Some(true) => sb.write_view("      <i/>\n")
       _ => ()
     }
+    match font.strike {
+      Some(true) => sb.write_view("      <strike/>\n")
+      _ => ()
+    }
+    match font.outline {
+      Some(true) => sb.write_view("      <outline/>\n")
+      _ => ()
+    }
+    match font.shadow {
+      Some(true) => sb.write_view("      <shadow/>\n")
+      _ => ()
+    }
+    match font.condense {
+      Some(true) => sb.write_view("      <condense/>\n")
+      _ => ()
+    }
+    match font.extend {
+      Some(true) => sb.write_view("      <extend/>\n")
+      _ => ()
+    }
     match font.underline {
       Some(value) =>
         sb.write_view("      <u val=\"\{escape_xml_attr(value)}\"/>\n")
@@ -529,17 +1049,10 @@ fn write_styles_xml(
       Some(value) => sb.write_view("      <sz val=\"\{value}\"/>\n")
       None => sb.write_view("      <sz val=\"11\"/>\n")
     }
-    match font.color {
-      Some(value) => {
-        let normalized = value.replace_all(old="#", new="")
-        let rgb = if normalized.length() == 6 {
-          "FF" + normalized
-        } else {
-          normalized
-        }
-        sb.write_view("      <color rgb=\"\{escape_xml_attr(rgb)}\"/>\n")
-      }
-      None => sb.write_view("      <color theme=\"1\"/>\n")
+    write_font_color(sb, font)
+    match font.charset {
+      Some(value) => sb.write_view("      <charset val=\"\{value}\"/>\n")
+      None => ()
     }
     let family = match font.family {
       Some(v) => v.to_string()
@@ -548,7 +1061,21 @@ fn write_styles_xml(
     sb.write_view("      <name val=\"")
     sb.write_view(escape_xml_attr(family))
     sb.write_view("\"/>\n")
-    sb.write_view("      <family val=\"2\"/>\n")
+    let family_number = match font.family_number {
+      Some(value) => value
+      None => 2
+    }
+    sb.write_view("      <family val=\"\{family_number}\"/>\n")
+    match font.vert_align {
+      Some(value) =>
+        sb.write_view("      <vertAlign val=\"\{escape_xml_attr(value)}\"/>\n")
+      None => ()
+    }
+    match font.scheme {
+      Some(value) =>
+        sb.write_view("      <scheme val=\"\{escape_xml_attr(value)}\"/>\n")
+      None => ()
+    }
     sb.write_view("    </font>\n")
   }
   sb.write_view("  </fonts>\n")
@@ -559,18 +1086,159 @@ fn write_styles_xml(
     "darkDown", "darkUp", "darkGrid", "darkTrellis", "lightHorizontal", "lightVertical",
     "lightDown", "lightUp", "lightGrid", "lightTrellis", "gray125", "gray0625",
   ]
-  let fills : Array[(Int, String?)] = [(0, None), (17, None)]
+  let fills : Array[String] = [
+    "    <fill><patternFill patternType=\"none\"/></fill>\n", "    <fill><patternFill patternType=\"gray125\"/></fill>\n",
+  ]
   let fill_ids : Map[String, Int] = {}
-  fn normalize_fill_key(pattern : Int, color : String?) -> String {
-    let c = match color {
-      Some(v) => v
-      None => ""
-    }
-    "\{pattern}|\{c}"
+  fn normalize_pattern_fill_key(
+    pattern : Int,
+    fg_attrs : String,
+    bg_attrs : String,
+  ) -> String {
+    "pattern|\{pattern}|\{fg_attrs}|\{bg_attrs}"
   }
 
-  fill_ids[normalize_fill_key(0, None)] = 0
-  fill_ids[normalize_fill_key(17, None)] = 1
+  fn normalize_gradient_fill_key(
+    shading : Int,
+    c1 : String,
+    c2 : String,
+  ) -> String {
+    "gradient|\{shading}|\{c1}|\{c2}"
+  }
+
+  fill_ids[normalize_pattern_fill_key(0, "", "")] = 0
+  fill_ids[normalize_pattern_fill_key(17, "", "")] = 1
+  fn clamp_transparency(v : Int) -> Int {
+    if v < 0 {
+      0
+    } else if v > 100 {
+      100
+    } else {
+      v
+    }
+  }
+
+  fn fill_rgb(color : String, transparency : Int) -> String {
+    let normalized = color.replace_all(old="#", new="")
+    let base = if normalized.length() == 8 {
+      (normalized[2:] catch { _ => normalized }).to_string()
+    } else {
+      normalized
+    }
+    let t = clamp_transparency(transparency)
+    if t <= 0 && normalized.length() == 8 {
+      normalized
+    } else {
+      let opacity = 100 - t
+      let alpha = (opacity * 255 + 50) / 100
+      let a = hex_byte(alpha.to_byte())
+      a + base
+    }
+  }
+
+  fn fill_color_attrs(
+    theme : Int?,
+    indexed : Int?,
+    tint : Double?,
+    rgb : String?,
+    transparency : Int,
+  ) -> String {
+    match theme {
+      Some(value) => {
+        let sb = StringBuilder::new()
+        sb.write_view("theme=\"\{value}\"")
+        match tint {
+          Some(v) => if v != 0.0 { sb.write_view(" tint=\"\{v}\"") }
+          None => ()
+        }
+        return sb.to_string()
+      }
+      None => ()
+    }
+    match indexed {
+      Some(value) => {
+        let sb = StringBuilder::new()
+        sb.write_view("indexed=\"\{value}\"")
+        match tint {
+          Some(v) => if v != 0.0 { sb.write_view(" tint=\"\{v}\"") }
+          None => ()
+        }
+        return sb.to_string()
+      }
+      None => ()
+    }
+    match rgb {
+      Some(value) => "rgb=\"\{escape_xml_attr(fill_rgb(value, transparency))}\""
+      None => ""
+    }
+  }
+
+  fn pattern_fill_xml(
+    pattern : Int,
+    fg_attrs : String,
+    bg_attrs : String,
+  ) -> String {
+    let pattern_type = fill_patterns[pattern]
+    if fg_attrs == "" && bg_attrs == "" {
+      return "    <fill><patternFill patternType=\"\{escape_xml_attr(pattern_type)}\"/></fill>\n"
+    }
+    let sb = StringBuilder::new()
+    sb.write_view("    <fill><patternFill patternType=\"")
+    sb.write_view(escape_xml_attr(pattern_type))
+    sb.write_view("\">")
+    if fg_attrs != "" {
+      sb.write_view("<fgColor \{fg_attrs}/>")
+    }
+    if bg_attrs != "" {
+      sb.write_view("<bgColor \{bg_attrs}/>")
+    }
+    sb.write_view("</patternFill></fill>\n")
+    sb.to_string()
+  }
+
+  fn gradient_fill_xml(
+    variant : GradientVariant,
+    c1 : String,
+    c2 : String,
+    indent : StringView,
+    newline : Bool,
+  ) -> String {
+    let sb = StringBuilder::new()
+    sb.write_view(indent)
+    sb.write_view("<fill><gradientFill")
+    if variant.bottom != 0.0 {
+      sb.write_view(" bottom=\"\{variant.bottom}\"")
+    }
+    if variant.degree != 0.0 {
+      sb.write_view(" degree=\"\{variant.degree}\"")
+    }
+    if variant.left != 0.0 {
+      sb.write_view(" left=\"\{variant.left}\"")
+    }
+    if variant.right != 0.0 {
+      sb.write_view(" right=\"\{variant.right}\"")
+    }
+    if variant.top != 0.0 {
+      sb.write_view(" top=\"\{variant.top}\"")
+    }
+    if variant.typ != "" {
+      sb.write_view(" type=\"\{escape_xml_attr(variant.typ)}\"")
+    }
+    sb.write_view(">")
+    for i in 0..<variant.stops.length() {
+      let pos = variant.stops[i]
+      let color = if i == 1 { c2 } else { c1 }
+      sb.write_view("<stop position=\"\{pos}\"><color rgb=\"")
+      sb.write_view(escape_xml_attr(color))
+      sb.write_view("\"/></stop>")
+    }
+    sb.write_view("</gradientFill></fill>")
+    if newline {
+      sb.write_char('\n')
+    }
+    sb.to_string()
+  }
+
   for style in style_list {
     match style.fill {
       Some(fill) =>
@@ -582,14 +1250,73 @@ fn write_styles_xml(
                 None => 1
               }
               if pattern >= 0 && pattern < fill_patterns.length() {
-                let color = match fill.colors {
+                let fg_rgb = match fill.colors {
                   Some(colors) => colors.get(0)
                   None => None
                 }
-                let key = normalize_fill_key(pattern, color)
+                let bg_rgb = match fill.colors {
+                  Some(colors) => colors.get(1)
+                  None => None
+                }
+                let transparency = match fill.transparency {
+                  Some(v) => clamp_transparency(v)
+                  None => 0
+                }
+                let fg_attrs = fill_color_attrs(
+                  fill.fg_theme,
+                  fill.fg_indexed,
+                  fill.fg_tint,
+                  fg_rgb,
+                  transparency,
+                )
+                let bg_attrs = fill_color_attrs(
+                  fill.bg_theme,
+                  fill.bg_indexed,
+                  fill.bg_tint,
+                  bg_rgb,
+                  transparency,
+                )
+                let key = normalize_pattern_fill_key(
+                  pattern, fg_attrs, bg_attrs,
+                )
                 if !fill_ids.contains(key) {
                   fill_ids[key] = fills.length()
-                  fills.push((pattern, color))
+                  fills.push(pattern_fill_xml(pattern, fg_attrs, bg_attrs))
+                }
+              }
+            } else if t == "gradient" {
+              let shading = match fill.shading {
+                Some(v) => v
+                None => 0
+              }
+              if shading >= 0 && shading < fill_gradient_variants.length() {
+                match fill.colors {
+                  Some(colors) =>
+                    match (colors.get(0), colors.get(1)) {
+                      (Some(color1), Some(color2)) => {
+                        let transparency = match fill.transparency {
+                          Some(v) => clamp_transparency(v)
+                          None => 0
+                        }
+                        let c1 = fill_rgb(color1, transparency)
+                        let c2 = fill_rgb(color2, transparency)
+                        let key = normalize_gradient_fill_key(shading, c1, c2)
+                        if !fill_ids.contains(key) {
+                          fill_ids[key] = fills.length()
+                          fills.push(
+                            gradient_fill_xml(
+                              fill_gradient_variants[shading],
+                              c1,
+                              c2,
+                              "    ",
+                              true,
+                            ),
+                          )
+                        }
+                      }
+                      _ => ()
+                    }
+                  None => ()
                 }
               }
             }
@@ -600,28 +1327,7 @@ fn write_styles_xml(
   }
   sb.write_view("  <fills count=\"\{fills.length()}\">\n")
   for entry in fills {
-    let (pattern, color) = entry
-    let pattern_type = fill_patterns[pattern]
-    match color {
-      Some(value) => {
-        let normalized = value.replace_all(old="#", new="")
-        let rgb = if normalized.length() == 6 {
-          "FF" + normalized
-        } else {
-          normalized
-        }
-        sb.write_view("    <fill><patternFill patternType=\"")
-        sb.write_view(escape_xml_attr(pattern_type))
-        sb.write_view("\"><fgColor rgb=\"")
-        sb.write_view(escape_xml_attr(rgb))
-        sb.write_view("\"/></patternFill></fill>\n")
-      }
-      None => {
-        sb.write_view("    <fill><patternFill patternType=\"")
-        sb.write_view(escape_xml_attr(pattern_type))
-        sb.write_view("\"/></fill>\n")
-      }
-    }
+    sb.write_view(entry)
   }
   sb.write_view("  </fills>\n")
 
@@ -630,26 +1336,32 @@ fn write_styles_xml(
     "none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair", "mediumDashed",
     "dashDot", "mediumDashDot", "dashDotDot", "mediumDashDotDot", "slantDashDot",
   ]
-  let borders : Array[Array[(String, Int, String?)]] = [
-    [
-      ("left", 0, None),
-      ("right", 0, None),
-      ("top", 0, None),
-      ("bottom", 0, None),
-      ("diagonal", 0, None),
-    ],
+  let borders : Array[BorderXmlEntry] = [
+    {
+      diagonal_up: false,
+      diagonal_down: false,
+      lines: [
+        ("left", 0, None),
+        ("right", 0, None),
+        ("top", 0, None),
+        ("bottom", 0, None),
+        ("diagonal", 0, None),
+        ("vertical", 0, None),
+        ("horizontal", 0, None),
+      ],
+    },
   ]
   let border_ids : Map[String, Int] = {}
-  fn normalize_border_key(lines : ArrayView[(String, Int, String?)]) -> String {
+  fn normalize_border_key(entry : BorderXmlEntry) -> String {
     let sb = StringBuilder::new()
-    let mut first = true
-    for line in lines {
-      let (_, style, color) = line
-      if first {
-        first = false
-      } else {
-        sb.write_char('|')
-      }
+    sb.write_view(if entry.diagonal_up { "1" } else { "0" })
+    sb.write_char(',')
+    sb.write_view(if entry.diagonal_down { "1" } else { "0" })
+    for line in entry.lines {
+      let (side, style, color) = line
+      sb.write_char('|')
+      sb.write_view(side)
+      sb.write_char('=')
       sb.write_view(style.to_string())
       sb.write_char(',')
       match color {
@@ -661,10 +1373,10 @@ fn write_styles_xml(
   }
 
   border_ids[normalize_border_key(borders[0])] = 0
-  fn border_lines_for_style(
-    borders : ArrayView[Border],
-  ) -> Array[(String, Int, String?)] {
-    let sides : Array[String] = ["left", "right", "top", "bottom"]
+  fn border_lines_for_style(borders : ArrayView[Border]) -> BorderXmlEntry {
+    let sides : Array[String] = [
+      "left", "right", "top", "bottom", "vertical", "horizontal",
+    ]
     let lines : Array[(String, Int, String?)] = []
     for side in sides {
       let mut style = 0
@@ -683,18 +1395,43 @@ fn write_styles_xml(
       }
       lines.push((side, style, color))
     }
-    lines.push(("diagonal", 0, None))
-    lines
+    let mut diagonal_up = false
+    let mut diagonal_down = false
+    for b in borders {
+      if b.typ == "diagonalUp" {
+        diagonal_up = true
+      }
+      if b.typ == "diagonalDown" {
+        diagonal_down = true
+      }
+    }
+    let mut diagonal_style = 0
+    let mut diagonal_color : String? = None
+    for b in borders {
+      if b.typ == "diagonalUp" || b.typ == "diagonalDown" || b.typ == "diagonal" {
+        diagonal_style = match b.style {
+          Some(v) => v
+          None => 0
+        }
+        diagonal_color = b.color
+        break
+      }
+    }
+    if diagonal_style < 0 || diagonal_style >= border_styles.length() {
+      diagonal_style = 0
+    }
+    lines.push(("diagonal", diagonal_style, diagonal_color))
+    { diagonal_up, diagonal_down, lines }
   }
 
   for style in style_list {
     match style.border {
       Some(border) => {
-        let lines = border_lines_for_style(border)
-        let key = normalize_border_key(lines)
+        let entry = border_lines_for_style(border)
+        let key = normalize_border_key(entry)
         if !border_ids.contains(key) {
           border_ids[key] = borders.length()
-          borders.push(lines)
+          borders.push(entry)
         }
       }
       None => ()
@@ -702,11 +1439,19 @@ fn write_styles_xml(
   }
   sb.write_view("  <borders count=\"\{borders.length()}\">\n")
   for entry in borders {
-    sb.write_view("    <border>")
-    for line in entry {
+    sb.write_view("    <border")
+    if entry.diagonal_up {
+      sb.write_view(" diagonalUp=\"1\"")
+    }
+    if entry.diagonal_down {
+      sb.write_view(" diagonalDown=\"1\"")
+    }
+    sb.write_view(">")
+    for line in entry.lines {
       let (side, style, color) = line
-      if side == "diagonal" {
-        sb.write_view("<diagonal/>")
+      if (side == "vertical" || side == "horizontal") &&
+        style <= 0 &&
+        color == None {
         continue
       }
       if style <= 0 {
@@ -770,13 +1515,69 @@ fn write_styles_xml(
                 Some(v) => v
                 None => 1
               }
-              let color = match fill.colors {
+              let fg_rgb = match fill.colors {
                 Some(colors) => colors.get(0)
                 None => None
               }
-              match fill_ids.get(normalize_fill_key(pattern, color)) {
+              let bg_rgb = match fill.colors {
+                Some(colors) => colors.get(1)
+                None => None
+              }
+              let transparency = match fill.transparency {
+                Some(v) => clamp_transparency(v)
+                None => 0
+              }
+              let fg_attrs = fill_color_attrs(
+                fill.fg_theme,
+                fill.fg_indexed,
+                fill.fg_tint,
+                fg_rgb,
+                transparency,
+              )
+              let bg_attrs = fill_color_attrs(
+                fill.bg_theme,
+                fill.bg_indexed,
+                fill.bg_tint,
+                bg_rgb,
+                transparency,
+              )
+              match
+                fill_ids.get(
+                  normalize_pattern_fill_key(pattern, fg_attrs, bg_attrs),
+                ) {
                 Some(id) => id
                 None => 0
+              }
+            } else if t == "gradient" {
+              let shading = match fill.shading {
+                Some(v) => v
+                None => 0
+              }
+              if shading < 0 || shading >= fill_gradient_variants.length() {
+                0
+              } else {
+                match fill.colors {
+                  Some(colors) =>
+                    match (colors.get(0), colors.get(1)) {
+                      (Some(color1), Some(color2)) => {
+                        let transparency = match fill.transparency {
+                          Some(v) => clamp_transparency(v)
+                          None => 0
+                        }
+                        let c1 = fill_rgb(color1, transparency)
+                        let c2 = fill_rgb(color2, transparency)
+                        match
+                          fill_ids.get(
+                            normalize_gradient_fill_key(shading, c1, c2),
+                          ) {
+                          Some(id) => id
+                          None => 0
+                        }
+                      }
+                      _ => 0
+                    }
+                  None => 0
+                }
               }
             } else {
               0
@@ -961,16 +1762,16 @@ fn write_styles_xml(
       let has_fill = match style.fill {
         Some(fill) =>
           match fill.typ {
-            Some(t) => t == "pattern"
+            Some(t) => t == "pattern" || t == "gradient"
             None => false
           }
         None => false
       }
       let has_border = match style.border {
         Some(border) => {
-          let lines = border_lines_for_style(border)
+          let entry = border_lines_for_style(border)
           let mut any = false
-          for line in lines {
+          for line in entry.lines {
             let (_, s, c) = line
             if s > 0 || c != None {
               any = true
@@ -1047,6 +1848,26 @@ fn write_styles_xml(
               Some(true) => sb.write_view("<i/>")
               _ => ()
             }
+            match font.strike {
+              Some(true) => sb.write_view("<strike/>")
+              _ => ()
+            }
+            match font.outline {
+              Some(true) => sb.write_view("<outline/>")
+              _ => ()
+            }
+            match font.shadow {
+              Some(true) => sb.write_view("<shadow/>")
+              _ => ()
+            }
+            match font.condense {
+              Some(true) => sb.write_view("<condense/>")
+              _ => ()
+            }
+            match font.extend {
+              Some(true) => sb.write_view("<extend/>")
+              _ => ()
+            }
             match font.underline {
               Some(value) =>
                 sb.write_view("<u val=\"\{escape_xml_attr(value)}\"/>")
@@ -1056,16 +1877,51 @@ fn write_styles_xml(
               Some(value) => sb.write_view("<sz val=\"\{value}\"/>")
               None => ()
             }
-            match font.color {
+            let tint = match font.color_tint {
+              Some(v) => if v == 0.0 { None } else { Some(v) }
+              None => None
+            }
+            match font.color_theme {
               Some(value) => {
-                let normalized = value.replace_all(old="#", new="")
-                let rgb = if normalized.length() == 6 {
-                  "FF" + normalized
-                } else {
-                  normalized
+                sb.write_view("<color theme=\"\{value}\"")
+                match tint {
+                  Some(v) => sb.write_view(" tint=\"\{v}\"")
+                  None => ()
                 }
-                sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"/>")
+                sb.write_view("/>")
               }
+              None =>
+                match font.color_indexed {
+                  Some(value) => {
+                    sb.write_view("<color indexed=\"\{value}\"")
+                    match tint {
+                      Some(v) => sb.write_view(" tint=\"\{v}\"")
+                      None => ()
+                    }
+                    sb.write_view("/>")
+                  }
+                  None =>
+                    match font.color {
+                      Some(value) => {
+                        let normalized = value.replace_all(old="#", new="")
+                        let rgb = if normalized.length() == 6 {
+                          "FF" + normalized
+                        } else {
+                          normalized
+                        }
+                        sb.write_view("<color rgb=\"\{escape_xml_attr(rgb)}\"")
+                        match tint {
+                          Some(v) => sb.write_view(" tint=\"\{v}\"")
+                          None => ()
+                        }
+                        sb.write_view("/>")
+                      }
+                      None => ()
+                    }
+                }
+            }
+            match font.charset {
+              Some(value) => sb.write_view("<charset val=\"\{value}\"/>")
               None => ()
             }
             match font.family {
@@ -1076,7 +1932,21 @@ fn write_styles_xml(
               }
               None => ()
             }
-            sb.write_view("<family val=\"2\"/>")
+            let family_number = match font.family_number {
+              Some(value) => value
+              None => 2
+            }
+            sb.write_view("<family val=\"\{family_number}\"/>")
+            match font.vert_align {
+              Some(value) =>
+                sb.write_view("<vertAlign val=\"\{escape_xml_attr(value)}\"/>")
+              None => ()
+            }
+            match font.scheme {
+              Some(value) =>
+                sb.write_view("<scheme val=\"\{escape_xml_attr(value)}\"/>")
+              None => ()
+            }
             sb.write_view("</font>")
           }
         None => ()
@@ -1084,34 +1954,83 @@ fn write_styles_xml(
       match style.fill {
         Some(fill) =>
           if has_fill {
-            let pattern = match fill.pattern {
-              Some(v) => v
-              None => 1
-            }
-            if pattern >= 0 && pattern < fill_patterns.length() {
-              let pattern_type = fill_patterns[pattern]
-              let color = match fill.colors {
-                Some(colors) => colors.get(0)
-                None => None
-              }
-              sb.write_view("<fill><patternFill patternType=\"")
-              sb.write_view(escape_xml_attr(pattern_type))
-              sb.write_view("\">")
-              match color {
-                Some(value) => {
-                  let normalized = value.replace_all(old="#", new="")
-                  let rgb = if normalized.length() == 6 {
-                    "FF" + normalized
-                  } else {
-                    normalized
+            match fill.typ {
+              Some(t) =>
+                if t == "pattern" {
+                  let pattern = match fill.pattern {
+                    Some(v) => v
+                    None => 1
                   }
-                  sb.write_view("<bgColor rgb=\"")
-                  sb.write_view(escape_xml_attr(rgb))
-                  sb.write_view("\"/>")
+                  if pattern >= 0 && pattern < fill_patterns.length() {
+                    let pattern_type = fill_patterns[pattern]
+                    let transparency = match fill.transparency {
+                      Some(v) => clamp_transparency(v)
+                      None => 0
+                    }
+                    let bg_rgb = match fill.colors {
+                      Some(colors) =>
+                        match colors.get(1) {
+                          Some(v) => Some(v)
+                          None => colors.get(0)
+                        }
+                      None => None
+                    }
+                    let bg_theme = match fill.bg_theme {
+                      Some(v) => Some(v)
+                      None => fill.fg_theme
+                    }
+                    let bg_indexed = match fill.bg_indexed {
+                      Some(v) => Some(v)
+                      None => fill.fg_indexed
+                    }
+                    let bg_tint = match fill.bg_tint {
+                      Some(v) => Some(v)
+                      None => fill.fg_tint
+                    }
+                    let bg_attrs = fill_color_attrs(
+                      bg_theme, bg_indexed, bg_tint, bg_rgb, transparency,
+                    )
+                    sb.write_view("<fill><patternFill patternType=\"")
+                    sb.write_view(escape_xml_attr(pattern_type))
+                    sb.write_view("\">")
+                    if bg_attrs != "" {
+                      sb.write_view("<bgColor \{bg_attrs}/>")
+                    }
+                    sb.write_view("</patternFill></fill>")
+                  }
+                } else if t == "gradient" {
+                  let shading = match fill.shading {
+                    Some(v) => v
+                    None => 0
+                  }
+                  if shading >= 0 && shading < fill_gradient_variants.length() {
+                    match fill.colors {
+                      Some(colors) =>
+                        match (colors.get(0), colors.get(1)) {
+                          (Some(color1), Some(color2)) => {
+                            let transparency = match fill.transparency {
+                              Some(v) => clamp_transparency(v)
+                              None => 0
+                            }
+                            let c1 = fill_rgb(color1, transparency)
+                            let c2 = fill_rgb(color2, transparency)
+                            sb.write_view(
+                              gradient_fill_xml(
+                                fill_gradient_variants[shading],
+                                c1,
+                                c2,
+                                "",
+                                false,
+                              ),
+                            )
+                          }
+                          _ => ()
+                        }
+                      None => ()
+                    }
+                  }
                 }
-                None => ()
-              }
-              sb.write_view("</patternFill></fill>")
+              None => ()
             }
           }
         None => ()
@@ -1119,12 +2038,20 @@ fn write_styles_xml(
       match style.border {
         Some(border) =>
           if has_border {
-            let lines = border_lines_for_style(border)
-            sb.write_view("<border>")
-            for line in lines {
+            let entry = border_lines_for_style(border)
+            sb.write_view("<border")
+            if entry.diagonal_up {
+              sb.write_view(" diagonalUp=\"1\"")
+            }
+            if entry.diagonal_down {
+              sb.write_view(" diagonalDown=\"1\"")
+            }
+            sb.write_view(">")
+            for line in entry.lines {
               let (side, style, color) = line
-              if side == "diagonal" {
-                sb.write_view("<diagonal/>")
+              if (side == "vertical" || side == "horizontal") &&
+                style <= 0 &&
+                color == None {
                 continue
               }
               if style <= 0 {
@@ -1239,9 +2166,59 @@ fn write_styles_xml(
     }
     sb.write_view("  </dxfs>\n")
   }
-  sb.write_view(
-    "  <tableStyles count=\"0\" defaultTableStyle=\"TableStyleMedium9\" defaultPivotStyle=\"PivotStyleLight16\"/>\n",
-  )
+  sb.write_view("  <tableStyles count=\"0\" defaultTableStyle=\"")
+  sb.write_view(escape_xml_attr(default_table_style))
+  sb.write_view("\" defaultPivotStyle=\"")
+  sb.write_view(escape_xml_attr(default_pivot_style))
+  sb.write_view("\"/>\n")
+  let has_indexed = match indexed_colors {
+    Some(colors) => colors.length() > 0
+    None => false
+  }
+  let has_mru = match mru_colors_xml {
+    Some(value) => value != ""
+    None => false
+  }
+  if has_indexed || has_mru {
+    sb.write_view("  <colors>")
+    match indexed_colors {
+      Some(colors) =>
+        if colors.length() > 0 {
+          sb.write_view("<indexedColors>")
+          for c in colors {
+            let normalized = normalize_rgb_hex(c).replace_all(old="#", new="")
+            let upper = normalized.to_upper()
+            let rgb = if upper.length() == 6 { "FF" + upper } else { upper }
+            sb.write_view("<rgbColor rgb=\"")
+            sb.write_view(escape_xml_attr(rgb))
+            sb.write_view("\"/>")
+          }
+          sb.write_view("</indexedColors>")
+        }
+      None => ()
+    }
+    match mru_colors_xml {
+      Some(value) =>
+        if value != "" {
+          sb.write_view("<mruColors>")
+          sb.write_view(value)
+          sb.write_view("</mruColors>")
+        }
+      None => ()
+    }
+    sb.write_view("</colors>\n")
+  }
+  match styles_ext_lst_xml {
+    Some(value) =>
+      if value == "" {
+        sb.write_view("  <extLst/>\n")
+      } else {
+        sb.write_view("  <extLst>")
+        sb.write_view(value)
+        sb.write_view("</extLst>\n")
+      }
+    None => ()
+  }
   sb.write_view("</styleSheet>")
   sb.to_string()
 }

@@ -136,6 +136,12 @@ pub struct SparklineOptions {
   mut hidden : Bool
   mut reverse : Bool
   mut series_color : String?
+  mut negative_color : String?
+  mut markers_color : String?
+  mut first_color : String?
+  mut last_color : String?
+  mut high_color : String?
+  mut low_color : String?
   mut manual_max : Int?
   mut manual_min : Int?
   mut empty_cells : String?
@@ -177,6 +183,12 @@ pub fn SparklineOptions::new(
     hidden: false,
     reverse: false,
     series_color: None,
+    negative_color: None,
+    markers_color: None,
+    first_color: None,
+    last_color: None,
+    high_color: None,
+    low_color: None,
     manual_max: None,
     manual_min: None,
     empty_cells: None,
@@ -294,6 +306,97 @@ pub fn SparklineOptions::set_series_color(
 ///|
 pub fn SparklineOptions::clear_series_color(self : SparklineOptions) -> Unit {
   self.series_color = None
+}
+
+///|
+pub fn SparklineOptions::set_negative_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.negative_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_negative_color(self : SparklineOptions) -> Unit {
+  self.negative_color = None
+}
+
+///|
+pub fn SparklineOptions::set_markers_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.markers_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_markers_color(self : SparklineOptions) -> Unit {
+  self.markers_color = None
+}
+
+///|
+pub fn SparklineOptions::set_first_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.first_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_first_color(self : SparklineOptions) -> Unit {
+  self.first_color = None
+}
+
+///|
+pub fn SparklineOptions::set_last_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.last_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_last_color(self : SparklineOptions) -> Unit {
+  self.last_color = None
+}
+
+///|
+pub fn SparklineOptions::set_high_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.high_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_high_color(self : SparklineOptions) -> Unit {
+  self.high_color = None
+}
+
+///|
+pub fn SparklineOptions::set_hight_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.high_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_hight_color(self : SparklineOptions) -> Unit {
+  self.high_color = None
+}
+
+///|
+pub fn SparklineOptions::set_low_color(
+  self : SparklineOptions,
+  value : String,
+) -> Unit {
+  self.low_color = Some(value)
+}
+
+///|
+pub fn SparklineOptions::clear_low_color(self : SparklineOptions) -> Unit {
+  self.low_color = None
 }
 
 ///|
@@ -1102,6 +1205,30 @@ fn sparkline_group_options_from_sparkline_options(
   group_opts.color_low = Some(preset.color_low)
   match opts.series_color {
     Some(value) => group_opts.color_series = Some(SparklineColor::rgb(value))
+    None => ()
+  }
+  match opts.negative_color {
+    Some(value) => group_opts.color_negative = Some(SparklineColor::rgb(value))
+    None => ()
+  }
+  match opts.markers_color {
+    Some(value) => group_opts.color_markers = Some(SparklineColor::rgb(value))
+    None => ()
+  }
+  match opts.first_color {
+    Some(value) => group_opts.color_first = Some(SparklineColor::rgb(value))
+    None => ()
+  }
+  match opts.last_color {
+    Some(value) => group_opts.color_last = Some(SparklineColor::rgb(value))
+    None => ()
+  }
+  match opts.high_color {
+    Some(value) => group_opts.color_high = Some(SparklineColor::rgb(value))
+    None => ()
+  }
+  match opts.low_color {
+    Some(value) => group_opts.color_low = Some(SparklineColor::rgb(value))
     None => ()
   }
   group_opts

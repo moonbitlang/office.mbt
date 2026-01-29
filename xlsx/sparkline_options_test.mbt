@@ -10,6 +10,12 @@ test "sparkline options write" {
   opts.set_axis(true)
   opts.set_reverse(true)
   opts.set_series_color("00FF00")
+  opts.set_negative_color("FF0000")
+  opts.set_markers_color("0000FF")
+  opts.set_first_color("112233")
+  opts.set_last_color("445566")
+  opts.set_high_color("778899")
+  opts.set_low_color("AABBCC")
   sheet.add_sparkline_options(opts)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -32,6 +38,18 @@ test "sparkline options write" {
   inspect(sheet_xml.contains("rgb=\"FF000000\""), content="true")
   inspect(sheet_xml.contains("x14:colorSeries"), content="true")
   inspect(sheet_xml.contains("rgb=\"FF00FF00\""), content="true")
+  inspect(sheet_xml.contains("x14:colorNegative"), content="true")
+  inspect(sheet_xml.contains("rgb=\"FFFF0000\""), content="true")
+  inspect(sheet_xml.contains("x14:colorMarkers"), content="true")
+  inspect(sheet_xml.contains("rgb=\"FF0000FF\""), content="true")
+  inspect(sheet_xml.contains("x14:colorFirst"), content="true")
+  inspect(sheet_xml.contains("rgb=\"FF112233\""), content="true")
+  inspect(sheet_xml.contains("x14:colorLast"), content="true")
+  inspect(sheet_xml.contains("rgb=\"FF445566\""), content="true")
+  inspect(sheet_xml.contains("x14:colorHigh"), content="true")
+  inspect(sheet_xml.contains("rgb=\"FF778899\""), content="true")
+  inspect(sheet_xml.contains("x14:colorLow"), content="true")
+  inspect(sheet_xml.contains("rgb=\"FFAABBCC\""), content="true")
 }
 
 ///|
@@ -46,6 +64,12 @@ test "sparkline options roundtrip" {
   opts.set_axis(true)
   opts.set_reverse(true)
   opts.set_series_color("00FF00")
+  opts.set_negative_color("FF0000")
+  opts.set_markers_color("0000FF")
+  opts.set_first_color("112233")
+  opts.set_last_color("445566")
+  opts.set_high_color("778899")
+  opts.set_low_color("AABBCC")
   sheet.add_sparkline_options(opts)
   let parsed = read(write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
@@ -66,6 +90,30 @@ test "sparkline options roundtrip" {
   match group.options.color_series {
     Some(color) => inspect(color.rgb, content="Some(\"FF00FF00\")")
     None => fail("missing colorSeries")
+  }
+  match group.options.color_negative {
+    Some(color) => inspect(color.rgb, content="Some(\"FFFF0000\")")
+    None => fail("missing colorNegative")
+  }
+  match group.options.color_markers {
+    Some(color) => inspect(color.rgb, content="Some(\"FF0000FF\")")
+    None => fail("missing colorMarkers")
+  }
+  match group.options.color_first {
+    Some(color) => inspect(color.rgb, content="Some(\"FF112233\")")
+    None => fail("missing colorFirst")
+  }
+  match group.options.color_last {
+    Some(color) => inspect(color.rgb, content="Some(\"FF445566\")")
+    None => fail("missing colorLast")
+  }
+  match group.options.color_high {
+    Some(color) => inspect(color.rgb, content="Some(\"FF778899\")")
+    None => fail("missing colorHigh")
+  }
+  match group.options.color_low {
+    Some(color) => inspect(color.rgb, content="Some(\"FFAABBCC\")")
+    None => fail("missing colorLow")
   }
 }
 

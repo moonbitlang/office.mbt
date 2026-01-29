@@ -18,7 +18,7 @@ References:
 ## Feature worklist
 
 ### Styles / formatting
-- [ ] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
+- [x] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
   - [x] Font (cell styles + conditional styles)
   - [x] Fill (pattern/solid + conditional fill)
   - [x] Border (basic left/right/top/bottom + conditional border)
@@ -34,7 +34,7 @@ References:
 - [x] Follow-up: picture positioning (oneCell/twoCell/absolute) (more `GraphicOptions` parity)
 - [x] Follow-up: picture autofit options (AutoFit / AutoFitIgnoreAspect) (more `GraphicOptions` parity)
 - [x] Follow-up: picture `PrintObject` / `Locked` flags (writes `xdr:clientData` attrs) (more `GraphicOptions` parity)
-- [ ] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
+- [x] Expand `xlsx.Shape` to support size/fill/line/rich text paragraphs (Excelize `Shape`/`ShapeLine` in `excelize/xmlDrawing.go`)
   - [x] Size (width/height + scale) and basic rich-text paragraphs
   - [x] Solid fill (color + transparency) and line (color + width)
   - [x] Name/alt text + `xdr:clientData` flags
@@ -53,7 +53,106 @@ References:
 - [x] Add `HyperlinkOpts`-like API for richer hyperlinks (Excelize `HyperlinkOpts` in `excelize/cell.go`)
 
 ### Conditional formatting
-- [ ] Add higher-level `ConditionalFormatOptions` parity (Excelize `ConditionalFormatOptions` in `excelize/xmlWorksheet.go`)
+- [x] Add higher-level `ConditionalFormatOptions` parity (Excelize `ConditionalFormatOptions` in `excelize/xmlWorksheet.go`)
 
 ### Tables
 - [x] Expand `xlsx.Table` options (row/col stripes, first/last column emphasis, etc.) (Excelize `Table` in `excelize/table.go` / `excelize/xmlTable.go`)
+
+## Follow-ups (known remaining differences)
+
+- [x] Expand `RichTextFont` toward Excelize `Font` parity (strike/shadow/vertAlign/etc.)
+- [x] Audit/expand style long-tail options and add round-trip tests
+  - [x] Style `Font` long-tail tags (strike/outline/shadow/condense/extend/charset/family/scheme/vertAlign)
+  - [x] Style `Border` diagonalUp/diagonalDown (+ optional vertical/horizontal)
+  - [x] Style `Fill` transparency (ARGB alpha) + round-trip tests
+  - [x] Style theme/indexed colors + tint (Font/Fill)
+- [x] Audit/expand chart option coverage (typed model vs raw OOXML fallbacks)
+  - [x] Support more basic chart types (stacked col/bar, area, pie, doughnut, radar, scatter, bubble)
+  - [x] Emit axis titles/gridlines/numFmt/tickLblPos + dispBlanksAs + bar gapWidth/overlap
+  - [x] Add stock chart support (high-low-close, open-high-low-close)
+  - [x] Add 3D chart support (pie3D/line3D/area3D/col3D/bar3D/surface, etc.)
+  - [x] Add deeper series styling options (fill/line/marker/data labels/data points)
+
+## Next parity audit targets (deeper / long-tail)
+
+### Charts (long-tail)
+- [x] Doughnut chart `holeSize` option
+- [x] Bubble chart `bubbleScale` option
+- [x] Plot-area data label flags (showCatName/showSerName/showPercent/showLeaderLines/showBubbleSize)
+- [x] Axis font + alignment parity (ChartAxis)
+- [x] Title rich text parity (Chart title/axis title runs)
+- [x] Series fill/marker fill+border parity (ChartSeries/ChartMarker/ChartLine)
+
+### Charts (struct parity next)
+- [x] Omit legend element when `legend.position == "none"`
+- [x] Legend font parity (`ChartLegend.font` -> `<c:txPr>`)
+- [x] Plot-area fill parity (`ChartPlotArea.Fill` solid fill at least)
+- [x] Plot-area data table parity (`ShowDataTable` / `ShowDataTableKeys`)
+- [x] Data label model parity (`ChartDataLabel` alignment/font/fill)
+- [x] Chart border/fill parity (chart-level `<c:spPr>`/`<c:txPr>`)
+- [x] OfPie split position (`ChartPlotArea.SecondPlotValues` -> `<c:splitPos>`)
+
+### Rich text (long-tail)
+- [x] Rich text run color theme/indexed/tint (`RichTextFont.color_theme/color_indexed/color_tint`)
+
+### Shapes (long-tail)
+- [x] Shape macro attribute (`Shape.macro_name` -> `xdr:cNvPr macro="..."`)
+
+## Parity audit (field-level, follow-ups)
+
+These are discovered via `python3 scripts/excelize_struct_field_parity.py` and manual review.
+
+### Pivot tables
+- [x] Pivot table definition option attrs (grand totals/drill/autofmt/etc.) + rowItems/colItems parity (partial Excelize `PivotTableOptions`)
+- [x] Pivot field options parity (compact/outline/showAll/insertBlankRow/defaultSubtotal + proper `<items>`)
+
+### Sparklines
+- [x] Sparkline per-color parity on `SparklineOptions` (negative/markers/first/last/high/low colors) or unify via `SparklineGroupOptions`
+
+### Styles
+- [x] Number format long-tail parity (Excelize `Style.DecimalPlaces`, `Style.NegRed`, `Style.CustomNumFmt` vs MoonBit `NumberFormat`)
+
+## Deep parity audit (behavior-level)
+
+These are behavior/interop differences not well-captured by API-name parity or
+struct-field parity scripts.
+
+### Pictures / images
+- [x] Parse image dimensions for more formats (bmp/tiff/ico) for correct EMU sizing
+- [x] Parse SVG dimensions (width/height/viewBox) for correct EMU sizing
+- [x] Parse metafile dimensions (emf/wmf) for correct EMU sizing
+- [x] Compressed metafiles (emz/wmz): gzip-decompress + sizing parity
+
+### Formula evaluation
+- [x] Formula function-name parity vs Excelize (`python3 scripts/excelize_formula_parity.py`)
+
+### Form controls (VML)
+- [x] Parse + round-trip basic form controls (macro/cellLink/checked) via `xl/drawings/vmlDrawing*.vml`
+- [x] FormControl sizing parity (width/height + anchor calculation)
+- [x] FormControl option parity (current/min/max/inc/page/horizontally, etc.)
+- [x] FormControl rich text paragraphs parity (`Paragraph` -> VML `<font>` runs)
+- [x] FormControl VML presets parity (fill/stroke + common `<x:ClientData>` defaults)
+
+## Next parity audit (long-tail)
+
+These are larger-scope items where Excelize exposes many knobs and mbtexcel may
+still be a subset. Tackle one item at a time and add focused tests.
+
+### Drawings / anchors
+- [x] Two-cell/absolute anchors compute correct `<xdr:to>` cell (not same-cell with huge offsets) for charts/images/shapes (Excelize uses `twoCellAnchor` for charts by default)
+
+### Charts
+- [x] Chart options long-tail parity audit (Excelize `Chart`/`Chart*` options vs mbtexcel chart model)
+- [x] Combo charts (basic CatAx/ValAx + optional secondary Y axis) (Excelize `AddChart(..., combo ...*Chart)` / `AddChartSheet(..., combo ...*Chart)`)
+- [x] Combo charts (axis-model long-tail): scatter/bubble mixes (basic)
+- [x] Combo charts (axis-model long-tail): dateAx/stock mixes and other edge cases
+
+### Styles
+- [x] Style model long-tail parity audit (rare font/fill/border/alignment/protection tags and edge cases)
+  - [x] Gradient cell fills (`Fill::gradient`, `Fill.typ == "gradient"`, `Fill.shading` 0..16)
+  - [x] Gradient conditional fills (dxfs `<dxf><fill><gradientFill .../></fill></dxf>`)
+  - [x] Round-trip theme/indexed colors (`xl/theme/theme1.xml`, `xl/styles.xml` `<indexedColors>`)
+  - [x] Round-trip `<colors><mruColors>` (read + write preserve)
+  - [x] Preserve full theme XML on write (round-trip `xl/theme/theme1.xml` beyond just extracted colors)
+  - [x] Round-trip `<styleSheet><extLst>` (read + write preserve)
+  - [x] Round-trip `<tableStyles>` default styles (defaultTableStyle/defaultPivotStyle attrs)

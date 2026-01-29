@@ -2,6 +2,10 @@
 package "bobzhang/mbtexcel/zip"
 
 // Values
+pub fn gunzip(BytesView) -> Bytes raise ZipError
+
+pub fn gzip(BytesView) -> Bytes raise ZipError
+
 pub fn read(BytesView) -> Archive raise ZipError
 
 pub fn write(Archive) -> Bytes raise ZipError

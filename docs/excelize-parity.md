@@ -16,127 +16,77 @@ When I say “parity” below, I mean **end-user features and ergonomics**, not 
 - **Method-name parity is very high**: by normalized name, every exported
   Excelize function / `(*File)` method has a corresponding exported MoonBit API
   name (often on `Workbook` / `Worksheet` / `StreamWriter`).
-- **Feature parity is not complete**: several Excelize features rely on rich
-  option structs (`Style`, `Chart`, `Shape`, `PivotTableOptions`,
-  `SparklineOptions`, `SlicerOptions`, …). The current MoonBit port generally
-  supports only a **minimal subset** of those options or requires **raw OOXML
-  XML strings**.
+- **Feature parity is high but not 100%**: most “option-struct driven” features
+  now have typed MoonBit models (styles, charts, shapes, sparklines, pivot
+  tables, slicers, tables, pictures, conditional formats), but some models are
+  still **subsets** of Excelize and a few features remain unsupported.
 
-## Major parity gaps / differences
+## Major remaining parity gaps / differences
 
-### 1) Styles are currently “number-format only”
+### 1) Some option models are still smaller than Excelize’s
 
-- Excelize exposes a rich cell style model via `Style` / `Font` / `Fill` /
-  `Border` / `Alignment` / `Protection` (`excelize/xmlStyles.go`).
-- mbtexcel exposes `xlsx.Style` with only `number_format` plus `default_font`
-  (`xlsx/style.mbt`).
-
-Impact:
-- You can’t programmatically create most rich formatting (borders, fills,
-  alignment, font variations, protection flags, …) using the MoonBit API yet.
-- Writing a workbook will emit a minimal `xl/styles.xml`, so **round-tripping**
-  complex styles from existing workbooks is not guaranteed to preserve details.
-
-### 2) Charts are XML-driven (no high-level chart builder yet)
-
-- Excelize chart creation is driven by the structured `Chart` object and many
-  subtypes (`excelize/xmlChart.go`, `excelize/chart.go`).
-- mbtexcel currently exposes charts as “raw XML payloads”:
-  - `Workbook::add_chart(sheet, cell, xml)` (`xlsx/workbook.mbt`)
-  - `Workbook::add_chart_sheet(name, chart_xml)` (`xlsx/workbook.mbt`)
-  - `Chart` / `ChartSheet` in MoonBit are essentially wrappers around XML
-    strings (`xlsx/pkg.generated.mbti`).
+Most major Excelize option structs have MoonBit counterparts, but some are
+still subsets (missing some rarely-used flags/fields). The biggest remaining
+examples are usually in “long tail” formatting knobs (styles, charts, rich
+text).
 
 Impact:
-- You can still write charts, but you must supply correct XML (or build your own
-  higher-level chart builder on top).
-- Excelize’s “typed options + validation” is not ported yet.
+- Some advanced formatting knobs require extending the MoonBit model (or falling
+  back to emitting raw OOXML XML in places where that’s exposed).
 
-### 3) Shapes are minimal (no sizing/format/paragraph model)
+### 2) Rich text font model is close to Excelize’s `Font`, but not identical
 
-- Excelize `Shape` includes dimensions, fill/line, rich text paragraph runs,
-  and other formatting (`excelize/xmlDrawing.go`).
-- mbtexcel `xlsx.Shape` currently includes only:
-  `reference`, `shape_type`, `text` (`xlsx/shape.mbt`).
-
-Impact:
-- Feature coverage is enough for basic “put a simple shape with text” cases,
-  but not the richer formatting supported by Excelize.
-
-### 4) Sparklines: partial `SparklineOptions` parity
-
-- Excelize supports rich sparkline options like style presets, markers, axis,
-  series color, reverse direction, etc via `SparklineOptions`
-  (`excelize/sparkline.go`).
-- mbtexcel supports:
-  - `SparklineOptions` builder (type/style/markers/high/low/first/last/negative/axis/reverse/seriesColor)
-  - round-tripping those settings via `SparklineGroupOptions` on `SparklineGroup`
+- Excelize rich text runs reference `Font` (includes theme/indexed/tint colors)
+  (`excelize/xmlSharedStrings.go`, `excelize/xmlStyles.go`).
+- mbtexcel rich text uses `RichTextFont` and now covers the most common font
+  run properties (bold/italic/underline/size/rFont, strike/outline/shadow/
+  condense/extend/charset/family/scheme/vertAlign, plus color rgb/theme/indexed
+  and tint), but it is still a separate type (not a perfect 1:1 mirror).
 
 Impact:
-- You can configure common sparkline formatting, but some Excelize options are
-  still not implemented (e.g. date axis, hidden, weight, manual min/max, empty
-  cell display modes beyond the current default).
+- Rich text works well for typical usage; if you rely on niche font run
+  attributes, validate on real files and add targeted tests.
 
-### 5) Pivot tables: XML-driven (no `PivotTableOptions` builder)
+### 3) Styles and charts aim for practical parity, not a perfect mirror
 
-- Excelize can generate pivot table XML from `PivotTableOptions`
-  (`excelize/pivotTable.go`).
-- mbtexcel exposes pivot tables primarily as XML strings:
-  `Workbook::add_pivot_table(_xml)` takes `table_xml`, `cache_definition_xml`,
-  and optional `cache_records_xml` (`xlsx/pkg.generated.mbti`).
-
-Impact:
-- You can add pivot tables if you already have the XML (or you build a higher
-  level pivot generator), but you don’t have Excelize’s option struct parity.
-
-### 6) Slicers: XML-driven / minimal options
-
-- Excelize exposes `SlicerOptions` and builds slicer cache/list parts
-  (`excelize/slicer.go`).
-- mbtexcel currently exposes a minimal `Slicer` type (`xlsx/pkg.generated.mbti`)
-  and sheet-level insertion APIs.
+The style model (`Style` / `Font` / `Fill` / `Border` / `Alignment` /
+`Protection`) and chart option types are implemented for common usage, but may
+still differ in edge cases and long-tail options compared to Excelize.
+For example, style fonts now include more tags (strike/shadow/charset/scheme/
+vertAlign), fills support transparency via ARGB alpha and Excelize-style
+gradient fills (shading variants), and font/fill colors support theme/indexed +
+tint, but there are still areas where the MoonBit model may not expose every
+Excelize knob.
+For charts, `ChartOptions` now covers common types (bar/col/line/area/pie/
+doughnut/radar/scatter/bubble/stock/3D/ofPie) and basic axis/legend +
+per-series styling options.
 
 Impact:
-- Basic slicer attachment is possible, but Excelize’s slicer option model is
-  not ported.
+- If you rely on very specific Excel formatting behaviors, validate on real
+  files and consider adding targeted tests for those cases.
 
-### 7) Tables: subset of Excelize’s `Table` fields
+### 4) Some picture formats may not have accurate auto-sizing
 
-- Excelize `Table` includes many flags like first/last column emphasis, row/col
-  stripes, and additional behaviors (`excelize/xmlTable.go`, `excelize/table.go`).
-- mbtexcel `xlsx.Table` currently captures core identity and layout only:
-  `name`, `display_name`, `range_ref`, `columns`, `style_name`
-  (`xlsx/pkg.generated.mbti`).
+mbtexcel infers picture size from image bytes to compute EMU extents.
+Common raster formats are supported; however, Windows metafiles like
+EMZ/WMZ (gzip-compressed EMF/WMF) are now decompressed and sized correctly.
 
-Impact:
-- Creating tables works for core cases, but advanced formatting/flags are not
-  fully configurable.
+### 5) VML form controls: mostly supported, with a few remaining gaps
 
-### 8) Pictures: subset of `GraphicOptions`
+mbtexcel can write and parse VML form controls including macro/cellLink/checked,
+sizing (width/height + anchor), scroll/spin options (val/min/max/inc/page +
+horizontal), basic `GraphicOptions` flags (printObject/positioning), and
+per-control VML presets (fill/stroke + common `<x:ClientData>` defaults).
 
-- Excelize picture insertion uses `GraphicOptions` (alt text, name, lock aspect
-  ratio, positioning modes, print/locked, etc.) (`excelize/xmlDrawing.go`).
-- mbtexcel picture APIs currently focus on: offset/scale + hyperlink
-  (`xlsx/worksheet.mbt`).
-
-Impact:
-- Image insertion is in good shape for “place over cells” flows, but advanced
-  drawing properties are not as configurable as Excelize.
-
-### 9) Rich text font model is smaller than Excelize’s `Font`
-
-- Excelize rich text runs reference the full `Font` type with many attributes
-  (strike, shadow, vertAlign, etc.) (`excelize/xmlSharedStrings.go`).
-- mbtexcel rich text uses `RichTextFont` with a smaller subset
-  (`xlsx/pkg.generated.mbti`).
-
-Impact:
-- Basic rich text works; not all font decorations map 1:1 yet.
+Remaining gaps are mostly long-tail preset/styling parity for specific control
+types and edge-case behaviors.
 
 ## Notes / intentional differences
 
 - **Async I/O**: some APIs are `async` in MoonBit (e.g. file I/O, writing to a
   writer). Excelize is synchronous.
+- **VBA projects**: supported as raw `vbaProject.bin` bytes (OLE/CFB header
+  validated) without attempting to parse/modify macro internals.
 - **Formula evaluation**: both projects have formula evaluation APIs, but exact
   supported function coverage and edge-case behavior may differ (this hasn’t
   been exhaustively parity-audited here).

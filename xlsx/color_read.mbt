@@ -82,3 +82,17 @@ fn parse_indexed_colors(xml : StringView) -> Array[String]? raise XlsxError {
     Some(colors)
   }
 }
+
+///|
+fn parse_mru_colors_xml(xml : StringView) -> String? raise XlsxError {
+  let body = match extract_tag_body_from(xml, "mruColors") {
+    Some(value) => value
+    None => return None
+  }
+  let text = body.to_string()
+  if text == "" {
+    None
+  } else {
+    Some(text)
+  }
+}

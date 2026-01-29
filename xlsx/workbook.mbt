@@ -13,8 +13,13 @@ pub struct Workbook {
   mut workbook_props : WorkbookPropsOptions
   mut calc_props : CalcPropsOptions
   mut default_font : String
+  default_table_style : String
+  default_pivot_style : String
   theme_colors : Array[String]?
+  theme_xml : String?
   indexed_colors : Array[String]?
+  mru_colors_xml : String?
+  styles_ext_lst_xml : String?
   mut file_path : String?
   mut zip_writer : ((@zip.Archive) -> Bytes raise)?
   mut charset_transcoder : ((String, Bytes) -> String raise XlsxError)?
@@ -163,8 +168,13 @@ pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
     workbook_props: WorkbookPropsOptions::new(),
     calc_props: CalcPropsOptions::new(),
     default_font: "Calibri",
+    default_table_style: "TableStyleMedium9",
+    default_pivot_style: "PivotStyleLight16",
     theme_colors: None,
+    theme_xml: None,
     indexed_colors: None,
+    mru_colors_xml: None,
+    styles_ext_lst_xml: None,
     file_path: None,
     zip_writer: None,
     charset_transcoder: None,
@@ -3045,6 +3055,11 @@ pub fn Workbook::add_pivot_table_with_options(
   self : Workbook,
   opts : PivotTableOptions,
 ) -> PivotTable raise XlsxError {
+  if opts.compact_data && opts.classic_layout {
+    raise XlsxError::InvalidPivotTable(
+      msg="pivot compactData is incompatible with classic layout",
+    )
+  }
   let (data_sheet, data_ref) = split_sheet_range(opts.data_range)
   let (pivot_sheet, pivot_ref) = split_sheet_range(opts.pivot_table_range)
   let (header_row, min_col, _max_row, max_col) = parse_range_ref(data_ref)
@@ -3078,17 +3093,17 @@ pub fn Workbook::add_pivot_table_with_options(
     }
   }
 
-  let row_fields : Array[Int] = []
+  let row_fields : Array[(Int, PivotTableField)] = []
   for field in opts.rows {
-    row_fields.push(resolve_field_index(field_index, field.data))
+    row_fields.push((resolve_field_index(field_index, field.data), field))
   }
-  let col_fields : Array[Int] = []
+  let col_fields : Array[(Int, PivotTableField)] = []
   for field in opts.columns {
-    col_fields.push(resolve_field_index(field_index, field.data))
+    col_fields.push((resolve_field_index(field_index, field.data), field))
   }
-  let page_fields : Array[Int] = []
+  let page_fields : Array[(Int, PivotTableField)] = []
   for field in opts.filter {
-    page_fields.push(resolve_field_index(field_index, field.data))
+    page_fields.push((resolve_field_index(field_index, field.data), field))
   }
   let data_fields : Array[(Int, PivotTableField)] = []
   for field in opts.data {

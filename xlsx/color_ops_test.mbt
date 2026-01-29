@@ -31,6 +31,7 @@ test "get base color from theme and indexed colors" {
     #|      <a:accent6><a:srgbClr val="0B0B0B"/></a:accent6>
     #|    </a:clrScheme>
     #|  </a:themeElements>
+    #|  <a:objectDefaults/>
     #|</a:theme>
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -39,7 +40,9 @@ test "get base color from theme and indexed colors" {
   let colors_block = "  <colors><indexedColors>" +
     "<rgbColor rgb=\"FF123456\"/>" +
     "<rgbColor rgb=\"FF654321\"/>" +
-    "</indexedColors></colors>\n"
+    "</indexedColors>" +
+    "<mruColors><color rgb=\"FFABCDEF\"/></mruColors>" +
+    "</colors>\n"
   let updated_styles = styles_xml.replace_all(
     old="</styleSheet>",
     new="\{colors_block}</styleSheet>",
@@ -63,4 +66,30 @@ test "get base color from theme and indexed colors" {
   let parsed = read(updated_bytes)
   inspect(parsed.get_base_color("", 0, theme_color=4), content="ABCDEF")
   inspect(parsed.get_base_color("", 1), content="654321")
+  let roundtrip = write(parsed)
+  let roundtrip_archive = @zip.read(roundtrip) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let roundtrip_theme = match roundtrip_archive.get("xl/theme/theme1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing theme1.xml")
+  }
+  inspect(roundtrip_theme.contains("accent1"), content="true")
+  inspect(roundtrip_theme.contains("val=\"ABCDEF\""), content="true")
+  inspect(roundtrip_theme.contains("objectDefaults"), content="true")
+  let roundtrip_styles = match roundtrip_archive.get("xl/styles.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing styles.xml")
+  }
+  inspect(roundtrip_styles.contains("<indexedColors>"), content="true")
+  inspect(
+    roundtrip_styles.contains("rgbColor rgb=\"FF123456\""),
+    content="true",
+  )
+  inspect(
+    roundtrip_styles.contains("rgbColor rgb=\"FF654321\""),
+    content="true",
+  )
+  inspect(roundtrip_styles.contains("<mruColors>"), content="true")
+  inspect(roundtrip_styles.contains("color rgb=\"FFABCDEF\""), content="true")
 }

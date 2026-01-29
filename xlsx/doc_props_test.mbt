@@ -83,3 +83,45 @@ test "custom properties roundtrip" {
   inspect(props[3].value, content="Some(Integer(-7))")
   inspect(props[4].value, content="Some(DateTime(\"2024-01-01T00:00:00Z\"))")
 }
+
+///|
+test "doc props get/set aliases" {
+  let workbook = Workbook::new()
+  let core = CoreProperties::with_values(
+    title="Title",
+    creator="Creator",
+    last_modified_by="Modifier",
+    created="2024-01-01T00:00:00Z",
+    modified="2024-01-02T00:00:00Z",
+  )
+  workbook.set_doc_props(core)
+  let got = workbook.get_doc_props()
+  inspect(got.title, content="Title")
+  inspect(got.creator, content="Creator")
+  inspect(got.last_modified_by, content="Modifier")
+  inspect(got.created, content="2024-01-01T00:00:00Z")
+  inspect(got.modified, content="2024-01-02T00:00:00Z")
+}
+
+///|
+test "app props get/set aliases" {
+  let workbook = Workbook::new()
+  let app = AppProperties::with_values(
+    application="MyApp",
+    company="Acme",
+    doc_security=2,
+    scale_crop=true,
+    links_up_to_date=false,
+    hyperlinks_changed=true,
+    app_version="16.0000",
+  )
+  workbook.set_app_props(app)
+  let got = workbook.get_app_props()
+  inspect(got.application, content="MyApp")
+  inspect(got.company, content="Acme")
+  inspect(got.doc_security, content="Some(2)")
+  inspect(got.scale_crop, content="Some(true)")
+  inspect(got.links_up_to_date, content="Some(false)")
+  inspect(got.hyperlinks_changed, content="Some(true)")
+  inspect(got.app_version, content="16.0000")
+}

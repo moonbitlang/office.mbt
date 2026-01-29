@@ -52,6 +52,147 @@ test "picture from bytes add and write" {
 }
 
 ///|
+test "picture dimension parsing (bmp/tiff/ico)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  // Minimal BMP header with width=10, height=20.
+  let bmp : Bytes = [
+    0x42, 0x4D, 0x3A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00,
+    0x00, 0x28, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]
+  // Minimal little-endian TIFF with width=5, height=7.
+  let tiff : Bytes = [
+    0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, 0x04,
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01, 0x01, 0x04, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]
+  // Minimal ICO with first entry width=16, height=16.
+  let ico : Bytes = [
+    0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00, 0x01, 0x00, 0x20,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x00,
+  ]
+  workbook.add_picture_from_bytes("Sheet1", "A1", bmp, ".bmp")
+  workbook.add_picture_from_bytes("Sheet1", "B2", tiff, ".tiff")
+  workbook.add_picture_from_bytes("Sheet1", "C3", ico, ".ico")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  // bmp 10x20
+  inspect(drawing_xml.contains("cx=\"95250\""), content="true")
+  inspect(drawing_xml.contains("cy=\"190500\""), content="true")
+  // tiff 5x7
+  inspect(drawing_xml.contains("cx=\"47625\""), content="true")
+  inspect(drawing_xml.contains("cy=\"66675\""), content="true")
+  // ico 16x16
+  inspect(drawing_xml.contains("cx=\"152400\""), content="true")
+  inspect(drawing_xml.contains("cy=\"152400\""), content="true")
+}
+
+///|
+test "picture dimension parsing (svg)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let svg_text = "<svg width=\"11\" height=\"13\" xmlns=\"http://www.w3.org/2000/svg\"></svg>"
+  let svg_bytes = @encoding/utf8.encode(svg_text)
+  workbook.add_picture_from_bytes("Sheet1", "A1", svg_bytes, ".svg")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  inspect(drawing_xml.contains("cx=\"104775\""), content="true")
+  inspect(drawing_xml.contains("cy=\"123825\""), content="true")
+}
+
+///|
+test "picture dimension parsing (emf/wmf)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  // Minimal EMF header with rclFrame width=2540 (.01mm) and height=1270 (.01mm)
+  // => 1.0in x 0.5in => 96px x 48px.
+  let emf : Bytes = [
+    0x01, 0x00, 0x00, 0x00, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEC, 0x09, 0x00, 0x00, 0xF6, 0x04, 0x00,
+    0x00, 0x20, 0x45, 0x4D, 0x46, 0x00, 0x00, 0x00, 0x00,
+  ]
+  // Minimal WMF placeable header with bbox 0..1440 x 0..720 and inch=1440
+  // => 1.0in x 0.5in => 96px x 48px.
+  let wmf : Bytes = [
+    0xD7, 0xCD, 0xC6, 0x9A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x05, 0xD0,
+    0x02, 0xA0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]
+  workbook.add_picture_from_bytes("Sheet1", "A1", emf, ".emf")
+  workbook.add_picture_from_bytes("Sheet1", "B2", wmf, ".wmf")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  // 96px x 48px => 914400 x 457200 EMU.
+  inspect(drawing_xml.contains("cx=\"914400\""), content="true")
+  inspect(drawing_xml.contains("cy=\"457200\""), content="true")
+}
+
+///|
+test "picture dimension parsing (emz/wmz)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  // Same test payloads as emf/wmf, but gzip-compressed.
+  let emf : Bytes = [
+    0x01, 0x00, 0x00, 0x00, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEC, 0x09, 0x00, 0x00, 0xF6, 0x04, 0x00,
+    0x00, 0x20, 0x45, 0x4D, 0x46, 0x00, 0x00, 0x00, 0x00,
+  ]
+  let wmf : Bytes = [
+    0xD7, 0xCD, 0xC6, 0x9A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x05, 0xD0,
+    0x02, 0xA0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]
+  let emz = @zip.gzip(emf[:]) catch { err => fail("gzip emf failed: \{err}") }
+  let wmz = @zip.gzip(wmf[:]) catch { err => fail("gzip wmf failed: \{err}") }
+  workbook.add_picture_from_bytes("Sheet1", "A1", emz, ".emz")
+  workbook.add_picture_from_bytes("Sheet1", "B2", wmz, ".wmz")
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("drawing1.xml utf8 decode failed")
+      }
+    None => fail("missing drawing1.xml")
+  }
+  // 96px x 48px => 914400 x 457200 EMU.
+  inspect(drawing_xml.contains("cx=\"914400\""), content="true")
+  inspect(drawing_xml.contains("cy=\"457200\""), content="true")
+}
+
+///|
 test "picture from bytes invalid extension" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

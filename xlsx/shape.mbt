@@ -27,6 +27,7 @@ pub fn ShapeLine::with_values(color? : String, width? : Double) -> ShapeLine {
 pub struct Shape {
   reference : String
   shape_type : String
+  macro_name : String
   text : String
   paragraph : Array[RichTextRun]
   width : Int
@@ -51,6 +52,7 @@ let default_shape_size = 160
 pub fn Shape::new(
   reference : String,
   shape_type : String,
+  macro_name? : String = "",
   text? : String = "",
   paragraph? : Array[RichTextRun] = [],
   width? : Int = default_shape_size,
@@ -91,6 +93,7 @@ pub fn Shape::new(
   {
     reference,
     shape_type,
+    macro_name,
     text,
     paragraph,
     width,

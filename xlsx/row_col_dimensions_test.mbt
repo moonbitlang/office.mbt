@@ -24,6 +24,47 @@ test "row and column dimensions roundtrip" {
 }
 
 ///|
+test "row/col getters get_* aliases" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_row_visible("Sheet1", 2, false)
+  workbook.set_row_outline_level("Sheet1", 2, 3)
+  workbook.set_col_visible("Sheet1", 3, false)
+  workbook.set_col_outline_level("Sheet1", 3, 2)
+  let parsed = read(write(workbook))
+  inspect(parsed.get_row_visible("Sheet1", 2), content="false")
+  inspect(parsed.get_row_outline_level("Sheet1", 2), content="3")
+  inspect(parsed.get_col_visible("Sheet1", 3), content="false")
+  inspect(parsed.get_col_outline_level("Sheet1", 3), content="2")
+}
+
+///|
+test "remove_row alias shifts cells" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "a")
+  workbook.set_cell("Sheet1", "A2", "b")
+  workbook.set_cell("Sheet1", "A3", "c")
+  workbook.remove_row("Sheet1", 2)
+  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  inspect(workbook.get_cell("Sheet1", "A2"), content="Some(\"c\")")
+  inspect(workbook.get_cell("Sheet1", "A3"), content="None")
+}
+
+///|
+test "remove_col alias shifts cells" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "a")
+  workbook.set_cell("Sheet1", "B1", "b")
+  workbook.set_cell("Sheet1", "C1", "c")
+  workbook.remove_col("Sheet1", 2)
+  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  inspect(workbook.get_cell("Sheet1", "B1"), content="Some(\"c\")")
+  inspect(workbook.get_cell("Sheet1", "C1"), content="None")
+}
+
+///|
 test "insert and remove rows adjust ranges" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

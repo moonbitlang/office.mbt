@@ -2,9 +2,21 @@
 pub(all) struct RichTextFont {
   bold : Bool
   italic : Bool
+  strike : Bool
+  outline : Bool
+  shadow : Bool
+  condense : Bool
+  extend : Bool
   underline : String?
   size : Double?
   color : String?
+  color_theme : Int?
+  color_indexed : Int?
+  color_tint : Double?
+  charset : Int?
+  family_number : Int?
+  scheme : String?
+  vert_align : String?
   family : String?
 } derive(Eq, Show)
 

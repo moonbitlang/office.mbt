@@ -83,6 +83,174 @@ pub fn ConditionalFormatOptions::set_bar_solid(
 }
 
 ///|
+pub fn ConditionalFormatOptions::set_type(
+  self : ConditionalFormatOptions,
+  typ : String,
+) -> Unit {
+  self.format_type = typ
+}
+
+///|
+pub fn ConditionalFormatOptions::set_above_average(
+  self : ConditionalFormatOptions,
+  value : Bool,
+) -> Unit {
+  self.above_average = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_percent(
+  self : ConditionalFormatOptions,
+  value : Bool,
+) -> Unit {
+  self.percent = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_format(
+  self : ConditionalFormatOptions,
+  value : Int?,
+) -> Unit {
+  self.format = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_criteria(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.criteria = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_value(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.value = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_min_type(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.min_type = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_mid_type(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.mid_type = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_max_type(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.max_type = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_min_value(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.min_value = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_mid_value(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.mid_value = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_max_value(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.max_value = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_min_color(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.min_color = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_mid_color(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.mid_color = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_max_color(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.max_color = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_bar_color(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.bar_color = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_bar_only(
+  self : ConditionalFormatOptions,
+  value : Bool,
+) -> Unit {
+  self.bar_only = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_icon_style(
+  self : ConditionalFormatOptions,
+  value : String,
+) -> Unit {
+  self.icon_style = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_reverse_icons(
+  self : ConditionalFormatOptions,
+  value : Bool,
+) -> Unit {
+  self.reverse_icons = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_icons_only(
+  self : ConditionalFormatOptions,
+  value : Bool,
+) -> Unit {
+  self.icons_only = value
+}
+
+///|
+pub fn ConditionalFormatOptions::set_stop_if_true(
+  self : ConditionalFormatOptions,
+  value : Bool,
+) -> Unit {
+  self.stop_if_true = value
+}
+
+///|
 fn normalize_conditional_type(value : StringView) -> String? {
   match value.to_string().to_lower() {
     "cell" => Some("cellIs")

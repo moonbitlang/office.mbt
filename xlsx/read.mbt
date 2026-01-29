@@ -393,11 +393,59 @@ fn parse_default_font(xml : StringView) -> String {
 fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
   let font = Font::new()
   match tag_attributes_in(xml, "b") {
-    Some(_) => font.bold = Some(true)
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.bold = Some(true) }
+        None => font.bold = Some(true)
+      }
     None => ()
   }
   match tag_attributes_in(xml, "i") {
-    Some(_) => font.italic = Some(true)
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.italic = Some(true) }
+        None => font.italic = Some(true)
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "strike") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.strike = Some(true) }
+        None => font.strike = Some(true)
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "outline") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.outline = Some(true) }
+        None => font.outline = Some(true)
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "shadow") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.shadow = Some(true) }
+        None => font.shadow = Some(true)
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "condense") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.condense = Some(true) }
+        None => font.condense = Some(true)
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "extend") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => if parse_bool_attr(value) { font.extend = Some(true) }
+        None => font.extend = Some(true)
+      }
     None => ()
   }
   match tag_attributes_in(xml, "u") {
@@ -421,6 +469,19 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       }
     None => ()
   }
+  match tag_attributes_in(xml, "charset") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="font charset invalid")
+          } noraise {
+            val => font.charset = Some(val)
+          }
+        None => ()
+      }
+    None => ()
+  }
   match tag_attributes_in(xml, "name") {
     Some(tag) =>
       match attr_value(tag, "val") {
@@ -429,8 +490,37 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       }
     None => ()
   }
-  match tag_attributes_in(xml, "color") {
+  match tag_attributes_in(xml, "family") {
     Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="font family invalid")
+          } noraise {
+            val => if val != 2 { font.family_number = Some(val) }
+          }
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "vertAlign") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => font.vert_align = Some(unescape_xml_text(value))
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "scheme") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(value) => font.scheme = Some(unescape_xml_text(value))
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(xml, "color") {
+    Some(tag) => {
       match attr_value(tag, "rgb") {
         Some(value) => {
           let rgb = unescape_xml_text(value)
@@ -443,6 +533,34 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
         }
         None => ()
       }
+      match attr_value(tag, "theme") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="font color theme invalid")
+          } noraise {
+            val => font.color_theme = Some(val)
+          }
+        None => ()
+      }
+      match attr_value(tag, "indexed") {
+        Some(value) =>
+          try @strconv.parse_int(value, base=10) catch {
+            _ => raise XlsxError::InvalidXml(msg="font color indexed invalid")
+          } noraise {
+            val => font.color_indexed = Some(val)
+          }
+        None => ()
+      }
+      match attr_value(tag, "tint") {
+        Some(value) =>
+          try @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="font color tint invalid")
+          } noraise {
+            val => font.color_tint = Some(val)
+          }
+        None => ()
+      }
+    }
     None => ()
   }
   font
@@ -491,6 +609,152 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
     "darkDown", "darkUp", "darkGrid", "darkTrellis", "lightHorizontal", "lightVertical",
     "lightDown", "lightUp", "lightGrid", "lightTrellis", "gray125", "gray0625",
   ]
+  fn parse_rgb_color(rgb : StringView) -> (String, Int?) {
+    if rgb.length() == 8 {
+      let alpha = parse_hex_byte(rgb, 0)
+      let opacity = (alpha * 100 + 127) / 255
+      let t = 100 - opacity
+      let transparency = if t <= 0 { None } else { Some(t) }
+      let color = (rgb[2:] catch { _ => rgb }).to_string()
+      (color, transparency)
+    } else {
+      (rgb.to_string(), None)
+    }
+  }
+
+  match tag_attributes_in(xml, "gradientFill") {
+    Some(tag) => {
+      fill.typ = Some("gradient")
+      let bottom = match attr_value(tag, "bottom") {
+        Some(value) =>
+          try @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="gradientFill bottom invalid")
+          } noraise {
+            v => v
+          }
+        None => 0.0
+      }
+      let degree = match attr_value(tag, "degree") {
+        Some(value) =>
+          try @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="gradientFill degree invalid")
+          } noraise {
+            v => v
+          }
+        None => 0.0
+      }
+      let left = match attr_value(tag, "left") {
+        Some(value) =>
+          try @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="gradientFill left invalid")
+          } noraise {
+            v => v
+          }
+        None => 0.0
+      }
+      let right = match attr_value(tag, "right") {
+        Some(value) =>
+          try @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="gradientFill right invalid")
+          } noraise {
+            v => v
+          }
+        None => 0.0
+      }
+      let top = match attr_value(tag, "top") {
+        Some(value) =>
+          try @strconv.parse_double(value) catch {
+            _ => raise XlsxError::InvalidXml(msg="gradientFill top invalid")
+          } noraise {
+            v => v
+          }
+        None => 0.0
+      }
+      let typ = match attr_value(tag, "type") {
+        Some(value) => unescape_xml_text(value)
+        None => ""
+      }
+      let mut transparency : Int? = None
+      let stop_positions : Array[Double] = []
+      let stop_colors : Array[String] = []
+      match extract_tag_body(xml, "gradientFill") {
+        Some(body) => {
+          let mut first = true
+          for chunk in body.to_string().split("<stop") {
+            if first {
+              first = false
+              continue
+            }
+            let text = chunk.to_string()
+            let open_end = match text.find(">") {
+              Some(pos) => pos
+              None => continue
+            }
+            let open_tag = text[:open_end] catch { _ => "" }
+            match attr_value(open_tag, "position") {
+              Some(value) =>
+                try @strconv.parse_double(value) catch {
+                  _ =>
+                    raise XlsxError::InvalidXml(
+                      msg="gradientFill stop position invalid",
+                    )
+                } noraise {
+                  v => stop_positions.push(v)
+                }
+              None => stop_positions.push(0.0)
+            }
+            let rest = text[open_end + 1:] catch { _ => "" }
+            let end = match rest.find("</stop>") {
+              Some(pos) => pos
+              None => continue
+            }
+            let content = rest[:end] catch { _ => "" }
+            match tag_attributes_in(content, "color") {
+              Some(color_tag) =>
+                match attr_value(color_tag, "rgb") {
+                  Some(value) => {
+                    let rgb = unescape_xml_text(value)
+                    let (c, t) = parse_rgb_color(rgb)
+                    stop_colors.push(c)
+                    match (transparency, t) {
+                      (None, Some(v)) => transparency = Some(v)
+                      _ => ()
+                    }
+                  }
+                  None => ()
+                }
+              None => ()
+            }
+          }
+        }
+        None => ()
+      }
+      let mut shading = 0
+      for i in 0..<fill_gradient_variants.length() {
+        let v = fill_gradient_variants[i]
+        if v.bottom == bottom &&
+          v.degree == degree &&
+          v.left == left &&
+          v.right == right &&
+          v.top == top &&
+          v.typ == typ &&
+          v.stops == stop_positions {
+          shading = i
+          break
+        }
+      }
+      fill.shading = Some(shading)
+      match (stop_colors.get(0), stop_colors.get(1)) {
+        (Some(c1), Some(c2)) => fill.colors = Some([c1, c2])
+        _ => ()
+      }
+      match transparency {
+        Some(v) => fill.transparency = Some(v)
+        None => ()
+      }
+    }
+    None => ()
+  }
   match tag_attributes_in(xml, "patternFill") {
     Some(tag) => {
       let pattern_type = match attr_value(tag, "patternType") {
@@ -511,34 +775,121 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       } else {
         fill.pattern = Some(0)
       }
-      let mut color : String? = None
+      let mut fg_color : String? = None
+      let mut bg_color : String? = None
+      let mut transparency : Int? = None
       match tag_attributes_in(xml, "fgColor") {
-        Some(color_tag) =>
-          match attr_value(color_tag, "rgb") {
-            Some(value) => color = Some(unescape_xml_text(value))
+        Some(color_tag) => {
+          match attr_value(color_tag, "theme") {
+            Some(value) =>
+              try @strconv.parse_int(value, base=10) catch {
+                _ =>
+                  raise XlsxError::InvalidXml(msg="fill fgColor theme invalid")
+              } noraise {
+                val => fill.fg_theme = Some(val)
+              }
             None => ()
           }
+          match attr_value(color_tag, "indexed") {
+            Some(value) =>
+              try @strconv.parse_int(value, base=10) catch {
+                _ =>
+                  raise XlsxError::InvalidXml(
+                    msg="fill fgColor indexed invalid",
+                  )
+              } noraise {
+                val => fill.fg_indexed = Some(val)
+              }
+            None => ()
+          }
+          match attr_value(color_tag, "tint") {
+            Some(value) =>
+              try @strconv.parse_double(value) catch {
+                _ =>
+                  raise XlsxError::InvalidXml(msg="fill fgColor tint invalid")
+              } noraise {
+                val => fill.fg_tint = Some(val)
+              }
+            None => ()
+          }
+          match attr_value(color_tag, "rgb") {
+            Some(value) => {
+              let rgb = unescape_xml_text(value)
+              let (c, t) = parse_rgb_color(rgb)
+              fg_color = Some(c)
+              match t {
+                Some(v) => transparency = Some(v)
+                None => ()
+              }
+            }
+            None => ()
+          }
+        }
         None => ()
       }
-      if color == None {
-        match tag_attributes_in(xml, "bgColor") {
-          Some(color_tag) =>
-            match attr_value(color_tag, "rgb") {
-              Some(value) => color = Some(unescape_xml_text(value))
-              None => ()
-            }
-          None => ()
-        }
-      }
-      match color {
-        Some(rgb) => {
-          let normalized = if rgb.length() == 8 && rgb.has_prefix("FF") {
-            (rgb[2:] catch { _ => rgb }).to_string()
-          } else {
-            rgb.to_string()
+      match tag_attributes_in(xml, "bgColor") {
+        Some(color_tag) => {
+          match attr_value(color_tag, "theme") {
+            Some(value) =>
+              try @strconv.parse_int(value, base=10) catch {
+                _ =>
+                  raise XlsxError::InvalidXml(msg="fill bgColor theme invalid")
+              } noraise {
+                val => fill.bg_theme = Some(val)
+              }
+            None => ()
           }
-          fill.colors = Some([normalized])
+          match attr_value(color_tag, "indexed") {
+            Some(value) =>
+              try @strconv.parse_int(value, base=10) catch {
+                _ =>
+                  raise XlsxError::InvalidXml(
+                    msg="fill bgColor indexed invalid",
+                  )
+              } noraise {
+                val => fill.bg_indexed = Some(val)
+              }
+            None => ()
+          }
+          match attr_value(color_tag, "tint") {
+            Some(value) =>
+              try @strconv.parse_double(value) catch {
+                _ =>
+                  raise XlsxError::InvalidXml(msg="fill bgColor tint invalid")
+              } noraise {
+                val => fill.bg_tint = Some(val)
+              }
+            None => ()
+          }
+          match attr_value(color_tag, "rgb") {
+            Some(value) => {
+              let rgb = unescape_xml_text(value)
+              let (c, t) = parse_rgb_color(rgb)
+              bg_color = Some(c)
+              match t {
+                Some(v) => transparency = Some(v)
+                None => ()
+              }
+            }
+            None => ()
+          }
         }
+        None => ()
+      }
+      let colors : Array[String] = []
+      match fg_color {
+        Some(c) => colors.push(c)
+        None => ()
+      }
+      match bg_color {
+        Some(c) => colors.push(c)
+        None => ()
+      }
+      if colors.length() > 0 {
+        fill.colors = Some(colors)
+      }
+      match transparency {
+        Some(v) => fill.transparency = Some(v)
         None => ()
       }
       fill
@@ -582,7 +933,10 @@ fn parse_fills(xml : StringView) -> Array[Fill] raise XlsxError {
 }
 
 ///|
-fn parse_border_entry(xml : StringView) -> Array[Border] raise XlsxError {
+fn parse_border_entry(
+  border_tag : StringView,
+  xml : StringView,
+) -> Array[Border] raise XlsxError {
   let border_styles : Array[String] = [
     "none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair", "mediumDashed",
     "dashDot", "mediumDashDot", "dashDotDot", "mediumDashDotDot", "slantDashDot",
@@ -636,6 +990,14 @@ fn parse_border_entry(xml : StringView) -> Array[Border] raise XlsxError {
     }
   }
 
+  let diagonal_up = match attr_value(border_tag, "diagonalUp") {
+    Some(value) => parse_bool_attr(value)
+    None => false
+  }
+  let diagonal_down = match attr_value(border_tag, "diagonalDown") {
+    Some(value) => parse_bool_attr(value)
+    None => false
+  }
   let borders : Array[Border] = []
   match parse_side(xml, "left") {
     Some(b) => borders.push(b)
@@ -650,6 +1012,55 @@ fn parse_border_entry(xml : StringView) -> Array[Border] raise XlsxError {
     None => ()
   }
   match parse_side(xml, "bottom") {
+    Some(b) => borders.push(b)
+    None => ()
+  }
+  let diagonal = parse_side(xml, "diagonal")
+  match diagonal {
+    Some(b) =>
+      if diagonal_up || diagonal_down {
+        let diagonal_style = match b.style {
+          Some(value) => value
+          None => 0
+        }
+        if diagonal_up {
+          match b.color {
+            Some(color) =>
+              borders.push(
+                Border::with_values("diagonalUp", color~, style=diagonal_style),
+              )
+            None =>
+              borders.push(
+                Border::with_values("diagonalUp", style=diagonal_style),
+              )
+          }
+        }
+        if diagonal_down {
+          match b.color {
+            Some(color) =>
+              borders.push(
+                Border::with_values(
+                  "diagonalDown",
+                  color~,
+                  style=diagonal_style,
+                ),
+              )
+            None =>
+              borders.push(
+                Border::with_values("diagonalDown", style=diagonal_style),
+              )
+          }
+        }
+      } else {
+        borders.push(b)
+      }
+    None => ()
+  }
+  match parse_side(xml, "vertical") {
+    Some(b) => borders.push(b)
+    None => ()
+  }
+  match parse_side(xml, "horizontal") {
     Some(b) => borders.push(b)
     None => ()
   }
@@ -688,7 +1099,7 @@ fn parse_borders(xml : StringView) -> Array[Array[Border]] raise XlsxError {
       None => continue
     }
     let content = rest[:end] catch { _ => "" }
-    borders.push(parse_border_entry(content))
+    borders.push(parse_border_entry(open_tag, content))
   }
   if borders.length() == 0 {
     borders.push([])
@@ -974,9 +1385,21 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
   }
   let mut bold = false
   let mut italic = false
+  let mut strike = false
+  let mut outline = false
+  let mut shadow = false
+  let mut condense = false
+  let mut extend = false
   let mut underline : String? = None
   let mut size : Double? = None
   let mut color : String? = None
+  let mut color_theme : Int? = None
+  let mut color_indexed : Int? = None
+  let mut color_tint : Double? = None
+  let mut charset : Int? = None
+  let mut family_number : Int? = None
+  let mut scheme : String? = None
+  let mut vert_align : String? = None
   let mut family : String? = None
   let mut has_any = false
   match tag_attributes_in(rpr_body, "b") {
@@ -1000,6 +1423,71 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
       if value {
         italic = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "strike") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        strike = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "outline") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        outline = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "shadow") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        shadow = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "condense") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        condense = true
+        has_any = true
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "extend") {
+    Some(tag) => {
+      let value = match attr_value(tag, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+      if value {
+        extend = true
         has_any = true
       }
     }
@@ -1034,6 +1522,38 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
     None => ()
   }
+  match tag_attributes_in(rpr_body, "charset") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(val) =>
+          try @strconv.parse_int(val, base=10) catch {
+            _ => ()
+          } noraise {
+            value => {
+              charset = Some(value)
+              has_any = true
+            }
+          }
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "family") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(val) =>
+          try @strconv.parse_int(val, base=10) catch {
+            _ => ()
+          } noraise {
+            value => {
+              family_number = Some(value)
+              has_any = true
+            }
+          }
+        None => ()
+      }
+    None => ()
+  }
   match tag_attributes_in(rpr_body, "rFont") {
     Some(tag) =>
       match attr_value(tag, "val") {
@@ -1046,7 +1566,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
     None => ()
   }
   match tag_attributes_in(rpr_body, "color") {
-    Some(tag) =>
+    Some(tag) => {
       match attr_value(tag, "rgb") {
         Some(val) => {
           color = Some(val)
@@ -1054,10 +1574,90 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
         }
         None => ()
       }
+      match attr_value(tag, "theme") {
+        Some(val) =>
+          try @strconv.parse_int(val, base=10) catch {
+            _ =>
+              raise XlsxError::InvalidXml(msg="rich text color theme invalid")
+          } noraise {
+            value => {
+              color_theme = Some(value)
+              has_any = true
+            }
+          }
+        None => ()
+      }
+      match attr_value(tag, "indexed") {
+        Some(val) =>
+          try @strconv.parse_int(val, base=10) catch {
+            _ =>
+              raise XlsxError::InvalidXml(msg="rich text color indexed invalid")
+          } noraise {
+            value => {
+              color_indexed = Some(value)
+              has_any = true
+            }
+          }
+        None => ()
+      }
+      match attr_value(tag, "tint") {
+        Some(val) =>
+          try @strconv.parse_double(val) catch {
+            _ => raise XlsxError::InvalidXml(msg="rich text color tint invalid")
+          } noraise {
+            value => {
+              color_tint = Some(value)
+              has_any = true
+            }
+          }
+        None => ()
+      }
+    }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "vertAlign") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(val) => {
+          vert_align = Some(val.to_string())
+          has_any = true
+        }
+        None => ()
+      }
+    None => ()
+  }
+  match tag_attributes_in(rpr_body, "scheme") {
+    Some(tag) =>
+      match attr_value(tag, "val") {
+        Some(val) => {
+          scheme = Some(val.to_string())
+          has_any = true
+        }
+        None => ()
+      }
     None => ()
   }
   if has_any {
-    Some({ bold, italic, underline, size, color, family })
+    Some({
+      bold,
+      italic,
+      strike,
+      outline,
+      shadow,
+      condense,
+      extend,
+      underline,
+      size,
+      color,
+      color_theme,
+      color_indexed,
+      color_tint,
+      charset,
+      family_number,
+      scheme,
+      vert_align,
+      family,
+    })
   } else {
     None
   }
@@ -1439,7 +2039,11 @@ fn parse_dxfs(
     }
     match extract_tag_body(tag, "border") {
       Some(border_body) => {
-        let border = parse_border_entry(border_body)
+        let border_tag = match tag_attributes_in(tag, "border") {
+          Some(value) => value
+          None => "border"
+        }
+        let border = parse_border_entry(border_tag, border_body)
         if border.length() > 0 {
           style = style.with_border(border)
         }
@@ -3333,23 +3937,54 @@ fn read_zip_bytes(
     Some(value) => parse_shared_strings(decode(value))
     None => []
   }
-  let (styles, conditional_styles, default_font, indexed_colors) = match
-    archive.get("xl/styles.xml") {
+  let (
+    styles,
+    conditional_styles,
+    default_font,
+    default_table_style,
+    default_pivot_style,
+    indexed_colors,
+    mru_colors_xml,
+    styles_ext_lst_xml,
+  ) = match archive.get("xl/styles.xml") {
     Some(value) => {
       let styles_xml = decode(value)
       let (styles, conditional_styles) = parse_styles(styles_xml)
+      let (default_table_style, default_pivot_style) = parse_table_styles_defaults(
+        styles_xml,
+      )
       let indexed_colors = parse_indexed_colors(styles_xml)
+      let mru_colors_xml = parse_mru_colors_xml(styles_xml)
+      let styles_ext_lst_xml = parse_styles_ext_lst_xml(styles_xml)
       (
         styles,
         conditional_styles,
         parse_default_font(styles_xml),
+        default_table_style,
+        default_pivot_style,
         indexed_colors,
+        mru_colors_xml,
+        styles_ext_lst_xml,
       )
     }
-    None => ([Style::new()], [], "Calibri", None)
+    None =>
+      (
+        [Style::new()],
+        [],
+        "Calibri",
+        "TableStyleMedium9",
+        "PivotStyleLight16",
+        None,
+        None,
+        None,
+      )
   }
-  let theme_colors = match archive.get("xl/theme/theme1.xml") {
-    Some(value) => parse_theme_colors(decode(value))
+  let theme_xml = match archive.get("xl/theme/theme1.xml") {
+    Some(value) => Some(decode(value))
+    None => None
+  }
+  let theme_colors = match theme_xml {
+    Some(xml) => parse_theme_colors(xml)
     None => None
   }
   let core_properties = match archive.get("docProps/core.xml") {
@@ -3382,8 +4017,13 @@ fn read_zip_bytes(
     workbook_props,
     calc_props,
     default_font,
+    default_table_style,
+    default_pivot_style,
     theme_colors,
+    theme_xml,
     indexed_colors,
+    mru_colors_xml,
+    styles_ext_lst_xml,
     file_path: None,
     zip_writer: None,
     charset_transcoder: transcoder,
@@ -3755,6 +4395,10 @@ fn read_zip_bytes(
         }
         parsed_comments
       }
+      let form_controls = match vml_drawing_xml {
+        Some(xml) => parse_form_controls_vml(xml)
+        None => []
+      }
       let sheet = {
         name,
         sheet_views,
@@ -3780,7 +4424,7 @@ fn read_zip_bytes(
         header_footer_images,
         charts: [],
         shapes: [],
-        form_controls: [],
+        form_controls,
         slicers: [],
         data_validations,
         conditional_formats: [],
