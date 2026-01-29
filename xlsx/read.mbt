@@ -3211,9 +3211,14 @@ fn parse_hyperlink_elements(
       None => raise XlsxError::InvalidXml(msg="hyperlink tag not closed")
     }
     let tag = try! text[:end]
-    let reference = match attr_value(tag, "ref") {
-      Some(value) => normalize_cell_or_range_ref(value)
+    let raw_ref = match attr_value(tag, "ref") {
+      Some(value) => value
       None => raise XlsxError::InvalidXml(msg="hyperlink ref missing")
+    }
+    let reference = try normalize_cell_or_range_ref(raw_ref) catch {
+      _ => raw_ref.to_string()
+    } noraise {
+      value => value
     }
     let location = match attr_value(tag, "location") {
       Some(value) => Some(unescape_xml_text(value))
