@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `34b6a71`
-- Progress: **59/169**
+- mbtexcel: `4aa2196`
+- Progress: **84/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -64,31 +64,31 @@
 - [x] `get_conditional_formats`
 - [x] `get_conditional_style`
 - [x] `get_custom_props`
-- [ ] `get_data_validations`
-- [ ] `get_default_font`
-- [ ] `get_defined_name`
-- [ ] `get_doc_props`
-- [ ] `get_form_controls`
-- [ ] `get_header_footer`
-- [ ] `get_merge_cells`
-- [ ] `get_page_layout`
-- [ ] `get_page_margins`
-- [ ] `get_panes`
-- [ ] `get_picture_cells`
-- [ ] `get_pictures`
-- [ ] `get_pivot_tables`
-- [ ] `get_row_height`
-- [ ] `get_row_outline_level`
-- [ ] `get_row_visible`
-- [ ] `get_rows`
-- [ ] `get_sheet_dimension`
-- [ ] `get_sheet_index`
-- [ ] `get_sheet_list`
-- [ ] `get_sheet_map`
-- [ ] `get_sheet_name`
-- [ ] `get_sheet_props`
-- [ ] `get_sheet_view`
-- [ ] `get_sheet_visible`
+- [x] `get_data_validations`
+- [x] `get_default_font`
+- [x] `get_defined_name`
+- [x] `get_doc_props`
+- [x] `get_form_controls`
+- [x] `get_header_footer`
+- [x] `get_merge_cells`
+- [x] `get_page_layout`
+- [x] `get_page_margins`
+- [x] `get_panes`
+- [x] `get_picture_cells`
+- [x] `get_pictures`
+- [x] `get_pivot_tables`
+- [x] `get_row_height`
+- [x] `get_row_outline_level`
+- [x] `get_row_visible`
+- [x] `get_rows`
+- [x] `get_sheet_dimension`
+- [x] `get_sheet_index`
+- [x] `get_sheet_list`
+- [x] `get_sheet_map`
+- [x] `get_sheet_name`
+- [x] `get_sheet_props`
+- [x] `get_sheet_view`
+- [x] `get_sheet_visible`
 - [ ] `get_slicers`
 - [ ] `get_style`
 - [ ] `get_tables`
