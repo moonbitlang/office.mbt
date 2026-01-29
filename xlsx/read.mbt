@@ -2105,7 +2105,13 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
       Some(value) => value
       None => raise XlsxError::InvalidXml(msg="mergeCell ref missing")
     }
-    let normalized = normalize_range_ref(ref_value)
+    let normalized = if ref_value.to_string().contains(":") {
+      normalize_range_ref(ref_value)
+    } else {
+      let (row, col) = cell_ref_to_rc(ref_value)
+      let cell_ref = cell_ref_from(row, col)
+      "\{cell_ref}:\{cell_ref}"
+    }
     merged.push(normalized)
   }
   merged
@@ -3508,7 +3514,12 @@ fn resolve_rel_target(
   base_folder : StringView,
 ) -> String raise XlsxError {
   let target_str = target.to_string()
-  if target_str.has_prefix("../") {
+  if target_str.has_prefix("/") {
+    let rest = target_str[1:] catch {
+        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+      }
+    rest.to_string()
+  } else if target_str.has_prefix("../") {
     let rest = target_str[3:] catch {
         _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
       }
@@ -3528,7 +3539,12 @@ fn resolve_rel_target(
 ///|
 fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
   let target_str = target.to_string()
-  if target_str.has_prefix("../") {
+  if target_str.has_prefix("/") {
+    let rest = target_str[1:] catch {
+        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+      }
+    rest.to_string()
+  } else if target_str.has_prefix("../") {
     let rest = target_str[3:] catch {
         _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
       }
@@ -3863,11 +3879,6 @@ fn parse_worksheet(
       Some(kind) if kind == "inlineStr" => Some(parse_inline_string(rest))
       _ => None
     }
-    if raw_value_opt is None &&
-      formula is None &&
-      !(cell_type is Some("inlineStr")) {
-      raise XlsxError::InvalidXml(msg="cell value missing")
-    }
     let force_string = raw_value_opt is None &&
       formula is Some(_) &&
       !(cell_type is Some("inlineStr"))
@@ -3922,28 +3933,36 @@ fn parse_worksheet(
           value = unescape_xml_text(raw_value)
           value_type = CellValueType::String
         }
-        Some(kind) if kind == "n" => {
-          ignore(
-            @strconv.parse_double(raw_value) catch {
-              _ => raise XlsxError::InvalidXml(msg="cell number invalid")
-            },
-          )
-          value = raw_value
-          value_type = CellValueType::Number
-        }
+        Some(kind) if kind == "n" =>
+          if raw_value == "" {
+            value = ""
+            value_type = CellValueType::String
+          } else {
+            ignore(
+              @strconv.parse_double(raw_value) catch {
+                _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+              },
+            )
+            value = raw_value
+            value_type = CellValueType::Number
+          }
         Some(_) => {
           value = unescape_xml_text(raw_value)
           value_type = CellValueType::String
         }
-        None => {
-          ignore(
-            @strconv.parse_double(raw_value) catch {
-              _ => raise XlsxError::InvalidXml(msg="cell number invalid")
-            },
-          )
-          value = raw_value
-          value_type = CellValueType::Number
-        }
+        None =>
+          if raw_value == "" {
+            value = ""
+            value_type = CellValueType::String
+          } else {
+            ignore(
+              @strconv.parse_double(raw_value) catch {
+                _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+              },
+            )
+            value = raw_value
+            value_type = CellValueType::Number
+          }
       }
     }
     let (row, col) = cell_ref_to_rc(ref_value)
