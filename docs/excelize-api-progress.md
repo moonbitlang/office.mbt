@@ -1,7 +1,7 @@
 # Excelize API progress (one-by-one)
 - Excelize: `excelize@37b730a`
-- mbtexcel: `c25dcca`
-- Progress: **21/169**
+- mbtexcel: `ba86d17`
+- Progress: **24/169**
 
 (Use `docs/excelize-api-matrix.md` to jump to def/test locations.)
 
@@ -26,9 +26,9 @@
 - [x] `charset_transcoder`
 - [x] `close`
 - [x] `cols`
-- [ ] `column_name_to_number`
-- [ ] `column_number_to_name`
-- [ ] `coordinates_to_cell_name`
+- [x] `column_name_to_number`
+- [x] `column_number_to_name`
+- [x] `coordinates_to_cell_name`
 - [ ] `copy_sheet`
 - [ ] `decrypt`
 - [ ] `delete_chart`
