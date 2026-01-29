@@ -2302,6 +2302,292 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
 }
 
 ///|
+fn build_icon_set_rule_xml_from_x14(
+  opt : ConditionalFormatOptions,
+  priority : Int,
+  cfvos : ArrayView[String],
+) -> String {
+  let sb = StringBuilder::new()
+  sb.write_view("<cfRule type=\"iconSet\"")
+  sb.write_view(" priority=\"\{priority}\"")
+  write_stop_if_true(sb, opt)
+  sb.write_view(">")
+  let show_value = if opt.icons_only { "0" } else { "1" }
+  sb.write_view(
+    "<iconSet iconSet=\"\{escape_xml_attr(opt.icon_style)}\" showValue=\"\{show_value}\"",
+  )
+  if opt.reverse_icons {
+    sb.write_view(" reverse=\"1\"")
+  }
+  if opt.percent {
+    sb.write_view(" percent=\"1\"")
+  }
+  sb.write_view(">")
+  if cfvos.length() > 0 {
+    for cfvo in cfvos {
+      sb.write_view(cfvo)
+    }
+  } else {
+    match icon_set_steps(opt.icon_style) {
+      Some(steps) =>
+        for step in steps {
+          sb.write_view("<cfvo type=\"percent\" val=\"\{step}\"/>")
+        }
+      None => ()
+    }
+  }
+  sb.write_view("</iconSet>")
+  sb.write_view("</cfRule>")
+  sb.to_string()
+}
+
+///|
+fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
+  let cfvos : Array[String] = []
+  let xml_str = xml.to_string()
+  if !xml_str.contains("<x14:cfvo") {
+    return cfvos
+  }
+  let mut first = true
+  for chunk in xml_str.split("<x14:cfvo") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let close_tag = "</x14:cfvo>"
+    let full = match text.find(close_tag) {
+      Some(pos) => {
+        let end = pos + close_tag.length()
+        let slice = text[:end] catch {
+            _ => raise XlsxError::InvalidXml(msg="x14:cfvo tag invalid")
+          }
+        "<x14:cfvo\{slice.to_string()}"
+      }
+      None => {
+        let end = match text.find("/>") {
+          Some(pos) => pos + 2
+          None => raise XlsxError::InvalidXml(msg="x14:cfvo tag not closed")
+        }
+        let slice = text[:end] catch {
+            _ => raise XlsxError::InvalidXml(msg="x14:cfvo tag invalid")
+          }
+        "<x14:cfvo\{slice.to_string()}"
+      }
+    }
+    let open_end = match full.find(">") {
+      Some(pos) => pos
+      None => raise XlsxError::InvalidXml(msg="x14:cfvo open tag missing")
+    }
+    let attrs = full["<x14:cfvo".length():open_end] catch {
+        _ => raise XlsxError::InvalidXml(msg="x14:cfvo open tag invalid")
+      }
+    let typ = match attr_value(attrs, "type") {
+      Some(value) => value.to_string()
+      None => ""
+    }
+    let value = match extract_tag_body_from(full, "xm:f") {
+      Some(v) => unescape_xml_text(v)
+      None =>
+        match extract_tag_body_from(full, "f") {
+          Some(v) => unescape_xml_text(v)
+          None => ""
+        }
+    }
+    if typ == "" {
+      continue
+    }
+    let sb = StringBuilder::new()
+    sb.write_view("<cfvo type=\"")
+    sb.write_view(escape_xml_attr(typ))
+    sb.write_view("\"")
+    if value != "" {
+      sb.write_view(" val=\"")
+      sb.write_view(escape_xml_attr(value))
+      sb.write_view("\"")
+    }
+    sb.write_view("/>")
+    cfvos.push(sb.to_string())
+  }
+  cfvos
+}
+
+///|
+fn parse_conditional_formats_x14(
+  xml : StringView,
+) -> Array[String] raise XlsxError {
+  let formats : Array[String] = []
+  let xml_str = xml.to_string()
+  let needle = "<x14:conditionalFormatting"
+  if !xml_str.contains(needle) {
+    return formats
+  }
+  let close_tag = "</x14:conditionalFormatting>"
+  let mut search_from = 0
+  while search_from < xml_str.length() {
+    let rest = xml_str[search_from:] catch {
+        _ =>
+          raise XlsxError::InvalidXml(
+            msg="x14:conditionalFormatting search slice invalid",
+          )
+      }
+    let rel_start = match rest.find(needle) {
+      Some(pos) => pos
+      None => break
+    }
+    let start = search_from + rel_start
+    let after_needle = start + needle.length()
+    let next_char = xml_str[after_needle:after_needle + 1] catch { _ => "" }
+    if next_char == "s" {
+      search_from = after_needle
+      continue
+    }
+    let after_start = xml_str[start:] catch {
+        _ =>
+          raise XlsxError::InvalidXml(
+            msg="x14:conditionalFormatting slice invalid",
+          )
+      }
+    let after_text = after_start.to_string()
+    let (full, consumed) = match after_text.find(close_tag) {
+      Some(pos) => {
+        let end = pos + close_tag.length()
+        let slice = after_text[:end] catch {
+            _ =>
+              raise XlsxError::InvalidXml(
+                msg="x14:conditionalFormatting tag invalid",
+              )
+          }
+        (slice.to_string(), end)
+      }
+      None => {
+        let end = match after_text.find("/>") {
+          Some(pos) => pos + 2
+          None =>
+            raise XlsxError::InvalidXml(
+              msg="x14:conditionalFormatting tag not closed",
+            )
+        }
+        let slice = after_text[:end] catch {
+            _ =>
+              raise XlsxError::InvalidXml(
+                msg="x14:conditionalFormatting tag invalid",
+              )
+          }
+        (slice.to_string(), end)
+      }
+    }
+    search_from = start + consumed
+    let sqref = match extract_tag_body_from(full, "xm:sqref") {
+      Some(value) => unescape_xml_text(value)
+      None =>
+        match extract_tag_body_from(full, "sqref") {
+          Some(value) => unescape_xml_text(value)
+          None =>
+            raise XlsxError::InvalidXml(
+              msg="x14:conditionalFormatting sqref missing",
+            )
+        }
+    }
+    let rules : Array[String] = []
+    if full.contains("<x14:cfRule") {
+      let mut rule_first = true
+      for rule_chunk in full.split("<x14:cfRule") {
+        if rule_first {
+          rule_first = false
+          continue
+        }
+        let rule_text = rule_chunk.to_string()
+        let rule_close = "</x14:cfRule>"
+        let rule_full = match rule_text.find(rule_close) {
+          Some(pos) => {
+            let end = pos + rule_close.length()
+            let slice = rule_text[:end] catch {
+                _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+              }
+            "<x14:cfRule\{slice.to_string()}"
+          }
+          None => {
+            let end = match rule_text.find("/>") {
+              Some(pos) => pos + 2
+              None =>
+                raise XlsxError::InvalidXml(msg="x14:cfRule tag not closed")
+            }
+            let slice = rule_text[:end] catch {
+                _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+              }
+            "<x14:cfRule\{slice.to_string()}"
+          }
+        }
+        let open_end = match rule_full.find(">") {
+          Some(pos) => pos
+          None => continue
+        }
+        let attrs = rule_full["<x14:cfRule".length():open_end] catch {
+            _ => raise XlsxError::InvalidXml(msg="x14:cfRule open tag invalid")
+          }
+        let typ = match attr_value(attrs, "type") {
+          Some(value) => value.to_string()
+          None => ""
+        }
+        if typ != "iconSet" {
+          continue
+        }
+        let mut priority = match attr_value(attrs, "priority") {
+          Some(value) =>
+            @strconv.parse_int(value, base=10) catch {
+              _ =>
+                raise XlsxError::InvalidXml(msg="x14:cfRule priority invalid")
+            }
+          None => 1
+        }
+        if priority <= 0 {
+          priority = 1
+        }
+        let stop_if_true = match attr_value(attrs, "stopIfTrue") {
+          Some(value) => parse_xml_bool(value)
+          None => false
+        }
+        let opt = ConditionalFormatOptions::new("icon_set")
+        opt.stop_if_true = stop_if_true
+        match tag_attributes_in(rule_full, "x14:iconSet") {
+          Some(tag) => {
+            match attr_value(tag, "iconSet") {
+              Some(value) => opt.icon_style = value.to_string()
+              None => ()
+            }
+            match attr_value(tag, "reverse") {
+              Some(value) => opt.reverse_icons = parse_xml_bool(value)
+              None => ()
+            }
+            let show_value = match attr_value(tag, "showValue") {
+              Some(value) => parse_xml_bool(value)
+              None => true
+            }
+            opt.icons_only = !show_value
+            match attr_value(tag, "percent") {
+              Some(value) => opt.percent = parse_xml_bool(value)
+              None =>
+                match attr_value(attrs, "percent") {
+                  Some(value) => opt.percent = parse_xml_bool(value)
+                  None => ()
+                }
+            }
+          }
+          None => continue
+        }
+        let cfvos = parse_x14_cfvo_values(rule_full)
+        rules.push(build_icon_set_rule_xml_from_x14(opt, priority, cfvos))
+      }
+    }
+    if rules.length() > 0 {
+      formats.push(conditional_format_xml(sqref, rules))
+    }
+  }
+  formats
+}
+
+///|
 fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
   let xml_str = xml.to_string()
   let marker = "<dimension"
@@ -5451,6 +5737,9 @@ fn read_zip_bytes(
         data_validations.push(dv)
       }
       let conditional_formats = parse_conditional_formats(sheet_xml)
+      for cf in parse_conditional_formats_x14(sheet_xml) {
+        conditional_formats.push(cf)
+      }
       let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
