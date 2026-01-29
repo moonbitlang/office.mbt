@@ -3516,6 +3516,7 @@ pub fn Workbook::add_pivot_table_xml(
   cache_records_xml? : String = "",
   name? : String = "",
 ) -> PivotTable raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3650,6 +3651,7 @@ pub fn Workbook::get_pivot_tables(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[PivotTable] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -3663,6 +3665,7 @@ pub fn Workbook::delete_pivot_table(
   sheet_name : StringView,
   name : StringView,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
