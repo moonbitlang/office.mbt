@@ -33,7 +33,12 @@ fn format_cell_value(
 fn format_text_value(raw : String, format : NumberFormat) -> String {
   match format {
     NumberFormat::Builtin(_id) => raw
-    NumberFormat::Custom(code) => format_text_pattern(raw, code)
+    NumberFormat::Custom(code) =>
+      if code.to_lower().trim().to_string() == "general" {
+        raw
+      } else {
+        format_text_pattern(raw, code)
+      }
   }
 }
 
