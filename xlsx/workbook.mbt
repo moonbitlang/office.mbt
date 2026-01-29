@@ -2766,6 +2766,7 @@ pub fn Workbook::add_slicer_raw(
   sheet_name : StringView,
   slicer : Slicer,
 ) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -2778,6 +2779,7 @@ pub fn Workbook::get_slicers(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[Slicer] raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
