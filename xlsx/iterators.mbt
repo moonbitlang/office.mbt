@@ -196,8 +196,13 @@ pub fn Rows::close(_self : Rows) -> Unit {
 
 ///|
 pub struct Cols {
-  columns : Array[Array[String]]
+  sheet : Worksheet
+  columns : Array[Array[Cell]]
+  max_row : Int
   mut index : Int
+  styles : Array[Style]?
+  options : Options
+  mut err : XlsxError?
 }
 
 ///|
@@ -212,35 +217,15 @@ fn max_row_for_columns(sheet : Worksheet) -> Int {
 }
 
 ///|
-fn collect_columns(sheet : Worksheet) -> Array[Array[String]] {
-  let max_col = sheet.max_col()
-  if max_col <= 0 {
-    return []
+fn collect_column_cells(sheet : Worksheet, max_col : Int) -> Array[Array[Cell]] {
+  let columns : Array[Array[Cell]] = []
+  for _ in 0..<max_col {
+    columns.push([])
   }
-  let max_row = max_row_for_columns(sheet)
-  let col_cells : Map[Int, Array[(Int, String)]] = {}
   for cell in sheet.cells {
-    let entries = match col_cells.get(cell.col) {
-      Some(value) => value
-      None => []
+    if cell.col >= 1 && cell.col <= max_col {
+      columns[cell.col - 1].push(cell)
     }
-    entries.push((cell.row, cell.value))
-    col_cells[cell.col] = entries
-  }
-  let columns : Array[Array[String]] = []
-  for col in 1..<=max_col {
-    let values : Array[String] = Array::make(max_row, "")
-    match col_cells.get(col) {
-      Some(entries) =>
-        for entry in entries {
-          let (row, value) = entry
-          if row >= 1 && row <= max_row {
-            values[row - 1] = value
-          }
-        }
-      None => ()
-    }
-    columns.push(values)
   }
   columns
 }
@@ -342,7 +327,23 @@ fn collect_columns_with_options(
 
 ///|
 pub fn Cols::new(sheet : Worksheet) -> Cols {
-  { columns: collect_columns(sheet), index: 0 }
+  Cols::new_with_options(sheet, None, Options::new())
+}
+
+///|
+fn Cols::new_with_options(
+  sheet : Worksheet,
+  styles : Array[Style]?,
+  options : Options,
+) -> Cols {
+  let max_col = sheet.max_col()
+  let columns = if max_col <= 0 {
+    []
+  } else {
+    collect_column_cells(sheet, max_col)
+  }
+  let max_row = if max_col <= 0 { 0 } else { max_row_for_columns(sheet) }
+  { sheet, columns, max_row, index: 0, styles, options, err: None }
 }
 
 ///|
@@ -356,11 +357,49 @@ pub fn Cols::next(self : Cols) -> Bool {
 }
 
 ///|
-pub fn Cols::rows(self : Cols) -> Array[String] {
+pub fn Cols::rows(self : Cols, options? : Options) -> Array[String] {
   if self.index <= 0 || self.index > self.columns.length() {
     return []
   }
-  self.columns[self.index - 1]
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  if self.max_row <= 0 {
+    return []
+  }
+  let entry = self.columns[self.index - 1]
+  let values : Array[String] = Array::make(self.max_row, "")
+  match self.styles {
+    Some(styles) =>
+      for cell in entry {
+        if cell.row < 1 || cell.row > self.max_row {
+          continue
+        }
+        let formatted = format_cell_value_for_workbook(
+          styles, cell, false, resolved_options,
+        ) catch {
+          err => {
+            if self.err is None {
+              self.err = Some(err)
+            }
+            ""
+          }
+        }
+        if self.err is Some(_) {
+          return values
+        }
+        values[cell.row - 1] = formatted
+      }
+    None =>
+      for cell in entry {
+        if cell.row < 1 || cell.row > self.max_row {
+          continue
+        }
+        values[cell.row - 1] = cell.value
+      }
+  }
+  values
 }
 
 ///|
@@ -369,6 +408,16 @@ pub fn Cols::col_index(self : Cols) -> Int? {
     return None
   }
   Some(self.index)
+}
+
+///|
+pub fn Cols::error(self : Cols) -> XlsxError? {
+  self.err
+}
+
+///|
+pub fn Cols::close(_self : Cols) -> Unit {
+  ()
 }
 
 ///|
@@ -430,6 +479,7 @@ pub fn Workbook::rows(
   self : Workbook,
   sheet_name : StringView,
 ) -> Rows raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
@@ -442,11 +492,12 @@ pub fn Workbook::cols(
   self : Workbook,
   sheet_name : StringView,
 ) -> Cols raise XlsxError {
+  check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
   }
-  Cols::new(sheet)
+  Cols::new_with_options(sheet, Some(self.styles), self.options)
 }
 
 ///|
@@ -455,6 +506,7 @@ pub fn Workbook::get_rows(
   sheet_name : StringView,
   options? : Options,
 ) -> Array[Array[String]] raise XlsxError {
+  check_sheet_name(sheet_name)
   let resolved_options = match options {
     Some(value) => value
     None => self.options
@@ -495,6 +547,7 @@ pub fn Workbook::get_cols(
   sheet_name : StringView,
   options? : Options,
 ) -> Array[Array[String]] raise XlsxError {
+  check_sheet_name(sheet_name)
   let resolved_options = match options {
     Some(value) => value
     None => self.options

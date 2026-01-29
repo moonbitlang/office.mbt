@@ -564,13 +564,20 @@ pub struct ColDimension {
 }
 
 pub struct Cols {
-  columns : Array[Array[String]]
+  sheet : Worksheet
+  columns : Array[Array[Cell]]
+  max_row : Int
   mut index : Int
+  styles : Array[Style]?
+  options : Options
+  mut err : XlsxError?
 }
+pub fn Cols::close(Self) -> Unit
 pub fn Cols::col_index(Self) -> Int?
+pub fn Cols::error(Self) -> XlsxError?
 pub fn Cols::new(Worksheet) -> Self
 pub fn Cols::next(Self) -> Bool
-pub fn Cols::rows(Self) -> Array[String]
+pub fn Cols::rows(Self, options? : Options) -> Array[String]
 
 pub(all) struct Comment {
   cell : String
