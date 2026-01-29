@@ -136,6 +136,27 @@ test "hyperlink update existing reference" {
 }
 
 ///|
+test "hyperlink validates cell reference" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let set_result : Result[Unit, Error] = try? workbook.set_cell_hyperlink(
+    "Sheet1",
+    "",
+    "https://example.com",
+    HyperlinkType::External,
+  )
+  inspect(set_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let get_result : Result[Hyperlink?, Error] = try? workbook.get_cell_hyperlink(
+    "Sheet1", "",
+  )
+  inspect(get_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let remove_result : Result[Unit, Error] = try? workbook.remove_cell_hyperlink(
+    "Sheet1", "",
+  )
+  inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+}
+
+///|
 test "hyperlink remove clears range reference" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
