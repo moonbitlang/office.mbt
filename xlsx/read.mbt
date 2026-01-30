@@ -2433,6 +2433,46 @@ fn parse_x14_conditional_formatting_blocks(
     !xml_str.contains("</x14:conditionalFormattings>") {
     raise XlsxError::InvalidXml(msg="x14:conditionalFormattings tag not closed")
   }
+  let mut open_pos : Int? = None
+  let mut open_search_from = 0
+  let open_needle = "<x14:conditionalFormatting"
+  while open_search_from < xml_str.length() {
+    let rest = xml_str[open_search_from:] catch {
+        _ =>
+          raise XlsxError::InvalidXml(
+            msg="x14:conditionalFormatting search slice invalid",
+          )
+      }
+    let rel_start = match rest.find(open_needle) {
+      Some(pos) => pos
+      None => break
+    }
+    let start = open_search_from + rel_start
+    let after_needle = start + open_needle.length()
+    let next_char = xml_str[after_needle:after_needle + 1] catch { _ => "" }
+    if next_char == "s" {
+      open_search_from = after_needle
+      continue
+    }
+    open_pos = Some(start)
+    break
+  }
+  match xml_str.find("</x14:conditionalFormatting>") {
+    Some(close_pos) =>
+      match open_pos {
+        Some(pos) =>
+          if pos > close_pos {
+            raise XlsxError::InvalidXml(
+              msg="x14:conditionalFormatting close before open",
+            )
+          }
+        None =>
+          raise XlsxError::InvalidXml(
+            msg="x14:conditionalFormatting close without open",
+          )
+      }
+    None => ()
+  }
   let needle = "<x14:conditionalFormatting"
   if !xml_str.contains(needle) {
     return blocks
