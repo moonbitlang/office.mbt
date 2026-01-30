@@ -2429,6 +2429,10 @@ fn parse_x14_conditional_formatting_blocks(
 ) -> Array[String] raise XlsxError {
   let blocks : Array[String] = []
   let xml_str = xml.to_string()
+  if xml_str.contains("<x14:conditionalFormattings") &&
+    !xml_str.contains("</x14:conditionalFormattings>") {
+    raise XlsxError::InvalidXml(msg="x14:conditionalFormattings tag not closed")
+  }
   let needle = "<x14:conditionalFormatting"
   if !xml_str.contains(needle) {
     return blocks
