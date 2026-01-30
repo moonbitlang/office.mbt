@@ -3166,20 +3166,20 @@ pub fn Worksheet::remove_row(
 fn parse_cell_ref_with_abs(
   reference : StringView,
 ) -> (Int, Int, Bool, Bool) raise XlsxError {
-  let chars = reference.to_array()
+  let len = reference.length()
   let mut idx = 0
   let mut abs_col = false
-  if idx < chars.length() && chars[idx] == '$' {
+  if idx < len && reference[idx] == '$' {
     abs_col = true
     idx = idx + 1
   }
   let mut col = 0
   let mut has_col = false
-  while idx < chars.length() {
-    let ch = chars[idx]
-    if ch.is_ascii_alphabetic() {
-      let upper = ch.to_ascii_uppercase()
-      col = col * 26 + (upper.to_int() - 'A'.to_int() + 1)
+  while idx < len {
+    let u0 = reference[idx]
+    if u0 is ('A'..='Z') || u0 is ('a'..='z') {
+      let upper = if u0 is ('a'..='z') { u0 - 32 } else { u0 }
+      col = col * 26 + (upper.to_int() - ('A' : UInt16).to_int() + 1)
       has_col = true
       idx = idx + 1
     } else {
@@ -3190,26 +3190,24 @@ fn parse_cell_ref_with_abs(
     raise XlsxError::InvalidCellRef(value=reference.to_string())
   }
   let mut abs_row = false
-  if idx < chars.length() && chars[idx] == '$' {
+  if idx < len && reference[idx] == '$' {
     abs_row = true
     idx = idx + 1
   }
-  let row_sb = StringBuilder::new()
-  while idx < chars.length() {
-    let ch = chars[idx]
-    if ch.is_ascii_digit() {
-      row_sb.write_char(ch)
+  let mut row = 0
+  let mut has_row = false
+  while idx < len {
+    let u0 = reference[idx]
+    if u0 is ('0'..='9') {
+      has_row = true
+      row = row * 10 + (u0.to_int() - ('0' : UInt16).to_int())
       idx = idx + 1
     } else {
       raise XlsxError::InvalidCellRef(value=reference.to_string())
     }
   }
-  let row_text = row_sb.to_string()
-  if row_text == "" {
+  if !has_row {
     raise XlsxError::InvalidCellRef(value=reference.to_string())
-  }
-  let row = @strconv.parse_int(row_text, base=10) catch {
-    _ => raise XlsxError::InvalidCellRef(value=reference.to_string())
   }
   if row <= 0 {
     raise XlsxError::InvalidCellRef(value=reference.to_string())
@@ -3224,18 +3222,11 @@ fn format_cell_ref_with_abs(
   abs_col : Bool,
   abs_row : Bool,
 ) -> String raise XlsxError {
-  let base = cell_ref_from(row, col)
-  let chars = base.to_array()
-  let mut split = 0
-  while split < chars.length() && chars[split].is_ascii_alphabetic() {
-    split = split + 1
+  let col_text = column_number_to_name(col)
+  if row <= 0 {
+    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
   }
-  let col_text = base[:split] catch {
-      _ => raise XlsxError::InvalidCellRef(value=base)
-    }
-  let row_text = base[split:] catch {
-      _ => raise XlsxError::InvalidCellRef(value=base)
-    }
+  let row_text = row.to_string()
   let sb = StringBuilder::new()
   if abs_col {
     sb.write_char('$')

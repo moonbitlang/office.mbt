@@ -49,18 +49,24 @@ fn is_attr_space(ch : Char) -> Bool {
 
 ///|
 fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
-  let chars = tag.to_array()
-  let name_chars = name.to_array()
+  let tag_len = tag.length()
+  let name_len = name.length()
+  let is_space = fn(u : UInt16) -> Bool {
+    u == (' ' : UInt16) ||
+    u == ('\t' : UInt16) ||
+    u == ('\n' : UInt16) ||
+    u == ('\r' : UInt16)
+  }
   let mut i = 0
-  while i < chars.length() {
-    while i < chars.length() && is_attr_space(chars[i]) {
+  while i < tag_len {
+    while i < tag_len && is_space(tag[i]) {
       i = i + 1
     }
-    if i >= chars.length() {
+    if i >= tag_len {
       break
     }
     let name_start = i
-    while i < chars.length() && !is_attr_space(chars[i]) && chars[i] != '=' {
+    while i < tag_len && !is_space(tag[i]) && tag[i] != ('=' : UInt16) {
       i = i + 1
     }
     let name_end = i
@@ -68,42 +74,41 @@ fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
       i = i + 1
       continue
     }
-    while i < chars.length() && is_attr_space(chars[i]) {
+    while i < tag_len && is_space(tag[i]) {
       i = i + 1
     }
-    if i >= chars.length() || chars[i] != '=' {
+    if i >= tag_len || tag[i] != ('=' : UInt16) {
       i = name_end
       continue
     }
     i = i + 1
-    while i < chars.length() && is_attr_space(chars[i]) {
+    while i < tag_len && is_space(tag[i]) {
       i = i + 1
     }
-    if i >= chars.length() || chars[i] != '"' {
+    if i >= tag_len || tag[i] != ('"' : UInt16) {
       continue
     }
     i = i + 1
     let value_start = i
-    while i < chars.length() && chars[i] != '"' {
+    while i < tag_len && tag[i] != ('"' : UInt16) {
       i = i + 1
     }
-    if i >= chars.length() {
+    if i >= tag_len {
       raise XlsxError::InvalidXml(msg="attribute out of range")
     }
-    if name_end - name_start == name_chars.length() {
+    if name_end - name_start == name_len {
       let mut matched = true
-      for j in 0..<name_chars.length() {
-        if chars[name_start + j] != name_chars[j] {
+      for j in 0..<name_len {
+        if tag[name_start + j] != name[j] {
           matched = false
           break
         }
       }
       if matched {
-        let sb = StringBuilder::new()
-        for j in value_start..<i {
-          sb.write_char(chars[j])
-        }
-        return Some(sb.to_string())
+        let value = tag[value_start:i] catch {
+            _ => raise XlsxError::InvalidXml(msg="attribute out of range")
+          }
+        return Some(value.to_string())
       }
     }
     i = i + 1
