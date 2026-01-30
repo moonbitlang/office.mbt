@@ -3621,52 +3621,6 @@ fn duplicate_sqref_for_row(
 }
 
 ///|
-fn replace_attr_value_in_open_tag(
-  xml : StringView,
-  attr_name : StringView,
-  value : String,
-) -> String? raise XlsxError {
-  let text = xml.to_string()
-  let tag_start = match text.find("<") {
-    Some(pos) => pos
-    None => return None
-  }
-  let tag_end = match text.find(">") {
-    Some(pos) => pos
-    None => return None
-  }
-  let open_tag = text[tag_start:tag_end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
-    }
-  let needle = "\{attr_name.to_string()}=\""
-  let attr_pos = match open_tag.find(needle) {
-    Some(pos) => pos
-    None => return None
-  }
-  let value_start = tag_start + attr_pos + needle.length()
-  let rest = text[value_start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="attribute slice invalid")
-    }
-  let value_end_rel = match rest.find("\"") {
-    Some(pos) => pos
-    None => return None
-  }
-  let value_end = value_start + value_end_rel
-  let sb = StringBuilder::new()
-  sb.write_view(
-    text[:value_start] catch {
-      _ => raise XlsxError::InvalidXml(msg="attribute start invalid")
-    },
-  )
-  sb.write_view(escape_xml_attr(value))
-  sb.write_view(
-    text[value_end:] catch {
-      _ => raise XlsxError::InvalidXml(msg="attribute end invalid")
-    },
-  )
-  Some(sb.to_string())
-}
-
 ///|
 fn duplicate_xml_sqref(
   xml : StringView,

@@ -1324,60 +1324,6 @@ fn parse_text_nodes(xml : StringView) -> String {
 }
 
 ///|
-fn tag_attributes_in(
-  xml : StringView,
-  tag_name : StringView,
-) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
-  let needle = "<\{tag_name.to_string()}"
-  let start = match xml_str.find(needle) {
-    Some(pos) => pos
-    None => return None
-  }
-  let rest = xml_str[start + 1:] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag attributes out of range")
-    }
-  let end = match rest.find(">") {
-    Some(pos) => pos
-    None => return None
-  }
-  let slice = rest[:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag attributes invalid")
-    }
-  Some(slice.to_string())
-}
-
-///|
-fn extract_tag_body_from(
-  xml : StringView,
-  tag_name : StringView,
-) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
-  let open_tag = "<\{tag_name.to_string()}"
-  let close_tag = "</\{tag_name.to_string()}>"
-  let start = match xml_str.find(open_tag) {
-    Some(pos) => pos
-    None => return None
-  }
-  let after_start = xml_str[start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
-    }
-  let open_end_rel = match after_start.find(">") {
-    Some(pos) => pos
-    None => return None
-  }
-  let body_start = start + open_end_rel + 1
-  let end = match xml_str.find(close_tag) {
-    Some(pos) => pos
-    None => return None
-  }
-  let body = xml_str[body_start:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag body invalid")
-    }
-  Some(body.to_string())
-}
-
-///|
 fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
   let rpr_body = match extract_tag_body_from(body, "rPr") {
     Some(value) => value
