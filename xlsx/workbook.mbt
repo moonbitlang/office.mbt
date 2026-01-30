@@ -574,18 +574,20 @@ pub fn Workbook::set_sheet_name(
 ) -> Unit raise XlsxError {
   check_sheet_name(source)
   check_sheet_name(target)
-  if sheet_name_equal(source, target) {
+  if source.to_string() == target {
     return
-  }
-  match self.sheet_entry(target) {
-    Some(_) => raise XlsxError::SheetAlreadyExists(name=target)
-    None => ()
   }
   let entry = match self.sheet_entry(source) {
     Some(value) => value
     None => raise XlsxError::SheetNotFound(name=source.to_string())
   }
   let old_name = self.sheet_entry_name(entry)
+  if !sheet_name_equal(old_name, target) {
+    match self.sheet_entry(target) {
+      Some(_) => raise XlsxError::SheetAlreadyExists(name=target)
+      None => ()
+    }
+  }
   match entry {
     SheetEntry::Worksheet(idx) => self.sheets[idx].name = target
     SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].name = target
