@@ -626,9 +626,7 @@ pub fn Workbook::delete_sheet(
   }
   let deleted_name = self.sheet_entry_name(entry)
   if self.sheet_order.length() <= 1 {
-    raise XlsxError::InvalidSheetOperation(
-      msg="workbook must contain at least one sheet",
-    )
+    return ()
   }
   ignore(self.sheet_order.remove(order_index))
   match entry {

@@ -27,11 +27,12 @@ test "sheet delete updates active index" {
 }
 
 ///|
-test "delete last sheet rejected" {
+test "delete last sheet is no-op" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Only"))
   let result : Result[Unit, Error] = try? workbook.delete_sheet("Only")
-  inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+  inspect(result is Ok(_), content="true")
+  inspect(workbook.sheet_name(0), content="Some(\"Only\")")
 }
 
 ///|
