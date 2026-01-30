@@ -5,10 +5,6 @@
     {
       "path": "moonbitlang/async/io",
       "alias": "async/io"
-    },
-    {
-      "path": "moonbitlang/core/encoding/utf8",
-      "alias": "encoding/utf8"
     }
   ],
   "test-import": [
@@ -16,6 +12,10 @@
     {
       "path": "moonbitlang/async/fs",
       "alias": "async/fs"
+    },
+    {
+      "path": "moonbitlang/core/encoding/utf8",
+      "alias": "encoding/utf8"
     },
     "moonbitlang/core/env",
     "bobzhang/mbtexcel/zip"
