@@ -23,18 +23,23 @@ These are non-blocking follow-ups discovered while investigating slow tests.
 These are follow-ups discovered while reviewing the current package architecture
 (see `docs/architecture.md` and `docs/architecture-improvements.md`).
 
-1. **Split `xlsx/read.mbt` and `xlsx/write.mbt` by subsystem**
-   - Goal: smaller files with clearer ownership boundaries (workbook/styles/worksheet/drawings/etc).
-   - Guardrail: no public API changes; `moon test` must remain green.
+Completed (already landed):
 
-2. **Centralize OOXML string/fragment utilities**
-   - Move scattered helpers (`attr_value`, `tag_attributes_in`, fragment attribute rewrite, etc.) into a single focused module and add unit tests.
+1. **Split IO helpers by subsystem (inside `xlsx/`)**
+   - `xlsx/read_*.mbt` and `xlsx/write_*.mbt` extracted from the read/write hubs.
 
-3. **Extract relationships parsing/target resolution into a reusable module**
-   - Reduce duplication and make read-side `.rels` parsing independently testable.
+2. **Centralize OOXML string/fragment utilities + `.rels` parsing**
+   - `xlsx/ooxml_utils.mbt` and `xlsx/ooxml_rels.mbt` added with unit tests.
 
-4. **Extract crypto/hash implementations from `xlsx/` into a dedicated package**
-   - Reduce `xlsx/` compile surface; keep behavior identical.
+3. **Extract pure crypto/hash + base64 into dedicated packages**
+   - `crypto/` and `base64/` packages; `xlsx/` uses them via imports/wrappers.
+
+4. **Split very large API/type hubs**
+   - `xlsx/workbook_types.mbt`, `xlsx/worksheet_types.mbt`,
+     `xlsx/formula_eval_types.mbt`, `xlsx/formula_parse.mbt`,
+     `xlsx/formula_eval.mbt`, `xlsx/formula_builtins.mbt`.
+
+Remaining follow-ups:
 
 5. **Decouple IO configuration from `Workbook`**
    - Move `file_path`, `zip_writer`, and `charset_transcoder` toward an explicit IO context passed into read/write paths (keep compat shims during migration).
@@ -44,3 +49,6 @@ These are follow-ups discovered while reviewing the current package architecture
 
 7. **Decide whether `ooxml/` should become a shared read/write “package layer”**
    - Either keep it write-only, or add parsing for `.rels` / content types and consume it from `xlsx/read`.
+
+8. **Further split `xlsx/formula_builtins.mbt` (optional)**
+   - If navigation remains painful, split built-ins by category (text/math/date/financial/lookup/etc).

@@ -8,17 +8,38 @@ cleaner architecture than today.
 
 Companion doc: `docs/architecture.md` (describes the current as-is design).
 
+## Status (as of 2026-01-30)
+
+This repo has already implemented several items from the roadmap:
+
+- [x] Phase 1: split large IO hub files inside `xlsx/`
+  - `xlsx/read.mbt` helpers extracted into:
+    - `xlsx/read_shared_strings.mbt`
+    - `xlsx/read_styles_xfs.mbt`
+    - `xlsx/read_workbook_xml.mbt`
+    - `xlsx/read_worksheet_xml.mbt`
+  - `xlsx/write.mbt` helpers extracted into:
+    - `xlsx/write_workbook_xml.mbt`
+    - `xlsx/write_shared_strings.mbt`
+- [x] Phase 1: centralize OOXML string + `.rels` helpers
+  - `xlsx/ooxml_utils.mbt`
+  - `xlsx/ooxml_rels.mbt`
+- [x] Phase 2: extract pure libraries out of `xlsx/`
+  - `crypto/` (AES + hashes)
+  - `base64/` (codec; `xlsx/base64.mbt` keeps error-mapping wrappers)
+- [x] Phase 1: start splitting the formula engine for navigability
+  - `xlsx/formula_eval_types.mbt`, `xlsx/formula_parse.mbt`,
+    `xlsx/formula_eval.mbt`, `xlsx/formula_builtins.mbt`
+- [x] Phase 1: extract `Workbook`/`Worksheet` type definitions and accessors
+  into dedicated files (`xlsx/workbook_types.mbt`, `xlsx/worksheet_types.mbt`)
+
 ## Current pain points (why refactor)
 
 1. The `xlsx/` package is “everything”
    - It contains the core model, most feature APIs, OOXML parsing, OOXML writing,
      a formula engine, and crypto primitives.
-   - Several single files are very large:
-     - `xlsx/formula_eval.mbt` (~22k LOC)
-     - `xlsx/read.mbt` (~6.5k LOC)
-     - `xlsx/worksheet.mbt` (~4.7k LOC)
-     - `xlsx/write.mbt` (~4.5k LOC)
-     - `xlsx/workbook.mbt` (~4.3k LOC)
+   - Several subsystems are large and worth keeping split into focused files
+     (formula engine, worksheet/workbook APIs, and OOXML IO helpers).
    - This hurts navigation, makes “small changes” risky, and increases compile
      times for unrelated edits.
 
@@ -130,11 +151,10 @@ Selection criteria for extraction:
 Good candidates (based on current layout):
 
 - Crypto + hashes
-  - Move `xlsx/crypto_*.mbt` and `xlsx/hash_*.mbt` and `xlsx/crypto_common.mbt`
-    into a new package (e.g., `crypto/`).
-  - `xlsx/encryption.mbt` then imports `@crypto`.
+  - Implemented: moved into `crypto/` and `xlsx/encryption.mbt` imports
+    `@crypto`.
 - Base64
-  - Move `xlsx/base64.mbt` into a small `base64/` package.
+  - Implemented: moved into `base64/` with `xlsx/base64.mbt` wrappers.
 - XML helpers
   - Either:
     - expand `ooxml/` into a general-purpose `ooxml_xml` helper package, or
@@ -243,4 +263,3 @@ If you want a low-risk first step that improves architecture immediately:
 
 These changes are “mechanical refactors” with low behavioral risk and make later
 architecture work much easier.
-
