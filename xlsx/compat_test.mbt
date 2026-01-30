@@ -17,6 +17,15 @@ test "compat sheet aliases and row or col setters" {
 }
 
 ///|
+test "compat get_sheet_index missing returns -1" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  inspect(workbook.get_sheet_index("SheetN"), content="-1")
+  let invalid : Result[Int, Error] = try? workbook.get_sheet_index("Sheet:1")
+  inspect(invalid is Err(XlsxError::InvalidSheetName(_)), content="true")
+}
+
+///|
 test "compat auto filter and background bytes" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

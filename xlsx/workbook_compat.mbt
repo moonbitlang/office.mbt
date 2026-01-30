@@ -8,7 +8,11 @@ pub fn Workbook::get_sheet_index(
   self : Workbook,
   name : StringView,
 ) -> Int raise XlsxError {
-  self.sheet_index(name)
+  check_sheet_name(name)
+  match self.sheet_entry_index(name) {
+    Some(value) => value
+    None => -1
+  }
 }
 
 ///|
