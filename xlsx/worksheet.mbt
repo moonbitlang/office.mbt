@@ -3621,6 +3621,7 @@ fn duplicate_sqref_for_row(
 }
 
 ///|
+
 ///|
 fn duplicate_xml_sqref(
   xml : StringView,

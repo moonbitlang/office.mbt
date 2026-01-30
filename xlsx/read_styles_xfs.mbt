@@ -293,4 +293,3 @@ fn parse_styles(
   let conditional_styles = parse_dxfs(xml, num_fmts, fonts)
   (styles, conditional_styles)
 }
-

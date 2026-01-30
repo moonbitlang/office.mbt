@@ -34,4 +34,3 @@ fn collect_shared_strings(
   }
   (shared_strings, text_map, rich_text_map, total)
 }
-

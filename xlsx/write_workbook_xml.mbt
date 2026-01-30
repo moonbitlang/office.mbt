@@ -240,4 +240,3 @@ fn write_calc_pr_xml(options : CalcPropsOptions) -> String? {
   sb.write_view("/>\n")
   Some(sb.to_string())
 }
-

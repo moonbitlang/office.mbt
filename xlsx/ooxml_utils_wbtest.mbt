@@ -1,7 +1,6 @@
 ///|
 test "ooxml_utils: tag_attributes_in finds first open tag" {
-  let xml =
-    "<root><a b=\"c\"/><a b=\"d\"/></root>"
+  let xml = "<root><a b=\"c\"/><a b=\"d\"/></root>"
   inspect(tag_attributes_in(xml[:], "a"), content="Some(\"a b=\\\"c\\\"/\")")
 }
 

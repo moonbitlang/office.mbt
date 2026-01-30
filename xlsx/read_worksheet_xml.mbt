@@ -252,4 +252,3 @@ fn parse_worksheet(
     sheet_props, dimension_ref, picture_rel_id,
   )
 }
-

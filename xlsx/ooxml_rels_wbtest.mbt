@@ -36,25 +36,43 @@ test "ooxml_rels: rels_path_for converts worksheets path to rels path" {
 test "ooxml_rels: parse_id_from_path extracts numeric suffix" {
   inspect(
     parse_id_from_path(
-      "xl/pivotTables/pivotTable12.xml",
-      "xl/pivotTables/pivotTable",
+      "xl/pivotTables/pivotTable12.xml", "xl/pivotTables/pivotTable",
     ),
     content="12",
   )
-  inspect(parse_id_from_path("xl/pivotTables/pivotTable.xml", "xl/pivotTables/pivotTable"), content="0")
+  inspect(
+    parse_id_from_path(
+      "xl/pivotTables/pivotTable.xml", "xl/pivotTables/pivotTable",
+    ),
+    content="0",
+  )
 }
 
 ///|
 test "ooxml_rels: resolve_rel_target handles absolute, parent, and relative targets" {
   inspect(resolve_rel_target("/xl/a.xml", "worksheets"), content="xl/a.xml")
-  inspect(resolve_rel_target("../drawings/d1.xml", "worksheets"), content="xl/drawings/d1.xml")
-  inspect(resolve_rel_target("xl/charts/c1.xml", "worksheets"), content="xl/charts/c1.xml")
-  inspect(resolve_rel_target("sheet1.xml", "worksheets"), content="xl/worksheets/sheet1.xml")
-  inspect(resolve_rel_target("rels/abc.xml", "worksheets/"), content="xl/worksheets/rels/abc.xml")
+  inspect(
+    resolve_rel_target("../drawings/d1.xml", "worksheets"),
+    content="xl/drawings/d1.xml",
+  )
+  inspect(
+    resolve_rel_target("xl/charts/c1.xml", "worksheets"),
+    content="xl/charts/c1.xml",
+  )
+  inspect(
+    resolve_rel_target("sheet1.xml", "worksheets"),
+    content="xl/worksheets/sheet1.xml",
+  )
+  inspect(
+    resolve_rel_target("rels/abc.xml", "worksheets/"),
+    content="xl/worksheets/rels/abc.xml",
+  )
 }
 
 ///|
 test "ooxml_rels: resolve_workbook_rel_target treats relative as under xl/" {
-  inspect(resolve_workbook_rel_target("worksheets/sheet1.xml"), content="xl/worksheets/sheet1.xml")
+  inspect(
+    resolve_workbook_rel_target("worksheets/sheet1.xml"),
+    content="xl/worksheets/sheet1.xml",
+  )
 }
-

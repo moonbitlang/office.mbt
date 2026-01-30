@@ -4035,6 +4035,7 @@ fn parse_drawing_slicer_anchors(
 }
 
 ///|
+
 ///|
 fn parse_bool_attr(value : StringView) -> Bool {
   match value.to_string() {

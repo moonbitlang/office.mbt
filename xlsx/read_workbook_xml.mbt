@@ -275,4 +275,3 @@ fn parse_workbook_protection(
     }
   }
 }
-
