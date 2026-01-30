@@ -23,12 +23,13 @@ test "content types" {
 
   // Add default content types by extension
   ct.add_default("xml", "application/xml")
-  ct.add_default("rels", "application/vnd.openxmlformats-package.relationships+xml")
+  ct.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
 
   // Add specific part overrides
   ct.add_override(
-    "/xl/workbook.xml",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+    "/xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
   )
 
   // Generate XML
@@ -82,17 +83,16 @@ test "workbook manifest" {
 
   // Add custom relationships
   manifest.add_content_override(
-    "/xl/worksheets/sheet3.xml",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
+    "/xl/worksheets/sheet3.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
   )
 
   // Generate XML files
   let content_types = manifest.content_types_xml()
   let root_rels = manifest.root_rels_xml()
   let workbook_rels = manifest.workbook_rels_xml()
-
   inspect(content_types.contains("Types"), content="true")
   inspect(root_rels.contains("Relationships"), content="true")
+  inspect(workbook_rels.contains("Relationships"), content="true")
 }
 ```
 

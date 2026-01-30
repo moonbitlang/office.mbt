@@ -29,7 +29,6 @@ test "hash functions" {
   // Hash single input
   let md5_hash = @crypto.hash_bytes("md5", b"Hello, World!")
   inspect(md5_hash.length(), content="16") // MD5 produces 16 bytes
-
   let sha256_hash = @crypto.hash_bytes("sha256", b"Hello, World!")
   inspect(sha256_hash.length(), content="32") // SHA-256 produces 32 bytes
 
@@ -59,9 +58,12 @@ test "aes ecb" {
 
   // Decrypt
   let decrypted = @crypto.aes_ecb_decrypt(ciphertext, key)
-  inspect(decrypted, content=(
-    #|b")\xb0$\xfe\x0a\xefG\xe0\x7f\x14d\xe2\x5c9\x95\x8b"
-  ))
+  inspect(
+    decrypted,
+    content=(
+      #|b")\xb0$\xfe\x0a\xefG\xe0\x7f\x14d\xe2\x5c9\x95\x8b"
+    ),
+  )
 }
 ```
 
@@ -82,9 +84,12 @@ test "aes cbc" {
 
   // Decrypt
   let decrypted = @crypto.aes_cbc_decrypt(ciphertext, key, iv)
-  inspect(decrypted, content=(
-    #|b"cE\xd9\x9f\xaa\x93\x01\xd4Hq\x09\xcf\x06o \xa5"
-  ))
+  inspect(
+    decrypted,
+    content=(
+      #|b"cE\xd9\x9f\xaa\x93\x01\xd4Hq\x09\xcf\x06o \xa5"
+    ),
+  )
 }
 ```
 
@@ -165,6 +170,7 @@ test "big endian" {
 Operations that can fail raise `CryptoError`:
 
 ```mbt nocheck
+///|
 pub suberror CryptoError {
   InvalidCrypto(msg~ : String)
 }

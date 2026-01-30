@@ -9,7 +9,7 @@ fn MemWriter::new() -> MemWriter {
 }
 
 ///|
-async fn MemWriter::write_once(
+fn MemWriter::write_once_sync(
   self : MemWriter,
   bytes : Bytes,
   offset~ : Int,
@@ -28,7 +28,7 @@ async fn MemWriter::write_once(
 }
 
 ///|
-async fn MemWriter::write(self : MemWriter, data : &@async/io.Data) -> Unit {
+fn MemWriter::write_sync(self : MemWriter, data : &@async/io.Data) -> Unit {
   let bytes = data.binary()
   for value in bytes {
     self.data.push(value)
@@ -59,7 +59,7 @@ impl @async/io.Writer for MemWriter with write_once(
   offset~ : Int,
   len~ : Int,
 ) {
-  self.write_once(bytes, offset~, len~)
+  self.write_once_sync(bytes, offset~, len~)
 }
 
 ///|
@@ -67,7 +67,7 @@ impl @async/io.Writer for MemWriter with write(
   self : MemWriter,
   data : &@async/io.Data,
 ) {
-  self.write(data)
+  self.write_sync(data)
 }
 
 ///|

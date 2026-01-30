@@ -58,7 +58,7 @@ test "create workbook" {
   inspect(wb.sheets().length(), content="0")
 
   // Add a sheet
-  let sheet = wb.add_sheet("Data")
+  ignore(wb.add_sheet("Data"))
   inspect(wb.get_sheet_list(), content="[\"Data\"]")
 }
 ```
@@ -120,7 +120,6 @@ test "row and column operations" {
 test "formulas" {
   let wb = Workbook::new()
   let sheet = wb.add_sheet("Calc")
-
   sheet.set_cell("A1", "10")
   sheet.set_cell("A2", "20")
   sheet.set_cell("A3", "30")
@@ -166,6 +165,10 @@ test "creating styles" {
   // Apply style to cell
   sheet.set_cell("A1", "Bold Text")
   sheet.set_cell_style("A1", bold_id)
+  sheet.set_cell("A2", "Filled")
+  sheet.set_cell_style("A2", fill_id)
+  sheet.set_cell("A3", "Combined")
+  sheet.set_cell_style("A3", combined_id)
 }
 ```
 
@@ -197,10 +200,10 @@ test "fill options" {
   inspect(solid.typ, content="Some(\"pattern\")")
 
   // Pattern fill
-  let pattern = Fill::pattern(pattern=17, color="00FF00")
+  ignore(Fill::pattern(pattern=17, color="00FF00"))
 
   // Gradient fill
-  let gradient = Fill::gradient("FF0000", "0000FF", shading=1)
+  ignore(Fill::gradient("FF0000", "0000FF", shading=1))
 }
 ```
 
@@ -227,13 +230,13 @@ test "border options" {
 ///|
 test "number formats" {
   // Built-in number format (index 2 = "0.00")
-  let decimal_style = Style::builtin_number_format(2)
+  ignore(Style::builtin_number_format(2))
 
   // Custom number format
-  let currency_style = Style::number_format("$#,##0.00")
+  ignore(Style::number_format("$#,##0.00"))
 
   // Percentage
-  let pct_style = Style::builtin_number_format(10) // "0.00%"
+  ignore(Style::builtin_number_format(10)) // "0.00%"
 }
 ```
 
@@ -280,7 +283,6 @@ test "conditional formatting" {
   cf.set_criteria(">")
   cf.set_value("100")
   cf.set_format(Some(cf_style_id))
-
   sheet.set_conditional_format("A1:A100", [cf])
 }
 ```
@@ -401,7 +403,8 @@ test "sheet operations" {
   ignore(wb.add_sheet("Sheet3"))
 
   // Get sheet by name
-  guard wb.sheet("Sheet1") is Some(s1) else { return }
+  guard wb.sheet("Sheet1") is Some(sheet1) else { return }
+  sheet1.set_cell("A1", "OK")
 
   // Rename sheet
   wb.set_sheet_name("Sheet1", "Data")
@@ -569,10 +572,7 @@ test "error handling" {
 
   // Try to get non-existent sheet
   let result : Result[Int, Error] = try? wb.get_sheet_index("Missing")
-  inspect(
-    result,
-    content="Ok(-1)",
-  )
+  inspect(result, content="Ok(-1)")
 
   // Invalid cell reference
   let sheet = wb.add_sheet("Test")
@@ -611,11 +611,11 @@ test "cell reference utilities" {
 ///|
 test "color utilities" {
   // RGB to HSL
-  let (h, s, l) = rgb_to_hsl(255, 0, 0) // Red
+  let (h, _, _) = rgb_to_hsl(255, 0, 0) // Red
   inspect(h < 1.0, content="true") // Hue near 0
 
   // HSL to RGB
-  let (r, g, b) = hsl_to_rgb(0.0, 1.0, 0.5) // Red
+  let (r, _, _) = hsl_to_rgb(0.0, 1.0, 0.5) // Red
   inspect(r, content="b'\\xFF'") // 255
 
   // Theme color with tint

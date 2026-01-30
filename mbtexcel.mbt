@@ -6,6 +6,7 @@
 /// # Example
 /// ```mbt nocheck
 /// let wb = new_workbook()
+///
 /// let sheet = wb.add_sheet("Data")
 /// ```
 pub fn new_workbook(
@@ -129,6 +130,7 @@ pub fn cell_name_to_coordinates(
 /// ```mbt nocheck
 /// let ref = coordinates_to_cell_name(2, 3)
 /// // ref = "B3"
+///
 /// let abs_ref = coordinates_to_cell_name(2, 3, abs=true)
 /// // abs_ref = "$B$3"
 /// ```
@@ -190,7 +192,9 @@ pub fn column_number_to_name(col : Int) -> String raise @xlsx.XlsxError {
 /// # Example
 /// ```mbt nocheck
 /// let bytes = read_file("report.xlsx")
+///
 /// let wb = read(bytes)
+///
 /// let value = wb.get_cell("Sheet1", "A1")
 /// ```
 pub fn read(
@@ -223,6 +227,7 @@ pub fn read(
 /// # Example
 /// ```mbt nocheck
 /// let bytes = read_file("protected.xlsx")
+///
 /// let wb = read_with_password(bytes, "secret123")
 /// ```
 pub fn read_with_password(
@@ -388,6 +393,7 @@ pub fn hslto_rgb(h : Double, s : Double, l : Double) -> (Byte, Byte, Byte) {
 /// # Example
 /// ```mbt nocheck
 /// let lighter = theme_color("FF0000", 0.5) // Lighter red
+///
 /// let darker = theme_color("FF0000", -0.5) // Darker red
 /// ```
 pub fn theme_color(base_color : String, tint : Double) -> String {
@@ -434,6 +440,7 @@ pub fn excel_date_to_time(
 /// # Example
 /// ```mbt nocheck
 /// let wb = open_file("report.xlsx")
+///
 /// let wb_protected = open_file("secret.xlsx", password="pass123")
 /// ```
 pub async fn open_file(

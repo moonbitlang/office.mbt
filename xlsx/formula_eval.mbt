@@ -77,7 +77,7 @@ fn anchorarray_values(
   sheet_name : String,
   args : ArrayView[Expr],
   values : ArrayView[FormulaValue],
-) -> FormulaValue raise XlsxError {
+) -> FormulaValue {
   if args.length() != 1 {
     return FormulaValue::Error(formula_error_value)
   }
@@ -452,9 +452,7 @@ fn transpose_number_matrix(
 priv struct TrendGrowthMatrixInfo {
   trend_type : Int
   n_cx : Int
-  n_cy : Int
   n_rx : Int
-  n_ry : Int
   m : Int
   n : Int
   mtx_x : Array[Array[Double]]
@@ -594,9 +592,7 @@ fn prepare_trend_growth(
   Ok(TrendGrowthMatrixInfo::{
     trend_type,
     n_cx,
-    n_cy,
     n_rx,
-    n_ry,
     m,
     n,
     mtx_x: new_x,
@@ -1684,7 +1680,7 @@ fn choosecols_values(
     values[0],
     ctx,
   )
-  let indices = match choose_indices(values.sub(start=1), range.cols) {
+  let indices = match choose_indices(values[1:], range.cols) {
     Ok(list) => list
     Err(err) => return err
   }
@@ -1716,7 +1712,7 @@ fn chooserows_values(
     values[0],
     ctx,
   )
-  let indices = match choose_indices(values.sub(start=1), range.rows) {
+  let indices = match choose_indices(values[1:], range.rows) {
     Ok(list) => list
     Err(err) => return err
   }
@@ -3174,7 +3170,7 @@ fn array_shape_from_expr(
                 values[0],
                 ctx,
               )
-              match choose_indices(values.sub(start=1), range.cols) {
+              match choose_indices(values[1:], range.cols) {
                 Ok(indices) => Some((range.rows, indices.length()))
                 Err(_) => None
               }
@@ -3190,7 +3186,7 @@ fn array_shape_from_expr(
                 values[0],
                 ctx,
               )
-              match choose_indices(values.sub(start=1), range.rows) {
+              match choose_indices(values[1:], range.rows) {
                 Ok(indices) => Some((indices.length(), range.cols))
                 Err(_) => None
               }

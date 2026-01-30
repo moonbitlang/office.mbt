@@ -641,7 +641,7 @@ fn build_top10_rule(
   opt : ConditionalFormatOptions,
   priority : Int,
   bottom : Bool,
-) -> String raise XlsxError {
+) -> String {
   let mut rank = 10
   if opt.value != "" {
     rank = @strconv.parse_int(opt.value, base=10) catch { _ => rank }
@@ -999,9 +999,10 @@ fn parse_cf_rule(
   }
   match attr_value(tag, "dxfId") {
     Some(value) =>
-      match (try? @strconv.parse_int(value, base=10)) {
-        Ok(id) => opt.format = Some(id)
-        Err(_) => ()
+      try @strconv.parse_int(value, base=10) catch {
+        _ => ()
+      } noraise {
+        id => opt.format = Some(id)
       }
     None => ()
   }

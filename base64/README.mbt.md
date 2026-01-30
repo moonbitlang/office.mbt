@@ -68,6 +68,7 @@ test "round trip" {
 The `decode` function raises `Base64Error` for invalid input:
 
 ```mbt nocheck
+///|
 pub suberror Base64Error {
   InvalidBase64(msg~ : String)
 }

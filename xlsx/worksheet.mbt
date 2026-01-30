@@ -1033,13 +1033,6 @@ fn normalize_extension(extension : StringView) -> String raise XlsxError {
 }
 
 ///|
-fn normalize_image_extension_lower(
-  extension : StringView,
-) -> String raise XlsxError {
-  normalize_extension(extension).to_lower()
-}
-
-///|
 fn normalize_extension_lower_requires_dot(
   extension : StringView,
   unsupported_msg : StringView,

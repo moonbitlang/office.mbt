@@ -132,7 +132,9 @@ test "aes cbc roundtrip" {
       "6bc1bee22e409f96e93d7e117393172a", "ae2d8a571e03ac9c9eb76fac45af8e51",
     ),
   )
-  let enc = aes_cbc_encrypt(key, iv, data)
+  let enc = @crypto.aes_cbc_encrypt(key, iv, data) catch {
+    _ => fail("aes_cbc_encrypt failed")
+  }
   let dec = aes_cbc_decrypt(key, iv, enc)
   let expected = String::add(
     "6bc1bee22e409f96e93d7e117393172a", "ae2d8a571e03ac9c9eb76fac45af8e51",

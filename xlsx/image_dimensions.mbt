@@ -1,5 +1,5 @@
 ///|
-fn img_read_u32_be(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
+fn img_read_u32_be(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 4 > bytes.length() {
     return None
   }
@@ -11,7 +11,7 @@ fn img_read_u32_be(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
 }
 
 ///|
-fn img_read_u32_le(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
+fn img_read_u32_le(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 4 > bytes.length() {
     return None
   }
@@ -23,7 +23,7 @@ fn img_read_u32_le(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
 }
 
 ///|
-fn img_read_u16_be(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
+fn img_read_u16_be(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 2 > bytes.length() {
     return None
   }
@@ -33,7 +33,7 @@ fn img_read_u16_be(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
 }
 
 ///|
-fn img_read_u16_le(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
+fn img_read_u16_le(bytes : BytesView, offset : Int) -> Int? {
   if offset < 0 || offset + 2 > bytes.length() {
     return None
   }
@@ -43,7 +43,7 @@ fn img_read_u16_le(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
 }
 
 ///|
-fn png_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn png_dimensions(bytes : BytesView) -> (Int, Int)? {
   // PNG signature: 89 50 4E 47 0D 0A 1A 0A
   if bytes.length() < 24 {
     return None
@@ -71,7 +71,7 @@ fn png_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn gif_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn gif_dimensions(bytes : BytesView) -> (Int, Int)? {
   if bytes.length() < 10 {
     return None
   }
@@ -93,7 +93,7 @@ fn gif_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn jpeg_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn jpeg_dimensions(bytes : BytesView) -> (Int, Int)? {
   if bytes.length() < 4 {
     return None
   }
@@ -161,7 +161,7 @@ fn jpeg_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn bmp_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn bmp_dimensions(bytes : BytesView) -> (Int, Int)? {
   // BMP file header is 14 bytes, followed by a DIB header.
   if bytes.length() < 26 {
     return None
@@ -204,7 +204,7 @@ fn bmp_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn ico_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn ico_dimensions(bytes : BytesView) -> (Int, Int)? {
   // ICONDIR (6 bytes) + at least one ICONDIRENTRY (16 bytes).
   if bytes.length() < 22 {
     return None
@@ -229,7 +229,7 @@ fn ico_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn tiff_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn tiff_dimensions(bytes : BytesView) -> (Int, Int)? {
   if bytes.length() < 8 {
     return None
   }
@@ -238,14 +238,14 @@ fn tiff_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
   if !le && !be {
     return None
   }
-  let read_u16 = fn(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
+  let read_u16 = fn(bytes : BytesView, offset : Int) -> Int? {
     if le {
       img_read_u16_le(bytes, offset)
     } else {
       img_read_u16_be(bytes, offset)
     }
   }
-  let read_u32 = fn(bytes : BytesView, offset : Int) -> Int? raise XlsxError {
+  let read_u32 = fn(bytes : BytesView, offset : Int) -> Int? {
     if le {
       img_read_u32_le(bytes, offset)
     } else {
@@ -384,7 +384,7 @@ fn svg_attr_value(tag : StringView, name : StringView) -> String? {
 }
 
 ///|
-fn svg_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn svg_dimensions(bytes : BytesView) -> (Int, Int)? {
   let text = @encoding/utf8.decode(bytes) catch { _ => return None }
   let start = match text.find("<svg") {
     Some(v) => v
@@ -451,7 +451,7 @@ fn svg_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn emf_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn emf_dimensions(bytes : BytesView) -> (Int, Int)? {
   // ENHMETAHEADER: use rclFrame (in .01 millimeter) if present.
   // Offsets: iType(0), nSize(4), rclBounds(8), rclFrame(24), signature(40).
   if bytes.length() < 44 {
@@ -493,7 +493,7 @@ fn emf_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 }
 
 ///|
-fn wmf_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
+fn wmf_dimensions(bytes : BytesView) -> (Int, Int)? {
   // Placeable metafile header (22 bytes): key + bbox + inch.
   if bytes.length() < 22 {
     return None
@@ -536,7 +536,7 @@ fn wmf_dimensions(bytes : BytesView) -> (Int, Int)? raise XlsxError {
 fn image_dimensions_px(
   data : BytesView,
   extension_lower : StringView,
-) -> (Int, Int)? raise XlsxError {
+) -> (Int, Int)? {
   match extension_lower.to_string() {
     "png" => png_dimensions(data)
     "gif" => gif_dimensions(data)

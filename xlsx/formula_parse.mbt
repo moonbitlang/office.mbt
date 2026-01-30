@@ -739,11 +739,15 @@ fn ref_bounds_opt(expr : Expr) -> (Int, Int, Int, Int)? raise XlsxError {
 }
 
 ///|
-fn current_cell_rc(ctx : CalcContext) -> (Int, Int)? raise XlsxError {
+fn current_cell_rc(ctx : CalcContext) -> (Int, Int)? {
   if ctx.current_ref == "" {
     None
   } else {
-    Some(cell_ref_to_rc(ctx.current_ref))
+    try cell_ref_to_rc(ctx.current_ref) catch {
+      _ => None
+    } noraise {
+      rc => Some(rc)
+    }
   }
 }
 
@@ -752,7 +756,7 @@ fn formula_text_value(
   workbook : Workbook,
   sheet_name : String,
   expr : Expr,
-) -> FormulaValue raise XlsxError {
+) -> FormulaValue {
   let (target_sheet, reference) = match expr {
     Expr::Cell(sheet, reference) =>
       if sheet == "" {

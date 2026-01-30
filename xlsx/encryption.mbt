@@ -157,18 +157,6 @@ fn aes_ecb_decrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
 }
 
 ///|
-fn aes_cbc_encrypt(
-  key : BytesView,
-  iv : BytesView,
-  data : BytesView,
-) -> Bytes raise XlsxError {
-  @crypto.aes_cbc_encrypt(key, iv, data) catch {
-    @crypto.CryptoError::InvalidCrypto(msg~) =>
-      raise XlsxError::InvalidEncryptionInfo(msg~)
-  }
-}
-
-///|
 fn aes_cbc_decrypt(
   key : BytesView,
   iv : BytesView,

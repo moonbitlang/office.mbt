@@ -38,7 +38,7 @@ pub enum NumberFormat {
 /// let font = Font::with_values(
 ///   bold=true,
 ///   size=12.0,
-///   color="FF0000",  // Red
+///   color="FF0000", // Red
 ///   underline="single",
 /// )
 /// ```
@@ -209,6 +209,7 @@ pub fn Font::with_values(
 /// let fill = Fill::solid("FFFF00")
 ///
 /// // Gradient fill
+///
 /// let gradient = Fill::gradient("FF0000", "0000FF", shading=1)
 /// ```
 pub struct Fill {
@@ -275,6 +276,7 @@ pub fn Fill::pattern(
 /// # Example
 /// ```mbt nocheck
 /// let yellow = Fill::solid("FFFF00")
+///
 /// let semi_transparent = Fill::solid("FF0000", transparency=50)
 /// ```
 pub fn Fill::solid(color : String, transparency? : Int) -> Fill {
@@ -582,6 +584,7 @@ pub fn Border::new(typ : String) -> Border {
 /// # Example
 /// ```mbt nocheck
 /// let thin_black = Border::with_values("left", color="000000", style=1)
+///
 /// let thick_red = Border::with_values("bottom", color="FF0000", style=5)
 /// ```
 pub fn Border::with_values(
@@ -771,7 +774,9 @@ pub fn Style::new() -> Style {
 /// # Example
 /// ```mbt nocheck
 /// let currency = Style::number_format("$#,##0.00")
+///
 /// let percent = Style::number_format("0.0%")
+///
 /// let date = Style::number_format("yyyy-mm-dd")
 /// ```
 pub fn Style::number_format(format_code : String) -> Style {

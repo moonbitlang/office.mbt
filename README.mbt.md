@@ -261,6 +261,7 @@ All functions that can fail raise `@xlsx.XlsxError`. Common error variants:
 Use `try?` to convert errors to `Result`:
 
 ```mbt nocheck
+///|
 fn safe_read(bytes : Bytes) -> Result[@xlsx.Workbook, Error] {
   try? @mbtexcel.read(bytes)
 }

@@ -223,23 +223,6 @@ fn escape_sheet_name(name : StringView) -> String {
 }
 
 ///|
-fn sheet_ref_prefix(name : StringView) -> String {
-  let raw = name.to_string()
-  let mut needs_quote = false
-  for c in raw {
-    if !(c.is_ascii_alphabetic() || c.is_ascii_digit() || c == '_') {
-      needs_quote = true
-      break
-    }
-  }
-  if needs_quote {
-    "'\{escape_sheet_name(raw)}'!"
-  } else {
-    "\{raw}!"
-  }
-}
-
-///|
 fn replace_sheet_name_in_refers_to(
   refers_to : StringView,
   from_name : StringView,

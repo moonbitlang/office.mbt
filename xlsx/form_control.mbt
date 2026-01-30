@@ -895,17 +895,19 @@ fn parse_form_controls_vml(
     let mut col0_opt : Int? = None
     match extract_xml_text_tag(body, "x:Row") {
       Some(v) =>
-        match (try? @strconv.parse_int(v, base=10)) {
-          Ok(value) => row0_opt = Some(value)
-          Err(_) => ()
+        try @strconv.parse_int(v, base=10) catch {
+          _ => ()
+        } noraise {
+          value => row0_opt = Some(value)
         }
       None => ()
     }
     match extract_xml_text_tag(body, "x:Column") {
       Some(v) =>
-        match (try? @strconv.parse_int(v, base=10)) {
-          Ok(value) => col0_opt = Some(value)
-          Err(_) => ()
+        try @strconv.parse_int(v, base=10) catch {
+          _ => ()
+        } noraise {
+          value => col0_opt = Some(value)
         }
       None => ()
     }
@@ -921,15 +923,15 @@ fn parse_form_controls_vml(
             if parts.length() < 4 {
               continue
             }
-            let col0 = match
-              (try? @strconv.parse_int(parts[0].trim(), base=10)) {
-              Ok(value) => value
-              Err(_) => continue
+            let col0 = try @strconv.parse_int(parts[0].trim(), base=10) catch {
+              _ => continue
+            } noraise {
+              value => value
             }
-            let row0 = match
-              (try? @strconv.parse_int(parts[2].trim(), base=10)) {
-              Ok(value) => value
-              Err(_) => continue
+            let row0 = try @strconv.parse_int(parts[2].trim(), base=10) catch {
+              _ => continue
+            } noraise {
+              value => value
             }
             (row0, col0)
           }

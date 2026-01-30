@@ -16,6 +16,7 @@ A pure MoonBit implementation of ZIP archive reading and writing. This package p
 `Archive` is the main container for ZIP entries:
 
 ```mbt nocheck
+///|
 pub struct Archive {
   entries : Array[Entry]
 }
@@ -26,9 +27,10 @@ pub struct Archive {
 `Entry` represents a single file in the archive:
 
 ```mbt nocheck
+///|
 pub struct Entry {
-  name : String         // File path within archive
-  data : Bytes          // Uncompressed file content
+  name : String // File path within archive
+  data : Bytes // Uncompressed file content
   compression : Compression
   data_descriptor : Bool
 }
@@ -39,9 +41,10 @@ pub struct Entry {
 Supported compression methods:
 
 ```mbt nocheck
+///|
 pub enum Compression {
-  Store    // No compression
-  Deflate  // DEFLATE algorithm
+  Store // No compression
+  Deflate // DEFLATE algorithm
 }
 ```
 
@@ -100,8 +103,10 @@ test "gzip" {
 
   // Decompress
   let decompressed = @zip.gunzip(compressed)
-
-  inspect(decompressed, content="b\"Hello, World! This is some test data to compress.\"")
+  inspect(
+    decompressed,
+    content="b\"Hello, World! This is some test data to compress.\"",
+  )
 }
 ```
 
@@ -148,6 +153,7 @@ test "iterate entries" {
 Operations that can fail raise `ZipError`:
 
 ```mbt nocheck
+///|
 pub suberror ZipError {
   OutOfBounds(offset~ : Int)
   InvalidSignature(expected~ : Int, actual~ : Int, offset~ : Int)
