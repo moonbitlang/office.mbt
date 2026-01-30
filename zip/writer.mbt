@@ -26,7 +26,9 @@ fn write_bytes(buf : Array[Byte], bytes : BytesView) -> Unit {
 
 ///|
 fn write_u64_le(buf : Array[Byte], value : UInt64) -> Unit {
-  write_bytes(buf, value.to_le_bytes())
+  for i in 0..<8 {
+    buf.push(((value >> (8 * i)) & 0xff).to_byte())
+  }
 }
 
 ///|
@@ -51,26 +53,35 @@ fn build_zip64_extra(
   comp~ : Int?,
   offset~ : Int?,
 ) -> Bytes raise ZipError {
-  let data : Array[Byte] = []
+  let mut field_count = 0
+  if uncomp is Some(_) {
+    field_count = field_count + 1
+  }
+  if comp is Some(_) {
+    field_count = field_count + 1
+  }
+  if offset is Some(_) {
+    field_count = field_count + 1
+  }
+  if field_count == 0 {
+    return b""
+  }
+  let data_len = 8 * field_count
+  let extra : Array[Byte] = Array::new(capacity=4 + data_len)
+  write_u16_le(extra, 0x0001)
+  write_u16_le(extra, data_len)
   match uncomp {
-    Some(value) => write_u64_le(data, to_u64(value))
+    Some(value) => write_u64_le(extra, to_u64(value))
     None => ()
   }
   match comp {
-    Some(value) => write_u64_le(data, to_u64(value))
+    Some(value) => write_u64_le(extra, to_u64(value))
     None => ()
   }
   match offset {
-    Some(value) => write_u64_le(data, to_u64(value))
+    Some(value) => write_u64_le(extra, to_u64(value))
     None => ()
   }
-  if data.length() == 0 {
-    return b""
-  }
-  let extra : Array[Byte] = []
-  write_u16_le(extra, 0x0001)
-  write_u16_le(extra, data.length())
-  write_bytes(extra, Bytes::from_array(data))
   Bytes::from_array(extra)
 }
 
@@ -98,8 +109,9 @@ fn write_with_options(
   archive : Archive,
   force_zip64? : Bool = false,
 ) -> Bytes raise ZipError {
-  let out : Array[Byte] = []
-  let central : Array[Byte] = []
+  let entry_count = archive.entries().length()
+  let out : Array[Byte] = Array::new(capacity=entry_count * 64)
+  let central : Array[Byte] = Array::new(capacity=entry_count * 64)
   let mut needs_zip64 = force_zip64
   let max_u32 : UInt = 0xFFFFFFFF
   for entry in archive.entries() {
@@ -222,7 +234,7 @@ fn write_with_options(
     out.push(b)
   }
   let central_size = central.length()
-  let total_entries = archive.entries().length()
+  let total_entries = entry_count
   if force_zip64 ||
     central_offset.reinterpret_as_uint() > max_u32 ||
     central_size.reinterpret_as_uint() > max_u32 ||

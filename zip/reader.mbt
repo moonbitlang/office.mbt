@@ -172,7 +172,7 @@ fn find_end_of_central(bytes : BytesView) -> Int? raise ZipError {
   }
   let max_scan = 22 + 0xFFFF
   let min_offset = if len > max_scan { len - max_scan } else { 0 }
-  for i = len - 22; i >= min_offset; i = i - 1 {
+  for i in (len - 22)>=..min_offset {
     if read_u32_le_at_raw(bytes, i) == end_of_central_sig.reinterpret_as_uint() {
       return Some(i)
     }
@@ -391,7 +391,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
   if central_offset + central_size > bytes.length() {
     raise ZipError::OutOfBounds(offset=central_offset)
   }
-  let metas : Array[EntryMeta] = []
+  let metas : Array[EntryMeta] = Array::new(capacity=entry_count)
   let central_reader = Reader::new(bytes, central_offset)
   for _ in 0..<entry_count {
     let header_offset = central_reader.pos

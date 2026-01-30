@@ -34,9 +34,8 @@ pub fn Archive::names(self : Archive) -> Array[String] {
 
 ///|
 pub fn Archive::get(self : Archive, name : StringView) -> Bytes? {
-  let needle = name.to_string()
   for entry in self.entries {
-    if entry.name == needle {
+    if entry.name[:] == name {
       return Some(entry.data)
     }
   }
