@@ -50,17 +50,7 @@ pub fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
   if row <= 0 || col <= 0 {
     raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
   }
-  let sb = StringBuilder::new()
-  let mut n = col
-  while n > 0 {
-    let rem = (n - 1) % 26
-    let c = Int::unsafe_to_char('A'.to_int() + rem)
-    sb.write_char(c)
-    n = (n - 1) / 26
-  }
-  let col_rev = sb.to_string()
-  let col_name = col_rev.rev()
-  "\{col_name}\{row}"
+  "\{column_number_to_name(col)}\{row}"
 }
 
 ///|
@@ -90,15 +80,29 @@ pub fn column_number_to_name(col : Int) -> String raise XlsxError {
   if col <= 0 {
     raise XlsxError::InvalidCellRef(value="\{col}")
   }
-  let sb = StringBuilder::new()
   let mut n = col
+  let mut len = 0
   while n > 0 {
-    let rem = (n - 1) % 26
-    let c = Int::unsafe_to_char('A'.to_int() + rem)
-    sb.write_char(c)
+    len = len + 1
     n = (n - 1) / 26
   }
-  sb.to_string().rev()
+  let out : FixedArray[Char] = FixedArray::make(len, 'A')
+  let mut idx = len - 1
+  n = col
+  while true {
+    let rem = (n - 1) % 26
+    out[idx] = Int::unsafe_to_char('A'.to_int() + rem)
+    n = (n - 1) / 26
+    if n == 0 {
+      break
+    }
+    idx = idx - 1
+  }
+  let sb = StringBuilder::new()
+  for c in out {
+    sb.write_char(c)
+  }
+  sb.to_string()
 }
 
 ///|
