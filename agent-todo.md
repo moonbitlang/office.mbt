@@ -17,6 +17,11 @@ References:
 
 ## Feature worklist
 
+## Maintenance / Cleanup
+
+- [x] Remove `moon check` warnings + deprecated slice usage (commit `4a75627`)
+- [ ] Package-by-package readability/perf pass (start with `zip/`, then `ooxml/`, then `crypto/`)
+
 ### Styles / formatting
 - [x] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
   - [x] Font (cell styles + conditional styles)
