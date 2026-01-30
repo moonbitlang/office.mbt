@@ -27,6 +27,9 @@ This repo has already implemented several items from the roadmap:
 - [x] Phase 2: extract pure libraries out of `xlsx/`
   - `crypto/` (AES + hashes)
   - `base64/` (codec; `xlsx/base64.mbt` keeps error-mapping wrappers)
+- [x] Phase 3 (partial): reduce IO config coupling in write helpers
+  - `Workbook::save_as` does not need to mutate `Workbook.file_path` just to
+    select workbook content type during write.
 - [x] Phase 1: start splitting the formula engine for navigability
   - `xlsx/formula_eval_types.mbt`, `xlsx/formula_parse.mbt`,
     `xlsx/formula_eval.mbt`, `xlsx/formula_builtins.mbt`

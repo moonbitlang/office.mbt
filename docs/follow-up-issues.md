@@ -42,7 +42,14 @@ Completed (already landed):
 Remaining follow-ups:
 
 5. **Decouple IO configuration from `Workbook`**
-   - Move `file_path`, `zip_writer`, and `charset_transcoder` toward an explicit IO context passed into read/write paths (keep compat shims during migration).
+   - Partially implemented:
+     - `Workbook::save_as` no longer needs to mutate `Workbook.file_path` just to
+       drive content-type selection during write; the writer supports passing a
+       `file_path` override internally.
+   - Remaining:
+     - Move `file_path`, `zip_writer`, and `charset_transcoder` toward an
+       explicit IO context passed into read/write paths (keep compat shims
+       during migration).
 
 6. **Introduce a scalable worksheet cell store (if performance becomes a priority)**
    - Options: index cache, row-grouped storage, or dual representation; maintain deterministic write output and stream-writer semantics.
