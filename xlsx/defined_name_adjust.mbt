@@ -1,17 +1,6 @@
 ///|
 fn column_name_from_number(col : Int) -> String raise XlsxError {
-  if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="column:")
-  }
-  let sb = StringBuilder::new()
-  let mut n = col
-  while n > 0 {
-    let rem = (n - 1) % 26
-    let c = Int::unsafe_to_char('A'.to_int() + rem)
-    sb.write_char(c)
-    n = (n - 1) / 26
-  }
-  sb.to_string().rev()
+  column_number_to_name(col)
 }
 
 ///|

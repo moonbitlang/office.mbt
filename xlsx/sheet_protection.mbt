@@ -2,6 +2,9 @@
 let sheet_protection_spin_count = 100000
 
 ///|
+let hex_digits_upper : Array[Char] = "0123456789ABCDEF".to_array()
+
+///|
 fn gen_sheet_password(plaintext : StringView) -> String {
   let bytes = @encoding/utf16.encode(
     plaintext,
@@ -31,19 +34,33 @@ fn gen_sheet_password(plaintext : StringView) -> String {
 
 ///|
 fn format_hex_upper(value : Int64) -> String {
-  let digits = "0123456789ABCDEF".to_array()
   let mask : Int64 = 0xffff
   let mut n = value & mask
   if n == 0 {
     return "0"
   }
-  let sb = StringBuilder::new()
-  while n > 0 {
-    let digit = (n & 0xf).to_int()
-    sb.write_char(digits[digit])
-    n = n >> 4
+  let mut len = 0
+  let mut tmp = n
+  while tmp > 0 {
+    len = len + 1
+    tmp = tmp >> 4
   }
-  sb.to_string().rev()
+  let out : FixedArray[Char] = FixedArray::make(len, '0')
+  let mut idx = len - 1
+  while true {
+    let digit = (n & 0xf).to_int()
+    out[idx] = hex_digits_upper[digit]
+    n = n >> 4
+    if n == 0 {
+      break
+    }
+    idx = idx - 1
+  }
+  let sb = StringBuilder::new()
+  for c in out {
+    sb.write_char(c)
+  }
+  sb.to_string()
 }
 
 ///|
