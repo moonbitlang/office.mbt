@@ -89,7 +89,7 @@ fn ByteWriter::write_u16_le(self : ByteWriter, value : Int) -> Unit {
 ///|
 fn ByteWriter::write_u32_le(self : ByteWriter, value : Int) -> Unit {
   let v = value.reinterpret_as_uint()
-  push_u32_le(self.buf, v)
+  @crypto.push_u32_le(self.buf, v)
 }
 
 ///|
@@ -131,7 +131,7 @@ fn hash_parts(
   parts : ArrayView[BytesView],
 ) -> Bytes raise XlsxError {
   let normalized = normalize_hash_algorithm(algorithm)
-  let out = hash_concat(normalized, parts)
+  let out = @crypto.hash_concat(normalized, parts)
   if out.length() == 0 {
     raise XlsxError::UnsupportedEncryption(
       msg="unsupported hash algorithm: \{algorithm}",
@@ -141,9 +141,54 @@ fn hash_parts(
 }
 
 ///|
+fn aes_ecb_encrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
+  @crypto.aes_ecb_encrypt(key, data) catch {
+    @crypto.CryptoError::InvalidCrypto(msg~) =>
+      raise XlsxError::InvalidEncryptionInfo(msg~)
+  }
+}
+
+///|
+fn aes_ecb_decrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
+  @crypto.aes_ecb_decrypt(key, data) catch {
+    @crypto.CryptoError::InvalidCrypto(msg~) =>
+      raise XlsxError::InvalidEncryptionInfo(msg~)
+  }
+}
+
+///|
+fn aes_cbc_encrypt(
+  key : BytesView,
+  iv : BytesView,
+  data : BytesView,
+) -> Bytes raise XlsxError {
+  @crypto.aes_cbc_encrypt(key, iv, data) catch {
+    @crypto.CryptoError::InvalidCrypto(msg~) =>
+      raise XlsxError::InvalidEncryptionInfo(msg~)
+  }
+}
+
+///|
+fn aes_cbc_decrypt(
+  key : BytesView,
+  iv : BytesView,
+  data : BytesView,
+) -> Bytes raise XlsxError {
+  @crypto.aes_cbc_decrypt(key, iv, data) catch {
+    @crypto.CryptoError::InvalidCrypto(msg~) =>
+      raise XlsxError::InvalidEncryptionInfo(msg~)
+  }
+}
+
+///|
+fn byte_xor(a : Byte, b : Byte) -> Byte {
+  (a.to_int() ^ b.to_int()).to_byte()
+}
+
+///|
 fn u32_le_bytes(value : Int) -> Bytes {
   let out : Array[Byte] = []
-  push_u32_le(out, value.reinterpret_as_uint())
+  @crypto.push_u32_le(out, value.reinterpret_as_uint())
   Bytes::from_array(out)
 }
 
@@ -488,7 +533,7 @@ fn decrypt_package(
     index = index + 1
   }
   if input.length() >= 8 {
-    let raw_size = u64_from_le(input, 0).to_int()
+    let raw_size = @crypto.u64_from_le(input, 0).to_int()
     if raw_size >= 0 && raw_size <= out.length() {
       out.truncate(raw_size)
     }
@@ -573,8 +618,8 @@ fn standard_decrypt(
 ) -> Bytes raise XlsxError {
   let header_size = read_u32_le(encryption_info_buf, 8).to_uint64().to_int()
   let header_block = encryption_info_buf[12:12 + header_size]
-  let alg_id = u32_from_le(header_block, 8)
-  let key_bits = u32_from_le(header_block, 16).to_uint64().to_int()
+  let alg_id = @crypto.u32_from_le(header_block, 8)
+  let key_bits = @crypto.u32_from_le(header_block, 16).to_uint64().to_int()
   let algorithm = match alg_id {
     0x0000_660e | 0x0000_660f | 0x0000_6610 => "AES"
     _ => ""
@@ -590,7 +635,7 @@ fn standard_decrypt(
   let secret_key = standard_convert_password_to_key(key_bits, salt, password)
   let decrypted = aes_ecb_decrypt(secret_key, encrypted_package_buf[8:])
   if encrypted_package_buf.length() >= 8 {
-    let raw_size = u64_from_le(encrypted_package_buf, 0).to_int()
+    let raw_size = @crypto.u64_from_le(encrypted_package_buf, 0).to_int()
     if raw_size >= 0 && raw_size <= decrypted.length() {
       return decrypted[:raw_size].to_bytes()
     }

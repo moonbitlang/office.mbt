@@ -2,6 +2,7 @@
   "import": [
     "bobzhang/mbtexcel/zip",
     "bobzhang/mbtexcel/ooxml",
+    "bobzhang/mbtexcel/crypto",
     {
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"

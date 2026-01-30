@@ -86,11 +86,11 @@ fn aes_rot_word(word : UInt) -> UInt {
 }
 
 ///|
-fn aes_schedule(key : BytesView) -> AesSchedule raise XlsxError {
+fn aes_schedule(key : BytesView) -> AesSchedule raise CryptoError {
   let (sbox, inv_sbox) = aes_tables()
   let key_len = key.length()
   if key_len != 16 && key_len != 24 && key_len != 32 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES key size")
+    raise CryptoError::InvalidCrypto(msg="invalid AES key size")
   }
   let nk = key_len / 4
   let rounds = nk + 6
@@ -255,9 +255,9 @@ fn aes_inv_mix_columns(state : Array[Byte]) -> Unit {
 fn aes_encrypt_block(
   schedule : AesSchedule,
   block : BytesView,
-) -> Bytes raise XlsxError {
+) -> Bytes raise CryptoError {
   if block.length() != 16 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES block size")
+    raise CryptoError::InvalidCrypto(msg="invalid AES block size")
   }
   let state = block.to_array()
   aes_add_round_key(state, schedule.round_keys, 0)
@@ -277,9 +277,9 @@ fn aes_encrypt_block(
 fn aes_decrypt_block(
   schedule : AesSchedule,
   block : BytesView,
-) -> Bytes raise XlsxError {
+) -> Bytes raise CryptoError {
   if block.length() != 16 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES block size")
+    raise CryptoError::InvalidCrypto(msg="invalid AES block size")
   }
   let state = block.to_array()
   aes_add_round_key(state, schedule.round_keys, schedule.rounds)
@@ -298,9 +298,12 @@ fn aes_decrypt_block(
 }
 
 ///|
-fn aes_ecb_encrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
+pub fn aes_ecb_encrypt(
+  key : BytesView,
+  data : BytesView,
+) -> Bytes raise CryptoError {
   if data.length() % 16 != 0 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES data length")
+    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = []
@@ -315,9 +318,12 @@ fn aes_ecb_encrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
 }
 
 ///|
-fn aes_ecb_decrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
+pub fn aes_ecb_decrypt(
+  key : BytesView,
+  data : BytesView,
+) -> Bytes raise CryptoError {
   if data.length() % 16 != 0 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES data length")
+    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = []
@@ -332,16 +338,16 @@ fn aes_ecb_decrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
 }
 
 ///|
-fn aes_cbc_decrypt(
+pub fn aes_cbc_decrypt(
   key : BytesView,
   iv : BytesView,
   data : BytesView,
-) -> Bytes raise XlsxError {
+) -> Bytes raise CryptoError {
   if iv.length() != 16 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES IV length")
+    raise CryptoError::InvalidCrypto(msg="invalid AES IV length")
   }
   if data.length() % 16 != 0 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES data length")
+    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = []
@@ -362,16 +368,16 @@ fn aes_cbc_decrypt(
 }
 
 ///|
-fn aes_cbc_encrypt(
+pub fn aes_cbc_encrypt(
   key : BytesView,
   iv : BytesView,
   data : BytesView,
-) -> Bytes raise XlsxError {
+) -> Bytes raise CryptoError {
   if iv.length() != 16 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES IV length")
+    raise CryptoError::InvalidCrypto(msg="invalid AES IV length")
   }
   if data.length() % 16 != 0 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid AES data length")
+    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = []

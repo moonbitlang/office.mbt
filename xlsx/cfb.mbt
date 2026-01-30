@@ -33,7 +33,7 @@ fn read_u32_le(bytes : BytesView, offset : Int) -> UInt raise XlsxError {
   if offset < 0 || offset + 4 > bytes.length() {
     raise XlsxError::InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
-  u32_from_le(bytes, offset)
+  @crypto.u32_from_le(bytes, offset)
 }
 
 ///|
@@ -48,7 +48,7 @@ fn read_u64_le(bytes : BytesView, offset : Int) -> UInt64 raise XlsxError {
   if offset < 0 || offset + 8 > bytes.length() {
     raise XlsxError::InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
-  u64_from_le(bytes, offset)
+  @crypto.u64_from_le(bytes, offset)
 }
 
 ///|

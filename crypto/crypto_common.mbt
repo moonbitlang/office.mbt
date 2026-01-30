@@ -19,7 +19,7 @@ fn rotr64(value : UInt64, bits : Int) -> UInt64 {
 }
 
 ///|
-fn u32_from_le(bytes : BytesView, offset : Int) -> UInt {
+pub fn u32_from_le(bytes : BytesView, offset : Int) -> UInt {
   let b0 = bytes[offset].to_uint()
   let b1 = bytes[offset + 1].to_uint()
   let b2 = bytes[offset + 2].to_uint()
@@ -28,7 +28,7 @@ fn u32_from_le(bytes : BytesView, offset : Int) -> UInt {
 }
 
 ///|
-fn u32_from_be(bytes : BytesView, offset : Int) -> UInt {
+pub fn u32_from_be(bytes : BytesView, offset : Int) -> UInt {
   let b0 = bytes[offset].to_uint()
   let b1 = bytes[offset + 1].to_uint()
   let b2 = bytes[offset + 2].to_uint()
@@ -37,7 +37,7 @@ fn u32_from_be(bytes : BytesView, offset : Int) -> UInt {
 }
 
 ///|
-fn u64_from_le(bytes : BytesView, offset : Int) -> UInt64 {
+pub fn u64_from_le(bytes : BytesView, offset : Int) -> UInt64 {
   let mut value : UInt64 = 0
   for i in 0..<=7 {
     value = value | (bytes[offset + i].to_uint64() << (8 * i))
@@ -46,7 +46,7 @@ fn u64_from_le(bytes : BytesView, offset : Int) -> UInt64 {
 }
 
 ///|
-fn u64_from_be(bytes : BytesView, offset : Int) -> UInt64 {
+pub fn u64_from_be(bytes : BytesView, offset : Int) -> UInt64 {
   let mut value : UInt64 = 0
   for i in 0..<=7 {
     value = (value << 8) | bytes[offset + i].to_uint64()
@@ -55,7 +55,7 @@ fn u64_from_be(bytes : BytesView, offset : Int) -> UInt64 {
 }
 
 ///|
-fn push_u32_le(output : Array[Byte], value : UInt) -> Unit {
+pub fn push_u32_le(output : Array[Byte], value : UInt) -> Unit {
   output.push((value & 0xff).to_uint64().to_byte())
   output.push(((value >> 8) & 0xff).to_uint64().to_byte())
   output.push(((value >> 16) & 0xff).to_uint64().to_byte())
@@ -63,7 +63,7 @@ fn push_u32_le(output : Array[Byte], value : UInt) -> Unit {
 }
 
 ///|
-fn push_u32_be(output : Array[Byte], value : UInt) -> Unit {
+pub fn push_u32_be(output : Array[Byte], value : UInt) -> Unit {
   output.push(((value >> 24) & 0xff).to_uint64().to_byte())
   output.push(((value >> 16) & 0xff).to_uint64().to_byte())
   output.push(((value >> 8) & 0xff).to_uint64().to_byte())

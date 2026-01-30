@@ -1,5 +1,5 @@
 ///|
-fn hash_concat(algorithm : String, parts : ArrayView[BytesView]) -> Bytes {
+pub fn hash_concat(algorithm : String, parts : ArrayView[BytesView]) -> Bytes {
   let buffer = @buffer.new()
   for part in parts {
     buffer.write_bytesview(part)
@@ -18,6 +18,6 @@ fn hash_concat(algorithm : String, parts : ArrayView[BytesView]) -> Bytes {
 }
 
 ///|
-fn hash_bytes(algorithm : String, input : BytesView) -> Bytes {
+pub fn hash_bytes(algorithm : String, input : BytesView) -> Bytes {
   hash_concat(algorithm, [input])
 }
