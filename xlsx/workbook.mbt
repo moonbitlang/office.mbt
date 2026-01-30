@@ -618,11 +618,11 @@ pub fn Workbook::delete_sheet(
   check_sheet_name(name)
   let entry = match self.sheet_entry(name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=name.to_string())
+    None => return ()
   }
   let order_index = match self.sheet_entry_index(name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=name.to_string())
+    None => return ()
   }
   let deleted_name = self.sheet_entry_name(entry)
   if self.sheet_order.length() <= 1 {
