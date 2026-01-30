@@ -3238,7 +3238,11 @@ fn write_theme_xml(theme_colors : Array[String]?) -> String {
 }
 
 ///|
-pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
+fn write_with_io(
+  workbook : Workbook,
+  file_path : String?,
+  zip_writer : ((@zip.Archive) -> Bytes raise)?,
+) -> Bytes raise XlsxError {
   let (shared_strings, string_map, rich_text_map, total_count) = collect_shared_strings(
     workbook,
   )
@@ -3256,7 +3260,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     include_calc_chain~,
   )
   let mut has_path_content_type = false
-  match workbook.file_path {
+  match file_path {
     Some(path) =>
       match extension_from_path(path) {
         Some(ext) =>
@@ -4149,7 +4153,7 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
     "[Content_Types].xml",
     @encoding/utf8.encode(manifest.content_types_xml()),
   )
-  match workbook.zip_writer {
+  match zip_writer {
     Some(writer) =>
       writer(archive) catch {
         err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
@@ -4162,11 +4166,16 @@ pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
 }
 
 ///|
+pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
+  write_with_io(workbook, workbook.file_path, workbook.zip_writer)
+}
+
+///|
 pub fn write_with_password(
   workbook : Workbook,
   password : String,
 ) -> Bytes raise XlsxError {
-  let raw = write(workbook)
+  let raw = write_with_io(workbook, workbook.file_path, workbook.zip_writer)
   if password.length() == 0 {
     raw
   } else {
