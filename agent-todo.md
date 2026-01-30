@@ -21,6 +21,7 @@ References:
 
 - [x] Remove `moon check` warnings + deprecated slice usage (commit `4a75627`)
 - [ ] Package-by-package readability/perf pass (start with `zip/`, then `ooxml/`, then `crypto/`)
+- [ ] Target support: confirm `--target wasm` compatibility (currently `moon check --target all` fails due to missing `@async/fs`/`@process` APIs in dependencies)
 
 ### Styles / formatting
 - [x] Expand `xlsx.Style` beyond number formats (Font/Fill/Border/Alignment/Protection parity with Excelize `Style` in `excelize/xmlStyles.go`)
