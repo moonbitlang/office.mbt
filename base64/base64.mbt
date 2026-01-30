@@ -2,6 +2,15 @@
 let base64_table : Array[Char] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".to_array()
 
 ///|
+let base64_decode_table : Array[Int] = {
+  let out : Array[Int] = Array::make(128, -1)
+  for i, ch in base64_table {
+    out[ch.to_int()] = i
+  }
+  out
+}
+
+///|
 pub fn encode(bytes : BytesView) -> String {
   let sb = StringBuilder::new()
   let len = bytes.length()
@@ -30,18 +39,18 @@ pub fn encode(bytes : BytesView) -> String {
 
 ///|
 pub fn decode(text : StringView) -> Bytes raise Base64Error {
-  let decode_table : Array[Int] = Array::make(128, -1)
-  for i, ch in base64_table {
-    decode_table[ch.to_int()] = i
-  }
-  let buffer : Array[Int] = []
-  let output : Array[Byte] = []
+  let output : Array[Byte] = Array::new(capacity=text.length() / 4 * 3)
   let mut saw_pad = false
+  let mut q0 = 0
+  let mut q1 = 0
+  let mut q2 = 0
+  let mut q3 = 0
+  let mut qlen = 0
   let mut index = 0
-  for ch in text.to_string().to_array() {
-    if ch == '=' {
+  for ch in text {
+    let value = if ch == '=' {
       saw_pad = true
-      buffer.push(-2)
+      -2
     } else {
       let code = ch.to_int()
       if code < 0 || code >= 128 {
@@ -49,19 +58,26 @@ pub fn decode(text : StringView) -> Bytes raise Base64Error {
           msg="invalid base64 character at index \{index}",
         )
       }
-      let value = decode_table[code]
+      let value = base64_decode_table[code]
       if value < 0 || saw_pad {
         raise Base64Error::InvalidBase64(
           msg="invalid base64 character at index \{index}",
         )
       }
-      buffer.push(value)
+      value
     }
-    if buffer.length() == 4 {
-      let b0 = buffer[0]
-      let b1 = buffer[1]
-      let b2 = buffer[2]
-      let b3 = buffer[3]
+    match qlen {
+      0 => q0 = value
+      1 => q1 = value
+      2 => q2 = value
+      _ => q3 = value
+    }
+    qlen = qlen + 1
+    if qlen == 4 {
+      let b0 = q0
+      let b1 = q1
+      let b2 = q2
+      let b3 = q3
       if b0 < 0 || b1 < 0 {
         raise Base64Error::InvalidBase64(msg="invalid base64 padding")
       }
@@ -76,14 +92,14 @@ pub fn decode(text : StringView) -> Bytes raise Base64Error {
       if b3 >= 0 {
         output.push((triple & 0xff).to_byte())
       }
-      buffer.clear()
       if b2 < 0 || b3 < 0 {
         saw_pad = true
       }
+      qlen = 0
     }
     index = index + 1
   }
-  if buffer.length() != 0 {
+  if qlen != 0 {
     raise Base64Error::InvalidBase64(msg="invalid base64 length")
   }
   Bytes::from_array(output)
