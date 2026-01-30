@@ -84,8 +84,13 @@ fn push_u64_be(output : Array[Byte], value : UInt64) -> Unit {
 
 ///|
 fn pad_message_32(input : BytesView, little_endian_len : Bool) -> Bytes {
-  let out : Array[Byte] = input.to_array()
-  let bit_len = input.length().to_uint64() * 8
+  let input_len = input.length()
+  let final_len = (input_len + 1 + 8 + 63) / 64 * 64
+  let out : Array[Byte] = Array::new(capacity=final_len)
+  for b in input {
+    out.push(b)
+  }
+  let bit_len = input_len.to_uint64() * 8
   out.push(0x80)
   while out.length() % 64 != 56 {
     out.push(0)
@@ -97,15 +102,8 @@ fn pad_message_32(input : BytesView, little_endian_len : Bool) -> Bytes {
       value = value >> 8
     }
   } else {
-    let mut value = bit_len
-    let len_bytes : Array[Byte] = []
-    for _ in 0..<=7 {
-      len_bytes.push((value & 0xff).to_byte())
-      value = value >> 8
-    }
-    let len = len_bytes.length()
-    for i in 0..<len {
-      out.push(len_bytes[len - 1 - i])
+    for i in 7>=..0 {
+      out.push(((bit_len >> (8 * i)) & 0xff).to_byte())
     }
   }
   Bytes::from_array(out)
@@ -113,8 +111,13 @@ fn pad_message_32(input : BytesView, little_endian_len : Bool) -> Bytes {
 
 ///|
 fn pad_message_64(input : BytesView) -> Bytes {
-  let out : Array[Byte] = input.to_array()
-  let bit_len = input.length().to_uint64() * 8
+  let input_len = input.length()
+  let final_len = (input_len + 1 + 16 + 127) / 128 * 128
+  let out : Array[Byte] = Array::new(capacity=final_len)
+  for b in input {
+    out.push(b)
+  }
+  let bit_len = input_len.to_uint64() * 8
   out.push(0x80)
   while out.length() % 128 != 112 {
     out.push(0)

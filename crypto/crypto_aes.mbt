@@ -252,14 +252,7 @@ fn aes_inv_mix_columns(state : Array[Byte]) -> Unit {
 }
 
 ///|
-fn aes_encrypt_block(
-  schedule : AesSchedule,
-  block : BytesView,
-) -> Bytes raise CryptoError {
-  if block.length() != 16 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES block size")
-  }
-  let state = block.to_array()
+fn aes_encrypt_state(schedule : AesSchedule, state : Array[Byte]) -> Unit {
   aes_add_round_key(state, schedule.round_keys, 0)
   for round in 1..<schedule.rounds {
     aes_sub_bytes(state, schedule.sbox)
@@ -270,18 +263,23 @@ fn aes_encrypt_block(
   aes_sub_bytes(state, schedule.sbox)
   aes_shift_rows(state)
   aes_add_round_key(state, schedule.round_keys, schedule.rounds)
-  Bytes::from_array(state)
 }
 
 ///|
-fn aes_decrypt_block(
+fn aes_encrypt_block(
   schedule : AesSchedule,
   block : BytesView,
-) -> Bytes raise CryptoError {
+) -> Array[Byte] raise CryptoError {
   if block.length() != 16 {
     raise CryptoError::InvalidCrypto(msg="invalid AES block size")
   }
   let state = block.to_array()
+  aes_encrypt_state(schedule, state)
+  state
+}
+
+///|
+fn aes_decrypt_state(schedule : AesSchedule, state : Array[Byte]) -> Unit {
   aes_add_round_key(state, schedule.round_keys, schedule.rounds)
   let mut round = schedule.rounds - 1
   while round > 0 {
@@ -294,7 +292,19 @@ fn aes_decrypt_block(
   aes_inv_shift_rows(state)
   aes_inv_sub_bytes(state, schedule.inv_sbox)
   aes_add_round_key(state, schedule.round_keys, 0)
-  Bytes::from_array(state)
+}
+
+///|
+fn aes_decrypt_block(
+  schedule : AesSchedule,
+  block : BytesView,
+) -> Array[Byte] raise CryptoError {
+  if block.length() != 16 {
+    raise CryptoError::InvalidCrypto(msg="invalid AES block size")
+  }
+  let state = block.to_array()
+  aes_decrypt_state(schedule, state)
+  state
 }
 
 ///|
@@ -306,12 +316,12 @@ pub fn aes_ecb_encrypt(
     raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
-  let out : Array[Byte] = []
+  let out : Array[Byte] = Array::new(capacity=data.length())
   let mut offset = 0
   while offset < data.length() {
     let block = data[offset:offset + 16]
     let enc = aes_encrypt_block(schedule, block)
-    out.append(enc.to_array())
+    out.append(enc[:])
     offset = offset + 16
   }
   Bytes::from_array(out)
@@ -326,12 +336,12 @@ pub fn aes_ecb_decrypt(
     raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
-  let out : Array[Byte] = []
+  let out : Array[Byte] = Array::new(capacity=data.length())
   let mut offset = 0
   while offset < data.length() {
     let block = data[offset:offset + 16]
     let dec = aes_decrypt_block(schedule, block)
-    out.append(dec.to_array())
+    out.append(dec[:])
     offset = offset + 16
   }
   Bytes::from_array(out)
@@ -350,18 +360,17 @@ pub fn aes_cbc_decrypt(
     raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
-  let out : Array[Byte] = []
-  let mut prev = iv.to_array()
+  let out : Array[Byte] = Array::new(capacity=data.length())
+  let mut prev = iv
   let mut offset = 0
   while offset < data.length() {
     let block = data[offset:offset + 16]
     let dec = aes_decrypt_block(schedule, block)
-    let plain : Array[Byte] = Array::make(16, (0).to_byte())
     for i in 0..<=15 {
-      plain[i] = byte_xor(dec[i], prev[i])
+      dec[i] = byte_xor(dec[i], prev[i])
     }
-    out.append(plain)
-    prev = block.to_array()
+    out.append(dec[:])
+    prev = block
     offset = offset + 16
   }
   Bytes::from_array(out)
@@ -380,7 +389,7 @@ pub fn aes_cbc_encrypt(
     raise CryptoError::InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
-  let out : Array[Byte] = []
+  let out : Array[Byte] = Array::new(capacity=data.length())
   let mut prev = iv.to_array()
   let mut offset = 0
   while offset < data.length() {
@@ -389,9 +398,9 @@ pub fn aes_cbc_encrypt(
     for i in 0..<=15 {
       mixed[i] = byte_xor(block[i], prev[i])
     }
-    let enc = aes_encrypt_block(schedule, Bytes::from_array(mixed))
-    out.append(enc.to_array())
-    prev = enc.to_array()
+    aes_encrypt_state(schedule, mixed)
+    out.append(mixed[:])
+    prev = mixed
     offset = offset + 16
   }
   Bytes::from_array(out)
