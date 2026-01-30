@@ -41,6 +41,14 @@ test "compat auto filter and background bytes" {
 }
 
 ///|
+test "compat get_sheet_visible/get_sheet_name missing behave like excelize" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  inspect(workbook.get_sheet_visible("SheetN"), content="false")
+  inspect(workbook.get_sheet_name(99), content="Some(\"\")")
+}
+
+///|
 test "search sheet exact and regex" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

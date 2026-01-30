@@ -17,7 +17,10 @@ pub fn Workbook::get_sheet_index(
 
 ///|
 pub fn Workbook::get_sheet_name(self : Workbook, index : Int) -> String? {
-  self.sheet_name(index)
+  match self.sheet_name(index) {
+    Some(value) => Some(value)
+    None => Some("")
+  }
 }
 
 ///|
@@ -25,7 +28,11 @@ pub fn Workbook::get_sheet_visible(
   self : Workbook,
   name : StringView,
 ) -> Bool raise XlsxError {
-  self.sheet_visible(name)
+  check_sheet_name(name)
+  match self.sheet_entry(name) {
+    Some(_) => self.sheet_visible(name)
+    None => false
+  }
 }
 
 ///|
