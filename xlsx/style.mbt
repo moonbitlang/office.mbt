@@ -1,10 +1,47 @@
 ///|
+/// Number format specification for cell values.
+///
+/// Excel supports both built-in formats (by index) and custom format strings.
+///
+/// # Built-in Format IDs
+/// - 0: General
+/// - 1: 0
+/// - 2: 0.00
+/// - 3: #,##0
+/// - 4: #,##0.00
+/// - 9: 0%
+/// - 10: 0.00%
+/// - 11: 0.00E+00
+/// - 12: # ?/?
+/// - 13: # ??/??
+/// - 14: mm-dd-yy
+/// - 15: d-mmm-yy
+/// - 16: d-mmm
+/// - 17: mmm-yy
+/// - 18: h:mm AM/PM
+/// - 19: h:mm:ss AM/PM
+/// - 20: h:mm
+/// - 21: h:mm:ss
+/// - 22: m/d/yy h:mm
 pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
 } derive(Eq, Show)
 
 ///|
+/// Font styling for cell text.
+///
+/// All fields are optional; only set fields affect the cell's appearance.
+///
+/// # Example
+/// ```mbt nocheck
+/// let font = Font::with_values(
+///   bold=true,
+///   size=12.0,
+///   color="FF0000",  // Red
+///   underline="single",
+/// )
+/// ```
 pub struct Font {
   mut bold : Bool?
   mut italic : Bool?
@@ -27,6 +64,7 @@ pub struct Font {
 } derive(Eq, Show)
 
 ///|
+/// Creates a new Font with all fields set to None (default styling).
 pub fn Font::new() -> Font {
   {
     bold: None,
@@ -51,6 +89,19 @@ pub fn Font::new() -> Font {
 }
 
 ///|
+/// Creates a new Font with specified values.
+///
+/// # Parameters
+/// - `bold`: Bold text
+/// - `italic`: Italic text
+/// - `strike`: Strikethrough
+/// - `underline`: Underline style ("single", "double", "singleAccounting", "doubleAccounting")
+/// - `size`: Font size in points
+/// - `color`: Hex color code like "FF0000" for red
+/// - `color_theme`: Theme color index (0-9)
+/// - `color_tint`: Tint value for theme color (-1.0 to 1.0)
+/// - `vert_align`: Vertical alignment ("superscript", "subscript")
+/// - `family`: Font family name
 pub fn Font::with_values(
   bold? : Bool,
   italic? : Bool,
@@ -148,6 +199,18 @@ pub fn Font::with_values(
 }
 
 ///|
+/// Fill (background) styling for cells.
+///
+/// Supports solid colors, patterns, and gradients.
+///
+/// # Example
+/// ```mbt nocheck
+/// // Solid yellow fill
+/// let fill = Fill::solid("FFFF00")
+///
+/// // Gradient fill
+/// let gradient = Fill::gradient("FF0000", "0000FF", shading=1)
+/// ```
 pub struct Fill {
   mut typ : String?
   mut pattern : Int?
@@ -203,6 +266,17 @@ pub fn Fill::pattern(
 }
 
 ///|
+/// Creates a solid color fill.
+///
+/// # Parameters
+/// - `color`: Hex color code like "FFFF00" for yellow
+/// - `transparency`: Transparency percentage (0-100)
+///
+/// # Example
+/// ```mbt nocheck
+/// let yellow = Fill::solid("FFFF00")
+/// let semi_transparent = Fill::solid("FF0000", transparency=50)
+/// ```
 pub fn Fill::solid(color : String, transparency? : Int) -> Fill {
   Fill::pattern(pattern=1, color~, transparency?)
 }
@@ -376,6 +450,18 @@ let fill_gradient_variants : Array[GradientVariant] = [
 ]
 
 ///|
+/// Creates a gradient fill between two colors.
+///
+/// # Parameters
+/// - `color1`: Start color (hex code)
+/// - `color2`: End color (hex code)
+/// - `shading`: Gradient shading variant (0-15)
+/// - `transparency`: Transparency percentage (0-100)
+///
+/// # Example
+/// ```mbt nocheck
+/// let gradient = Fill::gradient("FF0000", "0000FF") // Red to blue
+/// ```
 pub fn Fill::gradient(
   color1 : String,
   color2 : String,
@@ -446,6 +532,27 @@ pub fn Fill::solid_bg_indexed(indexed : Int, tint? : Double) -> Fill {
 }
 
 ///|
+/// Border styling for a cell edge.
+///
+/// # Border Types
+/// - "left", "right", "top", "bottom": Cell edges
+/// - "diagonalUp", "diagonalDown": Diagonal lines
+///
+/// # Border Styles
+/// - 0: None
+/// - 1: Thin
+/// - 2: Medium
+/// - 3: Dashed
+/// - 4: Dotted
+/// - 5: Thick
+/// - 6: Double
+/// - 7: Hair
+/// - 8: MediumDashed
+/// - 9: DashDot
+/// - 10: MediumDashDot
+/// - 11: DashDotDot
+/// - 12: MediumDashDotDot
+/// - 13: SlantDashDot
 pub struct Border {
   typ : String
   mut color : String?
@@ -465,6 +572,18 @@ pub fn Border::new(typ : String) -> Border {
 }
 
 ///|
+/// Creates a Border with specified values.
+///
+/// # Parameters
+/// - `typ`: Border type ("left", "right", "top", "bottom")
+/// - `color`: Hex color code
+/// - `style`: Border style (1=thin, 2=medium, 5=thick, etc.)
+///
+/// # Example
+/// ```mbt nocheck
+/// let thin_black = Border::with_values("left", color="000000", style=1)
+/// let thick_red = Border::with_values("bottom", color="FF0000", style=5)
+/// ```
 pub fn Border::with_values(
   typ : String,
   color? : String,
@@ -508,6 +627,13 @@ pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Protection {
 }
 
 ///|
+/// Text alignment settings for cells.
+///
+/// # Horizontal Values
+/// - "left", "center", "right", "fill", "justify", "centerContinuous", "distributed"
+///
+/// # Vertical Values
+/// - "top", "center", "bottom", "justify", "distributed"
 pub struct Alignment {
   mut horizontal : String?
   mut vertical : String?
@@ -536,6 +662,15 @@ pub fn Alignment::new() -> Alignment {
 }
 
 ///|
+/// Creates an Alignment with specified values.
+///
+/// # Parameters
+/// - `horizontal`: Horizontal alignment ("left", "center", "right", etc.)
+/// - `vertical`: Vertical alignment ("top", "center", "bottom", etc.)
+/// - `wrap_text`: Enable text wrapping
+/// - `text_rotation`: Rotation angle in degrees (0-180, or 255 for vertical)
+/// - `indent`: Indentation level
+/// - `shrink_to_fit`: Shrink text to fit cell width
 pub fn Alignment::with_values(
   horizontal? : String,
   vertical? : String,
@@ -588,6 +723,23 @@ pub fn Alignment::with_values(
 }
 
 ///|
+/// Complete cell style specification.
+///
+/// A Style combines font, fill, border, alignment, number format, and protection
+/// settings. Styles are registered with a workbook and referenced by ID in cells.
+///
+/// # Example
+/// ```mbt nocheck
+/// // Create a style with multiple elements
+/// let style = Style::new()
+///   .with_font(Font::with_values(bold=true, size=12.0))
+///   .with_fill(Fill::solid("FFFF00"))
+///   .with_alignment(Alignment::with_values(horizontal="center"))
+///
+/// // Register with workbook and apply to cell
+/// let style_id = workbook.add_style(style)
+/// sheet.set_cell_style("A1", style_id)
+/// ```
 pub struct Style {
   number_format : NumberFormat?
   font : Font?
@@ -598,6 +750,7 @@ pub struct Style {
 } derive(Eq, Show)
 
 ///|
+/// Creates a new empty Style with all fields set to None.
 pub fn Style::new() -> Style {
   {
     number_format: None,
@@ -610,6 +763,17 @@ pub fn Style::new() -> Style {
 }
 
 ///|
+/// Creates a Style with a custom number format.
+///
+/// # Parameters
+/// - `format_code`: Excel number format string like "#,##0.00", "0%", "yyyy-mm-dd"
+///
+/// # Example
+/// ```mbt nocheck
+/// let currency = Style::number_format("$#,##0.00")
+/// let percent = Style::number_format("0.0%")
+/// let date = Style::number_format("yyyy-mm-dd")
+/// ```
 pub fn Style::number_format(format_code : String) -> Style {
   {
     number_format: Some(NumberFormat::Custom(format_code)),
@@ -622,6 +786,19 @@ pub fn Style::number_format(format_code : String) -> Style {
 }
 
 ///|
+/// Creates a Style with a built-in number format.
+///
+/// # Parameters
+/// - `id`: Built-in format ID (see NumberFormat for common IDs)
+///
+/// # Common IDs
+/// - 1: 0
+/// - 2: 0.00
+/// - 3: #,##0
+/// - 4: #,##0.00
+/// - 9: 0%
+/// - 10: 0.00%
+/// - 14: mm-dd-yy
 pub fn Style::builtin_number_format(id : Int) -> Style {
   {
     number_format: Some(NumberFormat::Builtin(id)),
@@ -676,6 +853,7 @@ pub fn Style::excelize_currency_num_fmt(
 }
 
 ///|
+/// Creates a Style with only font settings.
 pub fn Style::font(font : Font) -> Style {
   {
     number_format: None,
@@ -688,6 +866,7 @@ pub fn Style::font(font : Font) -> Style {
 }
 
 ///|
+/// Returns a new Style with font settings added/replaced.
 pub fn Style::with_font(self : Style, font : Font) -> Style {
   {
     number_format: self.number_format,
@@ -700,6 +879,7 @@ pub fn Style::with_font(self : Style, font : Font) -> Style {
 }
 
 ///|
+/// Creates a Style with only fill settings.
 pub fn Style::fill(fill : Fill) -> Style {
   {
     number_format: None,
@@ -712,6 +892,7 @@ pub fn Style::fill(fill : Fill) -> Style {
 }
 
 ///|
+/// Returns a new Style with fill settings added/replaced.
 pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
   {
     number_format: self.number_format,
@@ -724,6 +905,17 @@ pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
 }
 
 ///|
+/// Creates a Style with only border settings.
+///
+/// # Example
+/// ```mbt nocheck
+/// let box_border = Style::border([
+///   Border::with_values("left", color="000000", style=1),
+///   Border::with_values("right", color="000000", style=1),
+///   Border::with_values("top", color="000000", style=1),
+///   Border::with_values("bottom", color="000000", style=1),
+/// ])
+/// ```
 pub fn Style::border(border : Array[Border]) -> Style {
   {
     number_format: None,
@@ -736,6 +928,7 @@ pub fn Style::border(border : Array[Border]) -> Style {
 }
 
 ///|
+/// Returns a new Style with border settings added/replaced.
 pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
   {
     number_format: self.number_format,
@@ -748,6 +941,7 @@ pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
 }
 
 ///|
+/// Creates a Style with only protection settings.
 pub fn Style::protection(protection : Protection) -> Style {
   {
     number_format: None,
