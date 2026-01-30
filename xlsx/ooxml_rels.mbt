@@ -5,7 +5,7 @@ fn parse_relationship_targets(
 ) -> Map[String, String] raise XlsxError {
   let targets : Map[String, String] = {}
   let mut first = true
-  for chunk in xml.to_string().split("<Relationship ") {
+  for chunk in xml.split("<Relationship ") {
     if first {
       first = false
       continue

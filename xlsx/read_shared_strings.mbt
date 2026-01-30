@@ -14,7 +14,7 @@ priv struct InlineStringEntry {
 fn parse_text_nodes(xml : StringView) -> String {
   let sb = StringBuilder::new()
   let mut first = true
-  for chunk in xml.to_string().split("<t") {
+  for chunk in xml.split("<t") {
     if first {
       first = false
       continue
@@ -375,7 +375,7 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
 fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
   let values : Array[SharedStringEntry] = []
   let mut first = true
-  for chunk in xml.to_string().split("<si") {
+  for chunk in xml.split("<si") {
     if first {
       first = false
       continue

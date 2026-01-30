@@ -997,7 +997,7 @@ fn parse_sparkline_groups(
 ) -> Array[SparklineGroup] raise XlsxError {
   let groups : Array[SparklineGroup] = []
   let mut first = true
-  for chunk in xml.to_string().split("<x14:sparklineGroup") {
+  for chunk in xml.split("<x14:sparklineGroup") {
     if first {
       first = false
       continue

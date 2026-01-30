@@ -22,7 +22,7 @@ fn parse_worksheet(
 ) raise XlsxError {
   let cells : Array[Cell] = []
   let mut first = true
-  for chunk in xml.to_string().split("<c ") {
+  for chunk in xml.split("<c ") {
     if first {
       first = false
       continue

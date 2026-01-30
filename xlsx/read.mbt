@@ -402,7 +402,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       match extract_tag_body(xml, "gradientFill") {
         Some(body) => {
           let mut first = true
-          for chunk in body.to_string().split("<stop") {
+          for chunk in body.split("<stop") {
             if first {
               first = false
               continue
@@ -1039,7 +1039,7 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
       Some(value) => value
       None => raise XlsxError::InvalidXml(msg="mergeCell ref missing")
     }
-    let normalized = if ref_value.to_string().contains(":") {
+    let normalized = if ref_value.contains(":") {
       normalize_range_ref(ref_value)
     } else {
       let (row, col) = cell_ref_to_rc(ref_value)
@@ -1719,7 +1719,7 @@ fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
 ///|
 fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
   let mut first = true
-  for chunk in body.to_string().split("<pane ") {
+  for chunk in body.split("<pane ") {
     if first {
       first = false
       continue
@@ -1774,7 +1774,7 @@ fn parse_sheet_view_selections(
 ) -> Array[Selection] raise XlsxError {
   let selections : Array[Selection] = []
   let mut first = true
-  for chunk in body.to_string().split("<selection ") {
+  for chunk in body.split("<selection ") {
     if first {
       first = false
       continue
@@ -3153,7 +3153,7 @@ fn parse_legacy_drawing_rel_id(
 ) -> String? raise XlsxError {
   let marker = "<\{tag_name.to_string()}"
   let mut first = true
-  for chunk in xml.to_string().split(marker) {
+  for chunk in xml.split(marker[:]) {
     if first {
       first = false
       continue
@@ -4088,7 +4088,7 @@ fn parse_row_dimensions(
 ) -> Map[Int, RowDimension] raise XlsxError {
   let dims : Map[Int, RowDimension] = {}
   let mut first = true
-  for chunk in xml.to_string().split("<row ") {
+  for chunk in xml.split("<row ") {
     if first {
       first = false
       continue
@@ -4155,7 +4155,7 @@ fn parse_col_dimensions(
 ) -> Map[Int, ColDimension] raise XlsxError {
   let dims : Map[Int, ColDimension] = {}
   let mut first = true
-  for chunk in xml.to_string().split("<col ") {
+  for chunk in xml.split("<col ") {
     if first {
       first = false
       continue

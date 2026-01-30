@@ -11,7 +11,7 @@ fn parse_workbook_sheets(
 ) -> Array[WorkbookSheetInfo] raise XlsxError {
   let sheets : Array[WorkbookSheetInfo] = []
   let mut first = true
-  for chunk in xml.to_string().split("<sheet ") {
+  for chunk in xml.split("<sheet ") {
     if first {
       first = false
       continue

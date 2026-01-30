@@ -869,7 +869,7 @@ fn parse_form_controls_vml(
   xml : StringView,
 ) -> Array[FormControl] raise XlsxError {
   let out : Array[FormControl] = []
-  for chunk in xml.to_string().split("<v:shape") {
+  for chunk in xml.split("<v:shape") {
     if chunk == "" || !chunk.contains("<x:ClientData") {
       continue
     }

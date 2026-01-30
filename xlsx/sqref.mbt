@@ -3,8 +3,8 @@ fn flat_sqref(
   sqref : StringView,
 ) -> Map[Int, Array[(Int, Int)]] raise XlsxError {
   let cells : Map[Int, Array[(Int, Int)]] = {}
-  for part in sqref.to_string().split(" ") {
-    let text = part.to_string().trim().to_string()
+  for part in sqref.split(" ") {
+    let text = part.trim()
     if text == "" {
       continue
     }

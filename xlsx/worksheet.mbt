@@ -22,7 +22,7 @@ fn parse_range_ref(
   range_ref : StringView,
 ) -> (Int, Int, Int, Int) raise XlsxError {
   let parts : Array[String] = []
-  for part in range_ref.to_string().split(":") {
+  for part in range_ref.split(":") {
     parts.push(part.to_string())
   }
   if parts.length() != 2 {
@@ -61,7 +61,7 @@ fn cell_in_bounds(
 fn normalize_cell_or_range_ref(
   reference : StringView,
 ) -> String raise XlsxError {
-  if reference.to_string().contains(":") {
+  if reference.contains(":") {
     normalize_range_ref(reference)
   } else {
     let (row, col) = cell_ref_to_rc(reference)
@@ -75,7 +75,7 @@ fn cell_in_reference(
   row : Int,
   col : Int,
 ) -> Bool raise XlsxError {
-  if reference.to_string().contains(":") {
+  if reference.contains(":") {
     let (min_row, min_col, max_row, max_col) = parse_range_ref(reference)
     cell_in_bounds(row, col, min_row, min_col, max_row, max_col)
   } else {
@@ -3255,20 +3255,23 @@ fn duplicate_sqref_for_row(
   sqref : StringView,
 ) -> Array[String] raise XlsxError {
   let refs : Array[String] = []
-  for part in sqref.to_string().split(" ") {
-    let text = part.to_string().trim().to_string()
+  for part in sqref.split(" ") {
+    let text = part.trim()
     if text == "" {
       continue
     }
     let (start_ref, end_ref) = if text.contains(":") {
-      let parts : Array[String] = []
-      for item in text.split(":") {
-        parts.push(item.to_string())
+      let sep = match text.find(":") {
+        Some(pos) => pos
+        None => raise XlsxError::InvalidCellRef(value=text.to_string())
       }
-      if parts.length() != 2 {
-        raise XlsxError::InvalidCellRef(value=text)
-      }
-      (parts[0], parts[1])
+      let start_ref = text[:sep] catch {
+          _ => raise XlsxError::InvalidCellRef(value=text.to_string())
+        }
+      let end_ref = text[sep + 1:] catch {
+          _ => raise XlsxError::InvalidCellRef(value=text.to_string())
+        }
+      (start_ref, end_ref)
     } else {
       (text, text)
     }

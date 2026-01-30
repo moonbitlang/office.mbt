@@ -597,7 +597,7 @@ fn parse_custom_properties(
 ) -> Array[CustomProperty] raise XlsxError {
   let properties : Array[CustomProperty] = []
   let mut first = true
-  for chunk in xml.to_string().split("<property ") {
+  for chunk in xml.split("<property ") {
     if first {
       first = false
       continue
