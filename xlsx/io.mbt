@@ -26,16 +26,34 @@ fn resolve_write_options(workbook : Workbook, options : Options?) -> Options {
 }
 
 ///|
+fn write_bytes_with_io(
+  workbook : Workbook,
+  options : Options?,
+  file_path_override : String?,
+) -> Bytes raise XlsxError {
+  let resolved = resolve_write_options(workbook, options)
+  let file_path = match file_path_override {
+    Some(value) => Some(value)
+    None => workbook.file_path
+  }
+  if resolved.password == "" {
+    write_with_io(workbook, file_path, workbook.zip_writer)
+  } else {
+    let raw = write_with_io(workbook, file_path, workbook.zip_writer)
+    if resolved.password.length() == 0 {
+      raw
+    } else {
+      encrypt_package(raw, resolved.password)
+    }
+  }
+}
+
+///|
 fn write_bytes(
   workbook : Workbook,
   options : Options?,
 ) -> Bytes raise XlsxError {
-  let resolved = resolve_write_options(workbook, options)
-  if resolved.password == "" {
-    write(workbook)
-  } else {
-    write_with_password(workbook, resolved.password)
-  }
+  write_bytes_with_io(workbook, options, None)
 }
 
 ///|
@@ -198,20 +216,12 @@ pub async fn Workbook::save_as(
       msg="unsupported workbook file format",
     )
   }
-  let prev_path = self.file_path
-  self.file_path = Some(path)
-  let bytes = write_bytes(self, options) catch {
-    err => {
-      self.file_path = prev_path
-      raise err
-    }
-  }
+  let bytes = write_bytes_with_io(self, options, Some(path))
   @async/fs.write_file(path, bytes, create=0o644) catch {
-    err => {
-      self.file_path = prev_path
+    err =>
       raise XlsxError::InvalidSheetOperation(msg="write file failed: \{err}")
-    }
   }
+  self.file_path = Some(path)
 }
 
 ///|
