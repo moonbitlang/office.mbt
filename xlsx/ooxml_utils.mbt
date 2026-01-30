@@ -58,6 +58,41 @@ fn extract_tag_body_from(
 }
 
 ///|
+/// Extract the body text from the first `<tag_name ...>...</tag_name>` pair.
+///
+/// This differs from `extract_tag_body_from` only in that it errors (instead of
+/// returning `None`) when the tag is found but is malformed (missing close `>`
+/// or missing close tag).
+fn extract_tag_body(
+  xml : StringView,
+  tag_name : StringView,
+) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
+  let open_tag = "<\{tag_name.to_string()}"
+  let close_tag = "</\{tag_name.to_string()}>"
+  let start = match xml_str.find(open_tag) {
+    Some(pos) => pos
+    None => return None
+  }
+  let after_start = xml_str[start:] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+    }
+  let open_end_rel = match after_start.find(">") {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="tag open not closed")
+  }
+  let body_start = start + open_end_rel + 1
+  let end = match xml_str.find(close_tag) {
+    Some(pos) => pos
+    None => raise XlsxError::InvalidXml(msg="tag close missing")
+  }
+  let body = xml_str[body_start:end] catch {
+      _ => raise XlsxError::InvalidXml(msg="tag body invalid")
+    }
+  Some(body.to_string())
+}
+
+///|
 /// Replace `attr_name="..."` inside the first open tag in `xml`.
 fn replace_attr_value_in_open_tag(
   xml : StringView,
@@ -104,4 +139,3 @@ fn replace_attr_value_in_open_tag(
   )
   Some(sb.to_string())
 }
-
