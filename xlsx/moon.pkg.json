@@ -3,6 +3,7 @@
     "bobzhang/mbtexcel/zip",
     "bobzhang/mbtexcel/ooxml",
     "bobzhang/mbtexcel/crypto",
+    "bobzhang/mbtexcel/base64",
     {
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"

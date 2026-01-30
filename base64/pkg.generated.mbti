@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/base64"
+
+// Values
+pub fn decode(StringView) -> Bytes raise Base64Error
+
+pub fn encode(BytesView) -> String
+
+// Errors
+pub suberror Base64Error {
+  InvalidBase64(msg~ : String)
+}
+pub impl Eq for Base64Error
+pub impl Show for Base64Error
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
