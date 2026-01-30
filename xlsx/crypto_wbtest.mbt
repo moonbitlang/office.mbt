@@ -27,17 +27,20 @@ fn hex_value(ch : Char) -> Int raise XlsxError {
 
 ///|
 fn hex_to_bytes(text : StringView) -> Bytes raise XlsxError {
-  let chars = text.to_string().to_array()
-  if chars.length() % 2 != 0 {
-    raise XlsxError::InvalidBase64(msg="invalid hex length")
+  let out : Array[Byte] = Array::new(capacity=text.length() / 2)
+  let mut pending_hi : Int? = None
+  for ch in text {
+    let v = hex_value(ch)
+    match pending_hi {
+      None => pending_hi = Some(v)
+      Some(hi) => {
+        out.push(((hi << 4) | v).to_byte())
+        pending_hi = None
+      }
+    }
   }
-  let out : Array[Byte] = []
-  let mut i = 0
-  while i < chars.length() {
-    let hi = hex_value(chars[i])
-    let lo = hex_value(chars[i + 1])
-    out.push(((hi << 4) | lo).to_byte())
-    i = i + 2
+  if pending_hi is Some(_) {
+    raise XlsxError::InvalidBase64(msg="invalid hex length")
   }
   Bytes::from_array(out)
 }

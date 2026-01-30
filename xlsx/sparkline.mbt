@@ -33,7 +33,7 @@ pub fn SparklineColor::rgb(
         msg="sparkline color must be RRGGBB or AARRGGBB",
       )
   }
-  for ch in normalized.to_array() {
+  for ch in normalized {
     let ok = (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F')
     if !ok {
       raise XlsxError::InvalidSparkline(msg="sparkline color must be hex")
