@@ -5329,24 +5329,24 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
     FormulaCriteriaType::Ne
   } else if text.has_prefix("<=") {
     condition_text = (text[2:] catch { _ => "" }).to_string()
-    FormulaCriteriaType::Le
+    Le
   } else if text.has_prefix(">=") {
     condition_text = (text[2:] catch { _ => "" }).to_string()
-    FormulaCriteriaType::Ge
+    Ge
   } else if text.has_prefix("<") {
     condition_text = (text[1:] catch { _ => "" }).to_string()
-    FormulaCriteriaType::Lt
+    Lt
   } else if text.has_prefix(">") {
     condition_text = (text[1:] catch { _ => "" }).to_string()
-    FormulaCriteriaType::Gt
+    Gt
   } else if text.has_prefix("=") {
     condition_text = (text[1:] catch { _ => "" }).to_string()
-    FormulaCriteriaType::Eq
+    Eq
   } else {
-    FormulaCriteriaType::Regexp
+    Regexp
   }
   match kind {
-    FormulaCriteriaType::Regexp => ()
+    Regexp => ()
     _ =>
       return {
         kind,
@@ -5713,13 +5713,13 @@ fn dget_values(
 ) -> FormulaValue {
   let db = match calc_database_new(database, field, criteria) {
     Some(value) => value
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   let mut value = FormulaValue::Error(formula_error_value)
   if calc_database_next(db) {
     value = calc_database_value(db)
     if calc_database_next(db) {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
   }
   value

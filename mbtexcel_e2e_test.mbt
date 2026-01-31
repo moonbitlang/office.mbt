@@ -45,6 +45,27 @@ async test "mbtexcel open_reader wrapper" {
 }
 
 ///|
+async test "mbtexcel open_reader wrapper with transcoder branch" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "reader")
+  let bytes = write(workbook)
+  let (reader, writer) = @async/io.pipe()
+  let parsed = @async.with_task_group(fn(group) {
+    group.spawn_bg(() => {
+      defer writer.close()
+      writer.write(bytes)
+    })
+    open_reader(reader, transcoder=fn(_charset : String, b : Bytes) -> String {
+      @encoding/utf8.decode(b) catch {
+        _ => ""
+      }
+    })
+  })
+  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"reader\")")
+}
+
+///|
 async test "mbtexcel read_zip_reader wrapper" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
@@ -62,6 +83,30 @@ async test "mbtexcel read_zip_reader wrapper" {
 }
 
 ///|
+async test "mbtexcel read_zip_reader wrapper with transcoder branch" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "B2", "zip")
+  let bytes = write(workbook)
+  let (reader, writer) = @async/io.pipe()
+  let parsed = @async.with_task_group(fn(group) {
+    group.spawn_bg(() => {
+      defer writer.close()
+      writer.write(bytes)
+    })
+    read_zip_reader(reader, transcoder=fn(
+      _charset : String,
+      b : Bytes,
+    ) -> String {
+      @encoding/utf8.decode(b) catch {
+        _ => ""
+      }
+    })
+  })
+  inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"zip\")")
+}
+
+///|
 async test "mbtexcel open_file wrapper" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
@@ -73,6 +118,31 @@ async test "mbtexcel open_file wrapper" {
     err => fail("write file failed: \{err}")
   }
   let parsed = open_file(path)
+  inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
+  @async/fs.remove(path) catch {
+    err => fail("remove file failed: \{err}")
+  }
+}
+
+///|
+async test "mbtexcel open_file wrapper with transcoder branch" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "C3", "file")
+  let bytes = write(workbook)
+  let stamp = @env.now().to_string()
+  let path = "mbtexcel_open_file_transcoder_\{stamp}.xlsx"
+  @async/fs.write_file(path, bytes, create=0o644) catch {
+    err => fail("write file failed: \{err}")
+  }
+  let parsed = open_file(path, transcoder=fn(
+    _charset : String,
+    b : Bytes,
+  ) -> String {
+    @encoding/utf8.decode(b) catch {
+      _ => ""
+    }
+  })
   inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
@@ -144,7 +214,7 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
     "Sheet1",
     "A2",
     "https://example.com",
-    @xlsx.External,
+    External,
     display="Example",
   )
   let parsed = read(write(workbook))
@@ -193,7 +263,7 @@ test "mbtexcel e2e header footer images" {
   workbook.add_header_footer_image(
     "Sheet1",
     @xlsx.HeaderFooterImageOptions::new(
-      @xlsx.Left,
+      Left,
       img,
       ".png",
       width="50pt",
@@ -415,10 +485,10 @@ test "mbtexcel e2e page breaks" {
 test "mbtexcel e2e custom properties" {
   let workbook = new_workbook()
   workbook.set_custom_props(
-    @xlsx.CustomProperty::new("Text", Some(@xlsx.Text("hello"))),
+    @xlsx.CustomProperty::new("Text", Some(Text("hello"))),
   )
   workbook.set_custom_props(
-    @xlsx.CustomProperty::new("Count", Some(@xlsx.Integer(3))),
+    @xlsx.CustomProperty::new("Count", Some(Integer(3))),
   )
   let parsed = read(write(workbook))
   let props = parsed.get_custom_props()
@@ -599,8 +669,8 @@ test "mbtexcel e2e vba project roundtrip" {
 test "mbtexcel e2e ignored errors roundtrip" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.add_ignored_errors("Sheet1", "A1", @xlsx.EvalError)
-  workbook.add_ignored_errors("Sheet1", "B2:C3", @xlsx.NumberStoredAsText)
+  workbook.add_ignored_errors("Sheet1", "A1", EvalError)
+  workbook.add_ignored_errors("Sheet1", "B2:C3", NumberStoredAsText)
   let parsed = read(write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value

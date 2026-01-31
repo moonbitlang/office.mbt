@@ -83,8 +83,8 @@ test "cell operations" {
   inspect(sheet.get_cell_rc(2, 1), content="Some(\"Row 2, Col 1\")")
 
   // Set typed values
-  sheet.set_cell_value("C1", CellValue::Numeric(42.5))
-  sheet.set_cell_value("D1", CellValue::Bool(true))
+  sheet.set_cell_value("C1", Numeric(42.5))
+  sheet.set_cell_value("D1", Bool(true))
   inspect(sheet.get_cell_value_raw("C1"), content="Some(Numeric(42.5))")
 }
 ```
@@ -254,13 +254,8 @@ test "data validation" {
   // Range validation with DataValidation struct
   let dv = DataValidation::new(true) // allow_blank=true
   dv.set_sqref("B1:B10")
-  dv.set_range(
-    DataValidationFormula::IntValue(1),
-    DataValidationFormula::IntValue(100),
-    DataValidationType::Whole,
-    DataValidationOperator::Between,
-  )
-  dv.set_error(DataValidationErrorStyle::Stop, "Invalid", "Enter 1-100")
+  dv.set_range(IntValue(1), IntValue(100), Whole, Between)
+  dv.set_error(Stop, "Invalid", "Enter 1-100")
   dv.set_input("Hint", "Enter a number between 1 and 100")
   sheet.add_data_validation(dv)
 }
@@ -309,7 +304,7 @@ test "charts" {
   )
 
   // Create chart options
-  let chart = ChartOptions::new(ChartType::Bar)
+  let chart = ChartOptions::new(Bar)
   chart.series.push(series)
   chart.set_title("Sales by Category")
   chart.set_dimension(ChartDimension::with_values(480, 300))
@@ -381,14 +376,14 @@ test "hyperlinks" {
   sheet.set_cell_hyperlink(
     "A1",
     "https://example.com",
-    HyperlinkType::External,
+    External,
     display="Example Site",
     tooltip="Click to visit",
   )
 
   // Internal link to another cell
   sheet.set_cell("A2", "Go to Data")
-  sheet.set_cell_hyperlink("A2", "Sheet2!A1", HyperlinkType::Location)
+  sheet.set_cell_hyperlink("A2", "Sheet2!A1", Location)
 }
 ```
 

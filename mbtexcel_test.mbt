@@ -9,6 +9,33 @@ test "mbtexcel roundtrip" {
 }
 
 ///|
+test "mbtexcel read wrappers with transcoder branch" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "t")
+  let bytes = write(workbook)
+  let parsed = read(bytes, transcoder=fn(
+    _charset : String,
+    b : Bytes,
+  ) -> String {
+    @encoding/utf8.decode(b) catch {
+      _ => ""
+    }
+  })
+  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"t\")")
+  let encrypted = write_with_password(workbook, "pass")
+  let parsed2 = read_with_password(encrypted, "pass", transcoder=fn(
+    _charset : String,
+    b : Bytes,
+  ) -> String {
+    @encoding/utf8.decode(b) catch {
+      _ => ""
+    }
+  })
+  inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"t\")")
+}
+
+///|
 test "mbtexcel expose workbook" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
@@ -69,8 +96,14 @@ test "mbtexcel acronym color helpers" {
   assert_eq(r, (204).to_byte())
   assert_eq(g, (0).to_byte())
   assert_eq(b, (0).to_byte())
+  let (r2, g2, b2) = hsl_to_rgb(0.0, 1.0, 0.4)
+  assert_eq(r2, (204).to_byte())
+  assert_eq(g2, (0).to_byte())
+  assert_eq(b2, (0).to_byte())
   let (h, s, l) = rgbto_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
   inspect((h, s, l), content="(0.16666666666666666, 1, 0.5)")
+  let (h2, s2, l2) = rgb_to_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
+  inspect((h2, s2, l2), content="(0.16666666666666666, 1, 0.5)")
 }
 
 ///|
