@@ -138,7 +138,7 @@ fn parse_worksheet(
     let mut rich_text : Array[RichTextRun]? = None
     if force_string {
       value = ""
-      value_type = CellValueType::String
+      value_type = String
     } else {
       match cell_type {
         Some(kind) if kind == "s" => {

@@ -9,6 +9,12 @@ test "relationships xml" {
       target_mode="External",
     ),
   )
+  rels.add(
+    "id<>&\"'",
+    rel_type="ty<pe>&\"'",
+    target="tgt<>&\"'",
+    target_mode="Ex<>&\"'",
+  )
   inspect(
     rels.to_xml(),
     content=(
@@ -16,6 +22,7 @@ test "relationships xml" {
       #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
       #|  <Relationship Id="rId1" Type="type-a" Target="xl/workbook.xml"/>
       #|  <Relationship Id="rId2" Type="type-b" Target="xl/sheet.xml?x=1&amp;y=2" TargetMode="External"/>
+      #|  <Relationship Id="id&lt;&gt;&amp;&quot;&apos;" Type="ty&lt;pe&gt;&amp;&quot;&apos;" Target="tgt&lt;&gt;&amp;&quot;&apos;" TargetMode="Ex&lt;&gt;&amp;&quot;&apos;"/>
       #|</Relationships>
     ),
   )

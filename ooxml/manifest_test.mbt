@@ -20,3 +20,54 @@ test "workbook manifest basics" {
   inspect(workbook_rels.contains("worksheets/sheet1.xml"), content="true")
   inspect(workbook_rels.contains("styles.xml"), content="true")
 }
+
+///|
+test "workbook manifest options and customization" {
+  let manifest = WorkbookManifest::new(
+    -1,
+    include_shared_strings=false,
+    include_calc_chain=true,
+  )
+  let content_types = manifest.content_types_xml()
+  inspect(content_types.contains("/xl/sharedStrings.xml"), content="false")
+  inspect(content_types.contains("/xl/calcChain.xml"), content="true")
+  inspect(content_types.contains("/xl/worksheets/sheet1.xml"), content="false")
+  manifest.add_custom_properties()
+  inspect(
+    manifest.content_types_xml().contains("/docProps/custom.xml"),
+    content="true",
+  )
+  inspect(
+    manifest.root_rels_xml().contains("custom-properties"),
+    content="true",
+  )
+  manifest.set_workbook_content_type("application/custom-workbook+xml")
+  inspect(
+    manifest.content_types_xml().contains("application/custom-workbook+xml"),
+    content="true",
+  )
+  inspect(
+    manifest.workbook_rels_xml().contains("calcChain.xml"),
+    content="true",
+  )
+  let id = manifest.add_workbook_relationship_with_id(
+    "http://example.com/type", "example.xml",
+  )
+  inspect(id, content="rId4")
+  inspect(manifest.workbook_rels_xml().contains("example.xml"), content="true")
+  manifest.add_root_relationship("http://example.com/root", "root.xml")
+  inspect(manifest.root_rels_xml().contains("root.xml"), content="true")
+}
+
+///|
+test "workbook manifest set_workbook_content_type pushes when missing" {
+  let manifest = WorkbookManifest::new(0)
+  while manifest.content_types.overrides.length() > 0 {
+    ignore(manifest.content_types.overrides.pop())
+  }
+  manifest.set_workbook_content_type("application/custom-workbook+xml")
+  inspect(
+    manifest.content_types_xml().contains("application/custom-workbook+xml"),
+    content="true",
+  )
+}

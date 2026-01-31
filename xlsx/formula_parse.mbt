@@ -91,15 +91,15 @@ fn FormulaParser::parse_expression(
         match self.peek() {
           Some('=') => {
             self.consume()
-            Some(BinaryOp::Le)
+            Some(Le)
           }
           Some('>') => {
             self.consume()
-            Some(BinaryOp::Ne)
+            Some(Ne)
           }
           _ => {
             self.pos = start
-            Some(BinaryOp::Lt)
+            Some(Lt)
           }
         }
       }
@@ -109,11 +109,11 @@ fn FormulaParser::parse_expression(
         match self.peek() {
           Some('=') => {
             self.consume()
-            Some(BinaryOp::Ge)
+            Some(Ge)
           }
           _ => {
             self.pos = start
-            Some(BinaryOp::Gt)
+            Some(Gt)
           }
         }
       }
@@ -122,8 +122,8 @@ fn FormulaParser::parse_expression(
     match op {
       Some(bin) => {
         match bin {
-          BinaryOp::Eq => self.consume()
-          BinaryOp::Lt | BinaryOp::Gt => self.consume()
+          Eq => self.consume()
+          Lt | Gt => self.consume()
           _ => ()
         }
         let right = self.parse_concat()

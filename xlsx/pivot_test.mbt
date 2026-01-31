@@ -128,7 +128,22 @@ test "pivot table validation" {
   }
   inspect(
     result,
-    content="Err(XlsxError::InvalidPivotTable(msg=\"pivot table xml empty\"))",
+    content=(
+      #|Err(InvalidPivotTable(msg="pivot table xml empty"))
+    ),
+  )
+  let result2 = try
+    sheet.add_pivot_table_xml("<pivotTableDefinition/>", "")
+  catch {
+    err => Err(err)
+  } noraise {
+    _ => Ok(())
+  }
+  inspect(
+    result2,
+    content=(
+      #|Err(InvalidPivotTable(msg="pivot cache definition empty"))
+    ),
   )
 }
 
@@ -226,7 +241,7 @@ test "pivot table options compactData classic layout invalid" {
   inspect(
     result,
     content=(
-      #|Err(XlsxError::InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))
+      #|Err(InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))
     ),
   )
 }

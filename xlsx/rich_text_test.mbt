@@ -51,6 +51,36 @@ test "rich text set/get" {
 }
 
 ///|
+test "rich text get on plain string cell returns single run" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell("A1", "plain")
+  inspect(
+    sheet.get_cell_rich_text("A1"),
+    content=(
+      #|Some([{text: "plain", font: None}])
+    ),
+  )
+}
+
+///|
+test "rich text get on non-string cell returns None" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", Numeric(1.0))
+  inspect(sheet.get_cell_rich_text("A1"), content="None")
+}
+
+///|
+test "rich text set updates existing cell" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v1", font: None }])
+  workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v2", font: None }])
+  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"v2\")")
+}
+
+///|
 test "rich text roundtrip" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

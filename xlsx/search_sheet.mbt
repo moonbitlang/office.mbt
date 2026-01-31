@@ -57,13 +57,13 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
         i = i + 2
         continue
       }
-      tokens.push({ kind: RegexTokenKind::Literal(ch), repeat: false })
+      tokens.push({ kind: Literal(ch), repeat: false })
       i = i + 1
       continue
     }
     let mut kind = RegexTokenKind::Literal(ch)
     if ch == '.' {
-      kind = RegexTokenKind::Any
+      kind = Any
       i = i + 1
     } else if ch == '[' {
       let ranges : Array[RegexRange] = []

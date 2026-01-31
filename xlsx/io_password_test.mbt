@@ -9,7 +9,7 @@ async test "open file and reader with password" {
   @async/fs.write_file(path, bytes, create=0o644) catch {
     err => fail("write file failed: \{err}")
   }
-  let file = @async/fs.open(path, mode=@async/fs.Mode::ReadOnly) catch {
+  let file = @async/fs.open(path, mode=ReadOnly) catch {
     err => fail("open file failed: \{err}")
   }
   let parsed = open_reader(file, password="pass")

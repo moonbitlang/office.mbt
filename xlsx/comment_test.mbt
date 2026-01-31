@@ -31,6 +31,35 @@ test "comment add/delete" {
 }
 
 ///|
+test "comment delete keeps other comments" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_comment({
+    cell: "A1",
+    author: "A",
+    text: "one",
+    paragraph: [],
+    width: None,
+    height: None,
+  })
+  sheet.add_comment({
+    cell: "B2",
+    author: "B",
+    text: "two",
+    paragraph: [],
+    width: None,
+    height: None,
+  })
+  sheet.delete_comment("A1")
+  inspect(
+    sheet.comments(),
+    content=(
+      #|[{cell: "B2", author: "B", text: "two", paragraph: [], width: None, height: None}]
+    ),
+  )
+}
+
+///|
 test "comment roundtrip" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

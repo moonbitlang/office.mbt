@@ -3504,7 +3504,7 @@ fn eval_function(
         if idx < 0 {
           return if_not_found
         }
-        if name == "TEXTAFTER" {
+        if name == "TEXTAFTER" || name == "_XLFN.TEXTAFTER" {
           let start = idx + delimiter.length()
           if start >= text.length() {
             Empty

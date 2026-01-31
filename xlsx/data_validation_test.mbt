@@ -127,3 +127,49 @@ test "data validation read x14 extLst" {
   inspect(dvs[0].sqref, content="A7:B8")
   inspect(dvs[0].formula1, content="Sheet1!$B$1:$B$5")
 }
+
+///|
+test "data validation enum/operator/style coverage" {
+  let dv = DataValidation::new(true)
+  dv.set_sqref("A1")
+  let types : Array[DataValidationType] = [
+    NoneType,
+    Custom,
+    Date,
+    Decimal,
+    List,
+    TextLength,
+    Time,
+    Whole,
+  ]
+  for t in types {
+    dv.set_range(IntValue(1), IntValue(2), t, Between)
+  }
+  let ops : Array[DataValidationOperator] = [
+    Between,
+    Equal,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
+    NotBetween,
+    NotEqual,
+  ]
+  for op in ops {
+    dv.set_range(IntValue(1), IntValue(2), Whole, op)
+  }
+  let styles : Array[DataValidationErrorStyle] = [Stop, Warning, Information]
+  for style in styles {
+    dv.set_error(style, "Title", "Message")
+  }
+  dv.set_range(DoubleValue(-1.5), DoubleValue(1.5), Decimal, Between)
+  dv.set_range(TextValue("abc"), TextValue("def"), Custom, NotEqual)
+  dv.set_sqref("A2")
+  dv.set_sqref_drop_list("Sheet1!$A$1:$A$2")
+  dv.set_drop_list(["=Sheet1!$B$1:$B$3"])
+  dv.set_input("PromptTitle", "PromptMessage")
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_data_validation(dv)
+  inspect(sheet.get_data_validations().length(), content="1")
+}

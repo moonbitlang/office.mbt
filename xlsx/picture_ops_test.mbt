@@ -205,7 +205,9 @@ test "picture from bytes invalid extension" {
   }
   inspect(
     result,
-    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported picture extension\"))",
+    content=(
+      #|Err(UnsupportedFeature(msg="unsupported picture extension"))
+    ),
   )
 }
 
@@ -222,7 +224,9 @@ test "picture from bytes extension requires dot" {
   }
   inspect(
     result,
-    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported picture extension\"))",
+    content=(
+      #|Err(UnsupportedFeature(msg="unsupported picture extension"))
+    ),
   )
 }
 
@@ -501,7 +505,9 @@ test "picture options validation" {
   }
   inspect(
     result,
-    content="Err(XlsxError::InvalidSheetOperation(msg=\"picture offset must be >= 0\"))",
+    content=(
+      #|Err(InvalidSheetOperation(msg="picture offset must be >= 0"))
+    ),
   )
   let result2 = try
     workbook.add_picture_from_bytes(
@@ -561,7 +567,7 @@ async test "picture invalid sheet name (from file path)" {
   } noraise {
     _ => Ok(())
   }
-  inspect(result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(result is Err(InvalidSheetName(_)), content="true")
 }
 
 ///|

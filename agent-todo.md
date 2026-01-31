@@ -20,6 +20,10 @@ References:
 ## Maintenance / Cleanup
 
 - [x] Remove `moon check` warnings + deprecated slice usage (commit `4a75627`)
+- [x] Coverage: raise `zip/` package coverage to ≥95% (now 705/738 ≈ 95.53%)
+- [ ] Coverage: raise `xlsx/` package coverage materially (currently 25277/31302 ≈ 80.75%; 95–98% is a large effort)
+- [ ] Coverage: decide how to treat `cmd/main` `fn main` (currently un-coverable by tests)
+- [ ] Coverage: audit unreachable branches in `zip/` + `crypto/` (some checks appear dead without whitebox access)
 - [ ] Package-by-package readability/perf pass (start with `zip/`, then `ooxml/`, then `crypto/`)
 - [ ] Target support: confirm `--target wasm` compatibility (currently `moon check --target all` fails due to missing `@async/fs`/`@process` APIs in dependencies)
 

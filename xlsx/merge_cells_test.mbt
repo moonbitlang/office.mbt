@@ -80,3 +80,20 @@ test "merge cells info merges overlap" {
     fail("unexpected merged range")
   }
 }
+
+///|
+test "merge cells invalid range reference" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let result : Result[Unit, Error] = try? sheet.merge_cells("A1:B2:C3")
+  inspect(result is Err(XlsxError::InvalidCellRef(_)), content="true")
+}
+
+///|
+test "merge cells duplicate is no-op" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.merge_cells("A1:B2")
+  sheet.merge_cells("B2:A1")
+  inspect(sheet.merged_cells(), content="[\"A1:B2\"]")
+}

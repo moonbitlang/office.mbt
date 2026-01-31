@@ -18,6 +18,11 @@ These are non-blocking follow-ups discovered while investigating slow tests.
    - True “Excelize behavior parity” needs comparing outputs against a runnable Go Excelize (or porting more of Excelize’s Go test assertions 1:1).
    - This environment currently has no `go` toolchain, so the workflow is: build an API-by-API mapping report and iterate tests/behavior one-by-one.
 
+5. **`xlsx/` coverage plan (95–98% target is large)**
+   - Current `xlsx/` package coverage is ~80.75% (25277/31302).
+   - Biggest remaining gaps are concentrated in `xlsx/formula_builtins.mbt`, `xlsx/formula_eval.mbt`, `xlsx/read.mbt`, `xlsx/write.mbt`, `xlsx/workbook.mbt`, and `xlsx/worksheet.mbt`.
+   - Prefer black-box tests; many remaining uncovered lines appear to be defensive/unreachable branches (worth auditing and possibly simplifying).
+
 ## Architecture refactor backlog
 
 These are follow-ups discovered while reviewing the current package architecture

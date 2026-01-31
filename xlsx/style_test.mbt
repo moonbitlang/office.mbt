@@ -94,6 +94,31 @@ test "invalid style id" {
 }
 
 ///|
+test "worksheet set_cell_style and set_cell_style_rc" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+
+  // set_cell_style on an empty cell creates it.
+  sheet.set_cell_style("A1", 0)
+  inspect(sheet.get_cell_style("A1"), content="Some(0)")
+
+  // Negative style ids reject.
+  let neg1 : Result[Unit, Error] = try? sheet.set_cell_style("A1", -1)
+  inspect(neg1 is Err(XlsxError::InvalidStyleId(_)), content="true")
+  let neg2 : Result[Unit, Error] = try? sheet.set_cell_style_rc(1, 1, -1)
+  inspect(neg2 is Err(XlsxError::InvalidStyleId(_)), content="true")
+
+  // set_cell_style_rc creates + updates existing.
+  sheet.set_cell_style_rc(1, 2, 0)
+  sheet.set_cell_style_rc(1, 2, 2)
+  inspect(sheet.get_cell_style_rc(1, 2), content="Some(2)")
+
+  // get_cell_style_rc validates row/col.
+  let bad_rc : Result[Int?, Error] = try? sheet.get_cell_style_rc(0, 1)
+  inspect(bad_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
+}
+
+///|
 test "conditional style roundtrip" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

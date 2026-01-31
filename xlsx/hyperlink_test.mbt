@@ -27,6 +27,37 @@ test "hyperlink roundtrip" {
 }
 
 ///|
+test "hyperlink resolves merged cell anchor" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.merge_cells("A1:C3")
+  sheet.set_cell_hyperlink("B2", "https://example.com", External)
+  inspect(
+    sheet.get_cell_hyperlink("A1"),
+    content=(
+      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: None, tooltip: None})
+    ),
+  )
+  inspect(sheet.get_cell_hyperlink("B2"), content="None")
+}
+
+///|
+test "hyperlink remove keeps other links" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_hyperlink("A1", "https://a.example", External)
+  sheet.set_cell_hyperlink("B2", "https://b.example", External)
+  sheet.remove_cell_hyperlink("A1")
+  inspect(sheet.get_cell_hyperlink("A1"), content="None")
+  inspect(
+    sheet.get_cell_hyperlink("B2"),
+    content=(
+      #|Some({reference: "B2", target: "https://b.example", link_type: External, display: None, tooltip: None})
+    ),
+  )
+}
+
+///|
 test "hyperlink updates on insert" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -92,6 +123,27 @@ test "hyperlink opts helper" {
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
       #|Some({reference: "A1", target: "https://example.com", link_type: External, display: None, tooltip: Some("Tip")})
+    ),
+  )
+}
+
+///|
+test "hyperlink opts helper (display only)" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = HyperlinkOpts::with_values(display="Shown")
+  workbook.set_cell_hyperlink_opts(
+    "Sheet1",
+    "A1",
+    "https://example.com",
+    External,
+    opts~,
+  )
+  let parsed = read(write(workbook))
+  inspect(
+    parsed.get_cell_hyperlink("Sheet1", "A1"),
+    content=(
+      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: Some("Shown"), tooltip: None})
     ),
   )
 }

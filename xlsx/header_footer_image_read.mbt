@@ -10,8 +10,8 @@ fn parse_header_footer_shape_id(
   let hf_char = id_norm.get_char(1)
   let position = match pos_char {
     Some('L') => HeaderFooterImagePosition::Left
-    Some('C') => HeaderFooterImagePosition::Center
-    Some('R') => HeaderFooterImagePosition::Right
+    Some('C') => Center
+    Some('R') => Right
     _ => return None
   }
   let is_footer = match hf_char {

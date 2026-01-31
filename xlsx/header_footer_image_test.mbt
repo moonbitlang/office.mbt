@@ -157,7 +157,9 @@ test "header footer image invalid extension" {
   }
   inspect(
     result,
-    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
+    content=(
+      #|Err(UnsupportedFeature(msg="unsupported header/footer image extension"))
+    ),
   )
 }
 
@@ -181,7 +183,9 @@ test "header footer image extension requires dot" {
   }
   inspect(
     result,
-    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
+    content=(
+      #|Err(UnsupportedFeature(msg="unsupported header/footer image extension"))
+    ),
   )
 }
 
@@ -303,4 +307,55 @@ test "header footer image workbook missing sheet" {
     ),
   )
   inspect(result is Err(XlsxError::SheetNotFound(_)), content="true")
+}
+
+///|
+test "header footer image read: missing vml relationship errors" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_header_footer(
+    Some(HeaderFooterOptions::with_values(odd_header="&L&G")),
+  )
+  sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      Left,
+      [1, 2, 3],
+      ".png",
+      width="10pt",
+      height="10pt",
+    ),
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let bad_rels =
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|</Relationships>
+  let updated_archive = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name != "xl/drawings/_rels/vmlDrawing1.vml.rels" {
+      updated_archive.add(
+        entry.name,
+        entry.data,
+        compression=entry.compression,
+        data_descriptor=entry.data_descriptor,
+      )
+    }
+  }
+  updated_archive.add(
+    "xl/drawings/_rels/vmlDrawing1.vml.rels",
+    @encoding/utf8.encode(bad_rels),
+  )
+  let updated_bytes = @zip.write(updated_archive) catch {
+    err => fail("zip write failed: \{err}")
+  }
+  let result : Result[Workbook, Error] = try? read(updated_bytes)
+  match result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="header/footer image relationship missing")
+    _ =>
+      fail("expected InvalidXml for missing header/footer image relationship")
+  }
 }
