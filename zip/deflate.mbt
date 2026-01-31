@@ -14,11 +14,11 @@ fn BitReader::new(bytes : BytesView) -> BitReader {
 ///|
 fn BitReader::ensure_bits(self : BitReader, count : Int) -> Unit raise ZipError {
   if count < 0 {
-    raise ZipError::OutOfBounds(offset=self.byte_pos)
+    raise OutOfBounds(offset=self.byte_pos)
   }
   while self.bit_count < count {
     if self.byte_pos >= self.bytes.length() || self.byte_pos < 0 {
-      raise ZipError::OutOfBounds(offset=self.byte_pos)
+      raise OutOfBounds(offset=self.byte_pos)
     }
     let byte = self.bytes[self.byte_pos].to_uint()
     self.bit_buf = self.bit_buf | (byte << self.bit_count)
@@ -104,7 +104,7 @@ let dist_extra : Array[Int] = [
 ///|
 fn length_to_symbol(length : Int) -> (Int, Int, Int) raise ZipError {
   if length < 3 || length > 258 {
-    raise ZipError::UnsupportedFeature(msg="invalid match length")
+    raise UnsupportedFeature(msg="invalid match length")
   }
   for idx in 0..<length_base.length() {
     let base = length_base[idx]
@@ -114,13 +114,13 @@ fn length_to_symbol(length : Int) -> (Int, Int, Int) raise ZipError {
       return (idx + 257, extra, length - base)
     }
   }
-  raise ZipError::UnsupportedFeature(msg="length not encodable")
+  raise UnsupportedFeature(msg="length not encodable")
 }
 
 ///|
 fn distance_to_symbol(distance : Int) -> (Int, Int, Int) raise ZipError {
   if distance <= 0 || distance > 32768 {
-    raise ZipError::UnsupportedFeature(msg="invalid match distance")
+    raise UnsupportedFeature(msg="invalid match distance")
   }
   for idx in 0..<dist_base.length() {
     let base = dist_base[idx]
@@ -130,7 +130,7 @@ fn distance_to_symbol(distance : Int) -> (Int, Int, Int) raise ZipError {
       return (idx, extra, distance - base)
     }
   }
-  raise ZipError::UnsupportedFeature(msg="distance not encodable")
+  raise UnsupportedFeature(msg="distance not encodable")
 }
 
 ///|
@@ -215,14 +215,14 @@ fn build_huffman(lengths : ArrayView[Int]) -> HuffmanTable raise ZipError {
   let mut max_bits = 0
   for len in lengths {
     if len < 0 || len > 15 {
-      raise ZipError::UnsupportedFeature(msg="invalid huffman length")
+      raise UnsupportedFeature(msg="invalid huffman length")
     }
     if len > max_bits {
       max_bits = len
     }
   }
   if max_bits == 0 {
-    raise ZipError::UnsupportedFeature(msg="empty huffman table")
+    raise UnsupportedFeature(msg="empty huffman table")
   }
   let counts : Array[Int] = Array::make(max_bits + 1, 0)
   for len in lengths {
@@ -270,7 +270,7 @@ fn decode_symbol(
       return table.sym[idx]
     }
   }
-  raise ZipError::UnsupportedFeature(msg="invalid huffman code")
+  raise UnsupportedFeature(msg="invalid huffman code")
 }
 
 ///|
@@ -320,7 +320,7 @@ fn read_dynamic_tables(
       lengths.push(symbol)
     } else if symbol == 16 {
       if lengths.length() == 0 {
-        raise ZipError::UnsupportedFeature(msg="repeat with no previous length")
+        raise UnsupportedFeature(msg="repeat with no previous length")
       }
       let repeat = reader.read_bits(2).reinterpret_as_int() + 3
       let prev = lengths[lengths.length() - 1]
@@ -338,7 +338,7 @@ fn read_dynamic_tables(
         lengths.push(0)
       }
     } else {
-      raise ZipError::UnsupportedFeature(msg="invalid code length symbol")
+      raise UnsupportedFeature(msg="invalid code length symbol")
     }
   }
   let lit_lengths = lengths[:hlit]
@@ -366,21 +366,19 @@ fn decode_huffman_block(
       }
       let length_idx = symbol - 257
       if length_idx < 0 || length_idx >= length_base.length() {
-        raise ZipError::UnsupportedFeature(msg="invalid length symbol")
+        raise UnsupportedFeature(msg="invalid length symbol")
       }
       let extra_len = length_extra[length_idx]
       let length = length_base[length_idx] +
         reader.read_bits(extra_len).reinterpret_as_int()
       let dist_symbol = decode_symbol(reader, dist_table)
       if dist_symbol < 0 || dist_symbol >= dist_base.length() {
-        raise ZipError::UnsupportedFeature(msg="invalid distance symbol")
+        raise UnsupportedFeature(msg="invalid distance symbol")
       }
       let dist = dist_base[dist_symbol] +
         reader.read_bits(dist_extra[dist_symbol]).reinterpret_as_int()
       if dist <= 0 || dist > out.length() {
-        raise ZipError::UnsupportedFeature(
-          msg="invalid back-reference distance",
-        )
+        raise UnsupportedFeature(msg="invalid back-reference distance")
       }
       for _ in 0..<length {
         let value = out[out.length() - dist]
@@ -410,7 +408,7 @@ fn BitWriter::write_bits(
   count : Int,
 ) -> Unit raise ZipError {
   if count < 0 {
-    raise ZipError::UnsupportedFeature(msg="negative bit count")
+    raise UnsupportedFeature(msg="negative bit count")
   }
   for i in 0..<count {
     let bit = (value >> i) & 1
@@ -435,7 +433,7 @@ fn BitWriter::finish(self : BitWriter) -> Bytes {
 ///|
 fn fixed_literal_code(symbol : Int) -> (Int, Int) raise ZipError {
   if symbol < 0 || symbol > 287 {
-    raise ZipError::UnsupportedFeature(msg="invalid fixed literal symbol")
+    raise UnsupportedFeature(msg="invalid fixed literal symbol")
   }
   if symbol <= 143 {
     (symbol + 0x30, 8)
@@ -513,9 +511,7 @@ fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
           let len = reader.read_bits(16).reinterpret_as_int()
           let nlen = reader.read_bits(16)
           if (len.reinterpret_as_uint() ^ nlen) != 0xFFFF {
-            raise ZipError::UnsupportedFeature(
-              msg="invalid stored block length",
-            )
+            raise UnsupportedFeature(msg="invalid stored block length")
           }
           for _ in 0..<len {
             out.push(reader.read_byte())
@@ -530,8 +526,7 @@ fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
           let (lit, dist) = read_dynamic_tables(reader)
           decode_huffman_block(reader, lit, dist, out)
         }
-        _ =>
-          raise ZipError::UnsupportedFeature(msg="invalid deflate block type")
+        _ => raise UnsupportedFeature(msg="invalid deflate block type")
       }
       continue bfinal == 1
     }

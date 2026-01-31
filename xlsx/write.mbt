@@ -477,7 +477,7 @@ fn write_drawing_rels_xml(
     sb.write_view("\" Target=\"")
     sb.write_view(escape_xml_attr(entry.target))
     sb.write_view("\"")
-    if entry.link_type == HyperlinkType::External {
+    if entry.link_type == External {
       sb.write_view(" TargetMode=\"External\"")
     }
     sb.write_view("/>\n")
@@ -624,7 +624,7 @@ fn write_drawing_xml(
       image.name
     }
     match image.positioning {
-      PicturePositioning::TwoCell => {
+      TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -647,7 +647,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::Absolute => {
+      Absolute => {
         sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -670,7 +670,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::OneCell => {
+      OneCell => {
         sb.write_view("  <xdr:oneCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -729,9 +729,9 @@ fn write_drawing_xml(
       "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(image.locked)}\" fPrintsWithSheet=\"\{bool_attr(image.print_object)}\"/>\n",
     )
     match image.positioning {
-      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+      TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
     }
   }
   for chart in charts {
@@ -745,7 +745,7 @@ fn write_drawing_xml(
     let cx = chart.width_emu
     let cy = chart.height_emu
     match chart.positioning {
-      PicturePositioning::TwoCell => {
+      TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -768,7 +768,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::Absolute => {
+      Absolute => {
         sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -791,7 +791,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::OneCell => {
+      OneCell => {
         sb.write_view("  <xdr:oneCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -827,9 +827,9 @@ fn write_drawing_xml(
       "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(chart.locked)}\" fPrintsWithSheet=\"\{bool_attr(chart.print_object)}\"/>\n",
     )
     match chart.positioning {
-      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+      TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
     }
   }
   for shape in shapes {
@@ -845,7 +845,7 @@ fn write_drawing_xml(
       .round()
       .to_int()
     match shape.positioning {
-      PicturePositioning::TwoCell => {
+      TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -868,7 +868,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::Absolute => {
+      Absolute => {
         sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -891,7 +891,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::OneCell => {
+      OneCell => {
         sb.write_view("  <xdr:oneCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -1044,9 +1044,9 @@ fn write_drawing_xml(
       "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(shape.locked)}\" fPrintsWithSheet=\"\{bool_attr(shape.print_object)}\"/>\n",
     )
     match shape.positioning {
-      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+      TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
     }
   }
   for item in slicers {
@@ -1082,10 +1082,10 @@ fn write_drawing_xml(
       .to_int()
     let positioning = match slicer.format.positioning {
       Some(v) => v
-      None => PicturePositioning::TwoCell
+      None => TwoCell
     }
     match positioning {
-      PicturePositioning::TwoCell => {
+      TwoCell => {
         sb.write_view("  <xdr:twoCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -1108,7 +1108,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::Absolute => {
+      Absolute => {
         sb.write_view("  <xdr:twoCellAnchor editAs=\"absolute\">\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -1131,7 +1131,7 @@ fn write_drawing_xml(
         sb.write_view("      <xdr:rowOff>\{to_row_off}</xdr:rowOff>\n")
         sb.write_view("    </xdr:to>\n")
       }
-      PicturePositioning::OneCell => {
+      OneCell => {
         sb.write_view("  <xdr:oneCellAnchor>\n")
         sb.write_view("    <xdr:from>\n")
         sb.write_view("      <xdr:col>\{col_idx}</xdr:col>\n")
@@ -1261,9 +1261,9 @@ fn write_drawing_xml(
       "    <xdr:clientData fLocksWithSheet=\"\{bool_attr(locked)}\" fPrintsWithSheet=\"\{bool_attr(print_object)}\"/>\n",
     )
     match positioning {
-      PicturePositioning::TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
-      PicturePositioning::OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
+      TwoCell => sb.write_view("  </xdr:twoCellAnchor>\n")
+      Absolute => sb.write_view("  </xdr:twoCellAnchor>\n")
+      OneCell => sb.write_view("  </xdr:oneCellAnchor>\n")
     }
   }
   sb.write_view("</xdr:wsDr>")
@@ -1989,7 +1989,7 @@ fn write_auto_filter_xml(filter : AutoFilter) -> String raise XlsxError {
   sb.write_view("\">\n")
   for column in filter.columns {
     if column.col < min_col || column.col > max_col {
-      raise XlsxError::InvalidAutoFilter(msg="auto filter column out of range")
+      raise InvalidAutoFilter(msg="auto filter column out of range")
     }
     let col_id = column.col - min_col
     sb.write_view("    <filterColumn colId=\"\{col_id}\">\n")
@@ -2287,13 +2287,10 @@ fn write_worksheet_xml(
       match cell.formula {
         Some(formula) => {
           match cell.value_type {
-            CellValueType::String =>
-              if cell.value != "" {
-                sb.write_view(" t=\"str\"")
-              }
-            CellValueType::Bool => sb.write_view(" t=\"b\"")
-            CellValueType::Error => sb.write_view(" t=\"e\"")
-            CellValueType::Number => ()
+            String => if cell.value != "" { sb.write_view(" t=\"str\"") }
+            Bool => sb.write_view(" t=\"b\"")
+            Error => sb.write_view(" t=\"e\"")
+            Number => ()
           }
           sb.write_view(">")
           sb.write_view("<f")
@@ -2323,9 +2320,8 @@ fn write_worksheet_xml(
           if cell.value != "" {
             sb.write_view("<v>")
             match cell.value_type {
-              CellValueType::String =>
-                sb.write_view(escape_xml_text(cell.value))
-              CellValueType::Error => sb.write_view(escape_xml_text(cell.value))
+              String => sb.write_view(escape_xml_text(cell.value))
+              Error => sb.write_view(escape_xml_text(cell.value))
               _ => sb.write_view(cell.value)
             }
             sb.write_view("</v>")
@@ -2334,32 +2330,32 @@ fn write_worksheet_xml(
         }
         None =>
           match cell.value_type {
-            CellValueType::String => {
+            String => {
               let idx = match cell.rich_text {
                 Some(_) =>
                   match rich_text_map.get(cell.reference) {
                     Some(value) => value
-                    None => raise XlsxError::InvalidSharedString(index=cell.row)
+                    None => raise InvalidSharedString(index=cell.row)
                   }
                 None =>
                   match string_map.get(cell.value) {
                     Some(value) => value
-                    None => raise XlsxError::InvalidSharedString(index=cell.row)
+                    None => raise InvalidSharedString(index=cell.row)
                   }
               }
               sb.write_view(" t=\"s\"><v>\{idx}</v></c>\n")
             }
-            CellValueType::Bool => {
+            Bool => {
               sb.write_view(" t=\"b\"><v>")
               sb.write_view(cell.value)
               sb.write_view("</v></c>\n")
             }
-            CellValueType::Error => {
+            Error => {
               sb.write_view(" t=\"e\"><v>")
               sb.write_view(escape_xml_text(cell.value))
               sb.write_view("</v></c>\n")
             }
-            CellValueType::Number => {
+            Number => {
               sb.write_view("><v>")
               sb.write_view(cell.value)
               sb.write_view("</v></c>\n")
@@ -2424,7 +2420,7 @@ fn write_worksheet_xml(
   if hyperlinks.length() > 0 {
     let mut wrote = false
     for link in hyperlinks {
-      if link.link_type == HyperlinkType::Unset {
+      if link.link_type == Unset {
         continue
       }
       if !wrote {
@@ -2435,20 +2431,17 @@ fn write_worksheet_xml(
       sb.write_view(escape_xml_attr(link.reference))
       sb.write_view("\"")
       match link.link_type {
-        HyperlinkType::External =>
+        External =>
           match hyperlink_rel_ids.get(link.reference) {
             Some(rel_id) => sb.write_view(" r:id=\"rId\{rel_id}\"")
-            None =>
-              raise XlsxError::InvalidHyperlink(
-                msg="hyperlink relationship missing",
-              )
+            None => raise InvalidHyperlink(msg="hyperlink relationship missing")
           }
-        HyperlinkType::Location => {
+        Location => {
           sb.write_view(" location=\"")
           sb.write_view(escape_xml_attr(link.target))
           sb.write_view("\"")
         }
-        HyperlinkType::Unset => ()
+        Unset => ()
       }
       match link.display {
         Some(value) => {
@@ -2809,7 +2802,7 @@ fn extract_vml_shapetype(xml : StringView) -> String? raise XlsxError {
     None => return None
   }
   let slice = xml_str[start:end] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml shapetype invalid")
+      _ => raise InvalidVmlDrawing(msg="vml shapetype invalid")
     }
   Some(slice.to_string())
 }
@@ -2822,7 +2815,7 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
   let mut start_pos = 0
   while start_pos < xml_str.length() {
     let rest = xml_str[start_pos:] catch {
-        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
+        _ => raise InvalidVmlDrawing(msg="vml shape slice invalid")
       }
     let rel = match rest.find(needle) {
       Some(pos) => pos
@@ -2844,7 +2837,7 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
       continue
     }
     let shape_rest = xml_str[start:] catch {
-        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
+        _ => raise InvalidVmlDrawing(msg="vml shape slice invalid")
       }
     let end_rel = match shape_rest.find("</v:shape>") {
       Some(pos) => pos
@@ -2852,7 +2845,7 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
     }
     let end = start + end_rel + "</v:shape>".length()
     let slice = xml_str[start:end] catch {
-        _ => raise XlsxError::InvalidVmlDrawing(msg="vml shape slice invalid")
+        _ => raise InvalidVmlDrawing(msg="vml shape slice invalid")
       }
     shapes.push(slice.to_string())
     start_pos = end
@@ -2919,10 +2912,10 @@ fn filter_vml_shapes_by_id(
     None => base_xml.length()
   }
   let prefix = base_xml[:insert_at] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+      _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
     }
   let suffix = base_xml[end:] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+      _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
     }
   let sb = StringBuilder::new()
   sb.write_view(prefix)
@@ -2954,10 +2947,10 @@ fn merge_vml_drawings(
             }
         }
         let prefix = merged[:insert_at] catch {
-            _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+            _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
           }
         let suffix = merged[insert_at:] catch {
-            _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+            _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
           }
         let sb = StringBuilder::new()
         sb.write_view(prefix)
@@ -2977,10 +2970,10 @@ fn merge_vml_drawings(
     None => merged.length()
   }
   let prefix = merged[:insert_at] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+      _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
     }
   let suffix = merged[insert_at:] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+      _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
     }
   let sb = StringBuilder::new()
   sb.write_view(prefix)
@@ -3014,10 +3007,10 @@ fn merge_vml_drawings_with_shapetype(
             }
         }
         let prefix = merged[:insert_at] catch {
-            _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+            _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
           }
         let suffix = merged[insert_at:] catch {
-            _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+            _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
           }
         let sb = StringBuilder::new()
         sb.write_view(prefix)
@@ -3037,10 +3030,10 @@ fn merge_vml_drawings_with_shapetype(
     None => merged.length()
   }
   let prefix = merged[:insert_at] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml prefix invalid")
+      _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
     }
   let suffix = merged[insert_at:] catch {
-      _ => raise XlsxError::InvalidVmlDrawing(msg="vml suffix invalid")
+      _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
     }
   let sb = StringBuilder::new()
   sb.write_view(prefix)
@@ -3424,9 +3417,7 @@ fn write_with_io(
           let col = match column {
             Some(v) => v
             None =>
-              raise XlsxError::InvalidSheetOperation(
-                msg="slicer table field missing",
-              )
+              raise InvalidSheetOperation(msg="slicer table field missing")
           }
           let rel_id = manifest.add_workbook_relationship_with_id(
             rel_slicer_cache,
@@ -3469,10 +3460,7 @@ fn write_with_io(
                 pivot_table_name: Some(pivot.name),
               })
             }
-            None =>
-              raise XlsxError::InvalidSheetOperation(
-                msg="slicer source missing",
-              )
+            None => raise InvalidSheetOperation(msg="slicer source missing")
           }
       }
     }
@@ -3559,7 +3547,7 @@ fn write_with_io(
     let hyperlink_targets : Array[String] = []
     let hyperlink_rel_ids : Map[String, Int] = {}
     for link in sheet.hyperlinks() {
-      if link.link_type == HyperlinkType::External {
+      if link.link_type == External {
         hyperlink_targets.push(link.target)
         hyperlink_rel_ids[link.reference] = rel_id
         rel_id = rel_id + 1
@@ -3881,7 +3869,7 @@ fn write_with_io(
       let image_rel_id = rel_id
       rel_id = rel_id + 1
       let mut hyperlink_rel_id : Int? = None
-      if image.hyperlink != "" && image.hyperlink_type != HyperlinkType::Unset {
+      if image.hyperlink != "" && image.hyperlink_type != Unset {
         let link_rel_id = rel_id
         rel_id = rel_id + 1
         drawing_hyperlinks.push({
@@ -3954,17 +3942,12 @@ fn write_with_io(
     let cache_xml = if entry.is_table_slicer {
       let table_id = match entry.table_id {
         Some(v) => v
-        None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="slicer cache table id missing",
-          )
+        None => raise InvalidSheetOperation(msg="slicer cache table id missing")
       }
       let column = match entry.table_column {
         Some(v) => v
         None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="slicer cache table column missing",
-          )
+          raise InvalidSheetOperation(msg="slicer cache table column missing")
       }
       write_slicer_cache_xml_table(
         entry.cache_name,
@@ -3976,24 +3959,17 @@ fn write_with_io(
     } else {
       let pivot_cache_id = match entry.pivot_cache_id {
         Some(v) => v
-        None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="slicer cache pivot id missing",
-          )
+        None => raise InvalidSheetOperation(msg="slicer cache pivot id missing")
       }
       let pivot_sheet_id = match entry.pivot_sheet_id {
         Some(v) => v
         None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="slicer cache pivot sheet id missing",
-          )
+          raise InvalidSheetOperation(msg="slicer cache pivot sheet id missing")
       }
       let pivot_name = match entry.pivot_table_name {
         Some(v) => v
         None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="slicer cache pivot name missing",
-          )
+          raise InvalidSheetOperation(msg="slicer cache pivot name missing")
       }
       write_slicer_cache_xml_pivot(
         entry.cache_name,
@@ -4038,7 +4014,7 @@ fn write_with_io(
         height_emu: emu_per_pixel * 260,
         print_object: true,
         locked: true,
-        positioning: PicturePositioning::OneCell,
+        positioning: OneCell,
         rel_id: 1,
       },
     ]
@@ -4156,11 +4132,11 @@ fn write_with_io(
   match zip_writer {
     Some(writer) =>
       writer(archive) catch {
-        err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+        err => raise UnsupportedFeature(msg=err.to_string())
       }
     None =>
       @zip.write(archive) catch {
-        err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+        err => raise UnsupportedFeature(msg=err.to_string())
       }
   }
 }

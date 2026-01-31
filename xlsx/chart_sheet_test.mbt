@@ -68,7 +68,7 @@ test "chart sheet with options (excelize-like)" {
   sheet.set_cell("B4", "6")
   sheet.set_cell("C4", "7")
   sheet.set_cell("D4", "8")
-  let opts = ChartOptions::new(ChartType::Col3DClustered)
+  let opts = ChartOptions::new(Col3DClustered)
   opts.title = "Fruit 3D Clustered Column Chart"
   opts.series.push(
     ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$2:$D$2", name="Sheet1!$A$2"),
@@ -91,7 +91,7 @@ test "chart sheet with options (excelize-like)" {
   let result : Result[Unit, Error] = try? workbook.set_cell_value(
     "Chart1",
     "A1",
-    CellValue::Bool(true),
+    Bool(true),
   )
   guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected chartsheet not-a-worksheet error")

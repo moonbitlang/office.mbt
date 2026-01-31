@@ -20,7 +20,7 @@ test "slicer roundtrip read" {
       alt_text="Slicer alt",
       print_object=false,
       locked=false,
-      positioning=PicturePositioning::Absolute,
+      positioning=Absolute,
     ),
   )
   workbook.add_slicer("Sheet1", opts)

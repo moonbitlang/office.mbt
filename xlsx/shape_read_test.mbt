@@ -15,7 +15,7 @@ test "shape parsed on read" {
     alt_text="Alt",
     locked=false,
     print_object=false,
-    positioning=PicturePositioning::TwoCell,
+    positioning=TwoCell,
   )
   workbook.add_shape("Sheet1", shape)
   let parsed = read(write(workbook))

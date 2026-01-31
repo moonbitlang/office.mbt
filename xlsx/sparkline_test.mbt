@@ -23,7 +23,7 @@ test "sparkline write" {
 test "sparkline roundtrip" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.add_sparkline("C3", "A1:A2", sparkline_type=SparklineType::Column)
+  sheet.add_sparkline("C3", "A1:A2", sparkline_type=Column)
   let parsed = read(write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value

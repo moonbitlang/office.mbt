@@ -28,7 +28,7 @@ pub(all) struct TableOptions {
 ///|
 pub fn TableOptions::new(range_ref : String) -> TableOptions raise XlsxError {
   if range_ref == "" {
-    raise XlsxError::InvalidTable(msg="table range empty")
+    raise InvalidTable(msg="table range empty")
   }
   ignore(parse_range_ref(normalize_range_ref(range_ref)))
   {
@@ -110,7 +110,7 @@ pub fn Table::new(
   show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
   if name == "" {
-    raise XlsxError::InvalidTable(msg="table name is empty")
+    raise InvalidTable(msg="table name is empty")
   }
   let display = if display_name == "" { name } else { display_name }
   let style = if style_name == "" { "TableStyleMedium9" } else { style_name }
@@ -136,10 +136,10 @@ pub fn Table::new(
     column_names.push(column)
   }
   if column_names.length() == 0 {
-    raise XlsxError::InvalidTable(msg="table columns empty")
+    raise InvalidTable(msg="table columns empty")
   }
   if column_names.length() != expected_cols {
-    raise XlsxError::InvalidTable(msg="table columns do not match range")
+    raise InvalidTable(msg="table columns do not match range")
   }
   {
     id: 0,
@@ -206,7 +206,7 @@ fn parse_table_columns(xml : StringView) -> Array[String] raise XlsxError {
   let columns : Array[String] = []
   let body = match extract_tag_body(xml, "tableColumns") {
     Some(value) => value
-    None => raise XlsxError::InvalidTable(msg="table columns missing")
+    None => raise InvalidTable(msg="table columns missing")
   }
   let mut first = true
   for chunk in body.split("<tableColumn ") {
@@ -220,15 +220,15 @@ fn parse_table_columns(xml : StringView) -> Array[String] raise XlsxError {
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="tableColumn tag not closed")
+          None => raise InvalidXml(msg="tableColumn tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="tableColumn tag invalid")
+        _ => raise InvalidXml(msg="tableColumn tag invalid")
       }
     let name = match attr_value(tag, "name") {
       Some(value) => value
-      None => raise XlsxError::InvalidTable(msg="table column name missing")
+      None => raise InvalidTable(msg="table column name missing")
     }
     columns.push(unescape_xml_text(name))
   }
@@ -297,31 +297,29 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
   let text = xml.to_string()
   let start = match text.find("<table ") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="table tag missing")
+    None => raise InvalidXml(msg="table tag missing")
   }
   let rest = text[start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="table tag invalid")
+      _ => raise InvalidXml(msg="table tag invalid")
     }
   let end = match rest.find(">") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="table tag not closed")
+    None => raise InvalidXml(msg="table tag not closed")
   }
-  let tag = rest[:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="table tag invalid")
-    }
+  let tag = rest[:end] catch { _ => raise InvalidXml(msg="table tag invalid") }
   let id = match attr_value(tag, "id") {
     Some(value) =>
       @strconv.parse_int(value, base=10) catch {
-        _ => raise XlsxError::InvalidXml(msg="table id invalid")
+        _ => raise InvalidXml(msg="table id invalid")
       }
-    None => raise XlsxError::InvalidXml(msg="table id missing")
+    None => raise InvalidXml(msg="table id missing")
   }
   let name = match attr_value(tag, "name") {
     Some(value) => unescape_xml_text(value)
     None =>
       match attr_value(tag, "displayName") {
         Some(value) => unescape_xml_text(value)
-        None => raise XlsxError::InvalidXml(msg="table name missing")
+        None => raise InvalidXml(msg="table name missing")
       }
   }
   let display_name = match attr_value(tag, "displayName") {
@@ -330,7 +328,7 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
   }
   let ref_value = match attr_value(tag, "ref") {
     Some(value) => unescape_xml_text(value)
-    None => raise XlsxError::InvalidXml(msg="table ref missing")
+    None => raise InvalidXml(msg="table ref missing")
   }
   let show_header_row = match attr_value(tag, "headerRowCount") {
     Some(value) => value.to_string() != "0"
@@ -340,7 +338,7 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
   let (_min_row, min_col, _max_row, max_col) = parse_range_ref(ref_value)
   let expected_cols = max_col - min_col + 1
   if columns.length() != expected_cols {
-    raise XlsxError::InvalidTable(msg="table columns do not match range")
+    raise InvalidTable(msg="table columns do not match range")
   }
   let (
     style_name,

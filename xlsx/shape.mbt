@@ -67,27 +67,25 @@ pub fn Shape::new(
   alt_text? : String = "",
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Shape raise XlsxError {
   if reference == "" {
-    raise XlsxError::InvalidSheetOperation(msg="shape reference empty")
+    raise InvalidSheetOperation(msg="shape reference empty")
   }
   if shape_type == "" {
-    raise XlsxError::InvalidSheetOperation(msg="shape type empty")
+    raise InvalidSheetOperation(msg="shape type empty")
   }
   if width <= 0 || height <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="shape size must be > 0")
+    raise InvalidSheetOperation(msg="shape size must be > 0")
   }
   if scale_x <= 0.0 || scale_y <= 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="shape scale must be > 0")
+    raise InvalidSheetOperation(msg="shape scale must be > 0")
   }
   if fill_transparency < 0 || fill_transparency > 100 {
-    raise XlsxError::InvalidSheetOperation(
-      msg="shape fill transparency out of range",
-    )
+    raise InvalidSheetOperation(msg="shape fill transparency out of range")
   }
   if line_width <= 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="shape line width must be > 0")
+    raise InvalidSheetOperation(msg="shape line width must be > 0")
   }
   ignore(cell_ref_to_rc(reference))
   {

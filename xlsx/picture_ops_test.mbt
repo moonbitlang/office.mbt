@@ -205,7 +205,7 @@ test "picture from bytes invalid extension" {
   }
   inspect(
     result,
-    content="Err(UnsupportedFeature(msg=\"unsupported picture extension\"))",
+    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported picture extension\"))",
   )
 }
 
@@ -222,7 +222,7 @@ test "picture from bytes extension requires dot" {
   }
   inspect(
     result,
-    content="Err(UnsupportedFeature(msg=\"unsupported picture extension\"))",
+    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported picture extension\"))",
   )
 }
 
@@ -261,7 +261,7 @@ test "picture options write drawing and rels" {
     scale_x=0.5,
     scale_y=2.0,
     hyperlink="https://example.com",
-    hyperlink_type=HyperlinkType::External,
+    hyperlink_type=External,
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
@@ -301,13 +301,13 @@ test "picture options via GraphicOptions" {
     scale_x=0.5,
     scale_y=2.0,
     hyperlink="https://example.com",
-    hyperlink_type=HyperlinkType::External,
+    hyperlink_type=External,
     name="Logo",
     alt_text="Excel Logo",
     lock_aspect_ratio=true,
     print_object=false,
     locked=false,
-    positioning=PicturePositioning::Absolute,
+    positioning=Absolute,
   )
   workbook.add_picture_from_bytes_with_options(
     "Sheet1", "C3", img, ".png", opts,
@@ -412,7 +412,7 @@ test "picture positioning twoCell" {
     "A1",
     [9, 9],
     ".png",
-    positioning=PicturePositioning::TwoCell,
+    positioning=TwoCell,
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
@@ -433,7 +433,7 @@ test "picture positioning absolute" {
     "A1",
     [9, 9],
     ".png",
-    positioning=PicturePositioning::Absolute,
+    positioning=Absolute,
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
@@ -501,7 +501,7 @@ test "picture options validation" {
   }
   inspect(
     result,
-    content="Err(InvalidSheetOperation(msg=\"picture offset must be >= 0\"))",
+    content="Err(XlsxError::InvalidSheetOperation(msg=\"picture offset must be >= 0\"))",
   )
   let result2 = try
     workbook.add_picture_from_bytes(

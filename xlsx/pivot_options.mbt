@@ -14,7 +14,7 @@ pub(all) struct PivotTableField {
 ///|
 pub fn PivotTableField::new(data : String) -> PivotTableField raise XlsxError {
   if data == "" {
-    raise XlsxError::InvalidPivotTable(msg="pivot field data empty")
+    raise InvalidPivotTable(msg="pivot field data empty")
   }
   {
     data,
@@ -63,10 +63,10 @@ pub fn PivotTableOptions::new(
   pivot_table_range : String,
 ) -> PivotTableOptions raise XlsxError {
   if data_range == "" {
-    raise XlsxError::InvalidPivotTable(msg="pivot data range empty")
+    raise InvalidPivotTable(msg="pivot data range empty")
   }
   if pivot_table_range == "" {
-    raise XlsxError::InvalidPivotTable(msg="pivot table range empty")
+    raise InvalidPivotTable(msg="pivot table range empty")
   }
   {
     data_range,
@@ -102,17 +102,17 @@ fn split_sheet_range(value : StringView) -> (String, String) raise XlsxError {
   match text.find("!") {
     Some(pos) => {
       if pos <= 0 || pos + 1 >= text.length() {
-        raise XlsxError::InvalidPivotTable(msg="range must be Sheet!A1:B2")
+        raise InvalidPivotTable(msg="range must be Sheet!A1:B2")
       }
       let sheet = text[:pos] catch {
-          _ => raise XlsxError::InvalidPivotTable(msg="range sheet invalid")
+          _ => raise InvalidPivotTable(msg="range sheet invalid")
         }
       let range_ref = text[pos + 1:] catch {
-          _ => raise XlsxError::InvalidPivotTable(msg="range ref invalid")
+          _ => raise InvalidPivotTable(msg="range ref invalid")
         }
       (sheet.to_string(), range_ref.to_string())
     }
-    None => raise XlsxError::InvalidPivotTable(msg="range must be Sheet!A1:B2")
+    None => raise InvalidPivotTable(msg="range must be Sheet!A1:B2")
   }
 }
 

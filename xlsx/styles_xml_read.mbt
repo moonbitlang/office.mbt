@@ -51,8 +51,7 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
     None => return None
   }
   let prefix = xml_str[:style_end] catch {
-      _ =>
-        raise XlsxError::InvalidXml(msg="styles.xml styleSheet slice invalid")
+      _ => raise InvalidXml(msg="styles.xml styleSheet slice invalid")
     }
   let mut search_start = 0
   for tag in ["colors", "tableStyles", "dxfs", "cellStyles", "cellXfs"] {
@@ -62,7 +61,7 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
     }
   }
   let tail = prefix[search_start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="styles.xml extLst tail invalid")
+      _ => raise InvalidXml(msg="styles.xml extLst tail invalid")
     }
   let ext_rel = match tail.find("<extLst") {
     Some(pos) => pos
@@ -70,28 +69,27 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
   }
   let ext_start = search_start + ext_rel
   let ext_rest = prefix[ext_start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="styles.xml extLst slice invalid")
+      _ => raise InvalidXml(msg="styles.xml extLst slice invalid")
     }
   let open_end_rel = match ext_rest.find(">") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="styles.xml extLst tag not closed")
+    None => raise InvalidXml(msg="styles.xml extLst tag not closed")
   }
   if open_end_rel > 0 && ext_rest[open_end_rel - 1] == '/' {
     return Some("")
   }
   let body_start = ext_start + open_end_rel + 1
   let body_rest = prefix[body_start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="styles.xml extLst body invalid")
+      _ => raise InvalidXml(msg="styles.xml extLst body invalid")
     }
   let close_rel = match body_rest.find("</extLst>") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="styles.xml extLst close missing")
+    None => raise InvalidXml(msg="styles.xml extLst close missing")
   }
   let body_end = body_start + close_rel
   Some(
     (prefix[body_start:body_end] catch {
-      _ =>
-        raise XlsxError::InvalidXml(msg="styles.xml extLst body slice invalid")
+      _ => raise InvalidXml(msg="styles.xml extLst body slice invalid")
     }).to_string(),
   )
 }

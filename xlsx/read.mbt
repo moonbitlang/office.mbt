@@ -64,7 +64,7 @@ fn decode_utf8(
         match transcoder {
           Some(value) => return value(encoding, bytes)
           None =>
-            raise XlsxError::InvalidXml(
+            raise InvalidXml(
               msg="xml encoding \{encoding} requires charset transcoder",
             )
         }
@@ -72,7 +72,7 @@ fn decode_utf8(
     None => ()
   }
   @encoding/utf8.decode(bytes) catch {
-    _ => raise XlsxError::InvalidXml(msg="invalid utf8")
+    _ => raise InvalidXml(msg="invalid utf8")
   }
 }
 
@@ -184,7 +184,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
         Some(value) =>
           font.size = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="font sz invalid")
+              _ => raise InvalidXml(msg="font sz invalid")
             },
           )
         None => ()
@@ -196,7 +196,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "val") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="font charset invalid")
+            _ => raise InvalidXml(msg="font charset invalid")
           } noraise {
             val => font.charset = Some(val)
           }
@@ -217,7 +217,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "val") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="font family invalid")
+            _ => raise InvalidXml(msg="font family invalid")
           } noraise {
             val => if val != 2 { font.family_number = Some(val) }
           }
@@ -258,7 +258,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "theme") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="font color theme invalid")
+            _ => raise InvalidXml(msg="font color theme invalid")
           } noraise {
             val => font.color_theme = Some(val)
           }
@@ -267,7 +267,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "indexed") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="font color indexed invalid")
+            _ => raise InvalidXml(msg="font color indexed invalid")
           } noraise {
             val => font.color_indexed = Some(val)
           }
@@ -276,7 +276,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "tint") {
         Some(value) =>
           try @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="font color tint invalid")
+            _ => raise InvalidXml(msg="font color tint invalid")
           } noraise {
             val => font.color_tint = Some(val)
           }
@@ -350,7 +350,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       let bottom = match attr_value(tag, "bottom") {
         Some(value) =>
           try @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="gradientFill bottom invalid")
+            _ => raise InvalidXml(msg="gradientFill bottom invalid")
           } noraise {
             v => v
           }
@@ -359,7 +359,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       let degree = match attr_value(tag, "degree") {
         Some(value) =>
           try @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="gradientFill degree invalid")
+            _ => raise InvalidXml(msg="gradientFill degree invalid")
           } noraise {
             v => v
           }
@@ -368,7 +368,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       let left = match attr_value(tag, "left") {
         Some(value) =>
           try @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="gradientFill left invalid")
+            _ => raise InvalidXml(msg="gradientFill left invalid")
           } noraise {
             v => v
           }
@@ -377,7 +377,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       let right = match attr_value(tag, "right") {
         Some(value) =>
           try @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="gradientFill right invalid")
+            _ => raise InvalidXml(msg="gradientFill right invalid")
           } noraise {
             v => v
           }
@@ -386,7 +386,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       let top = match attr_value(tag, "top") {
         Some(value) =>
           try @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="gradientFill top invalid")
+            _ => raise InvalidXml(msg="gradientFill top invalid")
           } noraise {
             v => v
           }
@@ -417,9 +417,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
               Some(value) =>
                 try @strconv.parse_double(value) catch {
                   _ =>
-                    raise XlsxError::InvalidXml(
-                      msg="gradientFill stop position invalid",
-                    )
+                    raise InvalidXml(msg="gradientFill stop position invalid")
                 } noraise {
                   v => stop_positions.push(v)
                 }
@@ -505,8 +503,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           match attr_value(color_tag, "theme") {
             Some(value) =>
               try @strconv.parse_int(value, base=10) catch {
-                _ =>
-                  raise XlsxError::InvalidXml(msg="fill fgColor theme invalid")
+                _ => raise InvalidXml(msg="fill fgColor theme invalid")
               } noraise {
                 val => fill.fg_theme = Some(val)
               }
@@ -515,10 +512,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           match attr_value(color_tag, "indexed") {
             Some(value) =>
               try @strconv.parse_int(value, base=10) catch {
-                _ =>
-                  raise XlsxError::InvalidXml(
-                    msg="fill fgColor indexed invalid",
-                  )
+                _ => raise InvalidXml(msg="fill fgColor indexed invalid")
               } noraise {
                 val => fill.fg_indexed = Some(val)
               }
@@ -527,8 +521,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           match attr_value(color_tag, "tint") {
             Some(value) =>
               try @strconv.parse_double(value) catch {
-                _ =>
-                  raise XlsxError::InvalidXml(msg="fill fgColor tint invalid")
+                _ => raise InvalidXml(msg="fill fgColor tint invalid")
               } noraise {
                 val => fill.fg_tint = Some(val)
               }
@@ -554,8 +547,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           match attr_value(color_tag, "theme") {
             Some(value) =>
               try @strconv.parse_int(value, base=10) catch {
-                _ =>
-                  raise XlsxError::InvalidXml(msg="fill bgColor theme invalid")
+                _ => raise InvalidXml(msg="fill bgColor theme invalid")
               } noraise {
                 val => fill.bg_theme = Some(val)
               }
@@ -564,10 +556,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           match attr_value(color_tag, "indexed") {
             Some(value) =>
               try @strconv.parse_int(value, base=10) catch {
-                _ =>
-                  raise XlsxError::InvalidXml(
-                    msg="fill bgColor indexed invalid",
-                  )
+                _ => raise InvalidXml(msg="fill bgColor indexed invalid")
               } noraise {
                 val => fill.bg_indexed = Some(val)
               }
@@ -576,8 +565,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           match attr_value(color_tag, "tint") {
             Some(value) =>
               try @strconv.parse_double(value) catch {
-                _ =>
-                  raise XlsxError::InvalidXml(msg="fill bgColor tint invalid")
+                _ => raise InvalidXml(msg="fill bgColor tint invalid")
               } noraise {
                 val => fill.bg_tint = Some(val)
               }
@@ -873,7 +861,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
     Some(value) =>
       alignment.text_rotation = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="textRotation invalid")
+          _ => raise InvalidXml(msg="textRotation invalid")
         },
       )
     None => ()
@@ -882,7 +870,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
     Some(value) =>
       alignment.indent = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="indent invalid")
+          _ => raise InvalidXml(msg="indent invalid")
         },
       )
     None => ()
@@ -899,7 +887,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
     Some(value) =>
       alignment.reading_order = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="readingOrder invalid")
+          _ => raise InvalidXml(msg="readingOrder invalid")
         },
       )
     None => ()
@@ -908,7 +896,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
     Some(value) =>
       alignment.relative_indent = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="relativeIndent invalid")
+          _ => raise InvalidXml(msg="relativeIndent invalid")
         },
       )
     None => ()
@@ -961,14 +949,14 @@ fn parse_defined_names(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="definedName tag not closed")
+      None => raise InvalidXml(msg="definedName tag not closed")
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="definedName tag invalid")
+        _ => raise InvalidXml(msg="definedName tag invalid")
       }
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="definedName name missing")
+      None => raise InvalidXml(msg="definedName name missing")
     }
     let comment = match attr_value(tag, "comment") {
       Some(value) => unescape_xml_text(value)
@@ -978,30 +966,27 @@ fn parse_defined_names(
       Some(value) =>
         Some(
           @strconv.parse_int(value, base=10) catch {
-            _ =>
-              raise XlsxError::InvalidXml(
-                msg="definedName localSheetId invalid",
-              )
+            _ => raise InvalidXml(msg="definedName localSheetId invalid")
           },
         )
       None => None
     }
     let rest = text[end + 1:] catch {
-        _ => raise XlsxError::InvalidXml(msg="definedName body invalid")
+        _ => raise InvalidXml(msg="definedName body invalid")
       }
     let data_end = match rest.find("</definedName>") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="definedName close missing")
+      None => raise InvalidXml(msg="definedName close missing")
     }
     let data = rest[:data_end] catch {
-        _ => raise XlsxError::InvalidXml(msg="definedName data invalid")
+        _ => raise InvalidXml(msg="definedName data invalid")
       }
     let scope = match local_id {
       Some(id) =>
         if id >= 0 && id < sheet_names.length() {
           sheet_names[id]
         } else {
-          raise XlsxError::InvalidXml(msg="definedName localSheetId missing")
+          raise InvalidXml(msg="definedName localSheetId missing")
         }
       None => "Workbook"
     }
@@ -1029,15 +1014,15 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="mergeCell tag not closed")
+          None => raise InvalidXml(msg="mergeCell tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="mergeCell tag invalid")
+        _ => raise InvalidXml(msg="mergeCell tag invalid")
       }
     let ref_value = match attr_value(tag, "ref") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="mergeCell ref missing")
+      None => raise InvalidXml(msg="mergeCell ref missing")
     }
     let normalized = if ref_value.contains(":") {
       normalize_range_ref(ref_value)
@@ -1070,18 +1055,17 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end] catch {
-            _ => raise XlsxError::InvalidXml(msg="dataValidation tag invalid")
+            _ => raise InvalidXml(msg="dataValidation tag invalid")
           }
         validations.push("<dataValidation \{slice.to_string()}")
       }
       None => {
         let end = match text.find("/>") {
           Some(pos) => pos + 2
-          None =>
-            raise XlsxError::InvalidXml(msg="dataValidation tag not closed")
+          None => raise InvalidXml(msg="dataValidation tag not closed")
         }
         let slice = text[:end] catch {
-            _ => raise XlsxError::InvalidXml(msg="dataValidation tag invalid")
+            _ => raise InvalidXml(msg="dataValidation tag invalid")
           }
         validations.push("<dataValidation \{slice.to_string()}")
       }
@@ -1109,21 +1093,18 @@ fn parse_data_validations_x14(
     let close_tag = "</x14:dataValidation>"
     let end = match text.find(close_tag) {
       Some(pos) => pos + close_tag.length()
-      None =>
-        raise XlsxError::InvalidXml(msg="x14:dataValidation tag not closed")
+      None => raise InvalidXml(msg="x14:dataValidation tag not closed")
     }
     let slice = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="x14:dataValidation tag invalid")
+        _ => raise InvalidXml(msg="x14:dataValidation tag invalid")
       }
     let full = "<x14:dataValidation \{slice.to_string()}"
     let open_end = match full.find(">") {
       Some(pos) => pos
-      None =>
-        raise XlsxError::InvalidXml(msg="x14:dataValidation open tag missing")
+      None => raise InvalidXml(msg="x14:dataValidation open tag missing")
     }
     let attrs = full["<x14:dataValidation ".length():open_end] catch {
-        _ =>
-          raise XlsxError::InvalidXml(msg="x14:dataValidation open tag invalid")
+        _ => raise InvalidXml(msg="x14:dataValidation open tag invalid")
       }
     let allow_blank = match attr_value(attrs, "allowBlank") {
       Some(value) => value
@@ -1135,8 +1116,7 @@ fn parse_data_validations_x14(
     }
     let sqref = match extract_tag_body_from(full, "xm:sqref") {
       Some(value) => unescape_xml_text(value)
-      None =>
-        raise XlsxError::InvalidXml(msg="x14:dataValidation sqref missing")
+      None => raise InvalidXml(msg="x14:dataValidation sqref missing")
     }
     let mut formula1 = ""
     match extract_tag_body_from(full, "x14:formula1") {
@@ -1207,26 +1187,17 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end] catch {
-            _ =>
-              raise XlsxError::InvalidXml(
-                msg="conditionalFormatting tag invalid",
-              )
+            _ => raise InvalidXml(msg="conditionalFormatting tag invalid")
           }
         formats.push("<conditionalFormatting\{slice.to_string()}")
       }
       None => {
         let end = match text.find("/>") {
           Some(pos) => pos + 2
-          None =>
-            raise XlsxError::InvalidXml(
-              msg="conditionalFormatting tag not closed",
-            )
+          None => raise InvalidXml(msg="conditionalFormatting tag not closed")
         }
         let slice = text[:end] catch {
-            _ =>
-              raise XlsxError::InvalidXml(
-                msg="conditionalFormatting tag invalid",
-              )
+            _ => raise InvalidXml(msg="conditionalFormatting tag invalid")
           }
         formats.push("<conditionalFormatting\{slice.to_string()}")
       }
@@ -1294,27 +1265,27 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end] catch {
-            _ => raise XlsxError::InvalidXml(msg="x14:cfvo tag invalid")
+            _ => raise InvalidXml(msg="x14:cfvo tag invalid")
           }
         "<x14:cfvo\{slice.to_string()}"
       }
       None => {
         let end = match text.find("/>") {
           Some(pos) => pos + 2
-          None => raise XlsxError::InvalidXml(msg="x14:cfvo tag not closed")
+          None => raise InvalidXml(msg="x14:cfvo tag not closed")
         }
         let slice = text[:end] catch {
-            _ => raise XlsxError::InvalidXml(msg="x14:cfvo tag invalid")
+            _ => raise InvalidXml(msg="x14:cfvo tag invalid")
           }
         "<x14:cfvo\{slice.to_string()}"
       }
     }
     let open_end = match full.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="x14:cfvo open tag missing")
+      None => raise InvalidXml(msg="x14:cfvo open tag missing")
     }
     let attrs = full["<x14:cfvo".length():open_end] catch {
-        _ => raise XlsxError::InvalidXml(msg="x14:cfvo open tag invalid")
+        _ => raise InvalidXml(msg="x14:cfvo open tag invalid")
       }
     let typ = match attr_value(attrs, "type") {
       Some(value) => value.to_string()
@@ -1365,7 +1336,7 @@ fn parse_x14_conditional_formatting_blocks(
   let xml_str = xml.to_string()
   if xml_str.contains("<x14:conditionalFormattings") &&
     !xml_str.contains("</x14:conditionalFormattings>") {
-    raise XlsxError::InvalidXml(msg="x14:conditionalFormattings tag not closed")
+    raise InvalidXml(msg="x14:conditionalFormattings tag not closed")
   }
   let mut open_pos : Int? = None
   let mut open_search_from = 0
@@ -1373,9 +1344,7 @@ fn parse_x14_conditional_formatting_blocks(
   while open_search_from < xml_str.length() {
     let rest = xml_str[open_search_from:] catch {
         _ =>
-          raise XlsxError::InvalidXml(
-            msg="x14:conditionalFormatting search slice invalid",
-          )
+          raise InvalidXml(msg="x14:conditionalFormatting search slice invalid")
       }
     let rel_start = match rest.find(open_needle) {
       Some(pos) => pos
@@ -1396,14 +1365,10 @@ fn parse_x14_conditional_formatting_blocks(
       match open_pos {
         Some(pos) =>
           if pos > close_pos {
-            raise XlsxError::InvalidXml(
-              msg="x14:conditionalFormatting close before open",
-            )
+            raise InvalidXml(msg="x14:conditionalFormatting close before open")
           }
         None =>
-          raise XlsxError::InvalidXml(
-            msg="x14:conditionalFormatting close without open",
-          )
+          raise InvalidXml(msg="x14:conditionalFormatting close without open")
       }
     None => ()
   }
@@ -1416,9 +1381,7 @@ fn parse_x14_conditional_formatting_blocks(
   while search_from < xml_str.length() {
     let rest = xml_str[search_from:] catch {
         _ =>
-          raise XlsxError::InvalidXml(
-            msg="x14:conditionalFormatting search slice invalid",
-          )
+          raise InvalidXml(msg="x14:conditionalFormatting search slice invalid")
       }
     let rel_start = match rest.find(needle) {
       Some(pos) => pos
@@ -1432,20 +1395,14 @@ fn parse_x14_conditional_formatting_blocks(
       continue
     }
     let after_start = xml_str[start:] catch {
-        _ =>
-          raise XlsxError::InvalidXml(
-            msg="x14:conditionalFormatting slice invalid",
-          )
+        _ => raise InvalidXml(msg="x14:conditionalFormatting slice invalid")
       }
     let after_text = after_start.to_string()
     let (full, consumed) = match after_text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = after_text[:end] catch {
-            _ =>
-              raise XlsxError::InvalidXml(
-                msg="x14:conditionalFormatting tag invalid",
-              )
+            _ => raise InvalidXml(msg="x14:conditionalFormatting tag invalid")
           }
         (slice.to_string(), end)
       }
@@ -1453,15 +1410,10 @@ fn parse_x14_conditional_formatting_blocks(
         let end = match after_text.find("/>") {
           Some(pos) => pos + 2
           None =>
-            raise XlsxError::InvalidXml(
-              msg="x14:conditionalFormatting tag not closed",
-            )
+            raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
         }
         let slice = after_text[:end] catch {
-            _ =>
-              raise XlsxError::InvalidXml(
-                msg="x14:conditionalFormatting tag invalid",
-              )
+            _ => raise InvalidXml(msg="x14:conditionalFormatting tag invalid")
           }
         (slice.to_string(), end)
       }
@@ -1505,17 +1457,17 @@ fn parse_x14_data_bars(
         Some(pos) => {
           let end = pos + rule_close.length()
           let slice = rule_text[:end] catch {
-              _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+              _ => raise InvalidXml(msg="x14:cfRule tag invalid")
             }
           "<x14:cfRule\{slice.to_string()}"
         }
         None => {
           let end = match rule_text.find("/>") {
             Some(pos) => pos + 2
-            None => raise XlsxError::InvalidXml(msg="x14:cfRule tag not closed")
+            None => raise InvalidXml(msg="x14:cfRule tag not closed")
           }
           let slice = rule_text[:end] catch {
-              _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+              _ => raise InvalidXml(msg="x14:cfRule tag invalid")
             }
           "<x14:cfRule\{slice.to_string()}"
         }
@@ -1525,7 +1477,7 @@ fn parse_x14_data_bars(
         None => continue
       }
       let attrs = rule_full["<x14:cfRule".length():open_end] catch {
-          _ => raise XlsxError::InvalidXml(msg="x14:cfRule open tag invalid")
+          _ => raise InvalidXml(msg="x14:cfRule open tag invalid")
         }
       let typ = match attr_value(attrs, "type") {
         Some(value) => value.to_string()
@@ -1584,9 +1536,7 @@ fn parse_conditional_formats_x14(
         match extract_tag_body_from(full, "sqref") {
           Some(value) => unescape_xml_text(value)
           None =>
-            raise XlsxError::InvalidXml(
-              msg="x14:conditionalFormatting sqref missing",
-            )
+            raise InvalidXml(msg="x14:conditionalFormatting sqref missing")
         }
     }
     let rules : Array[String] = []
@@ -1603,18 +1553,17 @@ fn parse_conditional_formats_x14(
           Some(pos) => {
             let end = pos + rule_close.length()
             let slice = rule_text[:end] catch {
-                _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+                _ => raise InvalidXml(msg="x14:cfRule tag invalid")
               }
             "<x14:cfRule\{slice.to_string()}"
           }
           None => {
             let end = match rule_text.find("/>") {
               Some(pos) => pos + 2
-              None =>
-                raise XlsxError::InvalidXml(msg="x14:cfRule tag not closed")
+              None => raise InvalidXml(msg="x14:cfRule tag not closed")
             }
             let slice = rule_text[:end] catch {
-                _ => raise XlsxError::InvalidXml(msg="x14:cfRule tag invalid")
+                _ => raise InvalidXml(msg="x14:cfRule tag invalid")
               }
             "<x14:cfRule\{slice.to_string()}"
           }
@@ -1624,7 +1573,7 @@ fn parse_conditional_formats_x14(
           None => continue
         }
         let attrs = rule_full["<x14:cfRule".length():open_end] catch {
-            _ => raise XlsxError::InvalidXml(msg="x14:cfRule open tag invalid")
+            _ => raise InvalidXml(msg="x14:cfRule open tag invalid")
           }
         let typ = match attr_value(attrs, "type") {
           Some(value) => value.to_string()
@@ -1636,8 +1585,7 @@ fn parse_conditional_formats_x14(
         let mut priority = match attr_value(attrs, "priority") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ =>
-                raise XlsxError::InvalidXml(msg="x14:cfRule priority invalid")
+              _ => raise InvalidXml(msg="x14:cfRule priority invalid")
             }
           None => 1
         }
@@ -1695,18 +1643,18 @@ fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
     None => None
     Some(start) => {
       let rest = xml_str[start + marker.length():] catch {
-          _ => raise XlsxError::InvalidXml(msg="dimension slice invalid")
+          _ => raise InvalidXml(msg="dimension slice invalid")
         }
       let end = match rest.find("/>") {
         Some(pos) => pos
         None =>
           match rest.find(">") {
             Some(pos) => pos
-            None => raise XlsxError::InvalidXml(msg="dimension tag not closed")
+            None => raise InvalidXml(msg="dimension tag not closed")
           }
       }
       let tag = rest[:end] catch {
-          _ => raise XlsxError::InvalidXml(msg="dimension tag invalid")
+          _ => raise InvalidXml(msg="dimension tag invalid")
         }
       match attr_value(tag, "ref") {
         Some(value) => Some(unescape_xml_text(value))
@@ -1730,12 +1678,10 @@ fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="pane tag not closed")
+          None => raise InvalidXml(msg="pane tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="pane tag invalid")
-      }
+    let tag = text[:end] catch { _ => raise InvalidXml(msg="pane tag invalid") }
     let pane = SheetPane::new()
     match attr_value(tag, "activePane") {
       Some(value) => pane.active_pane = unescape_xml_text(value)
@@ -1752,14 +1698,14 @@ fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
     match attr_value(tag, "xSplit") {
       Some(value) =>
         pane.x_split = @strconv.parse_double(value) catch {
-          _ => raise XlsxError::InvalidXml(msg="pane xSplit invalid")
+          _ => raise InvalidXml(msg="pane xSplit invalid")
         }
       None => ()
     }
     match attr_value(tag, "ySplit") {
       Some(value) =>
         pane.y_split = @strconv.parse_double(value) catch {
-          _ => raise XlsxError::InvalidXml(msg="pane ySplit invalid")
+          _ => raise InvalidXml(msg="pane ySplit invalid")
         }
       None => ()
     }
@@ -1785,11 +1731,11 @@ fn parse_sheet_view_selections(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="selection tag not closed")
+          None => raise InvalidXml(msg="selection tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="selection tag invalid")
+        _ => raise InvalidXml(msg="selection tag invalid")
       }
     let selection = { sqref: "", active_cell: "", pane: "" }
     match attr_value(tag, "sqref") {
@@ -1825,10 +1771,10 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="sheetView tag not closed")
+      None => raise InvalidXml(msg="sheetView tag not closed")
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="sheetView tag invalid")
+        _ => raise InvalidXml(msg="sheetView tag invalid")
       }
     let view = SheetView::new()
     match attr_value(tag, "defaultGridColor") {
@@ -1871,7 +1817,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
       Some(value) =>
         view.zoom_scale = Some(
           @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="sheetView zoomScale invalid")
+            _ => raise InvalidXml(msg="sheetView zoomScale invalid")
           },
         )
       None => ()
@@ -1883,8 +1829,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
     match attr_value(tag, "workbookViewId") {
       Some(value) =>
         view.workbook_view_id = @strconv.parse_int(value, base=10) catch {
-          _ =>
-            raise XlsxError::InvalidXml(msg="sheetView workbookViewId invalid")
+          _ => raise InvalidXml(msg="sheetView workbookViewId invalid")
         }
       None => ()
     }
@@ -1892,12 +1837,12 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
     if !self_closing {
       let close = match text.find("</sheetView>") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidXml(msg="sheetView close missing")
+        None => raise InvalidXml(msg="sheetView close missing")
       }
       let body_start = end + 1
       if close > body_start {
         let inner = text[body_start:close] catch {
-            _ => raise XlsxError::InvalidXml(msg="sheetView body invalid")
+            _ => raise InvalidXml(msg="sheetView body invalid")
           }
         view.pane = parse_sheet_view_pane(inner)
         let selections = parse_sheet_view_selections(inner)
@@ -1945,7 +1890,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
         Some(value) =>
           opts.tab_color_indexed = Some(
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="tabColor indexed invalid")
+              _ => raise InvalidXml(msg="tabColor indexed invalid")
             },
           )
         None => ()
@@ -1958,7 +1903,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
         Some(value) =>
           opts.tab_color_theme = Some(
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="tabColor theme invalid")
+              _ => raise InvalidXml(msg="tabColor theme invalid")
             },
           )
         None => ()
@@ -1967,7 +1912,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
         Some(value) =>
           opts.tab_color_tint = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="tabColor tint invalid")
+              _ => raise InvalidXml(msg="tabColor tint invalid")
             },
           )
         None => ()
@@ -2022,10 +1967,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
         Some(value) =>
           opts.base_col_width = Some(
             @strconv.parse_int(value, base=10) catch {
-              _ =>
-                raise XlsxError::InvalidXml(
-                  msg="sheetFormatPr baseColWidth invalid",
-                )
+              _ => raise InvalidXml(msg="sheetFormatPr baseColWidth invalid")
             },
           )
         None => ()
@@ -2034,10 +1976,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
         Some(value) =>
           opts.default_col_width = Some(
             @strconv.parse_double(value) catch {
-              _ =>
-                raise XlsxError::InvalidXml(
-                  msg="sheetFormatPr defaultColWidth invalid",
-                )
+              _ => raise InvalidXml(msg="sheetFormatPr defaultColWidth invalid")
             },
           )
         None => ()
@@ -2047,9 +1986,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
           opts.default_row_height = Some(
             @strconv.parse_double(value) catch {
               _ =>
-                raise XlsxError::InvalidXml(
-                  msg="sheetFormatPr defaultRowHeight invalid",
-                )
+                raise InvalidXml(msg="sheetFormatPr defaultRowHeight invalid")
             },
           )
         None => ()
@@ -2092,7 +2029,7 @@ fn parse_page_margins(
         Some(value) =>
           opts.left = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="pageMargins left invalid")
+              _ => raise InvalidXml(msg="pageMargins left invalid")
             },
           )
         None => ()
@@ -2101,7 +2038,7 @@ fn parse_page_margins(
         Some(value) =>
           opts.right = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="pageMargins right invalid")
+              _ => raise InvalidXml(msg="pageMargins right invalid")
             },
           )
         None => ()
@@ -2110,7 +2047,7 @@ fn parse_page_margins(
         Some(value) =>
           opts.top = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="pageMargins top invalid")
+              _ => raise InvalidXml(msg="pageMargins top invalid")
             },
           )
         None => ()
@@ -2119,7 +2056,7 @@ fn parse_page_margins(
         Some(value) =>
           opts.bottom = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="pageMargins bottom invalid")
+              _ => raise InvalidXml(msg="pageMargins bottom invalid")
             },
           )
         None => ()
@@ -2128,7 +2065,7 @@ fn parse_page_margins(
         Some(value) =>
           opts.header = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="pageMargins header invalid")
+              _ => raise InvalidXml(msg="pageMargins header invalid")
             },
           )
         None => ()
@@ -2137,7 +2074,7 @@ fn parse_page_margins(
         Some(value) =>
           opts.footer = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="pageMargins footer invalid")
+              _ => raise InvalidXml(msg="pageMargins footer invalid")
             },
           )
         None => ()
@@ -2178,7 +2115,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
     Some(value) =>
       opts.size = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="pageSetup paperSize invalid")
+          _ => raise InvalidXml(msg="pageSetup paperSize invalid")
         },
       )
     None => ()
@@ -2191,8 +2128,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
     Some(value) =>
       opts.first_page_number = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ =>
-            raise XlsxError::InvalidXml(msg="pageSetup firstPageNumber invalid")
+          _ => raise InvalidXml(msg="pageSetup firstPageNumber invalid")
         },
       )
     None => ()
@@ -2201,7 +2137,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
     Some(value) =>
       opts.adjust_to = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="pageSetup scale invalid")
+          _ => raise InvalidXml(msg="pageSetup scale invalid")
         },
       )
     None => ()
@@ -2210,7 +2146,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
     Some(value) =>
       opts.fit_to_height = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="pageSetup fitToHeight invalid")
+          _ => raise InvalidXml(msg="pageSetup fitToHeight invalid")
         },
       )
     None => ()
@@ -2219,7 +2155,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
     Some(value) =>
       opts.fit_to_width = Some(
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="pageSetup fitToWidth invalid")
+          _ => raise InvalidXml(msg="pageSetup fitToWidth invalid")
         },
       )
     None => ()
@@ -2301,8 +2237,7 @@ fn parse_sheet_protection(xml : StringView) -> SheetProtection? raise XlsxError 
   match attr_value(tag, "spinCount") {
     Some(value) =>
       spin_count = @strconv.parse_int(value, base=10) catch {
-        _ =>
-          raise XlsxError::InvalidXml(msg="sheetProtection spinCount invalid")
+        _ => raise InvalidXml(msg="sheetProtection spinCount invalid")
       }
     None => ()
   }
@@ -2413,30 +2348,28 @@ fn parse_page_breaks(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="brk tag not closed")
+          None => raise InvalidXml(msg="brk tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="brk tag invalid")
-      }
+    let tag = text[:end] catch { _ => raise InvalidXml(msg="brk tag invalid") }
     let id = match attr_value(tag, "id") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="brk id invalid")
+          _ => raise InvalidXml(msg="brk id invalid")
         }
-      None => raise XlsxError::InvalidXml(msg="brk id missing")
+      None => raise InvalidXml(msg="brk id missing")
     }
     let min = match attr_value(tag, "min") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="brk min invalid")
+          _ => raise InvalidXml(msg="brk min invalid")
         }
       None => 0
     }
     let max = match attr_value(tag, "max") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="brk max invalid")
+          _ => raise InvalidXml(msg="brk max invalid")
         }
       None => 0
     }
@@ -2457,7 +2390,7 @@ fn parse_picture_rel_id(xml : StringView) -> String? raise XlsxError {
   }
   match attr_value(tag, "r:id") {
     Some(value) => Some(value.to_string())
-    None => raise XlsxError::InvalidXml(msg="picture relationship missing")
+    None => raise InvalidXml(msg="picture relationship missing")
   }
 }
 
@@ -2476,24 +2409,24 @@ fn parse_auto_filter_columns(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="filterColumn tag not closed")
+      None => raise InvalidXml(msg="filterColumn tag not closed")
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="filterColumn tag invalid")
+        _ => raise InvalidXml(msg="filterColumn tag invalid")
       }
     let col_id = match attr_value(tag, "colId") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="filterColumn colId invalid")
+          _ => raise InvalidXml(msg="filterColumn colId invalid")
         }
-      None => raise XlsxError::InvalidXml(msg="filterColumn colId missing")
+      None => raise InvalidXml(msg="filterColumn colId missing")
     }
     let col = min_col + col_id
     let mut filters : Array[String]? = None
     let mut custom_filters : AutoFilterCustomFilters? = None
     if !tag.has_suffix("/") {
       let rest = text[end + 1:] catch {
-          _ => raise XlsxError::InvalidXml(msg="filterColumn body invalid")
+          _ => raise InvalidXml(msg="filterColumn body invalid")
         }
       let body_end = match rest.find("</filterColumn>") {
         Some(pos) => pos
@@ -2501,7 +2434,7 @@ fn parse_auto_filter_columns(
       }
       let column_body = if body_end > 0 {
         rest[:body_end] catch {
-          _ => raise XlsxError::InvalidXml(msg="filterColumn body invalid")
+          _ => raise InvalidXml(msg="filterColumn body invalid")
         }
       } else {
         ""
@@ -2521,12 +2454,11 @@ fn parse_auto_filter_columns(
               None =>
                 match filter_text.find(">") {
                   Some(pos) => pos
-                  None =>
-                    raise XlsxError::InvalidXml(msg="filter tag not closed")
+                  None => raise InvalidXml(msg="filter tag not closed")
                 }
             }
             let filter_tag = filter_text[:filter_end] catch {
-                _ => raise XlsxError::InvalidXml(msg="filter tag invalid")
+                _ => raise InvalidXml(msg="filter tag invalid")
               }
             match attr_value(filter_tag, "val") {
               Some(value) => values.push(unescape_xml_text(value))
@@ -2561,14 +2493,11 @@ fn parse_auto_filter_columns(
               None =>
                 match custom_text.find(">") {
                   Some(pos) => pos
-                  None =>
-                    raise XlsxError::InvalidXml(
-                      msg="customFilter tag not closed",
-                    )
+                  None => raise InvalidXml(msg="customFilter tag not closed")
                 }
             }
             let custom_tag = custom_text[:custom_end] catch {
-                _ => raise XlsxError::InvalidXml(msg="customFilter tag invalid")
+                _ => raise InvalidXml(msg="customFilter tag invalid")
               }
             let operator = match attr_value(custom_tag, "operator") {
               Some(value) => value
@@ -2598,7 +2527,7 @@ fn parse_auto_filter(xml : StringView) -> AutoFilter? raise XlsxError {
   }
   let ref_value = match attr_value(tag, "ref") {
     Some(value) => value
-    None => raise XlsxError::InvalidXml(msg="autoFilter ref missing")
+    None => raise InvalidXml(msg="autoFilter ref missing")
   }
   let range_ref = normalize_range_ref(ref_value)
   let (_min_row, min_col, _max_row, _max_col) = parse_range_ref(range_ref)
@@ -2641,12 +2570,12 @@ fn parse_hyperlink_elements(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="hyperlink tag not closed")
+      None => raise InvalidXml(msg="hyperlink tag not closed")
     }
     let tag = try! text[:end]
     let raw_ref = match attr_value(tag, "ref") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="hyperlink ref missing")
+      None => raise InvalidXml(msg="hyperlink ref missing")
     }
     let reference = try normalize_cell_or_range_ref(raw_ref) catch {
       _ => raw_ref.to_string()
@@ -2715,12 +2644,12 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="comment tag not closed")
+      None => raise InvalidXml(msg="comment tag not closed")
     }
     let tag = try! text[:end]
     let ref_value = match attr_value(tag, "ref") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="comment ref missing")
+      None => raise InvalidXml(msg="comment ref missing")
     }
     let (row, col) = cell_ref_to_rc(ref_value)
     let cell = cell_ref_from(row, col)
@@ -2777,15 +2706,15 @@ fn parse_table_part_ids(xml : StringView) -> Array[String] raise XlsxError {
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="tablePart tag not closed")
+          None => raise InvalidXml(msg="tablePart tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="tablePart tag invalid")
+        _ => raise InvalidXml(msg="tablePart tag invalid")
       }
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="tablePart id missing")
+      None => raise InvalidXml(msg="tablePart id missing")
     }
     ids.push(id)
   }
@@ -2813,16 +2742,15 @@ fn parse_pivot_table_part_ids(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None =>
-            raise XlsxError::InvalidXml(msg="pivotTablePart tag not closed")
+          None => raise InvalidXml(msg="pivotTablePart tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="pivotTablePart tag invalid")
+        _ => raise InvalidXml(msg="pivotTablePart tag invalid")
       }
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="pivotTablePart id missing")
+      None => raise InvalidXml(msg="pivotTablePart id missing")
     }
     ids.push(id)
   }
@@ -2847,15 +2775,15 @@ fn parse_sheet_slicer_rel_ids(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="x14:slicer tag not closed")
+          None => raise InvalidXml(msg="x14:slicer tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="x14:slicer tag invalid")
+        _ => raise InvalidXml(msg="x14:slicer tag invalid")
       }
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="x14:slicer id missing")
+      None => raise InvalidXml(msg="x14:slicer id missing")
     }
     ids.push(id)
   }
@@ -2888,19 +2816,19 @@ fn parse_slicer_part_entries(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="slicer tag not closed")
+          None => raise InvalidXml(msg="slicer tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="slicer tag invalid")
+        _ => raise InvalidXml(msg="slicer tag invalid")
       }
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="slicer name missing")
+      None => raise InvalidXml(msg="slicer name missing")
     }
     let cache = match attr_value(tag, "cache") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="slicer cache missing")
+      None => raise InvalidXml(msg="slicer cache missing")
     }
     let caption = match attr_value(tag, "caption") {
       Some(value) => unescape_xml_text(value)
@@ -2932,11 +2860,11 @@ fn parse_slicer_cache_definition(
 ) -> SlicerCacheDef raise XlsxError {
   let tag = match tag_attributes_in(xml, "slicerCacheDefinition") {
     Some(value) => value
-    None => raise XlsxError::InvalidXml(msg="slicerCacheDefinition missing")
+    None => raise InvalidXml(msg="slicerCacheDefinition missing")
   }
   let name = match attr_value(tag, "name") {
     Some(value) => unescape_xml_text(value)
-    None => raise XlsxError::InvalidXml(msg="slicer cache name missing")
+    None => raise InvalidXml(msg="slicer cache name missing")
   }
   let source_name = match attr_value(tag, "sourceName") {
     Some(value) => unescape_xml_text(value)
@@ -2952,7 +2880,7 @@ fn parse_slicer_cache_definition(
       match attr_value(cache_tag, "tableId") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="slicer cache tableId invalid")
+            _ => raise InvalidXml(msg="slicer cache tableId invalid")
           } noraise {
             val => table_id = Some(val)
           }
@@ -2961,7 +2889,7 @@ fn parse_slicer_cache_definition(
       match attr_value(cache_tag, "column") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="slicer cache column invalid")
+            _ => raise InvalidXml(msg="slicer cache column invalid")
           } noraise {
             val => table_column = Some(val)
           }
@@ -2993,7 +2921,7 @@ fn parse_slicer_cache_definition(
       match attr_value(pivot_tag, "tabId") {
         Some(value) =>
           try @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="slicer cache tabId invalid")
+            _ => raise InvalidXml(msg="slicer cache tabId invalid")
           } noraise {
             val => pivot_tab_id = Some(val)
           }
@@ -3029,7 +2957,7 @@ fn parse_slicer_cache_definitions(
     let cache_path = resolve_workbook_rel_target(target)
     let cache_bytes = match archive.get(cache_path) {
       Some(value) => value
-      None => raise XlsxError::MissingPart(path=cache_path)
+      None => raise MissingPart(path=cache_path)
     }
     let cache_xml = decode(cache_bytes)
     let def = parse_slicer_cache_definition(cache_xml)
@@ -3164,20 +3092,15 @@ fn parse_legacy_drawing_rel_id(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None =>
-            raise XlsxError::InvalidXml(
-              msg="\{tag_name.to_string()} tag not closed",
-            )
+          None => raise InvalidXml(msg="\{tag_name.to_string()} tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ =>
-          raise XlsxError::InvalidXml(msg="\{tag_name.to_string()} tag invalid")
+        _ => raise InvalidXml(msg="\{tag_name.to_string()} tag invalid")
       }
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
-      None =>
-        raise XlsxError::InvalidXml(msg="\{tag_name.to_string()} id missing")
+      None => raise InvalidXml(msg="\{tag_name.to_string()} id missing")
     }
     return Some(id)
   }
@@ -3192,10 +3115,10 @@ fn parse_xml_int_tag(
 ) -> Int raise XlsxError {
   let body = match extract_tag_body_from(xml, tag_name) {
     Some(value) => value
-    None => raise XlsxError::InvalidXml(msg~)
+    None => raise InvalidXml(msg~)
   }
   @strconv.parse_int(body, base=10) catch {
-    _ => raise XlsxError::InvalidXml(msg~)
+    _ => raise InvalidXml(msg~)
   }
 }
 
@@ -3259,14 +3182,12 @@ fn parse_drawing_anchors(
     let close_tag = "</xdr:oneCellAnchor>"
     let end = match text.find(close_tag) {
       Some(pos) => pos + close_tag.length()
-      None => raise XlsxError::InvalidXml(msg="oneCellAnchor close missing")
+      None => raise InvalidXml(msg="oneCellAnchor close missing")
     }
     let slice = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="oneCellAnchor body invalid")
+        _ => raise InvalidXml(msg="oneCellAnchor body invalid")
       }
-    anchors.push(
-      ("<xdr:oneCellAnchor\{slice.to_string()}", PicturePositioning::OneCell),
-    )
+    anchors.push(("<xdr:oneCellAnchor\{slice.to_string()}", OneCell))
   }
   let mut first_two = true
   for chunk in xml_str.split("<xdr:twoCellAnchor") {
@@ -3278,10 +3199,10 @@ fn parse_drawing_anchors(
     let close_tag = "</xdr:twoCellAnchor>"
     let end = match text.find(close_tag) {
       Some(pos) => pos + close_tag.length()
-      None => raise XlsxError::InvalidXml(msg="twoCellAnchor close missing")
+      None => raise InvalidXml(msg="twoCellAnchor close missing")
     }
     let slice = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="twoCellAnchor body invalid")
+        _ => raise InvalidXml(msg="twoCellAnchor body invalid")
       }
     let full = "<xdr:twoCellAnchor\{slice.to_string()}"
     let positioning = match tag_attributes_in(full[:], "xdr:twoCellAnchor") {
@@ -3289,13 +3210,13 @@ fn parse_drawing_anchors(
         match attr_value(tag, "editAs") {
           Some(value) =>
             if value.to_string() == "absolute" {
-              PicturePositioning::Absolute
+              Absolute
             } else {
-              PicturePositioning::TwoCell
+              TwoCell
             }
-          None => PicturePositioning::TwoCell
+          None => TwoCell
         }
-      None => PicturePositioning::TwoCell
+      None => TwoCell
     }
     anchors.push((full, positioning))
   }
@@ -3329,7 +3250,7 @@ fn parse_drawing_images(
     }
     let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing anchor from missing")
+      None => raise InvalidXml(msg="drawing anchor from missing")
     }
     let col_idx0 = parse_xml_int_tag(
       from_body[:],
@@ -3355,31 +3276,31 @@ fn parse_drawing_images(
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
-      PicturePositioning::OneCell => {
+      OneCell => {
         let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="drawing ext missing")
+          None => raise InvalidXml(msg="drawing ext missing")
         }
         let cx = match attr_value(ext_tag, "cx") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="drawing cx invalid")
+              _ => raise InvalidXml(msg="drawing cx invalid")
             }
-          None => raise XlsxError::InvalidXml(msg="drawing cx missing")
+          None => raise InvalidXml(msg="drawing cx missing")
         }
         let cy = match attr_value(ext_tag, "cy") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="drawing cy invalid")
+              _ => raise InvalidXml(msg="drawing cy invalid")
             }
-          None => raise XlsxError::InvalidXml(msg="drawing cy missing")
+          None => raise InvalidXml(msg="drawing cy missing")
         }
         (cx, cy)
       }
       _ => {
         let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="drawing anchor to missing")
+          None => raise InvalidXml(msg="drawing anchor to missing")
         }
         let to_col_idx0 = parse_xml_int_tag(
           to_body[:],
@@ -3412,7 +3333,7 @@ fn parse_drawing_images(
     }
     let c_nv_pr_tag = match tag_attributes_in(pic_body[:], "xdr:cNvPr") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing cNvPr missing")
+      None => raise InvalidXml(msg="drawing cNvPr missing")
     }
     let name = match attr_value(c_nv_pr_tag, "name") {
       Some(value) => unescape_xml_text(value)
@@ -3437,20 +3358,20 @@ fn parse_drawing_images(
     }
     let blip_tag = match tag_attributes_in(pic_body[:], "a:blip") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing blip missing")
+      None => raise InvalidXml(msg="drawing blip missing")
     }
     let embed_id = match attr_value(blip_tag, "r:embed") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing embed missing")
+      None => raise InvalidXml(msg="drawing embed missing")
     }
     let target = match image_targets.get(embed_id.to_string()) {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing image target missing")
+      None => raise InvalidXml(msg="drawing image target missing")
     }
     let media_path = resolve_rel_target(target, "drawings")
     let data = match archive.get(media_path) {
       Some(value) => value
-      None => raise XlsxError::MissingPart(path=media_path)
+      None => raise MissingPart(path=media_path)
     }
     let ext = match media_path.to_string().rev_find(".") {
       Some(pos) =>
@@ -3478,9 +3399,9 @@ fn parse_drawing_images(
               Some(value) => {
                 hyperlink = value
                 if hyperlink.contains("://") {
-                  hyperlink_type = HyperlinkType::External
+                  hyperlink_type = External
                 } else {
-                  hyperlink_type = HyperlinkType::Location
+                  hyperlink_type = Location
                 }
               }
               None => ()
@@ -3535,23 +3456,23 @@ fn parse_drawing_charts(
     }
     let rel_id = match attr_value(chart_tag, "r:id") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing chart rel id missing")
+      None => raise InvalidXml(msg="drawing chart rel id missing")
     }
     let target = match chart_targets.get(rel_id.to_string()) {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing chart target missing")
+      None => raise InvalidXml(msg="drawing chart target missing")
     }
     let chart_path = resolve_rel_target(target, "drawings")
     let chart_bytes = match archive.get(chart_path) {
       Some(value) => value
-      None => raise XlsxError::MissingPart(path=chart_path)
+      None => raise MissingPart(path=chart_path)
     }
     let xml = @encoding/utf8.decode(chart_bytes) catch {
-      _ => raise XlsxError::InvalidXml(msg="drawing chart xml decode failed")
+      _ => raise InvalidXml(msg="drawing chart xml decode failed")
     }
     let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing anchor from missing")
+      None => raise InvalidXml(msg="drawing anchor from missing")
     }
     let col_idx0 = parse_xml_int_tag(
       from_body[:],
@@ -3577,31 +3498,31 @@ fn parse_drawing_charts(
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
-      PicturePositioning::OneCell => {
+      OneCell => {
         let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="drawing ext missing")
+          None => raise InvalidXml(msg="drawing ext missing")
         }
         let cx = match attr_value(ext_tag, "cx") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="drawing cx invalid")
+              _ => raise InvalidXml(msg="drawing cx invalid")
             }
-          None => raise XlsxError::InvalidXml(msg="drawing cx missing")
+          None => raise InvalidXml(msg="drawing cx missing")
         }
         let cy = match attr_value(ext_tag, "cy") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="drawing cy invalid")
+              _ => raise InvalidXml(msg="drawing cy invalid")
             }
-          None => raise XlsxError::InvalidXml(msg="drawing cy missing")
+          None => raise InvalidXml(msg="drawing cy missing")
         }
         (cx, cy)
       }
       _ => {
         let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="drawing anchor to missing")
+          None => raise InvalidXml(msg="drawing anchor to missing")
         }
         let to_col_idx0 = parse_xml_int_tag(
           to_body[:],
@@ -3679,7 +3600,7 @@ fn parse_drawing_shapes(
     }
     let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing anchor from missing")
+      None => raise InvalidXml(msg="drawing anchor from missing")
     }
     let col_idx0 = parse_xml_int_tag(
       from_body[:],
@@ -3694,7 +3615,7 @@ fn parse_drawing_shapes(
     let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
     let c_nv_pr_tag = match tag_attributes_in(sp_body[:], "xdr:cNvPr") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing shape cNvPr missing")
+      None => raise InvalidXml(msg="drawing shape cNvPr missing")
     }
     let name = match attr_value(c_nv_pr_tag, "name") {
       Some(value) => unescape_xml_text(value)
@@ -3722,7 +3643,7 @@ fn parse_drawing_shapes(
     }
     let sppr_body = match extract_tag_body_from(sp_body[:], "xdr:spPr") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing shape spPr missing")
+      None => raise InvalidXml(msg="drawing shape spPr missing")
     }
     let xfrm_body = match extract_tag_body_from(sppr_body[:], "a:xfrm") {
       Some(value) => value
@@ -3730,21 +3651,21 @@ fn parse_drawing_shapes(
     }
     let ext_tag = match tag_attributes_in(xfrm_body[:], "a:ext") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing shape ext missing")
+      None => raise InvalidXml(msg="drawing shape ext missing")
     }
     let cx = match attr_value(ext_tag, "cx") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="drawing shape cx invalid")
+          _ => raise InvalidXml(msg="drawing shape cx invalid")
         }
-      None => raise XlsxError::InvalidXml(msg="drawing shape cx missing")
+      None => raise InvalidXml(msg="drawing shape cx missing")
     }
     let cy = match attr_value(ext_tag, "cy") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="drawing shape cy invalid")
+          _ => raise InvalidXml(msg="drawing shape cy invalid")
         }
-      None => raise XlsxError::InvalidXml(msg="drawing shape cy missing")
+      None => raise InvalidXml(msg="drawing shape cy missing")
     }
     let width = (cx.to_double() / picture_emu_per_pixel.to_double())
       .round()
@@ -3754,11 +3675,11 @@ fn parse_drawing_shapes(
       .to_int()
     let geom_tag = match tag_attributes_in(sppr_body[:], "a:prstGeom") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing shape prstGeom missing")
+      None => raise InvalidXml(msg="drawing shape prstGeom missing")
     }
     let shape_type = match attr_value(geom_tag, "prst") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="drawing shape prst missing")
+      None => raise InvalidXml(msg="drawing shape prst missing")
     }
     let mut fill_color = ""
     let mut fill_transparency = 0
@@ -3902,7 +3823,7 @@ fn parse_drawing_slicer_anchors(
     }
     let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="drawing slicer from missing")
+      None => raise InvalidXml(msg="drawing slicer from missing")
     }
     let col_idx0 = parse_xml_int_tag(
       from_body[:],
@@ -3928,31 +3849,31 @@ fn parse_drawing_slicer_anchors(
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
-      PicturePositioning::OneCell => {
+      OneCell => {
         let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="drawing slicer ext missing")
+          None => raise InvalidXml(msg="drawing slicer ext missing")
         }
         let cx = match attr_value(ext_tag, "cx") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="drawing slicer cx invalid")
+              _ => raise InvalidXml(msg="drawing slicer cx invalid")
             }
-          None => raise XlsxError::InvalidXml(msg="drawing slicer cx missing")
+          None => raise InvalidXml(msg="drawing slicer cx missing")
         }
         let cy = match attr_value(ext_tag, "cy") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="drawing slicer cy invalid")
+              _ => raise InvalidXml(msg="drawing slicer cy invalid")
             }
-          None => raise XlsxError::InvalidXml(msg="drawing slicer cy missing")
+          None => raise InvalidXml(msg="drawing slicer cy missing")
         }
         (cx, cy)
       }
       _ => {
         let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="drawing slicer to missing")
+          None => raise InvalidXml(msg="drawing slicer to missing")
         }
         let to_col_idx0 = parse_xml_int_tag(
           to_body[:],
@@ -4054,19 +3975,19 @@ fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
     None => return { text: "", runs: None }
   }
   let after_start = text[start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="inline string tag invalid")
+      _ => raise InvalidXml(msg="inline string tag invalid")
     }
   let open_end = match after_start.find(">") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="inline string not closed")
+    None => raise InvalidXml(msg="inline string not closed")
   }
   let body_start = start + open_end + 1
   let end = match text.find("</is>") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="inline string end missing")
+    None => raise InvalidXml(msg="inline string end missing")
   }
   let body = text[body_start:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="inline string body invalid")
+      _ => raise InvalidXml(msg="inline string body invalid")
     }
   let runs = if body.contains("<r") {
     let parsed = parse_rich_text_runs(body) catch { _ => [] }
@@ -4096,24 +4017,24 @@ fn parse_row_dimensions(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="row tag not closed")
+      None => raise InvalidXml(msg="row tag not closed")
     }
     let tag = try! text[:end]
     let row_text = match attr_value(tag, "r") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="row index missing")
+      None => raise InvalidXml(msg="row index missing")
     }
     let row = @strconv.parse_int(row_text, base=10) catch {
-      _ => raise XlsxError::InvalidXml(msg="row index invalid")
+      _ => raise InvalidXml(msg="row index invalid")
     }
     if row <= 0 {
-      raise XlsxError::InvalidXml(msg="row index invalid")
+      raise InvalidXml(msg="row index invalid")
     }
     let height = match attr_value(tag, "ht") {
       Some(value) =>
         Some(
           @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="row height invalid")
+            _ => raise InvalidXml(msg="row height invalid")
           },
         )
       None => None
@@ -4125,19 +4046,19 @@ fn parse_row_dimensions(
     let outline_level = match attr_value(tag, "outlineLevel") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="row outline level invalid")
+          _ => raise InvalidXml(msg="row outline level invalid")
         }
       None => 0
     }
     let style_id = match attr_value(tag, "s") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="row style id invalid")
+          _ => raise InvalidXml(msg="row style id invalid")
         }
       None => 0
     }
     if style_id < 0 || style_id >= style_count {
-      raise XlsxError::InvalidStyleId(index=style_id)
+      raise InvalidStyleId(index=style_id)
     }
     let style = if style_id > 0 { Some(style_id) } else { None }
     if height is None && !hidden && outline_level == 0 && style is None {
@@ -4163,31 +4084,31 @@ fn parse_col_dimensions(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="col tag not closed")
+      None => raise InvalidXml(msg="col tag not closed")
     }
     let tag = try! text[:end]
     let min_text = match attr_value(tag, "min") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="col min missing")
+      None => raise InvalidXml(msg="col min missing")
     }
     let max_text = match attr_value(tag, "max") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="col max missing")
+      None => raise InvalidXml(msg="col max missing")
     }
     let min_col = @strconv.parse_int(min_text, base=10) catch {
-      _ => raise XlsxError::InvalidXml(msg="col min invalid")
+      _ => raise InvalidXml(msg="col min invalid")
     }
     let max_col = @strconv.parse_int(max_text, base=10) catch {
-      _ => raise XlsxError::InvalidXml(msg="col max invalid")
+      _ => raise InvalidXml(msg="col max invalid")
     }
     if min_col <= 0 || max_col <= 0 || max_col < min_col {
-      raise XlsxError::InvalidXml(msg="col range invalid")
+      raise InvalidXml(msg="col range invalid")
     }
     let width = match attr_value(tag, "width") {
       Some(value) =>
         Some(
           @strconv.parse_double(value) catch {
-            _ => raise XlsxError::InvalidXml(msg="col width invalid")
+            _ => raise InvalidXml(msg="col width invalid")
           },
         )
       None => None
@@ -4199,19 +4120,19 @@ fn parse_col_dimensions(
     let outline_level = match attr_value(tag, "outlineLevel") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="col outline level invalid")
+          _ => raise InvalidXml(msg="col outline level invalid")
         }
       None => 0
     }
     let style_id = match attr_value(tag, "style") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="col style id invalid")
+          _ => raise InvalidXml(msg="col style id invalid")
         }
       None => 0
     }
     if style_id < 0 || style_id >= style_count {
-      raise XlsxError::InvalidStyleId(index=style_id)
+      raise InvalidStyleId(index=style_id)
     }
     let style = if style_id > 0 { Some(style_id) } else { None }
     if width is None && !hidden && outline_level == 0 && style is None {
@@ -4237,12 +4158,12 @@ fn enforce_unzip_limits(
     let size = entry.data.length()
     total_size = total_size + size
     if options.unzip_size_limit > 0 && total_size > options.unzip_size_limit {
-      raise XlsxError::InvalidOptions(msg="unzip size limit exceeded")
+      raise InvalidOptions(msg="unzip size limit exceeded")
     }
     if options.unzip_xml_size_limit > 0 {
       let name = entry.name.to_lower()
       if name.has_suffix(".xml") && size > options.unzip_xml_size_limit {
-        raise XlsxError::InvalidOptions(msg="unzip xml size limit exceeded")
+        raise InvalidOptions(msg="unzip xml size limit exceeded")
       }
     }
   }
@@ -4256,13 +4177,13 @@ fn read_zip_bytes(
 ) -> Workbook raise XlsxError {
   let resolved_options = normalize_unzip_limits(options)
   let archive = @zip.read(bytes) catch {
-    err => raise XlsxError::UnsupportedFeature(msg=err.to_string())
+    err => raise UnsupportedFeature(msg=err.to_string())
   }
   enforce_unzip_limits(archive, resolved_options)
   let decode = (value : Bytes) => decode_utf8(value, transcoder)
   let workbook_bytes = match archive.get("xl/workbook.xml") {
     Some(value) => value
-    None => raise XlsxError::MissingPart(path="xl/workbook.xml")
+    None => raise MissingPart(path="xl/workbook.xml")
   }
   let workbook_xml = decode(workbook_bytes)
   let sheets = parse_workbook_sheets(workbook_xml)
@@ -4380,7 +4301,7 @@ fn read_zip_bytes(
   }
   let workbook_rels = match archive.get("xl/_rels/workbook.xml.rels") {
     Some(value) => decode(value)
-    None => raise XlsxError::MissingPart(path="xl/_rels/workbook.xml.rels")
+    None => raise MissingPart(path="xl/_rels/workbook.xml.rels")
   }
   let slicer_cache_defs = parse_slicer_cache_definitions(
     workbook_rels, archive, decode,
@@ -4391,7 +4312,7 @@ fn read_zip_bytes(
       let vba_path = resolve_workbook_rel_target(target)
       let vba_bytes = match archive.get(vba_path) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=vba_path)
+        None => raise MissingPart(path=vba_path)
       }
       workbook.vba_project = Some(vba_bytes)
     }
@@ -4410,17 +4331,17 @@ fn read_zip_bytes(
     let is_worksheet = worksheet_targets.contains(rel_id)
     let is_chartsheet = chartsheet_targets.contains(rel_id)
     if !is_worksheet && !is_chartsheet {
-      raise XlsxError::InvalidXml(msg="sheet relationship missing")
+      raise InvalidXml(msg="sheet relationship missing")
     }
     if is_worksheet {
       let target = match worksheet_targets.get(rel_id) {
         Some(value) => value
-        None => raise XlsxError::InvalidXml(msg="worksheet target missing")
+        None => raise InvalidXml(msg="worksheet target missing")
       }
       let sheet_path = resolve_workbook_rel_target(target)
       let sheet_bytes = match archive.get(sheet_path) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=sheet_path)
+        None => raise MissingPart(path=sheet_path)
       }
       let sheet_xml = decode(sheet_bytes)
       let (
@@ -4481,7 +4402,7 @@ fn read_zip_bytes(
         let rels_path = rels_path_for(sheet_path, "worksheets")
         let rels_bytes = match archive.get(rels_path) {
           Some(value) => value
-          None => raise XlsxError::MissingPart(path=rels_path)
+          None => raise MissingPart(path=rels_path)
         }
         decode(rels_bytes)
       } else {
@@ -4491,7 +4412,7 @@ fn read_zip_bytes(
         []
       } else {
         if rels_xml == "" {
-          raise XlsxError::InvalidXml(msg="slicer relationship missing")
+          raise InvalidXml(msg="slicer relationship missing")
         }
         let rel_targets = parse_relationship_targets(rels_xml, rel_slicer)
         let parsed : Array[ParsedSlicerPartEntry] = []
@@ -4499,8 +4420,7 @@ fn read_zip_bytes(
         for rel_id in slicer_rel_ids {
           let target = match rel_targets.get(rel_id) {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(msg="slicer relationship missing")
+            None => raise InvalidXml(msg="slicer relationship missing")
           }
           let slicer_path = resolve_rel_target(target, "worksheets")
           if seen_paths.contains(slicer_path) {
@@ -4509,7 +4429,7 @@ fn read_zip_bytes(
           seen_paths[slicer_path] = true
           let slicer_bytes = match archive.get(slicer_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=slicer_path)
+            None => raise MissingPart(path=slicer_path)
           }
           let slicer_xml = decode(slicer_bytes)
           parsed.append(parse_slicer_part_entries(slicer_xml)[:])
@@ -4519,17 +4439,17 @@ fn read_zip_bytes(
       let sheet_background = match picture_rel_id {
         Some(rel_id) => {
           if rels_xml == "" {
-            raise XlsxError::InvalidXml(msg="picture relationship missing")
+            raise InvalidXml(msg="picture relationship missing")
           }
           let image_targets = parse_relationship_targets(rels_xml, rel_image)
           let target = match image_targets.get(rel_id) {
             Some(value) => value
-            None => raise XlsxError::InvalidXml(msg="picture target missing")
+            None => raise InvalidXml(msg="picture target missing")
           }
           let image_path = resolve_rel_target(target, "worksheets")
           let image_bytes = match archive.get(image_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=image_path)
+            None => raise MissingPart(path=image_path)
           }
           let path_text = target.to_string()
           let extension = match path_text.rev_find(".") {
@@ -4537,27 +4457,20 @@ fn read_zip_bytes(
               if pos + 1 < path_text.length() {
                 let view = path_text[pos + 1:] catch {
                     _ =>
-                      raise XlsxError::InvalidSheetBackground(
+                      raise InvalidSheetBackground(
                         msg="image extension missing",
                       )
                   }
                 view.to_string().to_lower()
               } else {
-                raise XlsxError::InvalidSheetBackground(
-                  msg="image extension missing",
-                )
+                raise InvalidSheetBackground(msg="image extension missing")
               }
-            None =>
-              raise XlsxError::InvalidSheetBackground(
-                msg="image extension missing",
-              )
+            None => raise InvalidSheetBackground(msg="image extension missing")
           }
           let content_type = match image_content_type(extension) {
             Some(value) => value
             None =>
-              raise XlsxError::InvalidSheetBackground(
-                msg="unsupported image extension",
-              )
+              raise InvalidSheetBackground(msg="unsupported image extension")
           }
           Some({ data: image_bytes, extension, content_type })
         }
@@ -4577,15 +4490,12 @@ fn read_zip_bytes(
             Some(rel_id) => {
               let target = match rel_targets.get(rel_id) {
                 Some(value) => value
-                None =>
-                  raise XlsxError::InvalidXml(
-                    msg="hyperlink relationship missing",
-                  )
+                None => raise InvalidXml(msg="hyperlink relationship missing")
               }
               parsed_links.push({
                 reference: link.reference,
                 target,
-                link_type: HyperlinkType::External,
+                link_type: External,
                 display: link.display,
                 tooltip: link.tooltip,
               })
@@ -4596,12 +4506,11 @@ fn read_zip_bytes(
                   parsed_links.push({
                     reference: link.reference,
                     target: location,
-                    link_type: HyperlinkType::Location,
+                    link_type: Location,
                     display: link.display,
                     tooltip: link.tooltip,
                   })
-                None =>
-                  raise XlsxError::InvalidXml(msg="hyperlink target missing")
+                None => raise InvalidXml(msg="hyperlink target missing")
               }
           }
         }
@@ -4615,13 +4524,12 @@ fn read_zip_bytes(
         for rel_id in table_part_ids {
           let target = match rel_targets.get(rel_id) {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(msg="table relationship missing")
+            None => raise InvalidXml(msg="table relationship missing")
           }
           let table_path = resolve_rel_target(target, "worksheets")
           let table_bytes = match archive.get(table_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=table_path)
+            None => raise MissingPart(path=table_path)
           }
           let table_xml = decode(table_bytes)
           parsed_tables.push(parse_table_xml(table_xml))
@@ -4636,21 +4544,18 @@ fn read_zip_bytes(
         for rel_id in pivot_part_ids {
           let target = match rel_targets.get(rel_id) {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(
-                msg="pivot table relationship missing",
-              )
+            None => raise InvalidXml(msg="pivot table relationship missing")
           }
           let pivot_path = resolve_rel_target(target, "worksheets")
           let pivot_bytes = match archive.get(pivot_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=pivot_path)
+            None => raise MissingPart(path=pivot_path)
           }
           let pivot_xml = decode(pivot_bytes)
           let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
           let pivot_rels_bytes = match archive.get(pivot_rels_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=pivot_rels_path)
+            None => raise MissingPart(path=pivot_rels_path)
           }
           let pivot_rels_xml = decode(pivot_rels_bytes)
           let cache_targets = parse_relationship_targets(
@@ -4658,15 +4563,12 @@ fn read_zip_bytes(
           )
           let cache_target = match first_relationship_target(cache_targets) {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(
-                msg="pivot cache relationship missing",
-              )
+            None => raise InvalidXml(msg="pivot cache relationship missing")
           }
           let cache_path = resolve_rel_target(cache_target, "pivotTables")
           let cache_bytes = match archive.get(cache_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=cache_path)
+            None => raise MissingPart(path=cache_path)
           }
           let cache_xml = decode(cache_bytes)
           let cache_id = parse_id_from_path(
@@ -4689,7 +4591,7 @@ fn read_zip_bytes(
                   )
                   let record_bytes = match archive.get(record_path) {
                     Some(value) => value
-                    None => raise XlsxError::MissingPart(path=record_path)
+                    None => raise MissingPart(path=record_path)
                   }
                   Some(decode(record_bytes))
                 }
@@ -4719,15 +4621,12 @@ fn read_zip_bytes(
         Some(rel_id) => {
           let target = match vml_targets.get(rel_id) {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(
-                msg="vml drawing relationship missing",
-              )
+            None => raise InvalidXml(msg="vml drawing relationship missing")
           }
           let vml_path = resolve_rel_target(target, "worksheets")
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=vml_path)
+            None => raise MissingPart(path=vml_path)
           }
           Some(decode(vml_bytes))
         }
@@ -4737,15 +4636,12 @@ fn read_zip_bytes(
         Some(rel_id) => {
           let target = match vml_targets.get(rel_id) {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(
-                msg="vml drawing hf relationship missing",
-              )
+            None => raise InvalidXml(msg="vml drawing hf relationship missing")
           }
           let vml_path = resolve_rel_target(target, "worksheets")
           let vml_bytes = match archive.get(vml_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=vml_path)
+            None => raise MissingPart(path=vml_path)
           }
           Some((decode(vml_bytes), vml_path))
         }
@@ -4778,7 +4674,7 @@ fn read_zip_bytes(
           let comment_path = resolve_rel_target(target, "worksheets")
           let comment_bytes = match archive.get(comment_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=comment_path)
+            None => raise MissingPart(path=comment_path)
           }
           let comment_xml = decode(comment_bytes)
           let entries = parse_comments_xml(comment_xml)
@@ -4826,25 +4722,25 @@ fn read_zip_bytes(
         row_dimensions,
         col_dimensions,
         state,
-        stream_state: StreamState::Idle,
+        stream_state: Idle,
       }
       let mut slicer_anchor_info : Map[String, SlicerAnchorInfo] = {}
       match drawing_rel_id {
         Some(rel_id) => {
           if rels_xml == "" {
-            raise XlsxError::InvalidXml(msg="drawing relationship missing")
+            raise InvalidXml(msg="drawing relationship missing")
           }
           let drawing_targets = parse_relationship_targets(
             rels_xml, rel_drawing,
           )
           let drawing_target = match drawing_targets.get(rel_id) {
             Some(value) => value
-            None => raise XlsxError::InvalidXml(msg="drawing target missing")
+            None => raise InvalidXml(msg="drawing target missing")
           }
           let drawing_path = resolve_rel_target(drawing_target, "worksheets")
           let drawing_bytes = match archive.get(drawing_path) {
             Some(value) => value
-            None => raise XlsxError::MissingPart(path=drawing_path)
+            None => raise MissingPart(path=drawing_path)
           }
           let drawing_xml = decode(drawing_bytes)
           if slicer_part_entries.length() > 0 {
@@ -4914,7 +4810,7 @@ fn read_zip_bytes(
             format.print_object = Some(info.print_object)
           }
           None => {
-            format.positioning = Some(PicturePositioning::TwoCell)
+            format.positioning = Some(TwoCell)
             format.locked = Some(true)
             format.print_object = Some(true)
           }
@@ -4936,18 +4832,16 @@ fn read_zip_bytes(
         })
       }
       workbook.sheets.push(sheet)
-      workbook.sheet_order.push(
-        SheetEntry::Worksheet(workbook.sheets.length() - 1),
-      )
+      workbook.sheet_order.push(Worksheet(workbook.sheets.length() - 1))
     } else {
       let target = match chartsheet_targets.get(rel_id) {
         Some(value) => value
-        None => raise XlsxError::InvalidXml(msg="chartsheet target missing")
+        None => raise InvalidXml(msg="chartsheet target missing")
       }
       let chartsheet_path = resolve_workbook_rel_target(target)
       let chartsheet_bytes = match archive.get(chartsheet_path) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=chartsheet_path)
+        None => raise MissingPart(path=chartsheet_path)
       }
       let chartsheet_xml = decode(chartsheet_bytes)
       let drawing_rel_id = parse_legacy_drawing_rel_id(
@@ -4955,12 +4849,12 @@ fn read_zip_bytes(
       )
       let drawing_rel = match drawing_rel_id {
         Some(value) => value
-        None => raise XlsxError::InvalidXml(msg="chartsheet drawing missing")
+        None => raise InvalidXml(msg="chartsheet drawing missing")
       }
       let chartsheet_rels_path = rels_path_for(chartsheet_path, "chartsheets")
       let chartsheet_rels_bytes = match archive.get(chartsheet_rels_path) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=chartsheet_rels_path)
+        None => raise MissingPart(path=chartsheet_rels_path)
       }
       let chartsheet_rels_xml = decode(chartsheet_rels_bytes)
       let drawing_targets = parse_relationship_targets(
@@ -4968,13 +4862,13 @@ fn read_zip_bytes(
       )
       let drawing_target = match drawing_targets.get(drawing_rel) {
         Some(value) => value
-        None => raise XlsxError::InvalidXml(msg="drawing target missing")
+        None => raise InvalidXml(msg="drawing target missing")
       }
       let drawing_path = resolve_rel_target(drawing_target, "chartsheets")
       let drawing_rels_path = rels_path_for(drawing_path, "drawings")
       let drawing_rels_bytes = match archive.get(drawing_rels_path) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=drawing_rels_path)
+        None => raise MissingPart(path=drawing_rels_path)
       }
       let drawing_rels_xml = decode(drawing_rels_bytes)
       let chart_targets = parse_relationship_targets(
@@ -4982,20 +4876,18 @@ fn read_zip_bytes(
       )
       let chart_target = match first_relationship_target(chart_targets) {
         Some(value) => value
-        None => raise XlsxError::InvalidXml(msg="chart target missing")
+        None => raise InvalidXml(msg="chart target missing")
       }
       let chart_path = resolve_rel_target(chart_target, "drawings")
       let chart_bytes = match archive.get(chart_path) {
         Some(value) => value
-        None => raise XlsxError::MissingPart(path=chart_path)
+        None => raise MissingPart(path=chart_path)
       }
       let chart_xml = decode(chart_bytes)
       let chart_sheet = ChartSheet::new(name, chart_xml)
       chart_sheet.state = state
       workbook.chart_sheets.push(chart_sheet)
-      workbook.sheet_order.push(
-        SheetEntry::ChartSheet(workbook.chart_sheets.length() - 1),
-      )
+      workbook.sheet_order.push(ChartSheet(workbook.chart_sheets.length() - 1))
     }
   }
   resolve_slicer_sources_after_read(workbook, slicer_cache_defs)
@@ -5021,7 +4913,7 @@ pub fn read(
     }
   }
   if is_encrypted_package(bytes) {
-    raise XlsxError::EncryptedPackage
+    raise EncryptedPackage
   }
   match transcoder {
     Some(value) => read_zip_bytes(bytes, options~, transcoder=value)
@@ -5046,7 +4938,7 @@ pub fn read_with_password(
     })
     match result {
       Ok(workbook) => workbook
-      Err(_) => raise XlsxError::InvalidPassword
+      Err(_) => raise InvalidPassword
     }
   } else {
     match transcoder {

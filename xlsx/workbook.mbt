@@ -5,12 +5,12 @@ pub fn Workbook::add_sheet(
 ) -> Worksheet raise XlsxError {
   check_sheet_name(name)
   match self.sheet_entry(name) {
-    Some(_) => raise XlsxError::SheetAlreadyExists(name~)
+    Some(_) => raise SheetAlreadyExists(name~)
     None => ()
   }
   let sheet = Worksheet::new(name)
   self.sheets.push(sheet)
-  self.sheet_order.push(SheetEntry::Worksheet(self.sheets.length() - 1))
+  self.sheet_order.push(Worksheet(self.sheets.length() - 1))
   if self.sheet_order.length() == 1 {
     self.active_sheet_index = 0
   }
@@ -25,12 +25,12 @@ pub fn Workbook::add_chart_sheet(
 ) -> ChartSheet raise XlsxError {
   check_sheet_name(name)
   match self.sheet_entry(name) {
-    Some(_) => raise XlsxError::SheetAlreadyExists(name~)
+    Some(_) => raise SheetAlreadyExists(name~)
     None => ()
   }
   let sheet = ChartSheet::new(name, chart_xml)
   self.chart_sheets.push(sheet)
-  self.sheet_order.push(SheetEntry::ChartSheet(self.chart_sheets.length() - 1))
+  self.sheet_order.push(ChartSheet(self.chart_sheets.length() - 1))
   if self.sheet_order.length() == 1 {
     self.active_sheet_index = 0
   }
@@ -55,15 +55,15 @@ pub fn Workbook::new_stream_writer(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
-  if sheet.stream_state != StreamState::Idle {
-    raise XlsxError::StreamModeConflict(msg="stream writer already active")
+  if sheet.stream_state != Idle {
+    raise StreamModeConflict(msg="stream writer already active")
   }
   if sheet.cells().length() > 0 {
-    raise XlsxError::StreamModeConflict(msg="worksheet already has data")
+    raise StreamModeConflict(msg="worksheet already has data")
   }
-  sheet.stream_state = StreamState::Writing
+  sheet.stream_state = Writing
   StreamWriter::new(sheet, self.styles)
 }
 
@@ -122,7 +122,7 @@ pub fn Workbook::sheet_index(
 ) -> Int raise XlsxError {
   match self.sheet_entry_index(name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=name.to_string())
+    None => raise SheetNotFound(name=name.to_string())
   }
 }
 
@@ -235,7 +235,7 @@ pub fn Workbook::set_custom_props(
   prop : CustomProperty,
 ) -> Unit raise XlsxError {
   if prop.name == "" {
-    raise XlsxError::InvalidWorkbookProperty(msg="custom property name missing")
+    raise InvalidWorkbookProperty(msg="custom property name missing")
   }
   let mut index : Int? = None
   for i, existing in self.custom_properties {
@@ -267,7 +267,7 @@ pub fn Workbook::add_vba_project(
   data : Bytes,
 ) -> Unit raise XlsxError {
   if data.find(ole_identifier_bytes) is None {
-    raise XlsxError::InvalidVBAProject(msg="unsupported vba project")
+    raise InvalidVBAProject(msg="unsupported vba project")
   }
   self.vba_project = Some(data)
 }
@@ -353,8 +353,7 @@ pub fn Workbook::unprotect_workbook(
 ) -> Unit raise XlsxError {
   let protection = match self.workbook_protection {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidWorkbookProtection(msg="workbook not protected")
+    None => raise InvalidWorkbookProtection(msg="workbook not protected")
   }
   if password != "" {
     verify_workbook_protection_password(protection, password)
@@ -393,18 +392,18 @@ pub fn Workbook::set_sheet_name(
   }
   let entry = match self.sheet_entry(source) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=source.to_string())
+    None => raise SheetNotFound(name=source.to_string())
   }
   let old_name = self.sheet_entry_name(entry)
   if !sheet_name_equal(old_name, target) {
     match self.sheet_entry(target) {
-      Some(_) => raise XlsxError::SheetAlreadyExists(name=target)
+      Some(_) => raise SheetAlreadyExists(name=target)
       None => ()
     }
   }
   match entry {
-    SheetEntry::Worksheet(idx) => self.sheets[idx].name = target
-    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].name = target
+    Worksheet(idx) => self.sheets[idx].name = target
+    ChartSheet(idx) => self.chart_sheets[idx].name = target
   }
   if self.defined_names.length() > 0 {
     let updated : Array[DefinedName] = []
@@ -446,35 +445,35 @@ pub fn Workbook::delete_sheet(
   }
   ignore(self.sheet_order.remove(order_index))
   match entry {
-    SheetEntry::Worksheet(idx) => {
+    Worksheet(idx) => {
       ignore(self.sheets.remove(idx))
       let updated : Array[SheetEntry] = []
       for item in self.sheet_order {
         match item {
-          SheetEntry::Worksheet(value) =>
+          Worksheet(value) =>
             if value > idx {
-              updated.push(SheetEntry::Worksheet(value - 1))
+              updated.push(Worksheet(value - 1))
             } else {
               updated.push(item)
             }
-          SheetEntry::ChartSheet(_) => updated.push(item)
+          ChartSheet(_) => updated.push(item)
         }
       }
       self.sheet_order.clear()
       self.sheet_order.append(updated[:])
     }
-    SheetEntry::ChartSheet(idx) => {
+    ChartSheet(idx) => {
       ignore(self.chart_sheets.remove(idx))
       let updated : Array[SheetEntry] = []
       for item in self.sheet_order {
         match item {
-          SheetEntry::ChartSheet(value) =>
+          ChartSheet(value) =>
             if value > idx {
-              updated.push(SheetEntry::ChartSheet(value - 1))
+              updated.push(ChartSheet(value - 1))
             } else {
               updated.push(item)
             }
-          SheetEntry::Worksheet(_) => updated.push(item)
+          Worksheet(_) => updated.push(item)
         }
       }
       self.sheet_order.clear()
@@ -547,12 +546,12 @@ pub fn Workbook::copy_sheet(
     from_index >= self.sheet_order.length() ||
     to_index >= self.sheet_order.length() ||
     from_index == to_index {
-    raise XlsxError::InvalidSheetIndex(index=to_index)
+    raise InvalidSheetIndex(index=to_index)
   }
   let from_entry = self.sheet_order[from_index]
   let to_entry = self.sheet_order[to_index]
   match (from_entry, to_entry) {
-    (SheetEntry::Worksheet(from_sheet_idx), SheetEntry::Worksheet(to_sheet_idx)) => {
+    (Worksheet(from_sheet_idx), Worksheet(to_sheet_idx)) => {
       let from_sheet = self.sheets[from_sheet_idx]
       let to_sheet = self.sheets[to_sheet_idx]
       let cloned = clone_worksheet(
@@ -562,7 +561,7 @@ pub fn Workbook::copy_sheet(
       )
       self.sheets[to_sheet_idx] = cloned
     }
-    _ => raise XlsxError::InvalidSheetIndex(index=to_index)
+    _ => raise InvalidSheetIndex(index=to_index)
   }
 }
 
@@ -576,20 +575,20 @@ pub fn Workbook::set_sheet_visible(
   check_sheet_name(name)
   let entry = match self.sheet_entry(name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=name.to_string())
+    None => raise SheetNotFound(name=name.to_string())
   }
   let index = match self.sheet_entry_index(name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=name.to_string())
+    None => raise SheetNotFound(name=name.to_string())
   }
   let state = if visible {
-    SheetState::Visible
+    Visible
   } else if very_hidden {
-    SheetState::VeryHidden
+    VeryHidden
   } else {
-    SheetState::Hidden
+    Hidden
   }
-  if state != SheetState::Visible {
+  if state != Visible {
     let mut visible_count = 0
     for i, order_entry in self.sheet_order {
       let sheet_state = if i == index {
@@ -597,12 +596,12 @@ pub fn Workbook::set_sheet_visible(
       } else {
         self.sheet_entry_state(order_entry)
       }
-      if sheet_state == SheetState::Visible {
+      if sheet_state == Visible {
         visible_count = visible_count + 1
       }
     }
     if visible_count == 0 {
-      raise XlsxError::InvalidSheetOperation(
+      raise InvalidSheetOperation(
         msg="workbook must contain at least one visible sheet",
       )
     }
@@ -617,8 +616,8 @@ pub fn Workbook::sheet_visible(
 ) -> Bool raise XlsxError {
   check_sheet_name(name)
   match self.sheet_entry(name) {
-    Some(entry) => self.sheet_entry_state(entry) == SheetState::Visible
-    None => raise XlsxError::SheetNotFound(name=name.to_string())
+    Some(entry) => self.sheet_entry_state(entry) == Visible
+    None => raise SheetNotFound(name=name.to_string())
   }
 }
 
@@ -631,7 +630,7 @@ pub fn Workbook::set_page_margins(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_page_margins(options)
 }
@@ -644,7 +643,7 @@ pub fn Workbook::get_page_margins(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.page_margins()
 }
@@ -658,7 +657,7 @@ pub fn Workbook::set_page_layout(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_page_layout(options)
 }
@@ -671,7 +670,7 @@ pub fn Workbook::get_page_layout(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.page_layout()
 }
@@ -685,7 +684,7 @@ pub fn Workbook::set_header_footer(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_header_footer(options)
 }
@@ -699,7 +698,7 @@ pub fn Workbook::set_sheet_props(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_sheet_props(options)
 }
@@ -712,7 +711,7 @@ pub fn Workbook::get_header_footer(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.header_footer()
 }
@@ -725,7 +724,7 @@ pub fn Workbook::get_header_footer_images(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_header_footer_images()
 }
@@ -738,7 +737,7 @@ pub fn Workbook::get_sheet_props(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.sheet_props()
 }
@@ -753,7 +752,7 @@ pub fn Workbook::set_sheet_view(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_sheet_view(view_index, options)
 }
@@ -767,7 +766,7 @@ pub fn Workbook::get_sheet_view(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_sheet_view(view_index)
 }
@@ -781,7 +780,7 @@ pub fn Workbook::set_panes(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_panes(panes)
 }
@@ -794,7 +793,7 @@ pub fn Workbook::get_panes(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_panes()
 }
@@ -808,7 +807,7 @@ pub fn Workbook::set_sheet_dimension(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_sheet_dimension(range_ref)
 }
@@ -821,7 +820,7 @@ pub fn Workbook::get_sheet_dimension(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   match sheet.sheet_dimension() {
     Some(value) => value
@@ -838,7 +837,7 @@ pub fn Workbook::protect_sheet(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.protect_sheet(options)
 }
@@ -852,7 +851,7 @@ pub fn Workbook::unprotect_sheet(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.unprotect_sheet(password~)
 }
@@ -867,7 +866,7 @@ pub fn Workbook::set_sheet_background(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_sheet_background(data, extension)
 }
@@ -880,7 +879,7 @@ pub fn Workbook::clear_sheet_background(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.clear_sheet_background()
 }
@@ -894,7 +893,7 @@ pub fn Workbook::insert_page_break(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.insert_page_break(cell)
 }
@@ -908,7 +907,7 @@ pub fn Workbook::remove_page_break(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.remove_page_break(cell)
 }
@@ -919,7 +918,7 @@ pub fn Workbook::set_defined_name(
   defined_name : DefinedName,
 ) -> Unit raise XlsxError {
   if defined_name.name == "" || defined_name.refers_to == "" {
-    raise XlsxError::InvalidDefinedName(msg="defined name missing")
+    raise InvalidDefinedName(msg="defined name missing")
   }
   if !is_builtin_defined_name(defined_name.name) {
     check_defined_name(defined_name.name)
@@ -937,7 +936,7 @@ pub fn Workbook::set_defined_name(
   for existing in self.defined_names {
     if existing.name == defined_name.name &&
       defined_name_scope_key(existing.scope) == scope_key {
-      raise XlsxError::DefinedNameDuplicate(name=defined_name.name)
+      raise DefinedNameDuplicate(name=defined_name.name)
     }
   }
   self.defined_names.push({
@@ -965,7 +964,7 @@ pub fn Workbook::delete_defined_name(
     updated.push(dn)
   }
   if !removed {
-    raise XlsxError::DefinedNameScope(name=defined_name.name)
+    raise DefinedNameScope(name=defined_name.name)
   }
   self.defined_names.clear()
   self.defined_names.append(updated[:])
@@ -1000,14 +999,14 @@ pub fn Workbook::group_sheets(
     }
   }
   if !contains_active {
-    raise XlsxError::InvalidSheetOperation(
+    raise InvalidSheetOperation(
       msg="group worksheet must contain an active worksheet",
     )
   }
   for name in sheets {
     let sheet = match self.sheet(name) {
       Some(value) => value
-      None => raise XlsxError::SheetNotFound(name~)
+      None => raise SheetNotFound(name~)
     }
     sheet.ensure_stream_idle()
     if sheet.sheet_views.length() == 0 {
@@ -1027,7 +1026,7 @@ pub fn Workbook::ungroup_sheets(self : Workbook) -> Unit raise XlsxError {
       continue
     }
     match entry {
-      SheetEntry::Worksheet(sheet_idx) => {
+      Worksheet(sheet_idx) => {
         let sheet = self.sheets[sheet_idx]
         if sheet.sheet_views.length() == 0 {
           continue
@@ -1037,7 +1036,7 @@ pub fn Workbook::ungroup_sheets(self : Workbook) -> Unit raise XlsxError {
           view.tab_selected = false
         }
       }
-      SheetEntry::ChartSheet(_) => ()
+      ChartSheet(_) => ()
     }
   }
 }
@@ -1370,7 +1369,7 @@ fn clone_worksheet(
     row_dimensions: clone_row_dimensions(sheet.row_dimensions),
     col_dimensions: clone_col_dimensions(sheet.col_dimensions),
     state,
-    stream_state: StreamState::Idle,
+    stream_state: Idle,
     vml_drawing_xml: sheet.vml_drawing_xml,
     vml_drawing_hf_xml: sheet.vml_drawing_hf_xml,
   }
@@ -1384,7 +1383,7 @@ pub fn Workbook::row_stream(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   RowStream::new(sheet)
 }
@@ -1406,7 +1405,7 @@ fn Workbook::check_style_id(
   style_id : Int,
 ) -> Unit raise XlsxError {
   if style_id < 0 || style_id >= self.styles.length() {
-    raise XlsxError::InvalidStyleId(index=style_id)
+    raise InvalidStyleId(index=style_id)
   }
 }
 
@@ -1416,7 +1415,7 @@ fn Workbook::check_conditional_style_id(
   style_id : Int,
 ) -> Unit raise XlsxError {
   if style_id < 0 || style_id >= self.conditional_styles.length() {
-    raise XlsxError::InvalidStyleId(index=style_id)
+    raise InvalidStyleId(index=style_id)
   }
 }
 
@@ -1455,7 +1454,7 @@ fn format_cell_value_for_workbook(
     return cell.value
   }
   if cell.style_id < 0 || cell.style_id >= styles.length() {
-    raise XlsxError::InvalidStyleId(index=cell.style_id)
+    raise InvalidStyleId(index=cell.style_id)
   }
   format_cell_value(
     cell.value_type,
@@ -1500,11 +1499,11 @@ pub fn Workbook::set_cell(
     Some(value) => value
     None =>
       match self.sheet_entry(sheet_name) {
-        Some(SheetEntry::ChartSheet(_)) =>
-          raise XlsxError::InvalidSheetOperation(
+        Some(ChartSheet(_)) =>
+          raise InvalidSheetOperation(
             msg="sheet \{sheet_name.to_string()} is not a worksheet",
           )
-        _ => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+        _ => raise SheetNotFound(name=sheet_name.to_string())
       }
   }
   sheet.set_cell(reference, value)
@@ -1522,11 +1521,11 @@ pub fn Workbook::set_cell_value(
     Some(value) => value
     None =>
       match self.sheet_entry(sheet_name) {
-        Some(SheetEntry::ChartSheet(_)) =>
-          raise XlsxError::InvalidSheetOperation(
+        Some(ChartSheet(_)) =>
+          raise InvalidSheetOperation(
             msg="sheet \{sheet_name.to_string()} is not a worksheet",
           )
-        _ => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+        _ => raise SheetNotFound(name=sheet_name.to_string())
       }
   }
   sheet.set_cell_value(reference, value)
@@ -1539,7 +1538,7 @@ pub fn Workbook::set_cell_bool(
   reference : String,
   value : Bool,
 ) -> Unit raise XlsxError {
-  self.set_cell_value(sheet_name, reference, CellValue::Bool(value))
+  self.set_cell_value(sheet_name, reference, Bool(value))
 }
 
 ///|
@@ -1549,11 +1548,7 @@ pub fn Workbook::set_cell_int(
   reference : String,
   value : Int,
 ) -> Unit raise XlsxError {
-  self.set_cell_value(
-    sheet_name,
-    reference,
-    CellValue::Numeric(Double::from_int(value)),
-  )
+  self.set_cell_value(sheet_name, reference, Numeric(Double::from_int(value)))
 }
 
 ///|
@@ -1566,7 +1561,7 @@ pub fn Workbook::set_cell_uint(
   self.set_cell_value(
     sheet_name,
     reference,
-    CellValue::Numeric(Double::convert_uint(value)),
+    Numeric(Double::convert_uint(value)),
   )
 }
 
@@ -1580,7 +1575,7 @@ pub fn Workbook::set_cell_float(
   bit_size? : Int = 64,
 ) -> Unit raise XlsxError {
   let normalized = normalize_cell_float_value(value, precision, bit_size)
-  self.set_cell_value(sheet_name, reference, CellValue::Numeric(normalized))
+  self.set_cell_value(sheet_name, reference, Numeric(normalized))
 }
 
 ///|
@@ -1613,7 +1608,7 @@ pub fn Workbook::set_cell_rich_text(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_rich_text(reference, runs)
 }
@@ -1631,7 +1626,7 @@ pub fn Workbook::set_cell_hyperlink(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_hyperlink(reference, target, link_type, display~, tooltip~)
 }
@@ -1648,7 +1643,7 @@ pub fn Workbook::set_cell_hyperlink_opts(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_hyperlink_opts(reference, target, link_type, opts~)
 }
@@ -1682,7 +1677,7 @@ pub fn Workbook::remove_cell_hyperlink(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.remove_cell_hyperlink(reference)
 }
@@ -1696,7 +1691,7 @@ pub fn Workbook::get_cell(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell(reference)
 }
@@ -1710,7 +1705,7 @@ pub fn Workbook::get_cell_rich_text(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_rich_text(reference)
 }
@@ -1724,7 +1719,7 @@ pub fn Workbook::get_cell_hyperlink(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_hyperlink(reference)
 }
@@ -1747,7 +1742,7 @@ pub fn Workbook::get_cell_value_raw(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_value_raw(reference)
 }
@@ -1761,7 +1756,7 @@ pub fn Workbook::get_cell_type(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_type(reference)
 }
@@ -1781,7 +1776,7 @@ pub fn Workbook::get_cell_value(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (row, col) = cell_ref_to_rc(reference)
   for cell in sheet.cells() {
@@ -1809,7 +1804,7 @@ pub fn Workbook::calc_cell_value(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
@@ -1827,7 +1822,7 @@ pub fn Workbook::calc_cell_value(
     }
   }
   if style_id < 0 || style_id >= self.styles.length() {
-    raise XlsxError::InvalidStyleId(index=style_id)
+    raise InvalidStyleId(index=style_id)
   }
   format_cell_value(
     value_type,
@@ -1865,7 +1860,7 @@ pub fn Workbook::set_cell_formula(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_formula(reference, formula, value~)
 }
@@ -1882,7 +1877,7 @@ pub fn Workbook::set_cell_formula_opts(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_formula_opts(reference, formula, opts~, value~)
 }
@@ -1896,7 +1891,7 @@ pub fn Workbook::get_cell_formula(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_formula(reference)
 }
@@ -1912,7 +1907,7 @@ pub fn Workbook::set_cell_style(
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_style(reference, style_id)
 }
@@ -1926,7 +1921,7 @@ pub fn Workbook::get_cell_style(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_style(reference)
 }
@@ -1944,7 +1939,7 @@ pub fn Workbook::add_image(
   scale_x? : Double = 1.0,
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
-  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  hyperlink_type? : HyperlinkType = Unset,
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
@@ -1952,12 +1947,12 @@ pub fn Workbook::add_image(
   auto_fit_ignore_aspect? : Bool = false,
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_image(
     reference,
@@ -1994,7 +1989,7 @@ pub fn Workbook::add_image_with_options(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let offset_x = match options.offset_x {
     Some(value) => value
@@ -2018,7 +2013,7 @@ pub fn Workbook::add_image_with_options(
   }
   let hyperlink_type = match options.hyperlink_type {
     Some(value) => value
-    None => HyperlinkType::Unset
+    None => Unset
   }
   let name = match options.name {
     Some(value) => value
@@ -2050,7 +2045,7 @@ pub fn Workbook::add_image_with_options(
   }
   let positioning = match options.positioning {
     Some(value) => value
-    None => PicturePositioning::OneCell
+    None => OneCell
   }
   sheet.add_image(
     reference,
@@ -2085,7 +2080,7 @@ pub async fn Workbook::add_picture(
   scale_x? : Double = 1.0,
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
-  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  hyperlink_type? : HyperlinkType = Unset,
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
@@ -2093,12 +2088,12 @@ pub async fn Workbook::add_picture(
   auto_fit_ignore_aspect? : Bool = false,
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_picture(
     reference,
@@ -2131,7 +2126,7 @@ pub async fn Workbook::add_picture_with_options(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_picture_with_options(reference, path, options)
 }
@@ -2148,7 +2143,7 @@ pub fn Workbook::add_picture_from_bytes(
   scale_x? : Double = 1.0,
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
-  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  hyperlink_type? : HyperlinkType = Unset,
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
@@ -2156,12 +2151,12 @@ pub fn Workbook::add_picture_from_bytes(
   auto_fit_ignore_aspect? : Bool = false,
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_picture_from_bytes(
     reference,
@@ -2196,7 +2191,7 @@ pub fn Workbook::add_picture_from_bytes_with_options(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_picture_from_bytes_with_options(reference, data, extension, options)
 }
@@ -2210,7 +2205,7 @@ pub fn Workbook::add_header_footer_image(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_header_footer_image(options)
 }
@@ -2224,7 +2219,7 @@ pub fn Workbook::get_pictures(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_pictures(cell)
 }
@@ -2237,7 +2232,7 @@ pub fn Workbook::get_picture_cells(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_picture_cells()
 }
@@ -2251,7 +2246,7 @@ pub fn Workbook::delete_picture(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_picture(cell)
 }
@@ -2266,7 +2261,7 @@ pub fn Workbook::add_chart(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_chart(reference, xml)
 }
@@ -2281,7 +2276,7 @@ pub fn Workbook::add_chart_with_options(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_chart_with_options(reference, opts)
 }
@@ -2295,7 +2290,7 @@ pub fn Workbook::delete_chart(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_chart(cell)
 }
@@ -2309,7 +2304,7 @@ pub fn Workbook::add_shape(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_shape(shape)
 }
@@ -2323,7 +2318,7 @@ pub fn Workbook::add_vml_drawing_xml(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_vml_drawing_xml(xml)
 }
@@ -2337,7 +2332,7 @@ pub fn Workbook::add_vml_drawing_hf_xml(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_vml_drawing_hf_xml(xml)
 }
@@ -2351,7 +2346,7 @@ pub fn Workbook::add_form_control(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_form_control(control)
 }
@@ -2364,7 +2359,7 @@ pub fn Workbook::get_form_controls(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let out : Array[FormControl] = []
   for control in sheet.get_form_controls() {
@@ -2382,7 +2377,7 @@ pub fn Workbook::delete_form_control(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_form_control(cell)
 }
@@ -2481,12 +2476,12 @@ pub fn Workbook::add_slicer(
   ignore(check_sheet_name(sheet_name))
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   ignore(check_sheet_name(opts.table_sheet))
   match self.sheet(opts.table_sheet) {
     Some(_) => ()
-    None => raise XlsxError::SheetNotFound(name=opts.table_sheet)
+    None => raise SheetNotFound(name=opts.table_sheet)
   }
   let mut has_source = false
   let mut is_table_slicer = false
@@ -2496,9 +2491,7 @@ pub fn Workbook::add_slicer(
       has_source = true
       is_table_slicer = true
       if !table.columns.contains(opts.name) {
-        raise XlsxError::InvalidSheetOperation(
-          msg="slicer field not found in table",
-        )
+        raise InvalidSheetOperation(msg="slicer field not found in table")
       }
       break
     }
@@ -2517,7 +2510,7 @@ pub fn Workbook::add_slicer(
           }
         }
         if !found {
-          raise XlsxError::InvalidSheetOperation(
+          raise InvalidSheetOperation(
             msg="slicer field not found in pivot cache",
           )
         }
@@ -2526,7 +2519,7 @@ pub fn Workbook::add_slicer(
     }
   }
   if !has_source {
-    raise XlsxError::TableNotFound(name=opts.table_name)
+    raise TableNotFound(name=opts.table_name)
   }
   let mut cache_name = ""
   for ws in self.sheets {
@@ -2553,7 +2546,7 @@ pub fn Workbook::add_slicer(
   let slicer_name = gen_slicer_name(self, opts.name)
   let format = opts.format
   if format.positioning is None {
-    format.positioning = Some(PicturePositioning::TwoCell)
+    format.positioning = Some(TwoCell)
   }
   if format.print_object is None {
     format.print_object = Some(true)
@@ -2597,7 +2590,7 @@ pub fn Workbook::add_slicer_raw(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_slicer(slicer)
 }
@@ -2610,7 +2603,7 @@ pub fn Workbook::get_slicers(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let out : Array[Slicer] = []
   for slicer in sheet.get_slicers() {
@@ -2641,7 +2634,7 @@ pub fn Workbook::delete_slicer(
     }
   }
   if !removed {
-    raise XlsxError::InvalidSheetOperation(msg="slicer not found")
+    raise InvalidSheetOperation(msg="slicer not found")
   }
 }
 
@@ -2654,7 +2647,7 @@ pub fn Workbook::add_comment(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_comment(comment)
 }
@@ -2668,7 +2661,7 @@ pub fn Workbook::delete_comment(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_comment(cell)
 }
@@ -2681,7 +2674,7 @@ pub fn Workbook::get_comments(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let comments : Array[Comment] = []
   for comment in sheet.comments() {
@@ -2700,7 +2693,7 @@ pub fn Workbook::set_auto_filter(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_auto_filter(range_ref, options)
   match sheet.auto_filter() {
@@ -2723,7 +2716,7 @@ pub fn Workbook::clear_auto_filter(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.clear_auto_filter()
   remove_defined_name_for_scope(self, "_xlnm._FilterDatabase", sheet_name)
@@ -2737,7 +2730,7 @@ pub fn Workbook::get_auto_filter(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.auto_filter()
 }
@@ -2750,12 +2743,8 @@ fn abs_cell_ref_from_rc(row : Int, col : Int) -> String raise XlsxError {
   while split < chars.length() && chars[split].is_ascii_alphabetic() {
     split = split + 1
   }
-  let col_text = base[:split] catch {
-      _ => raise XlsxError::InvalidCellRef(value=base)
-    }
-  let row_text = base[split:] catch {
-      _ => raise XlsxError::InvalidCellRef(value=base)
-    }
+  let col_text = base[:split] catch { _ => raise InvalidCellRef(value=base) }
+  let row_text = base[split:] catch { _ => raise InvalidCellRef(value=base) }
   "$\{col_text}$\{row_text}"
 }
 
@@ -2827,7 +2816,7 @@ pub fn Workbook::add_data_validation_xml(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_data_validation_xml(xml)
 }
@@ -2841,7 +2830,7 @@ pub fn Workbook::add_data_validation(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_data_validation(dv)
 }
@@ -2857,7 +2846,7 @@ pub fn Workbook::add_data_validation_list(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_data_validation_list(range_ref, values, allow_blank~)
 }
@@ -2870,7 +2859,7 @@ pub fn Workbook::get_data_validations(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_data_validations()
 }
@@ -2884,7 +2873,7 @@ pub fn Workbook::delete_data_validation(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_data_validation(sqrefs~)
 }
@@ -2899,7 +2888,7 @@ pub fn Workbook::add_ignored_errors(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_ignored_errors(range_ref, error_type)
 }
@@ -2913,7 +2902,7 @@ pub fn Workbook::add_conditional_format_xml(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_conditional_format_xml(xml)
 }
@@ -2928,7 +2917,7 @@ pub fn Workbook::set_conditional_format(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_conditional_format(range_ref, options)
 }
@@ -2941,7 +2930,7 @@ pub fn Workbook::get_conditional_formats(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_conditional_formats()
 }
@@ -2955,7 +2944,7 @@ pub fn Workbook::unset_conditional_format(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.unset_conditional_format(range_ref)
 }
@@ -2969,7 +2958,7 @@ pub fn Workbook::merge_cells(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.merge_cells(range_ref)
 }
@@ -2996,7 +2985,7 @@ pub fn Workbook::unmerge_cells(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.unmerge_cells(range_ref)
 }
@@ -3022,7 +3011,7 @@ pub fn Workbook::get_merge_cells(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let merged : Array[String] = []
   for range_ref in sheet.merged_cells() {
@@ -3045,7 +3034,7 @@ pub fn Workbook::get_merge_cells_info(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let merged_ranges = merge_overlap_ranges(sheet.merged_cells())
   let results : Array[MergeCell] = []
@@ -3130,7 +3119,7 @@ pub fn Workbook::add_table(
   ignore(check_sheet_name(sheet_name))
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let show_header_row = match options.show_header_row {
     Some(v) => v
@@ -3149,7 +3138,7 @@ pub fn Workbook::add_table(
   let (min_row0, min_col, max_row0, max_col) = parse_range_ref(normalized)
   let max_row = if min_row0 == max_row0 { max_row0 + 1 } else { max_row0 }
   if intersects_existing_tables(sheet, min_row0, min_col, max_row, max_col) {
-    raise XlsxError::InvalidTable(msg="table range intersects existing table")
+    raise InvalidTable(msg="table range intersects existing table")
   }
   let range_ref = normalize_range_ref(
     "\{cell_ref_from(min_row0, min_col)}:\{cell_ref_from(max_row, max_col)}",
@@ -3182,11 +3171,11 @@ pub fn Workbook::add_table(
     table_name = next_table_name(self)
   } else {
     check_defined_name(table_name) catch {
-      _ => raise XlsxError::InvalidTable(msg="table name invalid")
+      _ => raise InvalidTable(msg="table name invalid")
     }
   }
   if table_name_exists(self, table_name) {
-    raise XlsxError::InvalidTable(msg="table name exists")
+    raise InvalidTable(msg="table name exists")
   }
   sheet.add_table(
     range_ref,
@@ -3220,7 +3209,7 @@ pub fn Workbook::add_table_with_columns(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_table(
     range_ref,
@@ -3244,7 +3233,7 @@ pub fn Workbook::get_tables(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let tables : Array[Table] = []
   for table in sheet.tables() {
@@ -3272,7 +3261,7 @@ pub fn Workbook::delete_table(
       return
     }
   }
-  raise XlsxError::TableNotFound(name=target)
+  raise TableNotFound(name=target)
 }
 
 ///|
@@ -3284,7 +3273,7 @@ pub fn Workbook::add_sparkline(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_sparkline_options(options)
 }
@@ -3295,12 +3284,12 @@ pub fn Workbook::add_sparkline_group(
   sheet_name : StringView,
   locations : ArrayView[String],
   ranges : ArrayView[String],
-  sparkline_type? : SparklineType = SparklineType::Line,
+  sparkline_type? : SparklineType = Line,
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_sparkline_group(locations, ranges, sparkline_type~)
 }
@@ -3314,7 +3303,7 @@ pub fn Workbook::add_sparkline_options(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_sparkline_options(options)
 }
@@ -3325,12 +3314,12 @@ pub fn Workbook::add_sparkline_basic(
   sheet_name : StringView,
   location : String,
   range_ref : String,
-  sparkline_type? : SparklineType = SparklineType::Line,
+  sparkline_type? : SparklineType = Line,
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_sparkline(location, range_ref, sparkline_type~)
 }
@@ -3347,7 +3336,7 @@ pub fn Workbook::add_pivot_table_xml(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.add_pivot_table_xml(
     table_xml,
@@ -3393,7 +3382,7 @@ pub fn Workbook::add_pivot_table_with_options(
   opts : PivotTableOptions,
 ) -> PivotTable raise XlsxError {
   if opts.compact_data && opts.classic_layout {
-    raise XlsxError::InvalidPivotTable(
+    raise InvalidPivotTable(
       msg="pivot compactData is incompatible with classic layout",
     )
   }
@@ -3401,7 +3390,7 @@ pub fn Workbook::add_pivot_table_with_options(
   let (pivot_sheet, pivot_ref) = split_sheet_range(opts.pivot_table_range)
   let (header_row, min_col, max_row, max_col) = parse_range_ref(data_ref)
   if max_row <= header_row || max_col <= min_col {
-    raise XlsxError::InvalidPivotTable(msg="pivot data range invalid")
+    raise InvalidPivotTable(msg="pivot data range invalid")
   }
   let field_names : Array[String] = []
   let mut col = min_col
@@ -3413,7 +3402,7 @@ pub fn Workbook::add_pivot_table_with_options(
       None => ""
     }
     if value == "" {
-      raise XlsxError::InvalidPivotTable(msg="pivot field name empty")
+      raise InvalidPivotTable(msg="pivot field name empty")
     }
     field_names.push(value)
     col = col + 1
@@ -3428,8 +3417,7 @@ pub fn Workbook::add_pivot_table_with_options(
   ) -> Int raise XlsxError {
     match field_index.get(name) {
       Some(idx) => idx
-      None =>
-        raise XlsxError::InvalidPivotTable(msg="pivot field not found: \{name}")
+      None => raise InvalidPivotTable(msg="pivot field not found: \{name}")
     }
   }
 
@@ -3455,7 +3443,7 @@ pub fn Workbook::add_pivot_table_with_options(
     pivot_name = self.next_pivot_table_name()
   }
   if pivot_name.length() > 255 {
-    raise XlsxError::InvalidPivotTable(msg="pivot table name too long")
+    raise InvalidPivotTable(msg="pivot table name too long")
   }
   let cache_id_guess = 1
   let cache_xml = write_pivot_cache_definition_xml(
@@ -3482,7 +3470,7 @@ pub fn Workbook::get_pivot_tables(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   clone_pivot_tables(sheet.pivot_tables())
 }
@@ -3496,7 +3484,7 @@ pub fn Workbook::delete_pivot_table(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.delete_pivot_table(name)
 }
@@ -3512,7 +3500,7 @@ pub fn Workbook::set_cell_rc(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_rc(row, col, value)
 }
@@ -3528,7 +3516,7 @@ pub fn Workbook::set_cell_value_rc(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_value_rc(row, col, value)
 }
@@ -3543,7 +3531,7 @@ pub fn Workbook::get_cell_rc(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_rc(row, col)
 }
@@ -3558,7 +3546,7 @@ pub fn Workbook::get_cell_value_raw_rc(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_value_raw_rc(row, col)
 }
@@ -3579,7 +3567,7 @@ pub fn Workbook::get_cell_value_rc(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   for cell in sheet.cells() {
     if cell.row == row && cell.col == col {
@@ -3603,7 +3591,7 @@ pub fn Workbook::set_cell_style_rc(
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_style_rc(row, col, style_id)
 }
@@ -3618,7 +3606,7 @@ pub fn Workbook::get_cell_style_rc(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_cell_style_rc(row, col)
 }
@@ -3635,7 +3623,7 @@ pub fn Workbook::set_cell_formula_rc(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_cell_formula_rc(row, col, formula, value~)
 }
@@ -3650,7 +3638,7 @@ pub fn Workbook::set_row(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_row(row, values)
 }
@@ -3664,7 +3652,7 @@ pub fn Workbook::get_row(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_row(row)
 }
@@ -3679,7 +3667,7 @@ pub fn Workbook::set_col(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_col(col, values)
 }
@@ -3693,7 +3681,7 @@ pub fn Workbook::get_col(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_col(col)
 }
@@ -3708,7 +3696,7 @@ pub fn Workbook::set_row_height(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_row_height(row, height)
 }
@@ -3722,7 +3710,7 @@ pub fn Workbook::get_row_height(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_row_height(row)
 }
@@ -3737,7 +3725,7 @@ pub fn Workbook::set_row_visible(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_row_visible(row, visible)
 }
@@ -3751,7 +3739,7 @@ pub fn Workbook::row_visible(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.row_visible(row)
 }
@@ -3766,7 +3754,7 @@ pub fn Workbook::set_row_outline_level(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_row_outline_level(row, level)
 }
@@ -3780,7 +3768,7 @@ pub fn Workbook::row_outline_level(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.row_outline_level(row)
 }
@@ -3807,7 +3795,7 @@ pub fn Workbook::set_row_style_range(
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_row_style_range(start, end, style_id)
 }
@@ -3821,7 +3809,7 @@ pub fn Workbook::get_row_style(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_row_style(row)
 }
@@ -3836,7 +3824,7 @@ pub fn Workbook::set_col_width(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_col_width(col, width)
 }
@@ -3850,7 +3838,7 @@ pub fn Workbook::get_col_width(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_col_width(col)
 }
@@ -3865,7 +3853,7 @@ pub fn Workbook::set_col_visible(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_col_visible(col, visible)
 }
@@ -3879,7 +3867,7 @@ pub fn Workbook::col_visible(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.col_visible(col)
 }
@@ -3894,7 +3882,7 @@ pub fn Workbook::set_col_outline_level(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_col_outline_level(col, level)
 }
@@ -3908,7 +3896,7 @@ pub fn Workbook::col_outline_level(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.col_outline_level(col)
 }
@@ -3924,7 +3912,7 @@ pub fn Workbook::set_col_style(
   self.check_style_id(style_id)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.set_col_style(col, style_id)
 }
@@ -3938,7 +3926,7 @@ pub fn Workbook::get_col_style(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.get_col_style(col)
 }
@@ -3953,7 +3941,7 @@ pub fn Workbook::insert_rows(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.insert_rows(row, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
@@ -3973,7 +3961,7 @@ pub fn Workbook::remove_rows(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.remove_rows(row, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
@@ -4003,7 +3991,7 @@ pub fn Workbook::insert_cols(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.insert_cols(col, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
@@ -4023,7 +4011,7 @@ pub fn Workbook::remove_cols(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.remove_cols(col, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
@@ -4062,7 +4050,7 @@ pub fn Workbook::duplicate_row_to(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   sheet.duplicate_row_to(row, target_row)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(

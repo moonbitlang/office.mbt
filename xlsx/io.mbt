@@ -3,7 +3,7 @@ async fn[R : @async/io.Reader] read_all_bytes(
   reader : R,
 ) -> Bytes raise XlsxError {
   let data = reader.read_all() catch {
-    err => raise XlsxError::InvalidSheetOperation(msg="reader failed: \{err}")
+    err => raise InvalidSheetOperation(msg="reader failed: \{err}")
   }
   data.binary()
 }
@@ -11,8 +11,7 @@ async fn[R : @async/io.Reader] read_all_bytes(
 ///|
 async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
   let data = @async/fs.read_file(path) catch {
-    err =>
-      raise XlsxError::InvalidSheetOperation(msg="read file failed: \{err}")
+    err => raise InvalidSheetOperation(msg="read file failed: \{err}")
   }
   data.binary()
 }
@@ -172,8 +171,7 @@ pub async fn Workbook::set_sheet_background_from_file(
 ) -> Unit raise XlsxError {
   let extension = match extension_from_path(path) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidSheetBackground(msg="image extension missing")
+    None => raise InvalidSheetBackground(msg="image extension missing")
   }
   let bytes = read_file_bytes(path)
   self.set_sheet_background(sheet_name, bytes, extension)
@@ -190,7 +188,7 @@ pub async fn Workbook::save(
         Some(value) => self.save_as(path, options=value)
         None => self.save_as(path)
       }
-    None => raise XlsxError::InvalidSheetOperation(msg="workbook path not set")
+    None => raise InvalidSheetOperation(msg="workbook path not set")
   }
 }
 
@@ -202,24 +200,18 @@ pub async fn Workbook::save_as(
 ) -> Unit raise XlsxError {
   let extension = match extension_from_path(path) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidSheetOperation(
-        msg="workbook file extension missing",
-      )
+    None => raise InvalidSheetOperation(msg="workbook file extension missing")
   }
   if extension != "xlsx" &&
     extension != "xlsm" &&
     extension != "xlam" &&
     extension != "xltm" &&
     extension != "xltx" {
-    raise XlsxError::InvalidSheetOperation(
-      msg="unsupported workbook file format",
-    )
+    raise InvalidSheetOperation(msg="unsupported workbook file format")
   }
   let bytes = write_bytes_with_io(self, options, Some(path))
   @async/fs.write_file(path, bytes, create=0o644) catch {
-    err =>
-      raise XlsxError::InvalidSheetOperation(msg="write file failed: \{err}")
+    err => raise InvalidSheetOperation(msg="write file failed: \{err}")
   }
   self.file_path = Some(path)
 }
@@ -252,7 +244,7 @@ pub async fn[W : @async/io.Writer] Workbook::write_to(
 ) -> Int raise XlsxError {
   let bytes = write_bytes(self, options)
   writer.write(bytes) catch {
-    err => raise XlsxError::InvalidSheetOperation(msg="writer failed: \{err}")
+    err => raise InvalidSheetOperation(msg="writer failed: \{err}")
   }
   bytes.length()
 }

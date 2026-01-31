@@ -21,9 +21,7 @@ pub fn SlicerOptions::new(
   table_name : String,
 ) -> SlicerOptions raise XlsxError {
   if name == "" || cell == "" || table_sheet == "" || table_name == "" {
-    raise XlsxError::InvalidSheetOperation(
-      msg="slicer options missing required fields",
-    )
+    raise InvalidSheetOperation(msg="slicer options missing required fields")
   }
   ignore(cell_ref_to_rc(cell))
   {
@@ -64,7 +62,7 @@ pub fn SlicerOptions::set_size(
   height : Int,
 ) -> Unit raise XlsxError {
   if width <= 0 || height <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="slicer size must be > 0")
+    raise InvalidSheetOperation(msg="slicer size must be > 0")
   }
   self.width = width
   self.height = height

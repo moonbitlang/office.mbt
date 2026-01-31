@@ -35,7 +35,7 @@ test "zip invalid bytes" {
 ///|
 test "zip deflate roundtrip" {
   let archive = Archive::new()
-  archive.add("a.txt", b"hello", compression=Compression::Deflate)
+  archive.add("a.txt", b"hello", compression=Deflate)
   let bytes = write(archive)
   let parsed = read(bytes)
   inspect(

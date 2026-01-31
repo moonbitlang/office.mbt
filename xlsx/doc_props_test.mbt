@@ -49,27 +49,14 @@ test "doc properties defaults" {
 ///|
 test "custom properties roundtrip" {
   let workbook = Workbook::new()
+  workbook.set_custom_props(CustomProperty::new("Text", Some(Text("hello"))))
+  workbook.set_custom_props(CustomProperty::new("Bool", Some(Boolean(true))))
+  workbook.set_custom_props(CustomProperty::new("Number", Some(Float(12.5))))
+  workbook.set_custom_props(CustomProperty::new("Int", Some(Integer(-7))))
   workbook.set_custom_props(
-    CustomProperty::new("Text", Some(CustomPropertyValue::Text("hello"))),
+    CustomProperty::new("Date", Some(DateTime("2024-01-01T00:00:00Z"))),
   )
-  workbook.set_custom_props(
-    CustomProperty::new("Bool", Some(CustomPropertyValue::Boolean(true))),
-  )
-  workbook.set_custom_props(
-    CustomProperty::new("Number", Some(CustomPropertyValue::Float(12.5))),
-  )
-  workbook.set_custom_props(
-    CustomProperty::new("Int", Some(CustomPropertyValue::Integer(-7))),
-  )
-  workbook.set_custom_props(
-    CustomProperty::new(
-      "Date",
-      Some(CustomPropertyValue::DateTime("2024-01-01T00:00:00Z")),
-    ),
-  )
-  workbook.set_custom_props(
-    CustomProperty::new("Remove", Some(CustomPropertyValue::Text("gone"))),
-  )
+  workbook.set_custom_props(CustomProperty::new("Remove", Some(Text("gone"))))
   workbook.set_custom_props(CustomProperty::new("Remove", None))
   let parsed = read(write(workbook))
   let props = parsed.get_custom_props()

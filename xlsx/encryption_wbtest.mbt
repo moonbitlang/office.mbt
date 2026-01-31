@@ -395,8 +395,8 @@ test "encryption info detection" {
   let reader = cfb_read(bytes)
   let info = reader.read_stream("EncryptionInfo")
   let is_agile = match encryption_mechanism(info) {
-    EncryptionMechanism::Agile => true
-    EncryptionMechanism::Standard => false
+    Agile => true
+    Standard => false
   }
   inspect(is_agile, content="true")
   let xml = @encoding/utf8.decode(info[8:])
@@ -428,8 +428,8 @@ test "encryption info standard detection" {
   let reader = cfb_read(bytes)
   let info = reader.read_stream("EncryptionInfo")
   let is_standard = match encryption_mechanism(info) {
-    EncryptionMechanism::Standard => true
-    EncryptionMechanism::Agile => false
+    Standard => true
+    Agile => false
   }
   inspect(is_standard, content="true")
 }
@@ -524,5 +524,5 @@ test "write encrypted invalid password length" {
   let result : Result[Bytes, Error] = try? write_with_password(
     workbook, long_password,
   )
-  inspect(result is Err(XlsxError::InvalidPasswordLength(_)), content="true")
+  inspect(result is Err(InvalidPasswordLength(_)), content="true")
 }

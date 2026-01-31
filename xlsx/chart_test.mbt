@@ -58,7 +58,7 @@ test "chart delete" {
 test "chart options write" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Sheet1!$B$1"),
   )
@@ -120,7 +120,7 @@ test "chart size twoCellAnchor computes to cell" {
   sheet.set_cell("B4", "6")
   sheet.set_cell("C4", "7")
   sheet.set_cell("D4", "8")
-  let opts = ChartOptions::new(ChartType::Col3DClustered)
+  let opts = ChartOptions::new(Col3DClustered)
   opts.dimension = ChartDimension::with_values(640, 480)
   opts.series.push(
     ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$2:$D$2", name="Sheet1!$A$2"),
@@ -149,11 +149,11 @@ test "chart size twoCellAnchor computes to cell" {
 test "chart options combo (col + line) secondary axis" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
-  let combo = ChartOptions::new(ChartType::Line)
+  let combo = ChartOptions::new(Line)
   combo.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Series2"),
   )
@@ -179,11 +179,11 @@ test "chart options combo (col + line) secondary axis" {
 test "chart options combo (scatter + col)" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Scatter)
+  let opts = ChartOptions::new(Scatter)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
-  let combo = ChartOptions::new(ChartType::Col)
+  let combo = ChartOptions::new(Col)
   combo.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Series2"),
   )
@@ -211,7 +211,7 @@ test "chart options combo (scatter + col)" {
 test "chart options combo (stock + line) uses dateAx" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::StockOpenHighLowClose)
+  let opts = ChartOptions::new(StockOpenHighLowClose)
   opts.plot_area.up_bars.fill_color = "00FF00"
   opts.plot_area.down_bars.fill_color = "FF0000"
   opts.series.push(
@@ -226,7 +226,7 @@ test "chart options combo (stock + line) uses dateAx" {
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
   )
-  let combo = ChartOptions::new(ChartType::Line)
+  let combo = ChartOptions::new(Line)
   combo.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$F$2:$F$4", name="MA"),
   )
@@ -253,7 +253,7 @@ test "chart options combo (stock + line) uses dateAx" {
 test "chart options legend none omits legend" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -272,7 +272,7 @@ test "chart options legend none omits legend" {
 test "chart options legend font emits txPr" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -306,7 +306,7 @@ test "chart options legend font emits txPr" {
 test "chart options plotArea fill + dTable" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -333,7 +333,7 @@ test "chart options plotArea fill + dTable" {
 test "chart options series data label font + fill emits txPr/spPr" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   let series = ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
@@ -369,7 +369,7 @@ test "chart options series data label font + fill emits txPr/spPr" {
 test "chart options chart root fill + border emits spPr" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -377,7 +377,7 @@ test "chart options chart root fill + border emits spPr" {
   opts.fill_transparency = 25
   opts.border.color = "#445566"
   opts.border.width = 1.5
-  opts.border.dash = ChartDashType::Dot
+  opts.border.dash = Dot
   opts.border.transparency = 60
   workbook.add_chart_with_options("Sheet1", "C3", opts)
   let bytes = write(workbook)
@@ -400,7 +400,7 @@ test "chart options chart root fill + border emits spPr" {
 test "chart options stacked + axis + blanks + gap/overlap" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::ColStacked)
+  let opts = ChartOptions::new(ColStacked)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -411,7 +411,7 @@ test "chart options stacked + axis + blanks + gap/overlap" {
   opts.x_axis.major_grid_lines = true
   opts.y_axis.title = "Y Axis"
   opts.y_axis.minor_grid_lines = true
-  opts.y_axis.tick_label_position = ChartTickLabelPositionType::High
+  opts.y_axis.tick_label_position = High
   opts.y_axis.num_fmt = ChartNumFmt::new(
     custom_num_fmt="0.00",
     source_linked=false,
@@ -463,7 +463,7 @@ test "chart options rich title + axis title runs" {
     vert_align: None,
     family: Some("Calibri"),
   }
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -496,7 +496,7 @@ test "chart options rich title + axis title runs" {
 test "chart options axis txPr font + alignment" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -532,7 +532,7 @@ test "chart options axis txPr font + alignment" {
 test "chart options pie has no axes" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Pie)
+  let opts = ChartOptions::new(Pie)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -552,7 +552,7 @@ test "chart options pie has no axes" {
 test "chart options pie3D has no axes" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Pie3D)
+  let opts = ChartOptions::new(Pie3D)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -572,7 +572,7 @@ test "chart options pie3D has no axes" {
 test "chart options doughnut holeSize" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Doughnut)
+  let opts = ChartOptions::new(Doughnut)
   opts.hole_size = Some(60)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
@@ -593,7 +593,7 @@ test "chart options doughnut holeSize" {
 test "chart options ofPie splitPos" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::PieOfPie)
+  let opts = ChartOptions::new(PieOfPie)
   opts.plot_area.second_plot_values = 5
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
@@ -613,7 +613,7 @@ test "chart options ofPie splitPos" {
 test "chart options plotArea dLbls flags" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Pie)
+  let opts = ChartOptions::new(Pie)
   opts.plot_area.show_cat_name = true
   opts.plot_area.show_ser_name = true
   opts.plot_area.show_percent = true
@@ -642,7 +642,7 @@ test "chart options plotArea dLbls flags" {
 test "chart options pieOfPie has no axes" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::PieOfPie)
+  let opts = ChartOptions::new(PieOfPie)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -663,7 +663,7 @@ test "chart options pieOfPie has no axes" {
 test "chart options barOfPie emits ofPieType bar" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::BarOfPie)
+  let opts = ChartOptions::new(BarOfPie)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -682,7 +682,7 @@ test "chart options barOfPie emits ofPieType bar" {
 test "chart options line3D emits line3DChart" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Line3D)
+  let opts = ChartOptions::new(Line3D)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -702,7 +702,7 @@ test "chart options line3D emits line3DChart" {
 test "chart options series styling emits spPr/marker/dLbls/dPt" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Line)
+  let opts = ChartOptions::new(Line)
   opts.plot_area.show_val = true
   opts.plot_area.num_fmt = ChartNumFmt::new(
     custom_num_fmt="0.00",
@@ -717,7 +717,7 @@ test "chart options series styling emits spPr/marker/dLbls/dPt" {
   series.line.color = "#FF0000"
   series.line.transparency = 50
   series.line.width = 2.5
-  series.line.dash = ChartDashType::Dash
+  series.line.dash = Dash
   series.line.smooth = true
   series.marker.symbol = "circle"
   series.marker.size = 7
@@ -725,9 +725,9 @@ test "chart options series styling emits spPr/marker/dLbls/dPt" {
   series.marker.fill_transparency = 60
   series.marker.border.color = "#445566"
   series.marker.border.width = 1.5
-  series.marker.border.dash = ChartDashType::Dot
+  series.marker.border.dash = Dot
   series.marker.border.transparency = 25
-  series.data_label_position = ChartDataLabelPositionType::Top
+  series.data_label_position = Top
   series.data_point.push(ChartDataPoint::new(0, fill_color="00FF00"))
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
@@ -767,7 +767,7 @@ test "chart options series styling emits spPr/marker/dLbls/dPt" {
 test "chart options col3D cone emits shape" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col3DConeClustered)
+  let opts = ChartOptions::new(Col3DConeClustered)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -787,7 +787,7 @@ test "chart options col3D cone emits shape" {
 test "chart options surface3D wireframe emits serAx" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::WireframeSurface3D)
+  let opts = ChartOptions::new(WireframeSurface3D)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -807,7 +807,7 @@ test "chart options surface3D wireframe emits serAx" {
 test "chart options scatter uses xVal/yVal" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Scatter)
+  let opts = ChartOptions::new(Scatter)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -832,7 +832,7 @@ test "chart options scatter uses xVal/yVal" {
 test "chart options radar emits radarStyle" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Radar)
+  let opts = ChartOptions::new(Radar)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -851,7 +851,7 @@ test "chart options radar emits radarStyle" {
 test "chart options bubble3D uses bubbleSize" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Bubble3D)
+  let opts = ChartOptions::new(Bubble3D)
   opts.bubble_scale = Some(200)
   let series = ChartSeries::new(
     "Sheet1!$A$2:$A$4",
@@ -878,7 +878,7 @@ test "chart options bubble3D uses bubbleSize" {
 test "chart options bubble missing size errors" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Bubble)
+  let opts = ChartOptions::new(Bubble)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
@@ -895,7 +895,7 @@ test "chart options bubble missing size errors" {
 test "chart options stock high-low-close" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::StockHighLowClose)
+  let opts = ChartOptions::new(StockHighLowClose)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
   )
@@ -922,7 +922,7 @@ test "chart options stock high-low-close" {
 test "chart options stock open-high-low-close uses upDownBars" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::StockOpenHighLowClose)
+  let opts = ChartOptions::new(StockOpenHighLowClose)
   opts.plot_area.up_bars.fill_color = "00FF00"
   opts.plot_area.down_bars.fill_color = "FF0000"
   opts.series.push(
@@ -955,7 +955,7 @@ test "chart options stock open-high-low-close uses upDownBars" {
 test "chart options stock invalid series count" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::StockHighLowClose)
+  let opts = ChartOptions::new(StockHighLowClose)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
   )
@@ -972,7 +972,7 @@ test "chart options stock invalid series count" {
 test "chart data label alignment emits txPr paragraph align" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   let series = ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",

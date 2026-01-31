@@ -21,7 +21,7 @@ fn hex_value(ch : Char) -> Int raise XlsxError {
   } else if ch >= 'A' && ch <= 'F' {
     ch.to_int() - 'A'.to_int() + 10
   } else {
-    raise XlsxError::InvalidBase64(msg="invalid hex")
+    raise InvalidBase64(msg="invalid hex")
   }
 }
 
@@ -40,7 +40,7 @@ fn hex_to_bytes(text : StringView) -> Bytes raise XlsxError {
     }
   }
   if pending_hi is Some(_) {
-    raise XlsxError::InvalidBase64(msg="invalid hex length")
+    raise InvalidBase64(msg="invalid hex length")
   }
   Bytes::from_array(out)
 }

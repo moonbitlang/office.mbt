@@ -781,7 +781,7 @@ pub fn Style::new() -> Style {
 /// ```
 pub fn Style::number_format(format_code : String) -> Style {
   {
-    number_format: Some(NumberFormat::Custom(format_code)),
+    number_format: Some(Custom(format_code)),
     font: None,
     fill: None,
     border: None,
@@ -806,7 +806,7 @@ pub fn Style::number_format(format_code : String) -> Style {
 /// - 14: mm-dd-yy
 pub fn Style::builtin_number_format(id : Int) -> Style {
   {
-    number_format: Some(NumberFormat::Builtin(id)),
+    number_format: Some(Builtin(id)),
     font: None,
     fill: None,
     border: None,
@@ -820,7 +820,7 @@ pub fn Style::excelize_custom_num_fmt(
   format_code : StringView,
 ) -> Style raise XlsxError {
   if format_code == "" {
-    raise XlsxError::InvalidOptions(msg="custom number format can not be empty")
+    raise InvalidOptions(msg="custom number format can not be empty")
   }
   Style::number_format(format_code.to_string())
 }
@@ -832,14 +832,11 @@ pub fn Style::excelize_currency_num_fmt(
   neg_red? : Bool = false,
 ) -> Style raise XlsxError {
   if decimal_places < 0 || decimal_places > 30 {
-    raise XlsxError::InvalidOptions(msg="decimal places must be in [0, 30]")
+    raise InvalidOptions(msg="decimal places must be in [0, 30]")
   }
   let base = match excelize_currency_num_fmt_code(num_fmt) {
     Some(v) => v
-    None =>
-      raise XlsxError::InvalidOptions(
-        msg="unknown excelize currency number format",
-      )
+    None => raise InvalidOptions(msg="unknown excelize currency number format")
   }
   let code = if decimal_places == 2 {
     base
@@ -1021,7 +1018,7 @@ fn write_styles_xml(
   let mut next_id = 164
   for style in style_list {
     match style.number_format {
-      Some(NumberFormat::Custom(code)) =>
+      Some(Custom(code)) =>
         match num_fmt_ids.get(code) {
           Some(_) => ()
           None => {
@@ -1035,7 +1032,7 @@ fn write_styles_xml(
   }
   for style in dxf_list {
     match style.number_format {
-      Some(NumberFormat::Custom(code)) =>
+      Some(Custom(code)) =>
         match num_fmt_ids.get(code) {
           Some(_) => ()
           None => {
@@ -1689,8 +1686,8 @@ fn write_styles_xml(
   for style in style_list {
     let (num_fmt_id, apply) = match style.number_format {
       None => (0, false)
-      Some(NumberFormat::Builtin(id)) => (id, true)
-      Some(NumberFormat::Custom(code)) =>
+      Some(Builtin(id)) => (id, true)
+      Some(Custom(code)) =>
         match num_fmt_ids.get(code) {
           Some(id) => (id, true)
           None => (0, false)
@@ -2022,9 +2019,8 @@ fn write_styles_xml(
       }
       sb.write_view("    <dxf>")
       match style.number_format {
-        Some(NumberFormat::Builtin(id)) =>
-          sb.write_view("<numFmt numFmtId=\"\{id}\"/>")
-        Some(NumberFormat::Custom(code)) =>
+        Some(Builtin(id)) => sb.write_view("<numFmt numFmtId=\"\{id}\"/>")
+        Some(Custom(code)) =>
           match num_fmt_ids.get(code) {
             Some(id) => {
               sb.write_view("<numFmt numFmtId=\"\{id}\" formatCode=\"")

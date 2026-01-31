@@ -198,7 +198,7 @@ fn is_builtin_defined_name(name : StringView) -> Bool {
 ///|
 fn check_defined_name(name : StringView) -> Unit raise XlsxError {
   if count_utf16_units(name) > max_field_length {
-    raise XlsxError::InvalidDefinedName(msg="defined name too long")
+    raise InvalidDefinedName(msg="defined name too long")
   }
   let mut first = true
   for c in name {
@@ -208,12 +208,12 @@ fn check_defined_name(name : StringView) -> Unit raise XlsxError {
         first = false
         continue
       }
-      raise XlsxError::InvalidDefinedName(msg="defined name invalid")
+      raise InvalidDefinedName(msg="defined name invalid")
     }
     if in_code_range(code, supported_defined_name_after_ranges) {
       continue
     }
-    raise XlsxError::InvalidDefinedName(msg="defined name invalid")
+    raise InvalidDefinedName(msg="defined name invalid")
   }
 }
 

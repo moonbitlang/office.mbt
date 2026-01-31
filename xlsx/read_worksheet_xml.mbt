@@ -30,22 +30,22 @@ fn parse_worksheet(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="cell tag not closed")
+      None => raise InvalidXml(msg="cell tag not closed")
     }
     let tag = try! text[:end]
     let ref_value = match attr_value(tag, "r") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="cell reference missing")
+      None => raise InvalidXml(msg="cell reference missing")
     }
     let style_id = match attr_value(tag, "s") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="style id invalid")
+          _ => raise InvalidXml(msg="style id invalid")
         }
       None => 0
     }
     if style_id < 0 || style_id >= style_count {
-      raise XlsxError::InvalidStyleId(index=style_id)
+      raise InvalidStyleId(index=style_id)
     }
     let cell_type = attr_value(tag, "t")
     let rest = try! text[end + 1:]
@@ -67,7 +67,7 @@ fn parse_worksheet(
         let f_rest = try! rest[pos:]
         let open_end = match f_rest.find(">") {
           Some(value) => value
-          None => raise XlsxError::InvalidXml(msg="formula tag not closed")
+          None => raise InvalidXml(msg="formula tag not closed")
         }
         let open_tag = try! f_rest[:open_end]
         let open_chars = open_tag.to_array()
@@ -80,7 +80,7 @@ fn parse_worksheet(
           Some(value) =>
             match formula_type_from_ooxml(value) {
               Some(parsed) => Some(parsed)
-              None => raise XlsxError::InvalidXml(msg="formula type invalid")
+              None => raise InvalidXml(msg="formula type invalid")
             }
           None => None
         }
@@ -92,7 +92,7 @@ fn parse_worksheet(
           Some(value) =>
             Some(
               @strconv.parse_int(value, base=10) catch {
-                _ => raise XlsxError::InvalidXml(msg="formula si invalid")
+                _ => raise InvalidXml(msg="formula si invalid")
               },
             )
           None => None
@@ -103,7 +103,7 @@ fn parse_worksheet(
           let after_open = try! f_rest[open_end + 1:]
           let close_end = match after_open.find("</f>") {
             Some(value) => value
-            None => raise XlsxError::InvalidXml(msg="formula not closed")
+            None => raise InvalidXml(msg="formula not closed")
           }
           let content = unescape_xml_text(try! after_open[:close_end])
           (Some(content), kind, ref_value, si_value)
@@ -116,7 +116,7 @@ fn parse_worksheet(
         let v_rest = try! rest[pos + 3:]
         let v_end = match v_rest.find("</v>") {
           Some(end) => end
-          None => raise XlsxError::InvalidXml(msg="cell value not closed")
+          None => raise InvalidXml(msg="cell value not closed")
         }
         Some(try! v_rest[:v_end].to_string())
       }
@@ -143,76 +143,76 @@ fn parse_worksheet(
       match cell_type {
         Some(kind) if kind == "s" => {
           let index = @strconv.parse_int(raw_value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="shared string index invalid")
+            _ => raise InvalidXml(msg="shared string index invalid")
           }
           if index < 0 || index >= shared_strings.length() {
-            raise XlsxError::InvalidSharedString(index~)
+            raise InvalidSharedString(index~)
           }
           let entry = shared_strings[index]
           value = entry.text
           rich_text = entry.runs
-          value_type = CellValueType::String
+          value_type = String
         }
         Some(kind) if kind == "b" => {
           if raw_value != "0" && raw_value != "1" {
-            raise XlsxError::InvalidXml(msg="cell boolean invalid")
+            raise InvalidXml(msg="cell boolean invalid")
           }
           value = raw_value
-          value_type = CellValueType::Bool
+          value_type = Bool
         }
         Some(kind) if kind == "e" => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::Error
+          value_type = Error
         }
         Some(kind) if kind == "str" => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::String
+          value_type = String
         }
         Some(kind) if kind == "inlineStr" =>
           match inline_entry {
             Some(entry) => {
               value = entry.text
               rich_text = entry.runs
-              value_type = CellValueType::String
+              value_type = String
             }
             None => {
               value = ""
-              value_type = CellValueType::String
+              value_type = String
             }
           }
         Some(kind) if kind == "d" => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::String
+          value_type = String
         }
         Some(kind) if kind == "n" =>
           if raw_value == "" {
             value = ""
-            value_type = CellValueType::String
+            value_type = String
           } else {
             ignore(
               @strconv.parse_double(raw_value) catch {
-                _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+                _ => raise InvalidXml(msg="cell number invalid")
               },
             )
             value = raw_value
-            value_type = CellValueType::Number
+            value_type = Number
           }
         Some(_) => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::String
+          value_type = String
         }
         None =>
           if raw_value == "" {
             value = ""
-            value_type = CellValueType::String
+            value_type = String
           } else {
             ignore(
               @strconv.parse_double(raw_value) catch {
-                _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+                _ => raise InvalidXml(msg="cell number invalid")
               },
             )
             value = raw_value
-            value_type = CellValueType::Number
+            value_type = Number
           }
       }
     }

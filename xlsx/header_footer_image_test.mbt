@@ -8,7 +8,7 @@ test "header footer image vml and rels" {
   let img : Bytes = [1, 2, 3, 4]
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       img,
       ".png",
       width="50pt",
@@ -64,7 +64,7 @@ test "header footer image read roundtrip" {
   let img : Bytes = [10, 20, 30]
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       img,
       ".png",
       width="50pt",
@@ -115,7 +115,7 @@ test "header footer vml merge preserves existing shapes" {
   let img : Bytes = [7, 8, 9]
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       img,
       ".png",
       width="10pt",
@@ -143,7 +143,7 @@ test "header footer image invalid extension" {
   let result = try
     sheet.add_header_footer_image(
       HeaderFooterImageOptions::new(
-        HeaderFooterImagePosition::Left,
+        Left,
         [1, 2],
         ".bad",
         width="10pt",
@@ -157,7 +157,7 @@ test "header footer image invalid extension" {
   }
   inspect(
     result,
-    content="Err(UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
+    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
   )
 }
 
@@ -167,7 +167,7 @@ test "header footer image extension requires dot" {
   let result = try
     sheet.add_header_footer_image(
       HeaderFooterImageOptions::new(
-        HeaderFooterImagePosition::Left,
+        Left,
         [1, 2],
         "png",
         width="10pt",
@@ -181,7 +181,7 @@ test "header footer image extension requires dot" {
   }
   inspect(
     result,
-    content="Err(UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
+    content="Err(XlsxError::UnsupportedFeature(msg=\"unsupported header/footer image extension\"))",
   )
 }
 
@@ -202,7 +202,7 @@ test "header footer image multiple positions and first page" {
   )
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       [1, 2, 3],
       ".png",
       width="10pt",
@@ -211,7 +211,7 @@ test "header footer image multiple positions and first page" {
   )
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Center,
+      Center,
       [4, 5],
       ".gif",
       is_footer=true,
@@ -221,7 +221,7 @@ test "header footer image multiple positions and first page" {
   )
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Right,
+      Right,
       [6],
       ".jpg",
       first_page=true,
@@ -238,9 +238,9 @@ test "header footer image multiple positions and first page" {
     let suffix = if img.first_page { "FIRST" } else { "" }
     let mid = if img.is_footer { "F" } else { "H" }
     let base = match img.position {
-      HeaderFooterImagePosition::Left => "L"
-      HeaderFooterImagePosition::Center => "C"
-      HeaderFooterImagePosition::Right => "R"
+      Left => "L"
+      Center => "C"
+      Right => "R"
     }
     ids.push("\{base}\{mid}\{suffix}")
   }
@@ -257,7 +257,7 @@ test "header footer image replaces same slot" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       [9],
       ".png",
       width="10pt",
@@ -266,7 +266,7 @@ test "header footer image replaces same slot" {
   )
   sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       [8, 7],
       ".jpg",
       width="10pt",
@@ -295,7 +295,7 @@ test "header footer image workbook missing sheet" {
   let result : Result[Unit, Error] = try? workbook.add_header_footer_image(
     "SheetN",
     HeaderFooterImageOptions::new(
-      HeaderFooterImagePosition::Left,
+      Left,
       [1],
       ".png",
       width="10pt",

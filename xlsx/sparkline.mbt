@@ -13,13 +13,11 @@ pub struct SparklineColor {
 } derive(Eq, Show)
 
 ///|
-pub fn SparklineColor::rgb(
-  value : StringView,
-) -> SparklineColor raise XlsxError {
+pub fn rgb(value : StringView) -> SparklineColor raise XlsxError {
   let raw = value.to_string().to_upper()
   let hex = if raw.has_prefix("#") {
     let rest = raw[1:] catch {
-        _ => raise XlsxError::InvalidSparkline(msg="sparkline color invalid")
+        _ => raise InvalidSparkline(msg="sparkline color invalid")
       }
     rest.to_string()
   } else {
@@ -29,24 +27,19 @@ pub fn SparklineColor::rgb(
     6 => "FF" + hex
     8 => hex
     _ =>
-      raise XlsxError::InvalidSparkline(
-        msg="sparkline color must be RRGGBB or AARRGGBB",
-      )
+      raise InvalidSparkline(msg="sparkline color must be RRGGBB or AARRGGBB")
   }
   for ch in normalized {
     let ok = (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F')
     if !ok {
-      raise XlsxError::InvalidSparkline(msg="sparkline color must be hex")
+      raise InvalidSparkline(msg="sparkline color must be hex")
     }
   }
   { rgb: Some(normalized), theme: None, tint: None }
 }
 
 ///|
-pub fn SparklineColor::theme(
-  theme : Int,
-  tint? : Double = 0.0,
-) -> SparklineColor {
+pub fn theme(theme : Int, tint? : Double = 0.0) -> SparklineColor {
   let tint_opt = if tint == 0.0 { None } else { Some(tint) }
   { rgb: None, theme: Some(theme), tint: tint_opt }
 }
@@ -153,10 +146,10 @@ pub fn SparklineOptions::new(
   ranges : ArrayView[String],
 ) -> SparklineOptions raise XlsxError {
   if locations.length() == 0 || ranges.length() == 0 {
-    raise XlsxError::InvalidSparkline(msg="sparkline inputs empty")
+    raise InvalidSparkline(msg="sparkline inputs empty")
   }
   if locations.length() != ranges.length() {
-    raise XlsxError::InvalidSparkline(msg="sparkline inputs mismatch")
+    raise InvalidSparkline(msg="sparkline inputs mismatch")
   }
   let locs : Array[String] = []
   let rs : Array[String] = []
@@ -169,7 +162,7 @@ pub fn SparklineOptions::new(
   {
     locations: locs,
     ranges: rs,
-    sparkline_type: SparklineType::Line,
+    sparkline_type: Line,
     style: 0,
     weight: None,
     date_axis: false,
@@ -217,7 +210,7 @@ pub fn SparklineOptions::set_weight(
   weight : Double,
 ) -> Unit raise XlsxError {
   if weight <= 0.0 {
-    raise XlsxError::InvalidSparkline(msg="sparkline weight must be > 0")
+    raise InvalidSparkline(msg="sparkline weight must be > 0")
   }
   self.weight = Some(weight)
 }
@@ -432,7 +425,7 @@ pub fn SparklineOptions::set_empty_cells(
 ) -> Unit raise XlsxError {
   match mode.to_string() {
     "gap" | "zero" | "span" => self.empty_cells = Some(mode.to_string())
-    _ => raise XlsxError::InvalidSparkline(msg="sparkline empty cells invalid")
+    _ => raise InvalidSparkline(msg="sparkline empty cells invalid")
   }
 }
 
@@ -453,19 +446,19 @@ let sparkline_ns_xm = "http://schemas.microsoft.com/office/excel/2006/main"
 ///|
 fn sparkline_type_to_string(kind : SparklineType) -> String {
   match kind {
-    SparklineType::Column => "column"
-    SparklineType::WinLoss => "stacked"
-    SparklineType::Line => "line"
+    Column => "column"
+    WinLoss => "stacked"
+    Line => "line"
   }
 }
 
 ///|
 fn sparkline_type_from_string(value : StringView) -> SparklineType {
   match value.to_string() {
-    "column" => SparklineType::Column
-    "winLoss" => SparklineType::WinLoss
-    "stacked" => SparklineType::WinLoss
-    _ => SparklineType::Line
+    "column" => Column
+    "winLoss" => WinLoss
+    "stacked" => WinLoss
+    _ => Line
   }
 }
 
@@ -483,247 +476,247 @@ priv struct SparklinePreset {
 ///|
 let sparkline_presets : Array[SparklinePreset] = [
   {
-    color_series: SparklineColor::theme(4, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(5),
-    color_markers: SparklineColor::theme(4, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(4, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(4, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(4),
-    color_low: SparklineColor::theme(4),
+    color_series: theme(4, tint=-0.499984740745262),
+    color_negative: theme(5),
+    color_markers: theme(4, tint=-0.499984740745262),
+    color_first: theme(4, tint=0.3999755851924192),
+    color_last: theme(4, tint=0.3999755851924192),
+    color_high: theme(4),
+    color_low: theme(4),
   }, // 0
   {
-    color_series: SparklineColor::theme(4, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(5),
-    color_markers: SparklineColor::theme(4, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(4, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(4, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(4),
-    color_low: SparklineColor::theme(4),
+    color_series: theme(4, tint=-0.499984740745262),
+    color_negative: theme(5),
+    color_markers: theme(4, tint=-0.499984740745262),
+    color_first: theme(4, tint=0.3999755851924192),
+    color_last: theme(4, tint=0.3999755851924192),
+    color_high: theme(4),
+    color_low: theme(4),
   }, // 1
   {
-    color_series: SparklineColor::theme(5, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(6),
-    color_markers: SparklineColor::theme(5, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(5, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(5, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(5),
-    color_low: SparklineColor::theme(5),
+    color_series: theme(5, tint=-0.499984740745262),
+    color_negative: theme(6),
+    color_markers: theme(5, tint=-0.499984740745262),
+    color_first: theme(5, tint=0.3999755851924192),
+    color_last: theme(5, tint=0.3999755851924192),
+    color_high: theme(5),
+    color_low: theme(5),
   }, // 2
   {
-    color_series: SparklineColor::theme(6, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(7),
-    color_markers: SparklineColor::theme(6, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(6, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(6, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(6),
-    color_low: SparklineColor::theme(6),
+    color_series: theme(6, tint=-0.499984740745262),
+    color_negative: theme(7),
+    color_markers: theme(6, tint=-0.499984740745262),
+    color_first: theme(6, tint=0.3999755851924192),
+    color_last: theme(6, tint=0.3999755851924192),
+    color_high: theme(6),
+    color_low: theme(6),
   }, // 3
   {
-    color_series: SparklineColor::theme(7, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(8),
-    color_markers: SparklineColor::theme(7, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(7, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(7, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(7),
-    color_low: SparklineColor::theme(7),
+    color_series: theme(7, tint=-0.499984740745262),
+    color_negative: theme(8),
+    color_markers: theme(7, tint=-0.499984740745262),
+    color_first: theme(7, tint=0.3999755851924192),
+    color_last: theme(7, tint=0.3999755851924192),
+    color_high: theme(7),
+    color_low: theme(7),
   }, // 4
   {
-    color_series: SparklineColor::theme(8, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(9),
-    color_markers: SparklineColor::theme(8, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(8, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(8, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(8),
-    color_low: SparklineColor::theme(8),
+    color_series: theme(8, tint=-0.499984740745262),
+    color_negative: theme(9),
+    color_markers: theme(8, tint=-0.499984740745262),
+    color_first: theme(8, tint=0.3999755851924192),
+    color_last: theme(8, tint=0.3999755851924192),
+    color_high: theme(8),
+    color_low: theme(8),
   }, // 5
   {
-    color_series: SparklineColor::theme(9, tint=-0.499984740745262),
-    color_negative: SparklineColor::theme(4),
-    color_markers: SparklineColor::theme(9, tint=-0.499984740745262),
-    color_first: SparklineColor::theme(9, tint=0.3999755851924192),
-    color_last: SparklineColor::theme(9, tint=0.3999755851924192),
-    color_high: SparklineColor::theme(9),
-    color_low: SparklineColor::theme(9),
+    color_series: theme(9, tint=-0.499984740745262),
+    color_negative: theme(4),
+    color_markers: theme(9, tint=-0.499984740745262),
+    color_first: theme(9, tint=0.3999755851924192),
+    color_last: theme(9, tint=0.3999755851924192),
+    color_high: theme(9),
+    color_low: theme(9),
   }, // 6
   {
-    color_series: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_negative: SparklineColor::theme(5),
-    color_markers: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(5),
-    color_low: SparklineColor::theme(5),
+    color_series: theme(4, tint=-0.249977111117893),
+    color_negative: theme(5),
+    color_markers: theme(5, tint=-0.249977111117893),
+    color_first: theme(5, tint=-0.249977111117893),
+    color_last: theme(5, tint=-0.249977111117893),
+    color_high: theme(5),
+    color_low: theme(5),
   }, // 7
   {
-    color_series: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_negative: SparklineColor::theme(6),
-    color_markers: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(6, tint=-0.249977111117893),
+    color_series: theme(5, tint=-0.249977111117893),
+    color_negative: theme(6),
+    color_markers: theme(6, tint=-0.249977111117893),
+    color_first: theme(6, tint=-0.249977111117893),
+    color_last: theme(6, tint=-0.249977111117893),
+    color_high: theme(6, tint=-0.249977111117893),
+    color_low: theme(6, tint=-0.249977111117893),
   }, // 8
   {
-    color_series: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_negative: SparklineColor::theme(7),
-    color_markers: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(7, tint=-0.249977111117893),
+    color_series: theme(6, tint=-0.249977111117893),
+    color_negative: theme(7),
+    color_markers: theme(7, tint=-0.249977111117893),
+    color_first: theme(7, tint=-0.249977111117893),
+    color_last: theme(7, tint=-0.249977111117893),
+    color_high: theme(7, tint=-0.249977111117893),
+    color_low: theme(7, tint=-0.249977111117893),
   }, // 9
   {
-    color_series: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_negative: SparklineColor::theme(8),
-    color_markers: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(8, tint=-0.249977111117893),
+    color_series: theme(7, tint=-0.249977111117893),
+    color_negative: theme(8),
+    color_markers: theme(8, tint=-0.249977111117893),
+    color_first: theme(8, tint=-0.249977111117893),
+    color_last: theme(8, tint=-0.249977111117893),
+    color_high: theme(8, tint=-0.249977111117893),
+    color_low: theme(8, tint=-0.249977111117893),
   }, // 10
   {
-    color_series: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_negative: SparklineColor::theme(9),
-    color_markers: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(9, tint=-0.249977111117893),
+    color_series: theme(8, tint=-0.249977111117893),
+    color_negative: theme(9),
+    color_markers: theme(9, tint=-0.249977111117893),
+    color_first: theme(9, tint=-0.249977111117893),
+    color_last: theme(9, tint=-0.249977111117893),
+    color_high: theme(9, tint=-0.249977111117893),
+    color_low: theme(9, tint=-0.249977111117893),
   }, // 11
   {
-    color_series: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_negative: SparklineColor::theme(4),
-    color_markers: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(4, tint=-0.249977111117893),
+    color_series: theme(9, tint=-0.249977111117893),
+    color_negative: theme(4),
+    color_markers: theme(4, tint=-0.249977111117893),
+    color_first: theme(4, tint=-0.249977111117893),
+    color_last: theme(4, tint=-0.249977111117893),
+    color_high: theme(4, tint=-0.249977111117893),
+    color_low: theme(4, tint=-0.249977111117893),
   }, // 12
   {
-    color_series: SparklineColor::theme(4),
-    color_negative: SparklineColor::theme(5),
-    color_markers: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(4, tint=-0.249977111117893),
+    color_series: theme(4),
+    color_negative: theme(5),
+    color_markers: theme(4, tint=-0.249977111117893),
+    color_first: theme(4, tint=-0.249977111117893),
+    color_last: theme(4, tint=-0.249977111117893),
+    color_high: theme(4, tint=-0.249977111117893),
+    color_low: theme(4, tint=-0.249977111117893),
   }, // 13
   {
-    color_series: SparklineColor::theme(5),
-    color_negative: SparklineColor::theme(6),
-    color_markers: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(5, tint=-0.249977111117893),
+    color_series: theme(5),
+    color_negative: theme(6),
+    color_markers: theme(5, tint=-0.249977111117893),
+    color_first: theme(5, tint=-0.249977111117893),
+    color_last: theme(5, tint=-0.249977111117893),
+    color_high: theme(5, tint=-0.249977111117893),
+    color_low: theme(5, tint=-0.249977111117893),
   }, // 14
   {
-    color_series: SparklineColor::theme(6),
-    color_negative: SparklineColor::theme(7),
-    color_markers: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(6, tint=-0.249977111117893),
+    color_series: theme(6),
+    color_negative: theme(7),
+    color_markers: theme(6, tint=-0.249977111117893),
+    color_first: theme(6, tint=-0.249977111117893),
+    color_last: theme(6, tint=-0.249977111117893),
+    color_high: theme(6, tint=-0.249977111117893),
+    color_low: theme(6, tint=-0.249977111117893),
   }, // 15
   {
-    color_series: SparklineColor::theme(7),
-    color_negative: SparklineColor::theme(8),
-    color_markers: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(7, tint=-0.249977111117893),
+    color_series: theme(7),
+    color_negative: theme(8),
+    color_markers: theme(7, tint=-0.249977111117893),
+    color_first: theme(7, tint=-0.249977111117893),
+    color_last: theme(7, tint=-0.249977111117893),
+    color_high: theme(7, tint=-0.249977111117893),
+    color_low: theme(7, tint=-0.249977111117893),
   }, // 16
   {
-    color_series: SparklineColor::theme(8),
-    color_negative: SparklineColor::theme(9),
-    color_markers: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(8, tint=-0.249977111117893),
+    color_series: theme(8),
+    color_negative: theme(9),
+    color_markers: theme(8, tint=-0.249977111117893),
+    color_first: theme(8, tint=-0.249977111117893),
+    color_last: theme(8, tint=-0.249977111117893),
+    color_high: theme(8, tint=-0.249977111117893),
+    color_low: theme(8, tint=-0.249977111117893),
   }, // 17
   {
-    color_series: SparklineColor::theme(9),
-    color_negative: SparklineColor::theme(4),
-    color_markers: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_first: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_low: SparklineColor::theme(9, tint=-0.249977111117893),
+    color_series: theme(9),
+    color_negative: theme(4),
+    color_markers: theme(9, tint=-0.249977111117893),
+    color_first: theme(9, tint=-0.249977111117893),
+    color_last: theme(9, tint=-0.249977111117893),
+    color_high: theme(9, tint=-0.249977111117893),
+    color_low: theme(9, tint=-0.249977111117893),
   }, // 18
   {
-    color_series: SparklineColor::theme(4, tint=0.3999755851924192),
-    color_negative: SparklineColor::theme(0, tint=-0.499984740745262),
-    color_markers: SparklineColor::theme(4, tint=0.7999816888943144),
-    color_first: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(4, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(4, tint=-0.499984740745262),
-    color_low: SparklineColor::theme(4, tint=-0.499984740745262),
+    color_series: theme(4, tint=0.3999755851924192),
+    color_negative: theme(0, tint=-0.499984740745262),
+    color_markers: theme(4, tint=0.7999816888943144),
+    color_first: theme(4, tint=-0.249977111117893),
+    color_last: theme(4, tint=-0.249977111117893),
+    color_high: theme(4, tint=-0.499984740745262),
+    color_low: theme(4, tint=-0.499984740745262),
   }, // 19
   {
-    color_series: SparklineColor::theme(5, tint=0.3999755851924192),
-    color_negative: SparklineColor::theme(0, tint=-0.499984740745262),
-    color_markers: SparklineColor::theme(5, tint=0.7999816888943144),
-    color_first: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(5, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(5, tint=-0.499984740745262),
-    color_low: SparklineColor::theme(5, tint=-0.499984740745262),
+    color_series: theme(5, tint=0.3999755851924192),
+    color_negative: theme(0, tint=-0.499984740745262),
+    color_markers: theme(5, tint=0.7999816888943144),
+    color_first: theme(5, tint=-0.249977111117893),
+    color_last: theme(5, tint=-0.249977111117893),
+    color_high: theme(5, tint=-0.499984740745262),
+    color_low: theme(5, tint=-0.499984740745262),
   }, // 20
   {
-    color_series: SparklineColor::theme(6, tint=0.3999755851924192),
-    color_negative: SparklineColor::theme(0, tint=-0.499984740745262),
-    color_markers: SparklineColor::theme(6, tint=0.7999816888943144),
-    color_first: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(6, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(6, tint=-0.499984740745262),
-    color_low: SparklineColor::theme(6, tint=-0.499984740745262),
+    color_series: theme(6, tint=0.3999755851924192),
+    color_negative: theme(0, tint=-0.499984740745262),
+    color_markers: theme(6, tint=0.7999816888943144),
+    color_first: theme(6, tint=-0.249977111117893),
+    color_last: theme(6, tint=-0.249977111117893),
+    color_high: theme(6, tint=-0.499984740745262),
+    color_low: theme(6, tint=-0.499984740745262),
   }, // 21
   {
-    color_series: SparklineColor::theme(7, tint=0.3999755851924192),
-    color_negative: SparklineColor::theme(0, tint=-0.499984740745262),
-    color_markers: SparklineColor::theme(7, tint=0.7999816888943144),
-    color_first: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(7, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(7, tint=-0.499984740745262),
-    color_low: SparklineColor::theme(7, tint=-0.499984740745262),
+    color_series: theme(7, tint=0.3999755851924192),
+    color_negative: theme(0, tint=-0.499984740745262),
+    color_markers: theme(7, tint=0.7999816888943144),
+    color_first: theme(7, tint=-0.249977111117893),
+    color_last: theme(7, tint=-0.249977111117893),
+    color_high: theme(7, tint=-0.499984740745262),
+    color_low: theme(7, tint=-0.499984740745262),
   }, // 22
   {
-    color_series: SparklineColor::theme(8, tint=0.3999755851924192),
-    color_negative: SparklineColor::theme(0, tint=-0.499984740745262),
-    color_markers: SparklineColor::theme(8, tint=0.7999816888943144),
-    color_first: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(8, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(8, tint=-0.499984740745262),
-    color_low: SparklineColor::theme(8, tint=-0.499984740745262),
+    color_series: theme(8, tint=0.3999755851924192),
+    color_negative: theme(0, tint=-0.499984740745262),
+    color_markers: theme(8, tint=0.7999816888943144),
+    color_first: theme(8, tint=-0.249977111117893),
+    color_last: theme(8, tint=-0.249977111117893),
+    color_high: theme(8, tint=-0.499984740745262),
+    color_low: theme(8, tint=-0.499984740745262),
   }, // 23
   {
-    color_series: SparklineColor::theme(9, tint=0.3999755851924192),
-    color_negative: SparklineColor::theme(0, tint=-0.499984740745262),
-    color_markers: SparklineColor::theme(9, tint=0.7999816888943144),
-    color_first: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_last: SparklineColor::theme(9, tint=-0.249977111117893),
-    color_high: SparklineColor::theme(9, tint=-0.499984740745262),
-    color_low: SparklineColor::theme(9, tint=-0.499984740745262),
+    color_series: theme(9, tint=0.3999755851924192),
+    color_negative: theme(0, tint=-0.499984740745262),
+    color_markers: theme(9, tint=0.7999816888943144),
+    color_first: theme(9, tint=-0.249977111117893),
+    color_last: theme(9, tint=-0.249977111117893),
+    color_high: theme(9, tint=-0.499984740745262),
+    color_low: theme(9, tint=-0.499984740745262),
   }, // 24
   {
-    color_series: SparklineColor::theme(1, tint=0.499984740745262),
-    color_negative: SparklineColor::theme(1, tint=0.249977111117893),
-    color_markers: SparklineColor::theme(1, tint=0.249977111117893),
-    color_first: SparklineColor::theme(1, tint=0.249977111117893),
-    color_last: SparklineColor::theme(1, tint=0.249977111117893),
-    color_high: SparklineColor::theme(1, tint=0.249977111117893),
-    color_low: SparklineColor::theme(1, tint=0.249977111117893),
+    color_series: theme(1, tint=0.499984740745262),
+    color_negative: theme(1, tint=0.249977111117893),
+    color_markers: theme(1, tint=0.249977111117893),
+    color_first: theme(1, tint=0.249977111117893),
+    color_last: theme(1, tint=0.249977111117893),
+    color_high: theme(1, tint=0.249977111117893),
+    color_low: theme(1, tint=0.249977111117893),
   }, // 25
   {
-    color_series: SparklineColor::theme(1, tint=0.3499862666707358),
-    color_negative: SparklineColor::theme(0, tint=0.249977111117893),
-    color_markers: SparklineColor::theme(0, tint=0.249977111117893),
-    color_first: SparklineColor::theme(0, tint=0.249977111117893),
-    color_last: SparklineColor::theme(0, tint=0.249977111117893),
-    color_high: SparklineColor::theme(0, tint=0.249977111117893),
-    color_low: SparklineColor::theme(0, tint=0.249977111117893),
+    color_series: theme(1, tint=0.3499862666707358),
+    color_negative: theme(0, tint=0.249977111117893),
+    color_markers: theme(0, tint=0.249977111117893),
+    color_first: theme(0, tint=0.249977111117893),
+    color_last: theme(0, tint=0.249977111117893),
+    color_high: theme(0, tint=0.249977111117893),
+    color_low: theme(0, tint=0.249977111117893),
   }, // 26
   {
     color_series: { rgb: Some("FF323232"), theme: None, tint: None },
@@ -798,20 +791,20 @@ let sparkline_presets : Array[SparklinePreset] = [
     color_low: { rgb: Some("FFFF0000"), theme: None, tint: None },
   }, // 34
   {
-    color_series: SparklineColor::theme(3),
-    color_negative: SparklineColor::theme(9),
-    color_markers: SparklineColor::theme(8),
-    color_first: SparklineColor::theme(4),
-    color_last: SparklineColor::theme(5),
-    color_high: SparklineColor::theme(6),
-    color_low: SparklineColor::theme(7),
+    color_series: theme(3),
+    color_negative: theme(9),
+    color_markers: theme(8),
+    color_first: theme(4),
+    color_last: theme(5),
+    color_high: theme(6),
+    color_low: theme(7),
   }, // 35
 ]
 
 ///|
 fn sparkline_preset(style : Int) -> SparklinePreset raise XlsxError {
   if style < 0 || style > 35 {
-    raise XlsxError::InvalidSparkline(msg="sparkline style out of range")
+    raise InvalidSparkline(msg="sparkline style out of range")
   }
   sparkline_presets[style]
 }
@@ -1008,21 +1001,21 @@ fn parse_sparkline_groups(
     }
     let tag_end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="sparklineGroup tag not closed")
+      None => raise InvalidXml(msg="sparklineGroup tag not closed")
     }
     let tag = text[:tag_end] catch {
-        _ => raise XlsxError::InvalidXml(msg="sparklineGroup tag invalid")
+        _ => raise InvalidXml(msg="sparklineGroup tag invalid")
       }
     let group_end = match text.find("</x14:sparklineGroup>") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="sparklineGroup end missing")
+      None => raise InvalidXml(msg="sparklineGroup end missing")
     }
     let body = text[tag_end + 1:group_end] catch {
-        _ => raise XlsxError::InvalidXml(msg="sparklineGroup body invalid")
+        _ => raise InvalidXml(msg="sparklineGroup body invalid")
       }
     let kind = match attr_value(tag, "type") {
       Some(value) => sparkline_type_from_string(value)
-      None => SparklineType::Line
+      None => Line
     }
     let options = SparklineGroupOptions::new()
     match attr_value(tag, "displayEmptyCellsAs") {
@@ -1037,7 +1030,7 @@ fn parse_sparkline_groups(
       Some(value) =>
         options.line_weight = Some(
           @strconv.parse_double(value.to_string()) catch {
-            _ => raise XlsxError::InvalidXml(msg="sparkline lineWeight invalid")
+            _ => raise InvalidXml(msg="sparkline lineWeight invalid")
           },
         )
       None => ()
@@ -1046,7 +1039,7 @@ fn parse_sparkline_groups(
       Some(value) =>
         options.manual_max = Some(
           @strconv.parse_int(value.to_string(), base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="sparkline manualMax invalid")
+            _ => raise InvalidXml(msg="sparkline manualMax invalid")
           },
         )
       None => ()
@@ -1055,7 +1048,7 @@ fn parse_sparkline_groups(
       Some(value) =>
         options.manual_min = Some(
           @strconv.parse_int(value.to_string(), base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="sparkline manualMin invalid")
+            _ => raise InvalidXml(msg="sparkline manualMin invalid")
           },
         )
       None => ()
@@ -1130,38 +1123,36 @@ fn parse_sparkline_groups(
       let spark_text = spark_chunk.to_string()
       let spark_end = match spark_text.find("</x14:sparkline>") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidXml(msg="sparkline end missing")
+        None => raise InvalidXml(msg="sparkline end missing")
       }
       let spark_body = spark_text[:spark_end] catch {
-          _ => raise XlsxError::InvalidXml(msg="sparkline body invalid")
+          _ => raise InvalidXml(msg="sparkline body invalid")
         }
       let range = match spark_body.find("<xm:f>") {
         Some(pos) => {
           let rest = spark_body[pos + 6:] catch {
-              _ => raise XlsxError::InvalidXml(msg="sparkline range invalid")
+              _ => raise InvalidXml(msg="sparkline range invalid")
             }
           let end = match rest.find("</xm:f>") {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(msg="sparkline range end missing")
+            None => raise InvalidXml(msg="sparkline range end missing")
           }
           unescape_xml_text(try! rest[:end])
         }
-        None => raise XlsxError::InvalidXml(msg="sparkline range missing")
+        None => raise InvalidXml(msg="sparkline range missing")
       }
       let location = match spark_body.find("<xm:sqref>") {
         Some(pos) => {
           let rest = spark_body[pos + 10:] catch {
-              _ => raise XlsxError::InvalidXml(msg="sparkline location invalid")
+              _ => raise InvalidXml(msg="sparkline location invalid")
             }
           let end = match rest.find("</xm:sqref>") {
             Some(value) => value
-            None =>
-              raise XlsxError::InvalidXml(msg="sparkline location end missing")
+            None => raise InvalidXml(msg="sparkline location end missing")
           }
           unescape_xml_text(try! rest[:end])
         }
-        None => raise XlsxError::InvalidXml(msg="sparkline location missing")
+        None => raise InvalidXml(msg="sparkline location missing")
       }
       let (row, col) = cell_ref_to_rc(location)
       let canonical_loc = cell_ref_from(row, col)
@@ -1211,31 +1202,31 @@ fn sparkline_group_options_from_sparkline_options(
   group_opts.color_high = Some(preset.color_high)
   group_opts.color_low = Some(preset.color_low)
   match opts.series_color {
-    Some(value) => group_opts.color_series = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_series = Some(rgb(value))
     None => ()
   }
   match opts.negative_color {
-    Some(value) => group_opts.color_negative = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_negative = Some(rgb(value))
     None => ()
   }
   match opts.markers_color {
-    Some(value) => group_opts.color_markers = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_markers = Some(rgb(value))
     None => ()
   }
   match opts.first_color {
-    Some(value) => group_opts.color_first = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_first = Some(rgb(value))
     None => ()
   }
   match opts.last_color {
-    Some(value) => group_opts.color_last = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_last = Some(rgb(value))
     None => ()
   }
   match opts.high_color {
-    Some(value) => group_opts.color_high = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_high = Some(rgb(value))
     None => ()
   }
   match opts.low_color {
-    Some(value) => group_opts.color_low = Some(SparklineColor::rgb(value))
+    Some(value) => group_opts.color_low = Some(rgb(value))
     None => ()
   }
   group_opts

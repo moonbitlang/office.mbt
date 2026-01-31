@@ -131,7 +131,7 @@ test "mbtexcel read options unzip limits" {
   let bytes = write(workbook)
   let opts = @xlsx.Options::with_values(unzip_size_limit=1)
   let result : Result[@xlsx.Workbook, Error] = try? read(bytes, options=opts)
-  guard result is Err(@xlsx.XlsxError::InvalidOptions(_)) else {
+  guard result is Err(@xlsx.InvalidOptions(_)) else {
     fail("expected unzip size limit error")
   }
 }
@@ -168,7 +168,7 @@ test "mbtexcel workbook protection invalid password" {
   let result : Result[Unit, Error] = try? workbook.unprotect_workbook(
     password="wrong",
   )
-  guard result is Err(@xlsx.XlsxError::InvalidWorkbookProtection(_)) else {
+  guard result is Err(@xlsx.InvalidWorkbookProtection(_)) else {
     fail("expected workbook protection mismatch")
   }
 }
@@ -183,7 +183,7 @@ test "mbtexcel sheet protection invalid password" {
     "Sheet1",
     password="wrong",
   )
-  guard result is Err(@xlsx.XlsxError::InvalidSheetProtection(_)) else {
+  guard result is Err(@xlsx.InvalidSheetProtection(_)) else {
     fail("expected sheet protection mismatch")
   }
 }

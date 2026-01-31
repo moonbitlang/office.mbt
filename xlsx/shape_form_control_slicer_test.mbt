@@ -166,7 +166,7 @@ test "shape name, alt text, and clientData flags" {
 test "shape positioning twoCell" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new("E5", "rect", positioning=PicturePositioning::TwoCell)
+  let shape = Shape::new("E5", "rect", positioning=TwoCell)
   sheet.add_shape(shape)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -187,7 +187,7 @@ test "shape positioning twoCell" {
 test "shape positioning absolute" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new("F6", "rect", positioning=PicturePositioning::Absolute)
+  let shape = Shape::new("F6", "rect", positioning=Absolute)
   sheet.add_shape(shape)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -259,10 +259,7 @@ test "form control add/get/delete and vml" {
   scrollbar.set_page_change(1)
   scrollbar.set_horizontally(true)
   scrollbar.set_format(
-    GraphicOptions::with_values(
-      print_object=false,
-      positioning=PicturePositioning::Absolute,
-    ),
+    GraphicOptions::with_values(print_object=false, positioning=Absolute),
   )
   workbook.add_form_control("Sheet1", scrollbar)
   inspect(workbook.get_form_controls("Sheet1").length(), content="4")

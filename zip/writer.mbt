@@ -1,7 +1,7 @@
 ///|
 fn write_u16_le(buf : Array[Byte], value : Int) -> Unit raise ZipError {
   if value < 0 || value > 0xFFFF {
-    raise ZipError::UnsupportedFeature(msg="u16 overflow")
+    raise UnsupportedFeature(msg="u16 overflow")
   }
   let v = value.reinterpret_as_uint()
   buf.push((v & 0xFF).to_byte())
@@ -34,7 +34,7 @@ fn write_u64_le(buf : Array[Byte], value : UInt64) -> Unit {
 ///|
 fn to_u32(value : Int) -> UInt raise ZipError {
   if value < 0 {
-    raise ZipError::UnsupportedFeature(msg="u32 exceeds Int range")
+    raise UnsupportedFeature(msg="u32 exceeds Int range")
   }
   value.reinterpret_as_uint()
 }
@@ -42,7 +42,7 @@ fn to_u32(value : Int) -> UInt raise ZipError {
 ///|
 fn to_u64(value : Int) -> UInt64 raise ZipError {
   if value < 0 {
-    raise ZipError::UnsupportedFeature(msg="u64 exceeds Int range")
+    raise UnsupportedFeature(msg="u64 exceeds Int range")
   }
   UInt64::extend_uint(value.reinterpret_as_uint())
 }
@@ -124,7 +124,7 @@ fn write_with_options(
     let data_len = entry.data.length()
     let payload_len = payload.length()
     if name_len > 0xFFFF {
-      raise ZipError::UnsupportedFeature(msg="file name too long")
+      raise UnsupportedFeature(msg="file name too long")
     }
     let local_offset = out.length()
     let crc = crc32(entry.data)
@@ -150,7 +150,7 @@ fn write_with_options(
       offset=None,
     )
     if local_extra.length() > 0xFFFF {
-      raise ZipError::UnsupportedFeature(msg="extra field too long")
+      raise UnsupportedFeature(msg="extra field too long")
     }
     write_u32_le(out, local_header_sig.reinterpret_as_uint())
     write_u16_le(out, version)
@@ -192,7 +192,7 @@ fn write_with_options(
       offset=if needs_zip64_offset { Some(local_offset) } else { None },
     )
     if central_extra.length() > 0xFFFF {
-      raise ZipError::UnsupportedFeature(msg="extra field too long")
+      raise UnsupportedFeature(msg="extra field too long")
     }
     write_u32_le(central, central_header_sig.reinterpret_as_uint())
     write_u16_le(central, version)

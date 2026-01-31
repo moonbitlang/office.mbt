@@ -6,11 +6,7 @@ let hex_digits_upper : Array[Char] = "0123456789ABCDEF".to_array()
 
 ///|
 fn gen_sheet_password(plaintext : StringView) -> String {
-  let bytes = @encoding/utf16.encode(
-    plaintext,
-    bom=false,
-    endianness=@encoding/utf16.Endian::Little,
-  )
+  let bytes = @encoding/utf16.encode(plaintext, bom=false, endianness=Little)
   let mut password : Int64 = 0
   let mut char_pos = 1
   let mut i = 0
@@ -85,24 +81,23 @@ fn gen_iso_password_hash(
 ) -> (String, String) raise XlsxError {
   let pass_len = count_utf16_units(password)
   if pass_len <= 0 || pass_len > max_password_length {
-    raise XlsxError::InvalidPasswordLength(len=pass_len)
+    raise InvalidPasswordLength(len=pass_len)
   }
   let algorithm = match normalize_sheet_hash_algorithm(algorithm_name) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidSheetProtection(msg="unsupported hash algorithm")
+    None => raise InvalidSheetProtection(msg="unsupported hash algorithm")
   }
   let salt_value = if salt == "" {
     random_bytes(16)
   } else {
     base64_decode(salt) catch {
-      _ => raise XlsxError::InvalidBase64(msg="salt value invalid")
+      _ => raise InvalidBase64(msg="salt value invalid")
     }
   }
   let password_bytes = @encoding/utf16.encode(
     password,
     bom=false,
-    endianness=@encoding/utf16.Endian::Little,
+    endianness=Little,
   )
   let initial = @crypto.hash_concat(algorithm, [salt_value, password_bytes])
   let mut key = initial
@@ -168,12 +163,10 @@ fn verify_sheet_protection_password(
 ) -> Unit raise XlsxError {
   if protection.algorithm_name == "" {
     if protection.password == "" {
-      raise XlsxError::InvalidSheetProtection(msg="sheet not protected")
+      raise InvalidSheetProtection(msg="sheet not protected")
     }
     if protection.password != gen_sheet_password(password) {
-      raise XlsxError::InvalidSheetProtection(
-        msg="sheet protection password mismatch",
-      )
+      raise InvalidSheetProtection(msg="sheet protection password mismatch")
     }
     return
   }
@@ -184,8 +177,6 @@ fn verify_sheet_protection_password(
     protection.spin_count,
   )
   if protection.hash_value != hash_value {
-    raise XlsxError::InvalidSheetProtection(
-      msg="sheet protection password mismatch",
-    )
+    raise InvalidSheetProtection(msg="sheet protection password mismatch")
   }
 }

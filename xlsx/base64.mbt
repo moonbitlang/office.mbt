@@ -6,7 +6,6 @@ fn base64_encode(bytes : BytesView) -> String {
 ///|
 fn base64_decode(text : StringView) -> Bytes raise XlsxError {
   @base64.decode(text) catch {
-    @base64.Base64Error::InvalidBase64(msg~) =>
-      raise XlsxError::InvalidBase64(msg~)
+    @base64.Base64Error::InvalidBase64(msg~) => raise InvalidBase64(msg~)
   }
 }

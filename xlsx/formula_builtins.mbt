@@ -9,37 +9,37 @@ fn eval_function(
   if name == "ROW" {
     return if args.length() == 0 {
       match current_cell_rc(ctx) {
-        Some((row, _col)) => FormulaValue::Number(Double::from_int(row))
-        None => FormulaValue::Error(formula_error_value)
+        Some((row, _col)) => Number(Double::from_int(row))
+        None => Error(formula_error_value)
       }
     } else if args.length() == 1 {
       match ref_bounds_opt(args[0]) {
         Some((row1, _col1, row2, _col2)) => {
           let row = if row1 < row2 { row1 } else { row2 }
-          FormulaValue::Number(Double::from_int(row))
+          Number(Double::from_int(row))
         }
-        None => FormulaValue::Error(formula_error_value)
+        None => Error(formula_error_value)
       }
     } else {
-      FormulaValue::Error(formula_error_value)
+      Error(formula_error_value)
     }
   }
   if name == "COLUMN" {
     return if args.length() == 0 {
       match current_cell_rc(ctx) {
-        Some((_row, col)) => FormulaValue::Number(Double::from_int(col))
-        None => FormulaValue::Error(formula_error_value)
+        Some((_row, col)) => Number(Double::from_int(col))
+        None => Error(formula_error_value)
       }
     } else if args.length() == 1 {
       match ref_bounds_opt(args[0]) {
         Some((_row1, col1, _row2, col2)) => {
           let col = if col1 < col2 { col1 } else { col2 }
-          FormulaValue::Number(Double::from_int(col))
+          Number(Double::from_int(col))
         }
-        None => FormulaValue::Error(formula_error_value)
+        None => Error(formula_error_value)
       }
     } else {
-      FormulaValue::Error(formula_error_value)
+      Error(formula_error_value)
     }
   }
   if name == "ROWS" {
@@ -48,12 +48,12 @@ fn eval_function(
         Some((row1, _col1, row2, _col2)) => {
           let min_row = if row1 < row2 { row1 } else { row2 }
           let max_row = if row1 > row2 { row1 } else { row2 }
-          FormulaValue::Number(Double::from_int(max_row - min_row + 1))
+          Number(Double::from_int(max_row - min_row + 1))
         }
-        None => FormulaValue::Error(formula_error_value)
+        None => Error(formula_error_value)
       }
     } else {
-      FormulaValue::Error(formula_error_value)
+      Error(formula_error_value)
     }
   }
   if name == "COLUMNS" {
@@ -62,19 +62,19 @@ fn eval_function(
         Some((_row1, col1, _row2, col2)) => {
           let min_col = if col1 < col2 { col1 } else { col2 }
           let max_col = if col1 > col2 { col1 } else { col2 }
-          FormulaValue::Number(Double::from_int(max_col - min_col + 1))
+          Number(Double::from_int(max_col - min_col + 1))
         }
-        None => FormulaValue::Error(formula_error_value)
+        None => Error(formula_error_value)
       }
     } else {
-      FormulaValue::Error(formula_error_value)
+      Error(formula_error_value)
     }
   }
   if name == "FORMULATEXT" {
     return if args.length() == 1 {
       formula_text_value(workbook, sheet_name, args[0])
     } else {
-      FormulaValue::Error(formula_error_value)
+      Error(formula_error_value)
     }
   }
   let values : Array[FormulaValue] = []
@@ -82,8 +82,8 @@ fn eval_function(
     values.push(eval_expr(workbook, sheet_name, arg, ctx))
   }
   match name {
-    "TRUE" => FormulaValue::Bool(true)
-    "FALSE" => FormulaValue::Bool(false)
+    "TRUE" => Bool(true)
+    "FALSE" => Bool(false)
     "SUM" => sum_values(values)
     "SUBTOTAL" => subtotal_values(values)
     "AGGREGATE" => aggregate_values(values)
@@ -94,184 +94,184 @@ fn eval_function(
       if values.length() >= 1 {
         stdev_values(false, values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "STDEVA" =>
       if values.length() >= 1 {
         stdev_values(true, values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "STDEVP" | "STDEV.P" =>
       if values.length() >= 1 {
         match variance_values(values, false, false) {
-          FormulaValue::Number(variance) => {
+          Number(variance) => {
             let result = @math.pow(variance, 0.5)
-            FormulaValue::Number(round_significant_digits(result, 15))
+            Number(round_significant_digits(result, 15))
           }
-          FormulaValue::Error(err) => FormulaValue::Error(err)
-          _ => FormulaValue::Error(formula_error_value)
+          Error(err) => Error(err)
+          _ => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "STDEVPA" =>
       if values.length() >= 1 {
         match variance_values(values, false, true) {
-          FormulaValue::Number(variance) => {
+          Number(variance) => {
             let result = @math.pow(variance, 0.5)
-            FormulaValue::Number(round_significant_digits(result, 15))
+            Number(round_significant_digits(result, 15))
           }
-          FormulaValue::Error(err) => FormulaValue::Error(err)
-          _ => FormulaValue::Error(formula_error_value)
+          Error(err) => Error(err)
+          _ => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VAR" | "VAR.S" =>
       if values.length() >= 1 {
         variance_values(values, true, false)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VARA" =>
       if values.length() >= 1 {
         variance_values(values, true, true)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VARP" | "VAR.P" =>
       if values.length() >= 1 {
         variance_values(values, false, false)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VARPA" =>
       if values.length() >= 1 {
         variance_values(values, false, true)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TRIMMEAN" => trimmean_values(values)
     "AVEDEV" =>
       if values.length() >= 1 {
         avedev_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DEVSQ" =>
       if values.length() >= 1 {
         devsq_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "GEOMEAN" =>
       if values.length() >= 1 {
         geomean_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "HARMEAN" =>
       if values.length() >= 1 {
         harmean_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "KURT" =>
       if values.length() >= 1 {
         kurt_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SKEW" =>
       if values.length() >= 1 {
         skew_values("SKEW", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SKEW.P" =>
       if values.length() >= 1 {
         skew_values("SKEW.P", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "STANDARDIZE" =>
       if values.length() == 3 {
         standardize_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LARGE" =>
       if values.length() == 2 {
         kth_values("LARGE", values[0], values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SMALL" =>
       if values.length() == 2 {
         kth_values("SMALL", values[0], values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MODE" =>
       if values.length() >= 1 {
         mode_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MODE.SNGL" =>
       if values.length() >= 1 {
         mode_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MODE.MULT" =>
       if values.length() >= 1 {
         mode_mult_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERCENTILE" =>
       if values.length() == 2 {
         match value_as_number(values[1]) {
           Ok(k) =>
             if k < 0.0 || k > 1.0 {
-              FormulaValue::Error(formula_error_na)
+              Error(formula_error_na)
             } else {
               percentile_values(values[0], k, false, false)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERCENTILE.INC" =>
       if values.length() == 2 {
         match value_as_number(values[1]) {
           Ok(k) =>
             if k < 0.0 || k > 1.0 {
-              FormulaValue::Error(formula_error_na)
+              Error(formula_error_na)
             } else {
               percentile_values(values[0], k, false, false)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERCENTILE.EXC" =>
       if values.length() == 2 {
         match value_as_number(values[1]) {
           Ok(k) =>
             if k <= 0.0 || k >= 1.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               percentile_values(values[0], k, true, true)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERCENTRANK" =>
       if values.length() == 2 || values.length() == 3 {
@@ -290,7 +290,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERCENTRANK.INC" =>
       if values.length() == 2 || values.length() == 3 {
@@ -309,7 +309,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERCENTRANK.EXC" =>
       if values.length() == 2 || values.length() == 3 {
@@ -328,7 +328,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "QUARTILE" =>
       if values.length() == 2 {
@@ -337,7 +337,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "QUARTILE.INC" =>
       if values.length() == 2 {
@@ -346,7 +346,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "QUARTILE.EXC" =>
       if values.length() == 2 {
@@ -355,7 +355,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RANK" | "RANK.EQ" =>
       if values.length() == 2 || values.length() == 3 {
@@ -369,25 +369,17 @@ fn eval_function(
         }
         rank_values(values[0], values[1], order)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SIGN" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
-            FormulaValue::Number(
-              if num < 0.0 {
-                -1.0
-              } else if num > 0.0 {
-                1.0
-              } else {
-                0.0
-              },
-            )
+            Number(if num < 0.0 { -1.0 } else if num > 0.0 { 1.0 } else { 0.0 })
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SERIESSUM" =>
       if values.length() == 4 {
@@ -417,69 +409,69 @@ fn eval_function(
           result = result + num * @math.pow(x, n + m * idx)
           idx = idx + 1.0
         }
-        FormulaValue::Number(round_significant_digits(result, 15))
+        Number(round_significant_digits(result, 15))
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CORREL" =>
       if values.length() == 2 {
         correl_values(values[0], values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COVAR" =>
       if values.length() == 2 {
         covar_values("COVAR", values[0], values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COVARIANCE.P" =>
       if values.length() == 2 {
         covar_values("COVARIANCE.P", values[0], values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COVARIANCE.S" =>
       if values.length() == 2 {
         covar_values("COVARIANCE.S", values[0], values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PEARSON" =>
       if values.length() == 2 {
         pearson_product_values("PEARSON", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RSQ" =>
       if values.length() == 2 {
         pearson_product_values("RSQ", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SLOPE" =>
       if values.length() == 2 {
         pearson_product_values("SLOPE", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "INTERCEPT" =>
       if values.length() == 2 {
         pearson_product_values("INTERCEPT", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FORECAST" =>
       if values.length() == 3 {
         pearson_product_values("FORECAST", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FORECAST.LINEAR" =>
       if values.length() == 3 {
         pearson_product_values("FORECAST.LINEAR", values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "GROWTH" =>
       trend_growth_values(workbook, sheet_name, "GROWTH", args, values, ctx)
@@ -489,19 +481,19 @@ fn eval_function(
       if values.length() == 1 {
         fisher_value(values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FISHERINV" =>
       if values.length() == 1 {
         fisherinv_value(values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "STEYX" =>
       if values.length() == 2 {
         steyx_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MEDIAN" => median_values(values)
     "MIN" => min_values(values)
@@ -515,7 +507,7 @@ fn eval_function(
         let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
         countblank_values(range_values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FREQUENCY" => frequency_values(workbook, sheet_name, args, values, ctx)
     "COUNTIF" =>
@@ -523,12 +515,12 @@ fn eval_function(
         let range_values = eval_range_expr(workbook, sheet_name, args[0], ctx)
         countif_values(range_values, values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COUNTIFS" =>
       if args.length() >= 2 {
         if args.length() % 2 != 0 {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         } else {
           let ranges : Array[RangeValues] = []
           let criterias : Array[FormulaCriteria] = []
@@ -543,10 +535,10 @@ fn eval_function(
             criterias.push(parse_formula_criteria(values[i * 2 + 1]))
           }
           let matches = ifs_match(ranges, criterias)
-          FormulaValue::Number(Double::from_int(matches.length()))
+          Number(Double::from_int(matches.length()))
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DAVERAGE"
     | "DMAX"
@@ -562,18 +554,18 @@ fn eval_function(
         let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
         database_values(name, database, values[1], criteria)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DCOUNT" | "DCOUNTA" =>
       if args.length() >= 2 && args.length() <= 3 {
         let database = eval_range_expr(workbook, sheet_name, args[0], ctx)
         let field = if args.length() == 3 {
           match args[1] {
-            Expr::FuncCall(name, _) if name == "" => FormulaValue::Empty
+            FuncCall(name, _) if name == "" => Empty
             _ => values[1]
           }
         } else {
-          FormulaValue::Empty
+          Empty
         }
         let criteria_idx = if args.length() == 3 { 2 } else { 1 }
         let criteria = eval_range_expr(
@@ -584,7 +576,7 @@ fn eval_function(
         )
         dcount_values(name, database, field, criteria)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DGET" =>
       if args.length() == 3 {
@@ -592,7 +584,7 @@ fn eval_function(
         let criteria = eval_range_expr(workbook, sheet_name, args[2], ctx)
         dget_values(database, values[1], criteria)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUMIF" =>
       if args.length() == 2 || args.length() == 3 {
@@ -604,7 +596,7 @@ fn eval_function(
         }
         sumif_values(range_values, values[1], sum_range)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUMPRODUCT" =>
       if args.length() >= 1 {
@@ -614,13 +606,13 @@ fn eval_function(
         let mut has_scalar = false
         for i in 0..<args.length() {
           match args[i] {
-            Expr::Range(_, _, _) | Expr::Cell(_, _) => {
+            Range(_, _, _) | Cell(_, _) => {
               has_range = true
               ranges.push(eval_range_expr(workbook, sheet_name, args[i], ctx))
             }
             _ =>
               match values[i] {
-                FormulaValue::Error(err) => return FormulaValue::Error(err)
+                Error(err) => return Error(err)
                 _ => {
                   has_scalar = true
                   scalars.push(values[i])
@@ -629,14 +621,14 @@ fn eval_function(
           }
         }
         if has_range && has_scalar {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else if has_range {
           sumproduct_values(ranges)
         } else {
           sumproduct_scalars(scalars)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUMSQ" => sumsq_values(values)
     "SUMX2MY2" =>
@@ -645,7 +637,7 @@ fn eval_function(
         let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
         sumx_values("SUMX2MY2", left, right)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUMX2PY2" =>
       if args.length() == 2 {
@@ -653,7 +645,7 @@ fn eval_function(
         let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
         sumx_values("SUMX2PY2", left, right)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUMXMY2" =>
       if args.length() == 2 {
@@ -661,12 +653,12 @@ fn eval_function(
         let right = eval_range_expr(workbook, sheet_name, args[1], ctx)
         sumx_values("SUMXMY2", left, right)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUMIFS" =>
       if args.length() >= 3 {
         if args.length() % 2 != 1 {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         } else {
           let sum_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
           let ranges : Array[RangeValues] = []
@@ -691,13 +683,13 @@ fn eval_function(
                   Some(num) => sum = sum + num
                   None => ()
                 }
-              None => return FormulaValue::Error(formula_error_value)
+              None => return Error(formula_error_value)
             }
           }
-          FormulaValue::Number(sum)
+          Number(sum)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "AVERAGEIF" =>
       if args.length() == 2 || args.length() == 3 {
@@ -709,12 +701,12 @@ fn eval_function(
         }
         averageif_values(range_values, values[1], average_range)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "AVERAGEIFS" =>
       if args.length() >= 3 {
         if args.length() % 2 != 1 {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         } else {
           let average_range = eval_range_expr(
             workbook,
@@ -748,22 +740,22 @@ fn eval_function(
                   }
                   None => ()
                 }
-              None => return FormulaValue::Error(formula_error_value)
+              None => return Error(formula_error_value)
             }
           }
           if count == 0 {
-            FormulaValue::Error(formula_error_div)
+            Error(formula_error_div)
           } else {
-            FormulaValue::Number(sum / Double::from_int(count))
+            Number(sum / Double::from_int(count))
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MAXIFS" =>
       if args.length() >= 3 {
         if args.length() % 2 != 1 {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         } else {
           let max_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
           let ranges : Array[RangeValues] = []
@@ -783,12 +775,12 @@ fn eval_function(
           maxifs_values(max_range, matches)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MINIFS" =>
       if args.length() >= 3 {
         if args.length() % 2 != 1 {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         } else {
           let min_range = eval_range_expr(workbook, sheet_name, args[0], ctx)
           let ranges : Array[RangeValues] = []
@@ -808,7 +800,7 @@ fn eval_function(
           minifs_values(min_range, matches)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "GCD" => gcd_values(values)
     "LCM" => lcm_values(values)
@@ -820,7 +812,7 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COMBINA" | "_XLFN.COMBINA" =>
       if values.length() == 2 {
@@ -829,9 +821,9 @@ fn eval_function(
             let n = trunc_double(num)
             let k = trunc_double(chosen)
             if n < k {
-              FormulaValue::Error(formula_error_value)
+              Error(formula_error_value)
             } else if n == 0.0 {
-              FormulaValue::Number(n)
+              Number(n)
             } else {
               combin_values(n + k - 1.0, n - 1.0)
             }
@@ -840,13 +832,13 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COMPLEX" =>
       if values.length() < 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 3 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(real), Ok(imag)) => {
@@ -856,16 +848,14 @@ fn eval_function(
                 Ok(text) => {
                   let lower = text.to_lower()
                   if lower != "i" && lower != "j" {
-                    return FormulaValue::Error(formula_error_value)
+                    return Error(formula_error_value)
                   }
                   suffix = lower
                 }
                 Err(err) => return err
               }
             }
-            FormulaValue::String(
-              complex_to_string(complex_new(real, imag), suffix),
-            )
+            String(complex_to_string(complex_new(real, imag), suffix))
           }
           (Err(err), _) => err
           (_, Err(err)) => err
@@ -876,28 +866,28 @@ fn eval_function(
         match value_as_number(values[0]) {
           Ok(num) =>
             if num < 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::Number(factorial_double(num))
+              Number(factorial_double(num))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FACTDOUBLE" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num < 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::Number(double_factorial_double(num))
+              Number(double_factorial_double(num))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MULTINOMIAL" => multinomial_values(values)
     "MDETERM" =>
@@ -910,11 +900,11 @@ fn eval_function(
           ctx,
         )
         match number_matrix_from_range(range, true) {
-          Ok(matrix) => FormulaValue::Number(matrix_det(matrix))
+          Ok(matrix) => Number(matrix_det(matrix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MINVERSE" =>
       if values.length() == 1 {
@@ -929,7 +919,7 @@ fn eval_function(
           Ok(matrix) => {
             let det_value = matrix_det(matrix)
             if det_value == 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let adj = matrix_adjugate(matrix)
               let scale = 1.0 / det_value
@@ -943,19 +933,18 @@ fn eval_function(
                   }
                 }
               }
-              FormulaValue::List(matrix_values(adj))
+              List(matrix_values(adj))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MMULT" =>
       if values.length() == 2 {
         match (values[0], values[1]) {
-          (FormulaValue::Number(lhs), FormulaValue::Number(rhs)) =>
-            FormulaValue::Number(lhs * rhs)
+          (Number(lhs), Number(rhs)) => Number(lhs * rhs)
           _ => {
             let left_range = range_from_expr_or_value(
               workbook,
@@ -978,7 +967,7 @@ fn eval_function(
               ) {
               (Ok(left), Ok(right)) =>
                 match matrix_multiply(left, right) {
-                  Ok(matrix) => FormulaValue::List(matrix_values(matrix))
+                  Ok(matrix) => List(matrix_values(matrix))
                   Err(err) => err
                 }
               (Err(err), _) => err
@@ -987,17 +976,16 @@ fn eval_function(
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MUNIT" | "_XLFN.MUNIT" =>
       if values.length() == 1 {
         match munit_dimension(values[0]) {
-          Ok(dimension) =>
-            FormulaValue::List(munit_range_values(dimension).values)
+          Ok(dimension) => List(munit_range_values(dimension).values)
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TRANSPOSE" =>
       if args.length() == 1 {
@@ -1008,26 +996,26 @@ fn eval_function(
           values[0],
           ctx,
         )
-        FormulaValue::List(transpose_range_values(base_range).values)
+        List(transpose_range_values(base_range).values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERMUT" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(chosen)) =>
             if num < chosen {
-              FormulaValue::Error(formula_error_na)
+              Error(formula_error_na)
             } else {
               let result = factorial_double(num) /
                 factorial_double(num - chosen)
-              FormulaValue::Number(round_half_away_from_zero(result))
+              Number(round_half_away_from_zero(result))
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PERMUTATIONA" =>
       if values.length() == 2 {
@@ -1036,52 +1024,52 @@ fn eval_function(
             let number = Double::floor(num)
             let number_chosen = Double::floor(chosen)
             if number < 0.0 || number_chosen < 0.0 {
-              FormulaValue::Error(formula_error_na)
+              Error(formula_error_na)
             } else {
-              FormulaValue::Number(@math.pow(number, number_chosen))
+              Number(@math.pow(number, number_chosen))
             }
           }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ABS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(abs_double(num))
+          Ok(num) => Number(abs_double(num))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "INT" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(Double::floor(num))
+          Ok(num) => Number(Double::floor(num))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LN" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(@math.ln(num))
+          Ok(num) => Number(@math.ln(num))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "EXP" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(@math.exp(num))
+          Ok(num) => Number(@math.exp(num))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DECIMAL" | "_XLFN.DECIMAL" =>
       if values.length() == 2 {
@@ -1090,21 +1078,21 @@ fn eval_function(
             let base = Double::to_int(trunc_double(radix))
             let text_value = strip_hex_prefix(text)
             let parsed = @strconv.parse_int(text_value, base~) catch {
-              _ => return FormulaValue::Error(formula_error_value)
+              _ => return Error(formula_error_value)
             }
-            FormulaValue::Number(Double::from_int(parsed))
+            Number(Double::from_int(parsed))
           }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ROMAN" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) => {
@@ -1123,7 +1111,7 @@ fn eval_function(
                 Err(err) => return err
               }
             }
-            FormulaValue::String(roman_string(num, form))
+            String(roman_string(num, form))
           }
           Err(err) => err
         }
@@ -1135,7 +1123,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "BASE" => base_values(values)
     "BIN2DEC" =>
@@ -1149,13 +1137,13 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "BIN2HEX" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(_) =>
@@ -1163,7 +1151,7 @@ fn eval_function(
               Ok(text) => {
                 let decimal = bin2dec_string(text)
                 match decimal {
-                  FormulaValue::Error(_) => decimal
+                  Error(_) => decimal
                   _ => {
                     let new_values : Array[FormulaValue] = [decimal]
                     if values.length() == 2 {
@@ -1180,9 +1168,9 @@ fn eval_function(
       }
     "BIN2OCT" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(_) =>
@@ -1190,7 +1178,7 @@ fn eval_function(
               Ok(text) => {
                 let decimal = bin2dec_string(text)
                 match decimal {
-                  FormulaValue::Error(_) => decimal
+                  Error(_) => decimal
                   _ => {
                     let new_values : Array[FormulaValue] = [decimal]
                     if values.length() == 2 {
@@ -1210,15 +1198,15 @@ fn eval_function(
     "DEC2OCT" => dec2x_values("DEC2OCT", values)
     "HEX2BIN" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_string(values[0]) {
           Ok(text) => {
             let decimal = hex2dec_string(text)
             match decimal {
-              FormulaValue::Error(_) => decimal
+              Error(_) => decimal
               _ => {
                 let new_values : Array[FormulaValue] = [decimal]
                 if values.length() == 2 {
@@ -1238,19 +1226,19 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "HEX2OCT" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_string(values[0]) {
           Ok(text) => {
             let decimal = hex2dec_string(text)
             match decimal {
-              FormulaValue::Error(_) => decimal
+              Error(_) => decimal
               _ => {
                 let new_values : Array[FormulaValue] = [decimal]
                 if values.length() == 2 {
@@ -1265,9 +1253,9 @@ fn eval_function(
       }
     "OCT2BIN" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(_) =>
@@ -1296,13 +1284,13 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "OCT2HEX" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(_) =>
@@ -1328,7 +1316,7 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "BESSELJ" =>
       if values.length() == 2 {
@@ -1338,14 +1326,14 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "BESSELK" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(x), Ok(n)) =>
             if x <= 0.0 || n < 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let order = Double::floor(n)
               let result = if order == 0.0 {
@@ -1361,14 +1349,14 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "BESSELY" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(x), Ok(n)) =>
             if x <= 0.0 || n < 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let order = Double::floor(n)
               let result = if order == 0.0 {
@@ -1384,13 +1372,13 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DELTA" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         let number1 = match value_as_number(values[0]) {
           Ok(num) => num
@@ -1404,13 +1392,13 @@ fn eval_function(
         } else {
           0.0
         }
-        FormulaValue::Number(if number1 == number2 { 1.0 } else { 0.0 })
+        Number(if number1 == number2 { 1.0 } else { 0.0 })
       }
     "ERF" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(lower) =>
@@ -1433,7 +1421,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ERFC" =>
       if values.length() == 1 {
@@ -1442,7 +1430,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ERFCdotPRECISE" | "ERFC.PRECISE" | "_XLFN.ERFC.PRECISE" =>
       if values.length() == 1 {
@@ -1451,7 +1439,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "WEIBULL" => weibull_value(values)
     "WEIBULLdotDIST" | "WEIBULL.DIST" | "_XLFN.WEIBULL.DIST" =>
@@ -1604,9 +1592,9 @@ fn eval_function(
     "ZTEST" => ztest_values(values)
     "GESTEP" =>
       if values.length() < 1 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         let number = match value_as_number(values[0]) {
           Ok(num) => num
@@ -1620,7 +1608,7 @@ fn eval_function(
         } else {
           0.0
         }
-        FormulaValue::Number(if number >= step { 1.0 } else { 0.0 })
+        Number(if number >= step { 1.0 } else { 0.0 })
       }
     "BITAND" => bitwise_values("BITAND", values)
     "BITLSHIFT" => bitwise_values("BITLSHIFT", values)
@@ -1634,7 +1622,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ACOSH" =>
       if values.length() == 1 {
@@ -1643,7 +1631,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ACOT" | "_XLFN.ACOT" =>
       if values.length() == 1 {
@@ -1652,7 +1640,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ACOTH" | "_XLFN.ACOTH" =>
       if values.length() == 1 {
@@ -1661,7 +1649,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ASIN" =>
       if values.length() == 1 {
@@ -1670,7 +1658,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ASINH" =>
       if values.length() == 1 {
@@ -1679,7 +1667,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ATAN" =>
       if values.length() == 1 {
@@ -1688,7 +1676,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ATANH" =>
       if values.length() == 1 {
@@ -1697,7 +1685,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ATAN2" =>
       if values.length() == 2 {
@@ -1707,7 +1695,7 @@ fn eval_function(
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COS" =>
       if values.length() == 1 {
@@ -1716,7 +1704,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COSH" =>
       if values.length() == 1 {
@@ -1725,7 +1713,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SIN" =>
       if values.length() == 1 {
@@ -1734,7 +1722,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SINH" =>
       if values.length() == 1 {
@@ -1743,7 +1731,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TAN" =>
       if values.length() == 1 {
@@ -1752,7 +1740,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TANH" =>
       if values.length() == 1 {
@@ -1761,28 +1749,28 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COT" | "_XLFN.COT" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
               number_or_num_error(1.0 / @math.tan(num))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "COTH" | "_XLFN.COTH" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
               let exp_pos = @math.exp(num)
               let exp_neg = @math.exp(-num)
@@ -1791,35 +1779,35 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CSC" | "_XLFN.CSC" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
               number_or_num_error(1.0 / @math.sin(num))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CSCH" | "_XLFN.CSCH" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
               number_or_num_error(1.0 / @math.sinh(num))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SEC" | "_XLFN.SEC" =>
       if values.length() == 1 {
@@ -1828,7 +1816,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SECH" | "_XLFN.SECH" =>
       if values.length() == 1 {
@@ -1837,36 +1825,36 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DEGREES" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
-              FormulaValue::Number(180.0 / @math.PI * num)
+              Number(180.0 / @math.PI * num)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RADIANS" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(@math.PI / 180.0 * num)
+          Ok(num) => Number(@math.PI / 180.0 * num)
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RAND" =>
       if values.length() == 0 {
-        FormulaValue::Number(rand_state.double())
+        Number(rand_state.double())
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RANDARRAY" | "_XLFN.RANDARRAY" => randarray_values(values)
     "RANDBETWEEN" =>
@@ -1874,7 +1862,7 @@ fn eval_function(
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(bottom), Ok(top)) =>
             if top < bottom {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let bottom_int = Double::to_int(trunc_double(bottom))
               let top_int = Double::to_int(trunc_double(top))
@@ -1884,34 +1872,34 @@ fn eval_function(
               } else {
                 0
               }
-              FormulaValue::Number(Double::from_int(rand_value + bottom_int))
+              Number(Double::from_int(rand_value + bottom_int))
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PI" =>
       if values.length() == 0 {
-        FormulaValue::Number(@math.PI)
+        Number(@math.PI)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SQRTPI" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(@math.pow(num * @math.PI, 0.5))
+          Ok(num) => Number(@math.pow(num * @math.PI, 0.5))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LOG" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) => {
@@ -1923,11 +1911,11 @@ fn eval_function(
               }
             }
             if num == 0.0 || base == 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else if base == 1.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
-              FormulaValue::Number(@math.ln(num) / @math.ln(base))
+              Number(@math.ln(num) / @math.ln(base))
             }
           }
           Err(err) => err
@@ -1936,11 +1924,11 @@ fn eval_function(
     "LOG10" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(num) => FormulaValue::Number(@math.log10(num))
+          Ok(num) => Number(@math.log10(num))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMABS" =>
       if values.length() == 1 {
@@ -1950,7 +1938,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMAGINARY" =>
       if values.length() == 1 {
@@ -1959,7 +1947,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMARGUMENT" =>
       if values.length() == 1 {
@@ -1969,43 +1957,43 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMCONJUGATE" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_conj(num), suffix))
+            String(complex_to_string(complex_conj(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMCOS" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_cos(num), suffix))
+            String(complex_to_string(complex_cos(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMCOSH" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_cosh(num), suffix))
+            String(complex_to_string(complex_cosh(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMCOT" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(
+            String(
               complex_to_string(
                 complex_div(complex_cos(num), complex_sin(num)),
                 suffix,
@@ -2014,7 +2002,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMCSC" =>
       if values.length() == 1 {
@@ -2022,15 +2010,15 @@ fn eval_function(
           Ok((num, suffix)) => {
             let result = complex_div(complex_new(1.0, 0.0), complex_sin(num))
             if complex_is_invalid(result) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::String(complex_to_string(result, suffix))
+              String(complex_to_string(result, suffix))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMCSCH" =>
       if values.length() == 1 {
@@ -2038,15 +2026,15 @@ fn eval_function(
           Ok((num, suffix)) => {
             let result = complex_div(complex_new(1.0, 0.0), complex_sinh(num))
             if complex_is_invalid(result) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::String(complex_to_string(result, suffix))
+              String(complex_to_string(result, suffix))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMDIV" =>
       if values.length() == 2 {
@@ -2058,26 +2046,26 @@ fn eval_function(
           (Ok((left, suffix)), Ok(right)) => {
             let result = complex_div(left, right)
             if complex_is_invalid(result) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::String(complex_to_string(result, suffix))
+              String(complex_to_string(result, suffix))
             }
           }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMEXP" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_exp(num), suffix))
+            String(complex_to_string(complex_exp(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMLN" =>
       if values.length() == 1 {
@@ -2085,15 +2073,15 @@ fn eval_function(
           Ok((num, suffix)) => {
             let result = complex_log(num)
             if complex_is_invalid(result) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::String(complex_to_string(result, suffix))
+              String(complex_to_string(result, suffix))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMLOG10" =>
       if values.length() == 1 {
@@ -2101,15 +2089,15 @@ fn eval_function(
           Ok((num, suffix)) => {
             let result = complex_scale(complex_log(num), 1.0 / @math.ln(10.0))
             if complex_is_invalid(result) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::String(complex_to_string(result, suffix))
+              String(complex_to_string(result, suffix))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMLOG2" =>
       if values.length() == 1 {
@@ -2117,15 +2105,15 @@ fn eval_function(
           Ok((num, suffix)) => {
             let result = complex_scale(complex_log(num), 1.0 / @math.ln(2.0))
             if complex_is_invalid(result) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::String(complex_to_string(result, suffix))
+              String(complex_to_string(result, suffix))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMPOWER" =>
       if values.length() == 2 {
@@ -2139,34 +2127,33 @@ fn eval_function(
               base.imag == 0.0 &&
               exponent.real == 0.0 &&
               exponent.imag == 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let result = complex_pow(base, exponent)
               if complex_is_invalid(result) {
-                FormulaValue::Error(formula_error_num)
+                Error(formula_error_num)
               } else {
-                FormulaValue::String(complex_to_string(result, suffix))
+                String(complex_to_string(result, suffix))
               }
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMPRODUCT" => {
       let mut product = complex_new(1.0, 0.0)
       for value in flatten_values(values) {
         match value {
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          FormulaValue::Empty => ()
-          FormulaValue::Number(num) =>
-            product = complex_mul(product, complex_new(num, 0.0))
-          FormulaValue::Bool(flag) => {
+          Error(err) => return Error(err)
+          Empty => ()
+          Number(num) => product = complex_mul(product, complex_new(num, 0.0))
+          Bool(flag) => {
             let num = if flag { 1.0 } else { 0.0 }
             product = complex_mul(product, complex_new(num, 0.0))
           }
-          FormulaValue::String(text) =>
+          String(text) =>
             if text == "" {
               ()
             } else {
@@ -2175,93 +2162,91 @@ fn eval_function(
                 Err(err) => return err
               }
             }
-          FormulaValue::List(_) => ()
+          List(_) => ()
         }
       }
-      FormulaValue::String(complex_to_string(product, "i"))
+      String(complex_to_string(product, "i"))
     }
     "IMREAL" =>
       if values.length() == 1 {
         match parse_complex_value(values[0]) {
-          Ok(num) => FormulaValue::String(format_number(num.real))
+          Ok(num) => String(format_number(num.real))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSEC" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) => {
             let result = complex_div(complex_new(1.0, 0.0), complex_cos(num))
-            FormulaValue::String(complex_to_string(result, suffix))
+            String(complex_to_string(result, suffix))
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSECH" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) => {
             let result = complex_div(complex_new(1.0, 0.0), complex_cosh(num))
-            FormulaValue::String(complex_to_string(result, suffix))
+            String(complex_to_string(result, suffix))
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSIN" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_sin(num), suffix))
+            String(complex_to_string(complex_sin(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSINH" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_sinh(num), suffix))
+            String(complex_to_string(complex_sinh(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSQRT" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_sqrt(num), suffix))
+            String(complex_to_string(complex_sqrt(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSUB" =>
       if values.length() == 2 {
         match (parse_complex_value(values[0]), parse_complex_value(values[1])) {
           (Ok(left), Ok(right)) =>
-            FormulaValue::String(
-              complex_to_string(complex_sub(left, right), "i"),
-            )
+            String(complex_to_string(complex_sub(left, right), "i"))
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMSUM" =>
       if values.length() >= 1 {
         let mut result = complex_new(0.0, 0.0)
         for value in flatten_values(values) {
           match value {
-            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            Error(err) => return Error(err)
             _ =>
               match parse_complex_value(value) {
                 Ok(num) => result = complex_add(result, num)
@@ -2269,45 +2254,45 @@ fn eval_function(
               }
           }
         }
-        FormulaValue::String(complex_to_string(result, "i"))
+        String(complex_to_string(result, "i"))
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IMTAN" =>
       if values.length() == 1 {
         match parse_complex_value_with_suffix(values[0]) {
           Ok((num, suffix)) =>
-            FormulaValue::String(complex_to_string(complex_tan(num), suffix))
+            String(complex_to_string(complex_tan(num), suffix))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FLOOR" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(significance)) =>
             if significance < 0.0 && num >= 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let (whole, frac) = modf_double(num / significance)
               let mut val = whole
               if frac != 0.0 && num < 0.0 && frac < 0.0 {
                 val = val - 1.0
               }
-              FormulaValue::Number(val * significance)
+              Number(val * significance)
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CEILING" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) => {
@@ -2319,16 +2304,16 @@ fn eval_function(
               }
             }
             if significance < 0.0 && num > 0.0 {
-              FormulaValue::Error(formula_error_value)
+              Error(formula_error_value)
             } else if values.length() == 1 {
-              FormulaValue::Number(Double::ceil(num))
+              Number(Double::ceil(num))
             } else {
               let (whole, frac) = modf_double(num / significance)
               let mut val = whole
               if frac > 0.0 {
                 val = val + 1.0
               }
-              FormulaValue::Number(val * significance)
+              Number(val * significance)
             }
           }
           Err(err) => err
@@ -2336,14 +2321,14 @@ fn eval_function(
       }
     "CEILINGdotMATH" | "CEILING.MATH" | "_XLFN.CEILING.MATH" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 3 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) =>
             if values.length() == 1 {
-              FormulaValue::Number(Double::ceil(num))
+              Number(Double::ceil(num))
             } else {
               let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
               let mut mode = 1.0
@@ -2366,34 +2351,34 @@ fn eval_function(
                   val = val - 1.0
                 }
               }
-              FormulaValue::Number(val * significance)
+              Number(val * significance)
             }
           Err(err) => err
         }
       }
     "CEILINGdotPRECISE" | "CEILING.PRECISE" | "_XLFN.CEILING.PRECISE" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) =>
             if values.length() == 1 {
-              FormulaValue::Number(Double::ceil(num))
+              Number(Double::ceil(num))
             } else {
               match value_as_number(values[1]) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
-                    FormulaValue::Number(0.0)
+                    Number(0.0)
                   } else {
                     let (whole, frac) = modf_double(num / abs_significance)
                     let mut val = whole
                     if frac != 0.0 && num > 0.0 {
                       val = val + 1.0
                     }
-                    FormulaValue::Number(val * abs_significance)
+                    Number(val * abs_significance)
                   }
                 }
                 Err(err) => err
@@ -2404,14 +2389,14 @@ fn eval_function(
       }
     "FLOORdotMATH" | "FLOOR.MATH" | "_XLFN.FLOOR.MATH" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 3 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) =>
             if values.length() == 1 {
-              FormulaValue::Number(Double::floor(num))
+              Number(Double::floor(num))
             } else {
               let mut significance = if num < 0.0 { -1.0 } else { 1.0 }
               let mut mode = 1.0
@@ -2430,34 +2415,34 @@ fn eval_function(
               if frac != 0.0 && num < 0.0 && mode > 0.0 {
                 val = val - 1.0
               }
-              FormulaValue::Number(val * significance)
+              Number(val * significance)
             }
           Err(err) => err
         }
       }
     "FLOORdotPRECISE" | "FLOOR.PRECISE" | "_XLFN.FLOOR.PRECISE" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) =>
             if values.length() == 1 {
-              FormulaValue::Number(Double::floor(num))
+              Number(Double::floor(num))
             } else {
               match value_as_number(values[1]) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
-                    FormulaValue::Number(0.0)
+                    Number(0.0)
                   } else {
                     let (whole, frac) = modf_double(num / abs_significance)
                     let mut val = whole
                     if frac != 0.0 && num < 0.0 {
                       val = val - 1.0
                     }
-                    FormulaValue::Number(val * abs_significance)
+                    Number(val * abs_significance)
                   }
                 }
                 Err(err) => err
@@ -2468,27 +2453,27 @@ fn eval_function(
       }
     "ISOdotCEILING" | "ISO.CEILING" | "_XLFN.ISO.CEILING" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else if values.length() > 2 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
           Ok(num) =>
             if values.length() == 1 {
-              FormulaValue::Number(Double::ceil(num))
+              Number(Double::ceil(num))
             } else {
               match value_as_number(values[1]) {
                 Ok(significance) => {
                   let abs_significance = abs_double(significance)
                   if abs_significance == 0.0 {
-                    FormulaValue::Number(0.0)
+                    Number(0.0)
                   } else {
                     let (whole, frac) = modf_double(num / abs_significance)
                     let mut val = whole
                     if frac != 0.0 && num > 0.0 {
                       val = val + 1.0
                     }
-                    FormulaValue::Number(val * abs_significance)
+                    Number(val * abs_significance)
                   }
                 }
                 Err(err) => err
@@ -2509,73 +2494,69 @@ fn eval_function(
             } else {
               0
             }
-            FormulaValue::Number(round_down_with_digits(num, digits))
+            Number(round_down_with_digits(num, digits))
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ROUND" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(digits)) =>
-            FormulaValue::Number(round_with_digits(num, Double::to_int(digits)))
+            Number(round_with_digits(num, Double::to_int(digits)))
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ROUNDUP" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(digits)) =>
-            FormulaValue::Number(
-              round_up_with_digits(num, Double::to_int(digits)),
-            )
+            Number(round_up_with_digits(num, Double::to_int(digits)))
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ROUNDDOWN" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(digits)) =>
-            FormulaValue::Number(
-              round_down_with_digits(num, Double::to_int(digits)),
-            )
+            Number(round_down_with_digits(num, Double::to_int(digits)))
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SQRT" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num < 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
-              FormulaValue::Number(@math.pow(num, 0.5))
+              Number(@math.pow(num, 0.5))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "POWER" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
-          (Ok(lhs), Ok(rhs)) => FormulaValue::Number(@math.pow(lhs, rhs))
+          (Ok(lhs), Ok(rhs)) => Number(@math.pow(lhs, rhs))
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "EVEN" =>
       if values.length() == 1 {
@@ -2591,19 +2572,19 @@ fn eval_function(
                 val = val + 2.0
               }
             }
-            FormulaValue::Number(val)
+            Number(val)
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ODD" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num == 0.0 {
-              FormulaValue::Number(1.0)
+              Number(1.0)
             } else {
               let sign = num < 0.0
               let (whole, frac) = modf_double((num - 1.0) / 2.0)
@@ -2615,209 +2596,208 @@ fn eval_function(
                   val = val + 2.0
                 }
               }
-              FormulaValue::Number(val)
+              Number(val)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MROUND" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(multiple)) =>
             if multiple == 0.0 {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else if (multiple < 0.0 && num > 0.0) ||
               (multiple > 0.0 && num < 0.0) {
-              FormulaValue::Error(formula_error_num)
+              Error(formula_error_num)
             } else {
               let (whole, frac) = modf_double(num / multiple)
               let mut rounded = whole
               if trunc_double(frac + 0.5) > 0.0 {
                 rounded = rounded + 1.0
               }
-              FormulaValue::Number(rounded * multiple)
+              Number(rounded * multiple)
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MOD" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(divisor)) =>
             if divisor == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
               let quotient = num / divisor
               let truncated = Double::floor(quotient)
-              FormulaValue::Number(num - divisor * truncated)
+              Number(num - divisor * truncated)
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "QUOTIENT" =>
       if values.length() == 2 {
         match (value_as_number(values[0]), value_as_number(values[1])) {
           (Ok(num), Ok(divisor)) =>
             if divisor == 0.0 {
-              FormulaValue::Error(formula_error_div)
+              Error(formula_error_div)
             } else {
-              FormulaValue::Number(trunc_double(num / divisor))
+              Number(trunc_double(num / divisor))
             }
           (Err(err), _) => err
           (_, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "AND" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         for value in flatten_values(values) {
           match value_as_bool(value) {
-            Ok(flag) => if !flag { return FormulaValue::Bool(false) }
+            Ok(flag) => if !flag { return Bool(false) }
             Err(err) => return err
           }
         }
-        FormulaValue::Bool(true)
+        Bool(true)
       }
     "OR" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         for value in flatten_values(values) {
           match value_as_bool(value) {
-            Ok(flag) => if flag { return FormulaValue::Bool(true) }
+            Ok(flag) => if flag { return Bool(true) }
             Err(err) => return err
           }
         }
-        FormulaValue::Bool(false)
+        Bool(false)
       }
     "NOT" =>
       if values.length() == 1 {
         match value_as_bool(values[0]) {
-          Ok(flag) => FormulaValue::Bool(!flag)
+          Ok(flag) => Bool(!flag)
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "XOR" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         let mut count = 0
         let mut ok = false
         for value in flatten_values(values) {
           match normalize_scalar(value) {
-            FormulaValue::Error(err) => return FormulaValue::Error(err)
-            FormulaValue::Number(num) => {
+            Error(err) => return Error(err)
+            Number(num) => {
               ok = true
               if num != 0.0 {
                 count = count + 1
               }
             }
-            FormulaValue::Bool(flag) => {
+            Bool(flag) => {
               ok = true
               if flag {
                 count = count + 1
               }
             }
-            FormulaValue::String(text) => {
+            String(text) => {
               let parsed = @strconv.parse_bool(text) catch {
-                _ => return FormulaValue::Error(formula_error_value)
+                _ => return Error(formula_error_value)
               }
               ok = true
               if parsed {
                 count = count + 1
               }
             }
-            FormulaValue::Empty => ()
-            FormulaValue::List(_) => ()
+            Empty => ()
+            List(_) => ()
           }
         }
         if !ok {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
-          FormulaValue::Bool(count % 2 != 0)
+          Bool(count % 2 != 0)
         }
       }
     "LEN" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) => FormulaValue::Number(Double::from_int(text.length()))
+          Ok(text) => Number(Double::from_int(text.length()))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LENB" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) =>
-            FormulaValue::Number(Double::from_int(dbcs_byte_length(text)))
+          Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LOWER" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) => FormulaValue::String(text.to_lower())
+          Ok(text) => String(text.to_lower())
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "UPPER" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) => FormulaValue::String(text.to_upper())
+          Ok(text) => String(text.to_upper())
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "PROPER" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) => FormulaValue::String(proper_case(text))
+          Ok(text) => String(proper_case(text))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DBCS" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
           Ok(text) =>
             if dbcs_enabled(workbook) {
-              FormulaValue::String(dbcs_convert(text))
+              String(dbcs_convert(text))
             } else {
-              FormulaValue::String(text)
+              String(text)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TRIM" =>
       if values.length() == 1 {
         match value_as_string(values[0]) {
-          Ok(text) => FormulaValue::String(trim_excel_text(text))
+          Ok(text) => String(trim_excel_text(text))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LEFT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -2834,15 +2814,15 @@ fn eval_function(
           1
         }
         if count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let len = text.length()
           let end = if count > len { len } else { count }
           let start = 0
-          FormulaValue::String(text.unsafe_substring(start~, end~))
+          String(text.unsafe_substring(start~, end~))
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LEFTB" =>
       if values.length() == 1 || values.length() == 2 {
@@ -2859,18 +2839,18 @@ fn eval_function(
           1
         }
         if count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let bytes = @encoding/utf8.encode(text)
           let len = bytes.length()
           if count >= len {
-            FormulaValue::String(text)
+            String(text)
           } else {
-            FormulaValue::String(bytes_to_string(bytes[0:count]))
+            String(bytes_to_string(bytes[0:count]))
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RIGHT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -2887,15 +2867,15 @@ fn eval_function(
           1
         }
         if count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let len = text.length()
           let start = if count >= len { 0 } else { len - count }
           let end = len
-          FormulaValue::String(text.unsafe_substring(start~, end~))
+          String(text.unsafe_substring(start~, end~))
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "RIGHTB" =>
       if values.length() == 1 || values.length() == 2 {
@@ -2912,19 +2892,19 @@ fn eval_function(
           1
         }
         if count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let bytes = @encoding/utf8.encode(text)
           let len = bytes.length()
           if count >= len {
-            FormulaValue::String(text)
+            String(text)
           } else {
             let start = len - count
-            FormulaValue::String(bytes_to_string(bytes[start:len]))
+            String(bytes_to_string(bytes[start:len]))
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MID" =>
       if values.length() == 3 {
@@ -2941,22 +2921,22 @@ fn eval_function(
           Err(err) => return err
         }
         if start_num <= 0 || count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let len = text.length()
           if start_num > len {
-            FormulaValue::String("")
+            String("")
           } else {
             let start = start_num - 1
             let mut end = start + count
             if end > len {
               end = len
             }
-            FormulaValue::String(text.unsafe_substring(start~, end~))
+            String(text.unsafe_substring(start~, end~))
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MIDB" =>
       if values.length() == 3 {
@@ -2973,11 +2953,11 @@ fn eval_function(
           Err(err) => return err
         }
         if start_num <= 0 || count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else if count == 0 {
-          FormulaValue::String("")
+          String("")
         } else if start_num > dbcs_byte_length(text) {
-          FormulaValue::String("")
+          String("")
         } else {
           let sb = StringBuilder::new()
           let mut offset = 0
@@ -3009,10 +2989,10 @@ fn eval_function(
               }
             }
           }
-          FormulaValue::String(sb.to_string())
+          String(sb.to_string())
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "REPT" =>
       if values.length() == 2 {
@@ -3025,16 +3005,16 @@ fn eval_function(
           Err(err) => return err
         }
         if times < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else if times == 0 || text.length() == 0 {
-          FormulaValue::String("")
+          String("")
         } else if text.length() > max_cell_chars / times {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
-          FormulaValue::String(text.repeat(times))
+          String(text.repeat(times))
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "REPLACE" =>
       if values.length() == 4 {
@@ -3055,7 +3035,7 @@ fn eval_function(
           Err(err) => return err
         }
         if start_num <= 0 || count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let len = text.length()
           let mut start = start_num - 1
@@ -3070,10 +3050,10 @@ fn eval_function(
           sb.write_view(text.unsafe_substring(start=0, end=start))
           sb.write_view(new_text)
           sb.write_view(text.unsafe_substring(start=end, end=len))
-          FormulaValue::String(sb.to_string())
+          String(sb.to_string())
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "REPLACEB" =>
       if values.length() == 4 {
@@ -3094,7 +3074,7 @@ fn eval_function(
           Err(err) => return err
         }
         if start_num <= 0 || count < 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let bytes = @encoding/utf8.encode(text)
           let len = bytes.length()
@@ -3110,10 +3090,10 @@ fn eval_function(
           sb.write_view(bytes_to_string(bytes[0:start]))
           sb.write_view(new_text)
           sb.write_view(bytes_to_string(bytes[end:len]))
-          FormulaValue::String(sb.to_string())
+          String(sb.to_string())
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SUBSTITUTE" =>
       if values.length() == 3 || values.length() == 4 {
@@ -3130,14 +3110,14 @@ fn eval_function(
           Err(err) => return err
         }
         if old_text.length() == 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else if values.length() == 4 {
           let instance = match value_as_int(values[3]) {
             Ok(num) => num
             Err(err) => return err
           }
           if instance <= 0 {
-            FormulaValue::Error(formula_error_value)
+            Error(formula_error_value)
           } else {
             let mut index = 0
             let mut count = 0
@@ -3155,14 +3135,14 @@ fn eval_function(
                     sb.write_view(
                       text.unsafe_substring(start=tail_start, end=len),
                     )
-                    return FormulaValue::String(sb.to_string())
+                    return String(sb.to_string())
                   }
                   index = found + pattern_len
                 }
                 None => break
               }
             }
-            FormulaValue::String(text)
+            String(text)
           }
         } else {
           let mut index = 0
@@ -3182,10 +3162,10 @@ fn eval_function(
               }
             }
           }
-          FormulaValue::String(sb.to_string())
+          String(sb.to_string())
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FIND" =>
       if values.length() == 2 || values.length() == 3 {
@@ -3206,23 +3186,23 @@ fn eval_function(
           1
         }
         if start_num <= 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let start = start_num - 1
           let len = within_text.length()
           if start > len {
-            FormulaValue::Error(formula_error_value)
+            Error(formula_error_value)
           } else if find_text.length() == 0 {
-            FormulaValue::Number(Double::from_int(start_num))
+            Number(Double::from_int(start_num))
           } else {
             match find_substring_from(within_text, find_text, start) {
-              Some(idx) => FormulaValue::Number(Double::from_int(idx + 1))
-              None => FormulaValue::Error(formula_error_value)
+              Some(idx) => Number(Double::from_int(idx + 1))
+              None => Error(formula_error_value)
             }
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FINDB" =>
       if values.length() == 2 || values.length() == 3 {
@@ -3243,11 +3223,11 @@ fn eval_function(
           1
         }
         match find_dbcs(within_text, find_text, start_num, false) {
-          Some(value) => FormulaValue::Number(Double::from_int(value))
-          None => FormulaValue::Error(formula_error_value)
+          Some(value) => Number(Double::from_int(value))
+          None => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SEARCH" =>
       if values.length() == 2 || values.length() == 3 {
@@ -3268,25 +3248,25 @@ fn eval_function(
           1
         }
         if start_num <= 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let start = start_num - 1
           let lower_text = within_text.to_lower()
           let lower_find = find_text.to_lower()
           let len = lower_text.length()
           if start > len {
-            FormulaValue::Error(formula_error_value)
+            Error(formula_error_value)
           } else if lower_find.length() == 0 {
-            FormulaValue::Number(Double::from_int(start_num))
+            Number(Double::from_int(start_num))
           } else {
             match wildcard_find(lower_text, lower_find, start) {
-              Some(idx) => FormulaValue::Number(Double::from_int(idx + 1))
-              None => FormulaValue::Error(formula_error_value)
+              Some(idx) => Number(Double::from_int(idx + 1))
+              None => Error(formula_error_value)
             }
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SEARCHB" =>
       if values.length() == 2 || values.length() == 3 {
@@ -3309,11 +3289,11 @@ fn eval_function(
         let lower_find = find_text.to_lower()
         let lower_text = within_text.to_lower()
         match find_dbcs(lower_text, lower_find, start_num, true) {
-          Some(value) => FormulaValue::Number(Double::from_int(value))
-          None => FormulaValue::Error(formula_error_value)
+          Some(value) => Number(Double::from_int(value))
+          None => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "EXACT" =>
       if values.length() == 2 {
@@ -3325,9 +3305,9 @@ fn eval_function(
           Ok(text) => text
           Err(err) => return err
         }
-        FormulaValue::Bool(left == right)
+        Bool(left == right)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "FIXED" =>
       if values.length() >= 1 && values.length() <= 3 {
@@ -3354,20 +3334,18 @@ fn eval_function(
         } else {
           false
         }
-        FormulaValue::String(
-          format_fixed_number(number, decimals, !no_commas, 1),
-        )
+        String(format_fixed_number(number, decimals, !no_commas, 1))
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VALUE" =>
       if values.length() == 1 {
         match value_as_number_text(values[0]) {
-          Ok(num) => FormulaValue::Number(num)
+          Ok(num) => Number(num)
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VALUETOTEXT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -3380,21 +3358,21 @@ fn eval_function(
           0
         }
         if format != 0 && format != 1 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
           let text = formula_value_string(values[0])
           match value_as_number(values[0]) {
-            Ok(_) => FormulaValue::String(text)
+            Ok(_) => String(text)
             Err(_) =>
               if format == 1 {
-                FormulaValue::String("\"" + text + "\"")
+                String("\"" + text + "\"")
               } else {
-                FormulaValue::String(text)
+                String(text)
               }
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TEXT" =>
       if values.length() == 2 {
@@ -3404,7 +3382,7 @@ fn eval_function(
         }
         match value_as_number_text(values[0]) {
           Ok(num) =>
-            FormulaValue::String(
+            String(
               format_number_code(
                 format_number(num),
                 format_text,
@@ -3414,7 +3392,7 @@ fn eval_function(
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ARRAYTOTEXT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -3427,12 +3405,12 @@ fn eval_function(
           0
         }
         if format != 0 && format != 1 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let range = match args[0] {
-          Expr::Range(_, _, _) | Expr::Cell(_, _) =>
+          Range(_, _, _) | Cell(_, _) =>
             eval_range_expr(workbook, sheet_name, args[0], ctx)
-          _ => RangeValues::{ rows: 1, cols: 1, values: [values[0]] }
+          _ => { rows: 1, cols: 1, values: [values[0]] }
         }
         let rows : Array[String] = []
         for row in 0..<range.rows {
@@ -3440,7 +3418,7 @@ fn eval_function(
           for col in 0..<range.cols {
             let value = range.values[row * range.cols + col]
             match normalize_scalar(value) {
-              FormulaValue::Error(err) => return FormulaValue::Error(err)
+              Error(err) => return Error(err)
               _ => {
                 let text = formula_value_string(value)
                 match value_as_number(value) {
@@ -3463,12 +3441,12 @@ fn eval_function(
           rows.push(joined)
         }
         if format == 1 {
-          FormulaValue::String("{" + rows.join(";") + "}")
+          String("{" + rows.join(";") + "}")
         } else {
-          FormulaValue::String(rows.join(", "))
+          String(rows.join(", "))
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TEXTAFTER" | "TEXTBEFORE" | "_XLFN.TEXTAFTER" | "_XLFN.TEXTBEFORE" =>
       if values.length() >= 2 && values.length() <= 6 {
@@ -3481,7 +3459,7 @@ fn eval_function(
           Err(err) => return err
         }
         if text == "" {
-          return FormulaValue::Error(formula_error_na)
+          return Error(formula_error_na)
         }
         let instance_num = if values.length() >= 3 {
           match value_as_int(values[2]) {
@@ -3494,7 +3472,7 @@ fn eval_function(
         if instance_num == 0 ||
           instance_num > text.length() ||
           -instance_num > text.length() {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let match_mode = if values.length() >= 4 {
           match value_as_int(values[3]) {
@@ -3505,7 +3483,7 @@ fn eval_function(
           0
         }
         if match_mode != 0 && match_mode != 1 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let match_end = if values.length() >= 5 {
           match value_as_bool(values[4]) {
@@ -3515,11 +3493,7 @@ fn eval_function(
         } else {
           false
         }
-        let if_not_found = if values.length() == 6 {
-          values[5]
-        } else {
-          FormulaValue::Empty
-        }
+        let if_not_found = if values.length() == 6 { values[5] } else { Empty }
         let idx_opt = text_after_before_index(
           text, delimiter, instance_num, match_mode, match_end,
         )
@@ -3533,25 +3507,23 @@ fn eval_function(
         if name == "TEXTAFTER" {
           let start = idx + delimiter.length()
           if start >= text.length() {
-            FormulaValue::Empty
+            Empty
           } else {
-            FormulaValue::String(
-              text.unsafe_substring(start~, end=text.length()),
-            )
+            String(text.unsafe_substring(start~, end=text.length()))
           }
         } else if idx <= 0 {
-          FormulaValue::String("")
+          String("")
         } else {
-          FormulaValue::String(text.unsafe_substring(start=0, end=idx))
+          String(text.unsafe_substring(start=0, end=idx))
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TEXTSPLIT" | "_XLFN.TEXTSPLIT" =>
       if values.length() >= 2 && values.length() <= 6 {
         textsplit_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TEXTJOIN" =>
       if values.length() >= 3 {
@@ -3572,12 +3544,12 @@ fn eval_function(
         }
         let result = parts.join(delimiter)
         if result.length() > max_cell_chars {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else {
-          FormulaValue::String(result)
+          String(result)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SEQUENCE" | "_XLFN.SEQUENCE" => sequence_values(values)
     "TAKE" | "_XLFN.TAKE" =>
@@ -3627,14 +3599,14 @@ fn eval_function(
           false
         }
         let range = match args[0] {
-          Expr::Range(_, _, _) | Expr::Cell(_, _) =>
+          Range(_, _, _) | Cell(_, _) =>
             eval_range_expr(workbook, sheet_name, args[0], ctx)
           _ =>
             match values[0] {
-              FormulaValue::Error(err) => return FormulaValue::Error(err)
-              FormulaValue::List(list) =>
+              Error(err) => return Error(err)
+              List(list) =>
                 if list.length() == 0 {
-                  return FormulaValue::Error(formula_error_value)
+                  return Error(formula_error_value)
                 } else {
                   { rows: 1, cols: list.length(), values: list }
                 }
@@ -3642,11 +3614,11 @@ fn eval_function(
             }
         }
         match unique_range_values(range, by_col, exactly_once) {
-          Ok(result) => FormulaValue::List(result.values)
+          Ok(result) => List(result.values)
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DATE" =>
       if values.length() == 3 {
@@ -3658,15 +3630,15 @@ fn eval_function(
           ) {
           (Ok(year), Ok(month), Ok(day)) =>
             match excel_serial_from_date(year, month, day) {
-              Some(serial) => FormulaValue::Number(serial)
-              None => FormulaValue::Error(formula_error_num)
+              Some(serial) => Number(serial)
+              None => Error(formula_error_num)
             }
           (Err(err), _, _) => err
           (_, Err(err), _) => err
           (_, _, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TIME" =>
       if values.length() == 3 {
@@ -3678,15 +3650,15 @@ fn eval_function(
           ) {
           (Ok(hours), Ok(minutes), Ok(seconds)) =>
             match excel_time_fraction(hours, minutes, seconds) {
-              Some(value) => FormulaValue::Number(value)
-              None => FormulaValue::Error(formula_error_num)
+              Some(value) => Number(value)
+              None => Error(formula_error_num)
             }
           (Err(err), _, _) => err
           (_, Err(err), _) => err
           (_, _, Err(err)) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DATEVALUE" =>
       if values.length() == 1 {
@@ -3697,13 +3669,13 @@ fn eval_function(
         match parse_date_parts(text) {
           Some((year, month, day)) =>
             match excel_serial_from_date(year, month, day) {
-              Some(serial) => FormulaValue::Number(serial)
-              None => FormulaValue::Error(formula_error_value)
+              Some(serial) => Number(serial)
+              None => Error(formula_error_value)
             }
-          None => FormulaValue::Error(formula_error_value)
+          None => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TIMEVALUE" =>
       if values.length() == 1 {
@@ -3714,13 +3686,13 @@ fn eval_function(
         match parse_time_parts(text) {
           Some((hours, minutes, seconds)) =>
             match excel_time_fraction(hours, minutes, seconds) {
-              Some(value) => FormulaValue::Number(value)
-              None => FormulaValue::Error(formula_error_value)
+              Some(value) => Number(value)
+              None => Error(formula_error_value)
             }
-          None => FormulaValue::Error(formula_error_value)
+          None => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DATEDIF" =>
       if values.length() == 3 {
@@ -3733,9 +3705,9 @@ fn eval_function(
           Err(err) => return err
         }
         if start_serial > end_serial {
-          FormulaValue::Error(formula_error_num)
+          Error(formula_error_num)
         } else if start_serial == end_serial {
-          FormulaValue::Number(0.0)
+          Number(0.0)
         } else {
           let unit = match value_as_string(values[2]) {
             Ok(text) => text.to_lower()
@@ -3743,11 +3715,11 @@ fn eval_function(
           }
           let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
             Some(parts) => parts
-            None => return FormulaValue::Error(formula_error_num)
+            None => return Error(formula_error_num)
           }
           let (ey, em, ed) = match date_parts_from_serial(end_serial) {
             Some(parts) => parts
-            None => return FormulaValue::Error(formula_error_num)
+            None => return Error(formula_error_num)
           }
           match unit {
             "y" => {
@@ -3755,16 +3727,16 @@ fn eval_function(
               if em < sm || (em == sm && ed < sd) {
                 diff = diff - 1
               }
-              FormulaValue::Number(Double::from_int(diff))
+              Number(Double::from_int(diff))
             }
             "m" => {
               let mut diff = (ey - sy) * 12 + (em - sm)
               if ed < sd {
                 diff = diff - 1
               }
-              FormulaValue::Number(Double::from_int(diff))
+              Number(Double::from_int(diff))
             }
-            "d" => FormulaValue::Number(end_serial - start_serial)
+            "d" => Number(end_serial - start_serial)
             "ym" => {
               let mut diff = em - sm
               if ed < sd {
@@ -3773,7 +3745,7 @@ fn eval_function(
               if diff < 0 {
                 diff = diff + 12
               }
-              FormulaValue::Number(Double::from_int(diff))
+              Number(Double::from_int(diff))
             }
             "yd" => {
               let mut target_year = sy
@@ -3782,13 +3754,13 @@ fn eval_function(
               }
               let start_base = match excel_serial_from_date(sy, sm, sd) {
                 Some(value) => value
-                None => return FormulaValue::Error(formula_error_num)
+                None => return Error(formula_error_num)
               }
               let end_base = match excel_serial_from_date(target_year, em, ed) {
                 Some(value) => value
-                None => return FormulaValue::Error(formula_error_num)
+                None => return Error(formula_error_num)
               }
-              FormulaValue::Number(end_base - start_base)
+              Number(end_base - start_base)
             }
             "md" => {
               let diff = if ed >= sd {
@@ -3798,13 +3770,13 @@ fn eval_function(
                 let dim = days_in_month(prev_year, prev_month)
                 dim - sd + ed
               }
-              FormulaValue::Number(Double::from_int(diff))
+              Number(Double::from_int(diff))
             }
-            _ => FormulaValue::Error(formula_error_value)
+            _ => Error(formula_error_value)
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DAYS" =>
       if values.length() == 2 {
@@ -3816,9 +3788,9 @@ fn eval_function(
           Ok(value) => value
           Err(err) => return err
         }
-        FormulaValue::Number(end_serial - start_serial)
+        Number(end_serial - start_serial)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DAYS360" =>
       if values.length() == 2 || values.length() == 3 {
@@ -3832,11 +3804,11 @@ fn eval_function(
         }
         let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
           Some(parts) => parts
-          None => return FormulaValue::Error(formula_error_num)
+          None => return Error(formula_error_num)
         }
         let (ey, em, ed) = match date_parts_from_serial(end_serial) {
           Some(parts) => parts
-          None => return FormulaValue::Error(formula_error_num)
+          None => return Error(formula_error_num)
         }
         let mut start_day = sd
         let mut end_day = ed
@@ -3874,9 +3846,9 @@ fn eval_function(
         let diff = (norm_year - sy) * 360 +
           (norm_month - sm) * 30 +
           (end_day - start_day)
-        FormulaValue::Number(Double::from_int(diff))
+        Number(Double::from_int(diff))
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISOWEEKNUM" =>
       if values.length() == 1 {
@@ -3885,11 +3857,11 @@ fn eval_function(
           Err(err) => return err
         }
         match iso_week_number(year, month, day) {
-          Some(week) => FormulaValue::Number(Double::from_int(week))
-          None => FormulaValue::Error(formula_error_num)
+          Some(week) => Number(Double::from_int(week))
+          None => Error(formula_error_num)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "EDATE" =>
       if values.length() == 2 {
@@ -3905,11 +3877,11 @@ fn eval_function(
         let max_day = days_in_month(new_year, new_month)
         let new_day = if day > max_day { max_day } else { day }
         match excel_serial_from_date(new_year, new_month, new_day) {
-          Some(serial) => FormulaValue::Number(serial)
-          None => FormulaValue::Error(formula_error_num)
+          Some(serial) => Number(serial)
+          None => Error(formula_error_num)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "EOMONTH" =>
       if values.length() == 2 {
@@ -3924,11 +3896,11 @@ fn eval_function(
         let (new_year, new_month) = normalize_year_month(year, month + months)
         let new_day = days_in_month(new_year, new_month)
         match excel_serial_from_date(new_year, new_month, new_day) {
-          Some(serial) => FormulaValue::Number(serial)
-          None => FormulaValue::Error(formula_error_num)
+          Some(serial) => Number(serial)
+          None => Error(formula_error_num)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "YEARFRAC" =>
       if values.length() == 2 || values.length() == 3 {
@@ -3950,7 +3922,7 @@ fn eval_function(
         }
         yearfrac_value(start_serial, end_serial, basis)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "WEEKDAY" =>
       if values.length() == 1 || values.length() == 2 {
@@ -3970,18 +3942,18 @@ fn eval_function(
         }
         let weekday = weekday_sun1(year, month, day)
         if return_type == 1 {
-          FormulaValue::Number(Double::from_int(weekday))
+          Number(Double::from_int(weekday))
         } else if return_type == 3 {
           let value = (weekday + 6 - 1) % 7
-          FormulaValue::Number(Double::from_int(value))
+          Number(Double::from_int(value))
         } else if return_type >= 11 && return_type <= 17 {
           let value = (weekday + 6 - (return_type - 10)) % 7 + 1
-          FormulaValue::Number(Double::from_int(value))
+          Number(Double::from_int(value))
         } else {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "WEEKNUM" =>
       if values.length() == 1 || values.length() == 2 {
@@ -4007,7 +3979,7 @@ fn eval_function(
           1 | 17 => 0
           2 | 11 | 21 => 1
           12 | 13 | 14 | 15 | 16 => return_type - 10
-          _ => return FormulaValue::Error(formula_error_num)
+          _ => return Error(formula_error_num)
         }
         let mut padding = offset + 7 - first_weekday
         if padding > 7 {
@@ -4026,9 +3998,9 @@ fn eval_function(
             }
           }
         }
-        FormulaValue::Number(Double::from_int(week_num))
+        Number(Double::from_int(week_num))
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "NETWORKDAYS" =>
       if values.length() == 2 || values.length() == 3 {
@@ -4045,14 +4017,9 @@ fn eval_function(
         } else {
           []
         }
-        networkdays_intl_value(
-          start_serial,
-          end_serial,
-          FormulaValue::Number(1.0),
-          holidays,
-        )
+        networkdays_intl_value(start_serial, end_serial, Number(1.0), holidays)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "NETWORKDAYS.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
@@ -4067,7 +4034,7 @@ fn eval_function(
         let weekend_value = if values.length() >= 3 {
           values[2]
         } else {
-          FormulaValue::Number(1.0)
+          Number(1.0)
         }
         let holidays = if values.length() == 4 {
           collect_holidays(values[3])
@@ -4078,7 +4045,7 @@ fn eval_function(
           start_serial, end_serial, weekend_value, holidays,
         )
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "WORKDAY" =>
       if values.length() == 2 || values.length() == 3 {
@@ -4095,14 +4062,9 @@ fn eval_function(
         } else {
           []
         }
-        workday_intl_value(
-          start_serial,
-          days,
-          FormulaValue::Number(1.0),
-          holidays,
-        )
+        workday_intl_value(start_serial, days, Number(1.0), holidays)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "WORKDAY.INTL" =>
       if values.length() >= 2 && values.length() <= 4 {
@@ -4117,7 +4079,7 @@ fn eval_function(
         let weekend_value = if values.length() >= 3 {
           values[2]
         } else {
-          FormulaValue::Number(1.0)
+          Number(1.0)
         }
         let holidays = if values.length() == 4 {
           collect_holidays(values[3])
@@ -4126,7 +4088,7 @@ fn eval_function(
         }
         workday_intl_value(start_serial, days, weekend_value, holidays)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "NOW" =>
       if values.length() == 0 {
@@ -4135,78 +4097,72 @@ fn eval_function(
         let days = Double::floor(total_seconds / 86400.0)
         let seconds_in_day = total_seconds - days * 86400.0
         let serial = days + 25569.0 + seconds_in_day / 86400.0
-        FormulaValue::Number(serial)
+        Number(serial)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TODAY" =>
       if values.length() == 0 {
         let now_ms = @env.now()
         let total_seconds = UInt64::to_double(now_ms) / 1000.0
         let days = Double::floor(total_seconds / 86400.0)
-        FormulaValue::Number(days + 25569.0)
+        Number(days + 25569.0)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "YEAR" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
-          Ok((year, _, _, _, _, _)) =>
-            FormulaValue::Number(Double::from_int(year))
+          Ok((year, _, _, _, _, _)) => Number(Double::from_int(year))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MONTH" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
-          Ok((_, month, _, _, _, _)) =>
-            FormulaValue::Number(Double::from_int(month))
+          Ok((_, month, _, _, _, _)) => Number(Double::from_int(month))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DAY" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
-          Ok((_, _, day, _, _, _)) =>
-            FormulaValue::Number(Double::from_int(day))
+          Ok((_, _, day, _, _, _)) => Number(Double::from_int(day))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "HOUR" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
-          Ok((_, _, _, hour, _, _)) =>
-            FormulaValue::Number(Double::from_int(hour))
+          Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MINUTE" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
-          Ok((_, _, _, _, minute, _)) =>
-            FormulaValue::Number(Double::from_int(minute))
+          Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SECOND" =>
       if values.length() == 1 {
         match excel_serial_parts(values[0]) {
-          Ok((_, _, _, _, _, second)) =>
-            FormulaValue::Number(Double::from_int(second))
+          Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "INDEX" =>
       if args.length() == 2 || args.length() == 3 {
@@ -4224,15 +4180,15 @@ fn eval_function(
           1
         }
         if row_num <= 0 || col_num <= 0 {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else if row_num > range.rows || col_num > range.cols {
-          FormulaValue::Error(formula_error_ref)
+          Error(formula_error_ref)
         } else {
           let index = (row_num - 1) * range.cols + (col_num - 1)
           range.values[index]
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "MATCH" =>
       if args.length() == 2 || args.length() == 3 {
@@ -4248,7 +4204,7 @@ fn eval_function(
         }
         match_range_value(lookup, range, match_type)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "VLOOKUP" =>
       if args.length() == 3 || args.length() == 4 {
@@ -4268,7 +4224,7 @@ fn eval_function(
         }
         vlookup_value(lookup, table, col_index, range_lookup)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "HLOOKUP" =>
       if args.length() == 3 || args.length() == 4 {
@@ -4288,7 +4244,7 @@ fn eval_function(
         }
         hlookup_value(lookup, table, row_index, range_lookup)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "LOOKUP" =>
       if args.length() == 2 || args.length() == 3 {
@@ -4302,12 +4258,12 @@ fn eval_function(
             ctx,
           )
           if array_range.rows == 0 || array_range.cols == 0 {
-            return FormulaValue::Error(formula_error_value)
+            return Error(formula_error_value)
           }
           if array_range.rows == 1 || array_range.cols == 1 {
             let lookup_vec = match range_vector(array_range) {
               Some(list) => list
-              None => return FormulaValue::Error(formula_error_na)
+              None => return Error(formula_error_na)
             }
             let idx = match lookup_best_index(lookup, lookup_vec) {
               Ok(value) => value
@@ -4315,7 +4271,7 @@ fn eval_function(
             }
             match idx {
               Some(i) => lookup_vec[i]
-              None => FormulaValue::Error(formula_error_na)
+              None => Error(formula_error_na)
             }
           } else {
             let use_cols = array_range.rows >= array_range.cols
@@ -4331,11 +4287,11 @@ fn eval_function(
             }
             let lookup_list = match lookup_vec {
               Some(list) => list
-              None => return FormulaValue::Error(formula_error_na)
+              None => return Error(formula_error_na)
             }
             let result_list = match result_vec {
               Some(list) => list
-              None => return FormulaValue::Error(formula_error_na)
+              None => return Error(formula_error_na)
             }
             let idx = match lookup_best_index(lookup, lookup_list) {
               Ok(value) => value
@@ -4344,11 +4300,11 @@ fn eval_function(
             match idx {
               Some(i) =>
                 if i >= result_list.length() {
-                  FormulaValue::Error(formula_error_na)
+                  Error(formula_error_na)
                 } else {
                   result_list[i]
                 }
-              None => FormulaValue::Error(formula_error_na)
+              None => Error(formula_error_na)
             }
           }
         } else {
@@ -4370,18 +4326,18 @@ fn eval_function(
             lookup_range.cols == 0 ||
             result_range.rows == 0 ||
             result_range.cols == 0 {
-            return FormulaValue::Error(formula_error_value)
+            return Error(formula_error_value)
           }
           let lookup_list = match range_vector(lookup_range) {
             Some(list) => list
-            None => return FormulaValue::Error(formula_error_na)
+            None => return Error(formula_error_na)
           }
           let result_list = match range_vector(result_range) {
             Some(list) => list
-            None => return FormulaValue::Error(formula_error_na)
+            None => return Error(formula_error_na)
           }
           if lookup_list.length() != result_list.length() {
-            return FormulaValue::Error(formula_error_na)
+            return Error(formula_error_na)
           }
           let idx = match lookup_best_index(lookup, lookup_list) {
             Ok(value) => value
@@ -4389,11 +4345,11 @@ fn eval_function(
           }
           match idx {
             Some(i) => result_list[i]
-            None => FormulaValue::Error(formula_error_na)
+            None => Error(formula_error_na)
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "XLOOKUP" | "_XLFN.XLOOKUP" =>
       if args.length() >= 3 && args.length() <= 6 {
@@ -4415,7 +4371,7 @@ fn eval_function(
         let if_not_found = if args.length() >= 4 {
           values[3]
         } else {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         }
         let match_mode = if args.length() >= 5 {
           match value_as_int(values[4]) {
@@ -4437,18 +4393,18 @@ fn eval_function(
           match_mode != 0 &&
           match_mode != 1 &&
           match_mode != 2 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         if search_mode != 1 &&
           search_mode != -1 &&
           search_mode != 2 &&
           search_mode != -2 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let is_row = lookup_range.rows == 1
         let is_col = lookup_range.cols == 1
         if !is_row && !is_col {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let lookup_list = if is_row {
           range_row(lookup_range, 0)
@@ -4457,7 +4413,7 @@ fn eval_function(
         }
         let lookup_values = match lookup_list {
           Some(list) => list
-          None => return FormulaValue::Error(formula_error_value)
+          None => return Error(formula_error_value)
         }
         let match_idx = match
           xlookup_find_index(lookup, lookup_values, match_mode, search_mode) {
@@ -4470,31 +4426,31 @@ fn eval_function(
         }
         if is_row {
           if return_range.cols != lookup_range.cols {
-            return FormulaValue::Error(formula_error_value)
+            return Error(formula_error_value)
           }
           if return_range.rows == 1 {
             return_range.values[idx]
           } else {
             match range_column(return_range, idx) {
-              Some(list) => FormulaValue::List(list)
-              None => FormulaValue::Error(formula_error_value)
+              Some(list) => List(list)
+              None => Error(formula_error_value)
             }
           }
         } else {
           if return_range.rows != lookup_range.rows {
-            return FormulaValue::Error(formula_error_value)
+            return Error(formula_error_value)
           }
           if return_range.cols == 1 {
             return_range.values[idx * return_range.cols]
           } else {
             match range_row(return_range, idx) {
-              Some(list) => FormulaValue::List(list)
-              None => FormulaValue::Error(formula_error_value)
+              Some(list) => List(list)
+              None => Error(formula_error_value)
             }
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ANCHORARRAY" | "_XLFN.ANCHORARRAY" =>
       anchorarray_values(workbook, sheet_name, args, values)
@@ -4509,7 +4465,7 @@ fn eval_function(
           Err(err) => return err
         }
         if row_num <= 0 || col_num <= 0 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let abs_num = if values.length() >= 3 {
           match value_as_int(values[2]) {
@@ -4520,7 +4476,7 @@ fn eval_function(
           1
         }
         if abs_num < 1 || abs_num > 4 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         let a1 = if values.length() >= 4 {
           match value_as_bool(values[3]) {
@@ -4540,7 +4496,7 @@ fn eval_function(
         }
         let address = if a1 {
           address_a1(row_num, col_num, abs_num) catch {
-            _ => return FormulaValue::Error(formula_error_value)
+            _ => return Error(formula_error_value)
           }
         } else {
           address_r1c1(row_num, col_num, abs_num)
@@ -4550,9 +4506,9 @@ fn eval_function(
         } else {
           sheet_text + "!" + address
         }
-        FormulaValue::String(text)
+        String(text)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "INDIRECT" =>
       if values.length() == 1 || values.length() == 2 {
@@ -4583,12 +4539,12 @@ fn eval_function(
                 end=ref_part.length(),
               )
               let (start_ref, _start_end) = parse_range_ref_token(start_token) catch {
-                _ => return FormulaValue::Error(formula_error_ref)
+                _ => return Error(formula_error_ref)
               }
               let (_end_start, end_ref) = parse_range_ref_token(end_token) catch {
-                _ => return FormulaValue::Error(formula_error_ref)
+                _ => return Error(formula_error_ref)
               }
-              FormulaValue::List(
+              List(
                 collect_range_values(
                   workbook, target_sheet, start_ref, end_ref, ctx,
                 ),
@@ -4600,9 +4556,9 @@ fn eval_function(
                   resolve_cell_value(workbook, target_sheet, reference, ctx)
                 None => {
                   let (start_ref, end_ref) = parse_range_ref_token(ref_part) catch {
-                    _ => return FormulaValue::Error(formula_error_ref)
+                    _ => return Error(formula_error_ref)
                   }
-                  FormulaValue::List(
+                  List(
                     collect_range_values(
                       workbook, target_sheet, start_ref, end_ref, ctx,
                     ),
@@ -4620,19 +4576,19 @@ fn eval_function(
               )
               let (row1, col1) = match parse_r1c1_token(start_token) {
                 Some(value) => value
-                None => return FormulaValue::Error(formula_error_ref)
+                None => return Error(formula_error_ref)
               }
               let (row2, col2) = match parse_r1c1_token(end_token) {
                 Some(value) => value
-                None => return FormulaValue::Error(formula_error_ref)
+                None => return Error(formula_error_ref)
               }
               let start_ref = cell_ref_from(row1, col1) catch {
-                _ => return FormulaValue::Error(formula_error_ref)
+                _ => return Error(formula_error_ref)
               }
               let end_ref = cell_ref_from(row2, col2) catch {
-                _ => return FormulaValue::Error(formula_error_ref)
+                _ => return Error(formula_error_ref)
               }
-              FormulaValue::List(
+              List(
                 collect_range_values(
                   workbook, target_sheet, start_ref, end_ref, ctx,
                 ),
@@ -4642,16 +4598,16 @@ fn eval_function(
               match parse_r1c1_token(ref_part) {
                 Some((row, col)) => {
                   let reference = cell_ref_from(row, col) catch {
-                    _ => return FormulaValue::Error(formula_error_ref)
+                    _ => return Error(formula_error_ref)
                   }
                   resolve_cell_value(workbook, target_sheet, reference, ctx)
                 }
-                None => FormulaValue::Error(formula_error_ref)
+                None => Error(formula_error_ref)
               }
           }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CHAR" =>
       if values.length() == 1 {
@@ -4659,75 +4615,75 @@ fn eval_function(
           Ok(num) => {
             let code = Double::to_int(trunc_double(num))
             if code < 0 || code > max_field_length {
-              FormulaValue::Error(formula_error_value)
+              Error(formula_error_value)
             } else {
-              FormulaValue::String(char_from_code(code))
+              String(char_from_code(code))
             }
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "UNICHAR" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) =>
             if num <= 0.0 || num > 55295.0 {
-              FormulaValue::Error(formula_error_value)
+              Error(formula_error_value)
             } else {
               let code = Double::to_int(trunc_double(num))
-              FormulaValue::String(char_from_code(code))
+              String(char_from_code(code))
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CLEAN" =>
       if values.length() == 1 {
         clean_text_value(values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ENCODEURL" =>
       if values.length() == 1 {
         encode_url_value(values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "BAHTTEXT" =>
       if values.length() == 1 {
         bahttext_values(values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CODE" =>
       if values.length() == 1 {
         code_value("CODE", values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "UNICODE" =>
       if values.length() == 1 {
         code_value("UNICODE", values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "HYPERLINK" =>
       if values.length() == 1 || values.length() == 2 {
         match value_as_string(values[values.length() - 1]) {
-          Ok(text) => FormulaValue::String(text)
+          Ok(text) => String(text)
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "DISPIMG" | "_XLFN.DISPIMG" =>
       if values.length() == 2 {
         values[0]
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CHOOSE" =>
       if values.length() >= 2 {
@@ -4736,17 +4692,17 @@ fn eval_function(
           Err(err) => return err
         }
         let idx = @strconv.parse_int(index_text, base=10) catch {
-          _ => return FormulaValue::Error(formula_error_value)
+          _ => return Error(formula_error_value)
         }
         if values.length() <= idx {
-          FormulaValue::Error(formula_error_value)
+          Error(formula_error_value)
         } else if idx <= 0 {
           values[0]
         } else {
           values[idx]
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "CONCAT" | "CONCATENATE" => concat_values(values)
     "IF" =>
@@ -4758,27 +4714,27 @@ fn eval_function(
             } else if values.length() >= 3 {
               values[2]
             } else {
-              FormulaValue::Bool(false)
+              Bool(false)
             }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IFERROR" =>
       if values.length() == 2 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(_) => values[1]
-          FormulaValue::Empty => FormulaValue::Number(0.0)
+          Error(_) => values[1]
+          Empty => Number(0.0)
           _ => values[0]
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IFNA" =>
       if values.length() == 2 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(err) =>
+          Error(err) =>
             if err == formula_error_na {
               values[1]
             } else {
@@ -4787,11 +4743,11 @@ fn eval_function(
           _ => values[0]
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "IFS" =>
       if values.length() < 2 || values.length() % 2 != 0 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         for i in 0..<(values.length() / 2) {
           match value_as_bool(values[i * 2]) {
@@ -4799,11 +4755,11 @@ fn eval_function(
             Err(err) => return err
           }
         }
-        FormulaValue::Error(formula_error_na)
+        Error(formula_error_na)
       }
     "SWITCH" =>
       if values.length() < 3 {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         let target = values[0]
         let arg_count = values.length() - 1
@@ -4812,7 +4768,7 @@ fn eval_function(
         let mut result = if has_default {
           values[values.length() - 1]
         } else {
-          FormulaValue::Error(formula_error_na)
+          Error(formula_error_na)
         }
         for i in 0..<switch_count {
           let match_value = values[1 + i * 2]
@@ -4830,28 +4786,26 @@ fn eval_function(
     "ISBLANK" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Empty => FormulaValue::Bool(true)
-          _ => FormulaValue::Bool(false)
+          Empty => Bool(true)
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISERR" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(err) =>
-            FormulaValue::Bool(
-              is_known_error_code(err) && err != formula_error_na,
-            )
-          _ => FormulaValue::Bool(false)
+          Error(err) =>
+            Bool(is_known_error_code(err) && err != formula_error_na)
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISEVEN" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Empty => FormulaValue::Bool(true)
+          Empty => Bool(true)
           _ =>
             match value_as_number(values[0]) {
               Ok(num) => {
@@ -4860,206 +4814,189 @@ fn eval_function(
                 } else {
                   num == num / 2.0 * 2.0
                 }
-                FormulaValue::Bool(even)
+                Bool(even)
               }
               Err(err) => err
             }
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISODD" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
           Ok(num) => {
             let n = Double::to_int(num)
-            FormulaValue::Bool(n != n / 2 * 2)
+            Bool(n != n / 2 * 2)
           }
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISERROR" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(err) =>
-            FormulaValue::Bool(is_known_error_code(err))
-          _ => FormulaValue::Bool(false)
+          Error(err) => Bool(is_known_error_code(err))
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISLOGICAL" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Bool(_) => FormulaValue::Bool(true)
-          FormulaValue::String(text) =>
-            FormulaValue::Bool(text == "TRUE" || text == "FALSE")
-          _ => FormulaValue::Bool(false)
+          Bool(_) => Bool(true)
+          String(text) => Bool(text == "TRUE" || text == "FALSE")
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISNA" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(err) =>
-            FormulaValue::Bool(err == formula_error_na)
-          _ => FormulaValue::Bool(false)
+          Error(err) => Bool(err == formula_error_na)
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISNUMBER" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Number(_) => FormulaValue::Bool(true)
-          _ => FormulaValue::Bool(false)
+          Number(_) => Bool(true)
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISTEXT" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::String(text) =>
+          String(text) =>
             match parse_double_opt(text) {
-              Some(_) => FormulaValue::Bool(false)
-              None => FormulaValue::Bool(true)
+              Some(_) => Bool(false)
+              None => Bool(true)
             }
-          _ => FormulaValue::Bool(false)
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISNONTEXT" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::String(_) => FormulaValue::Bool(false)
-          _ => FormulaValue::Bool(true)
+          String(_) => Bool(false)
+          _ => Bool(true)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISREF" =>
       if args.length() == 1 {
-        FormulaValue::Bool(is_ref_expr(args[0]))
+        Bool(is_ref_expr(args[0]))
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ISFORMULA" =>
       if args.length() == 1 {
         match args[0] {
-          Expr::Cell(sheet, reference) => {
+          Cell(sheet, reference) => {
             let target_sheet = if sheet == "" { sheet_name } else { sheet }
-            FormulaValue::Bool(
-              cell_has_formula(workbook, target_sheet, reference),
-            )
+            Bool(cell_has_formula(workbook, target_sheet, reference))
           }
-          _ => FormulaValue::Bool(false)
+          _ => Bool(false)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "ERRORdotTYPE" | "ERROR.TYPE" =>
       if values.length() == 1 {
         error_type_value(values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SHEET" =>
       if args.length() == 0 {
         match sheet_index_opt(workbook, sheet_name) {
-          Some(index) => FormulaValue::Number(Double::from_int(index + 1))
-          None => FormulaValue::Error(formula_error_na)
+          Some(index) => Number(Double::from_int(index + 1))
+          None => Error(formula_error_na)
         }
       } else if args.length() == 1 {
         let target_sheet = match args[0] {
-          Expr::Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
-          Expr::Range(sheet, _, _) =>
-            if sheet == "" {
-              sheet_name
-            } else {
-              sheet
-            }
+          Cell(sheet, _) => if sheet == "" { sheet_name } else { sheet }
+          Range(sheet, _, _) => if sheet == "" { sheet_name } else { sheet }
           _ => formula_value_string(values[0])
         }
         match sheet_index_opt(workbook, target_sheet) {
-          Some(index) => FormulaValue::Number(Double::from_int(index + 1))
-          None => FormulaValue::Error(formula_error_na)
+          Some(index) => Number(Double::from_int(index + 1))
+          None => Error(formula_error_na)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "SHEETS" =>
       if args.length() == 0 {
-        FormulaValue::Number(Double::from_int(workbook.sheets().length()))
+        Number(Double::from_int(workbook.sheets().length()))
       } else if args.length() == 1 {
         match args[0] {
-          Expr::Cell(_, _) | Expr::Range(_, _, _) => FormulaValue::Number(1.0)
-          _ => FormulaValue::Error(formula_error_na)
+          Cell(_, _) | Range(_, _, _) => Number(1.0)
+          _ => Error(formula_error_na)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "TYPE" =>
       if values.length() == 1 {
         type_value(values[0])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "T" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(err) => FormulaValue::Error(err)
-          FormulaValue::Number(_) => FormulaValue::String("")
-          FormulaValue::String(text) => FormulaValue::String(text)
-          FormulaValue::Bool(flag) =>
-            FormulaValue::String(if flag { "TRUE" } else { "FALSE" })
-          FormulaValue::Empty => FormulaValue::String("")
-          FormulaValue::List(_) => FormulaValue::String("")
+          Error(err) => Error(err)
+          Number(_) => String("")
+          String(text) => String(text)
+          Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
+          Empty => String("")
+          List(_) => String("")
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "NA" =>
       if values.length() == 0 {
-        FormulaValue::Error(formula_error_na)
+        Error(formula_error_na)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     "N" =>
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
-          FormulaValue::Error(err) => FormulaValue::Error(err)
-          FormulaValue::Number(num) => FormulaValue::Number(num)
-          FormulaValue::Bool(flag) =>
-            FormulaValue::Number(if flag { 1.0 } else { 0.0 })
-          FormulaValue::String(text) =>
+          Error(err) => Error(err)
+          Number(num) => Number(num)
+          Bool(flag) => Number(if flag { 1.0 } else { 0.0 })
+          String(text) =>
             match parse_double_opt(text) {
-              Some(num) => FormulaValue::Number(num)
-              None =>
-                if text == "TRUE" {
-                  FormulaValue::Number(1.0)
-                } else {
-                  FormulaValue::Number(0.0)
-                }
+              Some(num) => Number(num)
+              None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
             }
-          FormulaValue::Empty => FormulaValue::Number(0.0)
-          FormulaValue::List(_) => FormulaValue::Number(0.0)
+          Empty => Number(0.0)
+          List(_) => Number(0.0)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     _ =>
       if args.length() == 0 {
         match defined_name_value(workbook, sheet_name, name, ctx) {
           Some(value) => value
-          None => FormulaValue::Error(formula_error_name)
+          None => Error(formula_error_name)
         }
       } else {
-        FormulaValue::Error(formula_error_name)
+        Error(formula_error_name)
       }
   }
 }
@@ -5069,22 +5006,22 @@ fn sum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut sum = 0.0
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) => sum = sum + num
-      FormulaValue::Bool(flag) => {
+      Error(err) => return Error(err)
+      Number(num) => sum = sum + num
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         sum = sum + num
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         match parse_double_opt(text) {
           Some(num) => sum = sum + num
           None => ()
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
-  FormulaValue::Number(sum)
+  Number(sum)
 }
 
 ///|
@@ -5092,50 +5029,48 @@ fn sumsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut sum = 0.0
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match cell {
-            FormulaValue::Number(num) => sum = sum + num * num
-            FormulaValue::String(text) =>
+            Number(num) => sum = sum + num * num
+            String(text) =>
               if text == "" {
                 ()
               } else {
                 match parse_double_opt(text) {
                   Some(num) => sum = sum + num * num
-                  None => return FormulaValue::Error(formula_error_value)
+                  None => return Error(formula_error_value)
                 }
               }
-            FormulaValue::Bool(_) =>
-              return FormulaValue::Error(formula_error_value)
-            FormulaValue::Error(_) =>
-              return FormulaValue::Error(formula_error_value)
-            FormulaValue::Empty => ()
-            FormulaValue::List(_) => ()
+            Bool(_) => return Error(formula_error_value)
+            Error(_) => return Error(formula_error_value)
+            Empty => ()
+            List(_) => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => sum = sum + num * num
-          FormulaValue::Bool(flag) => {
+          Number(num) => sum = sum + num * num
+          Bool(flag) => {
             let num = if flag { 1.0 } else { 0.0 }
             sum = sum + num * num
           }
-          FormulaValue::String(text) =>
+          String(text) =>
             if text == "" {
               ()
             } else {
               match parse_double_opt(text) {
                 Some(num) => sum = sum + num * num
-                None => return FormulaValue::Error(formula_error_value)
+                None => return Error(formula_error_value)
               }
             }
-          FormulaValue::Error(_) => ()
-          FormulaValue::Empty => ()
-          FormulaValue::List(_) => ()
+          Error(_) => ()
+          Empty => ()
+          List(_) => ()
         }
     }
   }
-  FormulaValue::Number(sum)
+  Number(sum)
 }
 
 ///|
@@ -5145,7 +5080,7 @@ fn gcd_lcm_collect(
   allow_empty_string : Bool,
 ) -> Result[Unit, FormulaValue] {
   match value {
-    FormulaValue::List(list) => {
+    List(list) => {
       for item in list {
         match gcd_lcm_collect(item, numbers, allow_empty_string) {
           Ok(_) => ()
@@ -5154,21 +5089,21 @@ fn gcd_lcm_collect(
       }
       Ok(())
     }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::Number(num) => {
+    Error(err) => Err(Error(err))
+    Number(num) => {
       numbers.push(num)
       Ok(())
     }
-    FormulaValue::Bool(flag) => {
+    Bool(flag) => {
       numbers.push(if flag { 1.0 } else { 0.0 })
       Ok(())
     }
-    FormulaValue::String(text) =>
+    String(text) =>
       if text == "" {
         if allow_empty_string {
           Ok(())
         } else {
-          Err(FormulaValue::Error(formula_error_value))
+          Err(Error(formula_error_value))
         }
       } else {
         match parse_double_opt(text) {
@@ -5176,10 +5111,10 @@ fn gcd_lcm_collect(
             numbers.push(num)
             Ok(())
           }
-          None => Err(FormulaValue::Error(formula_error_value))
+          None => Err(Error(formula_error_value))
         }
       }
-    FormulaValue::Empty => {
+    Empty => {
       numbers.push(0.0)
       Ok(())
     }
@@ -5189,7 +5124,7 @@ fn gcd_lcm_collect(
 ///|
 fn gcd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let numbers : Array[Double] = []
   for value in values {
@@ -5199,28 +5134,28 @@ fn gcd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if numbers[0] < 0.0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if numbers.length() == 1 {
-    return FormulaValue::Number(numbers[0])
+    return Number(numbers[0])
   }
   let mut result = numbers[0]
   for i in 1..<numbers.length() {
     if numbers[i] < 0.0 {
-      return FormulaValue::Error(formula_error_value)
+      return Error(formula_error_value)
     }
     result = gcd_double(result, numbers[i])
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
 fn lcm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let numbers : Array[Double] = []
   for value in values {
@@ -5230,22 +5165,22 @@ fn lcm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if numbers[0] < 0.0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if numbers.length() == 1 {
-    return FormulaValue::Number(numbers[0])
+    return Number(numbers[0])
   }
   let mut result = numbers[0]
   for i in 1..<numbers.length() {
     if numbers[i] < 0.0 {
-      return FormulaValue::Error(formula_error_value)
+      return Error(formula_error_value)
     }
     result = lcm_double(result, numbers[i])
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -5375,16 +5310,16 @@ let bitwise_max_value : Double = @math.pow(2.0, 48.0) - 1.0
 ///|
 fn bitwise_number(value : FormulaValue) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => Ok(num)
-    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    FormulaValue::Empty => Ok(0.0)
-    FormulaValue::String(text) =>
+    Number(num) => Ok(num)
+    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    Empty => Ok(0.0)
+    String(text) =>
       match parse_double_opt(text) {
         Some(num) => Ok(num)
-        None => Err(FormulaValue::Error(formula_error_num))
+        None => Err(Error(formula_error_num))
       }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_num))
+    Error(err) => Err(Error(err))
+    List(_) => Err(Error(formula_error_num))
   }
 }
 
@@ -5394,7 +5329,7 @@ fn bitwise_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   match (bitwise_number(values[0]), bitwise_number(values[1])) {
     (Ok(num1), Ok(num2)) =>
@@ -5402,7 +5337,7 @@ fn bitwise_values(
         num1 > bitwise_max_value ||
         num2 < 0.0 ||
         num2 > bitwise_max_value {
-        FormulaValue::Error(formula_error_num)
+        Error(formula_error_num)
       } else {
         let a = Double::to_int(trunc_double(num1))
         let b = Double::to_int(trunc_double(num2))
@@ -5414,7 +5349,7 @@ fn bitwise_values(
           "BITRSHIFT" => a >> b
           _ => 0
         }
-        FormulaValue::Number(Double::from_int(result))
+        Number(Double::from_int(result))
       }
     (Err(err), _) => err
     (_, Err(err)) => err
@@ -5438,12 +5373,12 @@ fn arabic_char_value(ch : Char) -> Int {
 ///|
 fn arabic_string_value(text : String) -> FormulaValue {
   if count_utf16_units(text) > 255 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let upper = text.to_upper()
   let chars = upper.to_array()
   if chars.length() == 0 {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
   let mut index = chars.length() - 1
   let mut actual_start = 0
@@ -5459,7 +5394,7 @@ fn arabic_string_value(text : String) -> FormulaValue {
     actual_start = actual_start + 1
   }
   if actual_start > index {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
   let mut number = 0
   let mut subtract_number = 0
@@ -5487,16 +5422,16 @@ fn arabic_string_value(text : String) -> FormulaValue {
   if is_negative {
     number = -number
   }
-  FormulaValue::Number(Double::from_int(number))
+  Number(Double::from_int(number))
 }
 
 ///|
 fn base_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let number = match value_as_number(values[0]) {
     Ok(num) => num
@@ -5508,14 +5443,14 @@ fn base_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let base = Double::to_int(trunc_double(radix))
   if base < 2 || base > 36 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let mut min_length = 0
   if values.length() == 3 {
     match value_as_string(values[2]) {
       Ok(text) =>
         min_length = @strconv.parse_int(text, base=10) catch {
-          _ => return FormulaValue::Error(formula_error_value)
+          _ => return Error(formula_error_value)
         }
       Err(err) => return err
     }
@@ -5526,7 +5461,7 @@ fn base_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let pad = "0".repeat(min_length - text.length())
     text = pad + text
   }
-  FormulaValue::String(text)
+  String(text)
 }
 
 ///|
@@ -5545,10 +5480,10 @@ fn dec2x_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() < 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let decimal = match value_as_number(values[0]) {
     Ok(num) => num
@@ -5556,7 +5491,7 @@ fn dec2x_values(
   }
   let (max_limit, min_limit, base) = dec2x_limits(name)
   if decimal < min_limit || decimal > max_limit {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let decimal_int = Double::to_int64(trunc_double(decimal))
   let raw = Int64::reinterpret_as_uint64(decimal_int)
@@ -5567,15 +5502,15 @@ fn dec2x_values(
       Err(err) => return err
     }
     if places_num < 0.0 || places_num > 10.0 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     let places = Double::to_int(trunc_double(places_num))
     if digits.length() > places {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     let pad = "0".repeat(places - digits.length())
     digits = pad + digits
-    return FormulaValue::String(digits.to_upper())
+    return String(digits.to_upper())
   }
   if decimal < 0.0 && digits.length() > 10 {
     let chars = digits.to_array()
@@ -5584,9 +5519,9 @@ fn dec2x_values(
     for i in start..<chars.length() {
       sb.write_char(chars[i])
     }
-    return FormulaValue::String(sb.to_string().to_upper())
+    return String(sb.to_string().to_upper())
   }
-  FormulaValue::String(digits.to_upper())
+  String(digits.to_upper())
 }
 
 ///|
@@ -5606,10 +5541,10 @@ fn bin2dec_string(text : String) -> FormulaValue {
       continue
     }
     if ch != '0' {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
   }
-  FormulaValue::Number(decimal)
+  Number(decimal)
 }
 
 ///|
@@ -5642,10 +5577,10 @@ fn hex2dec_string(text : String) -> FormulaValue {
         decimal = decimal +
           Double::from_int(value) * @math.pow(16.0, Double::from_int(i - 1))
       }
-      None => return FormulaValue::Error(formula_error_num)
+      None => return Error(formula_error_num)
     }
   }
-  FormulaValue::Number(decimal)
+  Number(decimal)
 }
 
 ///|
@@ -5657,10 +5592,10 @@ fn oct2dec_string(text : String) -> FormulaValue {
     let idx = length - i
     let ch = chars[idx]
     let digit = @strconv.parse_int(String::from_array([ch]), base=10) catch {
-      _ => return FormulaValue::Error(formula_error_num)
+      _ => return Error(formula_error_num)
     }
     if digit < 0 || digit > 7 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     if i == 10 && ch == '7' {
       decimal = decimal + @math.pow(-8.0, Double::from_int(i - 1))
@@ -5669,7 +5604,7 @@ fn oct2dec_string(text : String) -> FormulaValue {
     decimal = decimal +
       Double::from_int(digit) * @math.pow(8.0, Double::from_int(i - 1))
   }
-  FormulaValue::Number(decimal)
+  Number(decimal)
 }
 
 ///|
@@ -5677,10 +5612,10 @@ fn combin_values(number : Double, chosen : Double) -> FormulaValue {
   let n = trunc_double(number)
   let k = trunc_double(chosen)
   if k > n {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if k == n || k == 0.0 {
-    return FormulaValue::Number(1.0)
+    return Number(1.0)
   }
   let mut val = 1.0
   let k_int = Double::to_int(k)
@@ -5688,7 +5623,7 @@ fn combin_values(number : Double, chosen : Double) -> FormulaValue {
     let c = Double::from_int(i)
     val = val * (n + 1.0 - c) / c
   }
-  FormulaValue::Number(Double::ceil(val))
+  Number(Double::ceil(val))
 }
 
 ///|
@@ -5731,7 +5666,7 @@ fn multinomial_collect(
   numbers : Array[Double],
 ) -> Result[Unit, FormulaValue] {
   match value {
-    FormulaValue::List(list) => {
+    List(list) => {
       for item in list {
         match multinomial_collect(item, numbers) {
           Ok(_) => ()
@@ -5740,16 +5675,16 @@ fn multinomial_collect(
       }
       Ok(())
     }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::Number(num) => {
+    Error(err) => Err(Error(err))
+    Number(num) => {
       numbers.push(num)
       Ok(())
     }
-    FormulaValue::Bool(flag) => {
+    Bool(flag) => {
       numbers.push(if flag { 1.0 } else { 0.0 })
       Ok(())
     }
-    FormulaValue::String(text) =>
+    String(text) =>
       if text == "" {
         Ok(())
       } else {
@@ -5758,10 +5693,10 @@ fn multinomial_collect(
             numbers.push(num)
             Ok(())
           }
-          None => Err(FormulaValue::Error(formula_error_value))
+          None => Err(Error(formula_error_value))
         }
       }
-    FormulaValue::Empty => Ok(())
+    Empty => Ok(())
   }
 }
 
@@ -5780,7 +5715,7 @@ fn multinomial_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     numerator = numerator + num
     denominator = denominator * factorial_double(num)
   }
-  FormulaValue::Number(factorial_double(numerator) / denominator)
+  Number(factorial_double(numerator) / denominator)
 }
 
 ///|
@@ -5788,36 +5723,36 @@ fn product_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut product = 1.0
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Error(err) => return FormulaValue::Error(err)
-            FormulaValue::Number(num) => product = product * num
-            FormulaValue::Bool(_) => ()
-            FormulaValue::String(_) => ()
-            FormulaValue::Empty => ()
-            FormulaValue::List(_) => ()
+            Error(err) => return Error(err)
+            Number(num) => product = product * num
+            Bool(_) => ()
+            String(_) => ()
+            Empty => ()
+            List(_) => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          FormulaValue::Number(num) => product = product * num
-          FormulaValue::Bool(flag) => {
+          Error(err) => return Error(err)
+          Number(num) => product = product * num
+          Bool(flag) => {
             let num = if flag { 1.0 } else { 0.0 }
             product = product * num
           }
-          FormulaValue::String(text) =>
+          String(text) =>
             match parse_double_opt(text) {
               Some(num) => product = product * num
-              None => return FormulaValue::Error(formula_error_value)
+              None => return Error(formula_error_value)
             }
-          FormulaValue::Empty => ()
-          FormulaValue::List(_) => ()
+          Empty => ()
+          List(_) => ()
         }
     }
   }
-  FormulaValue::Number(product)
+  Number(product)
 }
 
 ///|
@@ -5826,12 +5761,12 @@ fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) => {
+      Error(err) => return Error(err)
+      Number(num) => {
         sum = sum + num
         count = count + 1
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         match parse_double_opt(text) {
           Some(num) => {
             sum = sum + num
@@ -5839,15 +5774,15 @@ fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           }
           None => ()
         }
-      FormulaValue::Bool(_) => ()
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Bool(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   if count == 0 {
-    FormulaValue::Error(formula_error_div)
+    Error(formula_error_div)
   } else {
-    FormulaValue::Number(sum / Double::from_int(count))
+    Number(sum / Double::from_int(count))
   }
 }
 
@@ -5857,17 +5792,17 @@ fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) => {
+      Error(err) => return Error(err)
+      Number(num) => {
         sum = sum + num
         count = count + 1
       }
-      FormulaValue::Bool(flag) => {
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         sum = sum + num
         count = count + 1
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "" {
           ()
         } else if text == "TRUE" || text == "FALSE" {
@@ -5883,14 +5818,14 @@ fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             None => count = count + 1
           }
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   if count == 0 {
-    FormulaValue::Error(formula_error_div)
+    Error(formula_error_div)
   } else {
-    FormulaValue::Number(sum / Double::from_int(count))
+    Number(sum / Double::from_int(count))
   }
 }
 
@@ -5917,28 +5852,28 @@ fn stdev_values(
     average_values(values)
   }
   let mean = match mean_value {
-    FormulaValue::Number(num) => num
-    FormulaValue::Error(err) => return FormulaValue::Error(err)
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    Error(err) => return Error(err)
+    _ => return Error(formula_error_value)
   }
   let mut sum = -1.0
   let mut count = -1
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) => {
+      Error(err) => return Error(err)
+      Number(num) => {
         let (next_sum, next_count) = stdev_add(sum, count, num, mean)
         sum = next_sum
         count = next_count
       }
-      FormulaValue::Bool(flag) =>
+      Bool(flag) =>
         if stdeva {
           let num = if flag { 1.0 } else { 0.0 }
           let (next_sum, next_count) = stdev_add(sum, count, num, mean)
           sum = next_sum
           count = next_count
         }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "TRUE" || text == "FALSE" {
           if stdeva {
             let num = if text == "TRUE" { 1.0 } else { 0.0 }
@@ -5956,15 +5891,15 @@ fn stdev_values(
             None => ()
           }
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   if count > 0 && sum >= 0.0 {
     let result = @math.pow(sum / Double::from_int(count), 0.5)
-    FormulaValue::Number(round_significant_digits(result, 15))
+    Number(round_significant_digits(result, 15))
   } else {
-    FormulaValue::Error(formula_error_div)
+    Error(formula_error_div)
   }
 }
 
@@ -5980,20 +5915,20 @@ fn variance_values(
   let minimum = if sample { 1 } else { 0 }
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Empty => ()
-      FormulaValue::Number(num) => {
+      Error(err) => return Error(err)
+      Empty => ()
+      Number(num) => {
         sum = sum + num
         sum_sq = sum_sq + num * num
         count = count + 1
       }
-      FormulaValue::Bool(flag) => {
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         sum = sum + num
         sum_sq = sum_sq + num * num
         count = count + 1
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "" {
           ()
         } else if text == "TRUE" || text == "FALSE" {
@@ -6011,7 +5946,7 @@ fn variance_values(
             None => if count_text_zero { count = count + 1 } else { () }
           }
         }
-      FormulaValue::List(_) => ()
+      List(_) => ()
     }
   }
   if count > minimum {
@@ -6019,34 +5954,34 @@ fn variance_values(
     let min_d = Double::from_int(minimum)
     let variance = (sum_sq * count_d - sum * sum) /
       (count_d * (count_d - min_d))
-    FormulaValue::Number(round_significant_digits(variance, 15))
+    Number(round_significant_digits(variance, 15))
   } else {
-    FormulaValue::Error(formula_error_div)
+    Error(formula_error_div)
   }
 }
 
 ///|
 fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let percent = match value_as_number(values[1]) {
     Ok(num) => num
     Err(err) => return err
   }
   if percent < 0.0 || percent >= 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let numbers : Array[Double] = []
   let list_values : Array[FormulaValue] = [values[0]]
   for value in flatten_values(list_values) {
     match normalize_scalar(value) {
-      FormulaValue::Number(num) => numbers.push(num)
+      Number(num) => numbers.push(num)
       _ => ()
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   numbers.sort()
   let discard = Double::floor(
@@ -6055,7 +5990,7 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let start = discard
   let end = numbers.length() - discard
   if end <= start {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mut sum = 0.0
   let mut count = 0
@@ -6064,16 +5999,16 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     count = count + 1
   }
   if count == 0 {
-    FormulaValue::Error(formula_error_div)
+    Error(formula_error_div)
   } else {
-    FormulaValue::Number(sum / Double::from_int(count))
+    Number(sum / Double::from_int(count))
   }
 }
 
 ///|
 fn beta_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 4 || values.length() > 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6088,7 +6023,7 @@ fn beta_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if alpha <= 0.0 || beta <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let cumulative = match value_as_bool(values[3]) {
     Ok(flag) => flag
@@ -6109,10 +6044,10 @@ fn beta_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if x < a || x > b {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if a == b {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let scale = b - a
   let normalized = (x - a) / scale
@@ -6127,7 +6062,7 @@ fn beta_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn betadist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 || values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6142,7 +6077,7 @@ fn betadist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if alpha <= 0.0 || beta <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mut a = 0.0
   let mut b = 1.0
@@ -6159,10 +6094,10 @@ fn betadist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if x < a || x > b {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if a == b {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let normalized = (x - a) / (b - a)
   let raw = get_beta_dist(normalized, alpha, beta)
@@ -6195,14 +6130,14 @@ fn get_beta_inv(probability : Double, alpha : Double, beta : Double) -> Double {
 ///|
 fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 || values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability <= 0.0 || probability >= 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let alpha = match value_as_number(values[1]) {
     Ok(num) => num
@@ -6213,7 +6148,7 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if alpha <= 0.0 || beta <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mut a = 0.0
   let mut b = 1.0
@@ -6230,7 +6165,7 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if a == b {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mid = get_beta_inv(probability, alpha, beta)
   let scaled = a + mid * (b - a)
@@ -6240,7 +6175,7 @@ fn betainv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6259,7 +6194,7 @@ fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if std_dev < 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let raw = if cumulative {
     norm_cdf(x, mean, std_dev)
@@ -6272,7 +6207,7 @@ fn normdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6287,10 +6222,10 @@ fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability < 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   if std_dev < 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let inv = match norminv_double(probability) {
     Ok(value) => value
@@ -6303,7 +6238,7 @@ fn norminv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6320,7 +6255,7 @@ fn norm_s_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6332,14 +6267,14 @@ fn norms_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn norm_s_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability < 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let inv = match norminv_double(probability) {
     Ok(value) => value
@@ -6356,7 +6291,7 @@ fn norms_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let alpha = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6371,7 +6306,7 @@ fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if alpha <= 0.0 || alpha >= 1.0 || std_dev <= 0.0 || size < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let inv = match norminv_double(alpha / 2.0) {
     Ok(value) => value
@@ -6384,7 +6319,7 @@ fn confidence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let alpha = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6399,17 +6334,12 @@ fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if alpha <= 0.0 || alpha >= 1.0 || std_dev <= 0.0 || size < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if size == 1.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
-  let iterator = InverseIterator::{
-    fp: alpha,
-    fdf: size - 1.0,
-    nt: 2.0,
-    kind: InverseKind::TDist,
-  }
+  let iterator = { fp: alpha, fdf: size - 1.0, nt: 2.0, kind: TDist }
   let result = calc_iterate_inverse(iterator, size / 2.0, size)
   let raw = std_dev * result / Double::sqrt(size)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6418,7 +6348,7 @@ fn confidence_t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6433,7 +6363,7 @@ fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability <= 0.0 || probability >= 1.0 || std_dev <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let inv = match norminv_double(probability) {
     Ok(value) => value
@@ -6446,14 +6376,14 @@ fn loginv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn gamma_value(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let number = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if number <= 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let raw = get_gamma(number)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6473,7 +6403,7 @@ fn gamma_cdf(x : Double, alpha : Double, beta : Double) -> Double {
 ///|
 fn gamma_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6492,10 +6422,10 @@ fn gamma_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if alpha <= 0.0 || beta <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = if cumulative {
     gamma_cdf(x, alpha, beta)
@@ -6546,7 +6476,7 @@ fn gammainv_double(
 ///|
 fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6561,10 +6491,10 @@ fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability < 0.0 || probability >= 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if alpha <= 0.0 || beta <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = gammainv_double(probability, alpha, beta)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6573,14 +6503,14 @@ fn gamma_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if x <= 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let raw = get_log_gamma(x)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6589,14 +6519,14 @@ fn gammaln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if x <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = get_log_gamma(x)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6605,7 +6535,7 @@ fn gammaln_precise_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6624,7 +6554,7 @@ fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x <= 0.0 || std_dev <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if cumulative {
     let z = (@math.ln(x) - mean) / std_dev
@@ -6640,7 +6570,7 @@ fn lognorm_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6655,7 +6585,7 @@ fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x <= 0.0 || std_dev <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let z = (@math.ln(x) - mean) / std_dev
   number_or_num_error(round_significant_digits(get_norm_s_dist(z), 15))
@@ -6664,7 +6594,7 @@ fn lognormdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6679,7 +6609,7 @@ fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 || lambda <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = if cumulative {
     1.0 - @math.exp(-lambda * x)
@@ -6692,7 +6622,7 @@ fn expon_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6707,7 +6637,7 @@ fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 || mean <= 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let raw = if cumulative {
     let mut sum = 0.0
@@ -6757,7 +6687,7 @@ fn binominv_double(n : Double, p : Double, alpha : Double) -> Double {
 ///|
 fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let successes = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6768,14 +6698,14 @@ fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if successes < 0.0 || successes > trials {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let probability = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability < 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let cumulative = match value_as_bool(values[3]) {
     Ok(flag) => flag
@@ -6798,10 +6728,10 @@ fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let trials = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6812,14 +6742,14 @@ fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability < 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let number_s = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if number_s < 0.0 || number_s > trials {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let number_s2 = if values.length() == 4 {
     match value_as_number(values[3]) {
@@ -6830,7 +6760,7 @@ fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     number_s
   }
   if number_s2 < 0.0 || number_s2 > trials {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mut sum = 0.0
   let mut i = number_s
@@ -6844,28 +6774,28 @@ fn binom_dist_range_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn binom_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let trials = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if trials < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let probability = match value_as_number(values[1]) {
     Ok(num) => num
     Err(err) => return err
   }
   if probability <= 0.0 || probability >= 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let alpha = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if alpha <= 0.0 || alpha >= 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = binominv_double(trials, probability, alpha)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6910,7 +6840,7 @@ fn hypgeom_raw(
 ///|
 fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let sample_s = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6929,7 +6859,7 @@ fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if hypgeom_args_invalid(sample_s, number_sample, population_s, number_pop) {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let cumulative = match value_as_bool(values[4]) {
     Ok(flag) => flag
@@ -6952,7 +6882,7 @@ fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let sample_s = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6971,7 +6901,7 @@ fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if hypgeom_args_invalid(sample_s, number_sample, population_s, number_pop) {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = hypgeom_raw(sample_s, number_sample, population_s, number_pop)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -6980,7 +6910,7 @@ fn hypgeomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let failures = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6999,7 +6929,7 @@ fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if failures < 0.0 || successes < 1.0 || probability < 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = if cumulative {
     1.0 - get_beta_dist(1.0 - probability, failures + 1.0, successes)
@@ -7014,7 +6944,7 @@ fn negbinom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let failures = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7029,7 +6959,7 @@ fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if failures < 0.0 || successes < 1.0 || probability < 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = binom_coeff_double(failures + successes - 1.0, successes - 1.0) *
     @math.pow(probability, successes) *
@@ -7040,7 +6970,7 @@ fn negbinomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7053,7 +6983,7 @@ fn gauss_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7066,7 +6996,7 @@ fn phi_value(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7082,16 +7012,16 @@ fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   if cumulative {
     if degrees < 1.0 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     let raw = get_t_dist(x, degrees, 4.0)
     return number_or_num_error(round_significant_digits(raw, 14))
   }
   if degrees < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if degrees == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let raw = get_t_dist(x, degrees, 3.0)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -7100,7 +7030,7 @@ fn tdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7111,7 +7041,7 @@ fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 || degrees < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = get_t_dist(x, degrees, 2.0)
   number_or_num_error(round_significant_digits(raw, 14))
@@ -7120,7 +7050,7 @@ fn tdist_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7131,7 +7061,7 @@ fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if degrees < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mut value = get_t_dist(x, degrees, 1.0)
   if x < 0.0 {
@@ -7143,7 +7073,7 @@ fn tdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7158,7 +7088,7 @@ fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 || degrees < 1.0 || (tails != 1.0 && tails != 2.0) {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = get_t_dist(x, degrees, tails)
   number_or_num_error(round_significant_digits(raw, 14))
@@ -7167,7 +7097,7 @@ fn tdist_legacy_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7178,22 +7108,12 @@ fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability <= 0.0 || probability >= 1.0 || degrees < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let iterator = if probability < 0.5 {
-    InverseIterator::{
-      fp: 1.0 - probability,
-      fdf: degrees,
-      nt: 4.0,
-      kind: InverseKind::TDist,
-    }
+    { fp: 1.0 - probability, fdf: degrees, nt: 4.0, kind: TDist }
   } else {
-    InverseIterator::{
-      fp: probability,
-      fdf: degrees,
-      nt: 4.0,
-      kind: InverseKind::TDist,
-    }
+    { fp: probability, fdf: degrees, nt: 4.0, kind: TDist }
   }
   let mut result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   if probability < 0.5 {
@@ -7205,7 +7125,7 @@ fn tinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7216,14 +7136,9 @@ fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability <= 0.0 || probability > 1.0 || degrees < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
-  let iterator = InverseIterator::{
-    fp: probability,
-    fdf: degrees,
-    nt: 2.0,
-    kind: InverseKind::TDist,
-  }
+  let iterator = { fp: probability, fdf: degrees, nt: 2.0, kind: TDist }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(round_significant_digits(result, 15))
 }
@@ -7231,7 +7146,7 @@ fn tinv_2t_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn number_strict_opt(value : FormulaValue) -> Double? {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => Some(num)
+    Number(num) => Some(num)
     _ => None
   }
 }
@@ -7296,11 +7211,11 @@ fn ttest_unpaired(
 ///|
 fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let (array1, array2) = match (values[0], values[1]) {
-    (FormulaValue::List(left), FormulaValue::List(right)) => (left, right)
-    _ => return FormulaValue::Error(formula_error_num)
+    (List(left), List(right)) => (left, right)
+    _ => return Error(formula_error_num)
   }
   let tails = match value_as_number(values[2]) {
     Ok(num) => num
@@ -7311,14 +7226,14 @@ fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if tails != 1.0 && tails != 2.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if test_type != 1.0 && test_type != 2.0 && test_type != 3.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let (t_value, df) = if test_type == 1.0 {
     if array1.length() != array2.length() {
-      return FormulaValue::Error(formula_error_na)
+      return Error(formula_error_na)
     }
     let mut sum1 = 0.0
     let mut sum2 = 0.0
@@ -7337,19 +7252,19 @@ fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       }
     }
     if cnt < 1.0 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     let sum_d = sum1 - sum2
     let divider = cnt * sum_sqr_d - sum_d * sum_d
     if divider == 0.0 {
-      return FormulaValue::Error(formula_error_div)
+      return Error(formula_error_div)
     }
     let t_val = Double::abs(sum_d) * Double::sqrt((cnt - 1.0) / divider)
     (t_val, cnt - 1.0)
   } else {
     let (t_val, df_val, ok) = ttest_unpaired(array1, array2, test_type == 3.0)
     if !ok {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     (t_val, df_val)
   }
@@ -7360,16 +7275,16 @@ fn ttest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let avg_input : Array[FormulaValue] = [values[0]]
   let mean = match average_values(avg_input) {
-    FormulaValue::Number(num) => num
-    FormulaValue::Error(_) => return FormulaValue::Error(formula_error_na)
-    _ => return FormulaValue::Error(formula_error_na)
+    Number(num) => num
+    Error(_) => return Error(formula_error_na)
+    _ => return Error(formula_error_na)
   }
   let x = match value_as_number(values[1]) {
     Ok(num) => num
@@ -7383,16 +7298,16 @@ fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     let stdev_input : Array[FormulaValue] = [values[0]]
     match stdev_values(false, stdev_input) {
-      FormulaValue::Number(num) => num
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      _ => return FormulaValue::Error(formula_error_div)
+      Number(num) => num
+      Error(err) => return Error(err)
+      _ => return Error(formula_error_div)
     }
   }
   let list = list_from_value(values[0])
   let count = Double::from_int(list.length())
   let denom = sigma / Double::sqrt(count)
   if denom == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let z = (mean - x) / denom
   let result = 1.0 - get_norm_s_dist(z)
@@ -7402,20 +7317,20 @@ fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn prob_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let (x_range, prob_range) = match (values[0], values[1]) {
-    (FormulaValue::List(xs), FormulaValue::List(ps)) => (xs, ps)
-    _ => return FormulaValue::Error(formula_error_num)
+    (List(xs), List(ps)) => (xs, ps)
+    _ => return Error(formula_error_num)
   }
   if x_range.length() == 0 || prob_range.length() == 0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if x_range.length() != prob_range.length() {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let lower = match value_as_number(values[2]) {
     Ok(num) => num
@@ -7433,20 +7348,20 @@ fn prob_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut res = 0.0
   for i in 0..<x_range.length() {
     match (normalize_scalar(x_range[i]), normalize_scalar(prob_range[i])) {
-      (FormulaValue::Number(x), FormulaValue::Number(p)) => {
+      (Number(x), Number(p)) => {
         if p < 0.0 || p > 1.0 {
-          return FormulaValue::Error(formula_error_num)
+          return Error(formula_error_num)
         }
         sum = sum + p
         if x >= lower && x <= upper {
           res = res + p
         }
       }
-      _ => return FormulaValue::Error(formula_error_num)
+      _ => return Error(formula_error_num)
     }
   }
   if Double::abs(sum - 1.0) > 1.0e-7 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   number_or_num_error(round_significant_digits(res, 15))
 }
@@ -7454,7 +7369,7 @@ fn prob_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7471,7 +7386,7 @@ fn chidist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7482,17 +7397,12 @@ fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability <= 0.0 || probability > 1.0 || degrees < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if probability == 1.0 {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
-  let iterator = InverseIterator::{
-    fp: 1.0 - probability,
-    fdf: degrees,
-    nt: 0.0,
-    kind: InverseKind::ChiSq,
-  }
+  let iterator = { fp: 1.0 - probability, fdf: degrees, nt: 0.0, kind: ChiSq }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(result)
 }
@@ -7500,7 +7410,7 @@ fn chiinv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7515,11 +7425,11 @@ fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let max_deg = @math.pow(10.0, 10.0)
   if degrees < 1.0 || degrees >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if cumulative {
     number_or_num_error(get_chisq_dist_cdf(x, degrees))
@@ -7531,7 +7441,7 @@ fn chisq_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn chisq_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7542,21 +7452,16 @@ fn chisq_inv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability < 0.0 || probability >= 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let max_deg = @math.pow(10.0, 10.0)
   if degrees < 1.0 || degrees > max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if probability == 0.0 {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
-  let iterator = InverseIterator::{
-    fp: probability,
-    fdf: degrees,
-    nt: 0.0,
-    kind: InverseKind::ChiSq,
-  }
+  let iterator = { fp: probability, fdf: degrees, nt: 0.0, kind: ChiSq }
   let result = calc_iterate_inverse(iterator, degrees / 2.0, degrees)
   number_or_num_error(result)
 }
@@ -7570,7 +7475,7 @@ fn chitest_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let actual_range = range_from_expr_or_value(
     workbook,
@@ -7587,14 +7492,14 @@ fn chitest_values(
     ctx,
   )
   if actual_range.rows == 0 || actual_range.cols == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if actual_range.rows != expected_range.rows ||
     actual_range.cols != expected_range.cols {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   if actual_range.rows * actual_range.cols == 1 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut result = 0.0
   for idx in 0..<actual_range.values.length() {
@@ -7607,10 +7512,10 @@ fn chitest_values(
       Err(err) => return err
     }
     if expected == 0.0 {
-      return FormulaValue::Error(formula_error_div)
+      return Error(formula_error_div)
     }
     if expected < 0.0 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     let diff = actual - expected
     result = result + diff * diff / expected
@@ -7623,7 +7528,7 @@ fn chitest_values(
     (actual_range.cols - 1) * (actual_range.rows - 1)
   }
   if degrees <= 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let value = round_chisq_result(get_chidist(result, Double::from_int(degrees)))
   number_or_num_error(value)
@@ -7632,7 +7537,7 @@ fn chitest_values(
 ///|
 fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7651,14 +7556,14 @@ fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let max_deg = @math.pow(10.0, 10.0)
   if deg1 < 1.0 || deg1 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if deg2 < 1.0 || deg2 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = if cumulative {
     get_f_dist_cdf(x, deg1, deg2)
@@ -7671,7 +7576,7 @@ fn fdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7686,14 +7591,14 @@ fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if x < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let max_deg = @math.pow(10.0, 10.0)
   if deg1 < 1.0 || deg1 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if deg2 < 1.0 || deg2 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let raw = get_f_dist_rt(x, deg1, deg2)
   number_or_num_error(round_significant_digits(raw, 15))
@@ -7702,7 +7607,7 @@ fn fdist_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7717,14 +7622,14 @@ fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability <= 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let max_deg = @math.pow(10.0, 10.0)
   if deg1 < 1.0 || deg1 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if deg2 < 1.0 || deg2 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let beta_inv = get_beta_inv(1.0 - probability, deg2 / 2.0, deg1 / 2.0)
   let result = (1.0 / beta_inv - 1.0) * (deg2 / deg1)
@@ -7734,7 +7639,7 @@ fn finv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn finv_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let probability = match value_as_number(values[0]) {
     Ok(num) => num
@@ -7749,14 +7654,14 @@ fn finv_rt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if probability <= 0.0 || probability > 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let max_deg = @math.pow(10.0, 10.0)
   if deg1 < 1.0 || deg1 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if deg2 < 1.0 || deg2 >= max_deg {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let beta_inv = get_beta_inv(probability, deg2 / 2.0, deg1 / 2.0)
   let result = (1.0 / beta_inv - 1.0) * (deg2 / deg1)
@@ -7792,7 +7697,7 @@ fn ftest_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let left_range = range_from_expr_or_value(
     workbook,
@@ -7810,19 +7715,19 @@ fn ftest_values(
   )
   let (n1, accu1) = ftest_collect(left_range.values)
   if n1 <= 1.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let f1 = accu1 / (n1 - 1.0)
   if f1 == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let (n2, accu2) = ftest_collect(right_range.values)
   if n2 <= 1.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let f2 = accu2 / (n2 - 1.0)
   if f2 == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let fd = get_f_dist_rt(f1 / f2, n1 - 1.0, n2 - 1.0)
   let mut probability = (1.0 - fd) * 2.0
@@ -7835,12 +7740,12 @@ fn ftest_values(
 ///|
 fn value_as_number_opt_financial(value : FormulaValue) -> Double? {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => Some(num)
-    FormulaValue::Bool(flag) => Some(if flag { 1.0 } else { 0.0 })
-    FormulaValue::Empty => Some(0.0)
-    FormulaValue::String(text) => parse_double_opt(text)
-    FormulaValue::Error(_) => Some(0.0)
-    FormulaValue::List(_) => None
+    Number(num) => Some(num)
+    Bool(flag) => Some(if flag { 1.0 } else { 0.0 })
+    Empty => Some(0.0)
+    String(text) => parse_double_opt(text)
+    Error(_) => Some(0.0)
+    List(_) => None
   }
 }
 
@@ -7971,12 +7876,12 @@ fn coupon_date_serial(
   let (settle_year, settle_month, settle_day) = match
     date_parts_from_serial(settlement_serial) {
     Some(parts) => parts
-    None => return Err(FormulaValue::Error(formula_error_value))
+    None => return Err(Error(formula_error_value))
   }
   let (mat_year, mat_month, mat_day) = match
     date_parts_from_serial(maturity_serial) {
     Some(parts) => parts
-    None => return Err(FormulaValue::Error(formula_error_value))
+    None => return Err(Error(formula_error_value))
   }
   let maturity_months = (mat_year - settle_year) * 12 +
     (mat_month - settle_month)
@@ -8004,7 +7909,7 @@ fn coupon_date_serial(
   }
   match excel_serial_from_date(year, month, day) {
     Some(serial) => Ok(serial)
-    None => Err(FormulaValue::Error(formula_error_num))
+    None => Err(Error(formula_error_num))
   }
 }
 
@@ -8013,7 +7918,7 @@ fn prepare_coupon_args(
   values : ArrayView[FormulaValue],
 ) -> Result[(Double, Double, Double, Int), FormulaValue] {
   if values.length() != 3 && values.length() != 4 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -8024,14 +7929,14 @@ fn prepare_coupon_args(
     Err(err) => return Err(err)
   }
   if settlement >= maturity {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let frequency = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if !validate_frequency(frequency) {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let basis = if values.length() == 4 {
     match value_as_number(values[3]) {
@@ -8082,10 +7987,10 @@ fn coupdays_value(
         )
         match excel_serial_from_date(new_year, new_month, new_day) {
           Some(serial) => serial
-          None => return Err(FormulaValue::Error(formula_error_num))
+          None => return Err(Error(formula_error_num))
         }
       }
-      None => return Err(FormulaValue::Error(formula_error_value))
+      None => return Err(Error(formula_error_value))
     }
     return Ok(coupdays_between(pcd, next, basis))
   }
@@ -8115,9 +8020,9 @@ fn coupnum_value(
   frequency : Double,
 ) -> Result[Double, FormulaValue] {
   match yearfrac_value(settlement, maturity, 0) {
-    FormulaValue::Number(num) => Ok(Double::ceil(num * frequency))
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    _ => Err(FormulaValue::Error(formula_error_value))
+    Number(num) => Ok(Double::ceil(num * frequency))
+    Error(err) => Err(Error(err))
+    _ => Err(Error(formula_error_value))
   }
 }
 
@@ -8128,9 +8033,9 @@ fn yearfrac_number(
   basis : Int,
 ) -> Result[Double, FormulaValue] {
   match yearfrac_value(start_serial, end_serial, basis) {
-    FormulaValue::Number(num) => Ok(num)
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    _ => Err(FormulaValue::Error(formula_error_value))
+    Number(num) => Ok(num)
+    Error(err) => Err(Error(err))
+    _ => Err(Error(formula_error_value))
   }
 }
 
@@ -8147,12 +8052,12 @@ fn round_half_up(value : Double) -> Double {
 fn amor_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
   let normalized = normalize_scalar(value)
   match normalized {
-    FormulaValue::String(text) => {
+    String(text) => {
       let trimmed = text.trim().to_string()
       if trimmed == "" {
-        Err(FormulaValue::Error(formula_error_value))
+        Err(Error(formula_error_value))
       } else {
-        value_as_date_serial(FormulaValue::String(trimmed))
+        value_as_date_serial(String(trimmed))
       }
     }
     _ => value_as_date_serial(normalized)
@@ -8175,14 +8080,14 @@ fn prepare_amor_args(
   values : ArrayView[FormulaValue],
 ) -> Result[AmorArgs, FormulaValue] {
   if values.length() != 6 && values.length() != 7 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let cost = match value_as_number(values[0]) {
     Ok(num) => num
-    Err(_) => return Err(FormulaValue::Error(formula_error_value))
+    Err(_) => return Err(Error(formula_error_value))
   }
   if cost < 0.0 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let date_purchased = match amor_date_serial(values[1]) {
     Ok(num) => num
@@ -8193,38 +8098,38 @@ fn prepare_amor_args(
     Err(err) => return Err(err)
   }
   if first_period < date_purchased {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let salvage = match value_as_number(values[3]) {
     Ok(num) => num
-    Err(_) => return Err(FormulaValue::Error(formula_error_num))
+    Err(_) => return Err(Error(formula_error_num))
   }
   if salvage < 0.0 || salvage > cost {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let period_value = match value_as_number(values[4]) {
     Ok(num) => num
-    Err(_) => return Err(FormulaValue::Error(formula_error_num))
+    Err(_) => return Err(Error(formula_error_num))
   }
   if period_value < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let rate = match value_as_number(values[5]) {
     Ok(num) => num
-    Err(_) => return Err(FormulaValue::Error(formula_error_num))
+    Err(_) => return Err(Error(formula_error_num))
   }
   if rate < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let basis_value = if values.length() == 7 {
     match value_as_number(values[6]) {
       Ok(num) => num
-      Err(_) => return Err(FormulaValue::Error(formula_error_num))
+      Err(_) => return Err(Error(formula_error_num))
     }
   } else {
     0.0
   }
-  Ok(AmorArgs::{
+  Ok({
     cost,
     date_purchased,
     first_period,
@@ -8242,7 +8147,7 @@ fn amordegrc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if args.rate >= 0.5 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let assets_life = 1.0 / args.rate
   let mut amor_coeff = 2.5
@@ -8276,7 +8181,7 @@ fn amordegrc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           round_significant_digits(round_half_up(cost * 0.5), 15),
         )
       }
-      return FormulaValue::Number(0.0)
+      return Number(0.0)
     }
     cost = cost - n_rate
   }
@@ -8300,7 +8205,7 @@ fn amorlinc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let rate2 = args.cost * args.rate
   if rate2 == 0.0 {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
   let delta = args.cost - args.salvage
   let periods = Double::to_int(trunc_double((delta - rate1) / rate2))
@@ -8311,7 +8216,7 @@ fn amorlinc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let result = delta - rate2 * Double::from_int(periods) - rate1
     return number_or_num_error(round_significant_digits(result, 15))
   }
-  FormulaValue::Number(0.0)
+  Number(0.0)
 }
 
 ///|
@@ -8322,318 +8227,159 @@ priv struct ConversionUnit {
 
 ///|
 let conversion_units : Map[String, ConversionUnit] = {
-  "g": ConversionUnit::{ group: category_weight_and_mass, allow_prefix: true },
-  "sg": ConversionUnit::{ group: category_weight_and_mass, allow_prefix: false },
-  "lbm": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "u": ConversionUnit::{ group: category_weight_and_mass, allow_prefix: true },
-  "ozm": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "grain": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "cwt": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "shweight": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "uk_cwt": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "lcwt": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "hweight": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "stone": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "ton": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "uk_ton": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "LTON": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "brton": ConversionUnit::{
-    group: category_weight_and_mass,
-    allow_prefix: false,
-  },
-  "m": ConversionUnit::{ group: category_distance, allow_prefix: true },
-  "mi": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "Nmi": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "in": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "ft": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "yd": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "ang": ConversionUnit::{ group: category_distance, allow_prefix: true },
-  "ell": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "ly": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "parsec": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "pc": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "Pica": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "Picapt": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "pica": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "survey_mi": ConversionUnit::{ group: category_distance, allow_prefix: false },
-  "yr": ConversionUnit::{ group: category_time, allow_prefix: false },
-  "day": ConversionUnit::{ group: category_time, allow_prefix: false },
-  "d": ConversionUnit::{ group: category_time, allow_prefix: false },
-  "hr": ConversionUnit::{ group: category_time, allow_prefix: false },
-  "mn": ConversionUnit::{ group: category_time, allow_prefix: false },
-  "min": ConversionUnit::{ group: category_time, allow_prefix: false },
-  "sec": ConversionUnit::{ group: category_time, allow_prefix: true },
-  "s": ConversionUnit::{ group: category_time, allow_prefix: true },
-  "Pa": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "p": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "atm": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "at": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "mmHg": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "psi": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "Torr": ConversionUnit::{ group: category_pressure, allow_prefix: true },
-  "N": ConversionUnit::{ group: category_force, allow_prefix: true },
-  "dyn": ConversionUnit::{ group: category_force, allow_prefix: true },
-  "dy": ConversionUnit::{ group: category_force, allow_prefix: true },
-  "lbf": ConversionUnit::{ group: category_force, allow_prefix: false },
-  "pond": ConversionUnit::{ group: category_force, allow_prefix: true },
-  "J": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "e": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "c": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "cal": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "eV": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "ev": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "HPh": ConversionUnit::{ group: category_energy, allow_prefix: false },
-  "hh": ConversionUnit::{ group: category_energy, allow_prefix: false },
-  "Wh": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "wh": ConversionUnit::{ group: category_energy, allow_prefix: true },
-  "flb": ConversionUnit::{ group: category_energy, allow_prefix: false },
-  "BTU": ConversionUnit::{ group: category_energy, allow_prefix: false },
-  "btu": ConversionUnit::{ group: category_energy, allow_prefix: false },
-  "HP": ConversionUnit::{ group: category_power, allow_prefix: false },
-  "h": ConversionUnit::{ group: category_power, allow_prefix: false },
-  "W": ConversionUnit::{ group: category_power, allow_prefix: true },
-  "w": ConversionUnit::{ group: category_power, allow_prefix: true },
-  "PS": ConversionUnit::{ group: category_power, allow_prefix: false },
-  "T": ConversionUnit::{ group: category_magnetism, allow_prefix: true },
-  "ga": ConversionUnit::{ group: category_magnetism, allow_prefix: true },
-  "C": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "cel": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "F": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "fah": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "K": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "kel": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "Rank": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "Reau": ConversionUnit::{ group: category_temperature, allow_prefix: false },
-  "l": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "L": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "lt": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "tsp": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "tspm": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "tbs": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "oz": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "cup": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "pt": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "us_pt": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "uk_pt": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "qt": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "uk_qt": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "gal": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "uk_gal": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "ang3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "ang^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "barrel": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "bushel": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "in3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "in^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "ft3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "ft^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "ly3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "ly^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "m3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "m^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: true,
-  },
-  "mi3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "mi^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "yd3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "yd^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "Nmi3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "Nmi^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "Pica3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "Pica^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "Picapt3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "Picapt^3": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "GRT": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "regton": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "MTON": ConversionUnit::{
-    group: category_volume_and_liquid_measure,
-    allow_prefix: false,
-  },
-  "ha": ConversionUnit::{ group: category_area, allow_prefix: true },
-  "uk_acre": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "us_acre": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "ang2": ConversionUnit::{ group: category_area, allow_prefix: true },
-  "ang^2": ConversionUnit::{ group: category_area, allow_prefix: true },
-  "ar": ConversionUnit::{ group: category_area, allow_prefix: true },
-  "ft2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "ft^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "in2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "in^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "ly2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "ly^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "m2": ConversionUnit::{ group: category_area, allow_prefix: true },
-  "m^2": ConversionUnit::{ group: category_area, allow_prefix: true },
-  "Morgen": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "mi2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "mi^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "Nmi2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "Nmi^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "Pica2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "Pica^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "Picapt2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "Picapt^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "yd2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "yd^2": ConversionUnit::{ group: category_area, allow_prefix: false },
-  "byte": ConversionUnit::{ group: category_information, allow_prefix: true },
-  "bit": ConversionUnit::{ group: category_information, allow_prefix: true },
-  "m/s": ConversionUnit::{ group: category_speed, allow_prefix: true },
-  "m/sec": ConversionUnit::{ group: category_speed, allow_prefix: true },
-  "m/h": ConversionUnit::{ group: category_speed, allow_prefix: true },
-  "m/hr": ConversionUnit::{ group: category_speed, allow_prefix: true },
-  "mph": ConversionUnit::{ group: category_speed, allow_prefix: false },
-  "admkn": ConversionUnit::{ group: category_speed, allow_prefix: false },
-  "kn": ConversionUnit::{ group: category_speed, allow_prefix: false },
+  "g": { group: category_weight_and_mass, allow_prefix: true },
+  "sg": { group: category_weight_and_mass, allow_prefix: false },
+  "lbm": { group: category_weight_and_mass, allow_prefix: false },
+  "u": { group: category_weight_and_mass, allow_prefix: true },
+  "ozm": { group: category_weight_and_mass, allow_prefix: false },
+  "grain": { group: category_weight_and_mass, allow_prefix: false },
+  "cwt": { group: category_weight_and_mass, allow_prefix: false },
+  "shweight": { group: category_weight_and_mass, allow_prefix: false },
+  "uk_cwt": { group: category_weight_and_mass, allow_prefix: false },
+  "lcwt": { group: category_weight_and_mass, allow_prefix: false },
+  "hweight": { group: category_weight_and_mass, allow_prefix: false },
+  "stone": { group: category_weight_and_mass, allow_prefix: false },
+  "ton": { group: category_weight_and_mass, allow_prefix: false },
+  "uk_ton": { group: category_weight_and_mass, allow_prefix: false },
+  "LTON": { group: category_weight_and_mass, allow_prefix: false },
+  "brton": { group: category_weight_and_mass, allow_prefix: false },
+  "m": { group: category_distance, allow_prefix: true },
+  "mi": { group: category_distance, allow_prefix: false },
+  "Nmi": { group: category_distance, allow_prefix: false },
+  "in": { group: category_distance, allow_prefix: false },
+  "ft": { group: category_distance, allow_prefix: false },
+  "yd": { group: category_distance, allow_prefix: false },
+  "ang": { group: category_distance, allow_prefix: true },
+  "ell": { group: category_distance, allow_prefix: false },
+  "ly": { group: category_distance, allow_prefix: false },
+  "parsec": { group: category_distance, allow_prefix: false },
+  "pc": { group: category_distance, allow_prefix: false },
+  "Pica": { group: category_distance, allow_prefix: false },
+  "Picapt": { group: category_distance, allow_prefix: false },
+  "pica": { group: category_distance, allow_prefix: false },
+  "survey_mi": { group: category_distance, allow_prefix: false },
+  "yr": { group: category_time, allow_prefix: false },
+  "day": { group: category_time, allow_prefix: false },
+  "d": { group: category_time, allow_prefix: false },
+  "hr": { group: category_time, allow_prefix: false },
+  "mn": { group: category_time, allow_prefix: false },
+  "min": { group: category_time, allow_prefix: false },
+  "sec": { group: category_time, allow_prefix: true },
+  "s": { group: category_time, allow_prefix: true },
+  "Pa": { group: category_pressure, allow_prefix: true },
+  "p": { group: category_pressure, allow_prefix: true },
+  "atm": { group: category_pressure, allow_prefix: true },
+  "at": { group: category_pressure, allow_prefix: true },
+  "mmHg": { group: category_pressure, allow_prefix: true },
+  "psi": { group: category_pressure, allow_prefix: true },
+  "Torr": { group: category_pressure, allow_prefix: true },
+  "N": { group: category_force, allow_prefix: true },
+  "dyn": { group: category_force, allow_prefix: true },
+  "dy": { group: category_force, allow_prefix: true },
+  "lbf": { group: category_force, allow_prefix: false },
+  "pond": { group: category_force, allow_prefix: true },
+  "J": { group: category_energy, allow_prefix: true },
+  "e": { group: category_energy, allow_prefix: true },
+  "c": { group: category_energy, allow_prefix: true },
+  "cal": { group: category_energy, allow_prefix: true },
+  "eV": { group: category_energy, allow_prefix: true },
+  "ev": { group: category_energy, allow_prefix: true },
+  "HPh": { group: category_energy, allow_prefix: false },
+  "hh": { group: category_energy, allow_prefix: false },
+  "Wh": { group: category_energy, allow_prefix: true },
+  "wh": { group: category_energy, allow_prefix: true },
+  "flb": { group: category_energy, allow_prefix: false },
+  "BTU": { group: category_energy, allow_prefix: false },
+  "btu": { group: category_energy, allow_prefix: false },
+  "HP": { group: category_power, allow_prefix: false },
+  "h": { group: category_power, allow_prefix: false },
+  "W": { group: category_power, allow_prefix: true },
+  "w": { group: category_power, allow_prefix: true },
+  "PS": { group: category_power, allow_prefix: false },
+  "T": { group: category_magnetism, allow_prefix: true },
+  "ga": { group: category_magnetism, allow_prefix: true },
+  "C": { group: category_temperature, allow_prefix: false },
+  "cel": { group: category_temperature, allow_prefix: false },
+  "F": { group: category_temperature, allow_prefix: false },
+  "fah": { group: category_temperature, allow_prefix: false },
+  "K": { group: category_temperature, allow_prefix: false },
+  "kel": { group: category_temperature, allow_prefix: false },
+  "Rank": { group: category_temperature, allow_prefix: false },
+  "Reau": { group: category_temperature, allow_prefix: false },
+  "l": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "L": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "lt": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "tsp": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "tspm": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "tbs": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "oz": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "cup": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "pt": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "us_pt": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "uk_pt": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "qt": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "uk_qt": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "gal": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "uk_gal": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "ang3": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "ang^3": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "barrel": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "bushel": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "in3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "in^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "ft3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "ft^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "ly3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "ly^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "m3": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "m^3": { group: category_volume_and_liquid_measure, allow_prefix: true },
+  "mi3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "mi^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "yd3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "yd^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "Nmi3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "Nmi^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "Pica3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "Pica^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "Picapt3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "Picapt^3": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "GRT": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "regton": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "MTON": { group: category_volume_and_liquid_measure, allow_prefix: false },
+  "ha": { group: category_area, allow_prefix: true },
+  "uk_acre": { group: category_area, allow_prefix: false },
+  "us_acre": { group: category_area, allow_prefix: false },
+  "ang2": { group: category_area, allow_prefix: true },
+  "ang^2": { group: category_area, allow_prefix: true },
+  "ar": { group: category_area, allow_prefix: true },
+  "ft2": { group: category_area, allow_prefix: false },
+  "ft^2": { group: category_area, allow_prefix: false },
+  "in2": { group: category_area, allow_prefix: false },
+  "in^2": { group: category_area, allow_prefix: false },
+  "ly2": { group: category_area, allow_prefix: false },
+  "ly^2": { group: category_area, allow_prefix: false },
+  "m2": { group: category_area, allow_prefix: true },
+  "m^2": { group: category_area, allow_prefix: true },
+  "Morgen": { group: category_area, allow_prefix: false },
+  "mi2": { group: category_area, allow_prefix: false },
+  "mi^2": { group: category_area, allow_prefix: false },
+  "Nmi2": { group: category_area, allow_prefix: false },
+  "Nmi^2": { group: category_area, allow_prefix: false },
+  "Pica2": { group: category_area, allow_prefix: false },
+  "Pica^2": { group: category_area, allow_prefix: false },
+  "Picapt2": { group: category_area, allow_prefix: false },
+  "Picapt^2": { group: category_area, allow_prefix: false },
+  "yd2": { group: category_area, allow_prefix: false },
+  "yd^2": { group: category_area, allow_prefix: false },
+  "byte": { group: category_information, allow_prefix: true },
+  "bit": { group: category_information, allow_prefix: true },
+  "m/s": { group: category_speed, allow_prefix: true },
+  "m/sec": { group: category_speed, allow_prefix: true },
+  "m/h": { group: category_speed, allow_prefix: true },
+  "m/hr": { group: category_speed, allow_prefix: true },
+  "mph": { group: category_speed, allow_prefix: false },
+  "admkn": { group: category_speed, allow_prefix: false },
+  "kn": { group: category_speed, allow_prefix: false },
 }
 
 ///|
@@ -8921,7 +8667,7 @@ fn convert_temperature(
 ///|
 fn convert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let number = match value_as_number(values[0]) {
     Ok(num) => num
@@ -8940,7 +8686,7 @@ fn convert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   )
   let (to_uom, to_category, to_multiplier, ok2) = get_unit_details(to_unit)
   if !ok1 || !ok2 || from_category != to_category {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let value = number * from_multiplier
   let result = if from_uom == to_uom && from_multiplier == to_multiplier {
@@ -8952,15 +8698,15 @@ fn convert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   } else {
     let conversions = match unit_conversions.get(from_category) {
       Some(map) => map
-      None => return FormulaValue::Error(formula_error_na)
+      None => return Error(formula_error_na)
     }
     let from_conversion = match conversions.get(from_uom) {
       Some(num) => num
-      None => return FormulaValue::Error(formula_error_na)
+      None => return Error(formula_error_na)
     }
     let to_conversion = match conversions.get(to_uom) {
       Some(num) => num
-      None => return FormulaValue::Error(formula_error_na)
+      None => return Error(formula_error_na)
     }
     let base_value = value * (1.0 / from_conversion)
     base_value * to_conversion / to_multiplier
@@ -8971,10 +8717,10 @@ fn convert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn euroconvert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let number = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9027,15 +8773,15 @@ fn euroconvert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let (source_rate, _source_decimals) = match
     convert_table.get(source_currency) {
     Some(value) => value
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   let (target_rate, target_decimals) = match
     convert_table.get(target_currency) {
     Some(value) => value
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   if source_currency == target_currency {
-    return FormulaValue::Number(number)
+    return Number(number)
   }
   let mut result = if source_currency == "EUR" {
     number * target_rate
@@ -9057,10 +8803,10 @@ fn euroconvert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn fv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9091,7 +8837,7 @@ fn fv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     0.0
   }
   if typ != 0.0 && typ != 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let result = if rate != 0.0 {
     let factor = @math.pow(1.0 + rate, nper)
@@ -9105,7 +8851,7 @@ fn fv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn fvschedule_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let principal = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9115,15 +8861,15 @@ fn fvschedule_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut result = principal
   for value in schedule {
     match normalize_scalar(value) {
-      FormulaValue::Empty => ()
-      FormulaValue::Error(_) => ()
-      FormulaValue::String(text) =>
+      Empty => ()
+      Error(_) => ()
+      String(text) =>
         if text == "" {
           ()
         } else {
           match parse_double_opt(text) {
             Some(num) => result = result * (1.0 + num)
-            None => return FormulaValue::Error(formula_error_value)
+            None => return Error(formula_error_value)
           }
         }
       _ =>
@@ -9155,7 +8901,7 @@ fn calc_npv(rate : Double, values : ArrayView[FormulaValue]) -> Double {
 ///|
 fn npv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9178,10 +8924,10 @@ fn npv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn pv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9255,10 +9001,10 @@ fn calc_rate(
 ///|
 fn rate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let nper = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9302,10 +9048,10 @@ fn rate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn irr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let list_values = flatten_values([values[0]])
   let guess = if values.length() == 2 {
@@ -9333,7 +9079,7 @@ fn irr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     f2 = calc_npv(x2, list_values)
   }
   if f1 * f2 > 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let f = calc_npv(x1, list_values)
   let mut rtb = 0.0
@@ -9364,7 +9110,7 @@ fn irr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn mirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let list_values = flatten_values([values[0]])
   let finance_rate = match value_as_number(values[1]) {
@@ -9389,7 +9135,7 @@ fn mirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if npv_neg == 0.0 || npv_pos == 0.0 || reinvest_rate <= -1.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let result = @math.pow(
       -npv_pos * @math.pow(rr, Double::from_int(n)) / (npv_neg * rr),
@@ -9412,19 +9158,18 @@ fn prepare_x_args(
     }
   }
   if value_args.length() < 2 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let date_args : Array[Double] = []
   let mut last_date = 0.0
   for date in dates {
     match normalize_scalar(date) {
-      FormulaValue::Empty =>
-        return Err(FormulaValue::Error(formula_error_value))
+      Empty => return Err(Error(formula_error_value))
       _ =>
         match value_as_number(date) {
           Ok(num) => {
             if num < last_date {
-              return Err(FormulaValue::Error(formula_error_value))
+              return Err(Error(formula_error_value))
             }
             date_args.push(num)
             last_date = num
@@ -9434,7 +9179,7 @@ fn prepare_x_args(
     }
   }
   if value_args.length() != date_args.length() {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   Ok((value_args, date_args))
 }
@@ -9488,7 +9233,7 @@ fn xirr_compute(
     }
   }
   if !has_positive || !has_negative {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mut result = guess
   let mut count = 0
@@ -9508,7 +9253,7 @@ fn xirr_compute(
     }
   }
   if failed || Double::is_nan(result) || Double::is_inf(result) {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   number_or_num_error(round_significant_digits(result, 15))
 }
@@ -9516,7 +9261,7 @@ fn xirr_compute(
 ///|
 fn xirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 && values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let raw_values = flatten_values([values[0]])
   let raw_dates = flatten_values([values[1]])
@@ -9529,11 +9274,11 @@ fn xirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     match value_as_number(values[2]) {
       Ok(num) => {
         if num <= -1.0 {
-          return FormulaValue::Error(formula_error_value)
+          return Error(formula_error_value)
         }
         guess = num
       }
-      Err(_) => return FormulaValue::Error(formula_error_num)
+      Err(_) => return Error(formula_error_num)
     }
   }
   xirr_compute(value_args, date_args, guess)
@@ -9542,14 +9287,14 @@ fn xirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn xnpv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
     Err(err) => return err
   }
   if rate <= 0.0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let raw_values = flatten_values([values[1]])
   let raw_dates = flatten_values([values[2]])
@@ -9569,10 +9314,10 @@ fn xnpv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn dollar_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let number = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9586,7 +9331,7 @@ fn dollar_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       Err(err) => return err
     }
     if decimals_value >= 128.0 {
-      return FormulaValue::Error(formula_error_value)
+      return Error(formula_error_value)
     }
     let digits = Double::to_int(decimals_value)
     if digits < 0 {
@@ -9600,9 +9345,9 @@ fn dollar_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let abs_value = abs_double(rounded)
   let formatted = format_fixed_number(abs_value, decimals, true, 1)
   if rounded < 0.0 {
-    FormulaValue::String("(\{symbol}\{formatted})")
+    String("(\{symbol}\{formatted})")
   } else {
-    FormulaValue::String("\{symbol}\{formatted}")
+    String("\{symbol}\{formatted}")
   }
 }
 
@@ -9612,7 +9357,7 @@ fn dollar_fraction_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let dollar = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9623,10 +9368,10 @@ fn dollar_fraction_values(
     Err(err) => return err
   }
   if frac < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if frac == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let (_whole, cents_raw) = modf_double(dollar)
   let mut cents = cents_raw
@@ -9645,7 +9390,7 @@ fn dollar_fraction_values(
 ///|
 fn effect_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9656,7 +9401,7 @@ fn effect_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if rate <= 0.0 || npery < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = @math.pow(1.0 + rate / npery, npery) - 1.0
   number_or_num_error(round_significant_digits(result, 15))
@@ -9665,7 +9410,7 @@ fn effect_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn nominal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9676,7 +9421,7 @@ fn nominal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if rate <= 0.0 || npery < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = npery * (@math.pow(rate + 1.0, 1.0 / npery) - 1.0)
   number_or_num_error(round_significant_digits(result, 15))
@@ -9685,10 +9430,10 @@ fn nominal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn nper_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9719,10 +9464,10 @@ fn nper_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     0.0
   }
   if typ != 0.0 && typ != 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   if pmt == 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = if rate != 0.0 {
     let term = pmt * (1.0 + rate * typ) / rate
@@ -9752,10 +9497,10 @@ fn calc_pmt(
 ///|
 fn pmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9786,7 +9531,7 @@ fn pmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     0.0
   }
   if typ != 0.0 && typ != 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let result = calc_pmt(rate, nper, pv, fv, typ)
   number_or_num_error(round_significant_digits(result, 15))
@@ -9821,10 +9566,10 @@ fn calc_ipmt(
 ///|
 fn ipmt_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9859,10 +9604,10 @@ fn ipmt_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     0.0
   }
   if typ != 0.0 && typ != 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   if per <= 0.0 || per > nper {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let payment = calc_pmt(rate, nper, pv, fv, typ)
   let (interest, principal) = calc_ipmt(typ, per, payment, pv, rate)
@@ -9876,7 +9621,7 @@ fn cumip_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() != 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9903,21 +9648,21 @@ fn cumip_values(
     Err(err) => return err
   }
   if typ != 0.0 && typ != 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   if start < 1.0 || start > end {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut total = 0.0
   let mut per = start
   while per <= end {
     let args : Array[FormulaValue] = [
-      FormulaValue::Number(rate),
-      FormulaValue::Number(per),
-      FormulaValue::Number(nper),
-      FormulaValue::Number(pv),
-      FormulaValue::Number(0.0),
-      FormulaValue::Number(typ),
+      Number(rate),
+      Number(per),
+      Number(nper),
+      Number(pv),
+      Number(0.0),
+      Number(typ),
     ]
     let result = ipmt_values(
       if name == "CUMIPMT" {
@@ -9928,9 +9673,9 @@ fn cumip_values(
       args,
     )
     match result {
-      FormulaValue::Number(num) => total = total + num
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      _ => return FormulaValue::Error(formula_error_value)
+      Number(num) => total = total + num
+      Error(err) => return Error(err)
+      _ => return Error(formula_error_value)
     }
     per = per + 1.0
   }
@@ -9940,7 +9685,7 @@ fn cumip_values(
 ///|
 fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -9978,22 +9723,22 @@ fn ispmt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn rri_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let nper = match value_as_number(values[0]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let pv = match value_as_number(values[1]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let fv = match value_as_number(values[2]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   if nper <= 0.0 || pv <= 0.0 || fv < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = @math.pow(fv / pv, 1.0 / nper) - 1.0
   number_or_num_error(round_significant_digits(result, 15))
@@ -10002,22 +9747,22 @@ fn rri_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn sln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let cost = match value_as_number(values[0]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let salvage = match value_as_number(values[1]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let life = match value_as_number(values[2]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   if life <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = (cost - salvage) / life
   number_or_num_error(round_significant_digits(result, 15))
@@ -10026,29 +9771,29 @@ fn sln_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn syd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let cost = match value_as_number(values[0]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let salvage = match value_as_number(values[1]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let life = match value_as_number(values[2]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   let per = match value_as_number(values[3]) {
     Ok(num) => num
-    Err(_) => return FormulaValue::Error(formula_error_num)
+    Err(_) => return Error(formula_error_num)
   }
   if life <= 0.0 || per <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if per > life {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = (cost - salvage) *
     (life - per + 1.0) *
@@ -10070,10 +9815,10 @@ fn db_args_invalid(
 ///|
 fn db_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let cost = match value_as_number(values[0]) {
     Ok(num) => num
@@ -10100,10 +9845,10 @@ fn db_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     12.0
   }
   if cost == 0.0 {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
   if db_args_invalid(cost, salvage, life, period) || month < 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let dr_raw = 1.0 - @math.pow(salvage / cost, 1.0 / life)
   let dr = Double::round(dr_raw * 1000.0) / 1000.0
@@ -10147,10 +9892,10 @@ fn ddb_double(
 ///|
 fn ddb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let cost = match value_as_number(values[0]) {
     Ok(num) => num
@@ -10177,12 +9922,12 @@ fn ddb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     2.0
   }
   if cost == 0.0 {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
   if db_args_invalid(cost, salvage, life, period) ||
     factor <= 0.0 ||
     period > life {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let depreciation = ddb_double(cost, salvage, life, period, factor)
   number_or_num_error(round_significant_digits(depreciation, 15))
@@ -10195,57 +9940,57 @@ fn prepare_vdb_args(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if cost < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let salvage = match value_as_number(values[1]) {
     Ok(num) => num
     Err(err) => return err
   }
   if salvage < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let life = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if life <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let start_period = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return err
   }
   if start_period < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let end_period = match value_as_number(values[4]) {
     Ok(num) => num
     Err(err) => return err
   }
   if start_period > end_period {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if end_period > life {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let factor = if values.length() > 5 {
     match value_as_number(values[5]) {
       Ok(num) => num
-      Err(_) => return FormulaValue::Error(formula_error_num)
+      Err(_) => return Error(formula_error_num)
     }
   } else {
     2.0
   }
   if factor < 0.0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
-  FormulaValue::List([
-    FormulaValue::Number(cost),
-    FormulaValue::Number(salvage),
-    FormulaValue::Number(life),
-    FormulaValue::Number(start_period),
-    FormulaValue::Number(end_period),
-    FormulaValue::Number(factor),
+  List([
+    Number(cost),
+    Number(salvage),
+    Number(life),
+    Number(start_period),
+    Number(end_period),
+    Number(factor),
   ])
 }
 
@@ -10292,42 +10037,42 @@ fn vdb_partial(
 ///|
 fn vdb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 5 || values.length() > 7 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let prepared = prepare_vdb_args(values)
   let list = match prepared {
-    FormulaValue::List(items) => items
-    FormulaValue::Error(err) => return FormulaValue::Error(err)
-    _ => return FormulaValue::Error(formula_error_value)
+    List(items) => items
+    Error(err) => return Error(err)
+    _ => return Error(formula_error_value)
   }
   let cost = match list[0] {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let salvage = match list[1] {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let life = match list[2] {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let start_period = match list[3] {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let end_period = match list[4] {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let factor = match list[5] {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let no_switch = if values.length() > 6 {
     match value_as_bool(values[6]) {
       Ok(flag) => flag
-      Err(_) => return FormulaValue::Error(formula_error_num)
+      Err(_) => return Error(formula_error_num)
     }
   } else {
     false
@@ -10370,7 +10115,7 @@ fn vdb_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn pduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rate = match value_as_number(values[0]) {
     Ok(num) => num
@@ -10385,7 +10130,7 @@ fn pduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if rate <= 0.0 || pv <= 0.0 || fv <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = (@math.ln(fv) - @math.ln(pv)) / @math.ln(1.0 + rate)
   number_or_num_error(round_significant_digits(result, 15))
@@ -10394,7 +10139,7 @@ fn pduration_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn accrint_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 6 || values.length() > 8 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let issue = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -10417,7 +10162,7 @@ fn accrint_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if !validate_frequency(frequency) {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() >= 7 {
     match value_as_number(values[6]) {
@@ -10444,7 +10189,7 @@ fn accrint_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn accrintm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let issue = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -10455,7 +10200,7 @@ fn accrintm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if settlement < issue {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let rate = match value_as_number(values[2]) {
     Ok(num) => num
@@ -10466,7 +10211,7 @@ fn accrintm_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if par <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 5 {
     match value_as_number(values[4]) {
@@ -10495,7 +10240,7 @@ fn coupdaybs_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Ok(num) => num
     Err(err) => return err
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -10509,7 +10254,7 @@ fn coupdays_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Ok(num) => num
     Err(err) => return err
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -10523,7 +10268,7 @@ fn coupdaysnc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Ok(num) => num
     Err(err) => return err
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -10538,7 +10283,7 @@ fn coupncd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Ok(serial) => serial
     Err(err) => return err
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -10552,7 +10297,7 @@ fn coupnum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Ok(num) => num
     Err(err) => return err
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -10567,7 +10312,7 @@ fn couppcd_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Ok(serial) => serial
     Err(err) => return err
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -10576,7 +10321,7 @@ fn disc_intrate_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -10587,21 +10332,21 @@ fn disc_intrate_values(
     Err(err) => return err
   }
   if maturity <= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let pr_investment = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if pr_investment <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let redemption = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return err
   }
   if redemption <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 5 {
     match value_as_number(values[4]) {
@@ -10626,7 +10371,7 @@ fn disc_intrate_values(
 ///|
 fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -10637,7 +10382,7 @@ fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if maturity <= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let investment = match value_as_number(values[2]) {
     Ok(num) => num
@@ -10648,12 +10393,12 @@ fn received_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if discount <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 5 {
     match value_as_number(values[4]) {
       Ok(num) => Double::to_int(trunc_double(num))
-      Err(_) => return FormulaValue::Error(formula_error_num)
+      Err(_) => return Error(formula_error_num)
     }
   } else {
     0
@@ -10671,7 +10416,7 @@ fn prepare_duration_args(
   values : ArrayView[FormulaValue],
 ) -> Result[(Double, Double, Double, Double, Double, Int), FormulaValue] {
   if values.length() != 5 && values.length() != 6 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -10682,28 +10427,28 @@ fn prepare_duration_args(
     Err(err) => return Err(err)
   }
   if settlement >= maturity {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let coupon = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if coupon < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let yld = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if yld < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let frequency = match value_as_number(values[4]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if !validate_frequency(frequency) {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let basis = if values.length() == 6 {
     match value_as_number(values[5]) {
@@ -10797,10 +10542,10 @@ fn price_value(
   basis : Int,
 ) -> Result[Double, FormulaValue] {
   if settlement >= maturity {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   if basis < 0 || basis > 4 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let e = match coupdays_value(settlement, maturity, frequency, basis) {
     Ok(num) => num
@@ -10853,7 +10598,7 @@ fn yield_value(
   basis : Int,
 ) -> FormulaValue {
   if settlement >= maturity {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let mut yield1 = 0.0
   let mut yield2 = 1.0
@@ -10923,19 +10668,19 @@ fn check_price_yield_args(
   frequency : Double,
 ) -> FormulaValue {
   if rate < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if name == "PRICE" {
     if pr_yld < 0.0 || redemption <= 0.0 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
   } else if pr_yld <= 0.0 || redemption < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if !validate_frequency(frequency) {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
-  FormulaValue::Empty
+  Empty
 }
 
 ///|
@@ -10944,7 +10689,7 @@ fn price_yield_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() != 6 && values.length() != 7 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -10972,7 +10717,7 @@ fn price_yield_values(
   }
   let check = check_price_yield_args(name, rate, pr_yld, redemption, frequency)
   match check {
-    FormulaValue::Empty => ()
+    Empty => ()
     _ => return check
   }
   let basis = if values.length() == 7 {
@@ -10999,7 +10744,7 @@ fn price_yield_values(
 ///|
 fn pricedisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11010,21 +10755,21 @@ fn pricedisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if maturity <= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let discount = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if discount <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let redemption = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return err
   }
   if redemption <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 5 {
     match value_as_number(values[4]) {
@@ -11045,7 +10790,7 @@ fn pricedisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn pricemat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 5 && values.length() != 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11060,24 +10805,24 @@ fn pricemat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if settlement >= maturity {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   if issue >= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let rate = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return err
   }
   if rate < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let yld = match value_as_number(values[4]) {
     Ok(num) => num
     Err(err) => return err
   }
   if yld < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 6 {
     match value_as_number(values[5]) {
@@ -11106,7 +10851,7 @@ fn pricemat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tbilleq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11118,14 +10863,14 @@ fn tbilleq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let dsm = maturity - settlement
   if dsm > 365.0 || maturity <= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let discount = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if discount <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = 365.0 * discount / (360.0 - discount * dsm)
   number_or_num_error(round_significant_digits(result, 15))
@@ -11134,7 +10879,7 @@ fn tbilleq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tbillprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11146,14 +10891,14 @@ fn tbillprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let dsm = maturity - settlement
   if dsm > 365.0 || maturity <= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let discount = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if discount <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = 100.0 * (1.0 - discount * dsm / 360.0)
   number_or_num_error(round_significant_digits(result, 15))
@@ -11162,7 +10907,7 @@ fn tbillprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn tbillyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11174,14 +10919,14 @@ fn tbillyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let dsm = maturity - settlement
   if dsm > 365.0 || maturity <= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let pr = match value_as_number(values[2]) {
     Ok(num) => num
     Err(err) => return err
   }
   if pr <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = (100.0 - pr) / pr * (360.0 / dsm)
   number_or_num_error(round_significant_digits(result, 15))
@@ -11190,7 +10935,7 @@ fn tbillyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn yielddisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 && values.length() != 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11205,14 +10950,14 @@ fn yielddisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if pr <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let redemption = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return err
   }
   if redemption <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 5 {
     match value_as_number(values[4]) {
@@ -11233,7 +10978,7 @@ fn yielddisc_values(values : ArrayView[FormulaValue]) -> FormulaValue {
 ///|
 fn yieldmat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 5 && values.length() != 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let settlement = match value_as_date_serial(values[0]) {
     Ok(num) => num
@@ -11248,21 +10993,21 @@ fn yieldmat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if issue >= settlement {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let rate = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return err
   }
   if rate < 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let pr = match value_as_number(values[4]) {
     Ok(num) => num
     Err(err) => return err
   }
   if pr <= 0.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let basis = if values.length() == 6 {
     match value_as_number(values[5]) {
@@ -11427,10 +11172,10 @@ fn prepare_odd_yld_or_pr_arg(
     Err(err) => return Err(err)
   }
   if (name == "ODDFPRICE" || name == "ODDLPRICE") && yld_or_pr < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   if (name == "ODDFYIELD" || name == "ODDLYIELD") && yld_or_pr <= 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   Ok(yld_or_pr)
 }
@@ -11460,20 +11205,20 @@ fn prepare_oddf_args(
     Err(err) => return Err(err)
   }
   if issue >= settlement {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   if settlement >= first_coupon {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   if first_coupon >= maturity {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let rate = match value_as_number(values[4]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if rate < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let yld_or_pr = match prepare_odd_yld_or_pr_arg(name, values[5]) {
     Ok(num) => num
@@ -11484,14 +11229,14 @@ fn prepare_oddf_args(
     Err(err) => return Err(err)
   }
   if redemption <= 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let frequency = match value_as_number(values[7]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if !validate_frequency(frequency) {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let basis = if values.length() == 9 {
     match value_as_number(values[8]) {
@@ -11522,11 +11267,11 @@ fn oddfprice_calc(
   basis : Int,
 ) -> Result[Double, FormulaValue] {
   if basis < 0 || basis > 4 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let (mat_year, mat_month, mat_day) = match date_parts_from_serial(maturity) {
     Some(parts) => parts
-    None => return Err(FormulaValue::Error(formula_error_value))
+    None => return Err(Error(formula_error_value))
   }
   let return_last_month = days_in_month(mat_year, mat_month) == mat_day
   let num_months = 12.0 / frequency
@@ -11537,7 +11282,7 @@ fn oddfprice_calc(
     mat, first_coupon, num_months_neg, f, 0.0, return_last_month,
   )
   if pcd != first_coupon {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let e = match coupdays_value(settlement, maturity, frequency, basis) {
     Ok(num) => num
@@ -11650,7 +11395,7 @@ fn oddfprice_calc(
 ///|
 fn oddfprice_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 8 && values.length() != 9 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let (
     settlement,
@@ -11699,7 +11444,7 @@ fn get_oddfprice(
 ///|
 fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 8 && values.length() != 9 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let (
     settlement,
@@ -11716,7 +11461,7 @@ fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if basis < 0 || basis > 4 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let years = coupdays_between(settlement, maturity, basis)
   let px = pr - 100.0
@@ -11735,7 +11480,7 @@ fn oddfyield_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   }
   let result = get_oddfprice(f, guess, 0.0, 1.0e-7)
   if Double::is_nan(result) || Double::is_inf(result) {
-    FormulaValue::Error(formula_error_num)
+    Error(formula_error_num)
   } else {
     number_or_num_error(round_significant_digits(result, 15))
   }
@@ -11762,17 +11507,17 @@ fn prepare_oddl_args(
     Err(err) => return Err(err)
   }
   if last_interest >= settlement {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   if settlement >= maturity {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let rate = match value_as_number(values[3]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if rate < 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let yld_or_pr = match prepare_odd_yld_or_pr_arg(name, values[4]) {
     Ok(num) => num
@@ -11783,14 +11528,14 @@ fn prepare_oddl_args(
     Err(err) => return Err(err)
   }
   if redemption <= 0.0 {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let frequency = match value_as_number(values[6]) {
     Ok(num) => num
     Err(err) => return Err(err)
   }
   if !validate_frequency(frequency) {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   let basis = if values.length() == 8 {
     match value_as_number(values[7]) {
@@ -11811,7 +11556,7 @@ fn prepare_oddl_args(
 ///|
 fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 7 && values.length() != 8 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let (
     settlement,
@@ -11827,7 +11572,7 @@ fn oddl_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     Err(err) => return err
   }
   if basis < 0 || basis > 4 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let num_months = 12.0 / frequency
   let nc = match coupnum_value(last_interest, maturity, frequency) {
@@ -11886,36 +11631,36 @@ fn median_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let numbers : Array[Double] = []
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) => numbers.push(num)
-      FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
-      FormulaValue::String(text) =>
+      Error(err) => return Error(err)
+      Number(num) => numbers.push(num)
+      Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+      String(text) =>
         match parse_double_opt(text) {
           Some(num) => numbers.push(num)
-          None => return FormulaValue::Error(formula_error_value)
+          None => return Error(formula_error_value)
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   numbers.sort()
   let count = numbers.length()
   if count % 2 == 0 {
     let left = numbers[count / 2 - 1]
     let right = numbers[count / 2]
-    FormulaValue::Number((left + right) / 2.0)
+    Number((left + right) / 2.0)
   } else {
-    FormulaValue::Number(numbers[count / 2])
+    Number(numbers[count / 2])
   }
 }
 
 ///|
 fn list_from_value(value : FormulaValue) -> Array[FormulaValue] {
   match value {
-    FormulaValue::List(list) => list
+    List(list) => list
     _ => [value]
   }
 }
@@ -11934,21 +11679,21 @@ fn index_of_double(values : ArrayView[Double], target : Double) -> Int {
 fn avedev_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let avg_value = average_values(values)
   let avg = match avg_value {
-    FormulaValue::Number(num) => num
-    _ => return FormulaValue::Error(formula_error_value)
+    Number(num) => num
+    _ => return Error(formula_error_value)
   }
   let mut sum = 0.0
   let mut count = 0
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match value_as_number(cell) {
             Ok(num) => {
               sum = sum + Double::abs(num - avg)
               count = count + 1
             }
-            Err(_) => return FormulaValue::Error(formula_error_value)
+            Err(_) => return Error(formula_error_value)
           }
         }
       _ =>
@@ -11957,16 +11702,14 @@ fn avedev_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             sum = sum + Double::abs(num - avg)
             count = count + 1
           }
-          Err(_) => return FormulaValue::Error(formula_error_value)
+          Err(_) => return Error(formula_error_value)
         }
     }
   }
   if count == 0 {
-    FormulaValue::Error(formula_error_value)
+    Error(formula_error_value)
   } else {
-    FormulaValue::Number(
-      round_significant_digits(sum / Double::from_int(count), 15),
-    )
+    Number(round_significant_digits(sum / Double::from_int(count), 15))
   }
 }
 
@@ -11975,22 +11718,22 @@ fn devsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let numbers : Array[Double] = []
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Number(num) => numbers.push(num)
+            Number(num) => numbers.push(num)
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => numbers.push(num)
+          Number(num) => numbers.push(num)
           _ => ()
         }
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut sum = 0.0
   for num in numbers {
@@ -12002,7 +11745,7 @@ fn devsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let delta = num - mean
     total = total + delta * delta
   }
-  FormulaValue::Number(round_significant_digits(total, 15))
+  Number(round_significant_digits(total, 15))
 }
 
 ///|
@@ -12011,56 +11754,56 @@ fn geomean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Number(num) => {
+            Number(num) => {
               if num <= 0.0 {
-                return FormulaValue::Error(formula_error_num)
+                return Error(formula_error_num)
               }
               product = product * num
               count = count + 1
             }
-            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            Error(err) => return Error(err)
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => {
+          Number(num) => {
             if num <= 0.0 {
-              return FormulaValue::Error(formula_error_num)
+              return Error(formula_error_num)
             }
             product = product * num
             count = count + 1
           }
-          FormulaValue::Bool(flag) => {
+          Bool(flag) => {
             let num = if flag { 1.0 } else { 0.0 }
             if num <= 0.0 {
-              return FormulaValue::Error(formula_error_num)
+              return Error(formula_error_num)
             }
             product = product * num
             count = count + 1
           }
-          FormulaValue::String(text) =>
+          String(text) =>
             match parse_double_opt(text) {
               Some(num) => {
                 if num <= 0.0 {
-                  return FormulaValue::Error(formula_error_num)
+                  return Error(formula_error_num)
                 }
                 product = product * num
                 count = count + 1
               }
-              None => return FormulaValue::Error(formula_error_value)
+              None => return Error(formula_error_value)
             }
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          FormulaValue::Empty => ()
-          FormulaValue::List(_) => ()
+          Error(err) => return Error(err)
+          Empty => ()
+          List(_) => ()
         }
     }
   }
   if count == 0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let result = @math.pow(product, 1.0 / Double::from_int(count))
   number_or_num_error(round_significant_digits(result, 15))
@@ -12072,56 +11815,56 @@ fn harmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Number(num) => {
+            Number(num) => {
               if num <= 0.0 {
-                return FormulaValue::Error(formula_error_na)
+                return Error(formula_error_na)
               }
               total = total + 1.0 / num
               count = count + 1
             }
-            FormulaValue::Error(err) => return FormulaValue::Error(err)
+            Error(err) => return Error(err)
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => {
+          Number(num) => {
             if num <= 0.0 {
-              return FormulaValue::Error(formula_error_na)
+              return Error(formula_error_na)
             }
             total = total + 1.0 / num
             count = count + 1
           }
-          FormulaValue::Bool(flag) => {
+          Bool(flag) => {
             let num = if flag { 1.0 } else { 0.0 }
             if num <= 0.0 {
-              return FormulaValue::Error(formula_error_na)
+              return Error(formula_error_na)
             }
             total = total + 1.0 / num
             count = count + 1
           }
-          FormulaValue::String(text) =>
+          String(text) =>
             match parse_double_opt(text) {
               Some(num) => {
                 if num <= 0.0 {
-                  return FormulaValue::Error(formula_error_na)
+                  return Error(formula_error_na)
                 }
                 total = total + 1.0 / num
                 count = count + 1
               }
               None => ()
             }
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          FormulaValue::Empty => ()
-          FormulaValue::List(_) => ()
+          Error(err) => return Error(err)
+          Empty => ()
+          List(_) => ()
         }
     }
   }
   if count == 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let result = 1.0 / (total / Double::from_int(count))
   number_or_num_error(round_significant_digits(result, 15))
@@ -12132,35 +11875,34 @@ fn kurt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let numbers : Array[Double] = []
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Number(num) => numbers.push(num)
-            FormulaValue::String(text) =>
+            Number(num) => numbers.push(num)
+            String(text) =>
               match parse_double_opt(text) {
                 Some(num) => numbers.push(num)
                 None => ()
               }
-            FormulaValue::Bool(flag) =>
-              numbers.push(if flag { 1.0 } else { 0.0 })
+            Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => numbers.push(num)
-          FormulaValue::String(text) =>
+          Number(num) => numbers.push(num)
+          String(text) =>
             match parse_double_opt(text) {
               Some(num) => numbers.push(num)
               None => ()
             }
-          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
           _ => ()
         }
     }
   }
   if numbers.length() < 4 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mut sum_numbers = 0.0
   for num in numbers {
@@ -12170,10 +11912,10 @@ fn kurt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mean = sum_numbers / count
   let stdev = match sample_stdev(numbers) {
     Some(num) => num
-    None => return FormulaValue::Error(formula_error_div)
+    None => return Error(formula_error_div)
   }
   if stdev <= 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mut sum = 0.0
   for num in numbers {
@@ -12193,31 +11935,31 @@ fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
   let numbers : Array[Double] = []
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Error(err) => return FormulaValue::Error(err)
-            FormulaValue::Number(num) => numbers.push(num)
+            Error(err) => return Error(err)
+            Number(num) => numbers.push(num)
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => numbers.push(num)
-          FormulaValue::String(text) =>
+          Number(num) => numbers.push(num)
+          String(text) =>
             match parse_double_opt(text) {
               Some(num) => numbers.push(num)
-              None => return FormulaValue::Error(formula_error_value)
+              None => return Error(formula_error_value)
             }
-          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          FormulaValue::Empty => ()
-          FormulaValue::List(_) => ()
+          Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          Error(err) => return Error(err)
+          Empty => ()
+          List(_) => ()
         }
     }
   }
   if numbers.length() <= 2 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mut sum = 0.0
   for num in numbers {
@@ -12228,7 +11970,7 @@ fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
   let stdev = if name == "SKEW" {
     match sample_stdev(numbers) {
       Some(num) => num
-      None => return FormulaValue::Error(formula_error_div)
+      None => return Error(formula_error_div)
     }
   } else {
     let mut sum_sq = 0.0
@@ -12239,7 +11981,7 @@ fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
     @math.pow(sum_sq / count, 0.5)
   }
   if stdev <= 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mut sum_scaled = 0.0
   for num in numbers {
@@ -12257,7 +11999,7 @@ fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
 ///|
 fn standardize_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -12272,7 +12014,7 @@ fn standardize_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if stddev <= 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let result = (x - mean) / stddev
   number_or_num_error(round_significant_digits(result, 15))
@@ -12290,18 +12032,18 @@ fn kth_values(
   }
   let k = k_raw.to_int()
   if k < 1 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let values = list_from_value(array_value)
   let numbers : Array[Double] = []
   for value in values {
     match normalize_scalar(value) {
-      FormulaValue::Number(num) => numbers.push(num)
+      Number(num) => numbers.push(num)
       _ => ()
     }
   }
   if numbers.length() < k {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   numbers.sort()
   let result = if name == "LARGE" {
@@ -12309,7 +12051,7 @@ fn kth_values(
   } else {
     numbers[k - 1]
   }
-  FormulaValue::Number(result)
+  Number(result)
 }
 
 ///|
@@ -12317,26 +12059,25 @@ fn mode_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let numbers : Array[Double] = []
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Number(num) => numbers.push(num)
-            FormulaValue::Bool(flag) =>
-              numbers.push(if flag { 1.0 } else { 0.0 })
+            Number(num) => numbers.push(num)
+            Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => numbers.push(num)
-          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          _ => return FormulaValue::Error(formula_error_value)
+          Number(num) => numbers.push(num)
+          Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          Error(err) => return Error(err)
+          _ => return Error(formula_error_value)
         }
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   numbers.sort()
   let mut mode_count = 0
@@ -12354,9 +12095,9 @@ fn mode_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if mode_count == 0 {
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   } else {
-    FormulaValue::Number(mode)
+    Number(mode)
   }
 }
 
@@ -12365,26 +12106,25 @@ fn mode_mult_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let numbers : Array[Double] = []
   for value in values {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         for cell in list {
           match normalize_scalar(cell) {
-            FormulaValue::Number(num) => numbers.push(num)
-            FormulaValue::Bool(flag) =>
-              numbers.push(if flag { 1.0 } else { 0.0 })
+            Number(num) => numbers.push(num)
+            Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
             _ => ()
           }
         }
       _ =>
         match normalize_scalar(value) {
-          FormulaValue::Number(num) => numbers.push(num)
-          FormulaValue::Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
-          FormulaValue::Error(err) => return FormulaValue::Error(err)
-          _ => return FormulaValue::Error(formula_error_value)
+          Number(num) => numbers.push(num)
+          Bool(flag) => numbers.push(if flag { 1.0 } else { 0.0 })
+          Error(err) => return Error(err)
+          _ => return Error(formula_error_value)
         }
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   numbers.sort()
   let mut mode_count = 0
@@ -12398,15 +12138,15 @@ fn mode_mult_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
     if count > mode_count {
       mode_count = count
-      modes = [FormulaValue::Number(numbers[i])]
+      modes = [Number(numbers[i])]
     } else if count == mode_count {
-      modes.push(FormulaValue::Number(numbers[i]))
+      modes.push(Number(numbers[i]))
     }
   }
   if mode_count == 0 {
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   } else {
-    FormulaValue::List(modes)
+    List(modes)
   }
 }
 
@@ -12421,18 +12161,18 @@ fn percentile_values(
   let numbers : Array[Double] = []
   for value in values {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) =>
+      Error(err) =>
         return if error_on_error {
-          FormulaValue::Error(formula_error_num)
+          Error(formula_error_num)
         } else {
-          FormulaValue::Error(err)
+          Error(err)
         }
-      FormulaValue::Number(num) => numbers.push(num)
+      Number(num) => numbers.push(num)
       _ => ()
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   numbers.sort()
   let count = numbers.length()
@@ -12442,24 +12182,24 @@ fn percentile_values(
     let base_index = base.to_int()
     let next_index = base_index - 1
     if next_index < 0 || base_index >= count {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
     let proportion = idx - base
     let result = numbers[next_index] +
       (numbers[base_index] - numbers[next_index]) * proportion
-    return FormulaValue::Number(round_significant_digits(result, 15))
+    return Number(round_significant_digits(result, 15))
   }
   let idx = k * Double::from_int(count - 1)
   let base = @math.floor(idx)
   if idx == base {
-    return FormulaValue::Number(numbers[base.to_int()])
+    return Number(numbers[base.to_int()])
   }
   let base_index = base.to_int()
   let next_index = base_index + 1
   let proportion = idx - base
   let result = numbers[base_index] +
     (numbers[next_index] - numbers[base_index]) * proportion
-  FormulaValue::Number(round_significant_digits(result, 15))
+  Number(round_significant_digits(result, 15))
 }
 
 ///|
@@ -12470,24 +12210,24 @@ fn percentrank_values(
   significance : Double,
 ) -> FormulaValue {
   if significance < 1.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let values = list_from_value(array_value)
   let numbers : Array[Double] = []
   for value in values {
     match normalize_scalar(value) {
-      FormulaValue::Error(_) => return FormulaValue::Error(formula_error_na)
-      FormulaValue::Number(num) => numbers.push(num)
+      Error(_) => return Error(formula_error_na)
+      Number(num) => numbers.push(num)
       _ => ()
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   numbers.sort()
   let count = numbers.length()
   if x < numbers[0] || x > numbers[count - 1] {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut pos = Double::from_int(index_of_double(numbers, x))
   if pos < 0.0 {
@@ -12507,7 +12247,7 @@ fn percentrank_values(
     pow * pos / (Double::from_int(count) - 1.0)
   }
   let result = @math.floor(digit) / pow
-  FormulaValue::Number(round_significant_digits(result, 15))
+  Number(round_significant_digits(result, 15))
 }
 
 ///|
@@ -12519,10 +12259,10 @@ fn quartile_values(
 ) -> FormulaValue {
   if exclusive {
     if quart <= 0.0 || quart >= 4.0 {
-      return FormulaValue::Error(formula_error_num)
+      return Error(formula_error_num)
     }
   } else if quart < 0.0 || quart > 4.0 {
-    return FormulaValue::Error(formula_error_num)
+    return Error(formula_error_num)
   }
   let k = quart / 4.0
   let error_on_error = name == "QUARTILE.EXC"
@@ -12543,12 +12283,12 @@ fn rank_values(
   let numbers : Array[Double] = []
   for value in values {
     match normalize_scalar(value) {
-      FormulaValue::Number(num) => numbers.push(num)
+      Number(num) => numbers.push(num)
       _ => ()
     }
   }
   if numbers.length() == 0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   numbers.sort()
   let order_value = match order {
@@ -12560,9 +12300,9 @@ fn rank_values(
   }
   let idx = index_of_double(numbers, num)
   if idx < 0 {
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   } else {
-    FormulaValue::Number(Double::from_int(idx + 1))
+    Number(Double::from_int(idx + 1))
   }
 }
 
@@ -12593,7 +12333,7 @@ fn correl_values(
   let left = list_from_value(left_value)
   let right = list_from_value(right_value)
   if left.length() != right.length() {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let xs : Array[Double] = []
   let ys : Array[Double] = []
@@ -12606,18 +12346,18 @@ fn correl_values(
     }
   }
   if xs.length() < 2 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let stdev_x = match sample_stdev(xs) {
     Some(num) => num
-    None => return FormulaValue::Error(formula_error_div)
+    None => return Error(formula_error_div)
   }
   let stdev_y = match sample_stdev(ys) {
     Some(num) => num
-    None => return FormulaValue::Error(formula_error_div)
+    None => return Error(formula_error_div)
   }
   if stdev_x == 0.0 || stdev_y == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mut sum_x = 0.0
   let mut sum_y = 0.0
@@ -12647,7 +12387,7 @@ fn covar_values(
   let left = list_from_value(left_value)
   let right = list_from_value(right_value)
   if left.length() != right.length() {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut sum_left = 0.0
   let mut count_left = 0
@@ -12672,7 +12412,7 @@ fn covar_values(
     }
   }
   if count_left == 0 || count_right == 0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mean_left = sum_left / Double::from_int(count_left)
   let mean_right = sum_right / Double::from_int(count_right)
@@ -12689,10 +12429,10 @@ fn covar_values(
   }
   let denom = if name == "COVARIANCE.S" { count - 1 } else { count }
   if denom <= 0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let result = sum / Double::from_int(denom)
-  FormulaValue::Number(round_significant_digits(result, 15))
+  Number(round_significant_digits(result, 15))
 }
 
 ///|
@@ -12701,7 +12441,7 @@ fn pearson_product_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if values.length() != 2 && values.length() != 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let mut array1 = list_from_value(values[values.length() - 1])
   let mut array2 = list_from_value(values[0])
@@ -12720,14 +12460,14 @@ fn pearson_product_values(
     array2 = tmp
   }
   if array1.length() != array2.length() {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut sum_x = 0.0
   let mut sum_y = 0.0
   let mut count = 0
   for i in 0..<array1.length() {
     match (normalize_scalar(array1[i]), normalize_scalar(array2[i])) {
-      (FormulaValue::Number(x), FormulaValue::Number(y)) => {
+      (Number(x), Number(y)) => {
         sum_x = sum_x + x
         sum_y = sum_y + y
         count = count + 1
@@ -12736,7 +12476,7 @@ fn pearson_product_values(
     }
   }
   if count == 0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let mean_x = sum_x / Double::from_int(count)
   let mean_y = sum_y / Double::from_int(count)
@@ -12745,7 +12485,7 @@ fn pearson_product_values(
   let mut delta_y = 0.0
   for i in 0..<array1.length() {
     match (normalize_scalar(array1[i]), normalize_scalar(array2[i])) {
-      (FormulaValue::Number(x), FormulaValue::Number(y)) => {
+      (Number(x), Number(y)) => {
         let dx = x - mean_x
         let dy = y - mean_y
         sum = sum + dx * dy
@@ -12756,7 +12496,7 @@ fn pearson_product_values(
     }
   }
   if sum * delta_x * delta_y == 0.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let result = match name {
     "FORECAST" | "FORECAST.LINEAR" => mean_y + sum / delta_x * (fx - mean_x)
@@ -12771,12 +12511,12 @@ fn pearson_product_values(
 ///|
 fn steyx_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let array_x = list_from_value(values[1])
   let array_y = list_from_value(values[0])
   if array_x.length() != array_y.length() {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut count = 0.0
   let mut sum_x = 0.0
@@ -12786,7 +12526,7 @@ fn steyx_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut sigma_xy = 0.0
   for i in 0..<array_x.length() {
     match (normalize_scalar(array_x[i]), normalize_scalar(array_y[i])) {
-      (FormulaValue::Number(x), FormulaValue::Number(y)) => {
+      (Number(x), Number(y)) => {
         sum_x = sum_x + x
         sum_y = sum_y + y
         square_x = square_x + x * x
@@ -12798,7 +12538,7 @@ fn steyx_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   if count < 3.0 {
-    return FormulaValue::Error(formula_error_div)
+    return Error(formula_error_div)
   }
   let dx = sum_x / count
   let dy = sum_y / count
@@ -12822,10 +12562,10 @@ fn trend_growth_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if values.length() > 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let know_y_range = range_from_expr_or_value(
     workbook,
@@ -12885,7 +12625,7 @@ fn trend_growth_values(
       result[col][row] = round_significant_digits(result[col][row], 15)
     }
   }
-  FormulaValue::List(matrix_values(result))
+  List(matrix_values(result))
 }
 
 ///|
@@ -12893,15 +12633,15 @@ fn min_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut min = None
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) =>
+      Error(err) => return Error(err)
+      Number(num) =>
         min = Some(
           match min {
             Some(current) => if num < current { num } else { current }
             None => num
           },
         )
-      FormulaValue::Bool(flag) => {
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         min = Some(
           match min {
@@ -12910,7 +12650,7 @@ fn min_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           },
         )
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "TRUE" || text == "FALSE" {
           ()
         } else {
@@ -12925,13 +12665,13 @@ fn min_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             None => ()
           }
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   match min {
-    Some(value) => FormulaValue::Number(value)
-    None => FormulaValue::Number(0.0)
+    Some(value) => Number(value)
+    None => Number(0.0)
   }
 }
 
@@ -12940,15 +12680,15 @@ fn mina_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut min : Double? = None
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) =>
+      Error(err) => return Error(err)
+      Number(num) =>
         min = Some(
           match min {
             Some(current) => if num < current { num } else { current }
             None => num
           },
         )
-      FormulaValue::Bool(flag) => {
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         min = Some(
           match min {
@@ -12957,7 +12697,7 @@ fn mina_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           },
         )
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "" {
           ()
         } else if text == "TRUE" || text == "FALSE" {
@@ -12980,13 +12720,13 @@ fn mina_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             None => ()
           }
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   match min {
-    Some(value) => FormulaValue::Number(value)
-    None => FormulaValue::Number(0.0)
+    Some(value) => Number(value)
+    None => Number(0.0)
   }
 }
 
@@ -12995,15 +12735,15 @@ fn max_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut max = None
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) =>
+      Error(err) => return Error(err)
+      Number(num) =>
         max = Some(
           match max {
             Some(current) => if num > current { num } else { current }
             None => num
           },
         )
-      FormulaValue::Bool(flag) => {
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         max = Some(
           match max {
@@ -13012,7 +12752,7 @@ fn max_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           },
         )
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "TRUE" || text == "FALSE" {
           ()
         } else {
@@ -13027,13 +12767,13 @@ fn max_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             None => ()
           }
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   match max {
-    Some(value) => FormulaValue::Number(value)
-    None => FormulaValue::Number(0.0)
+    Some(value) => Number(value)
+    None => Number(0.0)
   }
 }
 
@@ -13042,15 +12782,15 @@ fn maxa_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut max : Double? = None
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) =>
+      Error(err) => return Error(err)
+      Number(num) =>
         max = Some(
           match max {
             Some(current) => if num > current { num } else { current }
             None => num
           },
         )
-      FormulaValue::Bool(flag) => {
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         max = Some(
           match max {
@@ -13059,7 +12799,7 @@ fn maxa_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           },
         )
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         if text == "" {
           ()
         } else if text == "TRUE" || text == "FALSE" {
@@ -13082,13 +12822,13 @@ fn maxa_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             None => ()
           }
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
   match max {
-    Some(value) => FormulaValue::Number(value)
-    None => FormulaValue::Number(0.0)
+    Some(value) => Number(value)
+    None => Number(0.0)
   }
 }
 
@@ -13097,19 +12837,19 @@ fn count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(_) => count = count + 1
-      FormulaValue::Bool(_) => count = count + 1
-      FormulaValue::String(text) =>
+      Error(err) => return Error(err)
+      Number(_) => count = count + 1
+      Bool(_) => count = count + 1
+      String(text) =>
         match parse_double_opt(text) {
           Some(_) => count = count + 1
           None => ()
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
-  FormulaValue::Number(Double::from_int(count))
+  Number(Double::from_int(count))
 }
 
 ///|
@@ -13117,21 +12857,21 @@ fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Number(_) => count = count + 1
-      FormulaValue::Bool(_) => count = count + 1
-      FormulaValue::String(text) => if text != "" { count = count + 1 }
-      FormulaValue::Error(_) => ()
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Number(_) => count = count + 1
+      Bool(_) => count = count + 1
+      String(text) => if text != "" { count = count + 1 }
+      Error(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
-  FormulaValue::Number(Double::from_int(count))
+  Number(Double::from_int(count))
 }
 
 ///|
 fn subtotal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let function_num = match value_as_number(values[0]) {
     Ok(num) => Double::to_int(trunc_double(num))
@@ -13151,24 +12891,24 @@ fn subtotal_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     7 | 107 => stdev_values(false, sub_values)
     8 | 108 =>
       match variance_values(sub_values, false, false) {
-        FormulaValue::Number(variance) => {
+        Number(variance) => {
           let result = @math.pow(variance, 0.5)
-          FormulaValue::Number(round_significant_digits(result, 15))
+          Number(round_significant_digits(result, 15))
         }
-        FormulaValue::Error(err) => FormulaValue::Error(err)
-        _ => FormulaValue::Error(formula_error_value)
+        Error(err) => Error(err)
+        _ => Error(formula_error_value)
       }
     9 | 109 => sum_values(sub_values)
     10 | 110 => variance_values(sub_values, true, false)
     11 | 111 => variance_values(sub_values, false, false)
-    _ => FormulaValue::Error(formula_error_value)
+    _ => Error(formula_error_value)
   }
 }
 
 ///|
 fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let func_num = match value_as_int(values[0]) {
     Ok(num) => num
@@ -13179,7 +12919,7 @@ fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if opts < 0 || opts > 7 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let args_values = values[2:]
   match func_num {
@@ -13193,57 +12933,57 @@ fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       if args_values.length() >= 1 {
         stdev_values(false, args_values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     8 =>
       if args_values.length() >= 1 {
         match variance_values(args_values, false, false) {
-          FormulaValue::Number(variance) => {
+          Number(variance) => {
             let result = @math.pow(variance, 0.5)
-            FormulaValue::Number(round_significant_digits(result, 15))
+            Number(round_significant_digits(result, 15))
           }
-          FormulaValue::Error(err) => FormulaValue::Error(err)
-          _ => FormulaValue::Error(formula_error_value)
+          Error(err) => Error(err)
+          _ => Error(formula_error_value)
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     9 => sum_values(args_values)
     10 =>
       if args_values.length() >= 1 {
         variance_values(args_values, true, false)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     11 =>
       if args_values.length() >= 1 {
         variance_values(args_values, false, false)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     12 =>
       if args_values.length() >= 1 {
         median_values(args_values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     13 =>
       if args_values.length() >= 1 {
         mode_values(args_values)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     14 =>
       if args_values.length() == 2 {
         kth_values("LARGE", args_values[0], args_values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     15 =>
       if args_values.length() == 2 {
         kth_values("SMALL", args_values[0], args_values[1])
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     16 =>
       if args_values.length() == 2 {
@@ -13252,7 +12992,7 @@ fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     17 =>
       if args_values.length() == 2 {
@@ -13262,7 +13002,7 @@ fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     18 =>
       if args_values.length() == 2 {
@@ -13271,7 +13011,7 @@ fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
     19 =>
       if args_values.length() == 2 {
@@ -13281,9 +13021,9 @@ fn aggregate_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           Err(err) => err
         }
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
-    _ => FormulaValue::Error(formula_error_value)
+    _ => Error(formula_error_value)
   }
 }
 
@@ -13292,53 +13032,53 @@ fn sumproduct_scalars(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut product = 1.0
   for value in values {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::Number(num) => product = product * num
-      FormulaValue::Bool(flag) => {
+      Error(err) => return Error(err)
+      Number(num) => product = product * num
+      Bool(flag) => {
         let num = if flag { 1.0 } else { 0.0 }
         product = product * num
       }
-      FormulaValue::String(text) =>
+      String(text) =>
         match parse_double_opt(text) {
           Some(num) => product = product * num
-          None => return FormulaValue::Error(formula_error_value)
+          None => return Error(formula_error_value)
         }
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      Empty => ()
+      List(_) => return Error(formula_error_value)
     }
   }
-  FormulaValue::Number(product)
+  Number(product)
 }
 
 ///|
 fn sumproduct_number(value : FormulaValue) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::Number(num) => Ok(num)
-    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    FormulaValue::String(text) =>
+    Error(err) => Err(Error(err))
+    Number(num) => Ok(num)
+    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    String(text) =>
       if text == "" {
         Ok(0.0)
       } else {
         match parse_double_opt(text) {
           Some(num) => Ok(num)
-          None => Err(FormulaValue::Error(formula_error_value))
+          None => Err(Error(formula_error_value))
         }
       }
-    FormulaValue::Empty => Ok(0.0)
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+    Empty => Ok(0.0)
+    List(_) => Err(Error(formula_error_value))
   }
 }
 
 ///|
 fn sumproduct_values(ranges : Array[RangeValues]) -> FormulaValue {
   if ranges.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let base = ranges[0]
   for range in ranges {
     if range.rows != base.rows || range.cols != base.cols {
-      return FormulaValue::Error(formula_error_value)
+      return Error(formula_error_value)
     }
   }
   let mut sum = 0.0
@@ -13353,22 +13093,22 @@ fn sumproduct_values(ranges : Array[RangeValues]) -> FormulaValue {
     }
     sum = sum + product
   }
-  FormulaValue::Number(sum)
+  Number(sum)
 }
 
 ///|
 fn sumx_number(value : FormulaValue) -> Double {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => num
-    FormulaValue::Bool(flag) => if flag { 1.0 } else { 0.0 }
-    FormulaValue::String(text) =>
+    Number(num) => num
+    Bool(flag) => if flag { 1.0 } else { 0.0 }
+    String(text) =>
       match parse_double_opt(text) {
         Some(num) => num
         None => 0.0
       }
-    FormulaValue::Empty => 0.0
-    FormulaValue::Error(_) => 0.0
-    FormulaValue::List(_) => 0.0
+    Empty => 0.0
+    Error(_) => 0.0
+    List(_) => 0.0
   }
 }
 
@@ -13379,7 +13119,7 @@ fn sumx_values(
   right : RangeValues,
 ) -> FormulaValue {
   if left.rows != right.rows || left.cols != right.cols {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut sum = 0.0
   let count = left.rows * left.cols
@@ -13395,43 +13135,43 @@ fn sumx_values(
       sum = sum + term
     }
   }
-  FormulaValue::Number(sum)
+  Number(sum)
 }
 
 ///|
 fn error_type_value(value : FormulaValue) -> FormulaValue {
   match normalize_scalar(value) {
-    FormulaValue::Error(err) =>
+    Error(err) =>
       if err == formula_error_null {
-        FormulaValue::Number(1.0)
+        Number(1.0)
       } else if err == formula_error_div {
-        FormulaValue::Number(2.0)
+        Number(2.0)
       } else if err == formula_error_value {
-        FormulaValue::Number(3.0)
+        Number(3.0)
       } else if err == formula_error_ref {
-        FormulaValue::Number(4.0)
+        Number(4.0)
       } else if err == formula_error_name {
-        FormulaValue::Number(5.0)
+        Number(5.0)
       } else if err == formula_error_num {
-        FormulaValue::Number(6.0)
+        Number(6.0)
       } else if err == formula_error_na {
-        FormulaValue::Number(7.0)
+        Number(7.0)
       } else {
-        FormulaValue::Error(formula_error_na)
+        Error(formula_error_na)
       }
-    _ => FormulaValue::Error(formula_error_na)
+    _ => Error(formula_error_na)
   }
 }
 
 ///|
 fn type_value(value : FormulaValue) -> FormulaValue {
   match value {
-    FormulaValue::Error(_) => FormulaValue::Number(16.0)
-    FormulaValue::List(_) => FormulaValue::Number(64.0)
-    FormulaValue::Number(_) => FormulaValue::Number(1.0)
-    FormulaValue::Bool(_) => FormulaValue::Number(4.0)
-    FormulaValue::Empty => FormulaValue::Number(1.0)
-    FormulaValue::String(_) => FormulaValue::Number(2.0)
+    Error(_) => Number(16.0)
+    List(_) => Number(64.0)
+    Number(_) => Number(1.0)
+    Bool(_) => Number(4.0)
+    Empty => Number(1.0)
+    String(_) => Number(2.0)
   }
 }
 
@@ -13461,8 +13201,8 @@ fn is_known_error_code(err : String) -> Bool {
 ///|
 fn is_ref_expr(expr : Expr) -> Bool {
   match expr {
-    Expr::Cell(_, _) => true
-    Expr::Range(_, _, _) => true
+    Cell(_, _) => true
+    Range(_, _, _) => true
     _ => false
   }
 }
@@ -13499,11 +13239,11 @@ fn countblank_values(range_values : RangeValues) -> FormulaValue {
   let mut count = 0
   for value in range_values.values {
     match normalize_scalar(value) {
-      FormulaValue::Empty => count = count + 1
+      Empty => count = count + 1
       _ => ()
     }
   }
-  FormulaValue::Number(Double::from_int(count))
+  Number(Double::from_int(count))
 }
 
 ///|
@@ -13515,7 +13255,7 @@ fn countif_values(
   let mut count = 0
   for value in range_values.values {
     let normalized = normalize_scalar(value)
-    if normalized is FormulaValue::String(_) &&
+    if normalized is String(_) &&
       !formula_criteria_condition_is_string(criteria) {
       continue
     }
@@ -13523,7 +13263,7 @@ fn countif_values(
       count = count + 1
     }
   }
-  FormulaValue::Number(Double::from_int(count))
+  Number(Double::from_int(count))
 }
 
 ///|
@@ -13539,7 +13279,7 @@ fn sumif_values(
       let idx = row * range_values.cols + col
       let cell = range_values.values[idx]
       let normalized = normalize_scalar(cell)
-      if normalized is FormulaValue::Empty {
+      if normalized is Empty {
         continue
       }
       if formula_criteria_eval(normalized, criteria) {
@@ -13552,8 +13292,8 @@ fn sumif_values(
           None => cell
         }
         match normalize_scalar(target) {
-          FormulaValue::Number(num) => sum = sum + num
-          FormulaValue::Bool(flag) => {
+          Number(num) => sum = sum + num
+          Bool(flag) => {
             let num = if flag { 1.0 } else { 0.0 }
             sum = sum + num
           }
@@ -13562,7 +13302,7 @@ fn sumif_values(
       }
     }
   }
-  FormulaValue::Number(sum)
+  Number(sum)
 }
 
 ///|
@@ -13581,8 +13321,7 @@ fn averageif_values(
       if formula_value_string(cell) == "" {
         continue
       }
-      if cell is FormulaValue::String(_) &&
-        !formula_criteria_condition_is_string(criteria) {
+      if cell is String(_) && !formula_criteria_condition_is_string(criteria) {
         continue
       }
       if formula_criteria_eval(cell, criteria) {
@@ -13605,9 +13344,9 @@ fn averageif_values(
     }
   }
   if count == 0 {
-    FormulaValue::Error(formula_error_div)
+    Error(formula_error_div)
   } else {
-    FormulaValue::Number(sum / Double::from_int(count))
+    Number(sum / Double::from_int(count))
   }
 }
 
@@ -13628,12 +13367,12 @@ fn maxifs_values(
             }
           None => ()
         }
-      None => return FormulaValue::Error(formula_error_value)
+      None => return Error(formula_error_value)
     }
   }
   match best {
-    Some(value) => FormulaValue::Number(value)
-    None => FormulaValue::Number(0.0)
+    Some(value) => Number(value)
+    None => Number(0.0)
   }
 }
 
@@ -13654,12 +13393,12 @@ fn minifs_values(
             }
           None => ()
         }
-      None => return FormulaValue::Error(formula_error_value)
+      None => return Error(formula_error_value)
     }
   }
   match best {
-    Some(value) => FormulaValue::Number(value)
-    None => FormulaValue::Number(0.0)
+    Some(value) => Number(value)
+    None => Number(0.0)
   }
 }
 
@@ -13706,7 +13445,7 @@ fn flatten_values(values : ArrayView[FormulaValue]) -> Array[FormulaValue] {
   let out : Array[FormulaValue] = []
   for value in values {
     match value {
-      FormulaValue::List(list) => out.append(list)
+      List(list) => out.append(list)
       _ => out.push(value)
     }
   }
@@ -13724,11 +13463,11 @@ fn resolve_cell_value(
 ) -> FormulaValue raise XlsxError {
   let key = sheet_name + "!" + reference
   match ctx.visiting.get(key) {
-    Some(_) => return FormulaValue::Error(formula_error_calc)
+    Some(_) => return Error(formula_error_calc)
     None => ()
   }
   if ctx.depth >= ctx.max_depth {
-    return FormulaValue::Error(formula_error_calc)
+    return Error(formula_error_calc)
   }
   ctx.visiting[key] = true
   ctx.depth = ctx.depth + 1
@@ -13781,7 +13520,7 @@ fn spill_value_for_cell(
     let anchor_ref = cell_ref_from(anchor_row, anchor_col)
     let value = resolve_cell_value(workbook, sheet_name, anchor_ref, ctx)
     match value {
-      FormulaValue::List(list) => {
+      List(list) => {
         let offset_row = target_row - anchor_row
         let offset_col = target_col - anchor_col
         let idx = offset_row * cols + offset_col
@@ -13804,7 +13543,7 @@ fn calc_cell_value_internal(
 ) -> FormulaValue raise XlsxError {
   let sheet = match workbook.sheet(sheet_name) {
     Some(value) => value
-    None => return FormulaValue::Error(formula_error_ref)
+    None => return Error(formula_error_ref)
   }
   let (row, col) = cell_ref_to_rc(reference)
   for cell in sheet.cells() {
@@ -13830,7 +13569,7 @@ fn calc_cell_value_internal(
   }
   match spill_value_for_cell(workbook, sheet_name, row, col, ctx) {
     Some(value) => value
-    None => FormulaValue::Empty
+    None => Empty
   }
 }
 
@@ -13880,18 +13619,18 @@ fn eval_range_expr(
   ctx : CalcContext,
 ) -> RangeValues raise XlsxError {
   match expr {
-    Expr::Range(sheet, start_ref, end_ref) => {
+    Range(sheet, start_ref, end_ref) => {
       let target_sheet = if sheet == "" { sheet_name } else { sheet }
       collect_range_values_with_shape(
         workbook, target_sheet, start_ref, end_ref, ctx,
       )
     }
-    Expr::Cell(sheet, reference) => {
+    Cell(sheet, reference) => {
       let target_sheet = if sheet == "" { sheet_name } else { sheet }
       let value = resolve_cell_value(workbook, target_sheet, reference, ctx)
       { values: [value], rows: 1, cols: 1 }
     }
-    Expr::FuncCall(name, args) =>
+    FuncCall(name, args) =>
       if is_munit_func(name) {
         munit_range_values_from_expr(workbook, sheet_name, args, ctx)
       } else if name == "TRANSPOSE" {

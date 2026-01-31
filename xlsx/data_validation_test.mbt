@@ -29,10 +29,10 @@ test "data validation drop list length limit" {
 test "data validation range value bounds" {
   let dv = DataValidation::new(true)
   let result : Result[Unit, Error] = try? dv.set_range(
-    DataValidationFormula::DoubleValue(1.0e39),
-    DataValidationFormula::IntValue(10),
-    DataValidationType::Whole,
-    DataValidationOperator::Between,
+    DoubleValue(1.0e39),
+    IntValue(10),
+    Whole,
+    Between,
   )
   guard result is Err(XlsxError::InvalidDataValidation(_)) else {
     fail("expected range error")

@@ -129,15 +129,12 @@ fn parse_header_footer_images_from_vml(
     }
     let target = match rel_targets.get(rel_id) {
       Some(value) => value
-      None =>
-        raise XlsxError::InvalidXml(
-          msg="header/footer image relationship missing",
-        )
+      None => raise InvalidXml(msg="header/footer image relationship missing")
     }
     let image_path = resolve_rel_target(target, "drawings")
     let image_bytes = match archive.get(image_path) {
       Some(value) => value
-      None => raise XlsxError::MissingPart(path=image_path)
+      None => raise MissingPart(path=image_path)
     }
     let extension = match extension_from_path(image_path) {
       Some(value) => value

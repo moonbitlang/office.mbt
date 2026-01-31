@@ -23,7 +23,7 @@ pub fn StreamCell::new(
   let formula_value = if formula == "" { None } else { Some(formula) }
   {
     value,
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: formula_value,
     style_id,
@@ -54,7 +54,7 @@ pub fn StreamCell::new_rich_text(
 ) -> StreamCell raise XlsxError {
   let total = rich_text_total_units(runs)
   if total > max_cell_chars {
-    raise XlsxError::CellTextTooLong(len=total)
+    raise CellTextTooLong(len=total)
   }
   let stored_runs : Array[RichTextRun] = []
   for run in runs {
@@ -63,7 +63,7 @@ pub fn StreamCell::new_rich_text(
   let formula_value = if formula == "" { None } else { Some(formula) }
   {
     value: rich_text_plain_text(runs),
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: Some(stored_runs),
     formula: formula_value,
     style_id,
@@ -86,7 +86,7 @@ fn StreamWriter::new(sheet : Worksheet, styles : Array[Style]) -> StreamWriter {
 ///|
 fn StreamWriter::ensure_open(self : StreamWriter) -> Unit raise XlsxError {
   if self.closed {
-    raise XlsxError::StreamWriterClosed
+    raise StreamWriterClosed
   }
 }
 
@@ -96,9 +96,7 @@ fn StreamWriter::ensure_before_rows(
   action : String,
 ) -> Unit raise XlsxError {
   if self.last_row > 0 {
-    raise XlsxError::StreamModeConflict(
-      msg="\{action} must be called before set_row",
-    )
+    raise StreamModeConflict(msg="\{action} must be called before set_row")
   }
 }
 
@@ -118,13 +116,13 @@ fn apply_row_opts(
   opts : RowOpts,
 ) -> Unit raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   if opts.height < 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="row height is negative")
+    raise InvalidSheetOperation(msg="row height is negative")
   }
   if opts.outline_level < 0 || opts.outline_level > 7 {
-    raise XlsxError::InvalidSheetOperation(msg="row outline level out of range")
+    raise InvalidSheetOperation(msg="row outline level out of range")
   }
   let dim = sheet.row_dimension_value(row)
   let height = if opts.height > 0.0 { Some(opts.height) } else { dim.height }
@@ -145,10 +143,10 @@ fn set_col_width_stream(
   width : Double,
 ) -> Unit raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   if width < 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="column width is negative")
+    raise InvalidSheetOperation(msg="column width is negative")
   }
   let dim = sheet.col_dimension_value(col)
   let updated : ColDimension = {
@@ -167,7 +165,7 @@ fn set_col_visible_stream(
   visible : Bool,
 ) -> Unit raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   let dim = sheet.col_dimension_value(col)
   let updated : ColDimension = {
@@ -186,12 +184,10 @@ fn set_col_outline_level_stream(
   level : Int,
 ) -> Unit raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   if level < 0 || level > 7 {
-    raise XlsxError::InvalidSheetOperation(
-      msg="column outline level out of range",
-    )
+    raise InvalidSheetOperation(msg="column outline level out of range")
   }
   let dim = sheet.col_dimension_value(col)
   let updated : ColDimension = {
@@ -210,7 +206,7 @@ fn set_col_style_stream(
   style_id : Int,
 ) -> Unit raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   let dim = sheet.col_dimension_value(col)
   let style = if style_id > 0 { Some(style_id) } else { None }
@@ -278,12 +274,12 @@ pub fn StreamWriter::set_row_cells(
   self.ensure_open()
   let (row, start_col) = cell_ref_to_rc(start_ref)
   if row <= self.last_row {
-    raise XlsxError::StreamRowOrder(last=self.last_row, next=row)
+    raise StreamRowOrder(last=self.last_row, next=row)
   }
   let mut col = start_col
   for cell in values {
     if cell.style_id < 0 || cell.style_id >= self.styles.length() {
-      raise XlsxError::InvalidStyleId(index=cell.style_id)
+      raise InvalidStyleId(index=cell.style_id)
     }
     let reference = cell_ref_from(row, col)
     self.sheet.cells.push({
@@ -311,7 +307,7 @@ pub fn StreamWriter::set_row_cells(
 ///|
 pub fn StreamWriter::flush(self : StreamWriter) -> Unit raise XlsxError {
   self.ensure_open()
-  self.sheet.stream_state = StreamState::Flushed
+  self.sheet.stream_state = Flushed
   self.closed = true
 }
 
@@ -414,7 +410,7 @@ pub fn StreamWriter::set_col_style(
   self.ensure_open()
   self.ensure_before_rows("set_col_style")
   if style_id < 0 || style_id >= self.styles.length() {
-    raise XlsxError::InvalidStyleId(index=style_id)
+    raise InvalidStyleId(index=style_id)
   }
   let (min_col, max_col) = normalize_col_range(start_col, end_col)
   for col in min_col..<=max_col {

@@ -71,7 +71,7 @@ fn parse_formula_expr(formula : StringView) -> Expr raise XlsxError {
   let expr = parser.parse_expression()
   parser.skip_spaces()
   if !parser.at_end() {
-    raise XlsxError::InvalidXml(msg="formula parse error")
+    raise InvalidXml(msg="formula parse error")
   }
   expr
 }
@@ -127,7 +127,7 @@ fn FormulaParser::parse_expression(
           _ => ()
         }
         let right = self.parse_concat()
-        expr = Expr::Binary(bin, expr, right)
+        expr = Binary(bin, expr, right)
       }
       None => break
     }
@@ -143,7 +143,7 @@ fn FormulaParser::parse_concat(self : FormulaParser) -> Expr raise XlsxError {
   while self.peek() == Some('&') {
     self.consume()
     let right = self.parse_add_sub()
-    expr = Expr::Binary(BinaryOp::Concat, expr, right)
+    expr = Binary(Concat, expr, right)
     self.skip_spaces()
   }
   expr
@@ -155,15 +155,15 @@ fn FormulaParser::parse_add_sub(self : FormulaParser) -> Expr raise XlsxError {
   self.skip_spaces()
   while true {
     let op = match self.peek() {
-      Some('+') => Some(BinaryOp::Add)
-      Some('-') => Some(BinaryOp::Sub)
+      Some('+') => Some(Add)
+      Some('-') => Some(Sub)
       _ => None
     }
     match op {
       Some(bin) => {
         self.consume()
         let right = self.parse_mul_div()
-        expr = Expr::Binary(bin, expr, right)
+        expr = Binary(bin, expr, right)
       }
       None => break
     }
@@ -178,15 +178,15 @@ fn FormulaParser::parse_mul_div(self : FormulaParser) -> Expr raise XlsxError {
   self.skip_spaces()
   while true {
     let op = match self.peek() {
-      Some('*') => Some(BinaryOp::Mul)
-      Some('/') => Some(BinaryOp::Div)
+      Some('*') => Some(Mul)
+      Some('/') => Some(Div)
       _ => None
     }
     match op {
       Some(bin) => {
         self.consume()
         let right = self.parse_pow()
-        expr = Expr::Binary(bin, expr, right)
+        expr = Binary(bin, expr, right)
       }
       None => break
     }
@@ -202,7 +202,7 @@ fn FormulaParser::parse_pow(self : FormulaParser) -> Expr raise XlsxError {
   if self.peek() == Some('^') {
     self.consume()
     let right = self.parse_pow()
-    expr = Expr::Binary(BinaryOp::Pow, expr, right)
+    expr = Binary(Pow, expr, right)
   }
   expr
 }
@@ -213,11 +213,11 @@ fn FormulaParser::parse_unary(self : FormulaParser) -> Expr raise XlsxError {
   match self.peek() {
     Some('+') => {
       self.consume()
-      Expr::Unary(UnaryOp::Plus, self.parse_unary())
+      Unary(Plus, self.parse_unary())
     }
     Some('-') => {
       self.consume()
-      Expr::Unary(UnaryOp::Minus, self.parse_unary())
+      Unary(Minus, self.parse_unary())
     }
     _ => self.parse_postfix()
   }
@@ -229,7 +229,7 @@ fn FormulaParser::parse_postfix(self : FormulaParser) -> Expr raise XlsxError {
   self.skip_spaces()
   while self.peek() == Some('%') {
     self.consume()
-    expr = Expr::Unary(UnaryOp::Percent, expr)
+    expr = Unary(Percent, expr)
     self.skip_spaces()
   }
   expr
@@ -246,7 +246,7 @@ fn FormulaParser::parse_primary(self : FormulaParser) -> Expr raise XlsxError {
       self.skip_spaces()
       match self.advance() {
         Some(')') => expr
-        _ => raise XlsxError::InvalidXml(msg="formula missing )")
+        _ => raise InvalidXml(msg="formula missing )")
       }
     }
     Some('"') => self.parse_string()
@@ -263,7 +263,7 @@ fn FormulaParser::parse_primary(self : FormulaParser) -> Expr raise XlsxError {
       } else {
         self.parse_identifier_expr()
       }
-    None => raise XlsxError::InvalidXml(msg="formula empty")
+    None => raise InvalidXml(msg="formula empty")
   }
 }
 
@@ -274,7 +274,7 @@ fn FormulaParser::parse_quoted_sheet_ref(
   let sheet = self.parse_quoted_sheet_name()
   self.skip_spaces()
   if self.peek() != Some('!') {
-    raise XlsxError::InvalidXml(msg="formula sheet reference missing !")
+    raise InvalidXml(msg="formula sheet reference missing !")
   }
   self.consume()
   let cell_token = self.parse_identifier_token()
@@ -283,13 +283,13 @@ fn FormulaParser::parse_quoted_sheet_ref(
     let (start_ref, _start_end) = parse_range_ref_token(cell_token)
     let end_token = self.parse_identifier_token()
     let (_end_start, end_ref) = parse_range_ref_token(end_token)
-    return Expr::Range(sheet, start_ref, end_ref)
+    return Range(sheet, start_ref, end_ref)
   }
   let cell_ref = match parse_cell_ref_token(cell_token) {
     Some(value) => value
-    None => raise XlsxError::InvalidCellRef(value=cell_token)
+    None => raise InvalidCellRef(value=cell_token)
   }
-  Expr::Cell(sheet, cell_ref)
+  Cell(sheet, cell_ref)
 }
 
 ///|
@@ -312,7 +312,7 @@ fn FormulaParser::parse_quoted_sheet_name(
       sb.write_char(ch)
     }
   }
-  raise XlsxError::InvalidXml(msg="formula sheet name not closed")
+  raise InvalidXml(msg="formula sheet name not closed")
 }
 
 ///|
@@ -334,7 +334,7 @@ fn FormulaParser::parse_string(self : FormulaParser) -> Expr {
       sb.write_char(ch)
     }
   }
-  Expr::String(sb.to_string())
+  String(sb.to_string())
 }
 
 ///|
@@ -356,10 +356,10 @@ fn FormulaParser::parse_list(self : FormulaParser) -> Expr raise XlsxError {
         self.consume()
         break
       }
-      _ => raise XlsxError::InvalidXml(msg="formula list invalid")
+      _ => raise InvalidXml(msg="formula list invalid")
     }
   }
-  Expr::List(items)
+  List(items)
 }
 
 ///|
@@ -392,9 +392,9 @@ fn FormulaParser::parse_number(self : FormulaParser) -> Expr raise XlsxError {
   }
   let text = sb.to_string()
   let value = @strconv.parse_double(text) catch {
-    _ => raise XlsxError::InvalidXml(msg="formula number invalid")
+    _ => raise InvalidXml(msg="formula number invalid")
   }
-  Expr::Number(value)
+  Number(value)
 }
 
 ///|
@@ -412,13 +412,13 @@ fn FormulaParser::parse_identifier_expr(
       let (start_ref, _start_end) = parse_range_ref_token(cell_token)
       let end_token = self.parse_identifier_token()
       let (_end_start, end_ref) = parse_range_ref_token(end_token)
-      return Expr::Range(ident, start_ref, end_ref)
+      return Range(ident, start_ref, end_ref)
     }
     let cell_ref = match parse_cell_ref_token(cell_token) {
       Some(value) => value
-      None => raise XlsxError::InvalidCellRef(value=cell_token)
+      None => raise InvalidCellRef(value=cell_token)
     }
-    return Expr::Cell(ident, cell_ref)
+    return Cell(ident, cell_ref)
   }
   if self.peek() == Some('(') {
     self.consume()
@@ -436,18 +436,18 @@ fn FormulaParser::parse_identifier_expr(
             self.consume()
             break
           }
-          _ => raise XlsxError::InvalidXml(msg="formula args invalid")
+          _ => raise InvalidXml(msg="formula args invalid")
         }
       }
     }
-    return Expr::FuncCall(upper, args)
+    return FuncCall(upper, args)
   }
   if self.peek() == Some(':') {
     self.consume()
     let (start_ref, _start_end) = parse_range_ref_token(ident)
     let end_token = self.parse_identifier_token()
     let (_end_start, end_ref) = parse_range_ref_token(end_token)
-    return Expr::Range("", start_ref, end_ref)
+    return Range("", start_ref, end_ref)
   }
   match parse_cell_ref_token(ident) {
     Some(value) =>
@@ -456,15 +456,15 @@ fn FormulaParser::parse_identifier_expr(
         let (start_ref, _start_end) = parse_range_ref_token(value)
         let end_token = self.parse_identifier_token()
         let (_end_start, end_ref) = parse_range_ref_token(end_token)
-        Expr::Range("", start_ref, end_ref)
+        Range("", start_ref, end_ref)
       } else {
-        Expr::Cell("", value)
+        Cell("", value)
       }
     None =>
       match upper {
-        "TRUE" => Expr::Bool(true)
-        "FALSE" => Expr::Bool(false)
-        _ => Expr::FuncCall(upper, [])
+        "TRUE" => Bool(true)
+        "FALSE" => Bool(false)
+        _ => FuncCall(upper, [])
       }
   }
 }
@@ -534,21 +534,21 @@ fn FormulaParser::is_row_range_start(self : FormulaParser) -> Bool {
 fn FormulaParser::parse_row_range(self : FormulaParser) -> Expr raise XlsxError {
   let start_token = self.parse_row_token()
   if start_token == "" {
-    raise XlsxError::InvalidXml(msg="formula row range invalid")
+    raise InvalidXml(msg="formula row range invalid")
   }
   self.skip_spaces()
   if self.peek() != Some(':') {
-    raise XlsxError::InvalidXml(msg="formula row range invalid")
+    raise InvalidXml(msg="formula row range invalid")
   }
   self.consume()
   self.skip_spaces()
   let end_token = self.parse_row_token()
   if end_token == "" {
-    raise XlsxError::InvalidXml(msg="formula row range invalid")
+    raise InvalidXml(msg="formula row range invalid")
   }
   let (start_ref, _start_end) = parse_range_ref_token(start_token)
   let (_end_start, end_ref) = parse_range_ref_token(end_token)
-  Expr::Range("", start_ref, end_ref)
+  Range("", start_ref, end_ref)
 }
 
 ///|
@@ -596,17 +596,17 @@ fn parse_range_ref_token(
     } else if ch.is_ascii_digit() {
       row_sb.write_char(ch)
     } else {
-      raise XlsxError::InvalidCellRef(value=token.to_string())
+      raise InvalidCellRef(value=token.to_string())
     }
   }
   let col = col_sb.to_string()
   let row = row_sb.to_string()
   if col != "" && row == "" {
     let col_index = column_name_to_number(col) catch {
-      _ => raise XlsxError::InvalidCellRef(value=token.to_string())
+      _ => raise InvalidCellRef(value=token.to_string())
     }
     if col_index <= 0 || col_index > excel_max_cols {
-      raise XlsxError::InvalidCellRef(value=token.to_string())
+      raise InvalidCellRef(value=token.to_string())
     }
     let start_ref = cell_ref_from(1, col_index)
     let end_ref = cell_ref_from(excel_max_rows, col_index)
@@ -614,16 +614,16 @@ fn parse_range_ref_token(
   }
   if row != "" && col == "" {
     let row_index = @strconv.parse_int(row, base=10) catch {
-      _ => raise XlsxError::InvalidCellRef(value=token.to_string())
+      _ => raise InvalidCellRef(value=token.to_string())
     }
     if row_index <= 0 || row_index > excel_max_rows {
-      raise XlsxError::InvalidCellRef(value=token.to_string())
+      raise InvalidCellRef(value=token.to_string())
     }
     let start_ref = cell_ref_from(row_index, 1)
     let end_ref = cell_ref_from(row_index, excel_max_cols)
     return (start_ref, end_ref)
   }
-  raise XlsxError::InvalidCellRef(value=token.to_string())
+  raise InvalidCellRef(value=token.to_string())
 }
 
 ///|
@@ -636,7 +636,7 @@ fn address_a1(row : Int, col : Int, abs_num : Int) -> String raise XlsxError {
     2 => "\{col_name}$\{row}"
     3 => "$\{col_name}\{row}"
     4 => "\{col_name}\{row}"
-    _ => raise XlsxError::InvalidCellRef(value="address")
+    _ => raise InvalidCellRef(value="address")
   }
 }
 
@@ -725,11 +725,11 @@ fn split_sheet_ref(text : String) -> (String, String) {
 ///|
 fn ref_bounds_opt(expr : Expr) -> (Int, Int, Int, Int)? raise XlsxError {
   match expr {
-    Expr::Cell(_, reference) => {
+    Cell(_, reference) => {
       let (row, col) = cell_ref_to_rc(reference)
       Some((row, col, row, col))
     }
-    Expr::Range(_, start_ref, end_ref) => {
+    Range(_, start_ref, end_ref) => {
       let (row1, col1) = cell_ref_to_rc(start_ref)
       let (row2, col2) = cell_ref_to_rc(end_ref)
       Some((row1, col1, row2, col2))
@@ -758,30 +758,30 @@ fn formula_text_value(
   expr : Expr,
 ) -> FormulaValue {
   let (target_sheet, reference) = match expr {
-    Expr::Cell(sheet, reference) =>
+    Cell(sheet, reference) =>
       if sheet == "" {
         (sheet_name, reference)
       } else {
         (sheet, reference)
       }
-    Expr::Range(sheet, start_ref, _) =>
+    Range(sheet, start_ref, _) =>
       if sheet == "" {
         (sheet_name, start_ref)
       } else {
         (sheet, start_ref)
       }
-    _ => return FormulaValue::Error(formula_error_value)
+    _ => return Error(formula_error_value)
   }
   let sheet = match workbook.sheet(target_sheet) {
     Some(value) => value
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   let formula = sheet.get_cell_formula(reference) catch {
-    _ => return FormulaValue::Error(formula_error_value)
+    _ => return Error(formula_error_value)
   }
   let text = match formula {
     Some(value) => value
     None => ""
   }
-  FormulaValue::String(text)
+  String(text)
 }

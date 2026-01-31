@@ -21,7 +21,7 @@ pub fn Archive::add(
   self : Archive,
   name : String,
   data : Bytes,
-  compression? : Compression = Compression::Store,
+  compression? : Compression = Store,
   data_descriptor? : Bool = false,
 ) -> Unit {
   self.entries.push({ name, data, compression, data_descriptor })

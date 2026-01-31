@@ -68,7 +68,7 @@ test "auto filter invalid expression" {
   inspect(
     result,
     content=(
-      #|Err(InvalidAutoFilter(msg="auto filter operator invalid"))
+      #|Err(XlsxError::InvalidAutoFilter(msg="auto filter operator invalid"))
     ),
   )
 }

@@ -3,7 +3,7 @@ test "sparkline options write" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let opts = SparklineOptions::new(["B2"], ["A1:A3"])
-  opts.set_type(SparklineType::WinLoss)
+  opts.set_type(WinLoss)
   opts.set_style(31)
   opts.set_markers(true)
   opts.set_high(true)
@@ -57,7 +57,7 @@ test "sparkline options roundtrip" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let opts = SparklineOptions::new(["B2"], ["A1:A3"])
-  opts.set_type(SparklineType::WinLoss)
+  opts.set_type(WinLoss)
   opts.set_style(31)
   opts.set_markers(true)
   opts.set_high(true)
@@ -77,7 +77,7 @@ test "sparkline options roundtrip" {
     None => fail("missing sheet")
   }
   let group = parsed_sheet.sparkline_groups()[0]
-  inspect(group.sparkline_type == SparklineType::WinLoss, content="true")
+  inspect(group.sparkline_type == WinLoss, content="true")
   inspect(group.options.display_empty_cells_as, content="gap")
   inspect(group.options.markers, content="true")
   inspect(group.options.high, content="true")

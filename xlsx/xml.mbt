@@ -94,7 +94,7 @@ fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
       i = i + 1
     }
     if i >= tag_len {
-      raise XlsxError::InvalidXml(msg="attribute out of range")
+      raise InvalidXml(msg="attribute out of range")
     }
     if name_end - name_start == name_len {
       let mut matched = true
@@ -106,7 +106,7 @@ fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
       }
       if matched {
         let value = tag[value_start:i] catch {
-            _ => raise XlsxError::InvalidXml(msg="attribute out of range")
+            _ => raise InvalidXml(msg="attribute out of range")
           }
         return Some(value.to_string())
       }

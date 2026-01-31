@@ -65,11 +65,11 @@ fn parse_indexed_colors(xml : StringView) -> Array[String]? raise XlsxError {
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="indexedColors tag invalid")
+          None => raise InvalidXml(msg="indexedColors tag invalid")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="indexedColors tag invalid")
+        _ => raise InvalidXml(msg="indexedColors tag invalid")
       }
     match attr_value(tag, "rgb") {
       Some(value) => colors.push(normalize_rgb_hex(value))

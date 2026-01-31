@@ -18,7 +18,7 @@ pub struct Slicer {
 ///|
 pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
   if name == "" {
-    raise XlsxError::InvalidSheetOperation(msg="slicer name empty")
+    raise InvalidSheetOperation(msg="slicer name empty")
   }
   fn sanitize_cache_stub(value : StringView) -> String {
     let name = value.to_string()

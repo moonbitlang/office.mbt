@@ -19,7 +19,7 @@ pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
     break
   }
   if !has_col {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   if idx < len && reference[idx] == '$' {
     idx = idx + 1
@@ -34,13 +34,13 @@ pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
       idx = idx + 1
       continue
     }
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   if col == 0 || !has_row {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   (row, col)
 }
@@ -48,7 +48,7 @@ pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
 ///|
 pub fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
   if row <= 0 || col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   "\{column_number_to_name(col)}\{row}"
 }
@@ -56,7 +56,7 @@ pub fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
 ///|
 pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
   if name == "" {
-    raise XlsxError::InvalidCellRef(value=name.to_string())
+    raise InvalidCellRef(value=name.to_string())
   }
   let mut value = 0
   for c in name {
@@ -66,11 +66,11 @@ pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
     } else if u0 is ('a'..='z') {
       value = value * 26 + (u0 - 'a'.to_int() + 1)
     } else {
-      raise XlsxError::InvalidCellRef(value=name.to_string())
+      raise InvalidCellRef(value=name.to_string())
     }
   }
   if value <= 0 {
-    raise XlsxError::InvalidCellRef(value=name.to_string())
+    raise InvalidCellRef(value=name.to_string())
   }
   value
 }
@@ -78,7 +78,7 @@ pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
 ///|
 pub fn column_number_to_name(col : Int) -> String raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}")
+    raise InvalidCellRef(value="\{col}")
   }
   let mut n = col
   let mut len = 0
@@ -115,7 +115,7 @@ let cell_ref_max_cols = 16384
 pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
   let text = cell.to_string()
   if text == "" {
-    raise XlsxError::InvalidCellRef(value=text)
+    raise InvalidCellRef(value=text)
   }
   let col_sb = StringBuilder::new()
   let row_sb = StringBuilder::new()
@@ -129,19 +129,19 @@ pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
       seen_digit = true
       row_sb.write_char(c)
     } else {
-      raise XlsxError::InvalidCellRef(value=text)
+      raise InvalidCellRef(value=text)
     }
   }
   let col = col_sb.to_string()
   let row_text = row_sb.to_string()
   if col == "" || row_text == "" {
-    raise XlsxError::InvalidCellRef(value=text)
+    raise InvalidCellRef(value=text)
   }
   let row = @strconv.parse_int(row_text, base=10) catch {
-    _ => raise XlsxError::InvalidCellRef(value=text)
+    _ => raise InvalidCellRef(value=text)
   }
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value=text)
+    raise InvalidCellRef(value=text)
   }
   (col, row)
 }
@@ -150,7 +150,7 @@ pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
 pub fn join_cell_name(col : StringView, row : Int) -> String raise XlsxError {
   let col_number = column_name_to_number(col)
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   let col_name = column_number_to_name(col_number)
   "\{col_name}\{row}"
@@ -162,11 +162,11 @@ pub fn cell_name_to_coordinates(
 ) -> (Int, Int) raise XlsxError {
   let (col_name, row) = split_cell_name(cell)
   if row > cell_ref_max_rows {
-    raise XlsxError::InvalidCellRef(value=cell.to_string())
+    raise InvalidCellRef(value=cell.to_string())
   }
   let col = column_name_to_number(col_name)
   if col > cell_ref_max_cols {
-    raise XlsxError::InvalidCellRef(value=cell.to_string())
+    raise InvalidCellRef(value=cell.to_string())
   }
   (col, row)
 }
@@ -178,10 +178,10 @@ pub fn coordinates_to_cell_name(
   abs? : Bool = false,
 ) -> String raise XlsxError {
   if col <= 0 || row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   if row > cell_ref_max_rows || col > cell_ref_max_cols {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   let col_name = column_number_to_name(col)
   let sign = if abs { "$" } else { "" }

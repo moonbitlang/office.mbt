@@ -1,9 +1,7 @@
 ///|
 fn Worksheet::ensure_stream_idle(self : Worksheet) -> Unit raise XlsxError {
-  if self.stream_state != StreamState::Idle {
-    raise XlsxError::StreamModeConflict(
-      msg="worksheet is in stream writer mode",
-    )
+  if self.stream_state != Idle {
+    raise StreamModeConflict(msg="worksheet is in stream writer mode")
   }
 }
 
@@ -26,7 +24,7 @@ fn parse_range_ref(
     parts.push(part.to_string())
   }
   if parts.length() != 2 {
-    raise XlsxError::InvalidCellRef(value=range_ref.to_string())
+    raise InvalidCellRef(value=range_ref.to_string())
   }
   let (row1, col1) = cell_ref_to_rc(parts[0])
   let (row2, col2) = cell_ref_to_rc(parts[1])
@@ -115,7 +113,7 @@ pub fn Worksheet::set_cell(
         row,
         col,
         value,
-        value_type: CellValueType::String,
+        value_type: String,
         rich_text: None,
         formula: None,
         formula_type: None,
@@ -131,7 +129,7 @@ pub fn Worksheet::set_cell(
     row,
     col,
     value,
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: None,
     formula_type: None,
@@ -250,7 +248,7 @@ pub fn Worksheet::set_cell_rich_text(
   self.ensure_stream_idle()
   let total = rich_text_total_units(runs)
   if total > max_cell_chars {
-    raise XlsxError::CellTextTooLong(len=total)
+    raise CellTextTooLong(len=total)
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
@@ -266,7 +264,7 @@ pub fn Worksheet::set_cell_rich_text(
         row,
         col,
         value,
-        value_type: CellValueType::String,
+        value_type: String,
         rich_text: Some(stored_runs),
         formula: None,
         formula_type: None,
@@ -282,7 +280,7 @@ pub fn Worksheet::set_cell_rich_text(
     row,
     col,
     value,
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: Some(stored_runs),
     formula: None,
     formula_type: None,
@@ -300,7 +298,7 @@ pub fn Worksheet::get_cell_rich_text(
   let (row, col) = cell_ref_to_rc(reference)
   for cell in self.cells {
     if cell.row == row && cell.col == col {
-      if cell.value_type != CellValueType::String {
+      if cell.value_type != String {
         return None
       }
       match cell.rich_text {
@@ -339,7 +337,7 @@ pub fn Worksheet::set_cell_formula(
         row,
         col,
         value,
-        value_type: CellValueType::String,
+        value_type: String,
         rich_text: None,
         formula: Some(formula),
         formula_type: None,
@@ -355,7 +353,7 @@ pub fn Worksheet::set_cell_formula(
     row,
     col,
     value,
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: Some(formula),
     formula_type: None,
@@ -394,23 +392,18 @@ pub fn Worksheet::set_cell_formula_opts(
   let formula_kind = opts.formula_type
   match formula_kind {
     None => self.set_cell_formula(reference, formula, value~)
-    Some(FormulaType::Normal) =>
-      self.set_cell_formula(reference, formula, value~)
-    Some(FormulaType::DataTable) =>
-      self.set_cell_formula(reference, formula, value~)
-    Some(FormulaType::Array) => {
+    Some(Normal) => self.set_cell_formula(reference, formula, value~)
+    Some(DataTable) => self.set_cell_formula(reference, formula, value~)
+    Some(Array) => {
       let range_ref = match opts.range_ref {
         Some(value) => normalize_range_ref(value)
-        None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="array formula ref missing",
-          )
+        None => raise InvalidSheetOperation(msg="array formula ref missing")
       }
       let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
       let (master_row, master_col) = cell_ref_to_rc(reference)
       let canonical_master = cell_ref_from(master_row, master_col)
       if canonical_master != cell_ref_from(min_row, min_col) {
-        raise XlsxError::InvalidSheetOperation(
+        raise InvalidSheetOperation(
           msg="array formula master must be top-left of ref",
         )
       }
@@ -430,10 +423,10 @@ pub fn Worksheet::set_cell_formula_opts(
               row,
               col,
               value,
-              value_type: CellValueType::String,
+              value_type: String,
               rich_text: None,
               formula: Some(formula),
-              formula_type: Some(FormulaType::Array),
+              formula_type: Some(Array),
               formula_ref: Some(formula_ref),
               formula_shared_index: None,
               style_id: cell.style_id,
@@ -446,10 +439,10 @@ pub fn Worksheet::set_cell_formula_opts(
           row,
           col,
           value,
-          value_type: CellValueType::String,
+          value_type: String,
           rich_text: None,
           formula: Some(formula),
-          formula_type: Some(FormulaType::Array),
+          formula_type: Some(Array),
           formula_ref: Some(formula_ref),
           formula_shared_index: None,
           style_id: 0,
@@ -466,19 +459,16 @@ pub fn Worksheet::set_cell_formula_opts(
         }
       }
     }
-    Some(FormulaType::Shared) => {
+    Some(Shared) => {
       let range_ref = match opts.range_ref {
         Some(value) => normalize_range_ref(value)
-        None =>
-          raise XlsxError::InvalidSheetOperation(
-            msg="shared formula ref missing",
-          )
+        None => raise InvalidSheetOperation(msg="shared formula ref missing")
       }
       let (min_row, min_col, max_row, max_col) = parse_range_ref(range_ref)
       let (master_row, master_col) = cell_ref_to_rc(reference)
       let canonical_master = cell_ref_from(master_row, master_col)
       if canonical_master != cell_ref_from(min_row, min_col) {
-        raise XlsxError::InvalidSheetOperation(
+        raise InvalidSheetOperation(
           msg="shared formula master must be top-left of ref",
         )
       }
@@ -507,10 +497,10 @@ pub fn Worksheet::set_cell_formula_opts(
               row,
               col,
               value,
-              value_type: CellValueType::String,
+              value_type: String,
               rich_text: None,
               formula: Some(formula),
-              formula_type: Some(FormulaType::Shared),
+              formula_type: Some(Shared),
               formula_ref,
               formula_shared_index: Some(shared_index),
               style_id: cell.style_id,
@@ -523,10 +513,10 @@ pub fn Worksheet::set_cell_formula_opts(
           row,
           col,
           value,
-          value_type: CellValueType::String,
+          value_type: String,
           rich_text: None,
           formula: Some(formula),
-          formula_type: Some(FormulaType::Shared),
+          formula_type: Some(Shared),
           formula_ref,
           formula_shared_index: Some(shared_index),
           style_id: 0,
@@ -570,7 +560,7 @@ pub fn Worksheet::set_cell_hyperlink(
     Some(value) => value
     None => canonical
   }
-  if link_type == HyperlinkType::Unset {
+  if link_type == Unset {
     self.remove_cell_hyperlink(resolved)
     return
   }
@@ -593,7 +583,7 @@ pub fn Worksheet::set_cell_hyperlink(
   }
   if !updated {
     if self.hyperlinks.length() > max_sheet_hyperlinks {
-      raise XlsxError::HyperlinkLimitExceeded(limit=max_sheet_hyperlinks)
+      raise HyperlinkLimitExceeded(limit=max_sheet_hyperlinks)
     }
     self.hyperlinks.push({
       reference: normalized_ref,
@@ -665,7 +655,7 @@ pub fn Worksheet::add_comment(
   let canonical = cell_ref_from(row, col)
   for entry in self.comments {
     if entry.cell == canonical {
-      raise XlsxError::CommentAlreadyExists(cell=canonical)
+      raise CommentAlreadyExists(cell=canonical)
     }
   }
   let author_name = if comment.author == "" { "Author" } else { comment.author }
@@ -715,7 +705,7 @@ pub fn Worksheet::set_cell_style(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if style_id < 0 {
-    raise XlsxError::InvalidStyleId(index=style_id)
+    raise InvalidStyleId(index=style_id)
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
@@ -742,7 +732,7 @@ pub fn Worksheet::set_cell_style(
     row,
     col,
     value: "",
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: None,
     formula_type: None,
@@ -775,7 +765,7 @@ pub fn Worksheet::set_cell_style_rc(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if style_id < 0 {
-    raise XlsxError::InvalidStyleId(index=style_id)
+    raise InvalidStyleId(index=style_id)
   }
   let reference = cell_ref_from(row, col)
   for i, cell in self.cells {
@@ -801,7 +791,7 @@ pub fn Worksheet::set_cell_style_rc(
     row,
     col,
     value: "",
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: None,
     formula_type: None,
@@ -818,7 +808,7 @@ pub fn Worksheet::get_cell_style_rc(
   col : Int,
 ) -> Int? raise XlsxError {
   if row <= 0 || col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   for cell in self.cells {
     if cell.row == row && cell.col == col {
@@ -903,7 +893,7 @@ pub fn Worksheet::delete_table(
     updated.push(table)
   }
   if !removed {
-    raise XlsxError::TableNotFound(name=target)
+    raise TableNotFound(name=target)
   }
   self.tables.clear()
   self.tables.append(updated[:])
@@ -914,7 +904,7 @@ pub fn Worksheet::add_sparkline(
   self : Worksheet,
   location : String,
   range_ref : String,
-  sparkline_type? : SparklineType = SparklineType::Line,
+  sparkline_type? : SparklineType = Line,
 ) -> Unit raise XlsxError {
   self.add_sparkline_group([location], [range_ref], sparkline_type~)
 }
@@ -924,13 +914,13 @@ pub fn Worksheet::add_sparkline_group(
   self : Worksheet,
   locations : ArrayView[String],
   ranges : ArrayView[String],
-  sparkline_type? : SparklineType = SparklineType::Line,
+  sparkline_type? : SparklineType = Line,
 ) -> Unit raise XlsxError {
   if locations.length() == 0 || ranges.length() == 0 {
-    raise XlsxError::InvalidSparkline(msg="sparkline inputs empty")
+    raise InvalidSparkline(msg="sparkline inputs empty")
   }
   if locations.length() != ranges.length() {
-    raise XlsxError::InvalidSparkline(msg="sparkline inputs mismatch")
+    raise InvalidSparkline(msg="sparkline inputs mismatch")
   }
   let sparklines = build_sparklines(locations, ranges)
   self.sparkline_groups.push({
@@ -992,7 +982,7 @@ pub fn Worksheet::delete_pivot_table(
   self.ensure_stream_idle()
   let target = name.to_string()
   if target == "" {
-    raise XlsxError::InvalidSheetOperation(msg="pivot table name empty")
+    raise InvalidSheetOperation(msg="pivot table name empty")
   }
   let remaining : Array[PivotTable] = []
   let mut removed = false
@@ -1004,7 +994,7 @@ pub fn Worksheet::delete_pivot_table(
     }
   }
   if !removed {
-    raise XlsxError::InvalidSheetOperation(msg="pivot table not found")
+    raise InvalidSheetOperation(msg="pivot table not found")
   }
   self.pivot_tables.clear()
   for pivot in remaining {
@@ -1017,17 +1007,17 @@ fn normalize_extension(extension : StringView) -> String raise XlsxError {
   let value = extension.to_string()
   let trimmed = if value.has_prefix(".") {
     if value.length() <= 1 {
-      raise XlsxError::UnsupportedFeature(msg="image extension missing")
+      raise UnsupportedFeature(msg="image extension missing")
     }
     let view = value[1:] catch {
-        _ => raise XlsxError::UnsupportedFeature(msg="invalid image extension")
+        _ => raise UnsupportedFeature(msg="invalid image extension")
       }
     view.to_string()
   } else {
     value
   }
   if trimmed == "" {
-    raise XlsxError::UnsupportedFeature(msg="image extension missing")
+    raise UnsupportedFeature(msg="image extension missing")
   }
   trimmed
 }
@@ -1039,14 +1029,14 @@ fn normalize_extension_lower_requires_dot(
 ) -> String raise XlsxError {
   let raw = extension.to_string()
   if !raw.has_prefix(".") || raw.length() <= 1 {
-    raise XlsxError::UnsupportedFeature(msg=unsupported_msg.to_string())
+    raise UnsupportedFeature(msg=unsupported_msg.to_string())
   }
   let view = raw[1:] catch {
-      _ => raise XlsxError::UnsupportedFeature(msg=unsupported_msg.to_string())
+      _ => raise UnsupportedFeature(msg=unsupported_msg.to_string())
     }
   let trimmed = view.to_string()
   if trimmed == "" {
-    raise XlsxError::UnsupportedFeature(msg=unsupported_msg.to_string())
+    raise UnsupportedFeature(msg=unsupported_msg.to_string())
   }
   trimmed.to_lower()
 }
@@ -1057,7 +1047,7 @@ fn check_header_footer_image_size(
   field_name : StringView,
 ) -> Unit raise XlsxError {
   if value.to_string() == "" {
-    raise XlsxError::InvalidHeaderFooter(msg="\{field_name.to_string()} empty")
+    raise InvalidHeaderFooter(msg="\{field_name.to_string()} empty")
   }
 }
 
@@ -1071,16 +1061,16 @@ fn normalize_picture_options(
   hyperlink_type : HyperlinkType,
 ) -> (Int, Int, Double, Double, String, HyperlinkType) raise XlsxError {
   if offset_x < 0 || offset_y < 0 {
-    raise XlsxError::InvalidSheetOperation(msg="picture offset must be >= 0")
+    raise InvalidSheetOperation(msg="picture offset must be >= 0")
   }
   if scale_x <= 0.0 || scale_y <= 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="picture scale must be > 0")
+    raise InvalidSheetOperation(msg="picture scale must be > 0")
   }
   if hyperlink == "" {
-    return (offset_x, offset_y, scale_x, scale_y, "", HyperlinkType::Unset)
+    return (offset_x, offset_y, scale_x, scale_y, "", Unset)
   }
-  if hyperlink_type == HyperlinkType::Unset {
-    raise XlsxError::InvalidHyperlink(msg="picture hyperlink type missing")
+  if hyperlink_type == Unset {
+    raise InvalidHyperlink(msg="picture hyperlink type missing")
   }
   (offset_x, offset_y, scale_x, scale_y, hyperlink, hyperlink_type)
 }
@@ -1237,9 +1227,7 @@ pub fn Worksheet::add_header_footer_image(
   let content_type = match image_content_type(extension) {
     Some(value) => value
     None =>
-      raise XlsxError::UnsupportedFeature(
-        msg="unsupported header/footer image extension",
-      )
+      raise UnsupportedFeature(msg="unsupported header/footer image extension")
   }
   check_header_footer_image_size(options.width, "header/footer width")
   check_header_footer_image_size(options.height, "header/footer height")
@@ -1278,7 +1266,7 @@ pub fn Worksheet::add_picture_from_bytes(
   scale_x? : Double = 1.0,
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
-  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  hyperlink_type? : HyperlinkType = Unset,
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
@@ -1286,15 +1274,14 @@ pub fn Worksheet::add_picture_from_bytes(
   auto_fit_ignore_aspect? : Bool = false,
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
   let ext = normalize_extension_lower_requires_dot(
     extension, "unsupported picture extension",
   )
   let content_type = match image_content_type(ext) {
     Some(value) => value
-    None =>
-      raise XlsxError::UnsupportedFeature(msg="unsupported picture extension")
+    None => raise UnsupportedFeature(msg="unsupported picture extension")
   }
   self.add_image(
     reference,
@@ -1348,7 +1335,7 @@ pub fn Worksheet::add_picture_from_bytes_with_options(
   }
   let hyperlink_type = match options.hyperlink_type {
     Some(value) => value
-    None => HyperlinkType::Unset
+    None => Unset
   }
   let name = match options.name {
     Some(value) => value
@@ -1380,7 +1367,7 @@ pub fn Worksheet::add_picture_from_bytes_with_options(
   }
   let positioning = match options.positioning {
     Some(value) => value
-    None => PicturePositioning::OneCell
+    None => OneCell
   }
   self.add_picture_from_bytes(
     reference,
@@ -1413,7 +1400,7 @@ pub async fn Worksheet::add_picture(
   scale_x? : Double = 1.0,
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
-  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  hyperlink_type? : HyperlinkType = Unset,
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
@@ -1421,16 +1408,15 @@ pub async fn Worksheet::add_picture(
   auto_fit_ignore_aspect? : Bool = false,
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let extension = match extension_from_path(path) {
     Some(value) => value
-    None => raise XlsxError::UnsupportedFeature(msg="image extension missing")
+    None => raise UnsupportedFeature(msg="image extension missing")
   }
   let bytes = read_file_bytes(path) catch {
-    err =>
-      raise XlsxError::InvalidSheetOperation(msg="read picture failed: \{err}")
+    err => raise InvalidSheetOperation(msg="read picture failed: \{err}")
   }
   self.add_picture_from_bytes(
     reference,
@@ -1482,7 +1468,7 @@ pub async fn Worksheet::add_picture_with_options(
   }
   let hyperlink_type = match options.hyperlink_type {
     Some(value) => value
-    None => HyperlinkType::Unset
+    None => Unset
   }
   let name = match options.name {
     Some(value) => value
@@ -1514,7 +1500,7 @@ pub async fn Worksheet::add_picture_with_options(
   }
   let positioning = match options.positioning {
     Some(value) => value
-    None => PicturePositioning::OneCell
+    None => OneCell
   }
   self.add_picture(
     reference,
@@ -1548,7 +1534,7 @@ pub fn Worksheet::add_image(
   scale_x? : Double = 1.0,
   scale_y? : Double = 1.0,
   hyperlink? : String = "",
-  hyperlink_type? : HyperlinkType = HyperlinkType::Unset,
+  hyperlink_type? : HyperlinkType = Unset,
   name? : String = "",
   alt_text? : String = "",
   lock_aspect_ratio? : Bool = false,
@@ -1556,18 +1542,15 @@ pub fn Worksheet::add_image(
   auto_fit_ignore_aspect? : Bool = false,
   print_object? : Bool = true,
   locked? : Bool = true,
-  positioning? : PicturePositioning = PicturePositioning::OneCell,
+  positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
   let ext = normalize_extension(extension)
   if name != "" && name.length() > max_graphic_name_length {
-    raise XlsxError::GraphicNameTooLong(
-      len=name.length(),
-      limit=max_graphic_name_length,
-    )
+    raise GraphicNameTooLong(len=name.length(), limit=max_graphic_name_length)
   }
   if alt_text != "" && alt_text.length() > max_graphic_alt_text_length {
-    raise XlsxError::GraphicAltTextTooLong(
+    raise GraphicAltTextTooLong(
       len=alt_text.length(),
       limit=max_graphic_alt_text_length,
     )
@@ -1752,7 +1735,7 @@ pub fn Worksheet::add_chart(
     height_emu: picture_emu_per_pixel * 260,
     print_object: true,
     locked: true,
-    positioning: PicturePositioning::TwoCell,
+    positioning: TwoCell,
   })
 }
 
@@ -1780,10 +1763,10 @@ pub fn Worksheet::add_chart_with_options(
     None => 1.0
   }
   if offset_x < 0 || offset_y < 0 {
-    raise XlsxError::InvalidSheetOperation(msg="chart offset must be >= 0")
+    raise InvalidSheetOperation(msg="chart offset must be >= 0")
   }
   if scale_x <= 0.0 || scale_y <= 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="chart scale must be > 0")
+    raise InvalidSheetOperation(msg="chart scale must be > 0")
   }
   let print_object = match opts.format.print_object {
     Some(value) => value
@@ -1795,7 +1778,7 @@ pub fn Worksheet::add_chart_with_options(
   }
   let positioning = match opts.format.positioning {
     Some(value) => value
-    None => PicturePositioning::TwoCell
+    None => TwoCell
   }
   let width_emu = (Double::from_int(
       picture_emu_per_pixel * opts.dimension.width,
@@ -1857,7 +1840,7 @@ pub fn Worksheet::add_vml_drawing_xml(
   xml : String,
 ) -> Unit raise XlsxError {
   if xml == "" {
-    raise XlsxError::InvalidVmlDrawing(msg="vml drawing xml empty")
+    raise InvalidVmlDrawing(msg="vml drawing xml empty")
   }
   self.vml_drawing_xml = Some(xml)
 }
@@ -1868,7 +1851,7 @@ pub fn Worksheet::add_vml_drawing_hf_xml(
   xml : String,
 ) -> Unit raise XlsxError {
   if xml == "" {
-    raise XlsxError::InvalidVmlDrawing(msg="vml drawing hf xml empty")
+    raise InvalidVmlDrawing(msg="vml drawing hf xml empty")
   }
   self.vml_drawing_hf_xml = Some(xml)
 }
@@ -1935,7 +1918,7 @@ pub fn Worksheet::delete_slicer(
   self.ensure_stream_idle()
   let target = name.to_string()
   if target == "" {
-    raise XlsxError::InvalidSheetOperation(msg="slicer name empty")
+    raise InvalidSheetOperation(msg="slicer name empty")
   }
   let remaining : Array[Slicer] = []
   let mut removed = false
@@ -1947,7 +1930,7 @@ pub fn Worksheet::delete_slicer(
     }
   }
   if !removed {
-    raise XlsxError::InvalidSheetOperation(msg="slicer not found")
+    raise InvalidSheetOperation(msg="slicer not found")
   }
   self.slicers.clear()
   for slicer in remaining {
@@ -1981,7 +1964,7 @@ pub fn Worksheet::add_data_validation_list(
   allow_blank? : Bool = true,
 ) -> Unit raise XlsxError {
   if values.length() == 0 {
-    raise XlsxError::UnsupportedFeature(msg="empty validation list")
+    raise UnsupportedFeature(msg="empty validation list")
   }
   let dv = DataValidation::new(allow_blank)
   dv.set_sqref(range_ref)
@@ -2016,11 +1999,11 @@ pub fn Worksheet::delete_data_validation(
   for xml in self.data_validations {
     let tag = match tag_attributes_in(xml, "dataValidation") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="data validation tag missing")
+      None => raise InvalidXml(msg="data validation tag missing")
     }
     let sqref = match attr_value(tag, "sqref") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="data validation sqref missing")
+      None => raise InvalidXml(msg="data validation sqref missing")
     }
     let next_sqref = delete_cells_from_sqref(sqref, del_cells)
     if next_sqref == "" {
@@ -2028,8 +2011,7 @@ pub fn Worksheet::delete_data_validation(
     }
     match replace_attr_value_in_open_tag(xml, "sqref", next_sqref) {
       Some(value) => updated.push(value)
-      None =>
-        raise XlsxError::InvalidXml(msg="data validation sqref update failed")
+      None => raise InvalidXml(msg="data validation sqref update failed")
     }
   }
   self.data_validations.clear()
@@ -2044,7 +2026,7 @@ pub fn Worksheet::add_ignored_errors(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if range_ref == "" {
-    raise XlsxError::InvalidSheetOperation(msg="ignored errors range empty")
+    raise InvalidSheetOperation(msg="ignored errors range empty")
   }
   let sqref = normalize_cell_or_range_ref(range_ref)
   let entry = ignored_error_from_type(sqref, error_type)
@@ -2107,14 +2089,14 @@ fn inject_x14_id_ext_lst_into_cf_rule(
   match rule_xml.find(close_tag) {
     Some(pos) => {
       let before = rule_xml[:pos] catch {
-          _ => raise XlsxError::InvalidXml(msg="cfRule slice invalid")
+          _ => raise InvalidXml(msg="cfRule slice invalid")
         }
       let after = rule_xml[pos:] catch {
-          _ => raise XlsxError::InvalidXml(msg="cfRule slice invalid")
+          _ => raise InvalidXml(msg="cfRule slice invalid")
         }
       "\{before}<extLst><ext uri=\"\{ext_uri_conditional_formatting_rule_id}\" xmlns:x14=\"\{ns_spreadsheet_x14}\"><x14:id>\{escape_xml_text(id)}</x14:id></ext></extLst>\{after}"
     }
-    None => raise XlsxError::InvalidXml(msg="cfRule tag invalid")
+    None => raise InvalidXml(msg="cfRule tag invalid")
   }
 }
 
@@ -2126,7 +2108,7 @@ pub fn Worksheet::set_conditional_format(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if options.length() == 0 {
-    raise XlsxError::InvalidConditionalFormat(msg="options empty")
+    raise InvalidConditionalFormat(msg="options empty")
   }
   let (sqref, master_cell) = prepare_conditional_format_range(range_ref)
   let mut priority = 0
@@ -2205,13 +2187,11 @@ pub fn Worksheet::unset_conditional_format(
   for xml in self.conditional_formats {
     let tag = match tag_attributes_in(xml, "conditionalFormatting") {
       Some(value) => value
-      None =>
-        raise XlsxError::InvalidXml(msg="conditionalFormatting tag missing")
+      None => raise InvalidXml(msg="conditionalFormatting tag missing")
     }
     let sqref = match attr_value(tag, "sqref") {
       Some(value) => unescape_xml_text(value)
-      None =>
-        raise XlsxError::InvalidXml(msg="conditionalFormatting sqref missing")
+      None => raise InvalidXml(msg="conditionalFormatting sqref missing")
     }
     let next_sqref = delete_cells_from_sqref(sqref, del_cells)
     if next_sqref == "" {
@@ -2219,10 +2199,7 @@ pub fn Worksheet::unset_conditional_format(
     }
     match replace_attr_value_in_open_tag(xml, "sqref", next_sqref) {
       Some(value) => updated.push(value)
-      None =>
-        raise XlsxError::InvalidXml(
-          msg="conditionalFormatting sqref update failed",
-        )
+      None => raise InvalidXml(msg="conditionalFormatting sqref update failed")
     }
   }
   self.conditional_formats.clear()
@@ -2289,7 +2266,7 @@ pub fn Worksheet::set_cell_rc(
         row,
         col,
         value,
-        value_type: CellValueType::String,
+        value_type: String,
         rich_text: None,
         formula: None,
         formula_type: None,
@@ -2305,7 +2282,7 @@ pub fn Worksheet::set_cell_rc(
     row,
     col,
     value,
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: None,
     formula_type: None,
@@ -2376,7 +2353,7 @@ pub fn Worksheet::set_cell_formula_rc(
         row,
         col,
         value,
-        value_type: CellValueType::String,
+        value_type: String,
         rich_text: None,
         formula: Some(formula),
         formula_type: None,
@@ -2392,7 +2369,7 @@ pub fn Worksheet::set_cell_formula_rc(
     row,
     col,
     value,
-    value_type: CellValueType::String,
+    value_type: String,
     rich_text: None,
     formula: Some(formula),
     formula_type: None,
@@ -2409,7 +2386,7 @@ pub fn Worksheet::get_cell_rc(
   col : Int,
 ) -> String? raise XlsxError {
   if row <= 0 || col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   for cell in self.cells {
     if cell.row == row && cell.col == col {
@@ -2426,7 +2403,7 @@ pub fn Worksheet::get_cell_value_raw_rc(
   col : Int,
 ) -> CellValue? raise XlsxError {
   if row <= 0 || col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   for cell in self.cells {
     if cell.row == row && cell.col == col {
@@ -2465,7 +2442,7 @@ pub fn Worksheet::set_row(
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   for i, value in values {
     self.set_cell_rc(row, i + 1, value)
@@ -2478,7 +2455,7 @@ pub fn Worksheet::get_row(
   row : Int,
 ) -> Array[String] raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   let mut max_col = 0
   for cell in self.cells {
@@ -2505,7 +2482,7 @@ pub fn Worksheet::set_col(
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   for i, value in values {
     self.set_cell_rc(i + 1, col, value)
@@ -2518,7 +2495,7 @@ pub fn Worksheet::get_col(
   col : Int,
 ) -> Array[String] raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   let mut max_row = 0
   for cell in self.cells {
@@ -2614,10 +2591,10 @@ pub fn Worksheet::set_row_height(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   if height < 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="row height is negative")
+    raise InvalidSheetOperation(msg="row height is negative")
   }
   let dim = self.row_dimension_value(row)
   let updated : RowDimension = {
@@ -2635,7 +2612,7 @@ pub fn Worksheet::get_row_height(
   row : Int,
 ) -> Double? raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   match self.row_dimensions.get(row) {
     Some(dim) => dim.height
@@ -2651,7 +2628,7 @@ pub fn Worksheet::set_row_visible(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   let dim = self.row_dimension_value(row)
   let updated : RowDimension = {
@@ -2669,7 +2646,7 @@ pub fn Worksheet::row_visible(
   row : Int,
 ) -> Bool raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   match self.row_dimensions.get(row) {
     Some(dim) => !dim.hidden
@@ -2685,10 +2662,10 @@ pub fn Worksheet::set_row_outline_level(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   if level < 0 || level > 7 {
-    raise XlsxError::InvalidSheetOperation(msg="row outline level out of range")
+    raise InvalidSheetOperation(msg="row outline level out of range")
   }
   let dim = self.row_dimension_value(row)
   let updated : RowDimension = {
@@ -2706,7 +2683,7 @@ pub fn Worksheet::row_outline_level(
   row : Int,
 ) -> Int raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   match self.row_dimensions.get(row) {
     Some(dim) => dim.outline_level
@@ -2723,10 +2700,10 @@ pub fn Worksheet::set_row_style_range(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if start <= 0 || end <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{start}")
+    raise InvalidCellRef(value="\{0}:\{start}")
   }
   if end < start {
-    raise XlsxError::InvalidSheetOperation(msg="row style range invalid")
+    raise InvalidSheetOperation(msg="row style range invalid")
   }
   let style = if style_id > 0 { Some(style_id) } else { None }
   for row in start..<=end {
@@ -2756,7 +2733,7 @@ pub fn Worksheet::get_row_style(
   row : Int,
 ) -> Int? raise XlsxError {
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   match self.row_dimensions.get(row) {
     Some(dim) => dim.style_id
@@ -2772,10 +2749,10 @@ pub fn Worksheet::set_col_width(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   if width < 0.0 {
-    raise XlsxError::InvalidSheetOperation(msg="column width is negative")
+    raise InvalidSheetOperation(msg="column width is negative")
   }
   let dim = self.col_dimension_value(col)
   let updated : ColDimension = {
@@ -2793,7 +2770,7 @@ pub fn Worksheet::get_col_width(
   col : Int,
 ) -> Double? raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   match self.col_dimensions.get(col) {
     Some(dim) => dim.width
@@ -2809,7 +2786,7 @@ pub fn Worksheet::set_col_visible(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   let dim = self.col_dimension_value(col)
   let updated : ColDimension = {
@@ -2827,7 +2804,7 @@ pub fn Worksheet::col_visible(
   col : Int,
 ) -> Bool raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   match self.col_dimensions.get(col) {
     Some(dim) => !dim.hidden
@@ -2843,12 +2820,10 @@ pub fn Worksheet::set_col_outline_level(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   if level < 0 || level > 7 {
-    raise XlsxError::InvalidSheetOperation(
-      msg="column outline level out of range",
-    )
+    raise InvalidSheetOperation(msg="column outline level out of range")
   }
   let dim = self.col_dimension_value(col)
   let updated : ColDimension = {
@@ -2866,7 +2841,7 @@ pub fn Worksheet::col_outline_level(
   col : Int,
 ) -> Int raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   match self.col_dimensions.get(col) {
     Some(dim) => dim.outline_level
@@ -2882,7 +2857,7 @@ pub fn Worksheet::set_col_style(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   let dim = self.col_dimension_value(col)
   let style = if style_id > 0 { Some(style_id) } else { None }
@@ -2901,7 +2876,7 @@ pub fn Worksheet::get_col_style(
   col : Int,
 ) -> Int? raise XlsxError {
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   match self.col_dimensions.get(col) {
     Some(dim) => dim.style_id
@@ -2917,10 +2892,10 @@ pub fn Worksheet::insert_rows(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   if count <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="row count must be positive")
+    raise InvalidSheetOperation(msg="row count must be positive")
   }
   for i, cell in self.cells {
     if cell.row >= row {
@@ -3027,10 +3002,10 @@ pub fn Worksheet::remove_rows(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   if count <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="row count must be positive")
+    raise InvalidSheetOperation(msg="row count must be positive")
   }
   let end_row = row + count - 1
   let updated_cells : Array[Cell] = []
@@ -3187,7 +3162,7 @@ fn parse_cell_ref_with_abs(
     }
   }
   if !has_col {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   let mut abs_row = false
   if idx < len && reference[idx] == '$' {
@@ -3203,14 +3178,14 @@ fn parse_cell_ref_with_abs(
       row = row * 10 + (u0.to_int() - ('0' : UInt16).to_int())
       idx = idx + 1
     } else {
-      raise XlsxError::InvalidCellRef(value=reference.to_string())
+      raise InvalidCellRef(value=reference.to_string())
     }
   }
   if !has_row {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_string())
   }
   (row, col, abs_col, abs_row)
 }
@@ -3224,7 +3199,7 @@ fn format_cell_ref_with_abs(
 ) -> String raise XlsxError {
   let col_text = column_number_to_name(col)
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{row}")
+    raise InvalidCellRef(value="\{col}:\{row}")
   }
   let row_text = row.to_string()
   let sb = StringBuilder::new()
@@ -3254,13 +3229,13 @@ fn duplicate_sqref_for_row(
     let (start_ref, end_ref) = if text.contains(":") {
       let sep = match text.find(":") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidCellRef(value=text.to_string())
+        None => raise InvalidCellRef(value=text.to_string())
       }
       let start_ref = text[:sep] catch {
-          _ => raise XlsxError::InvalidCellRef(value=text.to_string())
+          _ => raise InvalidCellRef(value=text.to_string())
         }
       let end_ref = text[sep + 1:] catch {
-          _ => raise XlsxError::InvalidCellRef(value=text.to_string())
+          _ => raise InvalidCellRef(value=text.to_string())
         }
       (start_ref, end_ref)
     } else {
@@ -3387,12 +3362,10 @@ pub fn Worksheet::duplicate_row_to(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if row <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{0}:\{row}")
+    raise InvalidCellRef(value="\{0}:\{row}")
   }
   if target_row <= 0 || row == target_row {
-    raise XlsxError::InvalidSheetOperation(
-      msg="duplicate row target must be different",
-    )
+    raise InvalidSheetOperation(msg="duplicate row target must be different")
   }
   let row_cells : Array[Cell] = []
   for cell in self.cells {
@@ -3435,10 +3408,10 @@ pub fn Worksheet::insert_cols(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   if count <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="column count must be positive")
+    raise InvalidSheetOperation(msg="column count must be positive")
   }
   for i, cell in self.cells {
     if cell.col >= col {
@@ -3545,10 +3518,10 @@ pub fn Worksheet::remove_cols(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if col <= 0 {
-    raise XlsxError::InvalidCellRef(value="\{col}:\{0}")
+    raise InvalidCellRef(value="\{col}:\{0}")
   }
   if count <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="column count must be positive")
+    raise InvalidSheetOperation(msg="column count must be positive")
   }
   let end_col = col + count - 1
   let updated_cells : Array[Cell] = []

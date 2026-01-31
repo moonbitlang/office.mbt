@@ -13,7 +13,7 @@ fn eval_defined_name_ref(
     defined_name.scope
   }
   let expr = parse_formula_expr(defined_name.refers_to) catch {
-    _ => return FormulaValue::Error(formula_error_value)
+    _ => return Error(formula_error_value)
   }
   eval_expr(workbook, target_sheet, expr, ctx)
 }
@@ -79,31 +79,31 @@ fn anchorarray_values(
   values : ArrayView[FormulaValue],
 ) -> FormulaValue {
   if args.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let (target_sheet, reference) = match args[0] {
-    Expr::Cell(sheet, reference) =>
+    Cell(sheet, reference) =>
       if sheet == "" {
         (sheet_name, reference)
       } else {
         (sheet, reference)
       }
-    _ => return FormulaValue::Error(formula_error_value)
+    _ => return Error(formula_error_value)
   }
   let sheet = match workbook.sheet(target_sheet) {
     Some(value) => value
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   let formula = sheet.get_cell_formula(reference) catch {
-    _ => return FormulaValue::Error(formula_error_value)
+    _ => return Error(formula_error_value)
   }
   match formula {
-    None => FormulaValue::Empty
+    None => Empty
     Some(_) =>
       match values[0] {
-        FormulaValue::Error(err) => FormulaValue::Error(err)
-        FormulaValue::List(list) => FormulaValue::List(list)
-        _ => FormulaValue::List([values[0]])
+        Error(err) => Error(err)
+        List(list) => List(list)
+        _ => List([values[0]])
       }
   }
 }
@@ -173,7 +173,7 @@ fn munit_dimension(value : FormulaValue) -> Result[Int, FormulaValue] {
   match value_as_number(value) {
     Ok(num) =>
       if num < 0.0 {
-        Err(FormulaValue::Error(formula_error_value))
+        Err(Error(formula_error_value))
       } else {
         Ok(Double::to_int(trunc_double(num)))
       }
@@ -187,7 +187,7 @@ fn munit_range_values(dimension : Int) -> RangeValues {
   for row in 0..<dimension {
     for col in 0..<dimension {
       let value = if row == col { 1.0 } else { 0.0 }
-      out.push(FormulaValue::Number(value))
+      out.push(Number(value))
     }
   }
   { values: out, rows: dimension, cols: dimension }
@@ -201,11 +201,7 @@ fn munit_range_values_from_expr(
   ctx : CalcContext,
 ) -> RangeValues raise XlsxError {
   if args.length() != 1 {
-    return {
-      values: [FormulaValue::Error(formula_error_value)],
-      rows: 1,
-      cols: 1,
-    }
+    return { values: [Error(formula_error_value)], rows: 1, cols: 1 }
   }
   let dimension_value = eval_expr(workbook, sheet_name, args[0], ctx)
   match munit_dimension(dimension_value) {
@@ -222,11 +218,7 @@ fn transpose_range_values_from_expr(
   ctx : CalcContext,
 ) -> RangeValues raise XlsxError {
   if args.length() != 1 {
-    return {
-      values: [FormulaValue::Error(formula_error_value)],
-      rows: 1,
-      cols: 1,
-    }
+    return { values: [Error(formula_error_value)], rows: 1, cols: 1 }
   }
   let arg_expr = args[0]
   let arg_value = eval_expr(workbook, sheet_name, arg_expr, ctx)
@@ -242,10 +234,10 @@ fn number_matrix_from_range(
   require_square : Bool,
 ) -> Result[Array[Array[Double]], FormulaValue] {
   if range.rows <= 0 || range.cols <= 0 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   if require_square && range.rows != range.cols {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let out : Array[Array[Double]] = []
   for row in 0..<range.rows {
@@ -254,10 +246,9 @@ fn number_matrix_from_range(
     for col in 0..<range.cols {
       let value = range.values[offset + col]
       match value {
-        FormulaValue::Number(num) => row_values.push(num)
-        FormulaValue::Bool(flag) =>
-          row_values.push(if flag { 1.0 } else { 0.0 })
-        _ => return Err(FormulaValue::Error(formula_error_value))
+        Number(num) => row_values.push(num)
+        Bool(flag) => row_values.push(if flag { 1.0 } else { 0.0 })
+        _ => return Err(Error(formula_error_value))
       }
     }
     out.push(row_values)
@@ -359,7 +350,7 @@ fn matrix_values(matrix : Array[Array[Double]]) -> Array[FormulaValue] {
   let out : Array[FormulaValue] = []
   for row in 0..<matrix.length() {
     for col in 0..<matrix[row].length() {
-      out.push(FormulaValue::Number(matrix[row][col]))
+      out.push(Number(matrix[row][col]))
     }
   }
   out
@@ -375,7 +366,7 @@ fn matrix_multiply(
   let right_rows = right.length()
   let right_cols = right[0].length()
   if cols != right_rows {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let out : Array[Array[Double]] = []
   for row in 0..<rows {
@@ -468,7 +459,7 @@ fn prepare_trend_growth_mtx_x(
     for col in 0..<mtx_x[row].length() {
       let value = mtx_x[row][col]
       if value == 0.0 {
-        return Err(FormulaValue::Error(formula_error_num))
+        return Err(Error(formula_error_num))
       }
       while out.length() <= col {
         out.push([])
@@ -493,7 +484,7 @@ fn prepare_trend_growth_mtx_y(
     for col in 0..<mtx_y[row].length() {
       let value = mtx_y[row][col]
       if value == 0.0 {
-        return Err(FormulaValue::Error(formula_error_num))
+        return Err(Error(formula_error_num))
       }
       while out.length() <= col {
         out.push([])
@@ -513,7 +504,7 @@ fn prepare_trend_growth_mtx_y(
     for col in 0..<mtx_y[row].length() {
       let value = mtx_y[row][col]
       if value <= 0.0 {
-        return Err(FormulaValue::Error(formula_error_num))
+        return Err(Error(formula_error_num))
       }
       while log_out.length() <= col {
         log_out.push([])
@@ -559,16 +550,16 @@ fn prepare_trend_growth(
       m = 1
       n = cnt_y
     } else if n_cy != 1 && n_ry != 1 {
-      return Err(FormulaValue::Error(formula_error_ref))
+      return Err(Error(formula_error_ref))
     } else if n_cy == 1 {
       if n_rx != n_ry {
-        return Err(FormulaValue::Error(formula_error_ref))
+        return Err(Error(formula_error_ref))
       }
       trend_type = 2
       m = n_cx
       n = n_ry
     } else if n_cx != n_cy {
-      return Err(FormulaValue::Error(formula_error_ref))
+      return Err(Error(formula_error_ref))
     } else {
       trend_type = 3
       m = n_rx
@@ -589,15 +580,7 @@ fn prepare_trend_growth(
     m = 1
     n = cnt_y
   }
-  Ok(TrendGrowthMatrixInfo::{
-    trend_type,
-    n_cx,
-    n_rx,
-    m,
-    n,
-    mtx_x: new_x,
-    mtx_y: new_y,
-  })
+  Ok({ trend_type, n_cx, n_rx, m, n, mtx_x: new_x, mtx_y: new_y })
 }
 
 ///|
@@ -1195,7 +1178,7 @@ fn unique_row_key(
   for col in 0..<range.cols {
     let value = range.values[start + col]
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+      Error(err) => return Err(Error(err))
       _ => sb.write_view(formula_value_string(value))
     }
   }
@@ -1251,7 +1234,7 @@ fn unique_range_values(
 ///|
 fn sequence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 1 || values.length() > 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rows = match value_as_int(values[0]) {
     Ok(num) => num
@@ -1266,7 +1249,7 @@ fn sequence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     1
   }
   if rows <= 0 || cols <= 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let start = if values.length() >= 3 {
     match value_as_number(values[2]) {
@@ -1289,16 +1272,16 @@ fn sequence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     for col in 0..<cols {
       let idx = row * cols + col
       let value = start + step * Double::from_int(idx)
-      out.push(FormulaValue::Number(value))
+      out.push(Number(value))
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
 fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() > 5 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rows = if values.length() >= 1 {
     match value_as_int(values[0]) {
@@ -1317,7 +1300,7 @@ fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     1
   }
   if rows <= 0 || cols <= 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let min = if values.length() >= 3 {
     match value_as_number(values[2]) {
@@ -1344,28 +1327,28 @@ fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     false
   }
   if min > max {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let out : Array[FormulaValue] = []
   if whole_number {
     let min_int = Double::to_int(trunc_double(min))
     let max_int = Double::to_int(trunc_double(max))
     if min_int > max_int {
-      return FormulaValue::Error(formula_error_value)
+      return Error(formula_error_value)
     }
     let range = max_int - min_int + 1
     for _i in 0..<(rows * cols) {
       let rand_value = if range > 0 { rand_state.int(limit=range) } else { 0 }
-      out.push(FormulaValue::Number(Double::from_int(rand_value + min_int)))
+      out.push(Number(Double::from_int(rand_value + min_int)))
     }
   } else {
     let span = max - min
     for _i in 0..<(rows * cols) {
       let value = min + rand_state.double() * span
-      out.push(FormulaValue::Number(value))
+      out.push(Number(value))
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -1377,13 +1360,13 @@ fn slice_range_values(
   col_count : Int,
 ) -> Result[RangeValues, FormulaValue] {
   if row_count <= 0 || col_count <= 0 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   if row_start < 0 || col_start < 0 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   if row_start + row_count > range.rows || col_start + col_count > range.cols {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let out : Array[FormulaValue] = []
   for row in 0..<row_count {
@@ -1404,7 +1387,7 @@ fn take_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 2 || values.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rows_value = match value_as_int(values[1]) {
     Ok(num) => num
@@ -1436,17 +1419,17 @@ fn take_values(
     range.cols
   }
   if rows_count == 0 || cols_count == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let row_count = Double::abs(Double::from_int(rows_count)).to_int()
   let col_count = Double::abs(Double::from_int(cols_count)).to_int()
   if row_count > range.rows || col_count > range.cols {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let row_start = if rows_count > 0 { 0 } else { range.rows - row_count }
   let col_start = if cols_count > 0 { 0 } else { range.cols - col_count }
   match slice_range_values(range, row_start, row_count, col_start, col_count) {
-    Ok(result) => FormulaValue::List(result.values)
+    Ok(result) => List(result.values)
     Err(err) => err
   }
 }
@@ -1460,7 +1443,7 @@ fn drop_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 2 || values.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let rows_value = match value_as_int(values[1]) {
     Ok(num) => num
@@ -1484,14 +1467,14 @@ fn drop_values(
   let drop_rows = Double::abs(Double::from_int(rows_value)).to_int()
   let drop_cols = Double::abs(Double::from_int(cols_value)).to_int()
   if drop_rows > range.rows || drop_cols > range.cols {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let row_start = if rows_value >= 0 { drop_rows } else { 0 }
   let col_start = if cols_value >= 0 { drop_cols } else { 0 }
   let row_count = range.rows - drop_rows
   let col_count = range.cols - drop_cols
   match slice_range_values(range, row_start, row_count, col_start, col_count) {
-    Ok(result) => FormulaValue::List(result.values)
+    Ok(result) => List(result.values)
     Err(err) => err
   }
 }
@@ -1505,18 +1488,13 @@ fn flatten_range_values(
   let out : Array[FormulaValue] = []
   let keep_value = fn(value : FormulaValue) -> Result[Bool, FormulaValue] {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) =>
+      Error(err) =>
         if ignore == 2 || ignore == 3 {
           Ok(false)
         } else {
-          Err(FormulaValue::Error(err))
+          Err(Error(err))
         }
-      FormulaValue::Empty =>
-        if ignore == 1 || ignore == 3 {
-          Ok(false)
-        } else {
-          Ok(true)
-        }
+      Empty => if ignore == 1 || ignore == 3 { Ok(false) } else { Ok(true) }
       _ => Ok(true)
     }
   }
@@ -1545,7 +1523,7 @@ fn flatten_range_values(
     }
   }
   if out.length() == 0 {
-    Err(FormulaValue::Error(formula_error_calc))
+    Err(Error(formula_error_calc))
   } else {
     Ok(out)
   }
@@ -1563,16 +1541,16 @@ fn choose_indices(
       Err(err) => return Err(err)
     }
     if idx == 0 {
-      return Err(FormulaValue::Error(formula_error_value))
+      return Err(Error(formula_error_value))
     }
     let resolved = if idx > 0 { idx - 1 } else { total + idx }
     if resolved < 0 || resolved >= total {
-      return Err(FormulaValue::Error(formula_error_value))
+      return Err(Error(formula_error_value))
     }
     out.push(resolved)
   }
   if out.length() == 0 {
-    Err(FormulaValue::Error(formula_error_value))
+    Err(Error(formula_error_value))
   } else {
     Ok(out)
   }
@@ -1588,7 +1566,7 @@ fn stack_from_values(
   horizontal : Bool,
 ) -> FormulaValue raise XlsxError {
   if values.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let ranges : Array[RangeValues] = []
   let mut max_rows = 0
@@ -1619,12 +1597,9 @@ fn stack_from_values(
     }
   }
   if total_rows == 0 || total_cols == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
-  let out : Array[FormulaValue] = Array::make(
-    total_rows * total_cols,
-    FormulaValue::Empty,
-  )
+  let out : Array[FormulaValue] = Array::make(total_rows * total_cols, Empty)
   if horizontal {
     let mut col_offset = 0
     for range in ranges {
@@ -1633,7 +1608,7 @@ fn stack_from_values(
           let value = if row < range.rows {
             range.values[row * range.cols + col]
           } else {
-            FormulaValue::Error(formula_error_na)
+            Error(formula_error_na)
           }
           let idx = row * total_cols + col_offset + col
           out[idx] = value
@@ -1650,7 +1625,7 @@ fn stack_from_values(
           let value = if col < range.cols {
             range.values[row * range.cols + col]
           } else {
-            FormulaValue::Error(formula_error_na)
+            Error(formula_error_na)
           }
           let idx = out_row * total_cols + col
           out[idx] = value
@@ -1659,7 +1634,7 @@ fn stack_from_values(
       row_offset = row_offset + range.rows
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -1671,7 +1646,7 @@ fn choosecols_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let range = range_from_expr_or_value(
     workbook,
@@ -1691,7 +1666,7 @@ fn choosecols_values(
       out.push(range.values[offset + col])
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -1703,7 +1678,7 @@ fn chooserows_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let range = range_from_expr_or_value(
     workbook,
@@ -1723,7 +1698,7 @@ fn chooserows_values(
       out.push(range.values[offset + col])
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -1735,7 +1710,7 @@ fn expand_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 2 || values.length() > 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let range = range_from_expr_or_value(
     workbook,
@@ -1757,16 +1732,16 @@ fn expand_values(
     range.cols
   }
   if rows < range.rows || cols < range.cols || rows <= 0 || cols <= 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let pad_value = if values.length() == 4 {
     match normalize_scalar(values[3]) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      Error(err) => return Error(err)
+      List(_) => return Error(formula_error_value)
       value => value
     }
   } else {
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   }
   let out : Array[FormulaValue] = Array::make(rows * cols, pad_value)
   for row in 0..<range.rows {
@@ -1776,7 +1751,7 @@ fn expand_values(
       out[out_offset + col] = range.values[in_offset + col]
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -1789,7 +1764,7 @@ fn wrap_values(
   by_rows : Bool,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 2 || values.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let range = range_from_expr_or_value(
     workbook,
@@ -1800,23 +1775,23 @@ fn wrap_values(
   )
   let vector = match range_vector(range) {
     Some(list) => list
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   let count = match value_as_int(values[1]) {
     Ok(num) => num
     Err(err) => return err
   }
   if count <= 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let pad_value = if values.length() == 3 {
     match normalize_scalar(values[2]) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      Error(err) => return Error(err)
+      List(_) => return Error(formula_error_value)
       value => value
     }
   } else {
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   }
   let total = vector.length()
   let rows = if by_rows {
@@ -1837,7 +1812,7 @@ fn wrap_values(
     let col = if by_rows { i % count } else { i / count }
     out[row * cols + col] = vector[i]
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -1850,7 +1825,7 @@ fn tocol_torow_values(
   scan_by_column_default : Bool,
 ) -> FormulaValue raise XlsxError {
   if values.length() < 1 || values.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let ignore = if values.length() >= 2 {
     match value_as_int(values[1]) {
@@ -1861,7 +1836,7 @@ fn tocol_torow_values(
     0
   }
   if ignore < 0 || ignore > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let scan_by_column = if values.length() == 3 {
     match value_as_bool(values[2]) {
@@ -1879,7 +1854,7 @@ fn tocol_torow_values(
     ctx,
   )
   match flatten_range_values(range, scan_by_column, ignore) {
-    Ok(list) => FormulaValue::List(list)
+    Ok(list) => List(list)
     Err(err) => err
   }
 }
@@ -1891,20 +1866,20 @@ fn sort_range_values(
   sort_order : Int,
 ) -> Result[RangeValues, FormulaValue] {
   if sort_index < 1 || sort_index > range.cols {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   if sort_order != 1 && sort_order != -1 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let entries : Array[(Int, FormulaValue)] = []
   let key_col = sort_index - 1
   for row in 0..<range.rows {
     let key = match range.get(row, key_col) {
       Some(value) => value
-      None => return Err(FormulaValue::Error(formula_error_value))
+      None => return Err(Error(formula_error_value))
     }
     match key {
-      FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+      Error(err) => return Err(Error(err))
       _ => entries.push((row, key))
     }
   }
@@ -1939,14 +1914,14 @@ fn sortby_vector(
 ) -> Result[Array[FormulaValue], FormulaValue] {
   let vector = match range_vector(range) {
     Some(list) => list
-    None => return Err(FormulaValue::Error(formula_error_value))
+    None => return Err(Error(formula_error_value))
   }
   if vector.length() != expected_len {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   for value in vector {
     match value {
-      FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+      Error(err) => return Err(Error(err))
       _ => ()
     }
   }
@@ -1962,14 +1937,11 @@ fn sortby_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if args.length() < 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   match values[0] {
-    FormulaValue::Error(err) => return FormulaValue::Error(err)
-    FormulaValue::List(list) =>
-      if list.length() == 0 {
-        return FormulaValue::Error(formula_error_value)
-      }
+    Error(err) => return Error(err)
+    List(list) => if list.length() == 0 { return Error(formula_error_value) }
     _ => ()
   }
   let range = range_from_expr_or_value(
@@ -1985,11 +1957,8 @@ fn sortby_values(
   let mut idx = 1
   while idx < args.length() {
     match values[idx] {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::List(list) =>
-        if list.length() == 0 {
-          return FormulaValue::Error(formula_error_value)
-        }
+      Error(err) => return Error(err)
+      List(list) => if list.length() == 0 { return Error(formula_error_value) }
       _ => ()
     }
     let key_range = range_from_expr_or_value(
@@ -2012,13 +1981,13 @@ fn sortby_values(
       1
     }
     if sort_order != 1 && sort_order != -1 {
-      return FormulaValue::Error(formula_error_value)
+      return Error(formula_error_value)
     }
     key_sets.push((key_vector, sort_order))
     idx = idx + 2
   }
   if key_sets.length() == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let entries : Array[Int] = []
   for i in 0..<expected_len {
@@ -2053,14 +2022,14 @@ fn sortby_values(
         out.push(range.values[offset + col])
       }
     }
-    FormulaValue::List(out)
+    List(out)
   } else {
     for col in entries {
       for row in 0..<range.rows {
         out.push(range.values[row * range.cols + col])
       }
     }
-    FormulaValue::List(out)
+    List(out)
   }
 }
 
@@ -2073,7 +2042,7 @@ fn sort_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if args.length() < 1 || args.length() > 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let sort_index = if values.length() >= 2 {
     match value_as_int(values[1]) {
@@ -2100,7 +2069,7 @@ fn sort_values(
     false
   }
   if sort_index < 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let range = range_from_expr_or_value(
     workbook,
@@ -2113,7 +2082,7 @@ fn sort_values(
   match sort_range_values(base, sort_index, sort_order) {
     Ok(sorted) => {
       let result = if by_col { transpose_range_values(sorted) } else { sorted }
-      FormulaValue::List(result.values)
+      List(result.values)
     }
     Err(err) => err
   }
@@ -2127,14 +2096,14 @@ fn filter_range_values(
 ) -> FormulaValue {
   let values = match range_vector(range) {
     Some(list) => list
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   let include_values = match range_vector(mask) {
     Some(list) => list
-    None => return FormulaValue::Error(formula_error_value)
+    None => return Error(formula_error_value)
   }
   if values.length() != include_values.length() {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let out : Array[FormulaValue] = []
   for i in 0..<values.length() {
@@ -2149,10 +2118,10 @@ fn filter_range_values(
   if out.length() == 0 {
     match if_empty {
       Some(value) => value
-      None => FormulaValue::Error(formula_error_calc)
+      None => Error(formula_error_calc)
     }
   } else {
-    FormulaValue::List(out)
+    List(out)
   }
 }
 
@@ -2165,7 +2134,7 @@ fn filter_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if args.length() < 2 || args.length() > 3 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let range = range_from_expr_or_value(
     workbook,
@@ -2194,8 +2163,8 @@ fn sorted_numbers_from_range(
     for row in 0..<range.rows {
       let value = range.values[row * range.cols + col]
       match normalize_scalar(value) {
-        FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
-        FormulaValue::Number(num) => numbers.push(num)
+        Error(err) => return Err(Error(err))
+        Number(num) => numbers.push(num)
         _ => ()
       }
     }
@@ -2213,7 +2182,7 @@ fn frequency_values(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   if args.length() != 2 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let data_range = range_from_expr_or_value(
     workbook,
@@ -2245,15 +2214,15 @@ fn frequency_values(
       count = count + 1
       idx = idx + 1
     }
-    out.push(FormulaValue::Number(Double::from_int(count)))
+    out.push(Number(Double::from_int(count)))
   }
-  out.push(FormulaValue::Number(Double::from_int(data.length() - idx)))
+  out.push(Number(Double::from_int(data.length() - idx)))
   if out.length() > 2 {
     let temp = out[1]
     out[1] = out[2]
     out[2] = temp
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -2266,9 +2235,9 @@ fn range_from_expr_or_value(
 ) -> RangeValues raise XlsxError {
   let range_from_value = fn(value : FormulaValue) -> RangeValues {
     match value {
-      FormulaValue::List(list) =>
+      List(list) =>
         if list.length() == 0 {
-          { rows: 1, cols: 1, values: [FormulaValue::Empty] }
+          { rows: 1, cols: 1, values: [Empty] }
         } else {
           { rows: 1, cols: list.length(), values: list }
         }
@@ -2276,16 +2245,16 @@ fn range_from_expr_or_value(
     }
   }
   match expr {
-    Expr::Range(_, _, _) | Expr::Cell(_, _) =>
+    Range(_, _, _) | Cell(_, _) =>
       eval_range_expr(workbook, sheet_name, expr, ctx)
-    Expr::FuncCall(name, args) =>
+    FuncCall(name, args) =>
       if is_munit_func(name) {
         munit_range_values_from_expr(workbook, sheet_name, args, ctx)
       } else if name == "TRANSPOSE" {
         transpose_range_values_from_expr(workbook, sheet_name, args, ctx)
       } else {
         match value {
-          FormulaValue::List(list) =>
+          List(list) =>
             match array_shape_from_expr(workbook, sheet_name, expr, ctx) {
               Some((rows, cols)) =>
                 if rows > 0 && cols > 0 && rows * cols == list.length() {
@@ -2305,27 +2274,26 @@ fn range_from_expr_or_value(
 ///|
 fn formula_value_from_cell_value(value : CellValue) -> FormulaValue {
   match value {
-    CellValue::Numeric(num) => FormulaValue::Number(num)
-    CellValue::String(text) => FormulaValue::String(text)
-    CellValue::Bool(value) => FormulaValue::Bool(value)
-    CellValue::Error(text) => FormulaValue::Error(text)
+    Numeric(num) => Number(num)
+    String(text) => String(text)
+    Bool(value) => Bool(value)
+    Error(text) => Error(text)
   }
 }
 
 ///|
 fn formula_value_to_cell(value : FormulaValue) -> (CellValueType, String) {
   match value {
-    FormulaValue::Number(num) => (CellValueType::Number, format_number(num))
-    FormulaValue::String(text) => (CellValueType::String, text)
-    FormulaValue::Bool(value) =>
-      (CellValueType::Bool, if value { "1" } else { "0" })
-    FormulaValue::Error(text) => (CellValueType::Error, text)
-    FormulaValue::Empty => (CellValueType::String, "")
-    FormulaValue::List(list) =>
+    Number(num) => (Number, format_number(num))
+    String(text) => (String, text)
+    Bool(value) => (Bool, if value { "1" } else { "0" })
+    Error(text) => (Error, text)
+    Empty => (String, "")
+    List(list) =>
       if list.length() > 0 {
         formula_value_to_cell(list[0])
       } else {
-        (CellValueType::String, "")
+        (String, "")
       }
   }
 }
@@ -2471,9 +2439,9 @@ fn array_shape_from_expr(
   ctx : CalcContext,
 ) -> (Int, Int)? raise XlsxError {
   match expr {
-    Expr::Number(_) | Expr::String(_) | Expr::Bool(_) => Some((1, 1))
-    Expr::Cell(_, _) => Some((1, 1))
-    Expr::Range(sheet, start_ref, end_ref) => {
+    Number(_) | String(_) | Bool(_) => Some((1, 1))
+    Cell(_, _) => Some((1, 1))
+    Range(sheet, start_ref, end_ref) => {
       let target_sheet = if sheet == "" { sheet_name } else { sheet }
       let (row1, col1) = cell_ref_to_rc(start_ref)
       let (row2, col2) = cell_ref_to_rc(end_ref)
@@ -2488,15 +2456,14 @@ fn array_shape_from_expr(
       let cols = max_col - min_col + 1
       Some((rows, cols))
     }
-    Expr::Unary(_, inner) =>
-      array_shape_from_expr(workbook, sheet_name, inner, ctx)
-    Expr::Binary(_, left, right) =>
+    Unary(_, inner) => array_shape_from_expr(workbook, sheet_name, inner, ctx)
+    Binary(_, left, right) =>
       array_shape_binary(
         array_shape_from_expr(workbook, sheet_name, left, ctx),
         array_shape_from_expr(workbook, sheet_name, right, ctx),
       )
-    Expr::List(items) => Some((1, items.length()))
-    Expr::FuncCall(name, args) =>
+    List(items) => Some((1, items.length()))
+    FuncCall(name, args) =>
       if args.length() == 0 {
         match defined_name_expr(workbook, sheet_name, name) {
           Some(value) => array_shape_from_expr(workbook, sheet_name, value, ctx)
@@ -2707,8 +2674,8 @@ fn array_shape_from_expr(
           "MODE.MULT" =>
             if values.length() >= 1 {
               match mode_mult_values(values) {
-                FormulaValue::List(list) => Some((list.length(), 1))
-                FormulaValue::Error(_) => None
+                List(list) => Some((list.length(), 1))
+                Error(_) => None
                 _ => Some((1, 1))
               }
             } else {
@@ -2717,7 +2684,7 @@ fn array_shape_from_expr(
           "ANCHORARRAY" | "_XLFN.ANCHORARRAY" =>
             if args.length() == 1 {
               match args[0] {
-                Expr::Cell(sheet, reference) => {
+                Cell(sheet, reference) => {
                   let target_sheet = if sheet == "" {
                     sheet_name
                   } else {
@@ -3016,13 +2983,13 @@ fn array_shape_from_expr(
                 return None
               }
               match filter_range_values(range, mask, if_empty) {
-                FormulaValue::List(list) =>
+                List(list) =>
                   if is_row {
                     Some((1, list.length()))
                   } else {
                     Some((list.length(), 1))
                   }
-                FormulaValue::Error(_) => None
+                Error(_) => None
                 _ => Some((1, 1))
               }
             } else {
@@ -3351,17 +3318,17 @@ fn eval_numeric_binary(
   match (value_as_number(left), value_as_number(right)) {
     (Ok(lhs), Ok(rhs)) =>
       match op {
-        BinaryOp::Add => FormulaValue::Number(lhs + rhs)
-        BinaryOp::Sub => FormulaValue::Number(lhs - rhs)
-        BinaryOp::Mul => FormulaValue::Number(lhs * rhs)
-        BinaryOp::Div =>
+        Add => Number(lhs + rhs)
+        Sub => Number(lhs - rhs)
+        Mul => Number(lhs * rhs)
+        Div =>
           if rhs == 0.0 {
-            FormulaValue::Error(formula_error_div)
+            Error(formula_error_div)
           } else {
-            FormulaValue::Number(lhs / rhs)
+            Number(lhs / rhs)
           }
-        BinaryOp::Pow => FormulaValue::Number(@math.pow(lhs, rhs))
-        _ => FormulaValue::Error(formula_error_value)
+        Pow => Number(@math.pow(lhs, rhs))
+        _ => Error(formula_error_value)
       }
     (Err(err), _) => err
     (_, Err(err)) => err
@@ -3375,39 +3342,39 @@ fn eval_list_binary(
   right : FormulaValue,
 ) -> FormulaValue {
   let left_list = match left {
-    FormulaValue::List(list) => Some(list)
+    List(list) => Some(list)
     _ => None
   }
   let right_list = match right {
-    FormulaValue::List(list) => Some(list)
+    List(list) => Some(list)
     _ => None
   }
   match (left_list, right_list) {
     (Some(lhs), Some(rhs)) =>
       if lhs.length() != rhs.length() {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       } else {
         let out : Array[FormulaValue] = []
         for i in 0..<lhs.length() {
           out.push(eval_numeric_binary(op, lhs[i], rhs[i]))
         }
-        FormulaValue::List(out)
+        List(out)
       }
     (Some(lhs), None) => {
       let out : Array[FormulaValue] = []
       for item in lhs {
         out.push(eval_numeric_binary(op, item, right))
       }
-      FormulaValue::List(out)
+      List(out)
     }
     (None, Some(rhs)) => {
       let out : Array[FormulaValue] = []
       for item in rhs {
         out.push(eval_numeric_binary(op, left, item))
       }
-      FormulaValue::List(out)
+      List(out)
     }
-    _ => FormulaValue::Error(formula_error_value)
+    _ => Error(formula_error_value)
   }
 }
 
@@ -3455,12 +3422,12 @@ fn format_number(value : Double) -> String {
 ///|
 fn formula_value_string(value : FormulaValue) -> String {
   match value {
-    FormulaValue::String(text) => text
-    FormulaValue::Number(num) => format_number(num)
-    FormulaValue::Bool(value) => if value { "TRUE" } else { "FALSE" }
-    FormulaValue::Error(text) => text
-    FormulaValue::Empty => ""
-    FormulaValue::List(list) =>
+    String(text) => text
+    Number(num) => format_number(num)
+    Bool(value) => if value { "TRUE" } else { "FALSE" }
+    Error(text) => text
+    Empty => ""
+    List(list) =>
       if list.length() > 0 {
         formula_value_string(list[0])
       } else {
@@ -3472,7 +3439,7 @@ fn formula_value_string(value : FormulaValue) -> String {
 ///|
 fn value_as_string(value : FormulaValue) -> Result[String, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
+    Error(err) => Err(Error(err))
     _ => Ok(formula_value_string(value))
   }
 }
@@ -3489,19 +3456,15 @@ fn code_value(name : String, value : FormulaValue) -> FormulaValue {
     Err(err) => return err
   }
   if text.length() == 0 {
-    return if name == "CODE" {
-      FormulaValue::Number(0.0)
-    } else {
-      FormulaValue::Error(formula_error_value)
-    }
+    return if name == "CODE" { Number(0.0) } else { Error(formula_error_value) }
   }
   match text.get_char(0) {
-    Some(ch) => FormulaValue::Number(Double::from_int(ch.to_int()))
+    Some(ch) => Number(Double::from_int(ch.to_int()))
     None =>
       if name == "CODE" {
-        FormulaValue::Number(0.0)
+        Number(0.0)
       } else {
-        FormulaValue::Error(formula_error_value)
+        Error(formula_error_value)
       }
   }
 }
@@ -3518,7 +3481,7 @@ fn clean_text_value(value : FormulaValue) -> FormulaValue {
       sb.write_char(ch)
     }
   }
-  FormulaValue::String(sb.to_string())
+  String(sb.to_string())
 }
 
 ///|
@@ -3553,7 +3516,7 @@ fn encode_url_value(value : FormulaValue) -> FormulaValue {
   for byte in bytes {
     encode_url_byte(sb, byte)
   }
-  FormulaValue::String(sb.to_string())
+  String(sb.to_string())
 }
 
 ///|
@@ -3699,7 +3662,7 @@ fn bahttext_split_block(val : Double, size : Double) -> (Double, Int) {
 ///|
 fn bahttext_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let number = match value_as_number(values[0]) {
     Ok(num) => num
@@ -3740,7 +3703,7 @@ fn bahttext_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if minus {
     text = thMinus + text
   }
-  FormulaValue::String(text)
+  String(text)
 }
 
 ///|
@@ -4217,11 +4180,11 @@ fn concat_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let sb = StringBuilder::new()
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
+      Error(err) => return Error(err)
       _ => sb.write_view(formula_value_string(value))
     }
   }
-  FormulaValue::String(sb.to_string())
+  String(sb.to_string())
 }
 
 ///|
@@ -4266,7 +4229,7 @@ fn textjoin_collect_value(
   out : Array[String],
 ) -> Result[Unit, FormulaValue] {
   match value {
-    FormulaValue::List(list) => {
+    List(list) => {
       for item in list {
         match textjoin_collect_value(item, ignore_empty, out) {
           Ok(_) => ()
@@ -4277,26 +4240,26 @@ fn textjoin_collect_value(
     }
     _ =>
       match normalize_scalar(value) {
-        FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-        FormulaValue::Empty =>
+        Error(err) => Err(Error(err))
+        Empty =>
           if !ignore_empty {
             out.push("")
             Ok(())
           } else {
             Ok(())
           }
-        FormulaValue::String(text) =>
+        String(text) =>
           if text != "" || !ignore_empty {
             out.push(text)
             Ok(())
           } else {
             Ok(())
           }
-        FormulaValue::Number(_) | FormulaValue::Bool(_) => {
+        Number(_) | Bool(_) => {
           out.push(formula_value_string(value))
           Ok(())
         }
-        FormulaValue::List(_) => Ok(())
+        List(_) => Ok(())
       }
   }
 }
@@ -4304,7 +4267,7 @@ fn textjoin_collect_value(
 ///|
 fn textsplit_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() < 2 || values.length() > 6 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let text = match value_as_string(values[0]) {
     Ok(value) => value
@@ -4315,7 +4278,7 @@ fn textsplit_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if col_delimiter == "" {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let row_delimiter = if values.length() >= 3 {
     match value_as_string(values[2]) {
@@ -4342,17 +4305,17 @@ fn textsplit_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     0
   }
   if match_mode != 0 && match_mode != 1 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let ignore_case = match_mode == 1
   let pad_value = if values.length() == 6 {
     match normalize_scalar(values[5]) {
-      FormulaValue::Error(err) => return FormulaValue::Error(err)
-      FormulaValue::List(_) => return FormulaValue::Error(formula_error_value)
+      Error(err) => return Error(err)
+      List(_) => return Error(formula_error_value)
       value => value
     }
   } else {
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   }
   let row_texts = if row_delimiter == "" {
     [text]
@@ -4374,13 +4337,13 @@ fn textsplit_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for row in rows {
     for col in 0..<max_cols {
       if col < row.length() {
-        out.push(FormulaValue::String(row[col]))
+        out.push(String(row[col]))
       } else {
         out.push(pad_value)
       }
     }
   }
-  FormulaValue::List(out)
+  List(out)
 }
 
 ///|
@@ -4452,12 +4415,12 @@ fn compare_strings(left : String, right : String) -> Int {
 ///|
 fn value_rank(value : FormulaValue) -> Int {
   match value {
-    FormulaValue::Number(_) => 0
-    FormulaValue::Empty => 0
-    FormulaValue::String(_) => 1
-    FormulaValue::Bool(_) => 2
-    FormulaValue::Error(_) => 3
-    FormulaValue::List(_) => 4
+    Number(_) => 0
+    Empty => 0
+    String(_) => 1
+    Bool(_) => 2
+    Error(_) => 3
+    List(_) => 4
   }
 }
 
@@ -4467,8 +4430,8 @@ fn compare_values(
   rhs : FormulaValue,
 ) -> Result[Int, FormulaValue] {
   match (lhs, rhs) {
-    (FormulaValue::Error(err), _) => Err(FormulaValue::Error(err))
-    (_, FormulaValue::Error(err)) => Err(FormulaValue::Error(err))
+    (Error(err), _) => Err(Error(err))
+    (_, Error(err)) => Err(Error(err))
     _ => {
       let left = normalize_scalar(lhs)
       let right = normalize_scalar(rhs)
@@ -4478,11 +4441,10 @@ fn compare_values(
         return Ok(if lrank < rrank { -1 } else { 1 })
       }
       match (left, right) {
-        (FormulaValue::Number(a), FormulaValue::Number(b)) =>
+        (Number(a), Number(b)) =>
           Ok(if a < b { -1 } else if a > b { 1 } else { 0 })
-        (FormulaValue::String(a), FormulaValue::String(b)) =>
-          Ok(compare_strings(a, b))
-        (FormulaValue::Bool(a), FormulaValue::Bool(b)) =>
+        (String(a), String(b)) => Ok(compare_strings(a, b))
+        (Bool(a), Bool(b)) =>
           Ok(if a == b { 0 } else if !a && b { -1 } else { 1 })
         _ => Ok(0)
       }
@@ -4496,8 +4458,8 @@ fn compare_lookup_values(
   rhs : FormulaValue,
 ) -> Result[Int?, FormulaValue] {
   match (lhs, rhs) {
-    (FormulaValue::Error(err), _) => Err(FormulaValue::Error(err))
-    (_, FormulaValue::Error(err)) => Err(FormulaValue::Error(err))
+    (Error(err), _) => Err(Error(err))
+    (_, Error(err)) => Err(Error(err))
     _ => {
       let left = normalize_scalar(lhs)
       let right = normalize_scalar(rhs)
@@ -4507,11 +4469,10 @@ fn compare_lookup_values(
         return Ok(None)
       }
       match (left, right) {
-        (FormulaValue::Number(a), FormulaValue::Number(b)) =>
+        (Number(a), Number(b)) =>
           Ok(Some(if a < b { -1 } else if a > b { 1 } else { 0 }))
-        (FormulaValue::String(a), FormulaValue::String(b)) =>
-          Ok(Some(compare_strings(a, b)))
-        (FormulaValue::Bool(a), FormulaValue::Bool(b)) =>
+        (String(a), String(b)) => Ok(Some(compare_strings(a, b)))
+        (Bool(a), Bool(b)) =>
           Ok(Some(if a == b { 0 } else if !a && b { -1 } else { 1 }))
         _ => Ok(None)
       }
@@ -4527,24 +4488,24 @@ fn match_range_value(
 ) -> FormulaValue {
   let values = match range_vector(range) {
     Some(list) => list
-    None => return FormulaValue::Error(formula_error_na)
+    None => return Error(formula_error_na)
   }
   if match_type != 0 && match_type != 1 && match_type != -1 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   match lookup {
-    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    Error(err) => return Error(err)
     _ => ()
   }
   if match_type == 0 {
     for i in 0..<values.length() {
       match compare_values(values[i], lookup) {
-        Ok(0) => return FormulaValue::Number(Double::from_int(i + 1))
+        Ok(0) => return Number(Double::from_int(i + 1))
         Ok(_) => ()
         Err(err) => return err
       }
     }
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let mut best_idx : Int? = None
   for i in 0..<values.length() {
@@ -4561,25 +4522,25 @@ fn match_range_value(
     }
   }
   match best_idx {
-    Some(idx) => FormulaValue::Number(Double::from_int(idx + 1))
-    None => FormulaValue::Error(formula_error_na)
+    Some(idx) => Number(Double::from_int(idx + 1))
+    None => Error(formula_error_na)
   }
 }
 
 ///|
 fn lookup_range_flag(value : FormulaValue) -> Result[Bool, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Bool(flag) => Ok(flag)
-    FormulaValue::Number(num) => Ok(num != 0.0)
-    FormulaValue::Empty => Ok(false)
-    FormulaValue::String(text) => {
+    Bool(flag) => Ok(flag)
+    Number(num) => Ok(num != 0.0)
+    Empty => Ok(false)
+    String(text) => {
       let parsed = @strconv.parse_bool(text) catch {
-        _ => return Err(FormulaValue::Error(formula_error_value))
+        _ => return Err(Error(formula_error_value))
       }
       Ok(parsed)
     }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+    Error(err) => Err(Error(err))
+    List(_) => Err(Error(formula_error_value))
   }
 }
 
@@ -4591,14 +4552,14 @@ fn vlookup_value(
   range_lookup : Bool,
 ) -> FormulaValue {
   match lookup {
-    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    Error(err) => return Error(err)
     _ => ()
   }
   if col_index <= 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if col_index > table.cols {
-    return FormulaValue::Error(formula_error_ref)
+    return Error(formula_error_ref)
   }
   if range_lookup {
     let mut best_row : Int? = None
@@ -4611,7 +4572,7 @@ fn vlookup_value(
     }
     match best_row {
       Some(row) => table.values[row * table.cols + (col_index - 1)]
-      None => FormulaValue::Error(formula_error_na)
+      None => Error(formula_error_na)
     }
   } else {
     for row in 0..<table.rows {
@@ -4622,7 +4583,7 @@ fn vlookup_value(
         Err(err) => return err
       }
     }
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   }
 }
 
@@ -4634,21 +4595,18 @@ fn hlookup_value(
   range_lookup : Bool,
 ) -> FormulaValue {
   match lookup {
-    FormulaValue::Error(err) => return FormulaValue::Error(err)
+    Error(err) => return Error(err)
     _ => ()
   }
   match lookup {
-    FormulaValue::List(list) =>
-      if list.length() > 1 {
-        return FormulaValue::Error(formula_error_na)
-      }
+    List(list) => if list.length() > 1 { return Error(formula_error_na) }
     _ => ()
   }
   if row_index <= 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   if row_index > table.rows {
-    return FormulaValue::Error(formula_error_ref)
+    return Error(formula_error_ref)
   }
   if range_lookup {
     let mut best_col : Int? = None
@@ -4661,7 +4619,7 @@ fn hlookup_value(
     }
     match best_col {
       Some(col) => table.values[(row_index - 1) * table.cols + col]
-      None => FormulaValue::Error(formula_error_na)
+      None => Error(formula_error_na)
     }
   } else {
     for col in 0..<table.cols {
@@ -4672,7 +4630,7 @@ fn hlookup_value(
         Err(err) => return err
       }
     }
-    FormulaValue::Error(formula_error_na)
+    Error(formula_error_na)
   }
 }
 
@@ -4710,7 +4668,7 @@ fn xlookup_find_index(
   search_mode : Int,
 ) -> Result[Int?, FormulaValue] {
   match lookup {
-    FormulaValue::Error(err) => return Err(FormulaValue::Error(err))
+    Error(err) => return Err(Error(err))
     _ => ()
   }
   if values.length() == 0 {
@@ -4773,7 +4731,7 @@ fn xlookup_find_index(
     return Ok(None)
   }
   if match_mode != -1 && match_mode != 1 {
-    return Err(FormulaValue::Error(formula_error_value))
+    return Err(Error(formula_error_value))
   }
   let mut best_idx : Int? = None
   for i in 0..<values.length() {
@@ -4802,11 +4760,11 @@ fn xlookup_find_index(
 ///|
 fn normalize_scalar(value : FormulaValue) -> FormulaValue {
   match value {
-    FormulaValue::List(list) =>
+    List(list) =>
       if list.length() > 0 {
         normalize_scalar(list[0])
       } else {
-        FormulaValue::Empty
+        Empty
       }
     _ => value
   }
@@ -4815,33 +4773,33 @@ fn normalize_scalar(value : FormulaValue) -> FormulaValue {
 ///|
 fn value_as_number(value : FormulaValue) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => Ok(num)
-    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    FormulaValue::Empty => Ok(0.0)
-    FormulaValue::String(text) => {
+    Number(num) => Ok(num)
+    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    Empty => Ok(0.0)
+    String(text) => {
       let parsed = @strconv.parse_double(text) catch {
-        _ => return Err(FormulaValue::Error(formula_error_value))
+        _ => return Err(Error(formula_error_value))
       }
       Ok(parsed)
     }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+    Error(err) => Err(Error(err))
+    List(_) => Err(Error(formula_error_value))
   }
 }
 
 ///|
 fn value_as_number_text(value : FormulaValue) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => Ok(num)
-    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    FormulaValue::Empty => Ok(0.0)
-    FormulaValue::String(text) =>
+    Number(num) => Ok(num)
+    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    Empty => Ok(0.0)
+    String(text) =>
       match parse_value_number(text) {
         Some(num) => Ok(num)
-        None => Err(FormulaValue::Error(formula_error_value))
+        None => Err(Error(formula_error_value))
       }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+    Error(err) => Err(Error(err))
+    List(_) => Err(Error(formula_error_value))
   }
 }
 
@@ -5070,19 +5028,19 @@ fn split_complex_body(body : String) -> (String, String) {
 fn parse_complex_text(text : StringView) -> Result[Complex, FormulaValue] {
   let normalized = normalize_complex_text(text)
   if normalized == "" {
-    return Err(FormulaValue::Error(formula_error_num))
+    return Err(Error(formula_error_num))
   }
   if normalized.has_suffix("i") {
     let body = normalized.unsafe_substring(start=0, end=normalized.length() - 1)
     let (real_text, imag_text) = split_complex_body(body)
     match (parse_double_opt(real_text), parse_double_opt(imag_text)) {
       (Some(real), Some(imag)) => Ok(complex_new(real, imag))
-      _ => Err(FormulaValue::Error(formula_error_num))
+      _ => Err(Error(formula_error_num))
     }
   } else {
     match parse_double_opt(normalized) {
       Some(real) => Ok(complex_new(real, 0.0))
-      None => Err(FormulaValue::Error(formula_error_num))
+      None => Err(Error(formula_error_num))
     }
   }
 }
@@ -5270,26 +5228,26 @@ fn strip_hex_prefix(text : String) -> String {
 ///|
 fn value_as_bool(value : FormulaValue) -> Result[Bool, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Bool(flag) => Ok(flag)
-    FormulaValue::Number(num) => Ok(num == 1.0)
-    FormulaValue::Empty => Ok(false)
-    FormulaValue::String(text) => {
+    Bool(flag) => Ok(flag)
+    Number(num) => Ok(num == 1.0)
+    Empty => Ok(false)
+    String(text) => {
       let parsed = @strconv.parse_bool(text) catch {
-        _ => return Err(FormulaValue::Error(formula_error_value))
+        _ => return Err(Error(formula_error_value))
       }
       Ok(parsed)
     }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+    Error(err) => Err(Error(err))
+    List(_) => Err(Error(formula_error_value))
   }
 }
 
 ///|
 fn value_as_number_opt(value : FormulaValue) -> Double? {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) => Some(num)
-    FormulaValue::Bool(flag) => Some(if flag { 1.0 } else { 0.0 })
-    FormulaValue::String(text) => parse_double_opt(text)
+    Number(num) => Some(num)
+    Bool(flag) => Some(if flag { 1.0 } else { 0.0 })
+    String(text) => parse_double_opt(text)
     _ => None
   }
 }
@@ -5354,14 +5312,14 @@ fn build_criteria_pattern(text : StringView) -> String {
 fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
   let text = formula_value_string(value)
   if text == "" {
-    return { kind: FormulaCriteriaType::Unset, condition: FormulaValue::Empty }
+    return { kind: Unset, condition: Empty }
   }
   if is_digits(text) {
     return {
-      kind: FormulaCriteriaType::Eq,
+      kind: Eq,
       condition: match parse_criteria_number(text) {
-        Some(num) => FormulaValue::Number(num)
-        None => FormulaValue::String(text)
+        Some(num) => Number(num)
+        None => String(text)
       },
     }
   }
@@ -5393,15 +5351,15 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
       return {
         kind,
         condition: match parse_criteria_number(condition_text) {
-          Some(num) => FormulaValue::Number(num)
-          None => FormulaValue::String(condition_text)
+          Some(num) => Number(num)
+          None => String(condition_text)
         },
       }
   }
   let pattern = ".*" + build_criteria_pattern(condition_text) + ".*"
-  let mut condition : FormulaValue = FormulaValue::String(pattern)
+  let mut condition : FormulaValue = String(pattern)
   match parse_double_opt(pattern) {
-    Some(num) => condition = FormulaValue::Number(num)
+    Some(num) => condition = Number(num)
     None => ()
   }
   { kind, condition }
@@ -5410,7 +5368,7 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
 ///|
 fn formula_criteria_condition_is_string(criteria : FormulaCriteria) -> Bool {
   match criteria.condition {
-    FormulaValue::String(_) => true
+    String(_) => true
     _ => false
   }
 }
@@ -5420,27 +5378,24 @@ fn compare_criteria_values(left : FormulaValue, right : FormulaValue) -> Int? {
   let lhs = normalize_scalar(left)
   let rhs = normalize_scalar(right)
   match (lhs, rhs) {
-    (FormulaValue::Number(a), FormulaValue::Number(b)) =>
+    (Number(a), Number(b)) =>
       Some(if a < b { -1 } else if a > b { 1 } else { 0 })
-    (FormulaValue::Bool(a), FormulaValue::Bool(b)) => {
+    (Bool(a), Bool(b)) => {
       let la = if a { 1.0 } else { 0.0 }
       let rb = if b { 1.0 } else { 0.0 }
       Some(if la < rb { -1 } else if la > rb { 1 } else { 0 })
     }
-    (FormulaValue::Bool(a), FormulaValue::Number(b)) => {
+    (Bool(a), Number(b)) => {
       let la = if a { 1.0 } else { 0.0 }
       Some(if la < b { -1 } else if la > b { 1 } else { 0 })
     }
-    (FormulaValue::Number(a), FormulaValue::Bool(b)) => {
+    (Number(a), Bool(b)) => {
       let rb = if b { 1.0 } else { 0.0 }
       Some(if a < rb { -1 } else if a > rb { 1 } else { 0 })
     }
-    (FormulaValue::String(a), FormulaValue::String(b)) =>
-      Some(compare_strings(a, b))
-    (FormulaValue::String(_), FormulaValue::Number(_) | FormulaValue::Bool(_)) =>
-      Some(1)
-    (FormulaValue::Number(_) | FormulaValue::Bool(_), FormulaValue::String(_)) =>
-      Some(-1)
+    (String(a), String(b)) => Some(compare_strings(a, b))
+    (String(_), Number(_) | Bool(_)) => Some(1)
+    (Number(_) | Bool(_), String(_)) => Some(-1)
     _ => None
   }
 }
@@ -5492,27 +5447,24 @@ fn formula_criteria_eval(
   criteria : FormulaCriteria,
 ) -> Bool {
   match criteria.kind {
-    FormulaCriteriaType::Unset => false
-    FormulaCriteriaType::Eq =>
+    Unset => false
+    Eq =>
       formula_value_string(value) == formula_value_string(criteria.condition)
-    FormulaCriteriaType::Ne =>
+    Ne =>
       formula_value_string(value) != formula_value_string(criteria.condition)
-    FormulaCriteriaType::Regexp =>
+    Regexp =>
       regex_like_match(
         formula_value_string(value),
         formula_value_string(criteria.condition),
       )
-    FormulaCriteriaType::Lt
-    | FormulaCriteriaType::Le
-    | FormulaCriteriaType::Gt
-    | FormulaCriteriaType::Ge =>
+    Lt | Le | Gt | Ge =>
       match compare_criteria_values(value, criteria.condition) {
         Some(result) =>
           match criteria.kind {
-            FormulaCriteriaType::Lt => result < 0
-            FormulaCriteriaType::Le => result <= 0
-            FormulaCriteriaType::Gt => result > 0
-            FormulaCriteriaType::Ge => result >= 0
+            Lt => result < 0
+            Le => result <= 0
+            Gt => result > 0
+            Ge => result >= 0
             _ => false
           }
         None => false
@@ -5536,7 +5488,7 @@ fn calc_database_column_index(
 ) -> Int {
   let normalized = normalize_scalar(field)
   match normalized {
-    FormulaValue::Error(_) => return -1
+    Error(_) => return -1
     _ => ()
   }
   match value_as_number_opt(normalized) {
@@ -5575,7 +5527,7 @@ fn calc_database_new(
   let mut col = -1
   let normalized_field = normalize_scalar(field)
   let has_field = match normalized_field {
-    FormulaValue::Empty => false
+    Empty => false
     _ => true
   }
   if has_field {
@@ -5584,7 +5536,7 @@ fn calc_database_new(
       return None
     }
   }
-  Some(CalcDatabase::{ row: 0, col, index_map: {}, database, criteria })
+  Some({ row: 0, col, index_map: {}, database, criteria })
 }
 
 ///|
@@ -5592,12 +5544,12 @@ fn calc_database_value(db : CalcDatabase) -> FormulaValue {
   if db.col == -1 {
     match db.database.get(db.row, db.database.cols - 1) {
       Some(value) => value
-      None => FormulaValue::Empty
+      None => Empty
     }
   } else {
     match db.database.get(db.row, db.col) {
       Some(value) => value
-      None => FormulaValue::Empty
+      None => Empty
     }
   }
 }
@@ -5610,7 +5562,7 @@ fn calc_database_criteria_eval(db : CalcDatabase) -> Bool {
     for j in 0..<columns {
       let header = match db.criteria.get(0, j) {
         Some(value) => value
-        None => FormulaValue::Empty
+        None => Empty
       }
       let idx = calc_database_column_index(db.database, header)
       if idx < 0 {
@@ -5627,7 +5579,7 @@ fn calc_database_criteria_eval(db : CalcDatabase) -> Bool {
     while row_match && j < columns {
       let criteria_value = match db.criteria.get(i, j) {
         Some(value) => value
-        None => FormulaValue::Empty
+        None => Empty
       }
       if formula_value_string(criteria_value) != "" {
         let criteria = parse_formula_criteria(criteria_value)
@@ -5637,7 +5589,7 @@ fn calc_database_criteria_eval(db : CalcDatabase) -> Bool {
         }
         let cell = match db.database.get(db.row, col_index) {
           Some(value) => value
-          None => FormulaValue::Empty
+          None => Empty
         }
         if !formula_criteria_eval(cell, criteria) {
           row_match = false
@@ -5674,7 +5626,7 @@ fn database_collect_values(
 ) -> Result[Array[FormulaValue], FormulaValue] {
   let db = match calc_database_new(database, field, criteria) {
     Some(value) => value
-    None => return Err(FormulaValue::Error(formula_error_value))
+    None => return Err(Error(formula_error_value))
   }
   let values : Array[FormulaValue] = []
   while calc_database_next(db) {
@@ -5688,19 +5640,19 @@ fn database_count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let mut count = 0
   for value in values {
     match normalize_scalar(value) {
-      FormulaValue::Number(_) => count = count + 1
-      FormulaValue::String(text) =>
+      Number(_) => count = count + 1
+      String(text) =>
         match parse_double_opt(text) {
           Some(_) => count = count + 1
           None => ()
         }
-      FormulaValue::Bool(_) => ()
-      FormulaValue::Error(_) => ()
-      FormulaValue::Empty => ()
-      FormulaValue::List(_) => ()
+      Bool(_) => ()
+      Error(_) => ()
+      Empty => ()
+      List(_) => ()
     }
   }
-  FormulaValue::Number(Double::from_int(count))
+  Number(Double::from_int(count))
 }
 
 ///|
@@ -5722,12 +5674,12 @@ fn database_values(
     "DSTDEV" => stdev_values(false, values)
     "DSTDEVP" =>
       match variance_values(values, false, false) {
-        FormulaValue::Number(variance) => {
+        Number(variance) => {
           let result = @math.pow(variance, 0.5)
-          FormulaValue::Number(round_significant_digits(result, 15))
+          Number(round_significant_digits(result, 15))
         }
-        FormulaValue::Error(err) => FormulaValue::Error(err)
-        _ => FormulaValue::Error(formula_error_value)
+        Error(err) => Error(err)
+        _ => Error(formula_error_value)
       }
     "DVAR" => variance_values(values, true, false)
     "DVARP" => variance_values(values, false, false)
@@ -5909,7 +5861,7 @@ fn excel_serial_parts(
     Ok(num) =>
       match excel_serial_to_parts(num) {
         Some(parts) => Ok(parts)
-        None => Err(FormulaValue::Error(formula_error_num))
+        None => Err(Error(formula_error_num))
       }
     Err(err) => Err(err)
   }
@@ -5926,36 +5878,36 @@ fn date_parts_from_serial(serial : Double) -> (Int, Int, Int)? {
 ///|
 fn value_as_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
   match normalize_scalar(value) {
-    FormulaValue::Number(num) =>
+    Number(num) =>
       if num < 0.0 {
-        Err(FormulaValue::Error(formula_error_num))
+        Err(Error(formula_error_num))
       } else {
         Ok(num)
       }
-    FormulaValue::Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
-    FormulaValue::Empty => Ok(0.0)
-    FormulaValue::String(text) => {
+    Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
+    Empty => Ok(0.0)
+    String(text) => {
       let trimmed = text.trim().to_string()
       match parse_date_parts(trimmed) {
         Some((year, month, day)) =>
           match excel_serial_from_date(year, month, day) {
             Some(serial) => Ok(serial)
-            None => Err(FormulaValue::Error(formula_error_value))
+            None => Err(Error(formula_error_value))
           }
         None =>
           match parse_value_number(trimmed) {
             Some(num) =>
               if num < 0.0 {
-                Err(FormulaValue::Error(formula_error_num))
+                Err(Error(formula_error_num))
               } else {
                 Ok(num)
               }
-            None => Err(FormulaValue::Error(formula_error_value))
+            None => Err(Error(formula_error_value))
           }
       }
     }
-    FormulaValue::Error(err) => Err(FormulaValue::Error(err))
-    FormulaValue::List(_) => Err(FormulaValue::Error(formula_error_value))
+    Error(err) => Err(Error(err))
+    List(_) => Err(Error(formula_error_value))
   }
 }
 
@@ -5967,7 +5919,7 @@ fn date_parts_from_value(
     Ok(serial) =>
       match date_parts_from_serial(serial) {
         Some(parts) => Ok(parts)
-        None => Err(FormulaValue::Error(formula_error_num))
+        None => Err(Error(formula_error_num))
       }
     Err(err) => Err(err)
   }
@@ -6053,7 +6005,7 @@ fn weekend_mask_from_value(
       15 => [3]
       16 => [4]
       17 => [5]
-      _ => return Err(FormulaValue::Error(formula_error_value))
+      _ => return Err(Error(formula_error_value))
     }
     for idx in indices {
       weekend_mask[idx] = 1
@@ -6061,7 +6013,7 @@ fn weekend_mask_from_value(
     Ok(())
   }
   match normalize_scalar(value) {
-    FormulaValue::String(text) => {
+    String(text) => {
       let trimmed = text.trim().to_string()
       if trimmed.length() == 7 {
         let mut idx = 0
@@ -6071,7 +6023,7 @@ fn weekend_mask_from_value(
           } else if ch == '1' {
             weekend_mask[idx] = 1
           } else {
-            return Err(FormulaValue::Error(formula_error_value))
+            return Err(Error(formula_error_value))
           }
           idx = idx + 1
         }
@@ -6084,7 +6036,7 @@ fn weekend_mask_from_value(
               Err(err) => return Err(err)
             }
           }
-          None => return Err(FormulaValue::Error(formula_error_value))
+          None => return Err(Error(formula_error_value))
         }
       }
     }
@@ -6183,7 +6135,7 @@ fn networkdays_intl_value(
     Err(err) => return err
   }
   if workdays == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let mut start = start_serial
   let mut end = end_serial
@@ -6212,7 +6164,7 @@ fn networkdays_intl_value(
       count = count - 1
     }
   }
-  FormulaValue::Number(Double::from_int(sign * count))
+  Number(Double::from_int(sign * count))
 }
 
 ///|
@@ -6224,14 +6176,14 @@ fn workday_intl_value(
 ) -> FormulaValue {
   holidays.sort()
   if days == 0.0 {
-    return FormulaValue::Number(Double::ceil(start_serial))
+    return Number(Double::ceil(start_serial))
   }
   let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
     Ok(value) => value
     Err(err) => return err
   }
   if workdays == 0 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let mut sign = 1
   if days < 0.0 {
@@ -6260,7 +6212,7 @@ fn workday_intl_value(
   let adjusted = workday_intl_adjust(
     end_date, sign, holidays, weekend_mask, start_serial,
   )
-  FormulaValue::Number(Double::from_int(adjusted))
+  Number(Double::from_int(adjusted))
 }
 
 ///|
@@ -6370,7 +6322,7 @@ fn yearfrac_value(
   basis : Int,
 ) -> FormulaValue {
   if start_serial == end_serial {
-    return FormulaValue::Number(0.0)
+    return Number(0.0)
   }
   let (day_diff, days_in_year) = match basis {
     0 => yearfrac_basis0(start_serial, end_serial)
@@ -6378,12 +6330,12 @@ fn yearfrac_value(
     2 => (end_serial - start_serial, 360.0)
     3 => (end_serial - start_serial, 365.0)
     4 => yearfrac_basis4(start_serial, end_serial)
-    _ => return FormulaValue::Error(formula_error_num)
+    _ => return Error(formula_error_num)
   }
   if days_in_year == 0.0 {
-    FormulaValue::Error(formula_error_value)
+    Error(formula_error_value)
   } else {
-    FormulaValue::Number(day_diff / days_in_year)
+    Number(day_diff / days_in_year)
   }
 }
 
@@ -6450,16 +6402,16 @@ fn round_chisq_result(value : Double) -> Double {
 ///|
 fn number_or_num_error(value : Double) -> FormulaValue {
   if Double::is_nan(value) || Double::is_inf(value) {
-    FormulaValue::Error(formula_error_num)
+    Error(formula_error_num)
   } else {
-    FormulaValue::Number(value)
+    Number(value)
   }
 }
 
 ///|
 fn weibull_value(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() != 4 {
-    return FormulaValue::Error(formula_error_value)
+    return Error(formula_error_value)
   }
   let x = match value_as_number(values[0]) {
     Ok(num) => num
@@ -6478,7 +6430,7 @@ fn weibull_value(values : ArrayView[FormulaValue]) -> FormulaValue {
     Err(err) => return err
   }
   if alpha <= 0.0 || beta <= 0.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let exponent = @math.pow(x / beta, alpha)
   if cumulative {
@@ -6961,7 +6913,7 @@ fn norminv_double(prob : Double) -> Result[Double, FormulaValue] {
       1.0
     Ok(-numerator / denominator)
   } else {
-    Err(FormulaValue::Error(formula_error_num))
+    Err(Error(formula_error_num))
   }
 }
 
@@ -7052,8 +7004,8 @@ priv struct InverseIterator {
 ///|
 fn InverseIterator::call(self : InverseIterator, x : Double) -> Double {
   match self.kind {
-    InverseKind::ChiSq => self.fp - get_chisq_dist_cdf(x, self.fdf)
-    InverseKind::TDist => self.fp - get_t_dist(x, self.fdf, self.nt)
+    ChiSq => self.fp - get_chisq_dist_cdf(x, self.fdf)
+    TDist => self.fp - get_t_dist(x, self.fdf, self.nt)
   }
 }
 
@@ -7203,7 +7155,7 @@ fn fisher_value(value : FormulaValue) -> FormulaValue {
     Err(err) => return err
   }
   if num <= -1.0 || num >= 1.0 {
-    return FormulaValue::Error(formula_error_na)
+    return Error(formula_error_na)
   }
   let result = 0.5 * @math.ln((1.0 + num) / (1.0 - num))
   number_or_num_error(round_significant_digits(result, 15))
@@ -7536,10 +7488,10 @@ fn eval_expr(
   ctx : CalcContext,
 ) -> FormulaValue raise XlsxError {
   match expr {
-    Expr::Number(num) => FormulaValue::Number(num)
-    Expr::String(text) => FormulaValue::String(text)
-    Expr::Bool(value) => FormulaValue::Bool(value)
-    Expr::Cell(sheet, reference) =>
+    Number(num) => Number(num)
+    String(text) => String(text)
+    Bool(value) => Bool(value)
+    Cell(sheet, reference) =>
       resolve_cell_value(
         workbook,
         if sheet == "" {
@@ -7550,8 +7502,8 @@ fn eval_expr(
         reference,
         ctx,
       )
-    Expr::Range(sheet, start_ref, end_ref) =>
-      FormulaValue::List(
+    Range(sheet, start_ref, end_ref) =>
+      List(
         collect_range_values(
           workbook,
           if sheet == "" {
@@ -7564,22 +7516,21 @@ fn eval_expr(
           ctx,
         ),
       )
-    Expr::Unary(op, inner) =>
+    Unary(op, inner) =>
       eval_unary(op, eval_expr(workbook, sheet_name, inner, ctx))
-    Expr::Binary(op, left, right) =>
+    Binary(op, left, right) =>
       eval_binary(
         op,
         eval_expr(workbook, sheet_name, left, ctx),
         eval_expr(workbook, sheet_name, right, ctx),
       )
-    Expr::FuncCall(name, args) =>
-      eval_function(workbook, sheet_name, name, args, ctx)
-    Expr::List(items) => {
+    FuncCall(name, args) => eval_function(workbook, sheet_name, name, args, ctx)
+    List(items) => {
       let out : Array[FormulaValue] = []
       for item in items {
         out.push(eval_expr(workbook, sheet_name, item, ctx))
       }
-      FormulaValue::List(out)
+      List(out)
     }
   }
 }
@@ -7587,15 +7538,15 @@ fn eval_expr(
 ///|
 fn eval_unary(op : UnaryOp, value : FormulaValue) -> FormulaValue {
   match op {
-    UnaryOp::Plus => value
-    UnaryOp::Minus =>
+    Plus => value
+    Minus =>
       match value_as_number(value) {
-        Ok(num) => FormulaValue::Number(-num)
+        Ok(num) => Number(-num)
         Err(err) => err
       }
-    UnaryOp::Percent =>
+    Percent =>
       match value_as_number(value) {
-        Ok(num) => FormulaValue::Number(num / 100.0)
+        Ok(num) => Number(num / 100.0)
         Err(err) => err
       }
   }
@@ -7608,35 +7559,26 @@ fn eval_binary(
   right : FormulaValue,
 ) -> FormulaValue {
   match op {
-    BinaryOp::Concat =>
-      FormulaValue::String(
-        formula_value_string(left) + formula_value_string(right),
-      )
-    BinaryOp::Eq
-    | BinaryOp::Ne
-    | BinaryOp::Lt
-    | BinaryOp::Le
-    | BinaryOp::Gt
-    | BinaryOp::Ge =>
+    Concat => String(formula_value_string(left) + formula_value_string(right))
+    Eq | Ne | Lt | Le | Gt | Ge =>
       match compare_values(left, right) {
         Ok(result) => {
           let ok = match op {
-            BinaryOp::Eq => result == 0
-            BinaryOp::Ne => result != 0
-            BinaryOp::Lt => result < 0
-            BinaryOp::Le => result <= 0
-            BinaryOp::Gt => result > 0
-            BinaryOp::Ge => result >= 0
+            Eq => result == 0
+            Ne => result != 0
+            Lt => result < 0
+            Le => result <= 0
+            Gt => result > 0
+            Ge => result >= 0
             _ => false
           }
-          FormulaValue::Bool(ok)
+          Bool(ok)
         }
         Err(err) => err
       }
     _ =>
       match (left, right) {
-        (FormulaValue::List(_), _) | (_, FormulaValue::List(_)) =>
-          eval_list_binary(op, left, right)
+        (List(_), _) | (_, List(_)) => eval_list_binary(op, left, right)
         _ => eval_numeric_binary(op, left, right)
       }
   }

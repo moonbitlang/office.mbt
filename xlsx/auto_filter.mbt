@@ -95,7 +95,7 @@ fn parse_filter_tokens(
   tokens : ArrayView[String],
 ) -> (Int, String) raise XlsxError {
   if tokens.length() != 3 {
-    raise XlsxError::InvalidAutoFilter(msg="auto filter expression invalid")
+    raise InvalidAutoFilter(msg="auto filter expression invalid")
   }
   let op_text = tokens[1].to_lower()
   let operator = match op_text {
@@ -105,14 +105,14 @@ fn parse_filter_tokens(
     "<=" => 3
     ">" => 4
     ">=" => 6
-    _ => raise XlsxError::InvalidAutoFilter(msg="auto filter operator invalid")
+    _ => raise InvalidAutoFilter(msg="auto filter operator invalid")
   }
   let mut op_value = operator
   let mut token = tokens[2]
   let lower_token = token.to_lower()
   if lower_token == "blanks" || lower_token == "nonblanks" {
     if op_value != 2 && op_value != 5 {
-      raise XlsxError::InvalidAutoFilter(msg="auto filter operator invalid")
+      raise InvalidAutoFilter(msg="auto filter operator invalid")
     }
     token = lower_token
     if token == "blanks" {
@@ -147,7 +147,7 @@ fn parse_filter_expression(
     let (op, token) = parse_filter_tokens(tokens)
     ([op], [token])
   } else {
-    raise XlsxError::InvalidAutoFilter(msg="auto filter expression invalid")
+    raise InvalidAutoFilter(msg="auto filter expression invalid")
   }
 }
 
@@ -161,7 +161,7 @@ fn custom_filter_operator(op : Int) -> String raise XlsxError {
     5 => "notEqual"
     6 => "greaterThanOrEqual"
     22 => "equal"
-    _ => raise XlsxError::InvalidAutoFilter(msg="auto filter operator invalid")
+    _ => raise InvalidAutoFilter(msg="auto filter operator invalid")
   }
 }
 
@@ -211,10 +211,10 @@ fn auto_filter_from_options(
       continue
     }
     let col = column_name_to_number(opt.column) catch {
-      _ => raise XlsxError::InvalidAutoFilter(msg="auto filter column invalid")
+      _ => raise InvalidAutoFilter(msg="auto filter column invalid")
     }
     if col < min_col || col > max_col {
-      raise XlsxError::InvalidAutoFilter(msg="auto filter column out of range")
+      raise InvalidAutoFilter(msg="auto filter column out of range")
     }
     let column = auto_filter_column_from_expression(col, opt.expression)
     let mut replaced = false

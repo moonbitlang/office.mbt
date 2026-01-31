@@ -17,11 +17,11 @@ fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="numFmt tag not closed")
+          None => raise InvalidXml(msg="numFmt tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="numFmt tag invalid")
+        _ => raise InvalidXml(msg="numFmt tag invalid")
       }
     let id_text = match attr_value(tag, "numFmtId") {
       Some(value) => value
@@ -32,7 +32,7 @@ fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
       None => continue
     }
     let id = @strconv.parse_int(id_text, base=10) catch {
-      _ => raise XlsxError::InvalidXml(msg="numFmtId invalid")
+      _ => raise InvalidXml(msg="numFmtId invalid")
     }
     num_fmts[id] = unescape_xml_text(fmt_text)
   }
@@ -64,15 +64,15 @@ fn parse_cell_xfs(
     let text = chunk.to_string()
     let open_end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="xf tag not closed")
+      None => raise InvalidXml(msg="xf tag not closed")
     }
     let open_tag = text[:open_end] catch {
-        _ => raise XlsxError::InvalidXml(msg="xf tag invalid")
+        _ => raise InvalidXml(msg="xf tag invalid")
       }
     let self_closing = open_tag.has_suffix("/")
     let tag = if self_closing {
       open_tag[:open_tag.length() - 1] catch {
-        _ => raise XlsxError::InvalidXml(msg="xf tag invalid")
+        _ => raise InvalidXml(msg="xf tag invalid")
       }
     } else {
       open_tag
@@ -81,20 +81,18 @@ fn parse_cell_xfs(
       ""
     } else {
       let rest = text[open_end + 1:] catch {
-          _ => raise XlsxError::InvalidXml(msg="xf body invalid")
+          _ => raise InvalidXml(msg="xf body invalid")
         }
       let close = match rest.find("</xf>") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidXml(msg="xf close missing")
+        None => raise InvalidXml(msg="xf close missing")
       }
-      (rest[:close] catch {
-        _ => raise XlsxError::InvalidXml(msg="xf body invalid")
-      }).to_string()
+      (rest[:close] catch { _ => raise InvalidXml(msg="xf body invalid") }).to_string()
     }
     let num_fmt_id = match attr_value(tag, "numFmtId") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="numFmtId invalid")
+          _ => raise InvalidXml(msg="numFmtId invalid")
         }
       None => 0
     }
@@ -110,7 +108,7 @@ fn parse_cell_xfs(
     let font_id = match attr_value(tag, "fontId") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="fontId invalid")
+          _ => raise InvalidXml(msg="fontId invalid")
         }
       None => 0
     }
@@ -120,7 +118,7 @@ fn parse_cell_xfs(
     let fill_id = match attr_value(tag, "fillId") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="fillId invalid")
+          _ => raise InvalidXml(msg="fillId invalid")
         }
       None => 0
     }
@@ -130,7 +128,7 @@ fn parse_cell_xfs(
     let border_id = match attr_value(tag, "borderId") {
       Some(value) =>
         @strconv.parse_int(value, base=10) catch {
-          _ => raise XlsxError::InvalidXml(msg="borderId invalid")
+          _ => raise InvalidXml(msg="borderId invalid")
         }
       None => 0
     }
@@ -172,14 +170,14 @@ fn parse_dxfs(
     None => return styles
   }
   let after_start = xml_str[start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="dxfs tag out of range")
+      _ => raise InvalidXml(msg="dxfs tag out of range")
     }
   let tag_end = match after_start.find(">") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="dxfs tag close missing")
+    None => raise InvalidXml(msg="dxfs tag close missing")
   }
   let tag_text = after_start[:tag_end] catch {
-      _ => raise XlsxError::InvalidXml(msg="dxfs tag invalid")
+      _ => raise InvalidXml(msg="dxfs tag invalid")
     }
   if tag_text.has_suffix("/") {
     return styles
@@ -187,10 +185,10 @@ fn parse_dxfs(
   let close_tag = "</dxfs>"
   let close_start = match after_start.find(close_tag) {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="dxfs close missing")
+    None => raise InvalidXml(msg="dxfs close missing")
   }
   let body = after_start[tag_end + 1:close_start] catch {
-      _ => raise XlsxError::InvalidXml(msg="dxfs body invalid")
+      _ => raise InvalidXml(msg="dxfs body invalid")
     }
   let mut first = true
   for chunk in body.split("<dxf") {
@@ -204,18 +202,16 @@ fn parse_dxfs(
       None =>
         match text.find("/>") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="dxf tag not closed")
+          None => raise InvalidXml(msg="dxf tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="dxf tag invalid")
-      }
+    let tag = text[:end] catch { _ => raise InvalidXml(msg="dxf tag invalid") }
     let mut style = match tag_attributes_in(tag, "numFmt") {
       Some(num_fmt_tag) => {
         let num_fmt_id = match attr_value(num_fmt_tag, "numFmtId") {
           Some(value) =>
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="numFmtId invalid")
+              _ => raise InvalidXml(msg="numFmtId invalid")
             }
           None => 0
         }

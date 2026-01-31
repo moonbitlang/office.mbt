@@ -5,7 +5,7 @@ test "conditional format + merge APIs validate sheet name" {
   let ignored_errors_result : Result[Unit, Error] = try? workbook.add_ignored_errors(
     "Sheet:1",
     "A1",
-    IgnoredErrorType::NumberStoredAsText,
+    NumberStoredAsText,
   )
   inspect(
     ignored_errors_result is Err(XlsxError::InvalidSheetName(_)),

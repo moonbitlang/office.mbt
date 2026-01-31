@@ -44,22 +44,20 @@ let ole_identifier_bytes : Bytes = Bytes::from_array(ole_identifier)
 fn check_sheet_name(name : StringView) -> Unit raise XlsxError {
   let text = name.to_string()
   if text == "" {
-    raise XlsxError::InvalidSheetName(msg="sheet name is blank")
+    raise InvalidSheetName(msg="sheet name is blank")
   }
   if text.length() > max_sheet_name_length {
-    raise XlsxError::InvalidSheetName(msg="sheet name too long")
+    raise InvalidSheetName(msg="sheet name too long")
   }
   if text.has_prefix("'") || text.has_suffix("'") {
-    raise XlsxError::InvalidSheetName(
+    raise InvalidSheetName(
       msg="sheet name cannot start or end with a single quote",
     )
   }
   for c in text {
     match c {
       ':' | '\\' | '/' | '?' | '*' | '[' | ']' =>
-        raise XlsxError::InvalidSheetName(
-          msg="sheet name contains invalid characters",
-        )
+        raise InvalidSheetName(msg="sheet name contains invalid characters")
       _ => ()
     }
   }
@@ -80,11 +78,11 @@ fn Workbook::sheet_entry_index(self : Workbook, name : StringView) -> Int? {
   let needle = normalize_sheet_name(name)
   for i, entry in self.sheet_order {
     match entry {
-      SheetEntry::Worksheet(idx) =>
+      Worksheet(idx) =>
         if normalize_sheet_name(self.sheets[idx].name()) == needle {
           return Some(i)
         }
-      SheetEntry::ChartSheet(idx) =>
+      ChartSheet(idx) =>
         if normalize_sheet_name(self.chart_sheets[idx].name()) == needle {
           return Some(i)
         }
@@ -98,11 +96,11 @@ fn Workbook::sheet_entry(self : Workbook, name : StringView) -> SheetEntry? {
   let needle = normalize_sheet_name(name)
   for entry in self.sheet_order {
     match entry {
-      SheetEntry::Worksheet(idx) =>
+      Worksheet(idx) =>
         if normalize_sheet_name(self.sheets[idx].name()) == needle {
           return Some(entry)
         }
-      SheetEntry::ChartSheet(idx) =>
+      ChartSheet(idx) =>
         if normalize_sheet_name(self.chart_sheets[idx].name()) == needle {
           return Some(entry)
         }
@@ -114,8 +112,8 @@ fn Workbook::sheet_entry(self : Workbook, name : StringView) -> SheetEntry? {
 ///|
 fn Workbook::sheet_entry_name(self : Workbook, entry : SheetEntry) -> String {
   match entry {
-    SheetEntry::Worksheet(idx) => self.sheets[idx].name()
-    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].name()
+    Worksheet(idx) => self.sheets[idx].name()
+    ChartSheet(idx) => self.chart_sheets[idx].name()
   }
 }
 
@@ -125,8 +123,8 @@ fn Workbook::sheet_entry_state(
   entry : SheetEntry,
 ) -> SheetState {
   match entry {
-    SheetEntry::Worksheet(idx) => self.sheets[idx].state()
-    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].state()
+    Worksheet(idx) => self.sheets[idx].state()
+    ChartSheet(idx) => self.chart_sheets[idx].state()
   }
 }
 
@@ -137,8 +135,8 @@ fn Workbook::set_sheet_entry_state(
   state : SheetState,
 ) -> Unit {
   match entry {
-    SheetEntry::Worksheet(idx) => self.sheets[idx].state = state
-    SheetEntry::ChartSheet(idx) => self.chart_sheets[idx].state = state
+    Worksheet(idx) => self.sheets[idx].state = state
+    ChartSheet(idx) => self.chart_sheets[idx].state = state
   }
 }
 

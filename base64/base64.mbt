@@ -54,15 +54,11 @@ pub fn decode(text : StringView) -> Bytes raise Base64Error {
     } else {
       let code = ch.to_int()
       if code < 0 || code >= 128 {
-        raise Base64Error::InvalidBase64(
-          msg="invalid base64 character at index \{index}",
-        )
+        raise InvalidBase64(msg="invalid base64 character at index \{index}")
       }
       let value = base64_decode_table[code]
       if value < 0 || saw_pad {
-        raise Base64Error::InvalidBase64(
-          msg="invalid base64 character at index \{index}",
-        )
+        raise InvalidBase64(msg="invalid base64 character at index \{index}")
       }
       value
     }
@@ -79,7 +75,7 @@ pub fn decode(text : StringView) -> Bytes raise Base64Error {
       let b2 = q2
       let b3 = q3
       if b0 < 0 || b1 < 0 {
-        raise Base64Error::InvalidBase64(msg="invalid base64 padding")
+        raise InvalidBase64(msg="invalid base64 padding")
       }
       let triple = (b0 << 18) |
         (b1 << 12) |
@@ -100,7 +96,7 @@ pub fn decode(text : StringView) -> Bytes raise Base64Error {
     index = index + 1
   }
   if qlen != 0 {
-    raise Base64Error::InvalidBase64(msg="invalid base64 length")
+    raise InvalidBase64(msg="invalid base64 length")
   }
   Bytes::from_array(output)
 }

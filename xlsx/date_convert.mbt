@@ -59,7 +59,7 @@ pub fn excel_date_to_time(
   use_1904_format? : Bool = false,
 ) -> @time.ZonedDateTime raise XlsxError {
   if excel_date < 0.0 {
-    raise XlsxError::InvalidExcelDate(value=excel_date)
+    raise InvalidExcelDate(value=excel_date)
   }
   let parts = if use_1904_format {
     excel_serial_to_parts_1904(excel_date)
@@ -78,8 +78,8 @@ pub fn excel_date_to_time(
         nanosecond=0,
         zone=@time.utc_zone,
       ) catch {
-        _ => raise XlsxError::InvalidExcelDate(value=excel_date)
+        _ => raise InvalidExcelDate(value=excel_date)
       }
-    None => raise XlsxError::InvalidExcelDate(value=excel_date)
+    None => raise InvalidExcelDate(value=excel_date)
   }
 }

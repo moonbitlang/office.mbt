@@ -375,13 +375,11 @@ fn sheet_view_options_with_defaults(view : SheetView) -> SheetViewOptions {
 ///|
 fn normalize_view_index(view_index : Int, count : Int) -> Int raise XlsxError {
   if count <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="view index out of range")
+    raise InvalidSheetOperation(msg="view index out of range")
   }
   let idx = if view_index < 0 { count + view_index } else { view_index }
   if idx < 0 || idx >= count {
-    raise XlsxError::InvalidSheetOperation(
-      msg="view index \{view_index} out of range",
-    )
+    raise InvalidSheetOperation(msg="view index \{view_index} out of range")
   }
   idx
 }

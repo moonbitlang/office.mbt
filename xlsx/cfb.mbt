@@ -21,7 +21,7 @@ let dif_sector = -4
 ///|
 fn read_u16_le(bytes : BytesView, offset : Int) -> Int raise XlsxError {
   if offset < 0 || offset + 2 > bytes.length() {
-    raise XlsxError::InvalidEncryptionInfo(msg="cfb read out of bounds")
+    raise InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
   let b0 = bytes[offset].to_int()
   let b1 = bytes[offset + 1].to_int()
@@ -31,7 +31,7 @@ fn read_u16_le(bytes : BytesView, offset : Int) -> Int raise XlsxError {
 ///|
 fn read_u32_le(bytes : BytesView, offset : Int) -> UInt raise XlsxError {
   if offset < 0 || offset + 4 > bytes.length() {
-    raise XlsxError::InvalidEncryptionInfo(msg="cfb read out of bounds")
+    raise InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
   @crypto.u32_from_le(bytes, offset)
 }
@@ -46,7 +46,7 @@ fn read_i32_le(bytes : BytesView, offset : Int) -> Int raise XlsxError {
 ///|
 fn read_u64_le(bytes : BytesView, offset : Int) -> UInt64 raise XlsxError {
   if offset < 0 || offset + 8 > bytes.length() {
-    raise XlsxError::InvalidEncryptionInfo(msg="cfb read out of bounds")
+    raise InvalidEncryptionInfo(msg="cfb read out of bounds")
   }
   @crypto.u64_from_le(bytes, offset)
 }
@@ -136,11 +136,7 @@ fn CfbBuilder::write_uint64(self : CfbBuilder, value : Int) -> Unit {
 
 ///|
 fn CfbBuilder::write_utf16le(self : CfbBuilder, value : StringView) -> Unit {
-  let bytes = @encoding/utf16.encode(
-    value,
-    bom=false,
-    endianness=@encoding/utf16.Endian::Little,
-  )
+  let bytes = @encoding/utf16.encode(value, bom=false, endianness=Little)
   self.write_bytes(bytes)
 }
 
@@ -604,17 +600,17 @@ fn read_sector_chain(
   let mut guard_count = 0
   while current != end_of_chain && current != free_sector {
     if current < 0 || current >= fat.length() {
-      raise XlsxError::InvalidEncryptionInfo(msg="cfb chain out of bounds")
+      raise InvalidEncryptionInfo(msg="cfb chain out of bounds")
     }
     chain.push(current)
     let next = fat[current]
     if next == current {
-      raise XlsxError::InvalidEncryptionInfo(msg="cfb chain cycle")
+      raise InvalidEncryptionInfo(msg="cfb chain cycle")
     }
     current = next
     guard_count = guard_count + 1
     if guard_count > fat.length() {
-      raise XlsxError::InvalidEncryptionInfo(msg="cfb chain too long")
+      raise InvalidEncryptionInfo(msg="cfb chain too long")
     }
   }
   chain
@@ -623,11 +619,11 @@ fn read_sector_chain(
 ///|
 fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
   if bytes.length() < 512 {
-    raise XlsxError::InvalidEncryptionInfo(msg="cfb header too short")
+    raise InvalidEncryptionInfo(msg="cfb header too short")
   }
   for i in 0..<=7 {
     if bytes[i] != ole_identifier[i] {
-      raise XlsxError::InvalidEncryptionInfo(msg="invalid cfb signature")
+      raise InvalidEncryptionInfo(msg="invalid cfb signature")
     }
   }
   let sector_shift = read_u16_le(bytes, 0x1e)
@@ -695,12 +691,8 @@ fn cfb_read(bytes : BytesView) -> CfbReader raise XlsxError {
     let size = read_u64_le(entry_bytes, 0x78).to_int()
     let name = if name_len >= 2 {
       let name_bytes = entry_bytes[0:name_len - 2]
-      @encoding/utf16.decode(
-        name_bytes,
-        ignore_bom=true,
-        endianness=@encoding/utf16.Endian::Little,
-      ) catch {
-        _ => raise XlsxError::InvalidEncryptionInfo(msg="invalid cfb name")
+      @encoding/utf16.decode(name_bytes, ignore_bom=true, endianness=Little) catch {
+        _ => raise InvalidEncryptionInfo(msg="invalid cfb name")
       }
     } else {
       ""
@@ -764,17 +756,17 @@ fn CfbReader::read_stream(
     }
   }
   match entry {
-    None => raise XlsxError::InvalidEncryptionInfo(msg="cfb entry not found")
+    None => raise InvalidEncryptionInfo(msg="cfb entry not found")
     Some(item) => {
       if item.type_id != 2 {
-        raise XlsxError::InvalidEncryptionInfo(msg="cfb entry is not a stream")
+        raise InvalidEncryptionInfo(msg="cfb entry is not a stream")
       }
       if item.size == 0 {
         return Bytes::default()
       }
       if item.size < 0x1000 {
         if self.mini_stream.length() == 0 {
-          raise XlsxError::InvalidEncryptionInfo(msg="cfb mini stream missing")
+          raise InvalidEncryptionInfo(msg="cfb mini stream missing")
         }
         let data : Array[Byte] = []
         let mut current = item.start
@@ -783,9 +775,7 @@ fn CfbReader::read_stream(
         while current != end_of_chain && current != free_sector && remaining > 0 {
           let offset = current * self.mini_sector_size
           if offset + self.mini_sector_size > self.mini_stream.length() {
-            raise XlsxError::InvalidEncryptionInfo(
-              msg="cfb mini stream out of bounds",
-            )
+            raise InvalidEncryptionInfo(msg="cfb mini stream out of bounds")
           }
           let chunk = self.mini_stream[offset:offset + self.mini_sector_size]
           let take = if remaining < self.mini_sector_size {
@@ -796,16 +786,12 @@ fn CfbReader::read_stream(
           data.append(chunk[:take].to_array())
           remaining = remaining - take
           if current < 0 || current >= self.mini_fat.length() {
-            raise XlsxError::InvalidEncryptionInfo(
-              msg="cfb mini chain out of bounds",
-            )
+            raise InvalidEncryptionInfo(msg="cfb mini chain out of bounds")
           }
           current = self.mini_fat[current]
           guard_count = guard_count + 1
           if guard_count > self.mini_fat.length() {
-            raise XlsxError::InvalidEncryptionInfo(
-              msg="cfb mini chain too long",
-            )
+            raise InvalidEncryptionInfo(msg="cfb mini chain too long")
           }
         }
         Bytes::from_array(data)

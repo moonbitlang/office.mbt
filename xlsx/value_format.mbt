@@ -6,7 +6,7 @@ fn format_cell_value(
   options : Options,
 ) -> String {
   match value_type {
-    CellValueType::String =>
+    String =>
       match style {
         Some(style) =>
           match style.number_format {
@@ -15,9 +15,9 @@ fn format_cell_value(
           }
         None => raw
       }
-    CellValueType::Error => raw
-    CellValueType::Bool => if parse_cell_bool(raw) { "TRUE" } else { "FALSE" }
-    CellValueType::Number =>
+    Error => raw
+    Bool => if parse_cell_bool(raw) { "TRUE" } else { "FALSE" }
+    Number =>
       match style {
         Some(style) =>
           match style.number_format {
@@ -32,8 +32,8 @@ fn format_cell_value(
 ///|
 fn format_text_value(raw : String, format : NumberFormat) -> String {
   match format {
-    NumberFormat::Builtin(_id) => raw
-    NumberFormat::Custom(code) =>
+    Builtin(_id) => raw
+    Custom(code) =>
       if code.to_lower().trim().to_string() == "general" {
         raw
       } else {
@@ -49,8 +49,8 @@ fn format_number_with_format(
   options : Options,
 ) -> String {
   match format {
-    NumberFormat::Builtin(id) => format_number_builtin(raw, id, options)
-    NumberFormat::Custom(code) => format_number_code(raw, code, options)
+    Builtin(id) => format_number_builtin(raw, id, options)
+    Custom(code) => format_number_code(raw, code, options)
   }
 }
 
@@ -1194,17 +1194,14 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
           if j < len {
             let content = try! lower[i + 1:j]
             if has_literal {
-              tokens.push(DateToken::Literal(sb.to_string()))
+              tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
             match content {
-              "h" | "hh" =>
-                tokens.push(DateToken::ElapsedHour(content.length()))
-              "m" | "mm" =>
-                tokens.push(DateToken::ElapsedMinute(content.length()))
-              "s" | "ss" =>
-                tokens.push(DateToken::ElapsedSecond(content.length()))
+              "h" | "hh" => tokens.push(ElapsedHour(content.length()))
+              "m" | "mm" => tokens.push(ElapsedMinute(content.length()))
+              "s" | "ss" => tokens.push(ElapsedSecond(content.length()))
               _ => ()
             }
             i = j
@@ -1222,13 +1219,13 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
           }
           if maybe_ampm == "am/pm" {
             if has_literal {
-              tokens.push(DateToken::Literal(sb.to_string()))
+              tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
             let raw = (try! pattern[i:i + 5]).to_string()
             let upper = raw.contains("A") || raw.contains("P")
-            tokens.push(DateToken::AmPm(upper))
+            tokens.push(AmPm(upper))
             i = i + 5
             continue
           }
@@ -1239,13 +1236,13 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
           }
           if maybe_ap == "a/p" {
             if has_literal {
-              tokens.push(DateToken::Literal(sb.to_string()))
+              tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
             let raw = (try! pattern[i:i + 3]).to_string()
             let upper = raw.contains("A") || raw.contains("P")
-            tokens.push(DateToken::Ap(upper))
+            tokens.push(Ap(upper))
             i = i + 3
             continue
           }
@@ -1260,7 +1257,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
             c == 's' ||
             c == 'S' {
             if has_literal {
-              tokens.push(DateToken::Literal(sb.to_string()))
+              tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
               has_literal = false
             }
@@ -1270,12 +1267,12 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
             }
             let count = j - i
             let kind = match lower[i] {
-              'y' => DateToken::Year(count)
-              'm' => DateToken::Month(count)
-              'd' => DateToken::Day(count)
-              'h' => DateToken::Hour(count)
-              's' => DateToken::Second(count)
-              _ => DateToken::Literal((try! pattern[i:j]).to_string())
+              'y' => Year(count)
+              'm' => Month(count)
+              'd' => Day(count)
+              'h' => Hour(count)
+              's' => Second(count)
+              _ => Literal((try! pattern[i:j]).to_string())
             }
             tokens.push(kind)
             i = j
@@ -1291,7 +1288,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
     i = i + 1
   }
   if has_literal {
-    tokens.push(DateToken::Literal(sb.to_string()))
+    tokens.push(Literal(sb.to_string()))
   }
   tokens
 }
@@ -1311,7 +1308,7 @@ fn format_date_pattern_tokens(
   let mut use_ampm = false
   for token in tokens {
     match token {
-      DateToken::AmPm(_) | DateToken::Ap(_) => {
+      AmPm(_) | Ap(_) => {
         use_ampm = true
         break
       }
@@ -1326,8 +1323,8 @@ fn format_date_pattern_tokens(
   let output = StringBuilder::new()
   for idx, token in tokens {
     match token {
-      DateToken::Literal(text) => output.write_view(text)
-      DateToken::Year(count) =>
+      Literal(text) => output.write_view(text)
+      Year(count) =>
         if count == 2 {
           output.write_view(pad_left_int(year % 100, 2))
         } else if count >= 4 {
@@ -1335,14 +1332,14 @@ fn format_date_pattern_tokens(
         } else {
           output.write_view(year.to_string())
         }
-      DateToken::Month(count) => {
+      Month(count) => {
         let mut treat_as_minute = false
         if count <= 2 {
           let mut prev_idx = idx - 1
           while prev_idx >= 0 {
             match tokens[prev_idx] {
-              DateToken::Literal(_) => prev_idx = prev_idx - 1
-              DateToken::Hour(_) | DateToken::ElapsedHour(_) => {
+              Literal(_) => prev_idx = prev_idx - 1
+              Hour(_) | ElapsedHour(_) => {
                 treat_as_minute = true
                 break
               }
@@ -1352,8 +1349,8 @@ fn format_date_pattern_tokens(
           let mut next_idx = idx + 1
           while next_idx < tokens.length() {
             match tokens[next_idx] {
-              DateToken::Literal(_) => next_idx = next_idx + 1
-              DateToken::Second(_) | DateToken::ElapsedSecond(_) => {
+              Literal(_) => next_idx = next_idx + 1
+              Second(_) | ElapsedSecond(_) => {
                 treat_as_minute = true
                 break
               }
@@ -1381,7 +1378,7 @@ fn format_date_pattern_tokens(
           output.write_view(month.to_string())
         }
       }
-      DateToken::Day(count) =>
+      Day(count) =>
         if count >= 4 {
           output.write_view(weekday_long_name(weekday))
         } else if count == 3 {
@@ -1391,7 +1388,7 @@ fn format_date_pattern_tokens(
         } else {
           output.write_view(day.to_string())
         }
-      DateToken::Hour(count) => {
+      Hour(count) => {
         let hour_value = if use_ampm { hour12(hour) } else { hour }
         if count >= 2 {
           output.write_view(pad_left_int(hour_value, 2))
@@ -1399,37 +1396,37 @@ fn format_date_pattern_tokens(
           output.write_view(hour_value.to_string())
         }
       }
-      DateToken::Second(count) =>
+      Second(count) =>
         if count >= 2 {
           output.write_view(pad_left_int(second, 2))
         } else {
           output.write_view(second.to_string())
         }
-      DateToken::AmPm(upper) =>
+      AmPm(upper) =>
         if upper {
           output.write_view(if hour >= 12 { "PM" } else { "AM" })
         } else {
           output.write_view(if hour >= 12 { "pm" } else { "am" })
         }
-      DateToken::Ap(upper) =>
+      Ap(upper) =>
         if upper {
           output.write_view(if hour >= 12 { "P" } else { "A" })
         } else {
           output.write_view(if hour >= 12 { "p" } else { "a" })
         }
-      DateToken::ElapsedHour(count) =>
+      ElapsedHour(count) =>
         if count >= 2 {
           output.write_view(pad_left_int64(elapsed_hours, 2))
         } else {
           output.write_view(elapsed_hours.to_string())
         }
-      DateToken::ElapsedMinute(count) =>
+      ElapsedMinute(count) =>
         if count >= 2 {
           output.write_view(pad_left_int64(elapsed_minutes, 2))
         } else {
           output.write_view(elapsed_minutes.to_string())
         }
-      DateToken::ElapsedSecond(count) =>
+      ElapsedSecond(count) =>
         if count >= 2 {
           output.write_view(pad_left_int64(elapsed_seconds, 2))
         } else {

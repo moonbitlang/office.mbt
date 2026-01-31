@@ -1,7 +1,7 @@
 ///|
 fn read_u16_le(bytes : BytesView, offset : Int) -> UInt raise ZipError {
   if offset < 0 || offset + 2 > bytes.length() {
-    raise ZipError::OutOfBounds(offset~)
+    raise OutOfBounds(offset~)
   }
   let b0 = bytes[offset].to_uint()
   let b1 = bytes[offset + 1].to_uint()
@@ -11,7 +11,7 @@ fn read_u16_le(bytes : BytesView, offset : Int) -> UInt raise ZipError {
 ///|
 fn read_u32_le(bytes : BytesView, offset : Int) -> UInt raise ZipError {
   if offset < 0 || offset + 4 > bytes.length() {
-    raise ZipError::OutOfBounds(offset~)
+    raise OutOfBounds(offset~)
   }
   let b0 = bytes[offset].to_uint()
   let b1 = bytes[offset + 1].to_uint()
@@ -44,14 +44,14 @@ fn skip_cstring(bytes : BytesView, start : Int) -> Int? {
 pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   // RFC 1952
   if bytes.length() < 18 {
-    raise ZipError::UnsupportedFeature(msg="invalid gzip data")
+    raise UnsupportedFeature(msg="invalid gzip data")
   }
   if bytes[0] != 0x1F || bytes[1] != 0x8B {
-    raise ZipError::UnsupportedFeature(msg="invalid gzip header")
+    raise UnsupportedFeature(msg="invalid gzip header")
   }
   let compression_method = bytes[2].to_int()
   if compression_method != 8 {
-    raise ZipError::UnsupportedFeature(msg="unsupported gzip method")
+    raise UnsupportedFeature(msg="unsupported gzip method")
   }
   let flags = bytes[3].to_int()
   let mut idx = 10
@@ -62,20 +62,20 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   if (flags & 0x08) != 0 {
     idx = match skip_cstring(bytes, idx) {
       Some(v) => v
-      None => raise ZipError::UnsupportedFeature(msg="invalid gzip name")
+      None => raise UnsupportedFeature(msg="invalid gzip name")
     }
   }
   if (flags & 0x10) != 0 {
     idx = match skip_cstring(bytes, idx) {
       Some(v) => v
-      None => raise ZipError::UnsupportedFeature(msg="invalid gzip comment")
+      None => raise UnsupportedFeature(msg="invalid gzip comment")
     }
   }
   if (flags & 0x02) != 0 {
     idx = idx + 2
   }
   if idx < 0 || idx > bytes.length() - 8 {
-    raise ZipError::UnsupportedFeature(msg="invalid gzip data")
+    raise UnsupportedFeature(msg="invalid gzip data")
   }
   let trailer_crc = read_u32_le(bytes, bytes.length() - 8)
   let trailer_isize = read_u32_le(bytes, bytes.length() - 4)
@@ -83,11 +83,11 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   let decoded = deflate_decode(compressed)
   let expected_isize = (decoded.length() & 0xFFFFFFFF).reinterpret_as_uint()
   if trailer_isize != expected_isize {
-    raise ZipError::UnsupportedFeature(msg="gzip size mismatch")
+    raise UnsupportedFeature(msg="gzip size mismatch")
   }
   let actual_crc = crc32(decoded[:])
   if trailer_crc != actual_crc {
-    raise ZipError::UnsupportedFeature(msg="gzip crc mismatch")
+    raise UnsupportedFeature(msg="gzip crc mismatch")
   }
   decoded
 }

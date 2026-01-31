@@ -56,8 +56,8 @@ test "add_table options duplicate name and overlap errors" {
   let opts2 = TableOptions::new("C1:D2")
   opts2.set_name("Dup")
   let dup : Result[Table, Error] = try? workbook.add_table("Sheet1", opts2)
-  inspect(dup is Err(@xlsx.XlsxError::InvalidTable(_)), content="true")
+  inspect(dup is Err(@xlsx.InvalidTable(_)), content="true")
   let opts3 = TableOptions::new("B2:C3")
   let overlap : Result[Table, Error] = try? workbook.add_table("Sheet1", opts3)
-  inspect(overlap is Err(@xlsx.XlsxError::InvalidTable(_)), content="true")
+  inspect(overlap is Err(@xlsx.InvalidTable(_)), content="true")
 }

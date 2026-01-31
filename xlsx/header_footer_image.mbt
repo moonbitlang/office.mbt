@@ -48,9 +48,9 @@ fn header_footer_image_shape_id(
   first_page : Bool,
 ) -> String {
   let base = match position {
-    HeaderFooterImagePosition::Left => "L"
-    HeaderFooterImagePosition::Center => "C"
-    HeaderFooterImagePosition::Right => "R"
+    Left => "L"
+    Center => "C"
+    Right => "R"
   }
   let mid = if is_footer { "F" } else { "H" }
   let suffix = if first_page { "FIRST" } else { "" }

@@ -57,37 +57,37 @@ pub struct DataValidation {
 ///|
 fn data_validation_type_text(value : DataValidationType) -> String {
   match value {
-    DataValidationType::NoneType => "none"
-    DataValidationType::Custom => "custom"
-    DataValidationType::Date => "date"
-    DataValidationType::Decimal => "decimal"
-    DataValidationType::List => "list"
-    DataValidationType::TextLength => "textLength"
-    DataValidationType::Time => "time"
-    DataValidationType::Whole => "whole"
+    NoneType => "none"
+    Custom => "custom"
+    Date => "date"
+    Decimal => "decimal"
+    List => "list"
+    TextLength => "textLength"
+    Time => "time"
+    Whole => "whole"
   }
 }
 
 ///|
 fn data_validation_error_style_text(value : DataValidationErrorStyle) -> String {
   match value {
-    DataValidationErrorStyle::Stop => "stop"
-    DataValidationErrorStyle::Warning => "warning"
-    DataValidationErrorStyle::Information => "information"
+    Stop => "stop"
+    Warning => "warning"
+    Information => "information"
   }
 }
 
 ///|
 fn data_validation_operator_text(value : DataValidationOperator) -> String {
   match value {
-    DataValidationOperator::Between => "between"
-    DataValidationOperator::Equal => "equal"
-    DataValidationOperator::GreaterThan => "greaterThan"
-    DataValidationOperator::GreaterThanOrEqual => "greaterThanOrEqual"
-    DataValidationOperator::LessThan => "lessThan"
-    DataValidationOperator::LessThanOrEqual => "lessThanOrEqual"
-    DataValidationOperator::NotBetween => "notBetween"
-    DataValidationOperator::NotEqual => "notEqual"
+    Between => "between"
+    Equal => "equal"
+    GreaterThan => "greaterThan"
+    GreaterThanOrEqual => "greaterThanOrEqual"
+    LessThan => "lessThan"
+    LessThanOrEqual => "lessThanOrEqual"
+    NotBetween => "notBetween"
+    NotEqual => "notEqual"
   }
 }
 
@@ -106,16 +106,14 @@ fn data_validation_formula_text(
 ) -> String raise XlsxError {
   let max_float32 = 3.4028234663852886e38
   match value {
-    DataValidationFormula::IntValue(v) => v.to_string()
-    DataValidationFormula::DoubleValue(v) =>
+    IntValue(v) => v.to_string()
+    DoubleValue(v) =>
       if data_validation_abs_double(v) > max_float32 {
-        raise XlsxError::InvalidDataValidation(
-          msg="data validation range exceeds limit",
-        )
+        raise InvalidDataValidation(msg="data validation range exceeds limit")
       } else {
         v.to_string()
       }
-    DataValidationFormula::TextValue(v) => v
+    TextValue(v) => v
   }
 }
 
@@ -192,11 +190,9 @@ pub fn DataValidation::set_drop_list(
   }
   let formula = sb.to_string()
   if count_utf16_units(formula) > max_field_length {
-    raise XlsxError::InvalidDataValidation(
-      msg="data validation must be 0-255 characters",
-    )
+    raise InvalidDataValidation(msg="data validation must be 0-255 characters")
   }
-  self.validation_type = data_validation_type_text(DataValidationType::List)
+  self.validation_type = data_validation_type_text(List)
   if formula.has_prefix("=") {
     self.formula1 = escape_data_validation_formula(formula)
     return
@@ -228,7 +224,7 @@ pub fn DataValidation::set_sqref_drop_list(
   sqref : String,
 ) -> Unit {
   self.formula1 = sqref
-  self.validation_type = data_validation_type_text(DataValidationType::List)
+  self.validation_type = data_validation_type_text(List)
 }
 
 ///|
@@ -252,7 +248,7 @@ fn data_validation_bool_attr(value : Bool) -> String {
 ///|
 fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
   if dv.sqref == "" {
-    raise XlsxError::InvalidDataValidation(msg="data validation sqref empty")
+    raise InvalidDataValidation(msg="data validation sqref empty")
   }
   let sb = StringBuilder::new()
   sb.write_view("<dataValidation")
@@ -346,7 +342,7 @@ fn parse_xml_bool(text : StringView) -> Bool {
 fn data_validation_from_xml(xml : StringView) -> DataValidation raise XlsxError {
   let tag = match tag_attributes_in(xml, "dataValidation") {
     Some(value) => value
-    None => raise XlsxError::InvalidXml(msg="data validation tag missing")
+    None => raise InvalidXml(msg="data validation tag missing")
   }
   let allow_blank = match attr_value(tag, "allowBlank") {
     Some(value) => parse_xml_bool(value)
@@ -391,7 +387,7 @@ fn data_validation_from_xml(xml : StringView) -> DataValidation raise XlsxError 
   }
   dv.sqref = match attr_value(tag, "sqref") {
     Some(value) => unescape_xml_text(value)
-    None => raise XlsxError::InvalidXml(msg="data validation sqref missing")
+    None => raise InvalidXml(msg="data validation sqref missing")
   }
   match attr_value(tag, "type") {
     Some(value) => dv.validation_type = unescape_xml_text(value)

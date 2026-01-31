@@ -98,9 +98,7 @@ fn normalize_unzip_limits(options : Options) -> Options raise XlsxError {
     }
   }
   if unzip_xml_size_limit > unzip_size_limit {
-    raise XlsxError::InvalidOptions(
-      msg="unzip xml size limit exceeds total unzip limit",
-    )
+    raise InvalidOptions(msg="unzip xml size limit exceeds total unzip limit")
   }
   Options::with_values(
     max_calc_iterations=options.max_calc_iterations,

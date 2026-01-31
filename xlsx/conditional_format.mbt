@@ -505,7 +505,7 @@ fn prepare_conditional_format_range(
 ) -> (String, String) raise XlsxError {
   let cleaned = range_ref.to_string().replace_all(old=",", new=" ")
   if cleaned.trim() == "" {
-    raise XlsxError::InvalidConditionalFormat(msg="range is empty")
+    raise InvalidConditionalFormat(msg="range is empty")
   }
   let sqrefs : Array[String] = []
   let mut master_cell = ""
@@ -519,7 +519,7 @@ fn prepare_conditional_format_range(
       parts.push(item.to_string())
     }
     if parts.length() > 2 || parts.length() == 0 {
-      raise XlsxError::InvalidConditionalFormat(msg="range reference invalid")
+      raise InvalidConditionalFormat(msg="range reference invalid")
     }
     let (start_ref, end_ref) = if parts.length() == 1 {
       parse_range_ref_token(parts[0])
@@ -539,7 +539,7 @@ fn prepare_conditional_format_range(
     sqrefs.push(normalized)
   }
   if sqrefs.length() == 0 {
-    raise XlsxError::InvalidConditionalFormat(msg="range reference invalid")
+    raise InvalidConditionalFormat(msg="range reference invalid")
   }
   (sqrefs.join(" "), master_cell)
 }
@@ -561,17 +561,13 @@ fn build_cell_rule(
   sb.write_view(">")
   if operator == "between" || operator == "notBetween" {
     if opt.min_value == "" || opt.max_value == "" {
-      raise XlsxError::InvalidConditionalFormat(
-        msg="between criteria requires min/max",
-      )
+      raise InvalidConditionalFormat(msg="between criteria requires min/max")
     }
     write_formula(sb, opt.min_value)
     write_formula(sb, opt.max_value)
   } else {
     if opt.value == "" {
-      raise XlsxError::InvalidConditionalFormat(
-        msg="cell criteria requires value",
-      )
+      raise InvalidConditionalFormat(msg="cell criteria requires value")
     }
     write_formula(sb, opt.value)
   }
@@ -588,7 +584,7 @@ fn build_time_period_rule(
 ) -> String raise XlsxError {
   let formula = match time_period_formula(criteria, master_cell) {
     Some(value) => value
-    None => raise XlsxError::InvalidConditionalFormat(msg="time period invalid")
+    None => raise InvalidConditionalFormat(msg="time period invalid")
   }
   let sb = StringBuilder::new()
   sb.write_view("<cfRule type=\"timePeriod\"")
@@ -613,15 +609,14 @@ fn build_text_rule(
     "notContains" => "notContainsText"
     "beginsWith" => "beginsWith"
     "endsWith" => "endsWith"
-    _ => raise XlsxError::InvalidConditionalFormat(msg="text criteria invalid")
+    _ => raise InvalidConditionalFormat(msg="text criteria invalid")
   }
   if opt.value == "" {
-    raise XlsxError::InvalidConditionalFormat(msg="text value required")
+    raise InvalidConditionalFormat(msg="text value required")
   }
   let formula = match text_formula(criteria, master_cell, opt.value) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidConditionalFormat(msg="text formula invalid")
+    None => raise InvalidConditionalFormat(msg="text formula invalid")
   }
   let sb = StringBuilder::new()
   sb.write_view("<cfRule type=\"\{rule_type}\"")
@@ -778,8 +773,7 @@ fn build_icon_set_rule(
 ) -> String raise XlsxError {
   let steps = match icon_set_steps(opt.icon_style) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidConditionalFormat(msg="icon set style invalid")
+    None => raise InvalidConditionalFormat(msg="icon set style invalid")
   }
   let sb = StringBuilder::new()
   sb.write_view("<cfRule type=\"iconSet\"")
@@ -815,31 +809,28 @@ fn conditional_format_rules_xml(
   for i, opt in opts {
     let rule_type = match normalize_conditional_type(opt.format_type) {
       Some(value) => value
-      None => raise XlsxError::InvalidConditionalFormat(msg="type invalid")
+      None => raise InvalidConditionalFormat(msg="type invalid")
     }
     let priority = priority_start + i + 1
     let rule = match opt.format_type.to_string().to_lower() {
       "cell" => {
         let op = match normalize_criteria(opt.criteria) {
           Some(value) => value
-          None =>
-            raise XlsxError::InvalidConditionalFormat(msg="criteria invalid")
+          None => raise InvalidConditionalFormat(msg="criteria invalid")
         }
         build_cell_rule(opt, priority, op)
       }
       "time_period" => {
         let op = match normalize_criteria(opt.criteria) {
           Some(value) => value
-          None =>
-            raise XlsxError::InvalidConditionalFormat(msg="criteria invalid")
+          None => raise InvalidConditionalFormat(msg="criteria invalid")
         }
         build_time_period_rule(opt, priority, op, master_cell)
       }
       "text" => {
         let op = match normalize_criteria(opt.criteria) {
           Some(value) => value
-          None =>
-            raise XlsxError::InvalidConditionalFormat(msg="criteria invalid")
+          None => raise InvalidConditionalFormat(msg="criteria invalid")
         }
         build_text_rule(opt, priority, op, master_cell)
       }
@@ -881,14 +872,12 @@ fn conditional_format_rules_xml(
       "data_bar" => build_data_bar_rule(opt, priority)
       "formula" => {
         if opt.criteria == "" {
-          raise XlsxError::InvalidConditionalFormat(
-            msg="formula criteria missing",
-          )
+          raise InvalidConditionalFormat(msg="formula criteria missing")
         }
         build_simple_rule(rule_type, opt, priority, formula=opt.criteria)
       }
       "icon_set" => build_icon_set_rule(opt, priority)
-      _ => raise XlsxError::InvalidConditionalFormat(msg="type invalid")
+      _ => raise InvalidConditionalFormat(msg="type invalid")
     }
     rules.push(rule)
   }
@@ -931,11 +920,11 @@ fn extract_tag_blocks(
       None =>
         match fragment.find("/>") {
           Some(pos) => pos + 2
-          None => raise XlsxError::InvalidXml(msg="tag close missing")
+          None => raise InvalidXml(msg="tag close missing")
         }
     }
     let slice = fragment[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+        _ => raise InvalidXml(msg="tag slice invalid")
       }
     blocks.push(slice.to_string())
   }
@@ -953,14 +942,14 @@ fn extract_tag_bodies(
   for block in blocks {
     let start = match block.find(">") {
       Some(pos) => pos + 1
-      None => raise XlsxError::InvalidXml(msg="tag body start missing")
+      None => raise InvalidXml(msg="tag body start missing")
     }
     let end = match block.find(close_tag) {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="tag body end missing")
+      None => raise InvalidXml(msg="tag body end missing")
     }
     let body = block[start:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="tag body invalid")
+        _ => raise InvalidXml(msg="tag body invalid")
       }
     bodies.push(body.to_string())
   }
@@ -986,11 +975,11 @@ fn parse_cf_rule(
 ) -> ConditionalFormatOptions raise XlsxError {
   let tag = match tag_attributes_in(xml, "cfRule") {
     Some(value) => value
-    None => raise XlsxError::InvalidXml(msg="cfRule tag missing")
+    None => raise InvalidXml(msg="cfRule tag missing")
   }
   let rule_type = match attr_value(tag, "type") {
     Some(value) => value.to_string()
-    None => raise XlsxError::InvalidXml(msg="cfRule type missing")
+    None => raise InvalidXml(msg="cfRule type missing")
   }
   let opt = ConditionalFormatOptions::new("")
   opt.stop_if_true = match attr_value(tag, "stopIfTrue") {
@@ -1101,7 +1090,7 @@ fn parse_cf_rule(
     "colorScale" => {
       let scale_blocks = extract_tag_blocks(xml, "colorScale")
       if scale_blocks.length() == 0 {
-        raise XlsxError::InvalidXml(msg="colorScale missing")
+        raise InvalidXml(msg="colorScale missing")
       }
       let scale = scale_blocks[0]
       let cfvos = extract_tag_blocks(scale, "cfvo")
@@ -1174,7 +1163,7 @@ fn parse_cf_rule(
       opt.criteria = "="
       let data_blocks = extract_tag_blocks(xml, "dataBar")
       if data_blocks.length() == 0 {
-        raise XlsxError::InvalidXml(msg="dataBar missing")
+        raise InvalidXml(msg="dataBar missing")
       }
       let data = data_blocks[0]
       let tag = match tag_attributes_in(data, "dataBar") {
@@ -1266,7 +1255,7 @@ fn parse_cf_rule(
       opt.format_type = "icon_set"
       let icon_blocks = extract_tag_blocks(xml, "iconSet")
       if icon_blocks.length() == 0 {
-        raise XlsxError::InvalidXml(msg="iconSet missing")
+        raise InvalidXml(msg="iconSet missing")
       }
       let icon = icon_blocks[0]
       let tag = match tag_attributes_in(icon, "iconSet") {
@@ -1291,7 +1280,7 @@ fn parse_cf_rule(
         None => ()
       }
     }
-    _ => raise XlsxError::InvalidXml(msg="conditional format type unsupported")
+    _ => raise InvalidXml(msg="conditional format type unsupported")
   }
   opt
 }
@@ -1300,7 +1289,7 @@ fn parse_cf_rule(
 fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
   let text = sqref.to_string().trim().to_string()
   if text == "" {
-    raise XlsxError::InvalidXml(msg="sqref empty")
+    raise InvalidXml(msg="sqref empty")
   }
   let mut first = ""
   for part in text.split(" ") {
@@ -1311,14 +1300,14 @@ fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
     }
   }
   if first == "" {
-    raise XlsxError::InvalidXml(msg="sqref invalid")
+    raise InvalidXml(msg="sqref invalid")
   }
   let parts : Array[String] = []
   for item in first.split(":") {
     parts.push(item.to_string())
   }
   if parts.length() == 0 {
-    raise XlsxError::InvalidXml(msg="sqref invalid")
+    raise InvalidXml(msg="sqref invalid")
   }
   let (start_ref, _end_ref) = parse_range_ref_token(parts[0])
   start_ref
@@ -1344,17 +1333,17 @@ fn parse_conditional_format_xml(
         Some(pos) => {
           let end = pos + close_tag.length()
           let slice = text[:end] catch {
-              _ => raise XlsxError::InvalidXml(msg="cfRule tag invalid")
+              _ => raise InvalidXml(msg="cfRule tag invalid")
             }
           rules.push("<cfRule\{slice.to_string()}")
         }
         None => {
           let end = match text.find("/>") {
             Some(pos) => pos + 2
-            None => raise XlsxError::InvalidXml(msg="cfRule tag not closed")
+            None => raise InvalidXml(msg="cfRule tag not closed")
           }
           let slice = text[:end] catch {
-              _ => raise XlsxError::InvalidXml(msg="cfRule tag invalid")
+              _ => raise InvalidXml(msg="cfRule tag invalid")
             }
           rules.push("<cfRule\{slice.to_string()}")
         }
@@ -1365,12 +1354,11 @@ fn parse_conditional_format_xml(
 
   let tag = match tag_attributes_in(xml, "conditionalFormatting") {
     Some(value) => value
-    None => raise XlsxError::InvalidXml(msg="conditionalFormatting missing")
+    None => raise InvalidXml(msg="conditionalFormatting missing")
   }
   let sqref = match attr_value(tag, "sqref") {
     Some(value) => unescape_xml_text(value)
-    None =>
-      raise XlsxError::InvalidXml(msg="conditionalFormatting sqref missing")
+    None => raise InvalidXml(msg="conditionalFormatting sqref missing")
   }
   let master_cell = master_cell_from_sqref(sqref)
   let rules = extract_cf_rule_blocks(xml)

@@ -475,17 +475,15 @@ fn parse_custom_property_value(
   xml : StringView,
 ) -> CustomPropertyValue? raise XlsxError {
   match extract_tag_value(xml, "vt:lpwstr") {
-    Some(value) =>
-      return Some(CustomPropertyValue::Text(unescape_xml_text(value)))
+    Some(value) => return Some(Text(unescape_xml_text(value)))
     None => ()
   }
   match extract_tag_value(xml, "vt:bool") {
-    Some(value) =>
-      return Some(CustomPropertyValue::Boolean(parse_cell_bool(value)))
+    Some(value) => return Some(Boolean(parse_cell_bool(value)))
     None => ()
   }
   match extract_tag_value(xml, "vt:filetime") {
-    Some(value) => return Some(CustomPropertyValue::DateTime(value))
+    Some(value) => return Some(DateTime(value))
     None => ()
   }
   let int_tags = [
@@ -496,12 +494,10 @@ fn parse_custom_property_value(
     match extract_tag_value(xml, tag) {
       Some(value) =>
         return Some(
-          CustomPropertyValue::Integer(
+          Integer(
             @strconv.parse_int(value, base=10) catch {
               _ =>
-                raise XlsxError::InvalidWorkbookProperty(
-                  msg="custom property int invalid",
-                )
+                raise InvalidWorkbookProperty(msg="custom property int invalid")
             },
           ),
         )
@@ -513,10 +509,10 @@ fn parse_custom_property_value(
     match extract_tag_value(xml, tag) {
       Some(value) =>
         return Some(
-          CustomPropertyValue::Float(
+          Float(
             @strconv.parse_double(value) catch {
               _ =>
-                raise XlsxError::InvalidWorkbookProperty(
+                raise InvalidWorkbookProperty(
                   msg="custom property number invalid",
                 )
             },
@@ -534,27 +530,27 @@ fn write_custom_property_value(
   value : CustomPropertyValue,
 ) -> Unit {
   match value {
-    CustomPropertyValue::Integer(number) => {
+    Integer(number) => {
       sb.write_view("<vt:i4>")
       sb.write_view("\{number}")
       sb.write_view("</vt:i4>")
     }
-    CustomPropertyValue::Float(number) => {
+    Float(number) => {
       sb.write_view("<vt:r8>")
       sb.write_view("\{number}")
       sb.write_view("</vt:r8>")
     }
-    CustomPropertyValue::Boolean(value) => {
+    Boolean(value) => {
       sb.write_view("<vt:bool>")
       sb.write_view(if value { "true" } else { "false" })
       sb.write_view("</vt:bool>")
     }
-    CustomPropertyValue::Text(text) => {
+    Text(text) => {
       sb.write_view("<vt:lpwstr>")
       sb.write_view(escape_xml_text(text))
       sb.write_view("</vt:lpwstr>")
     }
-    CustomPropertyValue::DateTime(text) => {
+    DateTime(text) => {
       sb.write_view("<vt:filetime>")
       sb.write_view(escape_xml_text(text))
       sb.write_view("</vt:filetime>")
@@ -605,14 +601,14 @@ fn parse_custom_properties(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="property tag not closed")
+      None => raise InvalidXml(msg="property tag not closed")
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="property tag invalid")
+        _ => raise InvalidXml(msg="property tag invalid")
       }
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="property name missing")
+      None => raise InvalidXml(msg="property name missing")
     }
     let close_tag = "</property>"
     let body = match text.find(close_tag) {

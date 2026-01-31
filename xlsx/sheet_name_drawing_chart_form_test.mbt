@@ -26,7 +26,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     content="true",
   )
   let hf_opts = HeaderFooterImageOptions::new(
-    HeaderFooterImagePosition::Left,
+    Left,
     Bytes::from_array([]),
     "png",
   )
@@ -65,7 +65,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     add_chart_result is Err(XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let chart_opts = ChartOptions::new(ChartType::Col)
+  let chart_opts = ChartOptions::new(Col)
   let add_chart_opts_result : Result[Unit, Error] = try? workbook.add_chart_with_options(
     "Sheet:1", "A1", chart_opts,
   )

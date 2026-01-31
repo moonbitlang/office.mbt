@@ -113,7 +113,7 @@ pub fn Workbook::set_sheet_row(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (row, col) = cell_ref_to_rc(cell)
   let mut col_index = col
@@ -134,7 +134,7 @@ pub fn Workbook::set_sheet_col(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (row, col) = cell_ref_to_rc(cell)
   let mut row_index = row
@@ -163,7 +163,7 @@ fn parse_column_range(columns : StringView) -> (Int, Int) raise XlsxError {
     parts.push(part)
   }
   if parts.length() == 0 || parts.length() > 2 {
-    raise XlsxError::InvalidCellRef(value=text)
+    raise InvalidCellRef(value=text)
   }
   let start = column_name_to_number(parts[0])
   let end = if parts.length() == 2 {
@@ -172,7 +172,7 @@ fn parse_column_range(columns : StringView) -> (Int, Int) raise XlsxError {
     start
   }
   if end < start {
-    raise XlsxError::InvalidCellRef(value=text)
+    raise InvalidCellRef(value=text)
   }
   (start, end)
 }
@@ -187,7 +187,7 @@ pub fn Workbook::set_col_width_range(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
@@ -205,7 +205,7 @@ pub fn Workbook::set_col_visible_range(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
@@ -223,7 +223,7 @@ pub fn Workbook::set_col_outline_level_range(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
@@ -241,7 +241,7 @@ pub fn Workbook::set_col_style_range(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {

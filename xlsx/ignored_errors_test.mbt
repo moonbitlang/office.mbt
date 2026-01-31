@@ -2,9 +2,9 @@
 test "ignored errors write and roundtrip" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.add_ignored_errors("A1", IgnoredErrorType::EvalError)
-  sheet.add_ignored_errors("A1", IgnoredErrorType::EvalError)
-  sheet.add_ignored_errors("B2:C3", IgnoredErrorType::NumberStoredAsText)
+  sheet.add_ignored_errors("A1", EvalError)
+  sheet.add_ignored_errors("A1", EvalError)
+  sheet.add_ignored_errors("B2:C3", NumberStoredAsText)
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
@@ -29,7 +29,7 @@ test "ignored errors invalid range" {
   let sheet = workbook.add_sheet("Sheet1")
   let result : Result[Unit, Error] = try? sheet.add_ignored_errors(
     "",
-    IgnoredErrorType::EvalError,
+    EvalError,
   )
   match result {
     Err(XlsxError::InvalidSheetOperation(msg~)) =>
@@ -43,20 +43,20 @@ test "ignored errors workbook parity (all types + errors)" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let types : Array[IgnoredErrorType] = [
-    IgnoredErrorType::EvalError,
-    IgnoredErrorType::TwoDigitTextYear,
-    IgnoredErrorType::NumberStoredAsText,
-    IgnoredErrorType::Formula,
-    IgnoredErrorType::FormulaRange,
-    IgnoredErrorType::UnlockedFormula,
-    IgnoredErrorType::EmptyCellReference,
-    IgnoredErrorType::ListDataValidation,
-    IgnoredErrorType::CalculatedColumn,
+    EvalError,
+    TwoDigitTextYear,
+    NumberStoredAsText,
+    Formula,
+    FormulaRange,
+    UnlockedFormula,
+    EmptyCellReference,
+    ListDataValidation,
+    CalculatedColumn,
   ]
   for t in types {
     workbook.add_ignored_errors("Sheet1", "A1", t)
   }
-  workbook.add_ignored_errors("Sheet1", "A1", IgnoredErrorType::EvalError)
+  workbook.add_ignored_errors("Sheet1", "A1", EvalError)
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
@@ -81,13 +81,13 @@ test "ignored errors workbook parity (all types + errors)" {
   let missing_sheet : Result[Unit, Error] = try? parsed.add_ignored_errors(
     "SheetN",
     "A1",
-    IgnoredErrorType::EvalError,
+    EvalError,
   )
   inspect(missing_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
   let blank_range : Result[Unit, Error] = try? parsed.add_ignored_errors(
     "Sheet1",
     "",
-    IgnoredErrorType::EvalError,
+    EvalError,
   )
   inspect(
     blank_range is Err(XlsxError::InvalidSheetOperation(_)),

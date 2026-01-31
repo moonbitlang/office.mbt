@@ -30,15 +30,15 @@ fn ignored_error_from_type(
   sqref : String,
   error_type : IgnoredErrorType,
 ) -> IgnoredError {
-  let eval_error = error_type == IgnoredErrorType::EvalError
-  let two_digit_text_year = error_type == IgnoredErrorType::TwoDigitTextYear
-  let number_stored_as_text = error_type == IgnoredErrorType::NumberStoredAsText
-  let formula = error_type == IgnoredErrorType::Formula
-  let formula_range = error_type == IgnoredErrorType::FormulaRange
-  let unlocked_formula = error_type == IgnoredErrorType::UnlockedFormula
-  let empty_cell_reference = error_type == IgnoredErrorType::EmptyCellReference
-  let list_data_validation = error_type == IgnoredErrorType::ListDataValidation
-  let calculated_column = error_type == IgnoredErrorType::CalculatedColumn
+  let eval_error = error_type == EvalError
+  let two_digit_text_year = error_type == TwoDigitTextYear
+  let number_stored_as_text = error_type == NumberStoredAsText
+  let formula = error_type == Formula
+  let formula_range = error_type == FormulaRange
+  let unlocked_formula = error_type == UnlockedFormula
+  let empty_cell_reference = error_type == EmptyCellReference
+  let list_data_validation = error_type == ListDataValidation
+  let calculated_column = error_type == CalculatedColumn
   {
     sqref,
     eval_error,
@@ -56,7 +56,7 @@ fn ignored_error_from_type(
 ///|
 fn ignored_error_xml(error : IgnoredError) -> String raise XlsxError {
   if error.sqref == "" {
-    raise XlsxError::InvalidSheetOperation(msg="ignored errors sqref empty")
+    raise InvalidSheetOperation(msg="ignored errors sqref empty")
   }
   let sb = StringBuilder::new()
   sb.write_view("<ignoredError sqref=\"")
@@ -132,15 +132,15 @@ fn parse_ignored_errors(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="ignoredError tag not closed")
+          None => raise InvalidXml(msg="ignoredError tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="ignoredError tag invalid")
+        _ => raise InvalidXml(msg="ignoredError tag invalid")
       }
     let sqref = match attr_value(tag, "sqref") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="ignoredError sqref missing")
+      None => raise InvalidXml(msg="ignoredError sqref missing")
     }
     let error : IgnoredError = {
       sqref,

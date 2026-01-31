@@ -16,7 +16,7 @@ fn normalize_optional_value(
       return item
     }
   }
-  raise XlsxError::InvalidPageLayout(msg="\{field_name.to_string()} invalid")
+  raise InvalidPageLayout(msg="\{field_name.to_string()} invalid")
 }
 
 ///|
@@ -43,7 +43,7 @@ fn normalize_page_layout_options(
   match updated.adjust_to {
     Some(value) =>
       if value < 10 || value > 400 {
-        raise XlsxError::InvalidPageLayout(msg="adjust_to out of range")
+        raise InvalidPageLayout(msg="adjust_to out of range")
       }
     None => ()
   }
@@ -60,9 +60,7 @@ fn check_header_footer_limit(
   field_name : StringView,
 ) -> Unit raise XlsxError {
   if count_utf16_units(value) > max_field_length {
-    raise XlsxError::InvalidHeaderFooter(
-      msg="\{field_name.to_string()} too long",
-    )
+    raise InvalidHeaderFooter(msg="\{field_name.to_string()} too long")
   }
 }
 
@@ -244,7 +242,7 @@ pub fn Worksheet::unprotect_sheet(
       }
       self.sheet_protection = None
     }
-    None => raise XlsxError::InvalidSheetProtection(msg="sheet not protected")
+    None => raise InvalidSheetProtection(msg="sheet not protected")
   }
 }
 
@@ -256,13 +254,12 @@ pub fn Worksheet::set_sheet_background(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   if data.length() == 0 {
-    raise XlsxError::InvalidSheetBackground(msg="image data empty")
+    raise InvalidSheetBackground(msg="image data empty")
   }
   let ext = normalize_image_extension(extension)
   let content_type = match image_content_type(ext) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidSheetBackground(msg="unsupported image type")
+    None => raise InvalidSheetBackground(msg="unsupported image type")
   }
   self.sheet_background = Some({ data, extension: ext, content_type })
 }

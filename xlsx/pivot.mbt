@@ -16,10 +16,10 @@ pub fn PivotTable::new(
   name? : String = "",
 ) -> PivotTable raise XlsxError {
   if table_xml == "" {
-    raise XlsxError::InvalidPivotTable(msg="pivot table xml empty")
+    raise InvalidPivotTable(msg="pivot table xml empty")
   }
   if cache_definition_xml == "" {
-    raise XlsxError::InvalidPivotTable(msg="pivot cache definition empty")
+    raise InvalidPivotTable(msg="pivot cache definition empty")
   }
   let records = if cache_records_xml == "" {
     None

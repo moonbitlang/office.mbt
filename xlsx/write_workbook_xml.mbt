@@ -78,12 +78,12 @@ fn write_workbook_xml(
   sb.write_view("  <sheets>\n")
   for _i, entry in sheets {
     let sheet_id = match entry {
-      SheetEntry::Worksheet(idx) => idx + 1
-      SheetEntry::ChartSheet(idx) => worksheet_count + idx + 1
+      Worksheet(idx) => idx + 1
+      ChartSheet(idx) => worksheet_count + idx + 1
     }
     let rel_id = match entry {
-      SheetEntry::Worksheet(idx) => idx + 1
-      SheetEntry::ChartSheet(idx) => chartsheet_rel_start + idx
+      Worksheet(idx) => idx + 1
+      ChartSheet(idx) => chartsheet_rel_start + idx
     }
     sb.write_view("    <sheet name=\"")
     sb.write_view(escape_xml_attr(workbook.sheet_entry_name(entry)))
@@ -91,9 +91,9 @@ fn write_workbook_xml(
     sb.write_view("\{sheet_id}\"")
     sb.write_view(" r:id=\"rId\{rel_id}\"")
     match workbook.sheet_entry_state(entry) {
-      SheetState::Visible => ()
-      SheetState::Hidden => sb.write_view(" state=\"hidden\"")
-      SheetState::VeryHidden => sb.write_view(" state=\"veryHidden\"")
+      Visible => ()
+      Hidden => sb.write_view(" state=\"hidden\"")
+      VeryHidden => sb.write_view(" state=\"veryHidden\"")
     }
     sb.write_view("/>\n")
   }

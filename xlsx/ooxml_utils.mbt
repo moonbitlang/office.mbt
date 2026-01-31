@@ -14,14 +14,14 @@ fn tag_attributes_in(
     None => return None
   }
   let rest = xml_str[start + 1:] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag attributes out of range")
+      _ => raise InvalidXml(msg="tag attributes out of range")
     }
   let end = match rest.find(">") {
     Some(pos) => pos
     None => return None
   }
   let slice = rest[:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag attributes invalid")
+      _ => raise InvalidXml(msg="tag attributes invalid")
     }
   Some(slice.to_string())
 }
@@ -40,7 +40,7 @@ fn extract_tag_body_from(
     None => return None
   }
   let after_start = xml_str[start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+      _ => raise InvalidXml(msg="tag slice invalid")
     }
   let open_end_rel = match after_start.find(">") {
     Some(pos) => pos
@@ -52,7 +52,7 @@ fn extract_tag_body_from(
     None => return None
   }
   let body = xml_str[body_start:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag body invalid")
+      _ => raise InvalidXml(msg="tag body invalid")
     }
   Some(body.to_string())
 }
@@ -75,19 +75,19 @@ fn extract_tag_body(
     None => return None
   }
   let after_start = xml_str[start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+      _ => raise InvalidXml(msg="tag slice invalid")
     }
   let open_end_rel = match after_start.find(">") {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="tag open not closed")
+    None => raise InvalidXml(msg="tag open not closed")
   }
   let body_start = start + open_end_rel + 1
   let end = match xml_str.find(close_tag) {
     Some(pos) => pos
-    None => raise XlsxError::InvalidXml(msg="tag close missing")
+    None => raise InvalidXml(msg="tag close missing")
   }
   let body = xml_str[body_start:end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag body invalid")
+      _ => raise InvalidXml(msg="tag body invalid")
     }
   Some(body.to_string())
 }
@@ -109,7 +109,7 @@ fn replace_attr_value_in_open_tag(
     None => return None
   }
   let open_tag = text[tag_start:tag_end] catch {
-      _ => raise XlsxError::InvalidXml(msg="tag slice invalid")
+      _ => raise InvalidXml(msg="tag slice invalid")
     }
   let needle = "\{attr_name.to_string()}=\""
   let attr_pos = match open_tag.find(needle) {
@@ -118,7 +118,7 @@ fn replace_attr_value_in_open_tag(
   }
   let value_start = tag_start + attr_pos + needle.length()
   let rest = text[value_start:] catch {
-      _ => raise XlsxError::InvalidXml(msg="attribute slice invalid")
+      _ => raise InvalidXml(msg="attribute slice invalid")
     }
   let value_end_rel = match rest.find("\"") {
     Some(pos) => pos
@@ -128,13 +128,13 @@ fn replace_attr_value_in_open_tag(
   let sb = StringBuilder::new()
   sb.write_view(
     text[:value_start] catch {
-      _ => raise XlsxError::InvalidXml(msg="attribute start invalid")
+      _ => raise InvalidXml(msg="attribute start invalid")
     },
   )
   sb.write_view(escape_xml_attr(value))
   sb.write_view(
     text[value_end:] catch {
-      _ => raise XlsxError::InvalidXml(msg="attribute end invalid")
+      _ => raise InvalidXml(msg="attribute end invalid")
     },
   )
   Some(sb.to_string())

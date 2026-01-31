@@ -100,7 +100,7 @@ test "formula opts dataTable behaves like normal formula" {
   sheet.set_cell_formula_opts(
     "A1",
     "SUM(1,2)",
-    opts=FormulaOpts::with_values(formula_type=FormulaType::DataTable),
+    opts=FormulaOpts::with_values(formula_type=DataTable),
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {

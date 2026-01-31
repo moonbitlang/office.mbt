@@ -205,8 +205,7 @@ fn normalize_calc_props(
     Some(value) =>
       match normalize_calc_mode(value) {
         Some(result) => normalized.calc_mode = Some(result)
-        None =>
-          raise XlsxError::InvalidWorkbookProperty(msg="invalid calc mode")
+        None => raise InvalidWorkbookProperty(msg="invalid calc mode")
       }
   }
   match options.ref_mode {
@@ -214,8 +213,7 @@ fn normalize_calc_props(
     Some(value) =>
       match normalize_ref_mode(value) {
         Some(result) => normalized.ref_mode = Some(result)
-        None =>
-          raise XlsxError::InvalidWorkbookProperty(msg="invalid reference mode")
+        None => raise InvalidWorkbookProperty(msg="invalid reference mode")
       }
   }
   normalized
@@ -259,9 +257,7 @@ fn verify_workbook_protection_password(
   password : StringView,
 ) -> Unit raise XlsxError {
   if protection.algorithm_name == "" || protection.hash_value == "" {
-    raise XlsxError::InvalidWorkbookProtection(
-      msg="workbook protection password mismatch",
-    )
+    raise InvalidWorkbookProtection(msg="workbook protection password mismatch")
   }
   let (hash_value, _salt) = gen_iso_password_hash(
     password,
@@ -270,9 +266,7 @@ fn verify_workbook_protection_password(
     protection.spin_count,
   )
   if protection.hash_value != hash_value {
-    raise XlsxError::InvalidWorkbookProtection(
-      msg="workbook protection password mismatch",
-    )
+    raise InvalidWorkbookProtection(msg="workbook protection password mismatch")
   }
 }
 

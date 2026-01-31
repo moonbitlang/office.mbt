@@ -45,7 +45,7 @@ fn Reader::new(bytes : BytesView, pos : Int) -> Reader {
 ///|
 fn Reader::read_u8(self : Reader) -> Int raise ZipError {
   if self.pos >= self.bytes.length() || self.pos < 0 {
-    raise ZipError::OutOfBounds(offset=self.pos)
+    raise OutOfBounds(offset=self.pos)
   }
   let value = self.bytes[self.pos].to_int()
   self.pos = self.pos + 1
@@ -88,11 +88,11 @@ fn Reader::read_u64_raw(self : Reader) -> UInt64 raise ZipError {
 ///|
 fn Reader::read_bytes(self : Reader, len : Int) -> BytesView raise ZipError {
   if len < 0 {
-    raise ZipError::OutOfBounds(offset=self.pos)
+    raise OutOfBounds(offset=self.pos)
   }
   let end = self.pos + len
   if end > self.bytes.length() {
-    raise ZipError::OutOfBounds(offset=self.pos)
+    raise OutOfBounds(offset=self.pos)
   }
   let view = self.bytes[self.pos:end]
   self.pos = end
@@ -102,11 +102,11 @@ fn Reader::read_bytes(self : Reader, len : Int) -> BytesView raise ZipError {
 ///|
 fn Reader::skip(self : Reader, len : Int) -> Unit raise ZipError {
   if len < 0 {
-    raise ZipError::OutOfBounds(offset=self.pos)
+    raise OutOfBounds(offset=self.pos)
   }
   let end = self.pos + len
   if end > self.bytes.length() {
-    raise ZipError::OutOfBounds(offset=self.pos)
+    raise OutOfBounds(offset=self.pos)
   }
   self.pos = end
 }
@@ -115,7 +115,7 @@ fn Reader::skip(self : Reader, len : Int) -> Unit raise ZipError {
 fn u32_to_int(value : UInt) -> Int raise ZipError {
   let max_u32_int : UInt = 0x7FFFFFFF
   if value > max_u32_int {
-    raise ZipError::UnsupportedFeature(msg="u32 exceeds Int range")
+    raise UnsupportedFeature(msg="u32 exceeds Int range")
   }
   value.reinterpret_as_int()
 }
@@ -124,7 +124,7 @@ fn u32_to_int(value : UInt) -> Int raise ZipError {
 fn u64_to_int(value : UInt64) -> Int raise ZipError {
   let max_int : UInt64 = 0x7FFFFFFF
   if value > max_int {
-    raise ZipError::UnsupportedFeature(msg="u64 exceeds Int range")
+    raise UnsupportedFeature(msg="u64 exceeds Int range")
   }
   value.to_int()
 }
@@ -132,7 +132,7 @@ fn u64_to_int(value : UInt64) -> Int raise ZipError {
 ///|
 fn read_u16_le_at(bytes : BytesView, offset : Int) -> Int raise ZipError {
   if offset < 0 || offset + 2 > bytes.length() {
-    raise ZipError::OutOfBounds(offset~)
+    raise OutOfBounds(offset~)
   }
   let b0 = bytes[offset].to_int()
   let b1 = bytes[offset + 1].to_int()
@@ -142,7 +142,7 @@ fn read_u16_le_at(bytes : BytesView, offset : Int) -> Int raise ZipError {
 ///|
 fn read_u32_le_at_raw(bytes : BytesView, offset : Int) -> UInt raise ZipError {
   if offset < 0 || offset + 4 > bytes.length() {
-    raise ZipError::OutOfBounds(offset~)
+    raise OutOfBounds(offset~)
   }
   let b0 = bytes[offset].to_uint()
   let b1 = bytes[offset + 1].to_uint()
@@ -154,7 +154,7 @@ fn read_u32_le_at_raw(bytes : BytesView, offset : Int) -> UInt raise ZipError {
 ///|
 fn read_u64_le_at(bytes : BytesView, offset : Int) -> UInt64 raise ZipError {
   if offset < 0 || offset + 8 > bytes.length() {
-    raise ZipError::OutOfBounds(offset~)
+    raise OutOfBounds(offset~)
   }
   let mut result : UInt64 = 0
   for i in 0..<8 {
@@ -192,16 +192,14 @@ priv struct EntryMeta {
 ///|
 fn decode_name(bytes : BytesView, offset : Int) -> String raise ZipError {
   @encoding/utf8.decode(bytes) catch {
-    _ => raise ZipError::InvalidUtf8(offset~)
+    _ => raise InvalidUtf8(offset~)
   }
 }
 
 ///|
 fn ensure_flags_supported(flags : Int) -> Unit raise ZipError {
   if (flags & flag_encrypted) != 0 {
-    raise ZipError::UnsupportedFeature(
-      msg="encrypted zip entries not supported",
-    )
+    raise UnsupportedFeature(msg="encrypted zip entries not supported")
   }
   let supported = flag_data_descriptor |
     flag_utf8 |
@@ -209,7 +207,7 @@ fn ensure_flags_supported(flags : Int) -> Unit raise ZipError {
     flag_deflate_fast
   let unsupported = flags & supported.lnot()
   if unsupported != 0 {
-    raise ZipError::UnsupportedFeature(
+    raise UnsupportedFeature(
       msg="unsupported zip flags: 0x\{unsupported.to_string(radix=16)}",
     )
   }
@@ -228,7 +226,7 @@ fn parse_zip64_extra(
     let data_size = read_u16_le_at(extra, pos + 2)
     pos = pos + 4
     if pos + data_size > extra.length() {
-      raise ZipError::OutOfBounds(offset=pos)
+      raise OutOfBounds(offset=pos)
     }
     if header_id == 0x0001 {
       let mut cursor = pos
@@ -260,18 +258,18 @@ fn read_zip64_eocd(
 ) -> (Int, Int, Int) raise ZipError {
   let locator_offset = eocd_offset - 20
   if locator_offset < 0 {
-    raise ZipError::UnsupportedFeature(msg="zip64 locator missing")
+    raise UnsupportedFeature(msg="zip64 locator missing")
   }
   let locator_sig = read_u32_le_at_raw(bytes, locator_offset)
   if locator_sig != zip64_locator_sig.reinterpret_as_uint() {
-    raise ZipError::UnsupportedFeature(msg="zip64 locator missing")
+    raise UnsupportedFeature(msg="zip64 locator missing")
   }
   let zip64_offset_u64 = read_u64_le_at(bytes, locator_offset + 8)
   let zip64_offset = u64_to_int(zip64_offset_u64)
   let reader = Reader::new(bytes, zip64_offset)
   let sig = reader.read_u32_raw()
   if sig != zip64_eocd_sig.reinterpret_as_uint() {
-    raise ZipError::InvalidSignature(
+    raise InvalidSignature(
       expected=zip64_eocd_sig,
       actual=sig.reinterpret_as_int(),
       offset=zip64_offset,
@@ -287,7 +285,7 @@ fn read_zip64_eocd(
   let central_size = reader.read_u64_raw()
   let central_offset = reader.read_u64_raw()
   if disk_no != 0 || disk_start != 0 || entries_on_disk != total_entries {
-    raise ZipError::UnsupportedFeature(msg="multi-disk zip not supported")
+    raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
   (
     u64_to_int(total_entries),
@@ -299,9 +297,9 @@ fn read_zip64_eocd(
 ///|
 fn compression_from_method(method_id : Int) -> Compression raise ZipError {
   match method_id {
-    0 => Compression::Store
-    8 => Compression::Deflate
-    _ => raise ZipError::UnsupportedCompression(method_id~)
+    0 => Store
+    8 => Deflate
+    _ => raise UnsupportedCompression(method_id~)
   }
 }
 
@@ -310,7 +308,7 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
   let reader = Reader::new(bytes, meta.local_header_offset)
   let sig = reader.read_u32()
   if sig != local_header_sig {
-    raise ZipError::InvalidSignature(
+    raise InvalidSignature(
       expected=local_header_sig,
       actual=sig,
       offset=meta.local_header_offset,
@@ -338,7 +336,7 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
       u32_to_int(comp_size_raw)
     }
     if local_comp != meta.compressed_size {
-      raise ZipError::UnsupportedFeature(msg="mismatched compressed size")
+      raise UnsupportedFeature(msg="mismatched compressed size")
     }
   }
   let compressed = reader.read_bytes(meta.compressed_size)
@@ -352,12 +350,12 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
 pub fn read(bytes : BytesView) -> Archive raise ZipError {
   let eocd_offset = match find_end_of_central(bytes) {
     Some(offset) => offset
-    None => raise ZipError::MissingEndOfCentral
+    None => raise MissingEndOfCentral
   }
   let reader = Reader::new(bytes, eocd_offset)
   let sig = reader.read_u32()
   if sig != end_of_central_sig {
-    raise ZipError::InvalidSignature(
+    raise InvalidSignature(
       expected=end_of_central_sig,
       actual=sig,
       offset=eocd_offset,
@@ -372,7 +370,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
   let comment_len = reader.read_u16()
   reader.skip(comment_len)
   if disk_no != 0 || disk_start != 0 || disk_entries != total_entries {
-    raise ZipError::UnsupportedFeature(msg="multi-disk zip not supported")
+    raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
   let max_u32 : UInt = 0xFFFFFFFF
   let needs_zip64 = disk_entries == 0xFFFF ||
@@ -389,7 +387,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     )
   }
   if central_offset + central_size > bytes.length() {
-    raise ZipError::OutOfBounds(offset=central_offset)
+    raise OutOfBounds(offset=central_offset)
   }
   let metas : Array[EntryMeta] = Array::new(capacity=entry_count)
   let central_reader = Reader::new(bytes, central_offset)
@@ -397,7 +395,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     let header_offset = central_reader.pos
     let cd_sig = central_reader.read_u32()
     if cd_sig != central_header_sig {
-      raise ZipError::InvalidSignature(
+      raise InvalidSignature(
         expected=central_header_sig,
         actual=cd_sig,
         offset=header_offset,
@@ -437,7 +435,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     let _uncomp_size = if need_uncomp {
       match zip_uncomp {
         Some(value) => u64_to_int(value)
-        None => raise ZipError::UnsupportedFeature(msg="zip64 size missing")
+        None => raise UnsupportedFeature(msg="zip64 size missing")
       }
     } else {
       u32_to_int(uncomp_size_raw)
@@ -445,7 +443,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     let comp_size = if need_comp {
       match zip_comp {
         Some(value) => u64_to_int(value)
-        None => raise ZipError::UnsupportedFeature(msg="zip64 size missing")
+        None => raise UnsupportedFeature(msg="zip64 size missing")
       }
     } else {
       u32_to_int(comp_size_raw)
@@ -453,7 +451,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     let local_offset = if need_offset {
       match zip_offset {
         Some(value) => u64_to_int(value)
-        None => raise ZipError::UnsupportedFeature(msg="zip64 offset missing")
+        None => raise UnsupportedFeature(msg="zip64 offset missing")
       }
     } else {
       u32_to_int(local_offset_raw)

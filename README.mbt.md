@@ -135,9 +135,9 @@ test "cell value types" {
   sheet.set_cell("A3", "3.14159")
 
   // Using typed CellValue enum for explicit types
-  sheet.set_cell_value("B1", @xlsx.CellValue::String("Text"))
-  sheet.set_cell_value("B2", @xlsx.CellValue::Numeric(100.5))
-  sheet.set_cell_value("B3", @xlsx.CellValue::Bool(true))
+  sheet.set_cell_value("B1", String("Text"))
+  sheet.set_cell_value("B2", Numeric(100.5))
+  sheet.set_cell_value("B3", Bool(true))
 
   // Read back values
   inspect(sheet.get_cell("A1"), content="Some(\"Hello\")")

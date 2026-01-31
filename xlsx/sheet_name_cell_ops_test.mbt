@@ -12,7 +12,7 @@ test "cell APIs validate sheet name" {
   let set_cell_value_result : Result[Unit, Error] = try? workbook.set_cell_value(
     "Sheet:1",
     "A1",
-    CellValue::String("beta"),
+    String("beta"),
   )
   inspect(
     set_cell_value_result is Err(XlsxError::InvalidSheetName(_)),
@@ -31,7 +31,7 @@ test "cell APIs validate sheet name" {
     "Sheet:1",
     "A1",
     "https://example.com",
-    HyperlinkType::External,
+    External,
   )
   inspect(
     set_hyperlink_result is Err(XlsxError::InvalidSheetName(_)),
@@ -41,7 +41,7 @@ test "cell APIs validate sheet name" {
     "Sheet:1",
     "A1",
     "https://example.com",
-    HyperlinkType::External,
+    External,
   )
   inspect(
     set_hyperlink_opts_result is Err(XlsxError::InvalidSheetName(_)),

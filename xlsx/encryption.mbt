@@ -102,11 +102,7 @@ fn ByteWriter::write_u64_le(self : ByteWriter, value : Int) -> Unit {
 
 ///|
 fn ByteWriter::write_utf16le(self : ByteWriter, value : StringView) -> Unit {
-  let bytes = @encoding/utf16.encode(
-    value,
-    bom=false,
-    endianness=@encoding/utf16.Endian::Little,
-  )
+  let bytes = @encoding/utf16.encode(value, bom=false, endianness=Little)
   self.write_bytes(bytes)
 }
 
@@ -133,9 +129,7 @@ fn hash_parts(
   let normalized = normalize_hash_algorithm(algorithm)
   let out = @crypto.hash_concat(normalized, parts)
   if out.length() == 0 {
-    raise XlsxError::UnsupportedEncryption(
-      msg="unsupported hash algorithm: \{algorithm}",
-    )
+    raise UnsupportedEncryption(msg="unsupported hash algorithm: \{algorithm}")
   }
   out
 }
@@ -143,16 +137,14 @@ fn hash_parts(
 ///|
 fn aes_ecb_encrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
   @crypto.aes_ecb_encrypt(key, data) catch {
-    @crypto.CryptoError::InvalidCrypto(msg~) =>
-      raise XlsxError::InvalidEncryptionInfo(msg~)
+    InvalidCrypto(msg~) => raise InvalidEncryptionInfo(msg~)
   }
 }
 
 ///|
 fn aes_ecb_decrypt(key : BytesView, data : BytesView) -> Bytes raise XlsxError {
   @crypto.aes_ecb_decrypt(key, data) catch {
-    @crypto.CryptoError::InvalidCrypto(msg~) =>
-      raise XlsxError::InvalidEncryptionInfo(msg~)
+    InvalidCrypto(msg~) => raise InvalidEncryptionInfo(msg~)
   }
 }
 
@@ -163,8 +155,7 @@ fn aes_cbc_decrypt(
   data : BytesView,
 ) -> Bytes raise XlsxError {
   @crypto.aes_cbc_decrypt(key, iv, data) catch {
-    @crypto.CryptoError::InvalidCrypto(msg~) =>
-      raise XlsxError::InvalidEncryptionInfo(msg~)
+    InvalidCrypto(msg~) => raise InvalidEncryptionInfo(msg~)
   }
 }
 
@@ -221,8 +212,7 @@ fn parse_required_attr(
 ) -> String raise XlsxError {
   match attr_value(tag, name) {
     Some(value) => value
-    None =>
-      raise XlsxError::InvalidEncryptionInfo(msg="missing \{name} attribute")
+    None => raise InvalidEncryptionInfo(msg="missing \{name} attribute")
   }
 }
 
@@ -230,7 +220,7 @@ fn parse_required_attr(
 fn parse_int_attr(tag : StringView, name : String) -> Int raise XlsxError {
   let text = parse_required_attr(tag, name)
   @strconv.parse_int(text, base=10) catch {
-    _ => raise XlsxError::InvalidEncryptionInfo(msg="invalid \{name} value")
+    _ => raise InvalidEncryptionInfo(msg="invalid \{name} value")
   }
 }
 
@@ -251,14 +241,14 @@ fn tag_attributes(
     None => None
     Some(start) => {
       let rest = xml_str[start + needle.length():] catch {
-          _ => raise XlsxError::InvalidEncryptionInfo(msg="invalid tag slice")
+          _ => raise InvalidEncryptionInfo(msg="invalid tag slice")
         }
       let end = match rest.find(">") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidEncryptionInfo(msg="tag not closed")
+        None => raise InvalidEncryptionInfo(msg="tag not closed")
       }
       let tag = rest[:end] catch {
-          _ => raise XlsxError::InvalidEncryptionInfo(msg="invalid tag body")
+          _ => raise InvalidEncryptionInfo(msg="invalid tag body")
         }
       Some(tag.to_string())
     }
@@ -306,15 +296,14 @@ fn parse_encrypted_key(tag : StringView) -> EncryptedKey raise XlsxError {
 fn parse_encryption_info(xml : StringView) -> EncryptionInfo raise XlsxError {
   let key_data_tag = match tag_attributes(xml, "keyData") {
     Some(value) => value
-    None => raise XlsxError::InvalidEncryptionInfo(msg="keyData tag missing")
+    None => raise InvalidEncryptionInfo(msg="keyData tag missing")
   }
   let encrypted_key_tag = match tag_attributes(xml, "p:encryptedKey") {
     Some(value) => value
     None =>
       match tag_attributes(xml, "encryptedKey") {
         Some(value) => value
-        None =>
-          raise XlsxError::InvalidEncryptionInfo(msg="encryptedKey tag missing")
+        None => raise InvalidEncryptionInfo(msg="encryptedKey tag missing")
       }
   }
   let data_integrity_tag = tag_attributes(xml, "dataIntegrity")
@@ -331,11 +320,11 @@ fn parse_encryption_info(xml : StringView) -> EncryptionInfo raise XlsxError {
 ///|
 fn validate_key_data(key_data : KeyData) -> Unit raise XlsxError {
   if key_data.salt_value.length() != key_data.salt_size {
-    raise XlsxError::InvalidEncryptionInfo(msg="salt size mismatch")
+    raise InvalidEncryptionInfo(msg="salt size mismatch")
   }
   let hash = hash_parts(key_data.hash_algorithm, [Bytes::default()])
   if hash.length() != key_data.hash_size {
-    raise XlsxError::InvalidEncryptionInfo(msg="hash size mismatch")
+    raise InvalidEncryptionInfo(msg="hash size mismatch")
   }
 }
 
@@ -347,13 +336,13 @@ fn validate_encryption_info(
   validate_key_data(encryption.encrypted_key.key_data)
   if encryption.encrypted_key.encrypted_verifier_hash_input.length() == 0 ||
     encryption.encrypted_key.encrypted_verifier_hash_value.length() == 0 {
-    raise XlsxError::InvalidEncryptionInfo(msg="verifier data missing")
+    raise InvalidEncryptionInfo(msg="verifier data missing")
   }
   match encryption.data_integrity {
     Some(value) =>
       if value.encrypted_hmac_key.length() == 0 ||
         value.encrypted_hmac_value.length() == 0 {
-        raise XlsxError::InvalidEncryptionInfo(msg="hmac data missing")
+        raise InvalidEncryptionInfo(msg="hmac data missing")
       }
     None => ()
   }
@@ -371,20 +360,18 @@ fn encryption_mechanism(
   info : BytesView,
 ) -> EncryptionMechanism raise XlsxError {
   if info.length() < 4 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid encryption info")
+    raise InvalidEncryptionInfo(msg="invalid encryption info")
   }
   let major = read_u16_le(info, 0)
   let minor = read_u16_le(info, 2)
   if major == 4 && minor == 4 {
-    EncryptionMechanism::Agile
+    Agile
   } else if major >= 2 && major <= 4 && minor == 2 {
-    EncryptionMechanism::Standard
+    Standard
   } else if (major == 3 || major == 4) && minor == 3 {
-    raise XlsxError::UnsupportedEncryption(
-      msg="unsupported extensible encryption",
-    )
+    raise UnsupportedEncryption(msg="unsupported extensible encryption")
   } else {
-    raise XlsxError::UnsupportedEncryption(msg="unknown encryption mechanism")
+    raise UnsupportedEncryption(msg="unknown encryption mechanism")
   }
 }
 
@@ -398,7 +385,7 @@ fn derive_password_hash(
   let password_bytes = @encoding/utf16.encode(
     password,
     bom=false,
-    endianness=@encoding/utf16.Endian::Little,
+    endianness=Little,
   )
   let mut key = hash_parts(key_data.hash_algorithm, [salt_value, password_bytes])
   for i in 0..<encryption.encrypted_key.spin_count {
@@ -536,14 +523,13 @@ fn agile_decrypt(
   password : String,
 ) -> Bytes raise XlsxError {
   let xml = @encoding/utf8.decode(encryption_info_buf) catch {
-    _ =>
-      raise XlsxError::InvalidEncryptionInfo(msg="invalid encryption info xml")
+    _ => raise InvalidEncryptionInfo(msg="invalid encryption info xml")
   }
   let encryption = parse_encryption_info(xml)
   validate_encryption_info(encryption)
   if !is_aes_cipher(encryption.key_data) ||
     !is_aes_cipher(encryption.encrypted_key.key_data) {
-    raise XlsxError::UnsupportedEncryption(msg="unsupported cipher settings")
+    raise UnsupportedEncryption(msg="unsupported cipher settings")
   }
   let password_hash = derive_password_hash(password, encryption)
   let key = derive_password_key_from_hash(password_hash, block_key, encryption)
@@ -558,7 +544,7 @@ fn agile_decrypt(
     package_key, encrypted_package_buf, encryption,
   )
   if !password_ok && !is_valid_zip(decrypted) {
-    raise XlsxError::InvalidPassword
+    raise InvalidPassword
   }
   decrypted
 }
@@ -572,7 +558,7 @@ fn standard_convert_password_to_key(
   let password_bytes = @encoding/utf16.encode(
     password,
     bom=false,
-    endianness=@encoding/utf16.Endian::Little,
+    endianness=Little,
   )
   let mut key = hash_parts("sha1", [salt, password_bytes])
   for i in 0..<iter_count {
@@ -613,11 +599,11 @@ fn standard_decrypt(
     _ => ""
   }
   if algorithm != "AES" {
-    raise XlsxError::UnsupportedEncryption(msg="unsupported standard algorithm")
+    raise UnsupportedEncryption(msg="unsupported standard algorithm")
   }
   let verifier_block = encryption_info_buf[12 + header_size:]
   if verifier_block.length() < 72 {
-    raise XlsxError::InvalidEncryptionInfo(msg="invalid verifier block")
+    raise InvalidEncryptionInfo(msg="invalid verifier block")
   }
   let salt = verifier_block[4:4 + 16]
   let secret_key = standard_convert_password_to_key(key_bits, salt, password)
@@ -668,26 +654,23 @@ fn decrypt_encrypted_package(
   password : String,
 ) -> Bytes raise XlsxError {
   let reader = cfb_read(bytes) catch {
-    _ => raise XlsxError::InvalidEncryptedPackage(msg="invalid cfb package")
+    _ => raise InvalidEncryptedPackage(msg="invalid cfb package")
   }
   let encryption_info = reader.read_stream("EncryptionInfo") catch {
-    _ => raise XlsxError::InvalidEncryptedPackage(msg="encryption info missing")
+    _ => raise InvalidEncryptedPackage(msg="encryption info missing")
   }
   let encrypted_package = reader.read_stream("EncryptedPackage") catch {
-    _ =>
-      raise XlsxError::InvalidEncryptedPackage(msg="encrypted package missing")
+    _ => raise InvalidEncryptedPackage(msg="encrypted package missing")
   }
   if encryption_info.length() < 8 {
-    raise XlsxError::InvalidEncryptionInfo(msg="encryption info too short")
+    raise InvalidEncryptionInfo(msg="encryption info too short")
   }
   if encrypted_package.length() <= 8 {
-    raise XlsxError::InvalidEncryptedPackage(msg="encrypted streams empty")
+    raise InvalidEncryptedPackage(msg="encrypted streams empty")
   }
   match encryption_mechanism(encryption_info) {
-    EncryptionMechanism::Agile =>
-      agile_decrypt(encryption_info[8:], encrypted_package, password)
-    EncryptionMechanism::Standard =>
-      standard_decrypt(encryption_info, encrypted_package, password)
+    Agile => agile_decrypt(encryption_info[8:], encrypted_package, password)
+    Standard => standard_decrypt(encryption_info, encrypted_package, password)
   }
 }
 
@@ -695,7 +678,7 @@ fn decrypt_encrypted_package(
 fn standard_key_encryption(password : String) -> (Bytes, Bytes) raise XlsxError {
   let password_len = password.length()
   if password_len == 0 || password_len > max_password_length {
-    raise XlsxError::InvalidPasswordLength(len=password_len)
+    raise InvalidPasswordLength(len=password_len)
   }
   let salt_value = random_bytes(16)
   let verifier_hash_input = random_bytes(16)

@@ -3,18 +3,17 @@ fn normalize_image_extension(extension : StringView) -> String raise XlsxError {
   let value = extension.to_string()
   let trimmed = if value.has_prefix(".") {
     if value.length() <= 1 {
-      raise XlsxError::InvalidSheetBackground(msg="image extension missing")
+      raise InvalidSheetBackground(msg="image extension missing")
     }
     let view = value[1:] catch {
-        _ =>
-          raise XlsxError::InvalidSheetBackground(msg="invalid image extension")
+        _ => raise InvalidSheetBackground(msg="invalid image extension")
       }
     view.to_string()
   } else {
     value
   }
   if trimmed == "" {
-    raise XlsxError::InvalidSheetBackground(msg="image extension missing")
+    raise InvalidSheetBackground(msg="image extension missing")
   }
   trimmed.to_lower()
 }

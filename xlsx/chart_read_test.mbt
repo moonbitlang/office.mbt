@@ -2,7 +2,7 @@
 test "chart parsed on read" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ChartType::Col)
+  let opts = ChartOptions::new(Col)
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Sheet1!$B$1"),
   )

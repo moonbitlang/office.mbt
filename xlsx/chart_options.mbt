@@ -145,7 +145,7 @@ pub fn ChartAxis::new() -> ChartAxis {
     major_grid_lines: false,
     minor_grid_lines: false,
     major_unit: 0.0,
-    tick_label_position: ChartTickLabelPositionType::NextToAxis,
+    tick_label_position: NextToAxis,
     tick_label_skip: 0,
     reverse_order: false,
     secondary: false,
@@ -178,7 +178,7 @@ pub fn ChartDimension::with_values(
   height : Int,
 ) -> ChartDimension raise XlsxError {
   if width <= 0 || height <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="chart dimension must be > 0")
+    raise InvalidSheetOperation(msg="chart dimension must be > 0")
   }
   { width, height }
 }
@@ -196,8 +196,8 @@ pub(all) struct ChartLine {
 ///|
 pub fn ChartLine::new() -> ChartLine {
   {
-    typ: ChartLineType::Unset,
-    dash: ChartDashType::Unset,
+    typ: Unset,
+    dash: Unset,
     color: "",
     transparency: 0,
     smooth: false,
@@ -343,7 +343,7 @@ pub fn ChartSeries::new(
   name? : String = "",
 ) -> ChartSeries raise XlsxError {
   if categories == "" || values == "" {
-    raise XlsxError::InvalidSheetOperation(
+    raise InvalidSheetOperation(
       msg="chart series categories/values must be non-empty",
     )
   }
@@ -357,7 +357,7 @@ pub fn ChartSeries::new(
     line: ChartLine::new(),
     marker: ChartMarker::new(),
     data_label: ChartDataLabel::new(),
-    data_label_position: ChartDataLabelPositionType::BestFit,
+    data_label_position: BestFit,
     data_point: [],
   }
 }
@@ -368,7 +368,7 @@ pub fn ChartSeries::set_bubble_size(
   bubble_size : String,
 ) -> Unit raise XlsxError {
   if bubble_size == "" {
-    raise XlsxError::InvalidSheetOperation(msg="bubble size range empty")
+    raise InvalidSheetOperation(msg="bubble size range empty")
   }
   self.bubble_size = Some(bubble_size)
 }
@@ -542,92 +542,91 @@ pub fn ChartOptions::set_overlap(self : ChartOptions, overlap : Int?) -> Unit {
 ///|
 fn chart_type_to_plot(kind : ChartType) -> (String, String?) {
   match kind {
-    ChartType::Col => ("barChart", Some("col"))
-    ChartType::ColStacked => ("barChart", Some("col"))
-    ChartType::ColPercentStacked => ("barChart", Some("col"))
-    ChartType::Bar => ("barChart", Some("bar"))
-    ChartType::BarStacked => ("barChart", Some("bar"))
-    ChartType::BarPercentStacked => ("barChart", Some("bar"))
-    ChartType::Col3D
-    | ChartType::Col3DClustered
-    | ChartType::Col3DStacked
-    | ChartType::Col3DPercentStacked
-    | ChartType::Col3DCone
-    | ChartType::Col3DConeClustered
-    | ChartType::Col3DConeStacked
-    | ChartType::Col3DConePercentStacked
-    | ChartType::Col3DPyramid
-    | ChartType::Col3DPyramidClustered
-    | ChartType::Col3DPyramidStacked
-    | ChartType::Col3DPyramidPercentStacked
-    | ChartType::Col3DCylinder
-    | ChartType::Col3DCylinderClustered
-    | ChartType::Col3DCylinderStacked
-    | ChartType::Col3DCylinderPercentStacked => ("bar3DChart", Some("col"))
-    ChartType::Bar3DClustered
-    | ChartType::Bar3DStacked
-    | ChartType::Bar3DPercentStacked
-    | ChartType::Bar3DConeClustered
-    | ChartType::Bar3DConeStacked
-    | ChartType::Bar3DConePercentStacked
-    | ChartType::Bar3DPyramidClustered
-    | ChartType::Bar3DPyramidStacked
-    | ChartType::Bar3DPyramidPercentStacked
-    | ChartType::Bar3DCylinderClustered
-    | ChartType::Bar3DCylinderStacked
-    | ChartType::Bar3DCylinderPercentStacked => ("bar3DChart", Some("bar"))
-    ChartType::Line => ("lineChart", None)
-    ChartType::Line3D => ("line3DChart", None)
-    ChartType::Area => ("areaChart", None)
-    ChartType::AreaStacked => ("areaChart", None)
-    ChartType::AreaPercentStacked => ("areaChart", None)
-    ChartType::Area3D => ("area3DChart", None)
-    ChartType::Area3DStacked => ("area3DChart", None)
-    ChartType::Area3DPercentStacked => ("area3DChart", None)
-    ChartType::Pie => ("pieChart", None)
-    ChartType::Pie3D => ("pie3DChart", None)
-    ChartType::PieOfPie => ("ofPieChart", None)
-    ChartType::BarOfPie => ("ofPieChart", None)
-    ChartType::Doughnut => ("doughnutChart", None)
-    ChartType::Radar => ("radarChart", None)
-    ChartType::Scatter => ("scatterChart", None)
-    ChartType::Bubble => ("bubbleChart", None)
-    ChartType::Bubble3D => ("bubbleChart", None)
-    ChartType::Surface3D | ChartType::WireframeSurface3D =>
-      ("surface3DChart", None)
-    ChartType::Contour | ChartType::WireframeContour => ("surfaceChart", None)
-    ChartType::StockHighLowClose => ("stockChart", None)
-    ChartType::StockOpenHighLowClose => ("stockChart", None)
+    Col => ("barChart", Some("col"))
+    ColStacked => ("barChart", Some("col"))
+    ColPercentStacked => ("barChart", Some("col"))
+    Bar => ("barChart", Some("bar"))
+    BarStacked => ("barChart", Some("bar"))
+    BarPercentStacked => ("barChart", Some("bar"))
+    Col3D
+    | Col3DClustered
+    | Col3DStacked
+    | Col3DPercentStacked
+    | Col3DCone
+    | Col3DConeClustered
+    | Col3DConeStacked
+    | Col3DConePercentStacked
+    | Col3DPyramid
+    | Col3DPyramidClustered
+    | Col3DPyramidStacked
+    | Col3DPyramidPercentStacked
+    | Col3DCylinder
+    | Col3DCylinderClustered
+    | Col3DCylinderStacked
+    | Col3DCylinderPercentStacked => ("bar3DChart", Some("col"))
+    Bar3DClustered
+    | Bar3DStacked
+    | Bar3DPercentStacked
+    | Bar3DConeClustered
+    | Bar3DConeStacked
+    | Bar3DConePercentStacked
+    | Bar3DPyramidClustered
+    | Bar3DPyramidStacked
+    | Bar3DPyramidPercentStacked
+    | Bar3DCylinderClustered
+    | Bar3DCylinderStacked
+    | Bar3DCylinderPercentStacked => ("bar3DChart", Some("bar"))
+    Line => ("lineChart", None)
+    Line3D => ("line3DChart", None)
+    Area => ("areaChart", None)
+    AreaStacked => ("areaChart", None)
+    AreaPercentStacked => ("areaChart", None)
+    Area3D => ("area3DChart", None)
+    Area3DStacked => ("area3DChart", None)
+    Area3DPercentStacked => ("area3DChart", None)
+    Pie => ("pieChart", None)
+    Pie3D => ("pie3DChart", None)
+    PieOfPie => ("ofPieChart", None)
+    BarOfPie => ("ofPieChart", None)
+    Doughnut => ("doughnutChart", None)
+    Radar => ("radarChart", None)
+    Scatter => ("scatterChart", None)
+    Bubble => ("bubbleChart", None)
+    Bubble3D => ("bubbleChart", None)
+    Surface3D | WireframeSurface3D => ("surface3DChart", None)
+    Contour | WireframeContour => ("surfaceChart", None)
+    StockHighLowClose => ("stockChart", None)
+    StockOpenHighLowClose => ("stockChart", None)
   }
 }
 
 ///|
 fn chart_grouping(kind : ChartType) -> String? {
   match kind {
-    ChartType::ColStacked
-    | ChartType::BarStacked
-    | ChartType::AreaStacked
-    | ChartType::Col3DStacked
-    | ChartType::Bar3DStacked
-    | ChartType::Area3DStacked
-    | ChartType::Col3DConeStacked
-    | ChartType::Bar3DConeStacked
-    | ChartType::Col3DPyramidStacked
-    | ChartType::Bar3DPyramidStacked
-    | ChartType::Col3DCylinderStacked
-    | ChartType::Bar3DCylinderStacked => Some("stacked")
-    ChartType::ColPercentStacked
-    | ChartType::BarPercentStacked
-    | ChartType::AreaPercentStacked
-    | ChartType::Col3DPercentStacked
-    | ChartType::Bar3DPercentStacked
-    | ChartType::Area3DPercentStacked
-    | ChartType::Col3DConePercentStacked
-    | ChartType::Bar3DConePercentStacked
-    | ChartType::Col3DPyramidPercentStacked
-    | ChartType::Bar3DPyramidPercentStacked
-    | ChartType::Col3DCylinderPercentStacked
-    | ChartType::Bar3DCylinderPercentStacked => Some("percentStacked")
+    ColStacked
+    | BarStacked
+    | AreaStacked
+    | Col3DStacked
+    | Bar3DStacked
+    | Area3DStacked
+    | Col3DConeStacked
+    | Bar3DConeStacked
+    | Col3DPyramidStacked
+    | Bar3DPyramidStacked
+    | Col3DCylinderStacked
+    | Bar3DCylinderStacked => Some("stacked")
+    ColPercentStacked
+    | BarPercentStacked
+    | AreaPercentStacked
+    | Col3DPercentStacked
+    | Bar3DPercentStacked
+    | Area3DPercentStacked
+    | Col3DConePercentStacked
+    | Bar3DConePercentStacked
+    | Col3DPyramidPercentStacked
+    | Bar3DPyramidPercentStacked
+    | Col3DCylinderPercentStacked
+    | Bar3DCylinderPercentStacked => Some("percentStacked")
     _ => None
   }
 }
@@ -635,27 +634,27 @@ fn chart_grouping(kind : ChartType) -> String? {
 ///|
 fn chart_shape(kind : ChartType) -> String? {
   match kind {
-    ChartType::Bar3DConeClustered
-    | ChartType::Bar3DConeStacked
-    | ChartType::Bar3DConePercentStacked
-    | ChartType::Col3DCone
-    | ChartType::Col3DConeClustered
-    | ChartType::Col3DConeStacked
-    | ChartType::Col3DConePercentStacked => Some("cone")
-    ChartType::Bar3DPyramidClustered
-    | ChartType::Bar3DPyramidStacked
-    | ChartType::Bar3DPyramidPercentStacked
-    | ChartType::Col3DPyramid
-    | ChartType::Col3DPyramidClustered
-    | ChartType::Col3DPyramidStacked
-    | ChartType::Col3DPyramidPercentStacked => Some("pyramid")
-    ChartType::Bar3DCylinderClustered
-    | ChartType::Bar3DCylinderStacked
-    | ChartType::Bar3DCylinderPercentStacked
-    | ChartType::Col3DCylinder
-    | ChartType::Col3DCylinderClustered
-    | ChartType::Col3DCylinderStacked
-    | ChartType::Col3DCylinderPercentStacked => Some("cylinder")
+    Bar3DConeClustered
+    | Bar3DConeStacked
+    | Bar3DConePercentStacked
+    | Col3DCone
+    | Col3DConeClustered
+    | Col3DConeStacked
+    | Col3DConePercentStacked => Some("cone")
+    Bar3DPyramidClustered
+    | Bar3DPyramidStacked
+    | Bar3DPyramidPercentStacked
+    | Col3DPyramid
+    | Col3DPyramidClustered
+    | Col3DPyramidStacked
+    | Col3DPyramidPercentStacked => Some("pyramid")
+    Bar3DCylinderClustered
+    | Bar3DCylinderStacked
+    | Bar3DCylinderPercentStacked
+    | Col3DCylinder
+    | Col3DCylinderClustered
+    | Col3DCylinderStacked
+    | Col3DCylinderPercentStacked => Some("cylinder")
     _ => None
   }
 }
@@ -818,32 +817,32 @@ fn write_chart_series_tx(sb : StringBuilder, name : String) -> Unit {
 ///|
 fn chart_dash_value(dash : ChartDashType) -> StringView? {
   match dash {
-    ChartDashType::Unset => None
-    ChartDashType::Solid => Some("solid")
-    ChartDashType::Dot => Some("dot")
-    ChartDashType::Dash => Some("dash")
-    ChartDashType::LgDash => Some("lgDash")
-    ChartDashType::SashDot => Some("dashDot")
-    ChartDashType::LgDashDot => Some("lgDashDot")
-    ChartDashType::LgDashDotDot => Some("lgDashDotDot")
-    ChartDashType::SysDash => Some("sysDash")
-    ChartDashType::SysDot => Some("sysDot")
-    ChartDashType::SysDashDot => Some("sysDashDot")
-    ChartDashType::SysDashDotDot => Some("sysDashDotDot")
+    Unset => None
+    Solid => Some("solid")
+    Dot => Some("dot")
+    Dash => Some("dash")
+    LgDash => Some("lgDash")
+    SashDot => Some("dashDot")
+    LgDashDot => Some("lgDashDot")
+    LgDashDotDot => Some("lgDashDotDot")
+    SysDash => Some("sysDash")
+    SysDot => Some("sysDot")
+    SysDashDot => Some("sysDashDot")
+    SysDashDotDot => Some("sysDashDotDot")
   }
 }
 
 ///|
 fn data_label_pos_value(pos : ChartDataLabelPositionType) -> StringView {
   match pos {
-    ChartDataLabelPositionType::Center => "ctr"
-    ChartDataLabelPositionType::Left => "l"
-    ChartDataLabelPositionType::Right => "r"
-    ChartDataLabelPositionType::Top => "t"
-    ChartDataLabelPositionType::Bottom => "b"
-    ChartDataLabelPositionType::BestFit => "bestFit"
-    ChartDataLabelPositionType::InEnd => "inEnd"
-    ChartDataLabelPositionType::OutEnd => "outEnd"
+    Center => "ctr"
+    Left => "l"
+    Right => "r"
+    Top => "t"
+    Bottom => "b"
+    BestFit => "bestFit"
+    InEnd => "inEnd"
+    OutEnd => "outEnd"
   }
 }
 
@@ -851,8 +850,8 @@ fn data_label_pos_value(pos : ChartDataLabelPositionType) -> StringView {
 fn write_chart_series_sppr(sb : StringBuilder, series : ChartSeries) -> Unit {
   let line = series.line
   if series.fill_color == "" &&
-    line.typ == ChartLineType::Unset &&
-    line.dash == ChartDashType::Unset &&
+    line.typ == Unset &&
+    line.dash == Unset &&
     line.color == "" &&
     line.transparency == 0 &&
     line.width == 0.0 {
@@ -874,7 +873,7 @@ fn write_chart_series_sppr(sb : StringBuilder, series : ChartSeries) -> Unit {
       sb.write_view("\"/></a:solidFill>\n")
     }
   }
-  if line.typ == ChartLineType::NoLine {
+  if line.typ == NoLine {
     sb.write_view("            <a:ln><a:noFill/></a:ln>\n")
     sb.write_view("          </c:spPr>\n")
     return
@@ -921,8 +920,8 @@ fn write_chart_series_sppr(sb : StringBuilder, series : ChartSeries) -> Unit {
 ///|
 fn write_chart_series_marker(sb : StringBuilder, marker : ChartMarker) -> Unit {
   let border = marker.border
-  let has_border = border.typ != ChartLineType::Unset ||
-    border.dash != ChartDashType::Unset ||
+  let has_border = border.typ != Unset ||
+    border.dash != Unset ||
     border.color != "" ||
     border.width != 0.0
   let has_fill = marker.fill_color != ""
@@ -955,7 +954,7 @@ fn write_chart_series_marker(sb : StringBuilder, marker : ChartMarker) -> Unit {
       }
     }
     if has_border {
-      if border.typ == ChartLineType::NoLine {
+      if border.typ == NoLine {
         sb.write_view("              <a:ln><a:noFill/></a:ln>\n")
       } else {
         sb.write_view("              <a:ln")
@@ -1002,8 +1001,7 @@ fn write_chart_series_marker(sb : StringBuilder, marker : ChartMarker) -> Unit {
 
 ///|
 fn write_chart_series_dlbls(sb : StringBuilder, series : ChartSeries) -> Unit {
-  let pos_set = series.data_label_position !=
-    ChartDataLabelPositionType::BestFit
+  let pos_set = series.data_label_position != BestFit
   let has_font = series.data_label.font != Font::new()
   let has_alignment = series.data_label.alignment != Alignment::new()
   let has_fill = series.data_label.fill_color != ""
@@ -1137,7 +1135,7 @@ fn write_chart_series_for_plot(
   } else if plot_tag == "bubbleChart" {
     let bubble_size = match series.bubble_size {
       Some(value) => value
-      None => raise XlsxError::InvalidSheetOperation(msg="bubble size missing")
+      None => raise InvalidSheetOperation(msg="bubble size missing")
     }
     let global_idx = order_base + idx
     sb.write_view("        <c:ser>\n")
@@ -1175,11 +1173,8 @@ fn write_chart_sppr(
   border : ChartLine,
 ) -> Unit {
   if fill_color == "" &&
-    (
-      border.typ == ChartLineType::Unset ||
-      border.typ == ChartLineType::Automatic
-    ) &&
-    border.dash == ChartDashType::Unset &&
+    (border.typ == Unset || border.typ == Automatic) &&
+    border.dash == Unset &&
     border.color == "" &&
     border.transparency == 0 &&
     border.width == 0.0 {
@@ -1192,11 +1187,9 @@ fn write_chart_sppr(
     sb.write_view(escape_xml_attr(fill))
     sb.write_view("\"/></a:solidFill>\n")
   }
-  if border.typ == ChartLineType::NoLine {
+  if border.typ == NoLine {
     sb.write_view("              <a:ln><a:noFill/></a:ln>\n")
-  } else if border.color != "" ||
-    border.width != 0.0 ||
-    border.dash != ChartDashType::Unset {
+  } else if border.color != "" || border.width != 0.0 || border.dash != Unset {
     sb.write_view("              <a:ln")
     if border.width > 0.0 {
       let w = (border.width * 12700.0).round().to_int()
@@ -1239,10 +1232,10 @@ fn write_chart_sppr(
 ///|
 fn tick_label_pos_value(pos : ChartTickLabelPositionType) -> StringView {
   match pos {
-    ChartTickLabelPositionType::NextToAxis => "nextTo"
-    ChartTickLabelPositionType::High => "high"
-    ChartTickLabelPositionType::Low => "low"
-    ChartTickLabelPositionType::NoTickLabels => "none"
+    NextToAxis => "nextTo"
+    High => "high"
+    Low => "low"
+    NoTickLabels => "none"
   }
 }
 
@@ -1695,11 +1688,8 @@ fn write_plot_area_d_table(
 ///|
 fn write_chart_sppr_root(sb : StringBuilder, opts : ChartOptions) -> Unit {
   if opts.fill_color == "" &&
-    (
-      opts.border.typ == ChartLineType::Unset ||
-      opts.border.typ == ChartLineType::Automatic
-    ) &&
-    opts.border.dash == ChartDashType::Unset &&
+    (opts.border.typ == Unset || opts.border.typ == Automatic) &&
+    opts.border.dash == Unset &&
     opts.border.color == "" &&
     opts.border.transparency == 0 &&
     opts.border.width == 0.0 {
@@ -1722,11 +1712,9 @@ fn write_chart_sppr_root(sb : StringBuilder, opts : ChartOptions) -> Unit {
     }
   }
   let border = opts.border
-  if border.typ == ChartLineType::NoLine {
+  if border.typ == NoLine {
     sb.write_view("      <a:ln><a:noFill/></a:ln>\n")
-  } else if border.color != "" ||
-    border.width != 0.0 ||
-    border.dash != ChartDashType::Unset {
+  } else if border.color != "" || border.width != 0.0 || border.dash != Unset {
     sb.write_view("      <a:ln")
     if border.width > 0.0 {
       let w = (border.width * 12700.0).round().to_int()
@@ -1769,12 +1757,12 @@ fn write_chart_sppr_root(sb : StringBuilder, opts : ChartOptions) -> Unit {
 ///|
 pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
   if opts.series.length() == 0 {
-    raise XlsxError::InvalidSheetOperation(msg="chart series empty")
+    raise InvalidSheetOperation(msg="chart series empty")
   }
   if opts.combo_charts.length() > 0 {
     for combo in opts.combo_charts {
       if combo.series.length() == 0 {
-        raise XlsxError::InvalidSheetOperation(msg="combo chart series empty")
+        raise InvalidSheetOperation(msg="combo chart series empty")
       }
     }
   }
@@ -1792,16 +1780,16 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
   if !has_combo {
     let (plot_tag, bar_dir) = chart_type_to_plot(opts.typ)
     if plot_tag == "" {
-      raise XlsxError::UnsupportedFeature(msg="unsupported chart type")
+      raise UnsupportedFeature(msg="unsupported chart type")
     }
     if plot_tag == "stockChart" {
       let expected = match opts.typ {
-        ChartType::StockHighLowClose => 3
-        ChartType::StockOpenHighLowClose => 4
+        StockHighLowClose => 3
+        StockOpenHighLowClose => 4
         _ => 0
       }
       if expected > 0 && opts.series.length() != expected {
-        raise XlsxError::InvalidSheetOperation(
+        raise InvalidSheetOperation(
           msg="stock chart requires \{expected} series",
         )
       }
@@ -1815,7 +1803,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     if plot_tag == "radarChart" {
       sb.write_view("        <c:radarStyle val=\"standard\"/>\n")
     }
-    if plot_tag == "bubbleChart" && opts.typ == ChartType::Bubble3D {
+    if plot_tag == "bubbleChart" && opts.typ == Bubble3D {
       sb.write_view("        <c:bubble3D val=\"1\"/>\n")
     }
     if plot_tag == "bubbleChart" {
@@ -1836,7 +1824,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       sb.write_view("        <c:holeSize val=\"\{hole}\"/>\n")
     }
     if plot_tag == "ofPieChart" {
-      let typ = if opts.typ == ChartType::BarOfPie { "bar" } else { "pie" }
+      let typ = if opts.typ == BarOfPie { "bar" } else { "pie" }
       sb.write_view("        <c:ofPieType val=\"")
       sb.write_view(escape_xml_attr(typ))
       sb.write_view("\"/>\n")
@@ -1847,15 +1835,15 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       }
       sb.write_view("        <c:serLines/>\n")
     }
-    if plot_tag == "surface3DChart" && opts.typ == ChartType::WireframeSurface3D {
+    if plot_tag == "surface3DChart" && opts.typ == WireframeSurface3D {
       sb.write_view("        <c:wireframe val=\"1\"/>\n")
     }
-    if plot_tag == "surfaceChart" && opts.typ == ChartType::WireframeContour {
+    if plot_tag == "surfaceChart" && opts.typ == WireframeContour {
       sb.write_view("        <c:wireframe val=\"1\"/>\n")
     }
     if plot_tag == "stockChart" {
       sb.write_view("        <c:hiLowLines/>\n")
-      if opts.typ == ChartType::StockOpenHighLowClose {
+      if opts.typ == StockOpenHighLowClose {
         sb.write_view("        <c:upDownBars>\n")
         sb.write_view("          <c:gapWidth val=\"150\"/>\n")
         sb.write_view("          <c:upBars>\n")
@@ -1972,7 +1960,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     }
     let (main_plot_tag, _main_bar_dir) = chart_type_to_plot(opts.typ)
     if main_plot_tag == "" {
-      raise XlsxError::UnsupportedFeature(msg="unsupported chart type")
+      raise UnsupportedFeature(msg="unsupported chart type")
     }
     let mut has_cat_val = false
     let mut has_xy = false
@@ -1981,7 +1969,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     for plot in plots {
       let (plot_tag, _bar_dir) = chart_type_to_plot(plot.typ)
       if plot_tag == "" {
-        raise XlsxError::UnsupportedFeature(msg="unsupported chart type")
+        raise UnsupportedFeature(msg="unsupported chart type")
       }
       if plot_tag == "pieChart" ||
         plot_tag == "pie3DChart" ||
@@ -1989,7 +1977,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         plot_tag == "doughnutChart" ||
         plot_tag == "surface3DChart" ||
         plot_tag == "surfaceChart" {
-        raise XlsxError::UnsupportedFeature(msg="combo chart type unsupported")
+        raise UnsupportedFeature(msg="combo chart type unsupported")
       }
       if plot_tag == "scatterChart" || plot_tag == "bubbleChart" {
         has_xy = true
@@ -2075,16 +2063,16 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       let plot = plots[plot_idx]
       let (plot_tag, bar_dir) = chart_type_to_plot(plot.typ)
       if plot_tag == "" {
-        raise XlsxError::UnsupportedFeature(msg="unsupported chart type")
+        raise UnsupportedFeature(msg="unsupported chart type")
       }
       if plot_tag == "stockChart" {
         let expected = match plot.typ {
-          ChartType::StockHighLowClose => 3
-          ChartType::StockOpenHighLowClose => 4
+          StockHighLowClose => 3
+          StockOpenHighLowClose => 4
           _ => 0
         }
         if expected > 0 && plot.series.length() != expected {
-          raise XlsxError::InvalidSheetOperation(
+          raise InvalidSheetOperation(
             msg="stock chart requires \{expected} series",
           )
         }
@@ -2095,7 +2083,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         plot_tag == "doughnutChart" ||
         plot_tag == "surface3DChart" ||
         plot_tag == "surfaceChart" {
-        raise XlsxError::UnsupportedFeature(msg="combo chart type unsupported")
+        raise UnsupportedFeature(msg="combo chart type unsupported")
       }
       let is_xy = plot_tag == "scatterChart" || plot_tag == "bubbleChart"
       let use_secondary = plot_idx > 0 && plot.y_axis.secondary
@@ -2116,7 +2104,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       if plot_tag == "scatterChart" {
         sb.write_view("        <c:scatterStyle val=\"lineMarker\"/>\n")
       }
-      if plot_tag == "bubbleChart" && plot.typ == ChartType::Bubble3D {
+      if plot_tag == "bubbleChart" && plot.typ == Bubble3D {
         sb.write_view("        <c:bubble3D val=\"1\"/>\n")
       }
       if plot_tag == "bubbleChart" {
@@ -2133,7 +2121,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       }
       if plot_tag == "stockChart" {
         sb.write_view("        <c:hiLowLines/>\n")
-        if plot.typ == ChartType::StockOpenHighLowClose {
+        if plot.typ == StockOpenHighLowClose {
           sb.write_view("        <c:upDownBars>\n")
           sb.write_view("          <c:gapWidth val=\"150\"/>\n")
           sb.write_view("          <c:upBars>\n")

@@ -8,7 +8,7 @@ fn collect_shared_strings(
   let mut total = 0
   for sheet in workbook.sheets() {
     for cell in sheet.cells() {
-      if cell.formula is None && cell.value_type == CellValueType::String {
+      if cell.formula is None && cell.value_type == String {
         total = total + 1
         match cell.rich_text {
           Some(runs) => {

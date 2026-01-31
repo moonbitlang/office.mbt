@@ -16,11 +16,11 @@ fn parse_relationship_targets(
       None =>
         match text.find(">") {
           Some(pos) => pos
-          None => raise XlsxError::InvalidXml(msg="relationship tag not closed")
+          None => raise InvalidXml(msg="relationship tag not closed")
         }
     }
     let tag = text[:end] catch {
-        _ => raise XlsxError::InvalidXml(msg="relationship tag invalid")
+        _ => raise InvalidXml(msg="relationship tag invalid")
       }
     let rel = match attr_value(tag, "Type") {
       Some(value) => value
@@ -31,11 +31,11 @@ fn parse_relationship_targets(
     }
     let id = match attr_value(tag, "Id") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="relationship id missing")
+      None => raise InvalidXml(msg="relationship id missing")
     }
     let target = match attr_value(tag, "Target") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="relationship target missing")
+      None => raise InvalidXml(msg="relationship target missing")
     }
     targets[id] = target
   }
@@ -85,12 +85,12 @@ fn resolve_rel_target(
   let target_str = target.to_string()
   if target_str.has_prefix("/") {
     let rest = target_str[1:] catch {
-        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+        _ => raise InvalidXml(msg="relationship target invalid")
       }
     rest.to_string()
   } else if target_str.has_prefix("../") {
     let rest = target_str[3:] catch {
-        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+        _ => raise InvalidXml(msg="relationship target invalid")
       }
     "xl/" + rest.to_string()
   } else if target_str.has_prefix("xl/") {
@@ -110,12 +110,12 @@ fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
   let target_str = target.to_string()
   if target_str.has_prefix("/") {
     let rest = target_str[1:] catch {
-        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+        _ => raise InvalidXml(msg="relationship target invalid")
       }
     rest.to_string()
   } else if target_str.has_prefix("../") {
     let rest = target_str[3:] catch {
-        _ => raise XlsxError::InvalidXml(msg="relationship target invalid")
+        _ => raise InvalidXml(msg="relationship target invalid")
       }
     "xl/" + rest.to_string()
   } else if target_str.has_prefix("xl/") {

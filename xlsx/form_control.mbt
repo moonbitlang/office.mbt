@@ -37,10 +37,7 @@ fn normalize_form_control_type(
     "spin" | "spinbutton" | "spinner" => ("SpinButton", "Spin")
     "gbox" | "groupbox" => ("GroupBox", "GBox")
     "label" => ("Label", "Label")
-    _ =>
-      raise XlsxError::InvalidSheetOperation(
-        msg="unsupported form control type",
-      )
+    _ => raise InvalidSheetOperation(msg="unsupported form control type")
   }
 }
 
@@ -51,10 +48,10 @@ pub fn FormControl::new(
   text? : String = "",
 ) -> FormControl raise XlsxError {
   if cell == "" {
-    raise XlsxError::InvalidSheetOperation(msg="form control cell empty")
+    raise InvalidSheetOperation(msg="form control cell empty")
   }
   if control_type == "" {
-    raise XlsxError::InvalidSheetOperation(msg="form control type empty")
+    raise InvalidSheetOperation(msg="form control type empty")
   }
   let (canonical_type, _) = normalize_form_control_type(control_type)
   ignore(cell_ref_to_rc(cell))
@@ -127,7 +124,7 @@ pub fn FormControl::set_width(
   width : Int,
 ) -> Unit raise XlsxError {
   if width <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="form control width invalid")
+    raise InvalidSheetOperation(msg="form control width invalid")
   }
   self.width = Some(width)
 }
@@ -143,7 +140,7 @@ pub fn FormControl::set_height(
   height : Int,
 ) -> Unit raise XlsxError {
   if height <= 0 {
-    raise XlsxError::InvalidSheetOperation(msg="form control height invalid")
+    raise InvalidSheetOperation(msg="form control height invalid")
   }
   self.height = Some(height)
 }
@@ -159,9 +156,7 @@ pub fn FormControl::set_current_val(
   value : Int,
 ) -> Unit raise XlsxError {
   if value < 0 || value > max_form_control_value {
-    raise XlsxError::InvalidSheetOperation(
-      msg="form control current value invalid",
-    )
+    raise InvalidSheetOperation(msg="form control current value invalid")
   }
   self.current_val = Some(value)
 }
@@ -177,7 +172,7 @@ pub fn FormControl::set_min_val(
   value : Int,
 ) -> Unit raise XlsxError {
   if value < 0 || value > max_form_control_value {
-    raise XlsxError::InvalidSheetOperation(msg="form control min value invalid")
+    raise InvalidSheetOperation(msg="form control min value invalid")
   }
   self.min_val = Some(value)
 }
@@ -193,7 +188,7 @@ pub fn FormControl::set_max_val(
   value : Int,
 ) -> Unit raise XlsxError {
   if value < 0 || value > max_form_control_value {
-    raise XlsxError::InvalidSheetOperation(msg="form control max value invalid")
+    raise InvalidSheetOperation(msg="form control max value invalid")
   }
   self.max_val = Some(value)
 }
@@ -209,9 +204,7 @@ pub fn FormControl::set_inc_change(
   value : Int,
 ) -> Unit raise XlsxError {
   if value < 0 || value > max_form_control_value {
-    raise XlsxError::InvalidSheetOperation(
-      msg="form control inc change invalid",
-    )
+    raise InvalidSheetOperation(msg="form control inc change invalid")
   }
   self.inc_change = Some(value)
 }
@@ -227,9 +220,7 @@ pub fn FormControl::set_page_change(
   value : Int,
 ) -> Unit raise XlsxError {
   if value < 0 || value > max_form_control_value {
-    raise XlsxError::InvalidSheetOperation(
-      msg="form control page change invalid",
-    )
+    raise InvalidSheetOperation(msg="form control page change invalid")
   }
   self.page_change = Some(value)
 }
@@ -603,13 +594,12 @@ fn write_form_controls_vml(
       None => ()
     }
     match control.format.positioning {
-      Some(PicturePositioning::Absolute) => {
+      Some(Absolute) => {
         sb.write_view("      <x:MoveWithCells/>\n")
         sb.write_view("      <x:SizeWithCells/>\n")
       }
-      Some(PicturePositioning::OneCell) =>
-        sb.write_view("      <x:SizeWithCells/>\n")
-      Some(PicturePositioning::TwoCell) => ()
+      Some(OneCell) => sb.write_view("      <x:SizeWithCells/>\n")
+      Some(TwoCell) => ()
       None => ()
     }
     match control.format.print_object {
@@ -1021,9 +1011,9 @@ fn parse_form_controls_vml(
     }
     if xml_has_tag(body, "x:MoveWithCells") &&
       xml_has_tag(body, "x:SizeWithCells") {
-      control.format.positioning = Some(PicturePositioning::Absolute)
+      control.format.positioning = Some(Absolute)
     } else if xml_has_tag(body, "x:SizeWithCells") {
-      control.format.positioning = Some(PicturePositioning::OneCell)
+      control.format.positioning = Some(OneCell)
     }
     match extract_xml_text_tag(body, "x:Checked") {
       Some(v) => control.checked = Some(v.trim() != "" && v.trim() != "0")

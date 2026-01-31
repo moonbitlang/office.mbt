@@ -19,25 +19,25 @@ fn parse_workbook_sheets(
     let text = chunk.to_string()
     let end = match text.find(">") {
       Some(pos) => pos
-      None => raise XlsxError::InvalidXml(msg="sheet tag not closed")
+      None => raise InvalidXml(msg="sheet tag not closed")
     }
     let tag = try! text[:end]
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
-      None => raise XlsxError::InvalidXml(msg="sheet name missing")
+      None => raise InvalidXml(msg="sheet name missing")
     }
     let rel_id = match attr_value(tag, "r:id") {
       Some(value) => value
-      None => raise XlsxError::InvalidXml(msg="sheet relationship missing")
+      None => raise InvalidXml(msg="sheet relationship missing")
     }
     let state = match attr_value(tag, "state") {
       Some(value) =>
         match value.to_lower() {
-          "hidden" => SheetState::Hidden
-          "veryhidden" => SheetState::VeryHidden
-          _ => SheetState::Visible
+          "hidden" => Hidden
+          "veryhidden" => VeryHidden
+          _ => Visible
         }
-      None => SheetState::Visible
+      None => Visible
     }
     sheets.push({ name, state, rel_id })
   }
@@ -52,20 +52,20 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
     None => None
     Some(start) => {
       let rest = xml_str[start + marker.length():] catch {
-          _ => raise XlsxError::InvalidXml(msg="workbookView slice invalid")
+          _ => raise InvalidXml(msg="workbookView slice invalid")
         }
       let end = match rest.find(">") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidXml(msg="workbookView tag not closed")
+        None => raise InvalidXml(msg="workbookView tag not closed")
       }
       let tag = rest[:end] catch {
-          _ => raise XlsxError::InvalidXml(msg="workbookView tag invalid")
+          _ => raise InvalidXml(msg="workbookView tag invalid")
         }
       match attr_value(tag, "activeTab") {
         Some(value) =>
           Some(
             @strconv.parse_int(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="activeTab invalid")
+              _ => raise InvalidXml(msg="activeTab invalid")
             },
           )
         None => None
@@ -84,14 +84,14 @@ fn parse_workbook_props(
     None => WorkbookPropsOptions::new()
     Some(start) => {
       let rest = xml_str[start + marker.length():] catch {
-          _ => raise XlsxError::InvalidXml(msg="workbookPr slice invalid")
+          _ => raise InvalidXml(msg="workbookPr slice invalid")
         }
       let end = match rest.find(">") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidXml(msg="workbookPr tag not closed")
+        None => raise InvalidXml(msg="workbookPr tag not closed")
       }
       let tag = rest[:end] catch {
-          _ => raise XlsxError::InvalidXml(msg="workbookPr tag invalid")
+          _ => raise InvalidXml(msg="workbookPr tag invalid")
         }
       let props = WorkbookPropsOptions::new()
       match attr_value(tag, "date1904") {
@@ -119,21 +119,21 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
     None => CalcPropsOptions::new()
     Some(start) => {
       let rest = xml_str[start + marker.length():] catch {
-          _ => raise XlsxError::InvalidXml(msg="calcPr slice invalid")
+          _ => raise InvalidXml(msg="calcPr slice invalid")
         }
       let end = match rest.find(">") {
         Some(pos) => pos
-        None => raise XlsxError::InvalidXml(msg="calcPr tag not closed")
+        None => raise InvalidXml(msg="calcPr tag not closed")
       }
       let tag = rest[:end] catch {
-          _ => raise XlsxError::InvalidXml(msg="calcPr tag invalid")
+          _ => raise InvalidXml(msg="calcPr tag invalid")
         }
       let props = CalcPropsOptions::new()
       match attr_value(tag, "calcId") {
         Some(value) =>
           props.calc_id = Some(
             @strconv.parse_uint(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="calcId invalid")
+              _ => raise InvalidXml(msg="calcId invalid")
             },
           )
         None => ()
@@ -142,7 +142,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
         Some(value) =>
           match normalize_calc_mode(value) {
             Some(mode) => props.calc_mode = Some(mode)
-            None => raise XlsxError::InvalidXml(msg="calcMode invalid")
+            None => raise InvalidXml(msg="calcMode invalid")
           }
         None => ()
       }
@@ -154,7 +154,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
         Some(value) =>
           match normalize_ref_mode(value) {
             Some(mode) => props.ref_mode = Some(mode)
-            None => raise XlsxError::InvalidXml(msg="refMode invalid")
+            None => raise InvalidXml(msg="refMode invalid")
           }
         None => ()
       }
@@ -166,7 +166,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
         Some(value) =>
           props.iterate_count = Some(
             @strconv.parse_uint(value, base=10) catch {
-              _ => raise XlsxError::InvalidXml(msg="iterateCount invalid")
+              _ => raise InvalidXml(msg="iterateCount invalid")
             },
           )
         None => ()
@@ -175,7 +175,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
         Some(value) =>
           props.iterate_delta = Some(
             @strconv.parse_double(value) catch {
-              _ => raise XlsxError::InvalidXml(msg="iterateDelta invalid")
+              _ => raise InvalidXml(msg="iterateDelta invalid")
             },
           )
         None => ()
@@ -200,8 +200,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
         Some(value) =>
           props.concurrent_manual_count = Some(
             @strconv.parse_uint(value, base=10) catch {
-              _ =>
-                raise XlsxError::InvalidXml(msg="concurrentManualCount invalid")
+              _ => raise InvalidXml(msg="concurrentManualCount invalid")
             },
           )
         None => ()
@@ -225,16 +224,14 @@ fn parse_workbook_protection(
     None => None
     Some(start) => {
       let rest = xml_str[start + marker.length():] catch {
-          _ =>
-            raise XlsxError::InvalidXml(msg="workbookProtection slice invalid")
+          _ => raise InvalidXml(msg="workbookProtection slice invalid")
         }
       let end = match rest.find(">") {
         Some(pos) => pos
-        None =>
-          raise XlsxError::InvalidXml(msg="workbookProtection tag not closed")
+        None => raise InvalidXml(msg="workbookProtection tag not closed")
       }
       let tag = rest[:end] catch {
-          _ => raise XlsxError::InvalidXml(msg="workbookProtection tag invalid")
+          _ => raise InvalidXml(msg="workbookProtection tag invalid")
         }
       let protection : WorkbookProtection = {
         lock_structure: false,
@@ -267,7 +264,7 @@ fn parse_workbook_protection(
       match attr_value(tag, "workbookSpinCount") {
         Some(value) =>
           protection.spin_count = @strconv.parse_int(value, base=10) catch {
-            _ => raise XlsxError::InvalidXml(msg="workbookSpinCount invalid")
+            _ => raise InvalidXml(msg="workbookSpinCount invalid")
           }
         None => ()
       }

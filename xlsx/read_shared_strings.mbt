@@ -233,8 +233,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       match attr_value(tag, "theme") {
         Some(val) =>
           try @strconv.parse_int(val, base=10) catch {
-            _ =>
-              raise XlsxError::InvalidXml(msg="rich text color theme invalid")
+            _ => raise InvalidXml(msg="rich text color theme invalid")
           } noraise {
             value => {
               color_theme = Some(value)
@@ -246,8 +245,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       match attr_value(tag, "indexed") {
         Some(val) =>
           try @strconv.parse_int(val, base=10) catch {
-            _ =>
-              raise XlsxError::InvalidXml(msg="rich text color indexed invalid")
+            _ => raise InvalidXml(msg="rich text color indexed invalid")
           } noraise {
             value => {
               color_indexed = Some(value)
@@ -259,7 +257,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       match attr_value(tag, "tint") {
         Some(val) =>
           try @strconv.parse_double(val) catch {
-            _ => raise XlsxError::InvalidXml(msg="rich text color tint invalid")
+            _ => raise InvalidXml(msg="rich text color tint invalid")
           } noraise {
             value => {
               color_tint = Some(value)
@@ -345,7 +343,7 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
       continue
     }
     let tail = xml_str[after:] catch {
-        _ => raise XlsxError::InvalidXml(msg="rich text tag invalid")
+        _ => raise InvalidXml(msg="rich text tag invalid")
       }
     let open_end_rel = match tail.find(">") {
       Some(pos) => pos
@@ -353,7 +351,7 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     }
     let body_start = after + open_end_rel + 1
     let body_rest = xml_str[body_start:] catch {
-        _ => raise XlsxError::InvalidXml(msg="rich text body invalid")
+        _ => raise InvalidXml(msg="rich text body invalid")
       }
     let close_rel = match body_rest.find("</r>") {
       Some(pos) => pos
@@ -361,7 +359,7 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
     }
     let body_end = body_start + close_rel
     let body = xml_str[body_start:body_end] catch {
-        _ => raise XlsxError::InvalidXml(msg="rich text body invalid")
+        _ => raise InvalidXml(msg="rich text body invalid")
       }
     let run_text = parse_text_nodes(body)
     let font = parse_rich_text_font(body)

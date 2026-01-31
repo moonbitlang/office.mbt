@@ -36,26 +36,18 @@ test "form control excelize-like add/get" {
     },
   ])
   a1.set_format(
-    GraphicOptions::with_values(
-      print_object=true,
-      positioning=PicturePositioning::Absolute,
-    ),
+    GraphicOptions::with_values(print_object=true, positioning=Absolute),
   )
   form_controls.push(a1)
   let a5 = FormControl::new("A5", "CheckBox", text="Check Box 1")
   a5.set_checked(true)
   a5.set_format(
-    GraphicOptions::with_values(
-      print_object=false,
-      positioning=PicturePositioning::OneCell,
-    ),
+    GraphicOptions::with_values(print_object=false, positioning=OneCell),
   )
   form_controls.push(a5)
   let a6 = FormControl::new("A6", "CheckBox", text="Check Box 2")
   a6.set_cell_link("C5")
-  a6.set_format(
-    GraphicOptions::with_values(positioning=PicturePositioning::TwoCell),
-  )
+  a6.set_format(GraphicOptions::with_values(positioning=TwoCell))
   form_controls.push(a6)
   let a7 = FormControl::new("A7", "OptionButton", text="Option Button 1")
   a7.set_checked(true)

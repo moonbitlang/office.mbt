@@ -2,9 +2,9 @@
 test "calc basic operators" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(0.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("C1", Numeric(0.0))
   sheet.set_cell_formula("D1", "A1+(B1-C1)")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="5")
   sheet.set_cell_formula("E1", "A1&B1")
@@ -33,10 +33,10 @@ test "calc basic operators" {
 test "calc basic functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(3.0))
   sheet.set_cell_formula("C1", "SUM(A1:B2)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="10")
   sheet.set_cell_formula("C2", "AVERAGE(A1:B2)")
@@ -55,13 +55,13 @@ test "calc basic functions" {
 test "calc product and sumproduct functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
-  sheet.set_cell_value("C1", CellValue::String("text"))
-  sheet.set_cell_value("C2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("B2", Numeric(5.0))
+  sheet.set_cell_value("C1", String("text"))
+  sheet.set_cell_value("C2", Numeric(2.0))
   sheet.set_cell_formula("D1", "PRODUCT(3,6)")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="18")
   sheet.set_cell_formula("D2", "PRODUCT(\"3\",\"6\")")
@@ -100,13 +100,13 @@ test "calc product and sumproduct functions" {
 test "calc sumsq and sumx functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
-  sheet.set_cell_value("C1", CellValue::String("Month"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("B2", Numeric(5.0))
+  sheet.set_cell_value("C1", String("Month"))
   sheet.set_cell_formula("D1", "SUMSQ(A1:A4)")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="14")
   sheet.set_cell_formula("D2", "SUMSQ(A1,B1,A2,B2,6)")
@@ -249,13 +249,13 @@ test "calc even odd and mround functions" {
 test "calc matrix functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(6.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(5.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("B3", Numeric(6.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
   sheet.set_cell_formula("C1", "MDETERM(A1:B2)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="-3")
   sheet.set_cell_formula("C2", "MINVERSE(A1:B2)")
@@ -314,10 +314,10 @@ test "calc stdev functions" {
 test "calc var functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
   sheet.set_cell_formula("B1", "VAR(1,3,5,0,C1)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="4.91666666666667")
   sheet.set_cell_formula("B2", "VAR(1,3,5,0,C1,TRUE)")
@@ -360,12 +360,12 @@ test "calc weibull functions" {
 test "calc trimmean functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(5.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
   sheet.set_cell_formula("C1", "TRIMMEAN(A1:B4,10%)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2.5")
   sheet.set_cell_formula("C2", "TRIMMEAN(A1:B4,70%)")
@@ -593,20 +593,20 @@ test "calc chi-square functions" {
 test "calc chi-square test functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("B3", CellValue::Numeric(33.0))
-  sheet.set_cell_value("C3", CellValue::Numeric(39.0))
-  sheet.set_cell_value("B4", CellValue::Numeric(62.0))
-  sheet.set_cell_value("C4", CellValue::Numeric(62.0))
-  sheet.set_cell_value("B5", CellValue::Numeric(10.0))
-  sheet.set_cell_value("C5", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B6", CellValue::Numeric(-1.0))
-  sheet.set_cell_value("C6", CellValue::Numeric(0.0))
-  sheet.set_cell_value("F3", CellValue::Numeric(26.25))
-  sheet.set_cell_value("G3", CellValue::Numeric(31.5))
-  sheet.set_cell_value("F4", CellValue::Numeric(57.75))
-  sheet.set_cell_value("G4", CellValue::Numeric(61.95))
-  sheet.set_cell_value("F5", CellValue::Numeric(21.0))
-  sheet.set_cell_value("G5", CellValue::Numeric(11.55))
+  sheet.set_cell_value("B3", Numeric(33.0))
+  sheet.set_cell_value("C3", Numeric(39.0))
+  sheet.set_cell_value("B4", Numeric(62.0))
+  sheet.set_cell_value("C4", Numeric(62.0))
+  sheet.set_cell_value("B5", Numeric(10.0))
+  sheet.set_cell_value("C5", Numeric(4.0))
+  sheet.set_cell_value("B6", Numeric(-1.0))
+  sheet.set_cell_value("C6", Numeric(0.0))
+  sheet.set_cell_value("F3", Numeric(26.25))
+  sheet.set_cell_value("G3", Numeric(31.5))
+  sheet.set_cell_value("F4", Numeric(57.75))
+  sheet.set_cell_value("G4", Numeric(61.95))
+  sheet.set_cell_value("F5", Numeric(21.0))
+  sheet.set_cell_value("G5", Numeric(11.55))
   sheet.set_cell_formula("H1", "CHITEST(B3:C5,F3:G5)")
   inspect(
     workbook.calc_cell_value("Sheet1", "H1"),
@@ -702,26 +702,26 @@ test "calc f distribution functions" {
 test "calc f test functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A2", CellValue::Numeric(3.5))
-  sheet.set_cell_value("B2", CellValue::Numeric(9.2))
-  sheet.set_cell_value("A3", CellValue::Numeric(4.7))
-  sheet.set_cell_value("B3", CellValue::Numeric(8.2))
-  sheet.set_cell_value("A4", CellValue::Numeric(6.2))
-  sheet.set_cell_value("B4", CellValue::Numeric(7.3))
-  sheet.set_cell_value("A5", CellValue::Numeric(4.9))
-  sheet.set_cell_value("B5", CellValue::Numeric(6.1))
-  sheet.set_cell_value("A6", CellValue::Numeric(3.8))
-  sheet.set_cell_value("B6", CellValue::Numeric(5.4))
-  sheet.set_cell_value("A7", CellValue::Numeric(5.5))
-  sheet.set_cell_value("B7", CellValue::Numeric(7.8))
-  sheet.set_cell_value("A8", CellValue::Numeric(7.1))
-  sheet.set_cell_value("B8", CellValue::Numeric(5.9))
-  sheet.set_cell_value("A9", CellValue::Numeric(6.7))
-  sheet.set_cell_value("B9", CellValue::Numeric(8.4))
-  sheet.set_cell_value("A10", CellValue::Numeric(3.9))
-  sheet.set_cell_value("B10", CellValue::Numeric(7.7))
-  sheet.set_cell_value("A11", CellValue::Numeric(4.6))
-  sheet.set_cell_value("B11", CellValue::Numeric(6.6))
+  sheet.set_cell_value("A2", Numeric(3.5))
+  sheet.set_cell_value("B2", Numeric(9.2))
+  sheet.set_cell_value("A3", Numeric(4.7))
+  sheet.set_cell_value("B3", Numeric(8.2))
+  sheet.set_cell_value("A4", Numeric(6.2))
+  sheet.set_cell_value("B4", Numeric(7.3))
+  sheet.set_cell_value("A5", Numeric(4.9))
+  sheet.set_cell_value("B5", Numeric(6.1))
+  sheet.set_cell_value("A6", Numeric(3.8))
+  sheet.set_cell_value("B6", Numeric(5.4))
+  sheet.set_cell_value("A7", Numeric(5.5))
+  sheet.set_cell_value("B7", Numeric(7.8))
+  sheet.set_cell_value("A8", Numeric(7.1))
+  sheet.set_cell_value("B8", Numeric(5.9))
+  sheet.set_cell_value("A9", Numeric(6.7))
+  sheet.set_cell_value("B9", Numeric(8.4))
+  sheet.set_cell_value("A10", Numeric(3.9))
+  sheet.set_cell_value("B10", Numeric(7.7))
+  sheet.set_cell_value("A11", Numeric(4.6))
+  sheet.set_cell_value("B11", Numeric(6.6))
   sheet.set_cell_formula("C1", "FTEST(A2:A11,B2:B11)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.954035559394131")
   sheet.set_cell_formula("C2", "F.TEST(A2:A11,B2:B11)")
@@ -1400,12 +1400,12 @@ test "calc char clean code unicode choose functions" {
   inspect(workbook.calc_cell_value("Sheet1", "F1"), content="brown")
   sheet.set_cell_formula("F2", "CHOOSE(1,\"red\",\"blue\",\"green\",\"brown\")")
   inspect(workbook.calc_cell_value("Sheet1", "F2"), content="red")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(5.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(7.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("A3", Numeric(5.0))
+  sheet.set_cell_value("A4", Numeric(7.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("B2", Numeric(2.0))
   sheet.set_cell_formula("F3", "SUM(CHOOSE(A2,A1,B1:B2,A1:A3,A1:A4))")
   inspect(workbook.calc_cell_value("Sheet1", "F3"), content="9")
 }
@@ -2837,10 +2837,10 @@ test "calc math and text functions" {
   inspect(workbook.calc_cell_value("Sheet1", "A16"), content="TRUE1FALSE02")
   sheet.set_cell_formula("A17", "CONCATENATE(\"A\",\"B\",\"C\")")
   inspect(workbook.calc_cell_value("Sheet1", "A17"), content="ABC")
-  sheet.set_cell_value("B1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C2", CellValue::Numeric(5.0))
+  sheet.set_cell_value("B1", Numeric(1.0))
+  sheet.set_cell_value("C1", Numeric(4.0))
+  sheet.set_cell_value("B2", Numeric(2.0))
+  sheet.set_cell_value("C2", Numeric(5.0))
   sheet.set_cell_formula("A18", "CONCAT(B1:C2)")
   inspect(workbook.calc_cell_value("Sheet1", "A18"), content="1425")
   sheet.set_cell_formula("A19", "LEFT(\"Hello\")")
@@ -2949,10 +2949,10 @@ test "calc math and text functions" {
   inspect(workbook.calc_cell_value("Sheet1", "B64"), content="\"abc\"")
   sheet.set_cell_formula("B65", "VALUETOTEXT(123,1)")
   inspect(workbook.calc_cell_value("Sheet1", "B65"), content="123")
-  sheet.set_cell_value("Y1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("Z1", CellValue::String("a"))
-  sheet.set_cell_value("Y2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("Z2", CellValue::String("b"))
+  sheet.set_cell_value("Y1", Numeric(1.0))
+  sheet.set_cell_value("Z1", String("a"))
+  sheet.set_cell_value("Y2", Numeric(2.0))
+  sheet.set_cell_value("Z2", String("b"))
   sheet.set_cell_formula("B66", "ARRAYTOTEXT(Y1:Z2)")
   inspect(workbook.calc_cell_value("Sheet1", "B66"), content="1, a, 2, b")
   sheet.set_cell_formula("B67", "ARRAYTOTEXT(Y1:Z2,1)")
@@ -2974,8 +2974,8 @@ test "calc math and text functions" {
     Int::unsafe_to_char('l'.to_int()),
     Int::unsafe_to_char('d'.to_int()),
   ])
-  sheet.set_cell_value("C68", CellValue::String(dbcs_text))
-  sheet.set_cell_value("C69", CellValue::String(cn_text))
+  sheet.set_cell_value("C68", String(dbcs_text))
+  sheet.set_cell_value("C69", String(cn_text))
   sheet.set_cell_formula("B68", "LENB(C68)")
   inspect(workbook.calc_cell_value("Sheet1", "B68"), content="4")
   sheet.set_cell_formula("B69", "FINDB(\"a\",C68)")
@@ -3073,33 +3073,33 @@ test "calc textsplit error functions" {
 test "calc unique functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("Jan"))
-  sheet.set_cell_value("A2", CellValue::String("Feb"))
-  sheet.set_cell_value("A3", CellValue::String("Jan"))
-  sheet.set_cell_value("A4", CellValue::String("Feb"))
+  sheet.set_cell_value("A1", String("Jan"))
+  sheet.set_cell_value("A2", String("Feb"))
+  sheet.set_cell_value("A3", String("Jan"))
+  sheet.set_cell_value("A4", String("Feb"))
   sheet.set_cell_formula("B1", "TEXTJOIN(\",\",TRUE(),UNIQUE(A1:A4))")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="Jan,Feb")
   sheet.set_cell_formula(
     "B2", "TEXTJOIN(\",\",TRUE(),UNIQUE(A1:A4,FALSE(),TRUE()))",
   )
   inspect(workbook.calc_cell_value("Sheet1", "B2"), content="")
-  sheet.set_cell_value("C1", CellValue::String("North 1"))
-  sheet.set_cell_value("D1", CellValue::String("North 2"))
-  sheet.set_cell_value("C2", CellValue::String("South 1"))
-  sheet.set_cell_value("D2", CellValue::String("South 2"))
-  sheet.set_cell_value("C3", CellValue::String("North 1"))
-  sheet.set_cell_value("D3", CellValue::String("North 2"))
+  sheet.set_cell_value("C1", String("North 1"))
+  sheet.set_cell_value("D1", String("North 2"))
+  sheet.set_cell_value("C2", String("South 1"))
+  sheet.set_cell_value("D2", String("South 2"))
+  sheet.set_cell_value("C3", String("North 1"))
+  sheet.set_cell_value("D3", String("North 2"))
   sheet.set_cell_formula("B3", "TEXTJOIN(\",\",TRUE(),UNIQUE(C1:D3))")
   inspect(
     workbook.calc_cell_value("Sheet1", "B3"),
     content="North 1,North 2,South 1,South 2",
   )
-  sheet.set_cell_value("E1", CellValue::String("A"))
-  sheet.set_cell_value("F1", CellValue::String("B"))
-  sheet.set_cell_value("G1", CellValue::String("A"))
-  sheet.set_cell_value("E2", CellValue::String("1"))
-  sheet.set_cell_value("F2", CellValue::String("2"))
-  sheet.set_cell_value("G2", CellValue::String("1"))
+  sheet.set_cell_value("E1", String("A"))
+  sheet.set_cell_value("F1", String("B"))
+  sheet.set_cell_value("G1", String("A"))
+  sheet.set_cell_value("E2", String("1"))
+  sheet.set_cell_value("F2", String("2"))
+  sheet.set_cell_value("G2", String("1"))
   sheet.set_cell_formula("B4", "TEXTJOIN(\":\",TRUE(),UNIQUE(E1:G2,TRUE()))")
   inspect(workbook.calc_cell_value("Sheet1", "B4"), content="A:B:1:2")
   sheet.set_cell_formula(
@@ -3112,8 +3112,8 @@ test "calc unique functions" {
 test "calc unique error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("B1", CellValue::String("A"))
-  sheet.set_cell_value("B2", CellValue::String("B"))
+  sheet.set_cell_value("B1", String("A"))
+  sheet.set_cell_value("B2", String("B"))
   sheet.set_cell_formula("A1", "UNIQUE()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
   sheet.set_cell_formula("A2", "UNIQUE(1,2,3,4)")
@@ -3154,22 +3154,22 @@ test "calc sequence error functions" {
 test "calc sort functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(20.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(10.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(30.0))
+  sheet.set_cell_value("A1", Numeric(3.0))
+  sheet.set_cell_value("B1", Numeric(20.0))
+  sheet.set_cell_value("A2", Numeric(1.0))
+  sheet.set_cell_value("B2", Numeric(10.0))
+  sheet.set_cell_value("A3", Numeric(2.0))
+  sheet.set_cell_value("B3", Numeric(30.0))
   sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),SORT(A1:B3))")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,10,2,30,3,20")
   sheet.set_cell_formula("C2", "TEXTJOIN(\",\",TRUE(),SORT(A1:B3,2,-1))")
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2,30,3,20,1,10")
-  sheet.set_cell_value("D1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("E1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("F1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("D2", CellValue::Numeric(30.0))
-  sheet.set_cell_value("E2", CellValue::Numeric(10.0))
-  sheet.set_cell_value("F2", CellValue::Numeric(20.0))
+  sheet.set_cell_value("D1", Numeric(3.0))
+  sheet.set_cell_value("E1", Numeric(1.0))
+  sheet.set_cell_value("F1", Numeric(2.0))
+  sheet.set_cell_value("D2", Numeric(30.0))
+  sheet.set_cell_value("E2", Numeric(10.0))
+  sheet.set_cell_value("F2", Numeric(20.0))
   sheet.set_cell_formula("C3", "TEXTJOIN(\",\",TRUE(),SORT(D1:F2,2,1,TRUE()))")
   inspect(workbook.calc_cell_value("Sheet1", "C3"), content="1,2,3,10,20,30")
 }
@@ -3178,8 +3178,8 @@ test "calc sort functions" {
 test "calc sort error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
   sheet.set_cell_formula("B1", "SORT(A1:A2,0)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
   sheet.set_cell_formula("B2", "SORT(A1:A2,1,2)")
@@ -3190,14 +3190,14 @@ test "calc sort error functions" {
 test "calc sortby functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("A"))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A2", CellValue::String("C"))
-  sheet.set_cell_value("B2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A3", CellValue::String("B"))
-  sheet.set_cell_value("B3", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A4", CellValue::String("D"))
-  sheet.set_cell_value("B4", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A1", String("A"))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", String("C"))
+  sheet.set_cell_value("B2", Numeric(1.0))
+  sheet.set_cell_value("A3", String("B"))
+  sheet.set_cell_value("B3", Numeric(2.0))
+  sheet.set_cell_value("A4", String("D"))
+  sheet.set_cell_value("B4", Numeric(1.0))
   sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),SORTBY(A1:B4,B1:B4))")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="C,1,D,1,A,2,B,2")
   sheet.set_cell_formula(
@@ -3210,10 +3210,10 @@ test "calc sortby functions" {
 test "calc sortby error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B1", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
   sheet.set_cell_formula("C1", "SORTBY(A1:A2)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
   sheet.set_cell_formula("C2", "SORTBY(A1:A2,A1:A2,2)")
@@ -3237,7 +3237,7 @@ test "calc take functions" {
   let mut value = 1.0
   for row in 1..<=3 {
     for col in 1..<=3 {
-      sheet.set_cell_value_rc(row, col, CellValue::Numeric(value))
+      sheet.set_cell_value_rc(row, col, Numeric(value))
       value = value + 1.0
     }
   }
@@ -3253,9 +3253,9 @@ test "calc take functions" {
 test "calc take error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("C1", Numeric(3.0))
   sheet.set_cell_formula("D1", "TAKE(A1:C1,2)")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
   sheet.set_cell_formula("D2", "TAKE(A1:C1,1,4)")
@@ -3269,7 +3269,7 @@ test "calc drop functions" {
   let mut value = 1.0
   for row in 1..<=3 {
     for col in 1..<=3 {
-      sheet.set_cell_value_rc(row, col, CellValue::Numeric(value))
+      sheet.set_cell_value_rc(row, col, Numeric(value))
       value = value + 1.0
     }
   }
@@ -3285,9 +3285,9 @@ test "calc drop functions" {
 test "calc drop error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("C1", Numeric(3.0))
   sheet.set_cell_formula("D1", "DROP(A1:C1,2)")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#VALUE!")
   sheet.set_cell_formula("D2", "DROP(A1:C1,1,4)")
@@ -3298,10 +3298,10 @@ test "calc drop error functions" {
 test "calc tocol torow functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(3.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
   sheet.set_cell_formula("D1", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2))")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1,3,,2,4,")
   sheet.set_cell_formula("D2", "TEXTJOIN(\",\",FALSE(),TOCOL(A1:C2,1))")
@@ -3316,10 +3316,10 @@ test "calc tocol torow functions" {
 test "calc tocol torow error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(3.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
   sheet.set_cell_formula("C1", "1/0")
   sheet.set_cell_formula("D1", "TOCOL(A1:C2)")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="#DIV/0!")
@@ -3340,7 +3340,7 @@ test "calc choosecols chooserows functions" {
   let mut value = 1.0
   for row in 1..<=3 {
     for col in 1..<=3 {
-      sheet.set_cell_value_rc(row, col, CellValue::Numeric(value))
+      sheet.set_cell_value_rc(row, col, Numeric(value))
       value = value + 1.0
     }
   }
@@ -3358,8 +3358,8 @@ test "calc choosecols chooserows functions" {
 test "calc choosecols chooserows error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
   sheet.set_cell_formula("C1", "CHOOSECOLS(A1:B1)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
   sheet.set_cell_formula("C2", "CHOOSECOLS(A1:B1,0)")
@@ -3374,13 +3374,13 @@ test "calc choosecols chooserows error functions" {
 test "calc stack functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(9.0))
-  sheet.set_cell_value("C2", CellValue::Numeric(10.0))
-  sheet.set_cell_value("C3", CellValue::Numeric(11.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("C1", Numeric(9.0))
+  sheet.set_cell_value("C2", Numeric(10.0))
+  sheet.set_cell_value("C3", Numeric(11.0))
   sheet.set_cell_formula(
     "D1", "TEXTJOIN(\",\",FALSE(),TOCOL(HSTACK(A1:B2,C1:C3),2))",
   )
@@ -3405,8 +3405,8 @@ test "calc stack error functions" {
 test "calc expand functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
   sheet.set_cell_formula("C1", "TEXTJOIN(\",\",FALSE(),EXPAND(A1:B1,2,3,0))")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,2,0,0,0,0")
   sheet.set_cell_formula(
@@ -3419,8 +3419,8 @@ test "calc expand functions" {
 test "calc expand error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
   sheet.set_cell_formula("C1", "EXPAND(A1:B1,0)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
   sheet.set_cell_formula("C2", "EXPAND(A1:B1,1,1)")
@@ -3431,11 +3431,11 @@ test "calc expand error functions" {
 test "calc wrap functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(4.0))
-  sheet.set_cell_value("A5", CellValue::Numeric(5.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(4.0))
+  sheet.set_cell_value("A5", Numeric(5.0))
   sheet.set_cell_formula("B1", "TEXTJOIN(\",\",FALSE(),WRAPROWS(A1:A5,2,0))")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1,2,3,4,5,0")
   sheet.set_cell_formula("B2", "TEXTJOIN(\",\",FALSE(),WRAPCOLS(A1:A5,2,0))")
@@ -3448,8 +3448,8 @@ test "calc wrap functions" {
 test "calc wrap error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
   sheet.set_cell_formula("B1", "WRAPROWS(A1:A2,0)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="#VALUE!")
   sheet.set_cell_formula("B2", "WRAPCOLS(A1:A2,-1)")
@@ -3462,23 +3462,23 @@ test "calc wrap error functions" {
 test "calc filter functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(4.0))
-  sheet.set_cell_value("A5", CellValue::Numeric(5.0))
-  sheet.set_cell_value("B1", CellValue::Bool(true))
-  sheet.set_cell_value("B2", CellValue::Bool(false))
-  sheet.set_cell_value("B3", CellValue::Bool(true))
-  sheet.set_cell_value("B4", CellValue::Bool(false))
-  sheet.set_cell_value("B5", CellValue::Bool(true))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(4.0))
+  sheet.set_cell_value("A5", Numeric(5.0))
+  sheet.set_cell_value("B1", Bool(true))
+  sheet.set_cell_value("B2", Bool(false))
+  sheet.set_cell_value("B3", Bool(true))
+  sheet.set_cell_value("B4", Bool(false))
+  sheet.set_cell_value("B5", Bool(true))
   sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),FILTER(A1:A5,B1:B5))")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,3,5")
-  sheet.set_cell_value("D1", CellValue::Bool(false))
-  sheet.set_cell_value("D2", CellValue::Bool(false))
-  sheet.set_cell_value("D3", CellValue::Bool(false))
-  sheet.set_cell_value("D4", CellValue::Bool(false))
-  sheet.set_cell_value("D5", CellValue::Bool(false))
+  sheet.set_cell_value("D1", Bool(false))
+  sheet.set_cell_value("D2", Bool(false))
+  sheet.set_cell_value("D3", Bool(false))
+  sheet.set_cell_value("D4", Bool(false))
+  sheet.set_cell_value("D5", Bool(false))
   sheet.set_cell_formula("C2", "FILTER(A1:A5,D1:D5,\"none\")")
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="none")
 }
@@ -3487,10 +3487,10 @@ test "calc filter functions" {
 test "calc filter error functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B1", CellValue::Bool(false))
-  sheet.set_cell_value("B2", CellValue::Bool(false))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B1", Bool(false))
+  sheet.set_cell_value("B2", Bool(false))
   sheet.set_cell_formula("C1", "FILTER(A1:A2,B1:B2)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#CALC!")
   sheet.set_cell_formula("C2", "FILTER(A1:A2,B1:B1)")
@@ -3663,12 +3663,12 @@ test "calc date and time functions" {
 test "calc lookup functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(10.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(20.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(30.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("B1", Numeric(10.0))
+  sheet.set_cell_value("B2", Numeric(20.0))
+  sheet.set_cell_value("B3", Numeric(30.0))
   sheet.set_cell_formula("C1", "INDEX(A1:A3,2)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
   sheet.set_cell_formula("C2", "INDEX(A1:B3,2,2)")
@@ -3681,9 +3681,9 @@ test "calc lookup functions" {
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="2")
   sheet.set_cell_formula("D2", "MATCH(2.5,A1:A3,1)")
   inspect(workbook.calc_cell_value("Sheet1", "D2"), content="2")
-  sheet.set_cell_value("E1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("E2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("E3", CellValue::Numeric(1.0))
+  sheet.set_cell_value("E1", Numeric(3.0))
+  sheet.set_cell_value("E2", Numeric(2.0))
+  sheet.set_cell_value("E3", Numeric(1.0))
   sheet.set_cell_formula("D3", "MATCH(2.5,E1:E3,-1)")
   inspect(workbook.calc_cell_value("Sheet1", "D3"), content="1")
   sheet.set_cell_formula("D4", "MATCH(4,A1:A3,0)")
@@ -3706,12 +3706,12 @@ test "calc lookup functions" {
   inspect(workbook.calc_cell_value("Sheet1", "G6"), content="#N/A")
   sheet.set_cell_formula("G7", "VLOOKUP(2,A1:B3,2,0)")
   inspect(workbook.calc_cell_value("Sheet1", "G7"), content="20")
-  sheet.set_cell_value("A5", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B5", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C5", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A6", CellValue::Numeric(10.0))
-  sheet.set_cell_value("B6", CellValue::Numeric(20.0))
-  sheet.set_cell_value("C6", CellValue::Numeric(30.0))
+  sheet.set_cell_value("A5", Numeric(1.0))
+  sheet.set_cell_value("B5", Numeric(2.0))
+  sheet.set_cell_value("C5", Numeric(3.0))
+  sheet.set_cell_value("A6", Numeric(10.0))
+  sheet.set_cell_value("B6", Numeric(20.0))
+  sheet.set_cell_value("C6", Numeric(30.0))
   sheet.set_cell_formula("H1", "HLOOKUP(2,A5:C6,2,FALSE)")
   inspect(workbook.calc_cell_value("Sheet1", "H1"), content="20")
   sheet.set_cell_formula("H2", "HLOOKUP(2.5,A5:C6,2)")
@@ -3736,17 +3736,17 @@ test "calc lookup functions" {
   inspect(workbook.calc_cell_value("Sheet1", "J2"), content="missing")
   sheet.set_cell_formula("J3", "XLOOKUP(2.2,A1:A3,B1:B3,0,-1)")
   inspect(workbook.calc_cell_value("Sheet1", "J3"), content="20")
-  sheet.set_cell_value("C1", CellValue::String("Alpha"))
-  sheet.set_cell_value("C2", CellValue::String("Beta"))
-  sheet.set_cell_value("C3", CellValue::String("Gamma"))
+  sheet.set_cell_value("C1", String("Alpha"))
+  sheet.set_cell_value("C2", String("Beta"))
+  sheet.set_cell_value("C3", String("Gamma"))
   sheet.set_cell_formula("J4", "XLOOKUP(\"*ta\",C1:C3,B1:B3,\"\",2)")
   inspect(workbook.calc_cell_value("Sheet1", "J4"), content="20")
-  sheet.set_cell_value("E1", CellValue::String("A"))
-  sheet.set_cell_value("E2", CellValue::String("B"))
-  sheet.set_cell_value("E3", CellValue::String("A"))
-  sheet.set_cell_value("F1", CellValue::Numeric(100.0))
-  sheet.set_cell_value("F2", CellValue::Numeric(200.0))
-  sheet.set_cell_value("F3", CellValue::Numeric(300.0))
+  sheet.set_cell_value("E1", String("A"))
+  sheet.set_cell_value("E2", String("B"))
+  sheet.set_cell_value("E3", String("A"))
+  sheet.set_cell_value("F1", Numeric(100.0))
+  sheet.set_cell_value("F2", Numeric(200.0))
+  sheet.set_cell_value("F3", Numeric(300.0))
   sheet.set_cell_formula("J5", "XLOOKUP(\"A\",E1:E3,F1:F3,0,0,-1)")
   inspect(workbook.calc_cell_value("Sheet1", "J5"), content="300")
   sheet.set_cell_formula("M1", "HLOOKUP(MUNIT(1),MUNIT(1),1,FALSE)")
@@ -3829,11 +3829,11 @@ test "calc median function" {
 test "calc counta function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::String("text"))
-  sheet.set_cell_value("A3", CellValue::String(""))
-  sheet.set_cell_value("A4", CellValue::Bool(true))
-  sheet.set_cell_value("A5", CellValue::Error("#DIV/0!"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", String("text"))
+  sheet.set_cell_value("A3", String(""))
+  sheet.set_cell_value("A4", Bool(true))
+  sheet.set_cell_value("A5", Error("#DIV/0!"))
   sheet.set_cell_formula("B1", "COUNTA(A1:A5)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="3")
   sheet.set_cell_formula("B2", "COUNTA(A1:A5,2)")
@@ -3862,12 +3862,12 @@ test "calc error functions" {
 test "calc matrix function errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(0.0))
-  sheet.set_cell_value("B3", CellValue::String("text"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("A3", Numeric(0.0))
+  sheet.set_cell_value("B3", String("text"))
   sheet.set_cell_formula("C1", "MDETERM()")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="#VALUE!")
   sheet.set_cell_formula("C2", "MDETERM(A1:B3)")
@@ -4328,12 +4328,12 @@ test "calc f distribution function errors" {
 test "calc f test function errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A2", CellValue::Numeric(3.5))
-  sheet.set_cell_value("B2", CellValue::Numeric(9.2))
-  sheet.set_cell_value("A3", CellValue::Numeric(4.7))
-  sheet.set_cell_value("B3", CellValue::Numeric(8.2))
-  sheet.set_cell_value("A4", CellValue::Numeric(6.2))
-  sheet.set_cell_value("B4", CellValue::Numeric(7.3))
+  sheet.set_cell_value("A2", Numeric(3.5))
+  sheet.set_cell_value("B2", Numeric(9.2))
+  sheet.set_cell_value("A3", Numeric(4.7))
+  sheet.set_cell_value("B3", Numeric(8.2))
+  sheet.set_cell_value("A4", Numeric(6.2))
+  sheet.set_cell_value("B4", Numeric(7.3))
   sheet.set_cell_formula("A10", "FTEST()")
   inspect(workbook.calc_cell_value("Sheet1", "A10"), content="#VALUE!")
   sheet.set_cell_formula("A11", "FTEST(A2:A2,B2:B2)")
@@ -4360,7 +4360,7 @@ test "calc f test function errors" {
 test "calc ifs function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_formula("B1", "IFS(A1>1,\"big\",A1=1,\"one\")")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="one")
   sheet.set_cell_formula("B2", "IFS(A1>1,\"big\",A1=2,\"two\")")
@@ -4375,13 +4375,13 @@ test "calc ifs function" {
 test "calc is functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::String("text"))
-  sheet.set_cell_value("A3", CellValue::String("1"))
-  sheet.set_cell_value("A4", CellValue::Bool(true))
-  sheet.set_cell_value("A5", CellValue::Error("#DIV/0!"))
-  sheet.set_cell_value("A6", CellValue::Error("#SPILL!"))
-  sheet.set_cell_value("A7", CellValue::Error("#GETTING_DATA"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", String("text"))
+  sheet.set_cell_value("A3", String("1"))
+  sheet.set_cell_value("A4", Bool(true))
+  sheet.set_cell_value("A5", Error("#DIV/0!"))
+  sheet.set_cell_value("A6", Error("#SPILL!"))
+  sheet.set_cell_value("A7", Error("#GETTING_DATA"))
   sheet.set_cell_formula("B1", "ISBLANK(B2)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="TRUE")
   sheet.set_cell_formula("B2", "ISNUMBER(A1)")
@@ -4457,7 +4457,7 @@ test "calc ref functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let other = workbook.add_sheet("Other")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_formula("B1", "A1+1")
   other.set_cell_formula("A1", "1+1")
   sheet.set_cell_formula("C1", "ISFORMULA(B1)")
@@ -4480,8 +4480,8 @@ test "calc ref functions" {
 test "calc error type function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("B1", CellValue::Error("#NULL!"))
-  sheet.set_cell_value("B2", CellValue::Error("#SPILL!"))
+  sheet.set_cell_value("B1", Error("#NULL!"))
+  sheet.set_cell_value("B2", Error("#SPILL!"))
   sheet.set_cell_formula("A1", "ERROR.TYPE(1/0)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
   sheet.set_cell_formula("A2", "ERROR.TYPE(COUNTIFS(A1,1,2))")
@@ -4555,23 +4555,23 @@ test "calc type and t functions" {
 test "calc criteria functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::String("2"))
-  sheet.set_cell_value("B1", CellValue::Numeric(10.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(20.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(30.0))
-  sheet.set_cell_value("B4", CellValue::Numeric(40.0))
-  sheet.set_cell_value("B5", CellValue::Numeric(50.0))
-  sheet.set_cell_value("C1", CellValue::String("data"))
-  sheet.set_cell_value("C2", CellValue::String("beta"))
-  sheet.set_cell_value("C3", CellValue::String("alpha"))
-  sheet.set_cell_value("C4", CellValue::String("delta"))
-  sheet.set_cell_value("C5", CellValue::String("1"))
-  sheet.set_cell_value("E1", CellValue::String("a*b"))
-  sheet.set_cell_value("E2", CellValue::String("a?b"))
-  sheet.set_cell_value("E3", CellValue::String("a~b"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", String("2"))
+  sheet.set_cell_value("B1", Numeric(10.0))
+  sheet.set_cell_value("B2", Numeric(20.0))
+  sheet.set_cell_value("B3", Numeric(30.0))
+  sheet.set_cell_value("B4", Numeric(40.0))
+  sheet.set_cell_value("B5", Numeric(50.0))
+  sheet.set_cell_value("C1", String("data"))
+  sheet.set_cell_value("C2", String("beta"))
+  sheet.set_cell_value("C3", String("alpha"))
+  sheet.set_cell_value("C4", String("delta"))
+  sheet.set_cell_value("C5", String("1"))
+  sheet.set_cell_value("E1", String("a*b"))
+  sheet.set_cell_value("E2", String("a?b"))
+  sheet.set_cell_value("E3", String("a~b"))
   sheet.set_cell_formula("D1", "COUNTIF(A1:A5,\"2\")")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="1")
   sheet.set_cell_formula("D2", "COUNTIF(A1:A5,\">=2\")")
@@ -4614,51 +4614,51 @@ test "calc criteria functions" {
 
 ///|
 fn set_calc_database_base_data(sheet : Worksheet) -> Unit raise XlsxError {
-  sheet.set_cell_value("A1", CellValue::String("Tree"))
-  sheet.set_cell_value("B1", CellValue::String("Height"))
-  sheet.set_cell_value("C1", CellValue::String("Age"))
-  sheet.set_cell_value("D1", CellValue::String("Yield"))
-  sheet.set_cell_value("E1", CellValue::String("Profit"))
-  sheet.set_cell_value("F1", CellValue::String("Height"))
+  sheet.set_cell_value("A1", String("Tree"))
+  sheet.set_cell_value("B1", String("Height"))
+  sheet.set_cell_value("C1", String("Age"))
+  sheet.set_cell_value("D1", String("Yield"))
+  sheet.set_cell_value("E1", String("Profit"))
+  sheet.set_cell_value("F1", String("Height"))
   sheet.set_cell_formula("A2", "\"=Apple\"")
-  sheet.set_cell_value("B2", CellValue::String(">1000%"))
-  sheet.set_cell_value("F2", CellValue::String("<16"))
+  sheet.set_cell_value("B2", String(">1000%"))
+  sheet.set_cell_value("F2", String("<16"))
   sheet.set_cell_formula("A3", "\"=Pear\"")
-  sheet.set_cell_value("A4", CellValue::String("Tree"))
-  sheet.set_cell_value("B4", CellValue::String("Height"))
-  sheet.set_cell_value("C4", CellValue::String("Age"))
-  sheet.set_cell_value("D4", CellValue::String("Yield"))
-  sheet.set_cell_value("E4", CellValue::String("Profit"))
-  sheet.set_cell_value("A5", CellValue::String("Apple"))
-  sheet.set_cell_value("B5", CellValue::Numeric(18.0))
-  sheet.set_cell_value("C5", CellValue::Numeric(20.0))
-  sheet.set_cell_value("D5", CellValue::Numeric(14.0))
-  sheet.set_cell_value("E5", CellValue::Numeric(105.0))
-  sheet.set_cell_value("A6", CellValue::String("Pear"))
-  sheet.set_cell_value("B6", CellValue::Numeric(12.0))
-  sheet.set_cell_value("C6", CellValue::Numeric(12.0))
-  sheet.set_cell_value("D6", CellValue::Numeric(10.0))
-  sheet.set_cell_value("E6", CellValue::Numeric(96.0))
-  sheet.set_cell_value("A7", CellValue::String("Cherry"))
-  sheet.set_cell_value("B7", CellValue::Numeric(13.0))
-  sheet.set_cell_value("C7", CellValue::Numeric(14.0))
-  sheet.set_cell_value("D7", CellValue::Numeric(9.0))
-  sheet.set_cell_value("E7", CellValue::Numeric(105.0))
-  sheet.set_cell_value("A8", CellValue::String("Apple"))
-  sheet.set_cell_value("B8", CellValue::Numeric(14.0))
+  sheet.set_cell_value("A4", String("Tree"))
+  sheet.set_cell_value("B4", String("Height"))
+  sheet.set_cell_value("C4", String("Age"))
+  sheet.set_cell_value("D4", String("Yield"))
+  sheet.set_cell_value("E4", String("Profit"))
+  sheet.set_cell_value("A5", String("Apple"))
+  sheet.set_cell_value("B5", Numeric(18.0))
+  sheet.set_cell_value("C5", Numeric(20.0))
+  sheet.set_cell_value("D5", Numeric(14.0))
+  sheet.set_cell_value("E5", Numeric(105.0))
+  sheet.set_cell_value("A6", String("Pear"))
+  sheet.set_cell_value("B6", Numeric(12.0))
+  sheet.set_cell_value("C6", Numeric(12.0))
+  sheet.set_cell_value("D6", Numeric(10.0))
+  sheet.set_cell_value("E6", Numeric(96.0))
+  sheet.set_cell_value("A7", String("Cherry"))
+  sheet.set_cell_value("B7", Numeric(13.0))
+  sheet.set_cell_value("C7", Numeric(14.0))
+  sheet.set_cell_value("D7", Numeric(9.0))
+  sheet.set_cell_value("E7", Numeric(105.0))
+  sheet.set_cell_value("A8", String("Apple"))
+  sheet.set_cell_value("B8", Numeric(14.0))
   sheet.set_cell_formula("C8", "NA()")
-  sheet.set_cell_value("D8", CellValue::Numeric(10.0))
-  sheet.set_cell_value("E8", CellValue::Numeric(75.0))
-  sheet.set_cell_value("A9", CellValue::String("Pear"))
-  sheet.set_cell_value("B9", CellValue::Numeric(9.0))
-  sheet.set_cell_value("C9", CellValue::Numeric(8.0))
-  sheet.set_cell_value("D9", CellValue::Numeric(8.0))
-  sheet.set_cell_value("E9", CellValue::Numeric(77.0))
-  sheet.set_cell_value("A10", CellValue::String("Apple"))
-  sheet.set_cell_value("B10", CellValue::Numeric(12.0))
-  sheet.set_cell_value("C10", CellValue::Numeric(11.0))
-  sheet.set_cell_value("D10", CellValue::Numeric(6.0))
-  sheet.set_cell_value("E10", CellValue::Numeric(45.0))
+  sheet.set_cell_value("D8", Numeric(10.0))
+  sheet.set_cell_value("E8", Numeric(75.0))
+  sheet.set_cell_value("A9", String("Pear"))
+  sheet.set_cell_value("B9", Numeric(9.0))
+  sheet.set_cell_value("C9", Numeric(8.0))
+  sheet.set_cell_value("D9", Numeric(8.0))
+  sheet.set_cell_value("E9", Numeric(77.0))
+  sheet.set_cell_value("A10", String("Apple"))
+  sheet.set_cell_value("B10", Numeric(12.0))
+  sheet.set_cell_value("C10", Numeric(11.0))
+  sheet.set_cell_value("D10", Numeric(6.0))
+  sheet.set_cell_value("E10", Numeric(45.0))
 }
 
 ///|
@@ -4755,9 +4755,9 @@ test "calc quoted sheet refs" {
   let main = workbook.add_sheet("Main")
   let spaced = workbook.add_sheet("My Sheet")
   let apostrophe = workbook.add_sheet("O'Brien")
-  spaced.set_cell_value("A1", CellValue::Numeric(3.0))
-  spaced.set_cell_value("B1", CellValue::Numeric(4.0))
-  apostrophe.set_cell_value("B2", CellValue::Numeric(9.0))
+  spaced.set_cell_value("A1", Numeric(3.0))
+  spaced.set_cell_value("B1", Numeric(4.0))
+  apostrophe.set_cell_value("B2", Numeric(9.0))
   main.set_cell_formula("A1", "'My Sheet'!A1+2")
   inspect(workbook.calc_cell_value("Main", "A1"), content="5")
   main.set_cell_formula("A2", "SUM('My Sheet'!A1:B1)")
@@ -4770,11 +4770,11 @@ test "calc quoted sheet refs" {
 test "calc basic formula refs" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(5.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(7.0))
-  sheet.set_cell_value("E1", CellValue::String("abc"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(5.0))
+  sheet.set_cell_value("A4", Numeric(7.0))
+  sheet.set_cell_value("E1", String("abc"))
   sheet.set_cell_formula("B1", "A1")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1")
   sheet.set_cell_formula("B2", "A1+A2")
@@ -4797,9 +4797,9 @@ test "calc basic formula refs" {
 test "calc defined name functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("A1_as_string"))
-  sheet.set_cell_value("B1", CellValue::String("B1_as_string"))
-  sheet.set_cell_value("C1", CellValue::Numeric(123.0))
+  sheet.set_cell_value("A1", String("A1_as_string"))
+  sheet.set_cell_value("B1", String("B1_as_string"))
+  sheet.set_cell_value("C1", Numeric(123.0))
   workbook.set_defined_name(DefinedName::new("defined_name1", "Sheet1!A1"))
   workbook.set_defined_name(
     DefinedName::new("defined_name1", "Sheet1!B1", scope="Sheet1"),
@@ -4823,10 +4823,10 @@ test "calc defined name functions" {
 test "calc array formula multiplication" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
   sheet.set_cell_formula("C1", "A1:A2*B1:B2")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="12")
@@ -4840,9 +4840,9 @@ test "calc array formula multiplication" {
 test "calc spill array functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
   sheet.set_cell_formula("C1", "TRANSPOSE(A1:A3)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="2")
@@ -4863,14 +4863,14 @@ test "calc spill array functions" {
 test "calc spill dynamic array shapes" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A5", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(0.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A1", Numeric(3.0))
+  sheet.set_cell_value("A2", Numeric(1.0))
+  sheet.set_cell_value("A3", Numeric(2.0))
+  sheet.set_cell_value("A4", Numeric(2.0))
+  sheet.set_cell_value("A5", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(1.0))
+  sheet.set_cell_value("B2", Numeric(0.0))
+  sheet.set_cell_value("B3", Numeric(1.0))
   sheet.set_cell_formula("C1", "SORT(A1:A3)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="2")
@@ -4882,10 +4882,10 @@ test "calc spill dynamic array shapes" {
   inspect(workbook.calc_cell_value("Sheet1", "F1"), content="3")
   inspect(workbook.calc_cell_value("Sheet1", "F2"), content="1")
   inspect(workbook.calc_cell_value("Sheet1", "F3"), content="2")
-  sheet.set_cell_value("H1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("I1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("H2", CellValue::Numeric(3.0))
-  sheet.set_cell_value("I2", CellValue::Numeric(4.0))
+  sheet.set_cell_value("H1", Numeric(1.0))
+  sheet.set_cell_value("I1", Numeric(2.0))
+  sheet.set_cell_value("H2", Numeric(3.0))
+  sheet.set_cell_value("I2", Numeric(4.0))
   sheet.set_cell_formula("K1", "TOCOL(H1:I2)")
   inspect(workbook.calc_cell_value("Sheet1", "K1"), content="1")
   inspect(workbook.calc_cell_value("Sheet1", "K2"), content="2")
@@ -4902,12 +4902,12 @@ test "calc spill dynamic array shapes" {
 test "calc spill matrix and textsplit" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(4.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(5.0))
-  sheet.set_cell_value("C2", CellValue::Numeric(6.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("C1", Numeric(5.0))
+  sheet.set_cell_value("C2", Numeric(6.0))
   sheet.set_cell_formula("E1", "MMULT(A1:B2,C1:C2)")
   inspect(workbook.calc_cell_value("Sheet1", "E1"), content="17")
   inspect(workbook.calc_cell_value("Sheet1", "E2"), content="39")
@@ -4916,15 +4916,15 @@ test "calc spill matrix and textsplit" {
   inspect(workbook.calc_cell_value("Sheet1", "H1"), content="b")
   inspect(workbook.calc_cell_value("Sheet1", "G2"), content="c")
   inspect(workbook.calc_cell_value("Sheet1", "H2"), content="d")
-  sheet.set_cell_value("A4", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B4", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C4", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A5", CellValue::Numeric(10.0))
-  sheet.set_cell_value("B5", CellValue::Numeric(20.0))
-  sheet.set_cell_value("C5", CellValue::Numeric(30.0))
-  sheet.set_cell_value("A6", CellValue::Numeric(40.0))
-  sheet.set_cell_value("B6", CellValue::Numeric(50.0))
-  sheet.set_cell_value("C6", CellValue::Numeric(60.0))
+  sheet.set_cell_value("A4", Numeric(1.0))
+  sheet.set_cell_value("B4", Numeric(2.0))
+  sheet.set_cell_value("C4", Numeric(3.0))
+  sheet.set_cell_value("A5", Numeric(10.0))
+  sheet.set_cell_value("B5", Numeric(20.0))
+  sheet.set_cell_value("C5", Numeric(30.0))
+  sheet.set_cell_value("A6", Numeric(40.0))
+  sheet.set_cell_value("B6", Numeric(50.0))
+  sheet.set_cell_value("C6", Numeric(60.0))
   sheet.set_cell_formula("E4", "XLOOKUP(2,A4:C4,A5:C6)")
   inspect(workbook.calc_cell_value("Sheet1", "E4"), content="20")
   inspect(workbook.calc_cell_value("Sheet1", "E5"), content="50")
@@ -4934,12 +4934,12 @@ test "calc spill matrix and textsplit" {
 test "calc xlfn dynamic array functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(0.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(1.0))
+  sheet.set_cell_value("A1", Numeric(3.0))
+  sheet.set_cell_value("A2", Numeric(1.0))
+  sheet.set_cell_value("A3", Numeric(2.0))
+  sheet.set_cell_value("B1", Numeric(1.0))
+  sheet.set_cell_value("B2", Numeric(0.0))
+  sheet.set_cell_value("B3", Numeric(1.0))
   sheet.set_cell_formula("C1", "TEXTJOIN(\",\",TRUE(),_xlfn.SEQUENCE(3))")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1,2,3")
   sheet.set_cell_formula("C2", "TEXTJOIN(\",\",TRUE(),_xlfn.SORT(A1:A3))")
@@ -4960,22 +4960,22 @@ test "calc xlfn dynamic array functions" {
 test "calc spill frequency and trend" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(3.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(4.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(3.0))
   sheet.set_cell_formula("C1", "FREQUENCY(A1:A4,B1:B2)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="1")
   inspect(workbook.calc_cell_value("Sheet1", "C3"), content="1")
-  sheet.set_cell_value("D1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("D2", CellValue::Numeric(4.0))
-  sheet.set_cell_value("D3", CellValue::Numeric(6.0))
-  sheet.set_cell_value("E1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("E2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("E3", CellValue::Numeric(3.0))
+  sheet.set_cell_value("D1", Numeric(2.0))
+  sheet.set_cell_value("D2", Numeric(4.0))
+  sheet.set_cell_value("D3", Numeric(6.0))
+  sheet.set_cell_value("E1", Numeric(1.0))
+  sheet.set_cell_value("E2", Numeric(2.0))
+  sheet.set_cell_value("E3", Numeric(3.0))
   sheet.set_cell_formula("G1", "TREND(D1:D3,E1:E3)")
   inspect(workbook.calc_cell_value("Sheet1", "G1"), content="2")
   inspect(workbook.calc_cell_value("Sheet1", "H1"), content="4")
@@ -4986,20 +4986,20 @@ test "calc spill frequency and trend" {
 test "calc row and column range formulas" {
   let workbook = Workbook::new()
   let col_sheet = workbook.add_sheet("Cols")
-  col_sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  col_sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  col_sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  col_sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  col_sheet.set_cell_value("A1", Numeric(1.0))
+  col_sheet.set_cell_value("B1", Numeric(2.0))
+  col_sheet.set_cell_value("A2", Numeric(3.0))
+  col_sheet.set_cell_value("B2", Numeric(4.0))
   col_sheet.set_cell_formula("C1", "A:A*B:B")
   inspect(workbook.calc_cell_value("Cols", "C1"), content="2")
   inspect(workbook.calc_cell_value("Cols", "C2"), content="12")
   col_sheet.set_cell_formula("D1", "SUM(Cols!B:B)")
   inspect(workbook.calc_cell_value("Cols", "D1"), content="6")
   let row_sheet = workbook.add_sheet("Rows")
-  row_sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  row_sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  row_sheet.set_cell_value("A2", CellValue::Numeric(3.0))
-  row_sheet.set_cell_value("B2", CellValue::Numeric(4.0))
+  row_sheet.set_cell_value("A1", Numeric(1.0))
+  row_sheet.set_cell_value("B1", Numeric(2.0))
+  row_sheet.set_cell_value("A2", Numeric(3.0))
+  row_sheet.set_cell_value("B2", Numeric(4.0))
   row_sheet.set_cell_formula("A3", "1:1*2:2")
   inspect(workbook.calc_cell_value("Rows", "A3"), content="3")
   inspect(workbook.calc_cell_value("Rows", "B3"), content="8")
@@ -5009,10 +5009,10 @@ test "calc row and column range formulas" {
 test "calc financial functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
   sheet.set_cell_formula("B1", "FV(0.05/12,60,-1000)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="68006.0828408429")
   sheet.set_cell_formula("B2", "FV(0.1/4,16,-2000,0,1)")
@@ -5331,12 +5331,12 @@ test "calc irr and mirr functions" {
   let irr_values : Array[Double] = [-1.0, 0.2, 0.24, 0.288, 0.3456, 0.4147]
   for idx, value in irr_values {
     let cell = "A\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   let mirr_values : Array[Double] = [-100.0, 18.0, 22.5, 28.0, 35.5, 45.0]
   for idx, value in mirr_values {
     let cell = "C\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   sheet.set_cell_formula("B1", "IRR(A1:A4)")
   inspect(
@@ -5366,11 +5366,11 @@ test "calc xirr and xnpv functions" {
   ]
   for idx, value in xirr_values {
     let cell = "A\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   for idx, value in xirr_dates {
     let cell = "B\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   sheet.set_cell_formula("C1", "XIRR(A1:A4,B1:B4)")
   inspect(
@@ -5382,7 +5382,7 @@ test "calc xirr and xnpv functions" {
     workbook.calc_cell_value("Sheet1", "C2"),
     content="0.0944390744445203",
   )
-  sheet.set_cell_value("E1", CellValue::Numeric(0.05))
+  sheet.set_cell_value("E1", Numeric(0.05))
   let xnpv_dates : Array[Double] = [
     42370.0, 42401.0, 42491.0, 42552.0, 42675.0, 42736.0,
   ]
@@ -5391,11 +5391,11 @@ test "calc xirr and xnpv functions" {
   ]
   for idx, value in xnpv_dates {
     let cell = "D\{idx + 2}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   for idx, value in xnpv_values {
     let cell = "E\{idx + 2}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   sheet.set_cell_formula("F1", "XNPV(E1,E2:E7,D2:D7)")
   inspect(workbook.calc_cell_value("Sheet1", "F1"), content="4447.93800944052")
@@ -5701,12 +5701,12 @@ test "calc irr and mirr errors" {
   let irr_values : Array[Double] = [-1.0, 0.2, 0.24, 0.288, 0.3456, 0.4147]
   for idx, value in irr_values {
     let cell = "A\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   let mirr_values : Array[Double] = [-100.0, 18.0, 22.5, 28.0, 35.5, 45.0]
   for idx, value in mirr_values {
     let cell = "C\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   let cases : Array[(String, String)] = [
     ("IRR()", "#VALUE!"),
@@ -5738,11 +5738,11 @@ test "calc xirr errors" {
   ]
   for idx, value in xirr_values {
     let cell = "A\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   for idx, value in xirr_dates {
     let cell = "B\{idx + 1}"
-    sheet.set_cell_value(cell, CellValue::Numeric(value))
+    sheet.set_cell_value(cell, Numeric(value))
   }
   let cases : Array[(String, String)] = [
     ("XIRR()", "#VALUE!"),
@@ -5765,21 +5765,21 @@ test "calc xirr errors" {
 test "calc xnpv errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("B1", CellValue::Numeric(0.05))
-  sheet.set_cell_value("A2", CellValue::Numeric(42370.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(-10000.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(42401.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(2000.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(42491.0))
-  sheet.set_cell_value("B4", CellValue::Numeric(2400.0))
-  sheet.set_cell_value("A5", CellValue::Numeric(42552.0))
-  sheet.set_cell_value("B5", CellValue::Numeric(2900.0))
-  sheet.set_cell_value("A6", CellValue::Numeric(42675.0))
-  sheet.set_cell_value("B6", CellValue::Numeric(3500.0))
-  sheet.set_cell_value("A7", CellValue::Numeric(42736.0))
-  sheet.set_cell_value("B7", CellValue::Numeric(4100.0))
-  sheet.set_cell_value("A9", CellValue::Numeric(42401.0))
-  sheet.set_cell_value("A10", CellValue::Numeric(42370.0))
+  sheet.set_cell_value("B1", Numeric(0.05))
+  sheet.set_cell_value("A2", Numeric(42370.0))
+  sheet.set_cell_value("B2", Numeric(-10000.0))
+  sheet.set_cell_value("A3", Numeric(42401.0))
+  sheet.set_cell_value("B3", Numeric(2000.0))
+  sheet.set_cell_value("A4", Numeric(42491.0))
+  sheet.set_cell_value("B4", Numeric(2400.0))
+  sheet.set_cell_value("A5", Numeric(42552.0))
+  sheet.set_cell_value("B5", Numeric(2900.0))
+  sheet.set_cell_value("A6", Numeric(42675.0))
+  sheet.set_cell_value("B6", Numeric(3500.0))
+  sheet.set_cell_value("A7", Numeric(42736.0))
+  sheet.set_cell_value("B7", Numeric(4100.0))
+  sheet.set_cell_value("A9", Numeric(42401.0))
+  sheet.set_cell_value("A10", Numeric(42370.0))
   let cases : Array[(String, String)] = [
     ("XNPV()", "#VALUE!"),
     ("XNPV(\"\",B2:B7,A2:A7)", "#VALUE!"),
@@ -5803,25 +5803,25 @@ test "calc xnpv errors" {
 test "calc growth and trend functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("known_x's"))
-  sheet.set_cell_value("B1", CellValue::String("known_y's"))
-  sheet.set_cell_value("C1", CellValue::Numeric(0.0))
-  sheet.set_cell_value("D1", CellValue::Numeric(-1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(10.0))
-  sheet.set_cell_value("C2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B3", CellValue::Numeric(20.0))
-  sheet.set_cell_value("C3", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(3.0))
-  sheet.set_cell_value("B4", CellValue::Numeric(40.0))
-  sheet.set_cell_value("A5", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B5", CellValue::Numeric(80.0))
-  sheet.set_cell_value("A7", CellValue::String("new_x's"))
-  sheet.set_cell_value("B7", CellValue::String("new_y's"))
-  sheet.set_cell_value("A8", CellValue::Numeric(5.0))
-  sheet.set_cell_value("A9", CellValue::Numeric(6.0))
-  sheet.set_cell_value("A10", CellValue::Numeric(7.0))
+  sheet.set_cell_value("A1", String("known_x's"))
+  sheet.set_cell_value("B1", String("known_y's"))
+  sheet.set_cell_value("C1", Numeric(0.0))
+  sheet.set_cell_value("D1", Numeric(-1.0))
+  sheet.set_cell_value("A2", Numeric(1.0))
+  sheet.set_cell_value("B2", Numeric(10.0))
+  sheet.set_cell_value("C2", Numeric(1.0))
+  sheet.set_cell_value("A3", Numeric(2.0))
+  sheet.set_cell_value("B3", Numeric(20.0))
+  sheet.set_cell_value("C3", Numeric(1.0))
+  sheet.set_cell_value("A4", Numeric(3.0))
+  sheet.set_cell_value("B4", Numeric(40.0))
+  sheet.set_cell_value("A5", Numeric(4.0))
+  sheet.set_cell_value("B5", Numeric(80.0))
+  sheet.set_cell_value("A7", String("new_x's"))
+  sheet.set_cell_value("B7", String("new_y's"))
+  sheet.set_cell_value("A8", Numeric(5.0))
+  sheet.set_cell_value("A9", Numeric(6.0))
+  sheet.set_cell_value("A10", Numeric(7.0))
   let cases : Array[(String, String)] = [
     ("GROWTH(A2:B2)", "1"),
     ("GROWTH(B2:B5,A2:A5,A8:A10)", "160"),
@@ -5964,9 +5964,9 @@ fn assert_complex_result(actual : String, expected : String) -> Unit raise {
 test "calc complex functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("C1", Numeric(2.0))
   let cases : Array[(String, String)] = [
     ("COMPLEX(5,2)", "5+2i"),
     ("COMPLEX(5,-9)", "5-9i"),
@@ -6086,10 +6086,10 @@ test "calc complex functions" {
 test "calc complex errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(2.0))
-  sheet.set_cell_value("C1", CellValue::Numeric(3.0))
-  sheet.set_cell_value("D1", CellValue::String("Month"))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("C1", Numeric(3.0))
+  sheet.set_cell_value("D1", String("Month"))
   let cases : Array[(String, String)] = [
     ("COMPLEX()", "#VALUE!"),
     ("COMPLEX(10,-5,\"\")", "#VALUE!"),
@@ -6168,51 +6168,51 @@ test "calc complex errors" {
 
 ///|
 fn set_calc_base_data(sheet : Worksheet) -> Unit raise XlsxError {
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("D1", CellValue::String("Month"))
-  sheet.set_cell_value("E1", CellValue::String("Team"))
-  sheet.set_cell_value("F1", CellValue::String("Sales"))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
-  sheet.set_cell_value("D2", CellValue::String("Jan"))
-  sheet.set_cell_value("E2", CellValue::String("North 1"))
-  sheet.set_cell_value("F2", CellValue::Numeric(36693.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("D3", CellValue::String("Jan"))
-  sheet.set_cell_value("E3", CellValue::String("North 2"))
-  sheet.set_cell_value("F3", CellValue::Numeric(22100.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
-  sheet.set_cell_value("D4", CellValue::String("Jan"))
-  sheet.set_cell_value("E4", CellValue::String("South 1"))
-  sheet.set_cell_value("F4", CellValue::Numeric(53321.0))
-  sheet.set_cell_value("D5", CellValue::String("Jan"))
-  sheet.set_cell_value("E5", CellValue::String("South 2"))
-  sheet.set_cell_value("F5", CellValue::Numeric(34440.0))
-  sheet.set_cell_value("D6", CellValue::String("Feb"))
-  sheet.set_cell_value("E6", CellValue::String("North 1"))
-  sheet.set_cell_value("F6", CellValue::Numeric(29889.0))
-  sheet.set_cell_value("D7", CellValue::String("Feb"))
-  sheet.set_cell_value("E7", CellValue::String("North 2"))
-  sheet.set_cell_value("F7", CellValue::Numeric(50090.0))
-  sheet.set_cell_value("D8", CellValue::String("Feb"))
-  sheet.set_cell_value("E8", CellValue::String("South 1"))
-  sheet.set_cell_value("F8", CellValue::Numeric(32080.0))
-  sheet.set_cell_value("D9", CellValue::String("Feb"))
-  sheet.set_cell_value("E9", CellValue::String("South 2"))
-  sheet.set_cell_value("F9", CellValue::Numeric(45500.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("D1", String("Month"))
+  sheet.set_cell_value("E1", String("Team"))
+  sheet.set_cell_value("F1", String("Sales"))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(5.0))
+  sheet.set_cell_value("D2", String("Jan"))
+  sheet.set_cell_value("E2", String("North 1"))
+  sheet.set_cell_value("F2", Numeric(36693.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("D3", String("Jan"))
+  sheet.set_cell_value("E3", String("North 2"))
+  sheet.set_cell_value("F3", Numeric(22100.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
+  sheet.set_cell_value("D4", String("Jan"))
+  sheet.set_cell_value("E4", String("South 1"))
+  sheet.set_cell_value("F4", Numeric(53321.0))
+  sheet.set_cell_value("D5", String("Jan"))
+  sheet.set_cell_value("E5", String("South 2"))
+  sheet.set_cell_value("F5", Numeric(34440.0))
+  sheet.set_cell_value("D6", String("Feb"))
+  sheet.set_cell_value("E6", String("North 1"))
+  sheet.set_cell_value("F6", Numeric(29889.0))
+  sheet.set_cell_value("D7", String("Feb"))
+  sheet.set_cell_value("E7", String("North 2"))
+  sheet.set_cell_value("F7", Numeric(50090.0))
+  sheet.set_cell_value("D8", String("Feb"))
+  sheet.set_cell_value("E8", String("South 1"))
+  sheet.set_cell_value("F8", Numeric(32080.0))
+  sheet.set_cell_value("D9", String("Feb"))
+  sheet.set_cell_value("E9", String("South 2"))
+  sheet.set_cell_value("F9", Numeric(45500.0))
 }
 
 ///|
 test "calc series and sign functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(3.0))
-  sheet.set_cell_value("A4", CellValue::Numeric(0.0))
-  sheet.set_cell_value("B1", CellValue::Numeric(4.0))
-  sheet.set_cell_value("B2", CellValue::Numeric(5.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(0.0))
+  sheet.set_cell_value("B1", Numeric(4.0))
+  sheet.set_cell_value("B2", Numeric(5.0))
   let cases : Array[(String, String)] = [
     ("SERIESSUM(1,2,3,A1:A4)", "6"),
     ("SERIESSUM(1,2,3,A1:B5)", "15"),
@@ -6450,12 +6450,12 @@ test "calc mode functions" {
   let col_a : Array[Double] = [1, 1, 2, 2, 3, 3, 3, 4, 4, 4]
   for i in 0..<col_a.length() {
     let row = i + 1
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(col_a[i]))
+    sheet.set_cell_value("A\{row}", Numeric(col_a[i]))
   }
   let col_b : Array[Double] = [1, 1, 2, 2, 2]
   for i in 0..<col_b.length() {
     let row = i + 1
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(col_b[i]))
+    sheet.set_cell_value("B\{row}", Numeric(col_b[i]))
   }
   let cases : Array[(String, String)] = [
     ("MODE(A1:A10)", "3"),
@@ -6479,7 +6479,7 @@ test "calc spill mode.mult" {
   let values : Array[Double] = [1, 1, 2, 2, 3]
   for i in 0..<values.length() {
     let row = i + 1
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(values[i]))
+    sheet.set_cell_value("A\{row}", Numeric(values[i]))
   }
   sheet.set_cell_formula("C1", "MODE.MULT(A1:A5)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1")
@@ -6490,8 +6490,8 @@ test "calc spill mode.mult" {
 test "calc spill indirect and anchorarray" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
   sheet.set_cell_formula("B1", "INDIRECT(\"A1:A2\")")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="1")
   inspect(workbook.calc_cell_value("Sheet1", "B2"), content="2")
@@ -6523,9 +6523,9 @@ test "calc dynamic array range shapes" {
 test "calc mode errors" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A3", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(1.0))
+  sheet.set_cell_value("A3", Numeric(2.0))
   let cases : Array[(String, String)] = [
     ("MODE()", "#VALUE!"),
     ("MODE(0,\"\")", "#VALUE!"),
@@ -6549,8 +6549,8 @@ test "calc mode errors" {
 test "calc covar functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("array1"))
-  sheet.set_cell_value("B1", CellValue::String("array2"))
+  sheet.set_cell_value("A1", String("array1"))
+  sheet.set_cell_value("B1", String("array2"))
   let data : Array[(Double, Double)] = [
     (2.0, 22.9),
     (7.0, 33.49),
@@ -6564,8 +6564,8 @@ test "calc covar functions" {
   for i in 0..<data.length() {
     let row = i + 2
     let (left, right) = data[i]
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+    sheet.set_cell_value("A\{row}", Numeric(left))
+    sheet.set_cell_value("B\{row}", Numeric(right))
   }
   let cases : Array[(String, String)] = [
     ("COVAR(A1:A9,B1:B9)", "16.633125"),
@@ -6601,8 +6601,8 @@ test "calc covar functions" {
 test "calc pearson functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("x"))
-  sheet.set_cell_value("B1", CellValue::String("y"))
+  sheet.set_cell_value("A1", String("x"))
+  sheet.set_cell_value("B1", String("y"))
   let data : Array[(Double, Double)] = [
     (1.0, 10.11),
     (2.0, 22.9),
@@ -6629,8 +6629,8 @@ test "calc pearson functions" {
   for i in 0..<data.length() {
     let row = i + 2
     let (left, right) = data[i]
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+    sheet.set_cell_value("A\{row}", Numeric(left))
+    sheet.set_cell_value("B\{row}", Numeric(right))
   }
   sheet.set_cell_formula("C1", "PEARSON(A2:A22,B2:B22)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.864129542184994")
@@ -6640,8 +6640,8 @@ test "calc pearson functions" {
 test "calc rsq functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("known_y's"))
-  sheet.set_cell_value("B1", CellValue::String("known_x's"))
+  sheet.set_cell_value("A1", String("known_y's"))
+  sheet.set_cell_value("B1", String("known_x's"))
   let data : Array[(Double, Double)] = [
     (2.0, 22.9),
     (7.0, 33.49),
@@ -6655,8 +6655,8 @@ test "calc rsq functions" {
   for i in 0..<data.length() {
     let row = i + 2
     let (left, right) = data[i]
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+    sheet.set_cell_value("A\{row}", Numeric(left))
+    sheet.set_cell_value("B\{row}", Numeric(right))
   }
   sheet.set_cell_formula("C1", "RSQ(A2:A9,B2:B9)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.711666290486784")
@@ -6666,8 +6666,8 @@ test "calc rsq functions" {
 test "calc slope functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("known_x's"))
-  sheet.set_cell_value("B1", CellValue::String("known_y's"))
+  sheet.set_cell_value("A1", String("known_x's"))
+  sheet.set_cell_value("B1", String("known_y's"))
   let data : Array[(Double, Double)] = [
     (1.0, 3.0),
     (2.0, 7.0),
@@ -6679,8 +6679,8 @@ test "calc slope functions" {
   for i in 0..<data.length() {
     let row = i + 2
     let (left, right) = data[i]
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+    sheet.set_cell_value("A\{row}", Numeric(left))
+    sheet.set_cell_value("B\{row}", Numeric(right))
   }
   sheet.set_cell_formula("C1", "SLOPE(A2:A7,B2:B7)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="0.200826446280992")
@@ -6690,8 +6690,8 @@ test "calc slope functions" {
 test "calc steyx functions" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("known_x's"))
-  sheet.set_cell_value("B1", CellValue::String("known_y's"))
+  sheet.set_cell_value("A1", String("known_x's"))
+  sheet.set_cell_value("B1", String("known_y's"))
   let data : Array[(Double, Double)] = [
     (1.0, 3.0),
     (2.0, 7.9),
@@ -6706,8 +6706,8 @@ test "calc steyx functions" {
   for i in 0..<data.length() {
     let row = i + 2
     let (left, right) = data[i]
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(left))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(right))
+    sheet.set_cell_value("A\{row}", Numeric(left))
+    sheet.set_cell_value("B\{row}", Numeric(right))
   }
   sheet.set_cell_formula("C1", "STEYX(B2:B11,A2:A11)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="1.20118634668221")
@@ -6763,7 +6763,7 @@ test "calc formulatext function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "SUM(1,2)")
-  sheet.set_cell_value("A2", CellValue::Numeric(5.0))
+  sheet.set_cell_value("A2", Numeric(5.0))
   sheet.set_cell_formula("B1", "FORMULATEXT(A1)")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="SUM(1,2)")
   sheet.set_cell_formula("B2", "FORMULATEXT(A1:B1)")
@@ -6778,8 +6778,8 @@ test "calc formulatext function" {
 test "calc anchorarray function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("A2", CellValue::Numeric(2.0))
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
   sheet.set_cell_formula("B1", "A1:A2")
   sheet.set_cell_formula("C1", "SUM(ANCHORARRAY(B1))")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="3")
@@ -6799,11 +6799,11 @@ test "calc subtotal and frequency functions" {
   let sheet = workbook.add_sheet("Sheet1")
   let data : Array[Double] = [1.0, 2.0, 2.0, 3.0]
   for i in 0..<data.length() {
-    sheet.set_cell_value("A\{i + 1}", CellValue::Numeric(data[i]))
+    sheet.set_cell_value("A\{i + 1}", Numeric(data[i]))
   }
   let bins : Array[Double] = [1.0, 2.0]
   for i in 0..<bins.length() {
-    sheet.set_cell_value("B\{i + 1}", CellValue::Numeric(bins[i]))
+    sheet.set_cell_value("B\{i + 1}", Numeric(bins[i]))
   }
   sheet.set_cell_formula("C1", "SUBTOTAL(9,A1:A4)")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="8")
@@ -7325,13 +7325,13 @@ fn set_ttest_base_data(sheet : Worksheet) -> Unit raise XlsxError {
   ]
   for i in 0..<col_a.length() {
     let row = i + 1
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(col_a[i]))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(col_b[i]))
+    sheet.set_cell_value("A\{row}", Numeric(col_a[i]))
+    sheet.set_cell_value("B\{row}", Numeric(col_b[i]))
   }
-  sheet.set_cell_value("D1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("E1", CellValue::Numeric(1.0))
-  sheet.set_cell_value("D2", CellValue::Numeric(1.0))
-  sheet.set_cell_value("E2", CellValue::Numeric(1.0))
+  sheet.set_cell_value("D1", Numeric(1.0))
+  sheet.set_cell_value("E1", Numeric(1.0))
+  sheet.set_cell_value("D2", Numeric(1.0))
+  sheet.set_cell_value("E2", Numeric(1.0))
 }
 
 ///|
@@ -7522,7 +7522,7 @@ test "calc ztest functions" {
   ]
   for i in 0..<data.length() {
     let cell = cols[i] + "1"
-    sheet.set_cell_value(cell, CellValue::Numeric(data[i]))
+    sheet.set_cell_value(cell, Numeric(data[i]))
   }
   let cases : Array[(String, String)] = [
     ("Z.TEST(A1:L1,5)", "0.371103278558537"),
@@ -7540,7 +7540,7 @@ test "calc ztest functions" {
   }
   let error_book = Workbook::new()
   let error_sheet = error_book.add_sheet("Sheet1")
-  error_sheet.set_cell_value("A1", CellValue::Numeric(1.0))
+  error_sheet.set_cell_value("A1", Numeric(1.0))
   let error_cases : Array[(String, String)] = [
     ("Z.TEST(A1)", "#VALUE!"),
     ("Z.TEST(A1,0,0,0)", "#VALUE!"),
@@ -7567,14 +7567,14 @@ test "calc ztest functions" {
 test "calc prob function" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("x"))
-  sheet.set_cell_value("B1", CellValue::String("probability"))
+  sheet.set_cell_value("A1", String("x"))
+  sheet.set_cell_value("B1", String("probability"))
   let xs : Array[Double] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
   let ps : Array[Double] = [0.1, 0.15, 0.17, 0.22, 0.21, 0.09, 0.05, 0.01]
   for i in 0..<xs.length() {
     let row = i + 2
-    sheet.set_cell_value("A\{row}", CellValue::Numeric(xs[i]))
-    sheet.set_cell_value("B\{row}", CellValue::Numeric(ps[i]))
+    sheet.set_cell_value("A\{row}", Numeric(xs[i]))
+    sheet.set_cell_value("B\{row}", Numeric(ps[i]))
   }
   let cases : Array[(String, String)] = [
     ("PROB(A2:A9,B2:B9,3)", "0.22"),
@@ -7603,7 +7603,7 @@ test "calc prob function" {
     sheet.set_cell_formula(cell, formula)
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
-  sheet.set_cell_value("A2", CellValue::Error("#N/A"))
+  sheet.set_cell_value("A2", Error("#N/A"))
   sheet.set_cell_formula("E1", "PROB(A2:A9,B2:B9,3)")
   inspect(workbook.calc_cell_value("Sheet1", "E1"), content="#NUM!")
 }

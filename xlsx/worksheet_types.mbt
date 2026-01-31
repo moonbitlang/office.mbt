@@ -146,8 +146,8 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     col_breaks: [],
     row_dimensions: {},
     col_dimensions: {},
-    state: SheetState::Visible,
-    stream_state: StreamState::Idle,
+    state: Visible,
+    stream_state: Idle,
     vml_drawing_xml: None,
     vml_drawing_hf_xml: None,
   }

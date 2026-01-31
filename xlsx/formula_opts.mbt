@@ -9,20 +9,20 @@ pub(all) enum FormulaType {
 ///|
 fn formula_type_to_ooxml(kind : FormulaType) -> String {
   match kind {
-    FormulaType::Normal => "normal"
-    FormulaType::Array => "array"
-    FormulaType::Shared => "shared"
-    FormulaType::DataTable => "dataTable"
+    Normal => "normal"
+    Array => "array"
+    Shared => "shared"
+    DataTable => "dataTable"
   }
 }
 
 ///|
 fn formula_type_from_ooxml(value : StringView) -> FormulaType? {
   match value.to_string() {
-    "normal" => Some(FormulaType::Normal)
-    "array" => Some(FormulaType::Array)
-    "shared" => Some(FormulaType::Shared)
-    "dataTable" => Some(FormulaType::DataTable)
+    "normal" => Some(Normal)
+    "array" => Some(Array)
+    "shared" => Some(Shared)
+    "dataTable" => Some(DataTable)
     _ => None
   }
 }
@@ -57,10 +57,10 @@ pub fn FormulaOpts::with_values(
 
 ///|
 pub fn FormulaOpts::array(range_ref : String) -> FormulaOpts {
-  FormulaOpts::with_values(formula_type=FormulaType::Array, range_ref~)
+  FormulaOpts::with_values(formula_type=Array, range_ref~)
 }
 
 ///|
 pub fn FormulaOpts::shared(range_ref : String) -> FormulaOpts {
-  FormulaOpts::with_values(formula_type=FormulaType::Shared, range_ref~)
+  FormulaOpts::with_values(formula_type=Shared, range_ref~)
 }

@@ -22,7 +22,7 @@ test "mbtexcel password wrappers" {
   let bad : Result[@xlsx.Workbook, Error] = try? read_with_password(
     bytes, "wrong",
   )
-  guard bad is Err(@xlsx.XlsxError::InvalidPassword) else {
+  guard bad is Err(@xlsx.InvalidPassword) else {
     fail("expected invalid password")
   }
 }
@@ -144,7 +144,7 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
     "Sheet1",
     "A2",
     "https://example.com",
-    @xlsx.HyperlinkType::External,
+    @xlsx.External,
     display="Example",
   )
   let parsed = read(write(workbook))
@@ -193,7 +193,7 @@ test "mbtexcel e2e header footer images" {
   workbook.add_header_footer_image(
     "Sheet1",
     @xlsx.HeaderFooterImageOptions::new(
-      @xlsx.HeaderFooterImagePosition::Left,
+      @xlsx.Left,
       img,
       ".png",
       width="50pt",
@@ -415,16 +415,10 @@ test "mbtexcel e2e page breaks" {
 test "mbtexcel e2e custom properties" {
   let workbook = new_workbook()
   workbook.set_custom_props(
-    @xlsx.CustomProperty::new(
-      "Text",
-      Some(@xlsx.CustomPropertyValue::Text("hello")),
-    ),
+    @xlsx.CustomProperty::new("Text", Some(@xlsx.Text("hello"))),
   )
   workbook.set_custom_props(
-    @xlsx.CustomProperty::new(
-      "Count",
-      Some(@xlsx.CustomPropertyValue::Integer(3)),
-    ),
+    @xlsx.CustomProperty::new("Count", Some(@xlsx.Integer(3))),
   )
   let parsed = read(write(workbook))
   let props = parsed.get_custom_props()
@@ -605,12 +599,8 @@ test "mbtexcel e2e vba project roundtrip" {
 test "mbtexcel e2e ignored errors roundtrip" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.add_ignored_errors("Sheet1", "A1", @xlsx.IgnoredErrorType::EvalError)
-  workbook.add_ignored_errors(
-    "Sheet1",
-    "B2:C3",
-    @xlsx.IgnoredErrorType::NumberStoredAsText,
-  )
+  workbook.add_ignored_errors("Sheet1", "A1", @xlsx.EvalError)
+  workbook.add_ignored_errors("Sheet1", "B2:C3", @xlsx.NumberStoredAsText)
   let parsed = read(write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
@@ -739,10 +729,7 @@ test "mbtexcel e2e group and ungroup sheets" {
   let bad_group : Result[Unit, Error] = try? workbook.group_sheets([
     "Sheet1", "Sheet3",
   ])
-  inspect(
-    bad_group is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
-    content="true",
-  )
+  inspect(bad_group is Err(@xlsx.InvalidSheetOperation(_)), content="true")
   workbook.group_sheets(["Sheet2", "Sheet3"])
   let bytes = write(workbook)
   let archive = @zip.read(bytes)

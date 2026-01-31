@@ -53,10 +53,7 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
     let ch = chars[i]
     if ch == '\\' {
       if i + 1 < end {
-        tokens.push({
-          kind: RegexTokenKind::Literal(chars[i + 1]),
-          repeat: false,
-        })
+        tokens.push({ kind: Literal(chars[i + 1]), repeat: false })
         i = i + 2
         continue
       }
@@ -93,10 +90,10 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
         }
       }
       if closed {
-        kind = RegexTokenKind::Class(ranges)
+        kind = Class(ranges)
         i = j + 1
       } else {
-        kind = RegexTokenKind::Literal(ch)
+        kind = Literal(ch)
         i = i + 1
       }
     } else {
@@ -115,9 +112,9 @@ fn parse_regex_tokens(pattern : StringView) -> (Array[RegexToken], Bool, Bool) {
 ///|
 fn regex_token_matches(token : RegexTokenKind, ch : Char) -> Bool {
   match token {
-    RegexTokenKind::Literal(value) => value == ch
-    RegexTokenKind::Any => true
-    RegexTokenKind::Class(ranges) => {
+    Literal(value) => value == ch
+    Any => true
+    Class(ranges) => {
       for range in ranges {
         if ch >= range.start && ch <= range.end {
           return true
@@ -196,7 +193,7 @@ pub fn Workbook::search_sheet(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise XlsxError::SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_string())
   }
   let use_regex = reg
   let results : Array[String] = []

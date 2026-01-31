@@ -6,16 +6,11 @@ test "hyperlink roundtrip" {
     "Sheet1",
     "A1",
     "https://example.com",
-    HyperlinkType::External,
+    External,
     display="Example",
     tooltip="Tip",
   )
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "B2",
-    "Sheet1!C3",
-    HyperlinkType::Location,
-  )
+  workbook.set_cell_hyperlink("Sheet1", "B2", "Sheet1!C3", Location)
   let parsed = read(write(workbook))
   inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
@@ -35,12 +30,7 @@ test "hyperlink roundtrip" {
 test "hyperlink updates on insert" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "B2",
-    "https://example.com",
-    HyperlinkType::External,
-  )
+  workbook.set_cell_hyperlink("Sheet1", "B2", "https://example.com", External)
   workbook.insert_rows("Sheet1", 1, 1)
   inspect(workbook.get_cell_hyperlink("Sheet1", "B2"), content="None")
   inspect(
@@ -63,12 +53,7 @@ test "hyperlink updates on insert" {
 test "hyperlink alias methods" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_hyper_link(
-    "Sheet1",
-    "C3",
-    "https://example.com",
-    HyperlinkType::External,
-  )
+  workbook.set_cell_hyper_link("Sheet1", "C3", "https://example.com", External)
   inspect(
     workbook.get_cell_hyper_link("Sheet1", "C3"),
     content=(
@@ -86,7 +71,7 @@ test "hyperlink opts helper" {
     "Sheet1",
     "A1",
     "https://example.com",
-    HyperlinkType::External,
+    External,
     opts~,
   )
   let bytes = write(workbook)
@@ -115,17 +100,12 @@ test "hyperlink opts helper" {
 test "hyperlink update existing reference" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "A1",
-    "https://github.com",
-    HyperlinkType::External,
-  )
+  workbook.set_cell_hyperlink("Sheet1", "A1", "https://github.com", External)
   workbook.set_cell_hyperlink(
     "Sheet1",
     "A1",
     "https://github.com/xuri/excelize",
-    HyperlinkType::External,
+    External,
   )
   inspect(
     workbook.get_cell_hyperlink("Sheet1", "A1"),
@@ -143,7 +123,7 @@ test "hyperlink validates cell reference" {
     "Sheet1",
     "",
     "https://example.com",
-    HyperlinkType::External,
+    External,
   )
   inspect(set_result is Err(XlsxError::InvalidCellRef(_)), content="true")
   let get_result : Result[Hyperlink?, Error] = try? workbook.get_cell_hyperlink(
@@ -164,7 +144,7 @@ test "hyperlink remove clears range reference" {
     "Sheet1",
     "A1",
     "https://github.com/xuri/excelize",
-    HyperlinkType::External,
+    External,
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -219,7 +199,7 @@ test "hyperlink invalid ref tolerated on read" {
     "Sheet1",
     "A1",
     "https://github.com/xuri/excelize",
-    HyperlinkType::External,
+    External,
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
@@ -263,7 +243,7 @@ test "hyperlink invalid ref tolerated on read" {
     "Sheet1",
     "B2",
     "",
-    HyperlinkType::Unset,
+    Unset,
   )
   inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
 }

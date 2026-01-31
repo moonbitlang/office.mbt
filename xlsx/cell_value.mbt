@@ -20,20 +20,20 @@ pub(all) enum CellValue {
 ///|
 fn cell_value_type(value : CellValue) -> CellValueType {
   match value {
-    CellValue::String(_) => CellValueType::String
-    CellValue::Numeric(_) => CellValueType::Number
-    CellValue::Bool(_) => CellValueType::Bool
-    CellValue::Error(_) => CellValueType::Error
+    String(_) => String
+    Numeric(_) => Number
+    Bool(_) => Bool
+    Error(_) => Error
   }
 }
 
 ///|
 fn cell_value_raw_string(value : CellValue) -> String {
   match value {
-    CellValue::String(text) => text
-    CellValue::Numeric(value) => value.to_string()
-    CellValue::Bool(value) => if value { "1" } else { "0" }
-    CellValue::Error(text) => text
+    String(text) => text
+    Numeric(value) => value.to_string()
+    Bool(value) => if value { "1" } else { "0" }
+    Error(text) => text
   }
 }
 
@@ -53,14 +53,14 @@ fn cell_value_from_raw(
   raw : String,
 ) -> CellValue raise XlsxError {
   match value_type {
-    CellValueType::String => CellValue::String(raw)
-    CellValueType::Number =>
-      CellValue::Numeric(
+    String => String(raw)
+    Number =>
+      Numeric(
         @strconv.parse_double(raw) catch {
-          _ => raise XlsxError::InvalidXml(msg="cell number invalid")
+          _ => raise InvalidXml(msg="cell number invalid")
         },
       )
-    CellValueType::Bool => CellValue::Bool(parse_cell_bool(raw))
-    CellValueType::Error => CellValue::Error(raw)
+    Bool => Bool(parse_cell_bool(raw))
+    Error => Error(raw)
   }
 }

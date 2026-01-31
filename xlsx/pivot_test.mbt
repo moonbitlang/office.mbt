@@ -128,7 +128,7 @@ test "pivot table validation" {
   }
   inspect(
     result,
-    content="Err(InvalidPivotTable(msg=\"pivot table xml empty\"))",
+    content="Err(XlsxError::InvalidPivotTable(msg=\"pivot table xml empty\"))",
   )
 }
 
@@ -155,18 +155,18 @@ test "pivot table add/get/delete" {
 test "pivot table options builder write" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("Region"))
-  sheet.set_cell_value("B1", CellValue::String("Type"))
-  sheet.set_cell_value("C1", CellValue::String("Sales"))
-  sheet.set_cell_value("A2", CellValue::String("East"))
-  sheet.set_cell_value("B2", CellValue::String("A"))
-  sheet.set_cell_value("C2", CellValue::Numeric(10.0))
-  sheet.set_cell_value("A3", CellValue::String("West"))
-  sheet.set_cell_value("B3", CellValue::String("B"))
-  sheet.set_cell_value("C3", CellValue::Numeric(20.0))
-  sheet.set_cell_value("A4", CellValue::String("East"))
-  sheet.set_cell_value("B4", CellValue::String("B"))
-  sheet.set_cell_value("C4", CellValue::Numeric(30.0))
+  sheet.set_cell_value("A1", String("Region"))
+  sheet.set_cell_value("B1", String("Type"))
+  sheet.set_cell_value("C1", String("Sales"))
+  sheet.set_cell_value("A2", String("East"))
+  sheet.set_cell_value("B2", String("A"))
+  sheet.set_cell_value("C2", Numeric(10.0))
+  sheet.set_cell_value("A3", String("West"))
+  sheet.set_cell_value("B3", String("B"))
+  sheet.set_cell_value("C3", Numeric(20.0))
+  sheet.set_cell_value("A4", String("East"))
+  sheet.set_cell_value("B4", String("B"))
+  sheet.set_cell_value("C4", Numeric(30.0))
   let opts = PivotTableOptions::new("Sheet1!A1:C4", "Sheet1!E2:H10")
   opts.rows.push(PivotTableField::new("Region"))
   opts.columns.push(PivotTableField::new("Type"))
@@ -226,7 +226,7 @@ test "pivot table options compactData classic layout invalid" {
   inspect(
     result,
     content=(
-      #|Err(InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))
+      #|Err(XlsxError::InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))
     ),
   )
 }
@@ -235,12 +235,12 @@ test "pivot table options compactData classic layout invalid" {
 test "pivot table options default name increments" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("Region"))
-  sheet.set_cell_value("B1", CellValue::String("Type"))
-  sheet.set_cell_value("C1", CellValue::String("Sales"))
-  sheet.set_cell_value("A2", CellValue::String("East"))
-  sheet.set_cell_value("B2", CellValue::String("A"))
-  sheet.set_cell_value("C2", CellValue::Numeric(10.0))
+  sheet.set_cell_value("A1", String("Region"))
+  sheet.set_cell_value("B1", String("Type"))
+  sheet.set_cell_value("C1", String("Sales"))
+  sheet.set_cell_value("A2", String("East"))
+  sheet.set_cell_value("B2", String("A"))
+  sheet.set_cell_value("C2", Numeric(10.0))
   let opts1 = PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E2:H10")
   opts1.rows.push(PivotTableField::new("Region"))
   opts1.data.push(PivotTableField::new("Sales"))
@@ -257,10 +257,10 @@ test "pivot table options default name increments" {
 test "pivot table options name length and data range validation" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_value("A1", CellValue::String("Region"))
-  sheet.set_cell_value("B1", CellValue::String("Sales"))
-  sheet.set_cell_value("A2", CellValue::String("East"))
-  sheet.set_cell_value("B2", CellValue::Numeric(10.0))
+  sheet.set_cell_value("A1", String("Region"))
+  sheet.set_cell_value("B1", String("Sales"))
+  sheet.set_cell_value("A2", String("East"))
+  sheet.set_cell_value("B2", Numeric(10.0))
   let long = "c".repeat(256)
   let opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
   opts.name = long

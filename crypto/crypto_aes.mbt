@@ -90,7 +90,7 @@ fn aes_schedule(key : BytesView) -> AesSchedule raise CryptoError {
   let (sbox, inv_sbox) = aes_tables()
   let key_len = key.length()
   if key_len != 16 && key_len != 24 && key_len != 32 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES key size")
+    raise InvalidCrypto(msg="invalid AES key size")
   }
   let nk = key_len / 4
   let rounds = nk + 6
@@ -271,7 +271,7 @@ fn aes_encrypt_block(
   block : BytesView,
 ) -> Array[Byte] raise CryptoError {
   if block.length() != 16 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES block size")
+    raise InvalidCrypto(msg="invalid AES block size")
   }
   let state = block.to_array()
   aes_encrypt_state(schedule, state)
@@ -300,7 +300,7 @@ fn aes_decrypt_block(
   block : BytesView,
 ) -> Array[Byte] raise CryptoError {
   if block.length() != 16 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES block size")
+    raise InvalidCrypto(msg="invalid AES block size")
   }
   let state = block.to_array()
   aes_decrypt_state(schedule, state)
@@ -313,7 +313,7 @@ pub fn aes_ecb_encrypt(
   data : BytesView,
 ) -> Bytes raise CryptoError {
   if data.length() % 16 != 0 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
+    raise InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = Array::new(capacity=data.length())
@@ -333,7 +333,7 @@ pub fn aes_ecb_decrypt(
   data : BytesView,
 ) -> Bytes raise CryptoError {
   if data.length() % 16 != 0 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
+    raise InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = Array::new(capacity=data.length())
@@ -354,10 +354,10 @@ pub fn aes_cbc_decrypt(
   data : BytesView,
 ) -> Bytes raise CryptoError {
   if iv.length() != 16 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES IV length")
+    raise InvalidCrypto(msg="invalid AES IV length")
   }
   if data.length() % 16 != 0 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
+    raise InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = Array::new(capacity=data.length())
@@ -383,10 +383,10 @@ pub fn aes_cbc_encrypt(
   data : BytesView,
 ) -> Bytes raise CryptoError {
   if iv.length() != 16 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES IV length")
+    raise InvalidCrypto(msg="invalid AES IV length")
   }
   if data.length() % 16 != 0 {
-    raise CryptoError::InvalidCrypto(msg="invalid AES data length")
+    raise InvalidCrypto(msg="invalid AES data length")
   }
   let schedule = aes_schedule(key)
   let out : Array[Byte] = Array::new(capacity=data.length())

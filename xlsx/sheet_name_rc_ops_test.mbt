@@ -13,7 +13,7 @@ test "rc cell APIs validate sheet name" {
     "Sheet:1",
     1,
     1,
-    CellValue::String("beta"),
+    String("beta"),
   )
   inspect(
     set_cell_value_rc_result is Err(XlsxError::InvalidSheetName(_)),

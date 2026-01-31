@@ -35,13 +35,13 @@ pub fn utf16_index_to_utf8_offset(
 ) -> Int raise UtfIndexError {
   let len = s.length()
   if index < 0 || index > len {
-    raise UtfIndexError::OutOfRange(index~, len~)
+    raise OutOfRange(index~, len~)
   }
   if index > 0 && index < len {
     let prev = s[index - 1]
     let cur = s[index]
     if is_high_surrogate(prev) && is_low_surrogate(cur) {
-      raise UtfIndexError::InvalidBoundary(index~)
+      raise InvalidBoundary(index~)
     }
   }
   utf8_len_from_utf16_prefix(s, index)
@@ -93,7 +93,7 @@ fn utf16_index_from_utf8_prefix(
 ) -> Int raise UtfIndexError {
   let len = bytes.length()
   if offset < 0 || offset > len {
-    raise UtfIndexError::OutOfRange(index=offset, len~)
+    raise OutOfRange(index=offset, len~)
   }
   let mut pos = 0
   let mut utf16_units = 0
@@ -106,11 +106,11 @@ fn utf16_index_from_utf8_prefix(
     }
     if b0 >= 0xC2 && b0 <= 0xDF {
       if pos + 2 > offset {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       let b1 = bytes[pos + 1].to_int()
       if (b1 & 0xC0) != 0x80 {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       pos = pos + 2
       utf16_units = utf16_units + 1
@@ -118,15 +118,15 @@ fn utf16_index_from_utf8_prefix(
     }
     if b0 >= 0xE0 && b0 <= 0xEF {
       if pos + 3 > offset {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       let b1 = bytes[pos + 1].to_int()
       let b2 = bytes[pos + 2].to_int()
       if (b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80 {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       if (b0 == 0xE0 && b1 < 0xA0) || (b0 == 0xED && b1 >= 0xA0) {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       pos = pos + 3
       utf16_units = utf16_units + 1
@@ -134,22 +134,22 @@ fn utf16_index_from_utf8_prefix(
     }
     if b0 >= 0xF0 && b0 <= 0xF4 {
       if pos + 4 > offset {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       let b1 = bytes[pos + 1].to_int()
       let b2 = bytes[pos + 2].to_int()
       let b3 = bytes[pos + 3].to_int()
       if (b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80 || (b3 & 0xC0) != 0x80 {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       if (b0 == 0xF0 && b1 < 0x90) || (b0 == 0xF4 && b1 > 0x8F) {
-        raise UtfIndexError::InvalidUtf8(offset~)
+        raise InvalidUtf8(offset~)
       }
       pos = pos + 4
       utf16_units = utf16_units + 2
       continue
     }
-    raise UtfIndexError::InvalidUtf8(offset~)
+    raise InvalidUtf8(offset~)
   }
   utf16_units
 }
