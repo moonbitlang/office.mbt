@@ -24,6 +24,10 @@ moon run cmd/demos -- dashboard demos_out
 moon run cmd/demos -- invoice demos_out
 moon run cmd/demos -- pivot_slicer demos_out
 moon run cmd/demos -- sparklines demos_out
+moon run cmd/demos -- tracker_heatmap demos_out
+moon run cmd/demos -- interactive_controls demos_out
+moon run cmd/demos -- combo_chart demos_out
+moon run cmd/demos -- ooxml_showcase demos_out
 moon run cmd/demos -- secure demos_out
 ```
 
@@ -117,6 +121,76 @@ Shows compact “trend” visuals:
 Try tweaking:
 
 - Switch between `Line`, `Column`, and `WinLoss` sparklines.
+
+### `tracker_heatmap.xlsx`
+
+Source: `cmd/demos/demo_tracker_heatmap.mbt`.
+
+Shows a dense “habit tracker” style sheet:
+
+- 12×31 grid of scores (0..10)
+- **Heatmap** using a 3-color scale conditional format over the full grid
+- **Sparklines** (one per month) showing trends
+- **Frozen panes** so Month + day header stay visible while scrolling
+
+Try tweaking:
+
+- Change the score formula (the deterministic pattern) to your own data source.
+- Experiment with different color scales or add a data bar layer.
+
+### `interactive_controls.xlsx`
+
+Source: `cmd/demos/demo_interactive_controls.mbt`.
+
+Shows a “what-if model” driven by Excel form controls:
+
+- Workbook-level **defined names** for input cells (`BasePrice`, `DiscountPct`, etc.)
+- A **model table** that references those names in formulas
+- **Form controls** writing into cells:
+  - ScrollBar → `UI!B4` (Discount %)
+  - SpinButton → `UI!B5` (Tax %)
+  - CheckBox → `UI!B6` (Shipping on/off)
+- Conditional formatting (data bar + icon set) over Profit
+- A chart plotting Profit vs Quantity
+
+Try tweaking:
+
+- Change the control ranges (min/max) or link them to different cells.
+- Add a second series for revenue or cost and turn it into a combo chart.
+
+### `combo_chart.xlsx`
+
+Source: `cmd/demos/demo_combo_chart.mbt`.
+
+Shows a polished combo chart with styling:
+
+- Column series (New MRR)
+- Line series on a **secondary axis** (Churn %)
+- Area series (Active Users) with transparency
+- Axis titles and number formats
+
+Try tweaking:
+
+- Turn on markers / data labels, change line dash, or move series to secondary axis.
+
+### `ooxml_showcase.xlsx`
+
+Source: `cmd/demos/demo_ooxml_showcase.mbt`.
+
+Shows “OOXML long-tail” features that matter for real-world spreadsheets:
+
+- **Rich text** in a cell (mixed fonts/colors/underline)
+- **Hyperlinks** (external + internal jump)
+- **Comments** with rich text runs
+- **Ignored errors** to suppress “number stored as text” warnings
+- **Header/footer image** (via VML drawingHF)
+- **Sheet background** image
+- Basic page layout + margins for printing
+
+Try tweaking:
+
+- Add more ignored-error types (e.g. `TwoDigitTextYear`) over ranges from imported data.
+- Use this sheet as a template for “report-like” exports.
 
 ### `stream_big_*.xlsx`
 

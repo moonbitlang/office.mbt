@@ -17,6 +17,18 @@ fn usage() -> Unit {
   println("  pivot_slicer         Pivot table + slicer")
   println("  sparklines           KPI sparklines")
   println(
+    "  tracker_heatmap      Habit tracker heatmap + sparklines + frozen panes",
+  )
+  println(
+    "  interactive_controls What-if model driven by form controls + named ranges + chart",
+  )
+  println(
+    "  combo_chart          Combo chart (columns + line secondary axis + area) with styling",
+  )
+  println(
+    "  ooxml_showcase       Rich text + hyperlinks + comments + ignored errors + header image + background",
+  )
+  println(
     "  stream_big           Streaming writer for large sheets (arg: rows, default 20000)",
   )
   println(
@@ -58,6 +70,13 @@ fn run_demo_bytes(
     "invoice" => Some(("invoice.xlsx", demo_invoice_bytes()))
     "pivot_slicer" => Some(("pivot_slicer.xlsx", demo_pivot_slicer_bytes()))
     "sparklines" => Some(("sparklines.xlsx", demo_sparklines_bytes()))
+    "tracker_heatmap" =>
+      Some(("tracker_heatmap.xlsx", demo_tracker_heatmap_bytes()))
+    "interactive_controls" =>
+      Some(("interactive_controls.xlsx", demo_interactive_controls_bytes()))
+    "combo_chart" => Some(("combo_chart.xlsx", demo_combo_chart_bytes()))
+    "ooxml_showcase" =>
+      Some(("ooxml_showcase.xlsx", demo_ooxml_showcase_bytes()))
     "stream_big" => {
       let rows = demo_stream_big_rows_from_args(args)
       Some(("stream_big_\{rows}.xlsx", demo_stream_big_bytes(rows~)))
@@ -96,6 +115,10 @@ async fn run_all(out_dir : String) -> Unit {
   run_one("invoice", out_dir, [])
   run_one("pivot_slicer", out_dir, [])
   run_one("sparklines", out_dir, [])
+  run_one("tracker_heatmap", out_dir, [])
+  run_one("interactive_controls", out_dir, [])
+  run_one("combo_chart", out_dir, [])
+  run_one("ooxml_showcase", out_dir, [])
   run_one("stream_big", out_dir, [])
   run_one("secure", out_dir, [])
 }
@@ -111,6 +134,10 @@ async fn main {
       println("invoice")
       println("pivot_slicer")
       println("sparklines")
+      println("tracker_heatmap")
+      println("interactive_controls")
+      println("combo_chart")
+      println("ooxml_showcase")
       println("stream_big")
       println("secure")
     }
