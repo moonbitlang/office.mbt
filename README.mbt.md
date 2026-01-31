@@ -190,6 +190,23 @@ test "merged cells" {
 }
 ```
 
+## Demos
+
+This repo includes a runnable demo generator that produces real `.xlsx` files you can open in Excel/Numbers/LibreOffice.
+
+```sh
+moon run cmd/demos
+```
+
+This writes multiple workbooks into `./demos_out/` (by default). You can also run a single demo:
+
+```sh
+moon run cmd/demos -- dashboard demos_out
+moon run cmd/demos -- stream_big demos_out 50000
+```
+
+See `docs/demos.md` for what each demo generates and how the code is structured.
+
 ## API Reference
 
 ### Workbook Creation

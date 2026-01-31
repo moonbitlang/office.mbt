@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/cmd/demos"
+
+import {
+  "bobzhang/mbtexcel/xlsx",
+}
+
+// Values
+pub fn demo_dashboard_bytes() -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_invoice_bytes() -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_pivot_slicer_bytes() -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_secure_bytes(password? : String) -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_sparklines_bytes() -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_stream_big_bytes(rows? : Int) -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_stream_big_rows_from_args(ArrayView[String]) -> Int
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
