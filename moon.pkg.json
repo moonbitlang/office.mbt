@@ -14,6 +14,10 @@
       "alias": "async/fs"
     },
     {
+      "path": "moonbitlang/async/process",
+      "alias": "process"
+    },
+    {
       "path": "moonbitlang/core/encoding/utf8",
       "alias": "encoding/utf8"
     },
