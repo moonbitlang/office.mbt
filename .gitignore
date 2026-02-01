@@ -10,3 +10,6 @@ target
 excelize
 __pycache__/
 *.pyc
+.tools
+demos*/
+_mbtexcel_check
