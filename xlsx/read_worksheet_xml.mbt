@@ -122,26 +122,23 @@ fn parse_worksheet(
       }
       None => None
     }
-    let raw_value = match raw_value_opt {
-      Some(value) => value
-      None => ""
-    }
+    let raw_value = raw_value_opt.unwrap_or("")
     let inline_entry = match cell_type {
-      Some(kind) if kind == "inlineStr" => Some(parse_inline_string(rest))
+      Some("inlineStr") => Some(parse_inline_string(rest))
       _ => None
     }
     let force_string = raw_value_opt is None &&
       formula is Some(_) &&
       !(cell_type is Some("inlineStr"))
     let mut value = ""
-    let mut value_type = CellValueType::String
+    let mut value_type : CellValueType = String
     let mut rich_text : Array[RichTextRun]? = None
     if force_string {
       value = ""
-      value_type = CellValueType::String
+      value_type = String
     } else {
       match cell_type {
-        Some(kind) if kind == "s" => {
+        Some("s") => {
           let index = @strconv.parse_int(raw_value, base=10) catch {
             _ => raise InvalidXml(msg="shared string index invalid")
           }
@@ -151,43 +148,43 @@ fn parse_worksheet(
           let entry = shared_strings[index]
           value = entry.text
           rich_text = entry.runs
-          value_type = CellValueType::String
+          value_type = String
         }
-        Some(kind) if kind == "b" => {
+        Some("b") => {
           if raw_value != "0" && raw_value != "1" {
             raise InvalidXml(msg="cell boolean invalid")
           }
           value = raw_value
-          value_type = CellValueType::Bool
+          value_type = Bool
         }
-        Some(kind) if kind == "e" => {
+        Some("e") => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::Error
+          value_type = Error
         }
-        Some(kind) if kind == "str" => {
+        Some("str") => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::String
+          value_type = String
         }
-        Some(kind) if kind == "inlineStr" =>
+        Some("inlineStr") =>
           match inline_entry {
             Some(entry) => {
               value = entry.text
               rich_text = entry.runs
-              value_type = CellValueType::String
+              value_type = String
             }
             None => {
               value = ""
-              value_type = CellValueType::String
+              value_type = String
             }
           }
-        Some(kind) if kind == "d" => {
+        Some("d") => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::String
+          value_type = String
         }
-        Some(kind) if kind == "n" =>
+        Some("n") =>
           if raw_value == "" {
             value = ""
-            value_type = CellValueType::String
+            value_type = String
           } else {
             ignore(
               @strconv.parse_double(raw_value) catch {
@@ -195,16 +192,16 @@ fn parse_worksheet(
               },
             )
             value = raw_value
-            value_type = CellValueType::Number
+            value_type = Number
           }
         Some(_) => {
           value = unescape_xml_text(raw_value)
-          value_type = CellValueType::String
+          value_type = String
         }
         None =>
           if raw_value == "" {
             value = ""
-            value_type = CellValueType::String
+            value_type = String
           } else {
             ignore(
               @strconv.parse_double(raw_value) catch {
@@ -212,7 +209,7 @@ fn parse_worksheet(
               },
             )
             value = raw_value
-            value_type = CellValueType::Number
+            value_type = Number
           }
       }
     }

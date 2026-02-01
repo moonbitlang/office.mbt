@@ -30,12 +30,10 @@ fn gzip_push_u32_le(out : Array[Byte], value : UInt) -> Unit {
 
 ///|
 fn skip_cstring(bytes : BytesView, start : Int) -> Int? {
-  let mut i = start
-  while i < bytes.length() {
+  for i in start..<bytes.length() {
     if bytes[i] == 0 {
       return Some(i + 1)
     }
-    i = i + 1
   }
   None
 }

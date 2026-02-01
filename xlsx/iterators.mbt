@@ -48,10 +48,7 @@ fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
   let cells = sheet.sorted_cells()
   let row_cells : Map[Int, Array[Cell]] = {}
   for cell in cells {
-    let entries = match row_cells.get(cell.row) {
-      Some(value) => value
-      None => []
-    }
+    let entries = row_cells.get(cell.row).unwrap_or([])
     entries.push(cell)
     row_cells[cell.row] = entries
   }
@@ -69,11 +66,8 @@ fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
   row_keys.sort_by((a, b) => a - b)
   let entries : Array[RowCells] = []
   for row in row_keys {
-    let row_entries = match row_cells.get(row) {
-      Some(value) => value
-      None => []
-    }
-    if row_entries.length() == 0 {
+    let row_entries = row_cells.get(row).unwrap_or([])
+    if row_entries.is_empty() {
       entries.push({ row, cells: [], max_col: 0 })
       continue
     }
@@ -239,10 +233,7 @@ fn collect_row_entries_with_options(
   let cells = sheet.sorted_cells()
   let row_cells : Map[Int, Array[Cell]] = {}
   for cell in cells {
-    let entries = match row_cells.get(cell.row) {
-      Some(value) => value
-      None => []
-    }
+    let entries = row_cells.get(cell.row).unwrap_or([])
     entries.push(cell)
     row_cells[cell.row] = entries
   }
@@ -260,11 +251,8 @@ fn collect_row_entries_with_options(
   row_keys.sort_by((a, b) => a - b)
   let entries : Array[RowValues] = []
   for row in row_keys {
-    let row_entries = match row_cells.get(row) {
-      Some(value) => value
-      None => []
-    }
-    if row_entries.length() == 0 {
+    let row_entries = row_cells.get(row).unwrap_or([])
+    if row_entries.is_empty() {
       entries.push({ row, values: [] })
       continue
     }
@@ -300,25 +288,18 @@ fn collect_columns_with_options(
   let col_cells : Map[Int, Array[(Int, String)]] = {}
   for cell in sheet.cells {
     let formatted = format_cell_value_for_workbook(styles, cell, false, options)
-    let entries = match col_cells.get(cell.col) {
-      Some(value) => value
-      None => []
-    }
+    let entries = col_cells.get(cell.col).unwrap_or([])
     entries.push((cell.row, formatted))
     col_cells[cell.col] = entries
   }
   let columns : Array[Array[String]] = []
   for col in 1..<=max_col {
     let values : Array[String] = Array::make(max_row, "")
-    match col_cells.get(col) {
-      Some(entries) =>
-        for entry in entries {
-          let (row, value) = entry
-          if row >= 1 && row <= max_row {
-            values[row - 1] = value
-          }
-        }
-      None => ()
+    for entry in col_cells.get(col).unwrap_or([]) {
+      let (row, value) = entry
+      if row >= 1 && row <= max_row {
+        values[row - 1] = value
+      }
     }
     columns.push(values)
   }

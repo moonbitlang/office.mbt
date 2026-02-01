@@ -20,11 +20,9 @@ priv struct RegexToken {
 ///|
 fn regex_is_escaped(chars : Array[Char], index : Int) -> Bool {
   let mut count = 0
-  let mut i = index - 1
-  while i >= 0 {
+  for i in index>..0 {
     if chars[i] == '\\' {
       count = count + 1
-      i = i - 1
     } else {
       break
     }

@@ -172,24 +172,19 @@ fn CfbBuilder::put(self : CfbBuilder, name : String, content : Bytes) -> Unit {
 fn cfb_compare(left : String, right : String) -> Int {
   let left_parts = Array::from_iter(left.split("/"))
   let right_parts = Array::from_iter(right.split("/"))
-  let mut i = 0
-  let mut j = 0
-  let limit = if left_parts.length() < right_parts.length() {
-    left_parts.length()
-  } else {
-    right_parts.length()
-  }
-  while i < limit {
+  let left_len = left_parts.length()
+  let right_len = right_parts.length()
+  let limit = if left_len < right_len { left_len } else { right_len }
+  for i in 0..<limit {
     let l = left_parts[i]
     let r = right_parts[i]
-    j = l.length() - r.length()
+    let j = l.length() - r.length()
     if j != 0 {
       return j
     }
     if l != r {
       return if l < r { -1 } else { 1 }
     }
-    i = i + 1
   }
   left_parts.length() - right_parts.length()
 }
@@ -310,15 +305,14 @@ fn CfbBuilder::locate(self : CfbBuilder) -> Array[Int] {
 
 ///|
 fn CfbBuilder::write_msat(self : CfbBuilder, location : Array[Int]) -> Unit {
-  let mut i = 0
-  while i < 109 {
+  for i in 0..<109 {
     if i < location[2] {
       self.write_uint32(location[1] + i)
     } else {
       self.write_uint32(-1)
     }
-    i = i + 1
   }
+  let mut i = 109
   if location[1] != 0 {
     let mut offset = 0
     while offset < location[1] {
