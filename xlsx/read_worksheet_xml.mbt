@@ -138,7 +138,7 @@ fn parse_worksheet(
     let mut rich_text : Array[RichTextRun]? = None
     if force_string {
       value = ""
-      value_type = String
+      value_type = CellValueType::String
     } else {
       match cell_type {
         Some(kind) if kind == "s" => {
@@ -151,43 +151,43 @@ fn parse_worksheet(
           let entry = shared_strings[index]
           value = entry.text
           rich_text = entry.runs
-          value_type = String
+          value_type = CellValueType::String
         }
         Some(kind) if kind == "b" => {
           if raw_value != "0" && raw_value != "1" {
             raise InvalidXml(msg="cell boolean invalid")
           }
           value = raw_value
-          value_type = Bool
+          value_type = CellValueType::Bool
         }
         Some(kind) if kind == "e" => {
           value = unescape_xml_text(raw_value)
-          value_type = Error
+          value_type = CellValueType::Error
         }
         Some(kind) if kind == "str" => {
           value = unescape_xml_text(raw_value)
-          value_type = String
+          value_type = CellValueType::String
         }
         Some(kind) if kind == "inlineStr" =>
           match inline_entry {
             Some(entry) => {
               value = entry.text
               rich_text = entry.runs
-              value_type = String
+              value_type = CellValueType::String
             }
             None => {
               value = ""
-              value_type = String
+              value_type = CellValueType::String
             }
           }
         Some(kind) if kind == "d" => {
           value = unescape_xml_text(raw_value)
-          value_type = String
+          value_type = CellValueType::String
         }
         Some(kind) if kind == "n" =>
           if raw_value == "" {
             value = ""
-            value_type = String
+            value_type = CellValueType::String
           } else {
             ignore(
               @strconv.parse_double(raw_value) catch {
@@ -195,16 +195,16 @@ fn parse_worksheet(
               },
             )
             value = raw_value
-            value_type = Number
+            value_type = CellValueType::Number
           }
         Some(_) => {
           value = unescape_xml_text(raw_value)
-          value_type = String
+          value_type = CellValueType::String
         }
         None =>
           if raw_value == "" {
             value = ""
-            value_type = String
+            value_type = CellValueType::String
           } else {
             ignore(
               @strconv.parse_double(raw_value) catch {
@@ -212,7 +212,7 @@ fn parse_worksheet(
               },
             )
             value = raw_value
-            value_type = Number
+            value_type = CellValueType::Number
           }
       }
     }
