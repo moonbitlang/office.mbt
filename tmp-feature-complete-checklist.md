@@ -713,12 +713,19 @@ Commands used:
       - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 52. Run focused sparkline/x14/slicer integration bundle gate.
+- [x] 52. Run focused sparkline/x14/slicer integration bundle gate.
   - DoD: execute the full sparkline-related integration set (`45`, `46`, `48`, `49`, `51`) together and keep gate green.
-  - Planned:
-    - run all new sparkline integration tests in sequence
-    - run `moon check --deny-warn`
-    - update checklist with consolidated result
+  - Delivered:
+    - Executed focused integration bundle gate:
+      - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all five integration tests: `1/1` passed each
+      - check: pass
 
 - [ ] 53. Re-run full release gate after integration tranche 45-52.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` and record outcomes.
@@ -729,4 +736,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **52** (focused sparkline/x14/slicer integration bundle gate).
+- Next item: **53** (full release gate after integration tranche 45-52).
