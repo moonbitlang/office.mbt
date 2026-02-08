@@ -83,6 +83,18 @@ pub fn Workbook::sheet(self : Workbook, name : StringView) -> Worksheet? {
 }
 
 ///|
+fn Workbook::require_sheet(
+  self : Workbook,
+  sheet_name : StringView,
+) -> Worksheet raise XlsxError {
+  check_sheet_name(sheet_name)
+  match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise SheetNotFound(name=sheet_name.to_string())
+  }
+}
+
+///|
 pub fn Workbook::chart_sheet(self : Workbook, name : StringView) -> ChartSheet? {
   let needle = normalize_sheet_name(name)
   for sheet in self.chart_sheets {
@@ -636,11 +648,7 @@ pub fn Workbook::set_page_margins(
   sheet_name : StringView,
   options : PageLayoutMarginsOptions?,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_page_margins(options)
 }
 
@@ -649,11 +657,7 @@ pub fn Workbook::get_page_margins(
   self : Workbook,
   sheet_name : StringView,
 ) -> PageLayoutMarginsOptions raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.page_margins()
 }
 
@@ -663,11 +667,7 @@ pub fn Workbook::set_page_layout(
   sheet_name : StringView,
   options : PageLayoutOptions?,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_page_layout(options)
 }
 
@@ -676,11 +676,7 @@ pub fn Workbook::get_page_layout(
   self : Workbook,
   sheet_name : StringView,
 ) -> PageLayoutOptions raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.page_layout()
 }
 
@@ -690,11 +686,7 @@ pub fn Workbook::set_header_footer(
   sheet_name : StringView,
   options : HeaderFooterOptions?,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_header_footer(options)
 }
 
@@ -704,11 +696,7 @@ pub fn Workbook::set_sheet_props(
   sheet_name : StringView,
   options : SheetPropsOptions?,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_sheet_props(options)
 }
 
@@ -717,11 +705,7 @@ pub fn Workbook::get_header_footer(
   self : Workbook,
   sheet_name : StringView,
 ) -> HeaderFooterOptions? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.header_footer()
 }
 
@@ -730,11 +714,7 @@ pub fn Workbook::get_header_footer_images(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[HeaderFooterImageOptions] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_header_footer_images()
 }
 
@@ -743,11 +723,7 @@ pub fn Workbook::get_sheet_props(
   self : Workbook,
   sheet_name : StringView,
 ) -> SheetPropsOptions raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.sheet_props()
 }
 
@@ -758,11 +734,7 @@ pub fn Workbook::set_sheet_view(
   view_index : Int,
   options : SheetViewOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_sheet_view(view_index, options)
 }
 
@@ -772,11 +744,7 @@ pub fn Workbook::get_sheet_view(
   sheet_name : StringView,
   view_index : Int,
 ) -> SheetViewOptions raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_sheet_view(view_index)
 }
 
@@ -786,11 +754,7 @@ pub fn Workbook::set_panes(
   sheet_name : StringView,
   panes : Panes,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_panes(panes)
 }
 
@@ -799,11 +763,7 @@ pub fn Workbook::get_panes(
   self : Workbook,
   sheet_name : StringView,
 ) -> Panes raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_panes()
 }
 
@@ -813,11 +773,7 @@ pub fn Workbook::set_sheet_dimension(
   sheet_name : StringView,
   range_ref : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_sheet_dimension(range_ref)
 }
 
@@ -826,11 +782,7 @@ pub fn Workbook::get_sheet_dimension(
   self : Workbook,
   sheet_name : StringView,
 ) -> String raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   match sheet.sheet_dimension() {
     Some(value) => value
     None => ""
@@ -843,11 +795,7 @@ pub fn Workbook::protect_sheet(
   sheet_name : StringView,
   options : SheetProtectionOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.protect_sheet(options)
 }
 
@@ -857,11 +805,7 @@ pub fn Workbook::unprotect_sheet(
   sheet_name : StringView,
   password? : String = "",
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.unprotect_sheet(password~)
 }
 
@@ -872,11 +816,7 @@ pub fn Workbook::set_sheet_background(
   data : Bytes,
   extension : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_sheet_background(data, extension)
 }
 
@@ -885,11 +825,7 @@ pub fn Workbook::clear_sheet_background(
   self : Workbook,
   sheet_name : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.clear_sheet_background()
 }
 
@@ -899,11 +835,7 @@ pub fn Workbook::insert_page_break(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.insert_page_break(cell)
 }
 
@@ -913,11 +845,7 @@ pub fn Workbook::remove_page_break(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.remove_page_break(cell)
 }
 
@@ -1394,11 +1322,7 @@ pub fn Workbook::row_stream(
   self : Workbook,
   sheet_name : StringView,
 ) -> RowStream raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   RowStream::new(sheet)
 }
 
@@ -1619,11 +1543,7 @@ pub fn Workbook::set_cell_rich_text(
   reference : String,
   runs : ArrayView[RichTextRun],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_rich_text(reference, runs)
 }
 
@@ -1637,11 +1557,7 @@ pub fn Workbook::set_cell_hyperlink(
   display? : String = "",
   tooltip? : String = "",
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_hyperlink(reference, target, link_type, display~, tooltip~)
 }
 
@@ -1654,11 +1570,7 @@ pub fn Workbook::set_cell_hyperlink_opts(
   link_type : HyperlinkType,
   opts? : HyperlinkOpts = HyperlinkOpts::new(),
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_hyperlink_opts(reference, target, link_type, opts~)
 }
 
@@ -1688,11 +1600,7 @@ pub fn Workbook::remove_cell_hyperlink(
   sheet_name : StringView,
   reference : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.remove_cell_hyperlink(reference)
 }
 
@@ -1702,11 +1610,7 @@ pub fn Workbook::get_cell(
   sheet_name : StringView,
   reference : StringView,
 ) -> String? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell(reference)
 }
 
@@ -1716,11 +1620,7 @@ pub fn Workbook::get_cell_rich_text(
   sheet_name : StringView,
   reference : StringView,
 ) -> Array[RichTextRun]? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_rich_text(reference)
 }
 
@@ -1730,11 +1630,7 @@ pub fn Workbook::get_cell_hyperlink(
   sheet_name : StringView,
   reference : StringView,
 ) -> Hyperlink? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_hyperlink(reference)
 }
 
@@ -1753,11 +1649,7 @@ pub fn Workbook::get_cell_value_raw(
   sheet_name : StringView,
   reference : StringView,
 ) -> CellValue? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_value_raw(reference)
 }
 
@@ -1767,11 +1659,7 @@ pub fn Workbook::get_cell_type(
   sheet_name : StringView,
   reference : StringView,
 ) -> CellValueType? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_type(reference)
 }
 
@@ -1871,11 +1759,7 @@ pub fn Workbook::set_cell_formula(
   formula : String,
   value? : String = "",
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_formula(reference, formula, value~)
 }
 
@@ -1888,11 +1772,7 @@ pub fn Workbook::set_cell_formula_opts(
   opts? : FormulaOpts = FormulaOpts::new(),
   value? : String = "",
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_formula_opts(reference, formula, opts~, value~)
 }
 
@@ -1902,11 +1782,7 @@ pub fn Workbook::get_cell_formula(
   sheet_name : StringView,
   reference : StringView,
 ) -> String? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_formula(reference)
 }
 
@@ -1932,11 +1808,7 @@ pub fn Workbook::get_cell_style(
   sheet_name : StringView,
   reference : StringView,
 ) -> Int? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_style(reference)
 }
 
@@ -1963,11 +1835,7 @@ pub fn Workbook::add_image(
   locked? : Bool = true,
   positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_image(
     reference,
     data,
@@ -2000,11 +1868,7 @@ pub fn Workbook::add_image_with_options(
   content_type : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let offset_x = match options.offset_x {
     Some(value) => value
     None => 0
@@ -2104,11 +1968,7 @@ pub async fn Workbook::add_picture(
   locked? : Bool = true,
   positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_picture(
     reference,
     path,
@@ -2137,11 +1997,7 @@ pub async fn Workbook::add_picture_with_options(
   path : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_picture_with_options(reference, path, options)
 }
 
@@ -2167,11 +2023,7 @@ pub fn Workbook::add_picture_from_bytes(
   locked? : Bool = true,
   positioning? : PicturePositioning = OneCell,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_picture_from_bytes(
     reference,
     data,
@@ -2202,11 +2054,7 @@ pub fn Workbook::add_picture_from_bytes_with_options(
   extension : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_picture_from_bytes_with_options(reference, data, extension, options)
 }
 
@@ -2216,11 +2064,7 @@ pub fn Workbook::add_header_footer_image(
   sheet_name : StringView,
   options : HeaderFooterImageOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_header_footer_image(options)
 }
 
@@ -2230,11 +2074,7 @@ pub async fn Workbook::add_header_footer_image_from_file(
   sheet_name : StringView,
   options : HeaderFooterImageOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_header_footer_image_from_file(options)
 }
 
@@ -2244,11 +2084,7 @@ pub fn Workbook::get_pictures(
   sheet_name : StringView,
   cell : StringView,
 ) -> Array[Image] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_pictures(cell)
 }
 
@@ -2257,11 +2093,7 @@ pub fn Workbook::get_picture_cells(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[String] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_picture_cells()
 }
 
@@ -2271,11 +2103,7 @@ pub fn Workbook::delete_picture(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.delete_picture(cell)
 }
 
@@ -2286,11 +2114,7 @@ pub fn Workbook::add_chart(
   reference : String,
   xml : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_chart(reference, xml)
 }
 
@@ -2301,11 +2125,7 @@ pub fn Workbook::add_chart_with_options(
   reference : String,
   opts : ChartOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_chart_with_options(reference, opts)
 }
 
@@ -2315,11 +2135,7 @@ pub fn Workbook::delete_chart(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.delete_chart(cell)
 }
 
@@ -2329,11 +2145,7 @@ pub fn Workbook::add_shape(
   sheet_name : StringView,
   shape : Shape,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_shape(shape)
 }
 
@@ -2343,11 +2155,7 @@ pub fn Workbook::add_vml_drawing_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_vml_drawing_xml(xml)
 }
 
@@ -2357,11 +2165,7 @@ pub fn Workbook::add_vml_drawing_hf_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_vml_drawing_hf_xml(xml)
 }
 
@@ -2371,11 +2175,7 @@ pub fn Workbook::add_form_control(
   sheet_name : StringView,
   control : FormControl,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_form_control(control)
 }
 
@@ -2384,11 +2184,7 @@ pub fn Workbook::get_form_controls(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[FormControl] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let out : Array[FormControl] = []
   for control in sheet.get_form_controls() {
     out.push(control)
@@ -2402,11 +2198,7 @@ pub fn Workbook::delete_form_control(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.delete_form_control(cell)
 }
 
@@ -2501,11 +2293,7 @@ pub fn Workbook::add_slicer(
     out
   }
 
-  ignore(check_sheet_name(sheet_name))
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   ignore(check_sheet_name(opts.table_sheet))
   match self.sheet(opts.table_sheet) {
     Some(_) => ()
@@ -2615,11 +2403,7 @@ pub fn Workbook::add_slicer_raw(
   sheet_name : StringView,
   slicer : Slicer,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_slicer(slicer)
 }
 
@@ -2628,11 +2412,7 @@ pub fn Workbook::get_slicers(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[Slicer] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let out : Array[Slicer] = []
   for slicer in sheet.get_slicers() {
     out.push(slicer)
@@ -2672,11 +2452,7 @@ pub fn Workbook::add_comment(
   sheet_name : StringView,
   comment : Comment,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_comment(comment)
 }
 
@@ -2686,11 +2462,7 @@ pub fn Workbook::delete_comment(
   sheet_name : StringView,
   cell : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.delete_comment(cell)
 }
 
@@ -2699,11 +2471,7 @@ pub fn Workbook::get_comments(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[Comment] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let comments : Array[Comment] = []
   for comment in sheet.comments() {
     comments.push(comment)
@@ -2718,11 +2486,7 @@ pub fn Workbook::set_auto_filter(
   range_ref : String,
   options : ArrayView[AutoFilterOption],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_auto_filter(range_ref, options)
   match sheet.auto_filter() {
     Some(filter) => {
@@ -2741,11 +2505,7 @@ pub fn Workbook::clear_auto_filter(
   self : Workbook,
   sheet_name : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.clear_auto_filter()
   remove_defined_name_for_scope(self, "_xlnm._FilterDatabase", sheet_name)
 }
@@ -2755,11 +2515,7 @@ pub fn Workbook::get_auto_filter(
   self : Workbook,
   sheet_name : StringView,
 ) -> AutoFilter? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.auto_filter()
 }
 
@@ -2841,11 +2597,7 @@ pub fn Workbook::add_data_validation_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_data_validation_xml(xml)
 }
 
@@ -2855,11 +2607,7 @@ pub fn Workbook::add_data_validation(
   sheet_name : StringView,
   dv : DataValidation,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_data_validation(dv)
 }
 
@@ -2871,11 +2619,7 @@ pub fn Workbook::add_data_validation_list(
   values : ArrayView[String],
   allow_blank? : Bool = true,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_data_validation_list(range_ref, values, allow_blank~)
 }
 
@@ -2884,11 +2628,7 @@ pub fn Workbook::get_data_validations(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[DataValidation] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_data_validations()
 }
 
@@ -2898,11 +2638,7 @@ pub fn Workbook::delete_data_validation(
   sheet_name : StringView,
   sqrefs? : Array[String] = [],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.delete_data_validation(sqrefs~)
 }
 
@@ -2913,11 +2649,7 @@ pub fn Workbook::add_ignored_errors(
   range_ref : String,
   error_type : IgnoredErrorType,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_ignored_errors(range_ref, error_type)
 }
 
@@ -2927,11 +2659,7 @@ pub fn Workbook::add_conditional_format_xml(
   sheet_name : StringView,
   xml : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_conditional_format_xml(xml)
 }
 
@@ -2942,11 +2670,7 @@ pub fn Workbook::set_conditional_format(
   range_ref : String,
   options : ArrayView[ConditionalFormatOptions],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_conditional_format(range_ref, options)
 }
 
@@ -2955,11 +2679,7 @@ pub fn Workbook::get_conditional_formats(
   self : Workbook,
   sheet_name : StringView,
 ) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_conditional_formats()
 }
 
@@ -2969,11 +2689,7 @@ pub fn Workbook::unset_conditional_format(
   sheet_name : StringView,
   range_ref : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.unset_conditional_format(range_ref)
 }
 
@@ -2983,11 +2699,7 @@ pub fn Workbook::merge_cells(
   sheet_name : StringView,
   range_ref : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.merge_cells(range_ref)
 }
 
@@ -3010,11 +2722,7 @@ pub fn Workbook::unmerge_cells(
   sheet_name : StringView,
   range_ref : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.unmerge_cells(range_ref)
 }
 
@@ -3036,11 +2744,7 @@ pub fn Workbook::get_merge_cells(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[String] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let merged : Array[String] = []
   for range_ref in sheet.merged_cells() {
     merged.push(range_ref)
@@ -3144,11 +2848,7 @@ pub fn Workbook::add_table(
     false
   }
 
-  ignore(check_sheet_name(sheet_name))
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let show_header_row = match options.show_header_row {
     Some(v) => v
     None => true
@@ -3234,11 +2934,7 @@ pub fn Workbook::add_table_with_columns(
   show_column_stripes? : Bool = false,
   show_header_row? : Bool = true,
 ) -> Table raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_table(
     range_ref,
     name,
@@ -3258,11 +2954,7 @@ pub fn Workbook::get_tables(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[Table] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let tables : Array[Table] = []
   for table in sheet.tables() {
     tables.push(table)
@@ -3298,11 +2990,7 @@ pub fn Workbook::add_sparkline(
   sheet_name : StringView,
   options : SparklineOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_sparkline_options(options)
 }
 
@@ -3314,11 +3002,7 @@ pub fn Workbook::add_sparkline_group(
   ranges : ArrayView[String],
   sparkline_type? : SparklineType = Line,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_sparkline_group(locations, ranges, sparkline_type~)
 }
 
@@ -3328,11 +3012,7 @@ pub fn Workbook::add_sparkline_options(
   sheet_name : StringView,
   options : SparklineOptions,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_sparkline_options(options)
 }
 
@@ -3344,11 +3024,7 @@ pub fn Workbook::add_sparkline_basic(
   range_ref : String,
   sparkline_type? : SparklineType = Line,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_sparkline(location, range_ref, sparkline_type~)
 }
 
@@ -3361,11 +3037,7 @@ pub fn Workbook::add_pivot_table_xml(
   cache_records_xml? : String = "",
   name? : String = "",
 ) -> PivotTable raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.add_pivot_table_xml(
     table_xml,
     cache_definition_xml,
@@ -3495,11 +3167,7 @@ pub fn Workbook::get_pivot_tables(
   self : Workbook,
   sheet_name : StringView,
 ) -> Array[PivotTable] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   clone_pivot_tables(sheet.pivot_tables())
 }
 
@@ -3509,11 +3177,7 @@ pub fn Workbook::delete_pivot_table(
   sheet_name : StringView,
   name : StringView,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.delete_pivot_table(name)
 }
 
@@ -3525,11 +3189,7 @@ pub fn Workbook::set_cell_rc(
   col : Int,
   value : String,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_rc(row, col, value)
 }
 
@@ -3541,11 +3201,7 @@ pub fn Workbook::set_cell_value_rc(
   col : Int,
   value : CellValue,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_value_rc(row, col, value)
 }
 
@@ -3556,11 +3212,7 @@ pub fn Workbook::get_cell_rc(
   row : Int,
   col : Int,
 ) -> String? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_rc(row, col)
 }
 
@@ -3571,11 +3223,7 @@ pub fn Workbook::get_cell_value_raw_rc(
   row : Int,
   col : Int,
 ) -> CellValue? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_value_raw_rc(row, col)
 }
 
@@ -3631,11 +3279,7 @@ pub fn Workbook::get_cell_style_rc(
   row : Int,
   col : Int,
 ) -> Int? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_cell_style_rc(row, col)
 }
 
@@ -3648,11 +3292,7 @@ pub fn Workbook::set_cell_formula_rc(
   formula : String,
   value? : String = "",
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_formula_rc(row, col, formula, value~)
 }
 
@@ -3663,11 +3303,7 @@ pub fn Workbook::set_row(
   row : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_row(row, values)
 }
 
@@ -3677,11 +3313,7 @@ pub fn Workbook::get_row(
   sheet_name : StringView,
   row : Int,
 ) -> Array[String] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_row(row)
 }
 
@@ -3692,11 +3324,7 @@ pub fn Workbook::set_col(
   col : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_col(col, values)
 }
 
@@ -3706,11 +3334,7 @@ pub fn Workbook::get_col(
   sheet_name : StringView,
   col : Int,
 ) -> Array[String] raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_col(col)
 }
 
@@ -3721,11 +3345,7 @@ pub fn Workbook::set_row_height(
   row : Int,
   height : Double,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_row_height(row, height)
 }
 
@@ -3735,11 +3355,7 @@ pub fn Workbook::get_row_height(
   sheet_name : StringView,
   row : Int,
 ) -> Double? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_row_height(row)
 }
 
@@ -3750,11 +3366,7 @@ pub fn Workbook::set_row_visible(
   row : Int,
   visible : Bool,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_row_visible(row, visible)
 }
 
@@ -3764,11 +3376,7 @@ pub fn Workbook::row_visible(
   sheet_name : StringView,
   row : Int,
 ) -> Bool raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.row_visible(row)
 }
 
@@ -3779,11 +3387,7 @@ pub fn Workbook::set_row_outline_level(
   row : Int,
   level : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_row_outline_level(row, level)
 }
 
@@ -3793,11 +3397,7 @@ pub fn Workbook::row_outline_level(
   sheet_name : StringView,
   row : Int,
 ) -> Int raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.row_outline_level(row)
 }
 
@@ -3834,11 +3434,7 @@ pub fn Workbook::get_row_style(
   sheet_name : StringView,
   row : Int,
 ) -> Int? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_row_style(row)
 }
 
@@ -3849,11 +3445,7 @@ pub fn Workbook::set_col_width(
   col : Int,
   width : Double,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_col_width(col, width)
 }
 
@@ -3863,11 +3455,7 @@ pub fn Workbook::get_col_width(
   sheet_name : StringView,
   col : Int,
 ) -> Double? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_col_width(col)
 }
 
@@ -3878,11 +3466,7 @@ pub fn Workbook::set_col_visible(
   col : Int,
   visible : Bool,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_col_visible(col, visible)
 }
 
@@ -3892,11 +3476,7 @@ pub fn Workbook::col_visible(
   sheet_name : StringView,
   col : Int,
 ) -> Bool raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.col_visible(col)
 }
 
@@ -3907,11 +3487,7 @@ pub fn Workbook::set_col_outline_level(
   col : Int,
   level : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_col_outline_level(col, level)
 }
 
@@ -3921,11 +3497,7 @@ pub fn Workbook::col_outline_level(
   sheet_name : StringView,
   col : Int,
 ) -> Int raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.col_outline_level(col)
 }
 
@@ -3951,11 +3523,7 @@ pub fn Workbook::get_col_style(
   sheet_name : StringView,
   col : Int,
 ) -> Int? raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.get_col_style(col)
 }
 
@@ -3966,11 +3534,7 @@ pub fn Workbook::insert_rows(
   row : Int,
   count : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.insert_rows(row, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
@@ -3986,11 +3550,7 @@ pub fn Workbook::remove_rows(
   row : Int,
   count : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.remove_rows(row, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
@@ -4016,11 +3576,7 @@ pub fn Workbook::insert_cols(
   col : Int,
   count : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.insert_cols(col, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
@@ -4036,11 +3592,7 @@ pub fn Workbook::remove_cols(
   col : Int,
   count : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.remove_cols(col, count)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
@@ -4075,11 +3627,7 @@ pub fn Workbook::duplicate_row_to(
   row : Int,
   target_row : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.duplicate_row_to(row, target_row)
   self.adjust_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,

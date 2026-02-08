@@ -2141,6 +2141,23 @@ Commands used:
   - Coverage delta:
     - `xlsx/workbook.mbt` uncovered lines reduced from `168` to `132`
 
+- [x] 147. Refactor workbook sheet-lookup wrappers behind `require_sheet`.
+  - DoD: collapse duplicated `check_sheet_name + self.sheet + SheetNotFound` wrappers into one helper and validate no behavioral regressions.
+  - Delivered:
+    - Added internal helper in `xlsx/workbook.mbt`:
+      - `fn Workbook::require_sheet(self, sheet_name) -> Worksheet raise XlsxError`
+    - Replaced 116 duplicated lookup/guard blocks with:
+      - `let sheet = self.require_sheet(sheet_name)`
+    - Kept non-trivial call sites unchanged where extra semantics exist (e.g. chart-sheet specific `set_cell` guard, style-check ordering paths, and structural invariants).
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/workbook_more_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after_require_sheet.log`
+  - Coverage delta:
+    - `xlsx/workbook.mbt` uncovered lines reduced from `132` to `72`
+    - Total uncovered lines reduced from `3395` to `3335`
+
 ## Active Item
 
-- Next item: **147** (continue bounded high-risk residual reduction in `xlsx/workbook.mbt`, targeting structural helper branches and remaining wrapper clusters).
+- Next item: **148** (continue bounded high-risk residual reduction in `xlsx/workbook.mbt`, targeting remaining structural branches in slicer/table/pivot helpers and style/merge wrappers).
