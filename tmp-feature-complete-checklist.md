@@ -1298,13 +1298,41 @@ Commands used:
     - Coverage delta:
       - `xlsx/read.mbt` uncovered lines reduced from `419` to `417`
 
-- [ ] 97. Plan next bounded hardening slice after `read_with_password` branch closure.
+- [x] 97. Plan next bounded hardening slice after `read_with_password` branch closure.
   - DoD: choose the next smallest high-value parser/serializer target with explicit branch scope.
+  - Delivered:
+    - Compared next parser/serializer candidates after item 96:
+      - `xlsx/write.mbt` (`96` uncovered)
+      - `xlsx/worksheet.mbt` (`210` uncovered)
+    - Selected the smaller bounded target:
+      - `write.mbt` fallback/edge branches around drawing writer and shared-strings writer helpers
+    - Defined branch-focused DoD:
+      - add whitebox tests for `write_drawing_xml` `sheet=None` fallback paths
+      - add whitebox tests for `write_shared_strings_xml` rich-text color/tint and preserve-space branches
+      - validate with targeted tests, `moon check --deny-warn`, and coverage delta
+
+- [x] 98. Expand `write.mbt` fallback/edge branch coverage (drawing + shared-strings slice).
+  - DoD: reduce uncovered lines in `xlsx/write.mbt` with targeted whitebox coverage.
+  - Delivered:
+    - Added `xlsx/write_hardening_wbtest.mbt`:
+      - `write_drawing_xml` fallback branches when `sheet=None` for `TwoCell` and `Absolute` positioning
+      - `write_shared_strings_xml` branches for:
+        - indexed+tint rich-text color emission
+        - rgb+tint rich-text color emission with non-6-digit normalization path
+        - tint-only font path and preserve-space plain text emission
+    - Validation gates:
+      - `moon test xlsx/write_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/write.mbt` uncovered lines reduced from `96` to `89`
+
+- [ ] 99. Plan next bounded hardening slice after `write.mbt` edge-branch gains.
+  - DoD: choose the next highest-value uncovered target with explicit branch scope and measurable output.
   - Planned:
-    - inspect remaining uncovered clusters in `write.mbt` and `worksheet.mbt`
-    - pick one bounded slice with clear branch list and measurable delta
+    - inspect current uncovered hotspots in `worksheet.mbt` and `read.mbt`
+    - pick one bounded branch cluster with low implementation risk
     - continue one-by-one implementation + commit cadence
 
 ## Active Item
 
-- Next item: **97** (next bounded hardening slice selection).
+- Next item: **99** (next bounded hardening slice selection).
