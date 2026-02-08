@@ -92,6 +92,17 @@ test "panes set and get" {
 }
 
 ///|
+test "panes default when worksheet has no views" {
+  let sheet = Worksheet::new("Sheet1")
+  let panes = sheet.get_panes()
+  inspect(panes.freeze, content="false")
+  inspect(panes.split, content="false")
+  inspect(panes.x_split, content="0")
+  inspect(panes.y_split, content="0")
+  inspect(panes.selection.length(), content="0")
+}
+
+///|
 test "sheet dimension override write" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

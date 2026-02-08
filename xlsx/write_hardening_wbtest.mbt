@@ -802,3 +802,31 @@ test "write hardening wb: failing custom zip writer maps to UnsupportedFeature" 
   let result : Result[Bytes, Error] = try? workbook.write_to_buffer()
   inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")
 }
+
+///|
+test "write hardening wb: default zip writer failure maps to UnsupportedFeature" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.images.push({
+    reference: "A1",
+    data: @encoding/utf8.encode("x"),
+    extension: "a".repeat(70000),
+    content_type: "image/png",
+    offset_x: 0,
+    offset_y: 0,
+    scale_x: 1.0,
+    scale_y: 1.0,
+    width_emu: 1,
+    height_emu: 1,
+    print_object: true,
+    locked: true,
+    hyperlink: "",
+    hyperlink_type: Unset,
+    name: "",
+    alt_text: "",
+    lock_aspect_ratio: false,
+    positioning: TwoCell,
+  })
+  let result : Result[Bytes, Error] = try? write(workbook)
+  inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")
+}

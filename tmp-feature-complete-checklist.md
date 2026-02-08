@@ -1742,6 +1742,33 @@ Commands used:
   - Coverage delta:
     - `xlsx/workbook_props.mbt` uncovered lines reduced from `1` to `0`
 
+- [x] 123. Cover `write.mbt` default zip-backend error-wrap branch.
+  - DoD: deterministically trigger default `@zip.write` failure path in `write_with_io` and verify it maps to `XlsxError::UnsupportedFeature`.
+  - Delivered:
+    - Extended `xlsx/write_hardening_wbtest.mbt` with:
+      - `write hardening wb: default zip writer failure maps to UnsupportedFeature`
+      - injects an overlong generated media part name (`extension: "a".repeat(70000)`) via a worksheet image to force zip writer rejection
+      - verifies `write(workbook)` returns `Err(XlsxError::UnsupportedFeature(_))`
+  - Validation gates:
+    - `moon test xlsx/write_hardening_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after124.log`
+  - Coverage delta:
+    - `xlsx/write.mbt` uncovered lines reduced from `10` to `9`
+
+- [x] 124. Close `sheet_view_ops.mbt` residual default-panes branch.
+  - DoD: cover `Worksheet::get_panes` early-return branch when no sheet views exist.
+  - Delivered:
+    - Extended `xlsx/sheet_view_test.mbt` with:
+      - `panes default when worksheet has no views`
+      - validates `Worksheet::new(...).get_panes()` returns default zero/false/empty values
+  - Validation gates:
+    - `moon test xlsx/sheet_view_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after125.log`
+  - Coverage delta:
+    - `xlsx/sheet_view_ops.mbt` uncovered lines reduced from `1` to `0`
+
 ## Active Item
 
-- Next item: **123** (attempt deterministic coverage of `xlsx/write.mbt` default zip-backend error-wrap branch by fault-injecting an overlong generated part name).
+- Next item: **125** (close low-line-count residuals in `xlsx/cell_value.mbt` with targeted error/default path tests).
