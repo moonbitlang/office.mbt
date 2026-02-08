@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 867/867`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 869/869`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -1047,13 +1047,24 @@ Commands used:
       - all four integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 79. Re-run full release gate after icon-set + stream-stress tranche.
+- [x] 79. Re-run full release gate after icon-set + stream-stress tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `76-78`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`869/869`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 80. Plan next tranche after integration-first closure.
+  - DoD: define next one-by-one tranche focused on non-integration remaining parity gaps.
   - Planned:
-    - execute full release gate command
-    - capture updated total test count and parity status
-    - refresh baseline snapshot if totals changed
+    - identify highest-risk non-integration surfaces not yet covered by current checklist
+    - propose next 3-5 item sequence
+    - preserve current full-gate baseline in summary
 
 ## Active Item
 
-- Next item: **79** (full release gate after icon-set + stream-stress tranche).
+- Next item: **80** (plan next non-integration parity tranche).
