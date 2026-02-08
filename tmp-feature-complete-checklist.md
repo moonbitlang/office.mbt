@@ -998,13 +998,41 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 75. Refresh post-tranche feature-completeness gap list.
+- [x] 75. Refresh post-tranche feature-completeness gap list.
   - DoD: enumerate remaining high-value gaps after integration-heavy tranche (45-74) and propose next one-by-one sequence.
+  - Delivered:
+    - Coverage now includes:
+      - mixed-ext coexistence across sparkline/x14 conditional/slicer/pivot/chart
+      - multi-cycle roundtrip stability and relationship uniqueness
+      - stream-writer OOXML consistency with higher row volume + table/formula interactions
+      - repeated full release gates with semantic parity checks still green
+    - Remaining high-value gap candidates (prioritized):
+      - mixed x14 icon-set conditional formatting coexistence with sparkline+slicer workloads
+      - stream-writer stress profile at larger row counts with style/table/fomula combinations
+      - cross-feature worksheet mutation operations (row/col insert/remove) after mixed-ext setup
+    - Next actionable one-by-one sequence appended as items `76-78`.
+
+- [ ] 76. Add integration slice for x14 icon-set + sparkline + slicer coexistence.
+  - DoD: validate icon-set x14 conditional formatting ext can coexist with sparkline and slicer ext blocks in one worksheet.
   - Planned:
-    - summarize what is now covered by integration gates
-    - list uncovered/under-tested feature groups with priority
-    - append next actionable one-by-one items
+    - build mixed worksheet with slicer + sparkline + icon-set CF (x14 path)
+    - assert ext markers and key relationships/parts are present
+    - run targeted integration test + `moon check --deny-warn`
+
+- [ ] 77. Add stream-writer stress integration slice (1000+ rows) with table + formulas + styles.
+  - DoD: validate stream-writer remains OOXML-correct under higher row volume and richer cell styling/formula combinations.
+  - Planned:
+    - create stream-writer scenario with >=1000 rows, styled cells, formulas, and table metadata
+    - assert key worksheet/table XML markers and roundtrip behavior
+    - run targeted integration test + `moon check --deny-warn`
+
+- [ ] 78. Run combined gate for items 76/77.
+  - DoD: execute new integration tests for icon-set coexistence and stream-writer stress together and keep gate green.
+  - Planned:
+    - run both new integration tests and a quick mixed-ext regression slice
+    - run `moon check --deny-warn`
+    - record consolidated pass status
 
 ## Active Item
 
-- Next item: **75** (refresh post-tranche feature-completeness gaps).
+- Next item: **76** (x14 icon-set + sparkline + slicer integration slice).
