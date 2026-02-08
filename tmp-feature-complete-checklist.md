@@ -1,7 +1,7 @@
 # Temporary Feature-Complete Checklist
 
 Last updated: 2026-02-08  
-Branch/HEAD: `main` @ `ef202ae`  
+Branch/HEAD: `main` @ `2a11cba`  
 Excelize snapshot: `37b730a`
 
 ## Baseline Snapshot (Completed)
@@ -10,7 +10,7 @@ Excelize snapshot: `37b730a`
 - Exported type parity (key feature files): missing `0`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
-- Formula parity heuristic: Excelize `458` vs MoonBit `45`, missing `433`
+- Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
 
 Commands used:
 
@@ -482,13 +482,26 @@ Commands used:
       - normalized struct field parity is now `0` differences
       - formula parity heuristic remains Excelize `458` vs MoonBit `45` (missing `433`)
 
-- [ ] 32. Start formula parity closure pack 1 (high-usage text/date/math functions).
-  - DoD: increase MoonBit formula-name heuristic count from `45` with targeted implementations and parity tests.
+- [x] 32. Recalibrate formula parity heuristic against full MoonBit formula dispatch.
+  - DoD: eliminate false “missing function” noise from heuristic by scanning real formula dispatch sites.
+  - Delivered:
+    - Refactored `scripts/excelize_formula_parity.py`:
+      - added support for multiple MoonBit formula source files (default: `formula_eval` + builtins files)
+      - restricted extraction to `name` dispatcher comparisons and `match name { ... }` arms
+      - added glob expansion for repeated `--moonbit-formula` inputs
+      - updated summary label to `dispatch+literal heuristic`
+    - Re-validated formula parity output:
+      - `python3 scripts/excelize_formula_parity.py`
+      - Result: Excelize `458`, MoonBit `474`, missing `0`
+      - `--show-extra` reports `16` dynamic-array-era functions present in MoonBit but absent in current Excelize method-derived list.
+
+- [ ] 33. Validate formula parity quality with targeted behavior tests (not name-heuristic only).
+  - DoD: add or extend parity tests for a curated high-impact function subset and verify behavior-level parity.
   - Planned:
-    - select and implement a small high-impact function pack
-    - add parity tests for each added function
-    - rerun `python3 scripts/excelize_formula_parity.py` and record delta
+    - select representative functions across math/text/date/logical categories
+    - add/extend parity tests in formula test suites
+    - run targeted formula tests + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **32** (formula parity closure pack 1).
+- Next item: **33** (behavior-level formula parity tests).

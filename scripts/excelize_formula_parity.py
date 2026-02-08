@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import re
 from pathlib import Path
 
@@ -36,35 +37,83 @@ def excelize_function_names(calc_go: Path) -> set[str]:
     return out
 
 
-def moonbit_function_names(formula_eval_mbt: Path) -> set[str]:
+def moonbit_function_names(formula_files: list[Path]) -> set[str]:
     """
-    Heuristic: collect uppercase-ish string literals from formula_eval.mbt,
-    then normalize `_XLFN.` prefix.
+    Heuristic:
+    - collect names compared against the formula dispatcher variable `name`
+      (e.g. `if name == "ROW"`)
+    - collect string-case arms inside `match name { ... }` blocks
+      (e.g. `"SUM" =>`, `"SUM" | "SUBTOTAL" =>`)
+    - normalize `_XLFN.` prefix
     """
-    text = formula_eval_mbt.read_text(encoding="utf-8", errors="replace")
-    # Examples: "SUM", "ISO.CEILING", "MODE.MULT", "_XLFN.SEQUENCE"
-    lit_re = re.compile(r"\"([A-Z_][A-Z0-9_\\.]*?)\"")
+    eq_re = re.compile(r'\bname\s*==\s*"([A-Z_][A-Z0-9_\\.]*?)"')
+    # Examples: "SUM" =>, "SUM" | "SUBTOTAL" =>, "_XLFN.SEQUENCE" =>
+    case_re = re.compile(r"\"([A-Z_][A-Z0-9_\\.]*?)\"\s*(?:\||=>)")
     out: set[str] = set()
-    for m in lit_re.finditer(text):
-        out.add(_normalize_fn_name(m.group(1)))
+    for file in formula_files:
+        text = file.read_text(encoding="utf-8", errors="replace")
+        for m in eq_re.finditer(text):
+            out.add(_normalize_fn_name(m.group(1)))
+        lines = text.splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            if re.search(r"\bmatch\s+name\s*\{", line):
+                depth = line.count("{") - line.count("}")
+                block_lines: list[str] = []
+                i += 1
+                while i < len(lines) and depth > 0:
+                    arm = lines[i]
+                    block_lines.append(arm)
+                    depth += arm.count("{") - arm.count("}")
+                    i += 1
+                block_text = "\n".join(block_lines)
+                for m in case_re.finditer(block_text):
+                    out.add(_normalize_fn_name(m.group(1)))
+                continue
+            i += 1
     return out
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--excelize-calc", default="excelize/calc.go")
-    ap.add_argument("--moonbit-formula", default="xlsx/formula_eval.mbt")
+    ap.add_argument(
+        "--moonbit-formula",
+        action="append",
+        default=[
+            "xlsx/formula_eval.mbt",
+            "xlsx/formula_builtins.mbt",
+            "xlsx/formula_builtins_financial.mbt",
+            "xlsx/formula_builtins_stats.mbt",
+        ],
+        help=(
+            "MoonBit formula implementation file(s) or glob(s). "
+            "Can be repeated. Defaults to core formula evaluator + builtins."
+        ),
+    )
     ap.add_argument("--show-extra", action="store_true", help="Also show functions present in MoonBit but not Excelize.")
     args = ap.parse_args()
 
     excelize = excelize_function_names(Path(args.excelize_calc))
-    moonbit = moonbit_function_names(Path(args.moonbit_formula))
+    moonbit_files: list[Path] = []
+    seen: set[Path] = set()
+    for pattern in args.moonbit_formula:
+        matches = [Path(p) for p in glob.glob(pattern)]
+        if not matches:
+            matches = [Path(pattern)]
+        for path in matches:
+            if path in seen:
+                continue
+            seen.add(path)
+            moonbit_files.append(path)
+    moonbit = moonbit_function_names(moonbit_files)
 
     missing = sorted(excelize - moonbit)
     extra = sorted(moonbit - excelize)
 
     print(f"Excelize formula funcs (method-derived): {len(excelize)}")
-    print(f"MoonBit formula names (string-literal heuristic): {len(moonbit)}")
+    print(f"MoonBit formula names (dispatch+literal heuristic): {len(moonbit)}")
     print(f"Missing in MoonBit: {len(missing)}")
     for name in missing[:500]:
         print(f"  - {name}")
