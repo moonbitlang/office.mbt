@@ -191,13 +191,37 @@ Commands used:
       - `moon check --deny-warn`
       - `moon info --package xlsx`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known`
-- [ ] 13. Add file-path parity to `HeaderFooterImageOptions` (Excelize `File` analogue).
+- [x] 13. Add file-path parity to `HeaderFooterImageOptions` (Excelize `File` analogue).
   - DoD: header/footer image APIs accept file path input without forcing preloaded bytes.
+  - Delivered:
+    - Added `file : String?` field to `HeaderFooterImageOptions` in `xlsx/header_footer_image.mbt`.
+    - Added `HeaderFooterImageOptions::from_file(...)` constructor:
+      - infers extension from path
+      - validates extension presence
+      - records `file` and leaves `data` empty for deferred load
+    - Added async file-path APIs:
+      - `Worksheet::add_header_footer_image_from_file(...)` in `xlsx/worksheet.mbt`
+      - `Workbook::add_header_footer_image_from_file(...)` in `xlsx/workbook.mbt`
+    - Added sync API guard:
+      - `Worksheet::add_header_footer_image(...)` now rejects file-backed options with a deterministic `InvalidHeaderFooter` message, directing callers to the async API.
+    - Added regression coverage in `xlsx/header_footer_image_test.mbt`:
+      - constructor path/extension inference
+      - constructor extension-missing error
+      - sync API rejection for file-backed options
+      - end-to-end async file-path add/read roundtrip
+    - Validation gates:
+      - `moon test xlsx/header_footer_image_test.mbt`
+      - `moon test xlsx/sheet_name_sheet_ops_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known`
+- [ ] 14. Add alias parity for `Table.range` while preserving `range_ref`.
+  - DoD: public `Table` includes `range` alias mirroring Excelize field semantics and stays roundtrip-correct.
   - Planned:
-    - add optional file-path field and constructor path
-    - preserve current bytes path for existing call sites
-    - add read/write tests for both data and file-path flows
+    - add `range : String` field as alias to normalized `range_ref`
+    - keep write/read paths driven by canonical `range_ref`
+    - add regression checks for constructor/read/get_tables parity
 
 ## Active Item
 
-- Next item: **13** (`HeaderFooterImageOptions` file-path parity).
+- Next item: **14** (`Table.range` alias parity).

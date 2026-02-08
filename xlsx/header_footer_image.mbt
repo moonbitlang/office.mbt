@@ -9,6 +9,7 @@ pub(all) enum HeaderFooterImagePosition {
 pub struct HeaderFooterImageOptions {
   position : HeaderFooterImagePosition
   data : Bytes
+  file : String?
   extension : String
   is_footer : Bool
   first_page : Bool
@@ -26,7 +27,42 @@ pub fn HeaderFooterImageOptions::new(
   width? : String = "",
   height? : String = "",
 ) -> HeaderFooterImageOptions {
-  { position, data, extension, is_footer, first_page, width, height }
+  {
+    position,
+    data,
+    file: None,
+    extension,
+    is_footer,
+    first_page,
+    width,
+    height,
+  }
+}
+
+///|
+pub fn HeaderFooterImageOptions::from_file(
+  position : HeaderFooterImagePosition,
+  file : String,
+  is_footer? : Bool = false,
+  first_page? : Bool = false,
+  width? : String = "",
+  height? : String = "",
+) -> HeaderFooterImageOptions raise XlsxError {
+  let extension = match extension_from_path(file) {
+    Some(value) => ".\{value}"
+    None =>
+      raise UnsupportedFeature(msg="unsupported header/footer image extension")
+  }
+  {
+    position,
+    data: b"",
+    file: Some(file),
+    extension,
+    is_footer,
+    first_page,
+    width,
+    height,
+  }
 }
 
 ///|

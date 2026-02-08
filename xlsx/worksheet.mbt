@@ -1247,6 +1247,13 @@ pub fn Worksheet::add_header_footer_image(
   options : HeaderFooterImageOptions,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  match options.file {
+    Some(_) =>
+      raise InvalidHeaderFooter(
+        msg="header/footer image file path requires add_header_footer_image_from_file",
+      )
+    None => ()
+  }
   let extension = normalize_extension_lower_requires_dot(
     options.extension,
     "unsupported header/footer image extension",
@@ -1280,6 +1287,34 @@ pub fn Worksheet::add_header_footer_image(
   updated.push(image)
   self.header_footer_images.clear()
   self.header_footer_images.append(updated[:])
+}
+
+///|
+pub async fn Worksheet::add_header_footer_image_from_file(
+  self : Worksheet,
+  options : HeaderFooterImageOptions,
+) -> Unit raise XlsxError {
+  self.ensure_stream_idle()
+  let path = match options.file {
+    Some(value) => value
+    None =>
+      raise InvalidHeaderFooter(msg="header/footer image file path missing")
+  }
+  let data = read_file_bytes(path) catch {
+    err =>
+      raise InvalidHeaderFooter(msg="read header/footer image failed: \{err}")
+  }
+  self.add_header_footer_image(
+    HeaderFooterImageOptions::new(
+      options.position,
+      data,
+      options.extension,
+      is_footer=options.is_footer,
+      first_page=options.first_page,
+      width=options.width,
+      height=options.height,
+    ),
+  )
 }
 
 ///|

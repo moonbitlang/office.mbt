@@ -103,6 +103,81 @@ test "header footer image read roundtrip" {
 }
 
 ///|
+test "header footer image options from file path" {
+  let opts = try! HeaderFooterImageOptions::from_file(
+    Left,
+    "tmp_logo.PNG",
+    width="9pt",
+    height="8pt",
+  )
+  inspect(opts.file, content="Some(\"tmp_logo.PNG\")")
+  inspect(opts.extension, content=".png")
+  inspect(opts.data.length(), content="0")
+}
+
+///|
+test "header footer image options from file requires extension" {
+  let result : Result[HeaderFooterImageOptions, Error] = try? HeaderFooterImageOptions::from_file(
+    Left,
+    "tmp_logo",
+    width="9pt",
+    height="8pt",
+  )
+  inspect(
+    result,
+    content=(
+      #|Err(UnsupportedFeature(msg="unsupported header/footer image extension"))
+    ),
+  )
+}
+
+///|
+test "header footer image file options require async api" {
+  let sheet = Worksheet::new("Sheet1")
+  let opts = try! HeaderFooterImageOptions::from_file(
+    Left,
+    "tmp_logo.png",
+    width="9pt",
+    height="8pt",
+  )
+  let result : Result[Unit, Error] = try? sheet.add_header_footer_image(opts)
+  inspect(
+    result,
+    content=(
+      #|Err(InvalidHeaderFooter(msg="header/footer image file path requires add_header_footer_image_from_file"))
+    ),
+  )
+}
+
+///|
+async test "header footer image from file path" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let stamp = @env.now().to_string()
+  let path = "mbtexcel_hf_img_\{stamp}.png"
+  let img = Bytes::from_array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])
+  @async/fs.write_file(path, img, create=0o644) catch {
+    err => fail("write file failed: \{err}")
+  }
+  let opts = try! HeaderFooterImageOptions::from_file(
+    Left,
+    path,
+    width="9pt",
+    height="8pt",
+  )
+  workbook.add_header_footer_image_from_file("Sheet1", opts)
+  let parsed = read(write(workbook))
+  let images = parsed.get_header_footer_images("Sheet1")
+  inspect(images.length(), content="1")
+  inspect(images[0].extension, content="png")
+  inspect(images[0].file is None, content="true")
+  inspect(images[0].data == img, content="true")
+  @async/fs.remove(path) catch {
+    err => fail("remove file failed: \{err}")
+  }
+}
+
+///|
 test "header footer vml merge preserves existing shapes" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")

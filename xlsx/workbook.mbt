@@ -2223,6 +2223,20 @@ pub fn Workbook::add_header_footer_image(
 }
 
 ///|
+pub async fn Workbook::add_header_footer_image_from_file(
+  self : Workbook,
+  sheet_name : StringView,
+  options : HeaderFooterImageOptions,
+) -> Unit raise XlsxError {
+  check_sheet_name(sheet_name)
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise SheetNotFound(name=sheet_name.to_string())
+  }
+  sheet.add_header_footer_image_from_file(options)
+}
+
+///|
 pub fn Workbook::get_pictures(
   self : Workbook,
   sheet_name : StringView,
