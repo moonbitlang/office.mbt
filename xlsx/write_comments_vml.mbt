@@ -107,10 +107,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
     } else {
       base_author
     }
-    let author_id = match author_ids.get(author) {
-      Some(id) => id
-      None => 0
-    }
+    let author_id = author_ids.get(author).unwrap_or(0)
     let (text_value, runs) = truncate_comment_content(comment)
     sb.write_view("    <comment ref=\"")
     sb.write_view(escape_xml_attr(comment.cell))
@@ -266,7 +263,7 @@ fn write_comments_vml(
 }
 
 ///|
-fn extract_vml_shapetype(xml : StringView) -> String? raise XlsxError {
+fn extract_vml_shapetype(xml : StringView) -> String? {
   let xml_str = xml.to_string()
   let start = match xml_str.find("<v:shapetype") {
     Some(pos) => pos
@@ -276,22 +273,18 @@ fn extract_vml_shapetype(xml : StringView) -> String? raise XlsxError {
     Some(pos) => pos + "</v:shapetype>".length()
     None => return None
   }
-  let slice = xml_str[start:end] catch {
-      _ => raise InvalidVmlDrawing(msg="vml shapetype invalid")
-    }
+  let slice = xml_str.unsafe_substring(start~, end~)
   Some(slice.to_string())
 }
 
 ///|
-fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
+fn extract_vml_shapes(xml : StringView) -> Array[String] {
   let shapes : Array[String] = []
   let xml_str = xml.to_string()
   let needle = "<v:shape"
   let mut start_pos = 0
   while start_pos < xml_str.length() {
-    let rest = xml_str[start_pos:] catch {
-        _ => raise InvalidVmlDrawing(msg="vml shape slice invalid")
-      }
+    let rest = xml_str.unsafe_substring(start=start_pos, end=xml_str.length())
     let rel = match rest.find(needle) {
       Some(pos) => pos
       None => break
@@ -311,17 +304,13 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] raise XlsxError {
       start_pos = start + 1
       continue
     }
-    let shape_rest = xml_str[start:] catch {
-        _ => raise InvalidVmlDrawing(msg="vml shape slice invalid")
-      }
+    let shape_rest = xml_str.unsafe_substring(start~, end=xml_str.length())
     let end_rel = match shape_rest.find("</v:shape>") {
       Some(pos) => pos
       None => break
     }
     let end = start + end_rel + "</v:shape>".length()
-    let slice = xml_str[start:end] catch {
-        _ => raise InvalidVmlDrawing(msg="vml shape slice invalid")
-      }
+    let slice = xml_str.unsafe_substring(start~, end~)
     shapes.push(slice.to_string())
     start_pos = end
   }
@@ -336,13 +325,13 @@ fn vml_shape_id(shape_xml : StringView) -> String? {
     Some(pos) => pos + id_key.length()
     None => return None
   }
-  let rest = xml_str[start:] catch { _ => return None }
+  let rest = xml_str.unsafe_substring(start~, end=xml_str.length())
   let end_rel = match rest.find("\"") {
     Some(pos) => pos
     None => return None
   }
   let end = start + end_rel
-  let slice = xml_str[start:end] catch { _ => return None }
+  let slice = xml_str.unsafe_substring(start~, end~)
   Some(slice.to_string())
 }
 
@@ -350,7 +339,7 @@ fn vml_shape_id(shape_xml : StringView) -> String? {
 fn filter_vml_shapes_by_id(
   base_xml : String,
   remove_ids : Array[String],
-) -> String raise XlsxError {
+) -> String {
   if remove_ids.length() == 0 {
     return base_xml
   }
@@ -374,24 +363,10 @@ fn filter_vml_shapes_by_id(
       None => kept.push(shape)
     }
   }
-  let insert_at = match base_xml.find("<v:shape") {
-    Some(pos) => pos
-    None =>
-      match base_xml.find("</xml>") {
-        Some(pos) => pos
-        None => base_xml.length()
-      }
-  }
-  let end = match base_xml.find("</xml>") {
-    Some(pos) => pos
-    None => base_xml.length()
-  }
-  let prefix = base_xml[:insert_at] catch {
-      _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
-    }
-  let suffix = base_xml[end:] catch {
-      _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
-    }
+  let insert_at = base_xml.find("<v:shape").unwrap_or(base_xml.length())
+  let end = base_xml.find("</xml>").unwrap_or(base_xml.length())
+  let prefix = base_xml.unsafe_substring(start=0, end=insert_at)
+  let suffix = base_xml.unsafe_substring(start=end, end=base_xml.length())
   let sb = StringBuilder::new()
   sb.write_view(prefix)
   for shape in kept {
@@ -402,10 +377,7 @@ fn filter_vml_shapes_by_id(
 }
 
 ///|
-fn merge_vml_drawings(
-  base_xml : String,
-  comment_xml : String,
-) -> String raise XlsxError {
+fn merge_vml_drawings(base_xml : String, comment_xml : String) -> String {
   if !base_xml.contains("</xml>") {
     return comment_xml
   }
@@ -413,20 +385,14 @@ fn merge_vml_drawings(
   if !merged.contains("_x0000_t202") {
     match extract_vml_shapetype(comment_xml) {
       Some(shape_type) => {
-        let insert_at = match merged.find("<v:shape") {
-          Some(pos) => pos
-          None =>
-            match merged.find("</xml>") {
-              Some(pos) => pos
-              None => merged.length()
-            }
-        }
-        let prefix = merged[:insert_at] catch {
-            _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
-          }
-        let suffix = merged[insert_at:] catch {
-            _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
-          }
+        let insert_at = merged
+          .find("<v:shape")
+          .unwrap_or(merged.find("</xml>").unwrap_or(merged.length()))
+        let prefix = merged.unsafe_substring(start=0, end=insert_at)
+        let suffix = merged.unsafe_substring(
+          start=insert_at,
+          end=merged.length(),
+        )
         let sb = StringBuilder::new()
         sb.write_view(prefix)
         sb.write_view(shape_type)
@@ -440,16 +406,9 @@ fn merge_vml_drawings(
   if shapes.length() == 0 {
     return merged
   }
-  let insert_at = match merged.find("</xml>") {
-    Some(pos) => pos
-    None => merged.length()
-  }
-  let prefix = merged[:insert_at] catch {
-      _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
-    }
-  let suffix = merged[insert_at:] catch {
-      _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
-    }
+  let insert_at = merged.find("</xml>").unwrap_or(merged.length())
+  let prefix = merged.unsafe_substring(start=0, end=insert_at)
+  let suffix = merged.unsafe_substring(start=insert_at, end=merged.length())
   let sb = StringBuilder::new()
   sb.write_view(prefix)
   for shape in shapes {
@@ -464,7 +423,7 @@ fn merge_vml_drawings_with_shapetype(
   base_xml : String,
   extra_xml : String,
   shape_type_id : StringView,
-) -> String raise XlsxError {
+) -> String {
   if !base_xml.contains("</xml>") {
     return extra_xml
   }
@@ -473,20 +432,14 @@ fn merge_vml_drawings_with_shapetype(
   if !merged.contains(shape_token) {
     match extract_vml_shapetype(extra_xml) {
       Some(shape_type) => {
-        let insert_at = match merged.find("<v:shape") {
-          Some(pos) => pos
-          None =>
-            match merged.find("</xml>") {
-              Some(pos) => pos
-              None => merged.length()
-            }
-        }
-        let prefix = merged[:insert_at] catch {
-            _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
-          }
-        let suffix = merged[insert_at:] catch {
-            _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
-          }
+        let insert_at = merged
+          .find("<v:shape")
+          .unwrap_or(merged.find("</xml>").unwrap_or(merged.length()))
+        let prefix = merged.unsafe_substring(start=0, end=insert_at)
+        let suffix = merged.unsafe_substring(
+          start=insert_at,
+          end=merged.length(),
+        )
         let sb = StringBuilder::new()
         sb.write_view(prefix)
         sb.write_view(shape_type)
@@ -500,16 +453,9 @@ fn merge_vml_drawings_with_shapetype(
   if shapes.length() == 0 {
     return merged
   }
-  let insert_at = match merged.find("</xml>") {
-    Some(pos) => pos
-    None => merged.length()
-  }
-  let prefix = merged[:insert_at] catch {
-      _ => raise InvalidVmlDrawing(msg="vml prefix invalid")
-    }
-  let suffix = merged[insert_at:] catch {
-      _ => raise InvalidVmlDrawing(msg="vml suffix invalid")
-    }
+  let insert_at = merged.find("</xml>").unwrap_or(merged.length())
+  let prefix = merged.unsafe_substring(start=0, end=insert_at)
+  let suffix = merged.unsafe_substring(start=insert_at, end=merged.length())
   let sb = StringBuilder::new()
   sb.write_view(prefix)
   for shape in shapes {

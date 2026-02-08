@@ -2214,6 +2214,29 @@ Commands used:
     - Total uncovered lines reduced from `3262` to `3252`
     - Uncovered file count reduced from `55` to `54`
 
+- [x] 150. Close residuals in `write_comments_vml.mbt`.
+  - DoD: eliminate structural fallback residuals in VML merge/filter helpers and cover rich-text comment/VML edge branches to bring file residuals to zero.
+  - Delivered:
+    - Refactored `xlsx/write_comments_vml.mbt`:
+      - replaced structural `slice catch` flows with bounded `unsafe_substring` for VML extraction/id helpers.
+      - simplified merge/filter insertion-point fallbacks with `find(...).unwrap_or(...)` and removed dead match ladders.
+      - removed unnecessary `raise XlsxError` annotations from non-raising helper functions.
+    - Added `xlsx/write_comments_vml_wbtest.mbt` and expanded branch coverage:
+      - rich-text color edge branches (`theme + tint`, `indexed without tint`, and `tint-only` no-color passthrough).
+      - VML parse edge cases (`shapetype` missing close tag, partial `<v:shape` token, unterminated shape, malformed `id=` quote).
+      - merge/filter edge cases (shape without `id`, merge with shape-only XML missing shapetype in source).
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/write_comments_vml_wbtest.mbt`
+    - `moon test xlsx/comment_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after152.log`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after153.log`
+  - Coverage delta:
+    - `xlsx/write_comments_vml.mbt` uncovered lines reduced from `66` to `0`
+    - Total uncovered lines reduced from `3252` to `3186`
+    - Uncovered file count reduced from `54` to `53`
+
 ## Active Item
 
-- Next item: **150** (move to the next residual hotspot, starting with `xlsx/write_comments_vml.mbt`).
+- Next item: **151** (move to the next residual hotspot: `xlsx/write_worksheet_layout_xml.mbt`).
