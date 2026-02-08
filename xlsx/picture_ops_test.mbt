@@ -621,6 +621,52 @@ async test "picture with options file path guards" {
 }
 
 ///|
+async test "picture with options file path explicit values" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let stamp = @env.now().to_string()
+  let path = "mbtexcel_picture_opts_\{stamp}.png"
+  @async/fs.write_file(path, b"img", create=0o644) catch {
+    err => fail("write image failed: \{err}")
+  }
+  let opts = GraphicOptions::with_values(
+    offset_x=11,
+    offset_y=13,
+    scale_x=0.75,
+    scale_y=1.25,
+    hyperlink="https://example.com",
+    hyperlink_type=External,
+    name="Img1",
+    alt_text="Alt1",
+    lock_aspect_ratio=true,
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+    print_object=false,
+    locked=false,
+    positioning=Absolute,
+  )
+  workbook.add_picture_with_options("Sheet1", "A1", path, opts)
+  let images = workbook.get_pictures("Sheet1", "A1")
+  inspect(images.length(), content="1")
+  let image = images[0]
+  inspect(image.offset_x, content="11")
+  inspect(image.offset_y, content="13")
+  inspect(image.scale_x == 0.75, content="true")
+  inspect(image.scale_y == 1.25, content="true")
+  inspect(image.hyperlink, content="https://example.com")
+  inspect(image.hyperlink_type, content="External")
+  inspect(image.name, content="Img1")
+  inspect(image.alt_text, content="Alt1")
+  inspect(image.lock_aspect_ratio, content="true")
+  inspect(image.print_object, content="false")
+  inspect(image.locked, content="false")
+  inspect(image.positioning, content="Absolute")
+  @async/fs.remove(path) catch {
+    err => fail("remove image failed: \{err}")
+  }
+}
+
+///|
 async test "picture from file path" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

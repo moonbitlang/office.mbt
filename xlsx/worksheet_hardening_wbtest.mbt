@@ -207,3 +207,32 @@ test "worksheet wb: add_picture_from_bytes_with_options default branches" {
   inspect(image.locked, content="true")
   inspect(image.positioning, content="OneCell")
 }
+
+///|
+test "worksheet wb: picture option Some branches and guard errors" {
+  let sheet = Worksheet::new("Sheet1")
+  let opts = GraphicOptions::with_values(
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  sheet.add_picture_from_bytes_with_options("C3", [1, 2, 3], ".png", opts)
+  inspect(sheet.get_pictures("C3").length(), content="1")
+
+  let empty_vml : Result[Unit, Error] = try? sheet.add_vml_drawing_hf_xml("")
+  inspect(
+    empty_vml,
+    content=(
+      #|Err(InvalidVmlDrawing(msg="vml drawing hf xml empty"))
+    ),
+  )
+  let empty_options : Result[Unit, Error] = try? sheet.set_conditional_format(
+    "A1",
+    [],
+  )
+  inspect(
+    empty_options,
+    content=(
+      #|Err(InvalidConditionalFormat(msg="options empty"))
+    ),
+  )
+}

@@ -1399,6 +1399,32 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `177` to `172`
 
+- [x] 104. Plan next bounded worksheet hardening slice after async file-path branch coverage.
+  - DoD: choose a low-risk branch cluster with high branch density and direct tests.
+  - Delivered:
+    - reviewed remaining `worksheet.mbt` hotspots after item 103 (`172` uncovered)
+    - selected a bounded cluster centered on option-branch fan-in and simple guards:
+      - `add_picture_from_bytes_with_options` `Some(auto_fit)` and `Some(auto_fit_ignore_aspect)` branches
+      - `add_picture_with_options` full explicit-option `Some(...)` branch fan-in via async file path
+      - guard branches for `add_vml_drawing_hf_xml("")` and `set_conditional_format(..., [])`
+    - constrained implementation to targeted wb/blackbox tests + `moon check --deny-warn` + coverage re-measure
+
+- [x] 105. Cover worksheet option-fan-in and guard branches (picture + vml/cf guards).
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by exercising explicit-option branches and simple guard paths.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with:
+      - `add_picture_from_bytes_with_options` explicit `auto_fit`/`auto_fit_ignore_aspect` branch coverage
+      - `add_vml_drawing_hf_xml` empty-XML error branch
+      - `set_conditional_format` empty-options error branch
+    - Extended `xlsx/picture_ops_test.mbt` with async explicit-options path:
+      - `add_picture_with_options` with fully populated `GraphicOptions::with_values(...)` to hit `Some(...)` fan-in branches and verify stored image options
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon test xlsx/picture_ops_test.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `172` to `154`
+
 ## Active Item
 
-- Next item: **104** (select and implement the next bounded `worksheet.mbt` branch cluster, likely merged-cell anchor sizing or conditional-format edge branches).
+- Next item: **106** (choose the next bounded `worksheet.mbt` cluster, likely merged-cell anchor sizing and row/col pixel helpers).
