@@ -16,6 +16,21 @@ test "sheet name validation" {
 }
 
 ///|
+test "sheet name validation guard branches" {
+  let workbook = Workbook::new()
+  let blank : Result[Worksheet, Error] = try? workbook.add_sheet("")
+  inspect(blank is Err(XlsxError::InvalidSheetName(_)), content="true")
+
+  let too_long : Result[Worksheet, Error] = try? workbook.add_sheet(
+    "a".repeat(32),
+  )
+  inspect(too_long is Err(XlsxError::InvalidSheetName(_)), content="true")
+
+  let quoted : Result[Worksheet, Error] = try? workbook.add_sheet("'Quoted")
+  inspect(quoted is Err(XlsxError::InvalidSheetName(_)), content="true")
+}
+
+///|
 test "sheet delete updates active index" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -107,6 +122,16 @@ test "cannot hide all sheets" {
     "Sheet1", false,
   )
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+}
+
+///|
+test "chart sheet visibility via workbook API" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
+  workbook.set_sheet_visible("Chart1", false, very_hidden=true)
+  inspect(workbook.sheet_visible("Chart1"), content="false")
+  inspect(workbook.chart_sheets()[0].state(), content="VeryHidden")
 }
 
 ///|

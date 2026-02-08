@@ -1687,6 +1687,30 @@ Commands used:
   - Residual notes:
     - Remaining `xlsx/write.mbt` uncovered lines are concentrated in structurally unreachable branches (`Map` key re-fetch guards, redundant `Unset` match arm guarded by early `continue`, and impossible slicer-cache field-missing states after normalization), plus the default zip backend error-wrap branch that is difficult to deterministically fault-inject.
 
+- [x] 120. Cover `workbook_types/workbook_props` residual reachable guards.
+  - DoD: eliminate reachable uncovered branches for sheet-name guard variants, chart-sheet state mutation via workbook API, and workbook-protection mismatch guard.
+  - Delivered:
+    - Extended `xlsx/sheet_management_test.mbt` with:
+      - `sheet name validation guard branches`:
+        - blank name (`""`) -> `InvalidSheetName`
+        - too-long name (`"a".repeat(32)`) -> `InvalidSheetName`
+        - single-quote prefix (`"'Quoted"`) -> `InvalidSheetName`
+      - `chart sheet visibility via workbook API`:
+        - exercises `Workbook::set_sheet_visible` on a chart sheet (`very_hidden=true`)
+        - validates state transition (`VeryHidden`) and visibility query
+    - Extended `xlsx/workbook_protection_test.mbt` with:
+      - `workbook protection mismatched password on no-hash protection`:
+        - `protect_workbook()` with default options
+        - `unprotect_workbook(password="secret")` hits password-mismatch guard path when no hash metadata exists
+  - Validation gates:
+    - `moon test xlsx/sheet_management_test.mbt`
+    - `moon test xlsx/workbook_protection_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after121.log`
+  - Coverage delta:
+    - `xlsx/workbook_types.mbt` uncovered lines reduced from `4` to `0`
+    - `xlsx/workbook_props.mbt` uncovered lines reduced from `4` to `3`
+
 ## Active Item
 
-- Next item: **120** (`workbook_types/workbook` residual branch hardening for sheet-name guards, chart-sheet state mutation path, and workbook-protection mismatch guard path).
+- Next item: **121** (bounded `workbook_props.mbt` hardening for remaining reachable normalization branches: calc mode `"auto"`, ref mode `"R1C1"`, and custom workbook-protection algorithm option path).

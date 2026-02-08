@@ -34,3 +34,16 @@ test "workbook protection roundtrip" {
   let ok = try? parsed.unprotect_workbook(password="secret")
   inspect(ok, content="Ok(())")
 }
+
+///|
+test "workbook protection mismatched password on no-hash protection" {
+  let workbook = Workbook::new()
+  workbook.protect_workbook()
+  let bad : Result[Unit, Error] = try? workbook.unprotect_workbook(
+    password="secret",
+  )
+  inspect(
+    bad is Err(XlsxError::InvalidWorkbookProtection(_)),
+    content="true",
+  )
+}
