@@ -586,6 +586,7 @@ pub fn Cols::rows(Self, options? : Options) -> Array[String]
 pub(all) struct Comment {
   cell : String
   author : String
+  author_id : Int?
   text : String
   paragraph : Array[RichTextRun]
   width : Int?
@@ -1602,6 +1603,7 @@ pub impl Eq for StreamState
 
 pub struct StreamWriter {
   sheet : Worksheet
+  sheet_id : Int
   mut last_row : Int
   styles : Array[Style]
   mut closed : Bool
@@ -1617,6 +1619,7 @@ pub fn StreamWriter::set_col_width(Self, Int, Int, Double) -> Unit raise XlsxErr
 pub fn StreamWriter::set_panes(Self, Panes) -> Unit raise XlsxError
 pub fn StreamWriter::set_row(Self, String, ArrayView[String], row_opts? : RowOpts) -> Unit raise XlsxError
 pub fn StreamWriter::set_row_cells(Self, String, ArrayView[StreamCell], row_opts? : RowOpts) -> Unit raise XlsxError
+pub fn StreamWriter::sheet_id(Self) -> Int
 
 pub struct Style {
   number_format : NumberFormat?

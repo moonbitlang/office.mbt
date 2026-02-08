@@ -73,6 +73,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
     comments.push({
       cell,
       author,
+      author_id: Some(author_id),
       text: text_value,
       paragraph,
       width: None,
@@ -311,22 +312,26 @@ fn parse_slicer_cache_definition(
       }
     None => ()
   }
-  match tag_attributes_in(xml, "pivotTable") {
-    Some(pivot_tag) => {
-      match attr_value(pivot_tag, "tabId") {
-        Some(value) =>
-          try @strconv.parse_int(value, base=10) catch {
-            _ => raise InvalidXml(msg="slicer cache tabId invalid")
-          } noraise {
-            val => pivot_tab_id = Some(val)
+  match extract_tag_body_from(xml, "pivotTables") {
+    Some(pivot_tables_body) =>
+      match tag_attributes_in(pivot_tables_body, "pivotTable") {
+        Some(pivot_tag) => {
+          match attr_value(pivot_tag, "tabId") {
+            Some(value) =>
+              try @strconv.parse_int(value, base=10) catch {
+                _ => raise InvalidXml(msg="slicer cache tabId invalid")
+              } noraise {
+                val => pivot_tab_id = Some(val)
+              }
+            None => ()
           }
+          match attr_value(pivot_tag, "name") {
+            Some(value) => pivot_table_name = Some(unescape_xml_text(value))
+            None => ()
+          }
+        }
         None => ()
       }
-      match attr_value(pivot_tag, "name") {
-        Some(value) => pivot_table_name = Some(unescape_xml_text(value))
-        None => ()
-      }
-    }
     None => ()
   }
   {

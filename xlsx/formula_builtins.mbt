@@ -2659,34 +2659,71 @@ fn eval_function(
         Error(formula_error_value)
       }
     "AND" =>
-      if values.length() == 0 {
+      if values.length() == 0 || values.length() > 30 {
         Error(formula_error_value)
       } else {
-        for value in flatten_values(values) {
-          match value_as_bool(value) {
-            Ok(flag) => if !flag { return Bool(false) }
-            Err(err) => return err
+        let mut result = true
+        for value in values {
+          match value {
+            List(_) => return Error(formula_error_value)
+            _ =>
+              match normalize_scalar(value) {
+                Empty => ()
+                Error(err) => return Error(err)
+                Number(num) => result = result && num != 0.0
+                Bool(flag) => result = result && flag
+                String(text) =>
+                  if text == "TRUE" {
+                    ()
+                  } else if text == "FALSE" {
+                    return Bool(false)
+                  } else {
+                    return Error(formula_error_value)
+                  }
+                List(_) => return Error(formula_error_value)
+              }
           }
         }
-        Bool(true)
+        Bool(result)
       }
     "OR" =>
-      if values.length() == 0 {
+      if values.length() == 0 || values.length() > 30 {
         Error(formula_error_value)
       } else {
         for value in flatten_values(values) {
-          match value_as_bool(value) {
-            Ok(flag) => if flag { return Bool(true) }
-            Err(err) => return err
+          match normalize_scalar(value) {
+            Empty => ()
+            Error(err) => return Error(err)
+            Number(num) => if num != 0.0 { return Bool(true) }
+            Bool(flag) => if flag { return Bool(true) }
+            String(text) =>
+              if text == "FALSE" {
+                ()
+              } else if text == "TRUE" {
+                return Bool(true)
+              } else {
+                return Error(formula_error_value)
+              }
+            List(_) => ()
           }
         }
         Bool(false)
       }
     "NOT" =>
       if values.length() == 1 {
-        match value_as_bool(values[0]) {
-          Ok(flag) => Bool(!flag)
-          Err(err) => err
+        match normalize_scalar(values[0]) {
+          Error(err) => Error(err)
+          Bool(flag) => Bool(!flag)
+          Number(num) => Bool(!(num != 0.0))
+          String(text) =>
+            if text.to_upper() == "TRUE" {
+              Bool(false)
+            } else if text.to_upper() == "FALSE" {
+              Bool(true)
+            } else {
+              Error(formula_error_value)
+            }
+          _ => Error(formula_error_value)
         }
       } else {
         Error(formula_error_value)
@@ -2712,15 +2749,7 @@ fn eval_function(
                 count = count + 1
               }
             }
-            String(text) => {
-              let parsed = @strconv.parse_bool(text) catch {
-                _ => return Error(formula_error_value)
-              }
-              ok = true
-              if parsed {
-                count = count + 1
-              }
-            }
+            String(_) => ()
             Empty => ()
             List(_) => ()
           }
@@ -4706,10 +4735,14 @@ fn eval_function(
       }
     "CONCAT" | "CONCATENATE" => concat_values(values)
     "IF" =>
-      if values.length() >= 2 {
+      if values.length() == 0 || values.length() > 3 {
+        Error(formula_error_value)
+      } else {
         match value_as_bool(values[0]) {
           Ok(cond) =>
-            if cond {
+            if values.length() == 1 {
+              Bool(cond)
+            } else if cond {
               values[1]
             } else if values.length() >= 3 {
               values[2]
@@ -4718,8 +4751,6 @@ fn eval_function(
             }
           Err(err) => err
         }
-      } else {
-        Error(formula_error_value)
       }
     "IFERROR" =>
       if values.length() == 2 {

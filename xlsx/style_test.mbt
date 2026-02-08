@@ -402,6 +402,37 @@ test "conditional style font write + roundtrip" {
 }
 
 ///|
+test "conditional style font theme/tint write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let font = Font::with_values(color_theme=5, color_tint=-0.3)
+  let style_id = workbook.new_conditional_style(Style::font(font))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(
+    styles_xml.contains("<dxf><font><color theme=\"5\" tint=\"-0.3\"/>"),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::font(font))
+}
+
+///|
 test "cell style fill write + roundtrip" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -485,6 +516,35 @@ test "cell style fill theme color write + roundtrip" {
   inspect(
     styles_xml.contains(
       "patternFill patternType=\"solid\"><fgColor theme=\"4\" tint=\"0.25\"/>",
+    ),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+}
+
+///|
+test "cell style fill indexed color write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let fill = Fill::solid_indexed(3, tint=0.4)
+  let style_id = workbook.new_style(Style::fill(fill))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(
+    styles_xml.contains(
+      "patternFill patternType=\"solid\"><fgColor indexed=\"3\" tint=\"0.4\"/>",
     ),
     content="true",
   )
@@ -641,6 +701,39 @@ test "conditional style fill theme color write + roundtrip" {
   inspect(
     styles_xml.contains(
       "<dxf><fill><patternFill patternType=\"solid\"><bgColor theme=\"4\" tint=\"0.25\"/>",
+    ),
+    content="true",
+  )
+  let parsed = read(bytes)
+  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+}
+
+///|
+test "conditional style fill indexed color write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let fill = Fill::solid_bg_indexed(5, tint=-0.1)
+  let style_id = workbook.new_conditional_style(Style::fill(fill))
+  let opt = ConditionalFormatOptions::new("cell")
+  opt.criteria = "="
+  opt.value = "1"
+  opt.format = Some(style_id)
+  sheet.set_conditional_format("A1", [opt])
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
+  inspect(
+    styles_xml.contains(
+      "<dxf><fill><patternFill patternType=\"solid\"><bgColor indexed=\"5\" tint=\"-0.1\"/>",
     ),
     content="true",
   )
@@ -866,6 +959,36 @@ test "cell style alignment write + roundtrip" {
   inspect(styles_xml.contains("textRotation=\"45\""), content="true")
   inspect(styles_xml.contains("indent=\"2\""), content="true")
   inspect(styles_xml.contains("shrinkToFit=\"1\""), content="true")
+  let parsed = read(bytes)
+  assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
+}
+
+///|
+test "cell style alignment advanced attrs write + roundtrip" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let alignment = Alignment::with_values(
+    justify_last_line=true,
+    reading_order=2,
+    relative_indent=3,
+  )
+  let style_id = workbook.new_style(Style::alignment(alignment))
+  sheet.set_cell("A1", "hello")
+  workbook.set_cell_style("Sheet1", "A1", style_id)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes) catch {
+    err => fail("zip read failed: \{err}")
+  }
+  let styles_xml = match archive.get("xl/styles.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("styles.xml utf8 decode failed")
+      }
+    None => fail("missing styles.xml")
+  }
+  inspect(styles_xml.contains("justifyLastLine=\"1\""), content="true")
+  inspect(styles_xml.contains("readingOrder=\"2\""), content="true")
+  inspect(styles_xml.contains("relativeIndent=\"3\""), content="true")
   let parsed = read(bytes)
   assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
 }

@@ -1,0 +1,12 @@
+import {
+  "bobzhang/mbtexcel" @excel,
+  "bobzhang/mbtexcel/xlsx" @xlsx,
+  "bobzhang/mbtexcel/cmd/demos" @demos,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async/fs,
+  "moonbitlang/core/env",
+}
+
+options(
+  "is-main": true,
+)

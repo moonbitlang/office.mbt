@@ -382,6 +382,7 @@ test "mbtexcel e2e comments" {
   let comment : @xlsx.Comment = {
     cell: "A1",
     author: "tester",
+    author_id: None,
     text: "note",
     paragraph: [],
     width: None,

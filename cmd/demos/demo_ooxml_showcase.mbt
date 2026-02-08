@@ -101,6 +101,7 @@ pub fn demo_ooxml_showcase_bytes() -> Bytes raise @xlsx.XlsxError {
   sheet.add_comment({
     cell: "C5",
     author: "mbtexcel",
+    author_id: None,
     text: "",
     paragraph: [
       { text: "Note:", font: Some(note_font) },

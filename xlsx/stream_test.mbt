@@ -20,6 +20,17 @@ test "stream writer basic" {
 }
 
 ///|
+test "stream writer sheet id follows workbook order" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
+  ignore(workbook.add_sheet("Sheet2"))
+  let writer = workbook.new_stream_writer("Sheet2")
+  inspect(writer.sheet_id(), content="3")
+  writer.flush()
+}
+
+///|
 test "stream writer row order" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

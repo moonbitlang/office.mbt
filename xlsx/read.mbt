@@ -2608,19 +2608,38 @@ fn parse_legacy_drawing_rel_id(
   xml : StringView,
   tag_name : StringView,
 ) -> String? raise XlsxError {
+  let xml_str = xml.to_string()
   let marker = "<\{tag_name.to_string()}"
-  let mut first = true
-  for chunk in xml.split(marker[:]) {
-    if first {
-      first = false
-      continue
+  let chars = xml_str.to_array()
+  let mut pos = 0
+  while pos < xml_str.length() {
+    let tail = xml_str[pos:] catch { _ => return None }
+    let rel = match tail.find(marker[:]) {
+      Some(value) => value
+      None => break
     }
-    let text = chunk.to_string()
+    let start = pos + rel
+    let after = start + marker.length()
+    if after < chars.length() {
+      let ch = chars[after]
+      if ch != ' ' &&
+        ch != '\t' &&
+        ch != '\n' &&
+        ch != '\r' &&
+        ch != '>' &&
+        ch != '/' {
+        pos = after
+        continue
+      }
+    }
+    let text = xml_str[start + 1:] catch {
+        _ => raise InvalidXml(msg="\{tag_name.to_string()} tag invalid")
+      }
     let end = match text.find("/>") {
-      Some(pos) => pos
+      Some(value) => value
       None =>
         match text.find(">") {
-          Some(pos) => pos
+          Some(value) => value
           None => raise InvalidXml(msg="\{tag_name.to_string()} tag not closed")
         }
     }

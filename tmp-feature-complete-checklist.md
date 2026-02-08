@@ -1,0 +1,203 @@
+# Temporary Feature-Complete Checklist
+
+Last updated: 2026-02-08  
+Branch/HEAD: `main` @ `5b87469`  
+Excelize snapshot: `37b730a`
+
+## Baseline Snapshot (Completed)
+
+- API name parity: `169/169`, missing `0`
+- Exported type parity (key feature files): missing `0`
+- Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
+- Struct field parity differences (`--normalize-known`): `21` structs still differ
+- Formula parity heuristic: Excelize `458` vs MoonBit `45`, missing `433`
+
+Commands used:
+
+- `python3 scripts/excelize_parity_report.py`
+- `python3 scripts/excelize_api_coverage.py`
+- `python3 scripts/excelize_struct_field_parity.py --normalize-known`
+- `python3 scripts/excelize_formula_parity.py`
+
+## One-by-One Checklist
+
+- [x] 1. Freeze a measurable parity baseline and completion gate definition.
+  - DoD: baseline numbers are recorded with exact command sources and commit IDs.
+- [x] 2. Build semantic parity runner against real Excelize-generated workbooks.
+  - DoD: one command compares mbtexcel vs excelize outputs for selected scenarios.
+  - Delivered:
+    - `cmd/parity` generates matched mbtexcel parity scenarios: `dashboard.xlsx`, `controls.xlsx`, `cf.xlsx`.
+    - `scripts/semantic_parity.py` generates mbtexcel outputs, obtains Excelize outputs (`go` if available, otherwise `demos_out_go` fixtures), fingerprints OOXML semantics, and compares scenario-by-scenario.
+    - Default command: `python3 scripts/semantic_parity.py`
+    - Optional: `--validate-excelize` additionally validates Excelize artifacts via OpenXML validator (off by default because `excelize_cf` fixture fails strict validator in this environment).
+- [x] 3. Close chart long-tail parity gaps (axis/series/legend/fill/border edge options).
+  - DoD: chart scenario suite passes with no Excel repair and expected OOXML structure.
+  - Delivered:
+    - Refactored chart axis XML emission in `xlsx/chart_options.mbt` to align with Excelize axis semantics:
+      - emit `<c:delete>` instead of dropping axis nodes when `none=true`
+      - emit `<c:crosses>` and `<c:crossBetween>` with type-aware defaults
+      - apply reverse-order axis position mapping for primary axes
+      - emit category-axis metadata (`auto/lblAlgn/lblOffset/noMultiLvlLbl`)
+      - emit major/minor tick mark defaults on non-series axes
+      - enforce contour/wireframe-contour value-axis tick labels as `none`
+    - Added regression coverage in `xlsx/chart_test.mbt`:
+      - axis delete behavior (`none=true`)
+      - reverse-order axis position/crossing tags
+      - contour crossBetween + tick label behavior
+      - secondary axis crossing behavior in combo chart
+    - Improved `scripts/semantic_parity.py` chart tag parsing to handle both prefixed (`c:`) and default-namespace chart XML.
+- [x] 4. Close style long-tail parity gaps (theme/indexed/tint and advanced style knobs).
+  - DoD: style-focused fixtures roundtrip with expected formatting behavior.
+  - Delivered:
+    - Fixed conditional-style font emission gate in `xlsx/style.mbt`: `dxf` font blocks are now emitted whenever `font != Font::new()`, so theme/indexed/tint-only fonts are no longer dropped.
+    - Added style long-tail regression tests in `xlsx/style_test.mbt`:
+      - conditional font theme+tint roundtrip
+      - normal fill indexed+tint roundtrip
+      - conditional fill indexed+tint roundtrip
+      - advanced alignment attrs (`justifyLastLine`, `readingOrder`, `relativeIndent`) roundtrip
+    - Verified style and package test gates after change.
+- [x] 5. Close rich-text run parity gaps.
+  - DoD: run-level attribute matrix matches expected read/write behavior.
+  - Delivered:
+    - Added whitebox rich-text helper tests in `xlsx/rich_text_wbtest.mbt` to cover truncation edge behavior:
+      - non-positive UTF-16 truncation limits
+      - partial-run truncation and stop conditions
+    - Added integration regression in `xlsx/comment_test.mbt` to verify long comment rich-text truncation preserves run prefix and formatting.
+    - Re-validated rich-text and comment suites plus full package tests.
+- [x] 6. Close formula engine parity gaps with targeted function packs.
+  - DoD: prioritized formula function groups have dedicated passing parity tests.
+  - Delivered:
+    - Added `xlsx/calc_conditional_parity_test.mbt` with Excelize-parity coverage for conditional/logical functions:
+      - positive parity cases for `IF`, `AND`, `OR`, `NOT`, `SWITCH`
+      - error parity cases for `IF`, `IFERROR`, `IFNA`, `SWITCH`, `XOR`, `AND`, `OR`, `NOT`
+    - Fixed `IF` behavior in `xlsx/formula_builtins.mbt`:
+      - support single-argument form (`IF(logical_test) -> TRUE/FALSE`)
+      - reject 4+ args with `#VALUE!`
+    - Fixed `XOR` behavior in `xlsx/formula_builtins.mbt`:
+      - align text coercion with Excelize parity (`XOR(\"1\")` / text-only inputs now return `#VALUE!`)
+    - Refined logical coercion parity in `xlsx/formula_builtins.mbt`:
+      - `AND`/`OR` now enforce 1..30 arg bounds
+      - `AND` rejects range/list operands in parity with current Excelize behavior
+      - `AND`/`OR` string handling restricted to `\"TRUE\"`/`\"FALSE\"`
+      - `NOT` string handling now matches parity expectations (`\"1\"` returns `#VALUE!`)
+    - Validation gates:
+      - `moon test --package xlsx --file calc_conditional_parity_test.mbt`
+      - `moon test --package xlsx --file calc_test.mbt`
+      - `moon test --package xlsx`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+- [x] 7. Close VML/form-control long-tail parity gaps.
+  - DoD: control matrix opens/saves in Excel without repair and preserves behavior.
+  - Delivered:
+    - Fixed VML checked-state parsing in `xlsx/form_control.mbt`:
+      - `<x:Checked>False</x:Checked>` and `<x:Checked>false</x:Checked>` now parse as `Some(false)` (previously parsed as `Some(true)`).
+      - Preserved truthy parsing for `1`/`true`.
+    - Added whitebox regression coverage in `xlsx/form_control_wbtest.mbt`:
+      - `x:Checked` false textual/numeric variants
+      - `x:Checked` true textual/numeric variants
+    - Re-validated control behavior and package quality gates:
+      - `moon test --package xlsx --file form_control_wbtest.mbt`
+      - `moon test --package xlsx --file form_control_test.mbt`
+      - `moon test --package xlsx --file shape_form_control_slicer_test.mbt`
+      - `python3 scripts/semantic_parity.py` (`controls` scenario pass)
+      - `scripts/validate_demos.sh` (`interactive_controls.xlsx` valid)
+      - `moon test --package xlsx`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+- [x] 8. Expand pivot/slicer/table integration corpus.
+  - DoD: multi-cache and cross-sheet scenarios validate and open in Excel without repair.
+  - Delivered:
+    - Added cross-sheet, multi-cache pivot/table slicer corpus in `xlsx/pivot_slicer_cross_sheet_test.mbt`:
+      - two table slicers from different source sheets
+      - two pivot slicers from different source sheets
+      - verifies cache count, slicer part fan-out, worksheet relationships, and roundtrip slicer source resolution.
+    - Fixed pivot slicer cache parsing in `xlsx/read_sheet_rel_parts.mbt`:
+      - `parse_slicer_cache_definition` now extracts `<pivotTable .../>` from inside `<pivotTables>` instead of accidentally matching `<pivotTables>` as the target tag.
+      - This restores roundtrip `table_sheet/table_name` for pivot slicers in multi-cache/cross-sheet workbooks.
+    - Validation gates:
+      - `moon test --package xlsx --file pivot_slicer_cross_sheet_test.mbt`
+      - `moon test --package xlsx --file slicer_pivot_test.mbt`
+      - `moon test --package xlsx --file slicer_read_test.mbt`
+      - `moon test --package xlsx --file shape_form_control_slicer_test.mbt`
+      - `moon test --package xlsx`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+- [x] 9. Raise coverage in high-risk files (`read/write/workbook/worksheet`).
+  - DoD: targeted regression tests cover known fragile branches.
+  - Delivered:
+    - Added VML read error regressions in `xlsx/vml_read_error_test.mbt`:
+      - missing worksheet `legacyDrawing` relationship -> deterministic `InvalidXml`.
+      - missing worksheet `legacyDrawingHF` relationship -> deterministic `InvalidXml`.
+    - Fixed exact-tag parsing in `xlsx/read.mbt`:
+      - `parse_legacy_drawing_rel_id` now enforces tag-name boundary, so `<legacyDrawingHF ...>` no longer matches `legacyDrawing`.
+    - Added high-risk workbook/worksheet branch regressions in `xlsx/workbook_worksheet_high_risk_test.mbt`:
+      - `Workbook::set_cell` / `Workbook::set_cell_value` missing-sheet `SheetNotFound` branches.
+      - `Worksheet::delete_table` keep/remove/not-found branches.
+      - `Worksheet::delete_pivot_table` empty-name, not-found, and keep-remaining branches.
+    - Extended write-side protection coverage in `xlsx/workbook_protection_test.mbt`:
+      - verifies `<workbookProtection lockWindows="1"...>` emission.
+    - Validation gates:
+      - `moon test xlsx/vml_read_error_test.mbt`
+      - `moon test xlsx/workbook_worksheet_high_risk_test.mbt`
+      - `moon test xlsx/workbook_protection_test.mbt`
+      - `moon test xlsx/pivot_slicer_cross_sheet_test.mbt`
+      - `moon test xlsx/header_footer_image_test.mbt`
+      - `moon test xlsx`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+- [x] 10. Final “feature complete” release gate.
+  - DoD: `moon check && moon test && scripts/validate_demos.sh && parity runner` all pass in CI.
+  - Delivered:
+    - Executed full gate command:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`842` total, `842` passed)
+      - `scripts/validate_demos.sh`: all tracked demos valid (encrypted container demo intentionally skipped by validator script)
+      - `scripts/semantic_parity.py`: pass for scenarios `dashboard`, `controls`, `cf`
+
+## Post-Gate Parity Backlog (One-by-One)
+
+- [x] 11. Close `Comment.author_id` parity gap.
+  - DoD: comment model/read path preserve author index where available.
+  - Delivered:
+    - Added `author_id : Int?` field to `Comment` in `xlsx/comment.mbt`.
+    - Wired through write/read model handling:
+      - `Worksheet::add_comment` preserves incoming `author_id`.
+      - `clone_comments` in `xlsx/workbook.mbt` copies `author_id`.
+      - `parse_comments_xml` in `xlsx/read_sheet_rel_parts.mbt` now stores parsed `authorId` into `Comment.author_id`.
+    - Updated comment literals/snapshots in:
+      - `xlsx/comment_test.mbt`
+      - `xlsx/workbook_more_test.mbt`
+      - `cmd/demos/demo_ooxml_showcase.mbt`
+      - `mbtexcel_e2e_test.mbt`
+    - Validation gates:
+      - `moon test xlsx/comment_test.mbt`
+      - `moon test xlsx/workbook_more_test.mbt`
+      - `moon test mbtexcel_e2e_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info --package xlsx`
+- [x] 12. Close `StreamWriter.sheet_id` parity gap.
+  - DoD: stream writer carries stable workbook-order sheet id.
+  - Delivered:
+    - Added `sheet_id : Int` field to `StreamWriter` in `xlsx/stream.mbt`.
+    - Added public accessor `StreamWriter::sheet_id() -> Int`.
+    - Updated `Workbook::new_stream_writer` in `xlsx/workbook.mbt` to compute `sheet_id` from workbook sheet order (`sheet_entry_index + 1`) and pass it into `StreamWriter::new`.
+    - Added regression in `xlsx/stream_test.mbt`:
+      - verifies writer `sheet_id()` follows workbook order including chart sheets.
+    - Validation gates:
+      - `moon test xlsx/stream_test.mbt`
+      - `moon test xlsx/stream_more_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info --package xlsx`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known`
+- [ ] 13. Add file-path parity to `HeaderFooterImageOptions` (Excelize `File` analogue).
+  - DoD: header/footer image APIs accept file path input without forcing preloaded bytes.
+  - Planned:
+    - add optional file-path field and constructor path
+    - preserve current bytes path for existing call sites
+    - add read/write tests for both data and file-path flows
+
+## Active Item
+
+- Next item: **13** (`HeaderFooterImageOptions` file-path parity).

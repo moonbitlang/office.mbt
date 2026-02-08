@@ -1287,6 +1287,73 @@ fn tick_label_pos_value(pos : ChartTickLabelPositionType) -> StringView {
 }
 
 ///|
+fn val_axis_tick_label_pos(
+  kind : ChartType,
+  pos : ChartTickLabelPositionType,
+) -> StringView {
+  match kind {
+    Contour | WireframeContour => "none"
+    _ => tick_label_pos_value(pos)
+  }
+}
+
+///|
+fn val_axis_cross_between(kind : ChartType) -> StringView {
+  match kind {
+    Area
+    | AreaStacked
+    | AreaPercentStacked
+    | Area3D
+    | Area3DStacked
+    | Area3DPercentStacked
+    | Surface3D
+    | WireframeSurface3D
+    | Contour
+    | WireframeContour
+    | Bubble
+    | Bubble3D => "midCat"
+    _ => "between"
+  }
+}
+
+///|
+fn axis_position_value(
+  axis_tag : StringView,
+  axis : ChartAxis,
+  axis_pos : StringView,
+) -> StringView {
+  if !axis.reverse_order {
+    return axis_pos
+  }
+  if axis_pos == "b" &&
+    (axis_tag == "catAx" || axis_tag == "dateAx" || axis_tag == "serAx") {
+    return "t"
+  }
+  if axis_pos == "l" && axis_tag == "valAx" {
+    return "r"
+  }
+  axis_pos
+}
+
+///|
+fn axis_crosses_value(
+  axis_tag : StringView,
+  axis_pos : StringView,
+) -> StringView? {
+  if axis_tag == "valAx" {
+    if axis_pos == "r" {
+      Some("max")
+    } else {
+      Some("autoZero")
+    }
+  } else if axis_tag == "catAx" || axis_tag == "dateAx" {
+    Some("autoZero")
+  } else {
+    None
+  }
+}
+
+///|
 fn axis_id_or_default(axis : ChartAxis, fallback : Int) -> Int {
   if axis.ax_id > 0 {
     axis.ax_id
@@ -1575,9 +1642,11 @@ fn write_axis(
   ax_id : Int,
   cross_ax_id : Int,
   axis_pos : StringView,
+  kind : ChartType,
 ) -> Unit {
-  let is_category_like = axis_tag == "catAx" || axis_tag == "serAx"
-  let is_value_like = axis_tag == "valAx" || axis_tag == "dateAx"
+  let is_category_like = axis_tag == "catAx" || axis_tag == "dateAx"
+  let is_value_like = axis_tag == "valAx"
+  let resolved_axis_pos = axis_position_value(axis_tag, axis, axis_pos)
   sb.write_view("      <c:\{axis_tag.to_string()}>\n")
   sb.write_view("        <c:axId val=\"\{ax_id}\"/>\n")
   sb.write_view("        <c:scaling>")
@@ -1599,8 +1668,11 @@ fn write_axis(
     None => ()
   }
   sb.write_view("</c:scaling>\n")
+  sb.write_view("        <c:delete val=\"")
+  sb.write_view(if axis.none { "1" } else { "0" })
+  sb.write_view("\"/>\n")
   sb.write_view("        <c:axPos val=\"")
-  sb.write_view(escape_xml_attr(axis_pos))
+  sb.write_view(escape_xml_attr(resolved_axis_pos))
   sb.write_view("\"/>\n")
   if axis.major_grid_lines {
     sb.write_view("        <c:majorGridlines/>\n")
@@ -1610,11 +1682,39 @@ fn write_axis(
   }
   write_axis_title(sb, axis.title, axis.title_rich)
   write_axis_num_fmt(sb, axis.num_fmt)
+  if axis_tag != "serAx" {
+    sb.write_view("        <c:majorTickMark val=\"none\"/>\n")
+    sb.write_view("        <c:minorTickMark val=\"none\"/>\n")
+  }
+  let tick_lbl_pos = if is_value_like {
+    val_axis_tick_label_pos(kind, axis.tick_label_position)
+  } else {
+    tick_label_pos_value(axis.tick_label_position)
+  }
   sb.write_view("        <c:tickLblPos val=\"")
-  sb.write_view(escape_xml_attr(tick_label_pos_value(axis.tick_label_position)))
+  sb.write_view(escape_xml_attr(tick_lbl_pos))
   sb.write_view("\"/>\n")
   write_axis_tx_pr(sb, axis)
   sb.write_view("        <c:crossAx val=\"\{cross_ax_id}\"/>\n")
+  match axis_crosses_value(axis_tag, resolved_axis_pos) {
+    Some(value) => {
+      sb.write_view("        <c:crosses val=\"")
+      sb.write_view(escape_xml_attr(value))
+      sb.write_view("\"/>\n")
+    }
+    None => ()
+  }
+  if is_value_like {
+    sb.write_view("        <c:crossBetween val=\"")
+    sb.write_view(escape_xml_attr(val_axis_cross_between(kind)))
+    sb.write_view("\"/>\n")
+  }
+  if is_category_like {
+    sb.write_view("        <c:auto val=\"1\"/>\n")
+    sb.write_view("        <c:lblAlgn val=\"ctr\"/>\n")
+    sb.write_view("        <c:lblOffset val=\"100\"/>\n")
+    sb.write_view("        <c:noMultiLvlLbl val=\"0\"/>\n")
+  }
   if is_category_like && axis.tick_label_skip > 0 {
     sb.write_view("        <c:tickLblSkip val=\"\{axis.tick_label_skip}\"/>\n")
   }
@@ -1988,9 +2088,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     if plot_tag != "pieChart" &&
       plot_tag != "pie3DChart" &&
       plot_tag != "ofPieChart" &&
-      plot_tag != "doughnutChart" &&
-      !opts.x_axis.none &&
-      !opts.y_axis.none {
+      plot_tag != "doughnutChart" {
       let x_id = axis_id_or_default(opts.x_axis, cat_ax_id)
       let y_id = axis_id_or_default(opts.y_axis, val_ax_id)
       let x_axis_tag = if plot_tag == "scatterChart" ||
@@ -2001,10 +2099,10 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       } else {
         "catAx"
       }
-      write_axis(sb, x_axis_tag, opts.x_axis, x_id, y_id, "b")
-      write_axis(sb, "valAx", opts.y_axis, y_id, x_id, "l")
+      write_axis(sb, x_axis_tag, opts.x_axis, x_id, y_id, "b", opts.typ)
+      write_axis(sb, "valAx", opts.y_axis, y_id, x_id, "l", opts.typ)
       if plot_tag == "surface3DChart" || plot_tag == "surfaceChart" {
-        write_axis(sb, "serAx", opts.y_axis, ser_ax_id, y_id, "r")
+        write_axis(sb, "serAx", opts.y_axis, ser_ax_id, y_id, "r", opts.typ)
       }
     }
     write_plot_area_d_table(sb, plot_tag, opts)
@@ -2262,7 +2360,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       sb.write_view("      </c:\{plot_tag}>\n")
       order_base = order_base + plot.series.length()
     }
-    if has_cat_val && !opts.x_axis.none && !opts.y_axis.none {
+    if has_cat_val {
       write_axis(
         sb,
         cat_axis_tag,
@@ -2270,8 +2368,17 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         primary_cat_id,
         primary_val_id,
         "b",
+        opts.typ,
       )
-      write_axis(sb, "valAx", opts.y_axis, primary_val_id, primary_cat_id, "l")
+      write_axis(
+        sb,
+        "valAx",
+        opts.y_axis,
+        primary_val_id,
+        primary_cat_id,
+        "l",
+        opts.typ,
+      )
       match secondary_plot {
         Some(value) => {
           write_axis(
@@ -2281,6 +2388,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
             secondary_cat_id,
             secondary_val_id,
             "b",
+            value.typ,
           )
           write_axis(
             sb,
@@ -2289,39 +2397,38 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
             secondary_val_id,
             secondary_cat_id,
             "r",
+            value.typ,
           )
         }
         None => ()
       }
     }
     match xy_primary_plot {
-      Some(value) =>
-        if !value.x_axis.none && !value.y_axis.none {
-          write_axis(
-            sb,
-            "valAx",
-            value.x_axis,
-            xy_primary_x_id,
-            xy_primary_y_id,
-            "b",
-          )
-          write_axis(
-            sb,
-            "valAx",
-            value.y_axis,
-            xy_primary_y_id,
-            xy_primary_x_id,
-            "l",
-          )
-        }
+      Some(value) => {
+        write_axis(
+          sb,
+          "valAx",
+          value.x_axis,
+          xy_primary_x_id,
+          xy_primary_y_id,
+          "b",
+          value.typ,
+        )
+        write_axis(
+          sb,
+          "valAx",
+          value.y_axis,
+          xy_primary_y_id,
+          xy_primary_x_id,
+          "l",
+          value.typ,
+        )
+      }
       None => ()
     }
     match xy_secondary_plot {
       Some(value) =>
-        if xy_secondary_x_id > 0 &&
-          xy_secondary_y_id > 0 &&
-          !value.x_axis.none &&
-          !value.y_axis.none {
+        if xy_secondary_x_id > 0 && xy_secondary_y_id > 0 {
           write_axis(
             sb,
             "valAx",
@@ -2329,6 +2436,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
             xy_secondary_x_id,
             xy_secondary_y_id,
             "t",
+            value.typ,
           )
           write_axis(
             sb,
@@ -2337,6 +2445,7 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
             xy_secondary_y_id,
             xy_secondary_x_id,
             "r",
+            value.typ,
           )
         }
       None => ()

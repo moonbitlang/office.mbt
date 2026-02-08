@@ -693,6 +693,7 @@ pub fn Worksheet::add_comment(
   self.comments.push({
     cell: canonical,
     author,
+    author_id: comment.author_id,
     text: comment.text,
     paragraph,
     width: comment.width,

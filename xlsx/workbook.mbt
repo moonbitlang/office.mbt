@@ -53,6 +53,10 @@ pub fn Workbook::new_stream_writer(
   sheet_name : StringView,
 ) -> StreamWriter raise XlsxError {
   check_sheet_name(sheet_name)
+  let sheet_id = match self.sheet_entry_index(sheet_name) {
+    Some(value) => value + 1
+    None => raise SheetNotFound(name=sheet_name.to_string())
+  }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_string())
@@ -64,7 +68,7 @@ pub fn Workbook::new_stream_writer(
     raise StreamModeConflict(msg="worksheet already has data")
   }
   sheet.stream_state = Writing
-  StreamWriter::new(sheet, self.styles)
+  StreamWriter::new(sheet, sheet_id, self.styles)
 }
 
 ///|
@@ -1133,6 +1137,7 @@ fn clone_comments(values : ArrayView[Comment]) -> Array[Comment] {
     out.push({
       cell: value.cell,
       author: value.author,
+      author_id: value.author_id,
       text: value.text,
       paragraph,
       width: value.width,

@@ -389,6 +389,7 @@ test "workbook: copy_sheet clones complex worksheet state" {
   src.add_comment({
     cell: "A1",
     author: "me",
+    author_id: None,
     text: "note",
     paragraph: [
       { text: "a", font: None },

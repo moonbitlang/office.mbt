@@ -4,6 +4,7 @@ test "workbook protection roundtrip" {
   let opts = WorkbookProtectionOptions::with_values(
     password="secret",
     lock_structure=true,
+    lock_windows=true,
   )
   workbook.protect_workbook(options=opts)
   let bytes = write(workbook)
@@ -19,6 +20,7 @@ test "workbook protection roundtrip" {
   }
   inspect(workbook_xml.contains("<workbookProtection"), content="true")
   inspect(workbook_xml.contains("lockStructure=\"1\""), content="true")
+  inspect(workbook_xml.contains("lockWindows=\"1\""), content="true")
   inspect(
     workbook_xml.contains("workbookAlgorithmName=\"SHA-512\""),
     content="true",

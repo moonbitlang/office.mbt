@@ -1940,19 +1940,7 @@ fn write_styles_xml(
     sb.write_view("  <dxfs count=\"\{dxf_list.length()}\">\n")
     for style in dxf_list {
       let has_font = match style.font {
-        Some(font) =>
-          match
-            (
-              font.bold,
-              font.italic,
-              font.underline,
-              font.size,
-              font.color,
-              font.family,
-            ) {
-            (None, None, None, None, None, None) => false
-            _ => true
-          }
+        Some(font) => font != Font::new()
         None => false
       }
       let has_fill = match style.fill {

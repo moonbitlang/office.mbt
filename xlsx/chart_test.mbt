@@ -183,6 +183,11 @@ test "chart options combo (col + line) secondary axis" {
   inspect(chart_part.contains("axPos val=\"r\""), content="true")
   inspect(chart_part.contains("axId val=\"3\""), content="true")
   inspect(chart_part.contains("axId val=\"4\""), content="true")
+  inspect(chart_part.contains("<c:crosses val=\"max\"/>"), content="true")
+  inspect(
+    chart_part.contains("<c:crossBetween val=\"between\"/>"),
+    content="true",
+  )
   let line_chart_idx = find_chart_index_or_fail(chart_part, "<c:lineChart>")
   let line_grouping_idx = find_chart_index_or_fail(
     chart_part, "<c:grouping val=\"standard\"/>",
@@ -1054,4 +1059,75 @@ test "chart data label alignment emits txPr paragraph align" {
   inspect(chart_part.contains("<c:dLbls>"), content="true")
   inspect(chart_part.contains("algn=\"ctr\""), content="true")
   inspect(chart_part.contains("rot=\"2700000\""), content="true")
+}
+
+///|
+test "chart axis none emits delete without dropping axis" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.x_axis.none = true
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:catAx>"), content="true")
+  inspect(chart_part.contains("<c:valAx>"), content="true")
+  inspect(chart_part.contains("<c:delete val=\"1\"/>"), content="true")
+  inspect(chart_part.contains("<c:delete val=\"0\"/>"), content="true")
+}
+
+///|
+test "chart axis reverse order emits flipped positions and crossing tags" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  opts.x_axis.reverse_order = true
+  opts.y_axis.reverse_order = true
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:axPos val=\"t\"/>"), content="true")
+  inspect(chart_part.contains("<c:axPos val=\"r\"/>"), content="true")
+  inspect(chart_part.contains("<c:crosses val=\"autoZero\"/>"), content="true")
+  inspect(
+    chart_part.contains("<c:crossBetween val=\"between\"/>"),
+    content="true",
+  )
+}
+
+///|
+test "chart options contour uses none tick labels and midCat crossBetween" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Contour)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:surfaceChart>"), content="true")
+  inspect(chart_part.contains("<c:tickLblPos val=\"none\"/>"), content="true")
+  inspect(
+    chart_part.contains("<c:crossBetween val=\"midCat\"/>"),
+    content="true",
+  )
 }

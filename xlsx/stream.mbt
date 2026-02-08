@@ -73,14 +73,24 @@ pub fn StreamCell::new_rich_text(
 ///|
 pub struct StreamWriter {
   sheet : Worksheet
+  sheet_id : Int
   mut last_row : Int
   styles : Array[Style]
   mut closed : Bool
 }
 
 ///|
-fn StreamWriter::new(sheet : Worksheet, styles : Array[Style]) -> StreamWriter {
-  { sheet, last_row: 0, styles, closed: false }
+fn StreamWriter::new(
+  sheet : Worksheet,
+  sheet_id : Int,
+  styles : Array[Style],
+) -> StreamWriter {
+  { sheet, sheet_id, last_row: 0, styles, closed: false }
+}
+
+///|
+pub fn StreamWriter::sheet_id(self : StreamWriter) -> Int {
+  self.sheet_id
 }
 
 ///|

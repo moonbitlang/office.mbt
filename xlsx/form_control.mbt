@@ -1016,7 +1016,12 @@ fn parse_form_controls_vml(
       control.format.positioning = Some(OneCell)
     }
     match extract_xml_text_tag(body, "x:Checked") {
-      Some(v) => control.checked = Some(v.trim() != "" && v.trim() != "0")
+      Some(v) => {
+        let checked_text = v.trim().to_lower()
+        control.checked = Some(
+          checked_text != "" && checked_text != "0" && checked_text != "false",
+        )
+      }
       None => ()
     }
     out.push(control)
