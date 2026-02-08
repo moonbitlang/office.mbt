@@ -105,9 +105,7 @@ fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
         }
       }
       if matched {
-        let value = tag[value_start:i] catch {
-            _ => raise InvalidXml(msg="attribute out of range")
-          }
+        let value = tag.to_string().unsafe_substring(start=value_start, end=i)
         return Some(value.to_string())
       }
     }

@@ -2257,6 +2257,37 @@ Commands used:
     - Total uncovered lines reduced from `3186` to `3159`
     - Uncovered file count reduced from `53` to `52`
 
+- [x] 152. Close residuals in `xml.mbt`.
+  - DoD: eliminate remaining XML escaping/attribute parser residuals and keep parser behavior intact on malformed attributes.
+  - Delivered:
+    - Refactored `xlsx/xml.mbt`:
+      - replaced bounded attribute-value slice `catch` fallback with explicit `to_string().unsafe_substring(...)`.
+    - Added `xlsx/xml_wbtest.mbt`:
+      - covered `escape_xml_attr` `>` branch and attribute-space helper branch.
+      - covered `attr_value` parser edge paths for empty-name token skip, post-`=` whitespace handling, missing quote handling, and unterminated-quote error path.
+  - Validation gates:
+    - `moon test xlsx/xml_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after156.log`
+  - Coverage delta:
+    - `xlsx/xml.mbt` uncovered lines reduced from `7` to `0`
+    - Total uncovered lines reduced from `3159` to `3152`
+    - Uncovered file count reduced from `52` to `51`
+
+- [x] 153. Close residual in `cell_ref.mbt`.
+  - DoD: exercise the overflow guard branch in `column_name_to_number` and bring file residuals to zero.
+  - Delivered:
+    - Extended `xlsx/cell_ref_more_test.mbt`:
+      - added `cell ref column-name overflow guard` scanning long `"Z"` column names until overflow guard emits `InvalidCellRef`.
+  - Validation gates:
+    - `moon test xlsx/cell_ref_more_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after157.log`
+  - Coverage delta:
+    - `xlsx/cell_ref.mbt` uncovered lines reduced from `1` to `0`
+    - Total uncovered lines reduced from `3152` to `3151`
+    - Uncovered file count reduced from `51` to `50`
+
 ## Active Item
 
-- Next item: **152** (move to the next residual hotspot: `xlsx/xml.mbt`).
+- Next item: **154** (move to the next residual hotspot: `zip/deflate.mbt`).

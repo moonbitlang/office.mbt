@@ -152,3 +152,17 @@ test "cell ref row/col guards and split overflow row parse" {
   )
   inspect(split_overflow is Err(_), content="true")
 }
+
+///|
+test "cell ref column-name overflow guard" {
+  let mut overflowed = false
+  for n in 1..<512 {
+    let name = "Z".repeat(n)
+    let parsed : Result[Int, Error] = try? column_name_to_number(name)
+    if parsed is Err(XlsxError::InvalidCellRef(_)) {
+      overflowed = true
+      break
+    }
+  }
+  inspect(overflowed, content="true")
+}
