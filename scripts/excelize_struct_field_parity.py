@@ -150,6 +150,24 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
         {"type", "sparkline_type"},
         {"hight_color", "high_color"},
     ],
+    "Chart": [
+        {"type", "typ"},
+        {"fill", "fill_color"},
+        {"bubble_size", "bubble_scale"},
+    ],
+    "ChartLine": [{"type", "typ"}, {"fill", "color"}],
+    "ChartDataLabel": [{"fill", "fill_color"}],
+    "ChartDataPoint": [{"fill", "fill_color"}],
+    "ChartMarker": [{"fill", "fill_color"}],
+    "ChartPlotArea": [{"fill", "fill_color"}],
+    "ChartSeries": [{"sizes", "bubble_size"}, {"fill", "fill_color"}],
+    "ChartUpDownBar": [{"fill", "fill_color"}],
+}
+
+
+# Some Excelize structs map to differently named MoonBit structs.
+_STRUCT_EQUIVALENTS: dict[str, str] = {
+    "Chart": "ChartOptions",
 }
 
 
@@ -213,7 +231,8 @@ def main() -> int:
     for go_name, go_s in sorted(go_structs.items(), key=lambda x: x[0]):
         if include is not None and go_name not in include:
             continue
-        mb = mb_structs.get(go_name)
+        mb_name = _STRUCT_EQUIVALENTS.get(go_name, go_name)
+        mb = mb_structs.get(mb_name)
         if not mb:
             continue
 

@@ -283,14 +283,42 @@ Commands used:
       - `moon check --deny-warn`
       - `moon info --package xlsx && moon fmt`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Style`
-- [ ] 17. Reduce chart missing-field parity (`Chart* fill/type/sizes/legend` baseline aliases).
+- [x] 17. Reduce chart missing-field parity (`Chart* fill/type/sizes/legend` baseline aliases).
   - DoD: eliminate current chart “missing” field set from parity report via concrete fields or canonical alias normalization.
+  - Delivered:
+    - Added chart parity normalizer coverage in `scripts/excelize_struct_field_parity.py`:
+      - struct equivalence mapping: `Chart` (Excelize) -> `ChartOptions` (MoonBit)
+      - alias normalization for chart keyword/fill naming:
+        - `Chart`: `type/typ`, `fill/fill_color`, `bubble_size/bubble_scale`
+        - `ChartLine`: `type/typ`, `fill/color`
+        - `ChartDataLabel`: `fill/fill_color`
+        - `ChartDataPoint`: `fill/fill_color`
+        - `ChartMarker`: `fill/fill_color`
+        - `ChartPlotArea`: `fill/fill_color`
+        - `ChartSeries`: `sizes/bubble_size`, `fill/fill_color`
+        - `ChartUpDownBar`: `fill/fill_color`
+    - Added concrete `ChartSeries` parity aliases in `xlsx/chart_options.mbt`:
+      - `legend : ChartLegend`
+      - `sizes : String` with sync in `set_bubble_size`
+      - bubble chart writer now accepts `sizes` as fallback when `bubble_size` option is unset.
+    - Added regression coverage:
+      - `xlsx/chart_options_setters_test.mbt` validates `set_bubble_size` syncs `sizes`.
+      - `xlsx/chart_test.mbt` validates bubble chart emission works when only `series.sizes` is set.
+    - Validation gates:
+      - `moon test xlsx/chart_options_setters_test.mbt`
+      - `moon test xlsx/chart_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
+
+- [ ] 18. Reduce shape missing-field parity (`Shape cell/type/macro/format/fill/line`).
+  - DoD: remove current Shape “missing” field set in parity report via concrete aliases and/or normalization.
   - Planned:
-    - inspect `Chart`, `ChartSeries`, `ChartLine`, `ChartDataLabel`, `ChartDataPoint`, `ChartMarker`, `ChartPlotArea`, `ChartUpDownBar`
-    - add safe alias fields where non-breaking
-    - add/adjust parity normalizer aliases for unavoidable keyword/name differences (`type` vs `typ`)
-    - validate existing chart behavior and chart tests remain green
+    - inspect `Shape` model vs Excelize `Shape`
+    - add safe aliases (`type`, `macro`, `fill`, `line`) where non-breaking
+    - keep writer/read paths behaviorally stable
+    - add shape regression tests and rerun parity report
 
 ## Active Item
 
-- Next item: **17** (chart missing-field parity reduction).
+- Next item: **18** (shape missing-field parity reduction).

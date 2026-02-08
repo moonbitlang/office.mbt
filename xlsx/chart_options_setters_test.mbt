@@ -22,6 +22,8 @@ test "chart options: setter coverage and basic validation" {
     content="true",
   )
   series.set_bubble_size("Sheet1!$C$1:$C$2")
+  inspect(series.sizes, content="Sheet1!$C$1:$C$2")
+  inspect(series.legend.position, content="bottom")
   let opts = ChartOptions::new(Scatter)
   opts.series.push(series)
   opts.set_format(GraphicOptions::new())

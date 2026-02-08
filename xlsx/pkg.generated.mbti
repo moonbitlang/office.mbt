@@ -457,8 +457,10 @@ pub(all) struct ChartSeries {
   categories : String
   values : String
   mut bubble_size : String?
+  mut sizes : String
   mut fill_color : String
   mut fill_transparency : Int
+  mut legend : ChartLegend
   mut line : ChartLine
   mut marker : ChartMarker
   mut data_label : ChartDataLabel

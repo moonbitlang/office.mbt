@@ -943,6 +943,29 @@ test "chart options bubble3D uses bubbleSize" {
 }
 
 ///|
+test "chart options bubble uses sizes alias" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Bubble)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  series.sizes = "Sheet1!$C$2:$C$4"
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:bubbleSize>"), content="true")
+  inspect(chart_part.contains("Sheet1!$C$2:$C$4"), content="true")
+}
+
+///|
 test "chart options bubble missing size errors" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

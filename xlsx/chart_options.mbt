@@ -327,8 +327,10 @@ pub(all) struct ChartSeries {
   categories : String
   values : String
   mut bubble_size : String?
+  mut sizes : String
   mut fill_color : String
   mut fill_transparency : Int
+  mut legend : ChartLegend
   mut line : ChartLine
   mut marker : ChartMarker
   mut data_label : ChartDataLabel
@@ -352,8 +354,10 @@ pub fn ChartSeries::new(
     categories,
     values,
     bubble_size: None,
+    sizes: "",
     fill_color: "",
     fill_transparency: 0,
+    legend: ChartLegend::new(),
     line: ChartLine::new(),
     marker: ChartMarker::new(),
     data_label: ChartDataLabel::new(),
@@ -371,6 +375,15 @@ pub fn ChartSeries::set_bubble_size(
     raise InvalidSheetOperation(msg="bubble size range empty")
   }
   self.bubble_size = Some(bubble_size)
+  self.sizes = bubble_size
+}
+
+///|
+fn chart_series_bubble_size(series : ChartSeries) -> String? {
+  match series.bubble_size {
+    Some(value) => Some(value)
+    None => if series.sizes == "" { None } else { Some(series.sizes) }
+  }
 }
 
 ///|
@@ -1180,7 +1193,7 @@ fn write_chart_series_for_plot(
   if plot_tag == "scatterChart" {
     write_chart_series_scatter(sb, series, idx, order_base)
   } else if plot_tag == "bubbleChart" {
-    let bubble_size = match series.bubble_size {
+    let bubble_size = match chart_series_bubble_size(series) {
       Some(value) => value
       None => raise InvalidSheetOperation(msg="bubble size missing")
     }
