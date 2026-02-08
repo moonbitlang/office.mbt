@@ -1923,6 +1923,19 @@ Commands used:
   - Residual notes:
     - Remaining `image_types.mbt` uncovered line is a structural slice catch fallback when stripping the leading dot after prior length checks.
 
+- [x] 135. Close low-line-count residuals in `search_sheet.mbt`.
+  - DoD: cover remaining regex tokenization and memoization branches in sheet search helpers.
+  - Delivered:
+    - Added `xlsx/search_sheet_wbtest.mbt` with focused whitebox tests:
+      - `search sheet wb: regex parser handles trailing escape and escaped class char`
+      - `search sheet wb: memoized match fast-return branch`
+  - Validation gates:
+    - `moon test xlsx/search_sheet_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after137.log`
+  - Coverage delta:
+    - `xlsx/search_sheet.mbt` uncovered lines reduced from `4` to `0`
+
 ## Active Item
 
-- Next item: **135** (close low-line-count residuals in `xlsx/search_sheet.mbt` with targeted parser/guard tests).
+- Next item: **136** (close low-line-count residuals in `xlsx/write_part_paths.mbt` with targeted path/guard tests).
