@@ -1729,6 +1729,19 @@ Commands used:
   - Coverage delta:
     - `xlsx/workbook_props.mbt` uncovered lines reduced from `3` to `1`
 
+- [x] 122. Close final `workbook_props.mbt` calc-mode normalization branch.
+  - DoD: cover the remaining `"autoNoTable"` normalization path in `normalize_calc_mode`.
+  - Delivered:
+    - Extended `xlsx/workbook_props_test.mbt` with:
+      - `calc props normalize autonotable variant`
+      - verifies case-insensitive input (`"AUTONOTABLE"`) normalizes to `Some("autoNoTable")` after write/read roundtrip
+  - Validation gates:
+    - `moon test xlsx/workbook_props_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after123.log`
+  - Coverage delta:
+    - `xlsx/workbook_props.mbt` uncovered lines reduced from `1` to `0`
+
 ## Active Item
 
-- Next item: **122** (close the final `workbook_props.mbt` calc-mode normalization branch by exercising `"autoNoTable"` input normalization path).
+- Next item: **123** (attempt deterministic coverage of `xlsx/write.mbt` default zip-backend error-wrap branch by fault-injecting an overlong generated part name).
