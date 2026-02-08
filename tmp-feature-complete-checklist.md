@@ -962,13 +962,24 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 72. Add stream-writer parity integration slice with mixed feature workbook controls.
+- [x] 72. Add stream-writer parity integration slice with mixed feature workbook controls.
   - DoD: validate stream-writer generated workbook does not regress key OOXML integrity markers under larger row volume.
+  - Delivered:
+    - Added `xlsx/integration_stream_writer_ooxml_consistency_test.mbt`:
+      - stream-writer scenario with 300 data rows, formula cells, and a table part
+      - validates worksheet/table OOXML markers and relationship targets in archive output
+      - validates read-roundtrip behavior for headers, formulas, computed values, and table metadata
+    - Validation gates:
+      - `moon test xlsx/integration_stream_writer_ooxml_consistency_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 73. Run combined gate for stream-writer integration + mixed-ext pack.
+  - DoD: execute new stream-writer integration test together with key mixed-ext regression tests and keep gate green.
   - Planned:
-    - generate stream-writer workbook with representative formatting/formula/table interactions
-    - assert key worksheet/workbook OOXML markers and archive part presence
-    - run targeted integration test + `moon check --deny-warn`
+    - run `integration_stream_writer_ooxml_consistency_test` and representative mixed-ext tests
+    - run `moon check --deny-warn`
+    - record consolidated pass status
 
 ## Active Item
 
-- Next item: **72** (stream-writer parity integration slice).
+- Next item: **73** (combined stream-writer + mixed-ext integration gate).
