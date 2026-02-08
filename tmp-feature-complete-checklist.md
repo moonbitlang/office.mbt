@@ -1,7 +1,7 @@
 # Temporary Feature-Complete Checklist
 
 Last updated: 2026-02-08  
-Branch/HEAD: `main` @ `7f1ccaf`  
+Branch/HEAD: `main` @ `cea5a46`  
 Excelize snapshot: `37b730a`
 
 ## Baseline Snapshot (Completed)
@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 869/869`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 879/879`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -1143,13 +1143,21 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 86. Refresh baseline snapshot after non-integration tranche closure.
+- [x] 86. Refresh baseline snapshot after non-integration tranche closure.
   - DoD: synchronize top-level baseline metadata/totals with latest full-gate results.
+  - Delivered:
+    - Updated checklist metadata to current baseline:
+      - `Branch/HEAD` refreshed to latest post-gate commit
+      - latest full release gate total updated to `moon test 879/879`
+    - Confirmed parity snapshot note consistency with post-item-85 gate state
+
+- [ ] 87. Normalize dot-segment relationship targets (`./`, repeated `../`) in read-side resolvers.
+  - DoD: resolve relationship targets with dot-segments to canonical part paths before archive lookup.
   - Planned:
-    - update `Last updated` and `Branch/HEAD` metadata
-    - update latest full-gate totals to `879/879`
-    - keep parity snapshot notes consistent with post-item-85 state
+    - add resolver tests for dot-segment target forms in `xlsx/ooxml_rels_wbtest.mbt`
+    - implement path normalization in `xlsx/ooxml_rels.mbt` for both worksheet and workbook target resolvers
+    - run targeted rel tests + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **86** (baseline snapshot refresh after item 85 gate).
+- Next item: **87** (dot-segment relationship target normalization).
