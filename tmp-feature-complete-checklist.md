@@ -2158,6 +2158,33 @@ Commands used:
     - `xlsx/workbook.mbt` uncovered lines reduced from `132` to `72`
     - Total uncovered lines reduced from `3395` to `3335`
 
+- [x] 148. Close remaining high-risk residuals in `workbook.mbt` (structural + wrapper + pivot/slicer slice).
+  - DoD: eliminate the remaining `workbook.mbt` residuals through targeted wrapper refactors and bounded branch tests, then bring file residuals to zero.
+  - Delivered:
+    - Refactored `xlsx/workbook.mbt`:
+      - `new_stream_writer` now uses `require_sheet` for worksheet lookup.
+      - `delete_sheet` simplified to a single authoritative `sheet_entry_index` lookup.
+      - `set_sheet_visible` simplified to `sheet_index + sheet_order[index]` (single lookup path).
+      - removed dead `factor == 0.0` fallback in `normalize_cell_float_value`.
+      - simplified `set_auto_filter` defined-name update path to always use normalized input range.
+      - migrated remaining style/merge/RC wrappers to `require_sheet` where safe.
+      - used `unsafe_substring` in bounded internal helpers (`pivot_cache_field_names`, `abs_cell_ref_from_rc`) to remove structurally dead slice-catch residuals.
+    - Extended `xlsx/workbook_more_test.mbt` with targeted residual tests:
+      - defaults/fan-in coverage for `add_image_with_options` and `calc_cell_value_rc` options-`None`.
+      - wrapper coverage for validation/filter/merge/sparkline/RC/style APIs.
+      - table naming and slicer edge-path coverage (missing source/table/pivot field, digit-prefixed slicer field, raw slicer wrapper).
+      - copy-sheet coverage for pane cloning and x14 data-bar map cloning.
+      - pivot option residual coverage (`next_pivot_table_name` fallback branches, empty headers, missing fields, filter loop path).
+  - Validation gates:
+    - `moon test xlsx/workbook_more_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after149.log`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after150.log`
+  - Coverage delta:
+    - `xlsx/workbook.mbt` uncovered lines reduced from `72` to `0`
+    - Total uncovered lines reduced from `3335` to `3262`
+    - Uncovered file count reduced from `56` to `55`
+
 ## Active Item
 
-- Next item: **148** (continue bounded high-risk residual reduction in `xlsx/workbook.mbt`, targeting remaining structural branches in slicer/table/pivot helpers and style/merge wrappers).
+- Next item: **149** (move to next low-line-count residual file, starting with `xlsx/workbook_compat.mbt`).

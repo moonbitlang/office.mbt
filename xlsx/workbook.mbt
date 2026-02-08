@@ -57,10 +57,7 @@ pub fn Workbook::new_stream_writer(
     Some(value) => value + 1
     None => raise SheetNotFound(name=sheet_name.to_string())
   }
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   if sheet.stream_state != Idle {
     raise StreamModeConflict(msg="stream writer already active")
   }
@@ -452,14 +449,11 @@ pub fn Workbook::delete_sheet(
   name : StringView,
 ) -> Unit raise XlsxError {
   check_sheet_name(name)
-  let entry = match self.sheet_entry(name) {
-    Some(value) => value
-    None => return ()
-  }
   let order_index = match self.sheet_entry_index(name) {
     Some(value) => value
     None => return ()
   }
+  let entry = self.sheet_order[order_index]
   let deleted_name = self.sheet_entry_name(entry)
   if self.sheet_order.length() <= 1 {
     return ()
@@ -594,14 +588,8 @@ pub fn Workbook::set_sheet_visible(
   very_hidden? : Bool = false,
 ) -> Unit raise XlsxError {
   check_sheet_name(name)
-  let entry = match self.sheet_entry(name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=name.to_string())
-  }
-  let index = match self.sheet_entry_index(name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=name.to_string())
-  }
+  let index = self.sheet_index(name)
+  let entry = self.sheet_order[index]
   let state = if visible {
     Visible
   } else if very_hidden {
@@ -1417,11 +1405,7 @@ fn normalize_cell_float_value(
     normalized
   } else {
     let factor = @math.pow(10.0, Double::from_int(precision))
-    if factor == 0.0 {
-      normalized
-    } else {
-      (normalized * factor).round() / factor
-    }
+    (normalized * factor).round() / factor
   }
 }
 
@@ -1795,10 +1779,7 @@ pub fn Workbook::set_cell_style(
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   self.check_style_id(style_id)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_style(reference, style_id)
 }
 
@@ -2281,12 +2262,12 @@ pub fn Workbook::add_slicer(
         None => break
       }
       let after = pos + rel + needle.length()
-      let rest = xml[after:] catch { _ => break }
+      let rest = xml.unsafe_substring(start=after, end=xml.length())
       let end = match rest.find("\"") {
         Some(v) => v
         None => break
       }
-      let name = rest[:end] catch { _ => break }
+      let name = rest.unsafe_substring(start=0, end~)
       out.push(name.to_string())
       pos = after + end + 1
     }
@@ -2488,16 +2469,11 @@ pub fn Workbook::set_auto_filter(
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   sheet.set_auto_filter(range_ref, options)
-  match sheet.auto_filter() {
-    Some(filter) => {
-      let abs_range = auto_filter_abs_range_ref(filter.range_ref)
-      let refers_to = "'\{escape_sheet_name(sheet_name)}'!\{abs_range}"
-      upsert_defined_name_for_scope(
-        self, "_xlnm._FilterDatabase", sheet_name, refers_to,
-      )
-    }
-    None => ()
-  }
+  let abs_range = auto_filter_abs_range_ref(range_ref)
+  let refers_to = "'\{escape_sheet_name(sheet_name)}'!\{abs_range}"
+  upsert_defined_name_for_scope(
+    self, "_xlnm._FilterDatabase", sheet_name, refers_to,
+  )
 }
 
 ///|
@@ -2527,8 +2503,8 @@ fn abs_cell_ref_from_rc(row : Int, col : Int) -> String raise XlsxError {
   while split < chars.length() && chars[split].is_ascii_alphabetic() {
     split = split + 1
   }
-  let col_text = base[:split] catch { _ => raise InvalidCellRef(value=base) }
-  let row_text = base[split:] catch { _ => raise InvalidCellRef(value=base) }
+  let col_text = base.unsafe_substring(start=0, end=split)
+  let row_text = base.unsafe_substring(start=split, end=base.length())
   "$\{col_text}$\{row_text}"
 }
 
@@ -2764,10 +2740,7 @@ pub fn Workbook::get_merge_cells_info(
     Some(value) => value
     None => self.options
   }
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let merged_ranges = merge_overlap_ranges(sheet.merged_cells())
   let results : Array[MergeCell] = []
   for range_ref in merged_ranges {
@@ -3241,10 +3214,7 @@ pub fn Workbook::get_cell_value_rc(
     Some(value) => value
     None => self.options
   }
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   for cell in sheet.cells() {
     if cell.row == row && cell.col == col {
       return Some(
@@ -3265,10 +3235,7 @@ pub fn Workbook::set_cell_style_rc(
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   self.check_style_id(style_id)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_cell_style_rc(row, col, style_id)
 }
 
@@ -3421,10 +3388,7 @@ pub fn Workbook::set_row_style_range(
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   self.check_style_id(style_id)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_row_style_range(start, end, style_id)
 }
 
@@ -3510,10 +3474,7 @@ pub fn Workbook::set_col_style(
 ) -> Unit raise XlsxError {
   check_sheet_name(sheet_name)
   self.check_style_id(style_id)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   sheet.set_col_style(col, style_id)
 }
 

@@ -770,3 +770,358 @@ async test "workbook: async missing-sheet picture/header wrappers" {
   )
   inspect(add_hf_result is Err(XlsxError::SheetNotFound(_)), content="true")
 }
+
+///|
+test "workbook: default graphic options + formula rc wrapper branches" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_formula("Sheet1", "A1", "1+1")
+  workbook.set_cell_formula_opts("Sheet1", "B1", "2+2")
+  inspect(workbook.get_cell_formula("Sheet1", "B1") is Some(_), content="true")
+
+  // Exercise calc_cell_value_rc options None forwarding.
+  inspect(workbook.calc_cell_value_rc("Sheet1", 1, 1), content="2")
+
+  // Exercise add_image_with_options default fan-in (all option fields None).
+  workbook.add_image_with_options(
+    "Sheet1",
+    "C3",
+    [1, 2],
+    ".png",
+    "image/png",
+    GraphicOptions::new(),
+  )
+  let pictures = workbook.get_pictures("Sheet1", "C3")
+  inspect(pictures.length(), content="1")
+  let picture = pictures[0]
+  inspect(picture.offset_x, content="0")
+  inspect(picture.offset_y, content="0")
+  inspect(picture.scale_x == 1.0, content="true")
+  inspect(picture.scale_y == 1.0, content="true")
+  inspect(picture.hyperlink, content="")
+  inspect(picture.hyperlink_type, content="Unset")
+  inspect(picture.name, content="")
+  inspect(picture.alt_text, content="")
+  inspect(picture.lock_aspect_ratio, content="false")
+  inspect(picture.print_object, content="true")
+  inspect(picture.locked, content="true")
+  inspect(picture.positioning, content="OneCell")
+}
+
+///|
+test "workbook: validation merge sparkline and rc/style wrapper coverage" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let empty = Workbook::new()
+  ignore(empty.add_sheet("Empty"))
+  empty.clear_auto_filter("Empty")
+  workbook.set_defined_name(
+    DefinedName::new("KeepRef", "Sheet1!$Z$1", scope="Sheet1"),
+  )
+
+  workbook.set_auto_filter("Sheet1", "A1:B2", [])
+  workbook.clear_auto_filter("Sheet1")
+  // Second clear hits remove-defined-name empty fast path.
+  workbook.clear_auto_filter("Sheet1")
+
+  let dv = DataValidation::new(true)
+  dv.set_sqref("A1")
+  dv.set_drop_list(["Yes", "No"])
+  workbook.add_data_validation("Sheet1", dv)
+  workbook.add_data_validation_list("Sheet1", "B1", ["A"])
+  ignore(workbook.get_data_validations("Sheet1"))
+  workbook.delete_data_validation("Sheet1", sqrefs=["B1"])
+  workbook.add_data_validation_xml(
+    "Sheet1", "<dataValidation type=\"list\" allowBlank=\"1\" sqref=\"C1\"><formula1>\"X,Y\"</formula1></dataValidation>",
+  )
+
+  workbook.add_conditional_format_xml(
+    "Sheet1", "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+
+  workbook.merge_cells("Sheet1", "D1:E1")
+  let merge_info = workbook.get_merge_cells_info(
+    "Sheet1",
+    options=Options::new(),
+  )
+  inspect(merge_info.length(), content="1")
+  inspect(merge_info[0].value, content="")
+  workbook.unmerge_cells("Sheet1", "D1:E1")
+
+  workbook.set_cell("Sheet1", "A1", "10")
+  workbook.add_sparkline_group("Sheet1", ["F2"][:], ["A1:A1"][:])
+  workbook.add_sparkline_basic("Sheet1", "F3", "A1:A1")
+
+  workbook.set_cell_value_rc("Sheet1", 2, 2, String("rc"))
+  inspect(
+    workbook.get_cell_value_raw_rc("Sheet1", 2, 2) is Some(_),
+    content="true",
+  )
+  inspect(workbook.get_cell_value_rc("Sheet1", 2, 2) is Some(_), content="true")
+  inspect(
+    workbook.get_cell_value_rc("Sheet1", 2, 2, options=Options::new())
+    is Some(_),
+    content="true",
+  )
+  workbook.set_cell_style_rc("Sheet1", 2, 2, 0)
+  inspect(workbook.get_cell_style_rc("Sheet1", 2, 2), content="Some(0)")
+  workbook.set_cell_formula_rc("Sheet1", 3, 1, "1+1")
+  workbook.set_row_style_range("Sheet1", 1, 1, 0)
+  workbook.set_col_style("Sheet1", 1, 0)
+
+  let miss_row_style : Result[Unit, Error] = try? workbook.set_row_style_range(
+    "Missing", 1, 1, 0,
+  )
+  inspect(miss_row_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  let miss_col_style : Result[Unit, Error] = try? workbook.set_col_style(
+    "Missing", 1, 0,
+  )
+  inspect(miss_col_style is Err(XlsxError::SheetNotFound(_)), content="true")
+
+  workbook.set_defined_name(
+    DefinedName::new("ShiftRef", "Sheet1!$A$3", scope="Sheet1"),
+  )
+  workbook.duplicate_row_to("Sheet1", 1, 2)
+  let mut shifted = false
+  for dn in workbook.defined_names() {
+    if dn.name == "ShiftRef" && dn.refers_to.contains("$A$4") {
+      shifted = true
+      break
+    }
+  }
+  inspect(shifted, content="true")
+}
+
+///|
+test "workbook: table naming and slicer wrapper/error branches" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+
+  ignore(
+    workbook.add_table_with_columns(
+      "Sheet1",
+      "A1:B2",
+      "Table",
+      ["Region", "Type"][:],
+    ),
+  )
+  ignore(
+    workbook.add_table_with_columns(
+      "Sheet1",
+      "D1:E2",
+      "TableA",
+      ["Region", "Type"][:],
+    ),
+  )
+  ignore(
+    workbook.add_table_with_columns(
+      "Sheet1",
+      "G1:H2",
+      "Table3",
+      ["Region", "Type"][:],
+    ),
+  )
+
+  let auto_name_opts = TableOptions::new("J1:K2") catch {
+    err => fail("table options init failed: \{err}")
+  }
+  let auto_name_table = workbook.add_table("Sheet1", auto_name_opts)
+  inspect(auto_name_table.name, content="Table4")
+
+  let bad_name_opts = TableOptions::new("L1:M2") catch {
+    err => fail("table options init failed: \{err}")
+  }
+  bad_name_opts.set_name("1bad")
+  let bad_name_result : Result[Table, Error] = try? workbook.add_table(
+    "Sheet1", bad_name_opts,
+  )
+  inspect(bad_name_result is Err(XlsxError::InvalidTable(_)), content="true")
+
+  let missing_sheet_opts = SlicerOptions::new(
+    "Region", "A1", "Missing", "Table",
+  ) catch {
+    err => fail("slicer options init failed: \{err}")
+  }
+  let missing_sheet : Result[Unit, Error] = try? workbook.add_slicer(
+    "Sheet1", missing_sheet_opts,
+  )
+  inspect(missing_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
+
+  let missing_table_opts = SlicerOptions::new(
+    "Region", "A1", "Sheet1", "NoSuch",
+  ) catch {
+    err => fail("slicer options init failed: \{err}")
+  }
+  let missing_table : Result[Unit, Error] = try? workbook.add_slicer_with_options(
+    "Sheet1", missing_table_opts,
+  )
+  inspect(missing_table is Err(XlsxError::TableNotFound(_)), content="true")
+
+  let missing_field_opts = SlicerOptions::new(
+    "MissingField", "A1", "Sheet1", "Table",
+  ) catch {
+    err => fail("slicer options init failed: \{err}")
+  }
+  let missing_field : Result[Unit, Error] = try? workbook.add_slicer(
+    "Sheet1", missing_field_opts,
+  )
+  inspect(
+    missing_field is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+
+  ignore(
+    workbook.add_table_with_columns(
+      "Sheet1",
+      "N1:O2",
+      "TableDigits",
+      ["1Region", "Type"][:],
+    ),
+  )
+  let digit_field_opts = SlicerOptions::new(
+    "1Region", "N3", "Sheet1", "TableDigits",
+  ) catch {
+    err => fail("slicer options init failed: \{err}")
+  }
+  workbook.add_slicer("Sheet1", digit_field_opts)
+
+  ignore(
+    workbook.add_pivot_table_xml(
+      "Sheet1",
+      "<pivotTableDefinition/>",
+      "<cacheDefinition><cacheFields><cacheField name=\"Region</cacheFields></cacheDefinition>",
+      name="PivotBad",
+    ),
+  )
+  let pivot_field_missing_opts = SlicerOptions::new(
+    "Region", "P1", "Sheet1", "PivotBad",
+  ) catch {
+    err => fail("slicer options init failed: \{err}")
+  }
+  let pivot_field_missing : Result[Unit, Error] = try? workbook.add_slicer(
+    "Sheet1", pivot_field_missing_opts,
+  )
+  inspect(
+    pivot_field_missing is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+
+  let raw = Slicer::new("RawSlicer") catch {
+    err => fail("raw slicer init failed: \{err}")
+  }
+  workbook.add_slicer_raw("Sheet1", raw)
+  inspect(workbook.get_slicers("Sheet1").length() > 0, content="true")
+}
+
+///|
+test "workbook: copy_sheet clones pane and x14 data bar maps" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Src"))
+  ignore(workbook.add_sheet("Dst"))
+  workbook.set_panes(
+    "Src",
+    Panes::with_values(
+      freeze=true,
+      split=true,
+      x_split=1,
+      y_split=1,
+      top_left_cell="B2",
+      active_pane="bottomRight",
+      selection=[
+        Selection::with_values(sqref="B2", active_cell="B2", pane="bottomRight"),
+      ],
+    ),
+  )
+  let data_bar = ConditionalFormatOptions::new("data_bar")
+  data_bar.set_bar_solid(true)
+  data_bar.set_bar_border_color("#0000FF")
+  workbook.set_conditional_format("Src", "A1:A2", [data_bar])
+  workbook.copy_sheet(0, 1)
+  inspect(workbook.get_conditional_formats("Dst").length() > 0, content="true")
+}
+
+///|
+test "workbook: pivot option residual branches" {
+  let wb_name = Workbook::new()
+  let name_sheet = wb_name.add_sheet("Sheet1")
+  name_sheet.set_cell_value("A1", String("Region"))
+  name_sheet.set_cell_value("B1", String("Sales"))
+  name_sheet.set_cell_value("A2", String("East"))
+  name_sheet.set_cell_value("B2", Numeric(10.0))
+  ignore(
+    wb_name.add_pivot_table_xml(
+      "Sheet1",
+      "<pivotTableDefinition/>",
+      "<pivotCacheDefinition/>",
+      name="Other",
+    ),
+  )
+  ignore(
+    wb_name.add_pivot_table_xml(
+      "Sheet1",
+      "<pivotTableDefinition/>",
+      "<pivotCacheDefinition/>",
+      name="PivotTable",
+    ),
+  )
+  ignore(
+    wb_name.add_pivot_table_xml(
+      "Sheet1",
+      "<pivotTableDefinition/>",
+      "<pivotCacheDefinition/>",
+      name="PivotTable3",
+    ),
+  )
+  let next_name_opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
+  next_name_opts.rows.push(PivotTableField::new("Region"))
+  next_name_opts.data.push(PivotTableField::new("Sales"))
+  let next_name_pivot = wb_name.add_pivot_table(next_name_opts)
+  inspect(next_name_pivot.name, content="PivotTable4")
+
+  let wb_empty = Workbook::new()
+  let empty_sheet = wb_empty.add_sheet("Sheet1")
+  empty_sheet.set_cell_value("A2", String("East"))
+  empty_sheet.set_cell_value("B2", Numeric(10.0))
+  let empty_header_opts = PivotTableOptions::new(
+    "Sheet1!A1:B2", "Sheet1!E2:H10",
+  )
+  let empty_header_result : Result[PivotTable, Error] = try? wb_empty.add_pivot_table(
+    empty_header_opts,
+  )
+  inspect(
+    empty_header_result is Err(XlsxError::InvalidPivotTable(_)),
+    content="true",
+  )
+
+  let wb_missing = Workbook::new()
+  let missing_sheet = wb_missing.add_sheet("Sheet1")
+  missing_sheet.set_cell_value("A1", String("Region"))
+  missing_sheet.set_cell_value("B1", String("Sales"))
+  missing_sheet.set_cell_value("A2", String("East"))
+  missing_sheet.set_cell_value("B2", Numeric(10.0))
+  let missing_field_opts = PivotTableOptions::new(
+    "Sheet1!A1:B2", "Sheet1!E2:H10",
+  )
+  missing_field_opts.rows.push(PivotTableField::new("Missing"))
+  let missing_field_result : Result[PivotTable, Error] = try? wb_missing.add_pivot_table(
+    missing_field_opts,
+  )
+  inspect(
+    missing_field_result is Err(XlsxError::InvalidPivotTable(_)),
+    content="true",
+  )
+
+  let wb_filter = Workbook::new()
+  let filter_sheet = wb_filter.add_sheet("Sheet1")
+  filter_sheet.set_cell_value("A1", String("Region"))
+  filter_sheet.set_cell_value("B1", String("Sales"))
+  filter_sheet.set_cell_value("A2", String("East"))
+  filter_sheet.set_cell_value("B2", Numeric(10.0))
+  let filter_opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
+  filter_opts.filter.push(PivotTableField::new("Region"))
+  filter_opts.data.push(PivotTableField::new("Missing"))
+  let filter_result : Result[PivotTable, Error] = try? wb_filter.add_pivot_table(
+    filter_opts,
+  )
+  inspect(filter_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
+}
