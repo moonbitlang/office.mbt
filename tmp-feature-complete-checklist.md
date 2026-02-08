@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 864/864`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 865/865`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -868,13 +868,25 @@ Commands used:
       - all eight integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 65. Re-run full release gate after three-cycle mixed-ext tranche.
+- [x] 65. Re-run full release gate after three-cycle mixed-ext tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `63/64`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`865/865`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 66. Add mixed-ext relationship-id uniqueness test across three-cycle roundtrip output.
+  - DoD: verify relationship IDs/targets in worksheet and drawing rels remain unique/non-duplicated after three-cycle roundtrip.
   - Planned:
-    - execute full release gate command
-    - capture updated total test count and parity status
-    - refresh baseline snapshot if totals changed
+    - reuse three-cycle fixture from `63`
+    - parse final-cycle worksheet and drawing rels
+    - assert unique `Id` values and valid target fan-out for drawing/chart/slicer
+    - run targeted integration test + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **65** (full release gate after three-cycle mixed-ext tranche).
+- Next item: **66** (mixed-ext relationship-id uniqueness after three cycles).
