@@ -21,6 +21,8 @@ This repo has already implemented several items from the roadmap:
   - `xlsx/write.mbt` helpers extracted into:
     - `xlsx/write_workbook_xml.mbt`
     - `xlsx/write_shared_strings.mbt`
+    - `xlsx/write_worksheet_layout_xml.mbt`
+    - `xlsx/write_comments_vml.mbt`
 - [x] Phase 1: centralize OOXML string + `.rels` helpers
   - `xlsx/ooxml_utils.mbt`
   - `xlsx/ooxml_rels.mbt`
@@ -39,6 +41,10 @@ This repo has already implemented several items from the roadmap:
     `xlsx/formula_eval.mbt`, `xlsx/formula_builtins.mbt`
 - [x] Phase 1: extract `Workbook`/`Worksheet` type definitions and accessors
   into dedicated files (`xlsx/workbook_types.mbt`, `xlsx/worksheet_types.mbt`)
+- [x] Phase 4 (partial): add worksheet cell index cache for hot get/set paths
+  - `Worksheet` now tracks an internal `cell_index` cache that is lazily built
+    and invalidated on structural row/column mutations.
+  - Covered by `xlsx/worksheet_cell_index_wbtest.mbt`.
 
 ## Current pain points (why refactor)
 
