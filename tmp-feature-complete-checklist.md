@@ -1,7 +1,7 @@
 # Temporary Feature-Complete Checklist
 
 Last updated: 2026-02-08  
-Branch/HEAD: `main` @ `5b87469`  
+Branch/HEAD: `main` @ `ef202ae`  
 Excelize snapshot: `37b730a`
 
 ## Baseline Snapshot (Completed)
@@ -9,7 +9,7 @@ Excelize snapshot: `37b730a`
 - API name parity: `169/169`, missing `0`
 - Exported type parity (key feature files): missing `0`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
-- Struct field parity differences (`--normalize-known`): `21` structs still differ
+- Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `45`, missing `433`
 
 Commands used:
@@ -453,12 +453,42 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Shape`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 30. Reduce stream/iterator struct extras (`Cell`, `Rows`, `Cols`, `StreamWriter`).
+- [x] 30. Reduce stream/iterator struct extras (`Cell`, `Rows`, `Cols`, `StreamWriter`).
   - DoD: remove current stream/iterator extra-field parity noise from normalized report via extension allowances.
+  - Delivered:
+    - Registered normalized-report MoonBit extension fields in `scripts/excelize_struct_field_parity.py` for:
+      - `Cell`
+      - `Rows`
+      - `Cols`
+      - `StreamWriter`
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Cell,Rows,Cols,StreamWriter`
+      - Result: `No field-level differences found (heuristic).`
+    - Re-validated full normalized struct-field parity:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known`
+      - Result: `No field-level differences found (heuristic).`
+
+- [x] 31. Refresh baseline snapshot after normalized struct-parity closure.
+  - DoD: update baseline metrics section with current command outputs, including zero normalized struct differences.
+  - Delivered:
+    - Re-ran baseline commands:
+      - `python3 scripts/excelize_parity_report.py`
+      - `python3 scripts/excelize_api_coverage.py`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known`
+      - `python3 scripts/excelize_formula_parity.py`
+    - Refreshed baseline snapshot values:
+      - API name parity remains `169/169`, missing `0`
+      - API test-reference coverage remains uncovered `0`
+      - normalized struct field parity is now `0` differences
+      - formula parity heuristic remains Excelize `458` vs MoonBit `45` (missing `433`)
+
+- [ ] 32. Start formula parity closure pack 1 (high-usage text/date/math functions).
+  - DoD: increase MoonBit formula-name heuristic count from `45` with targeted implementations and parity tests.
   - Planned:
-    - classify MoonBit stream/iterator implementation fields as normalized-report extensions
-    - rerun focused parity report for `Cell,Rows,Cols,StreamWriter`
+    - select and implement a small high-impact function pack
+    - add parity tests for each added function
+    - rerun `python3 scripts/excelize_formula_parity.py` and record delta
 
 ## Active Item
 
-- Next item: **30** (`Cell/Rows/Cols/StreamWriter` extra-field parity reduction).
+- Next item: **32** (formula parity closure pack 1).

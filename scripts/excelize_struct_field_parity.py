@@ -219,6 +219,19 @@ _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
         "locked",
         "positioning",
     },
+    "Cell": {
+        "reference",
+        "row",
+        "col",
+        "value_type",
+        "rich_text",
+        "formula_type",
+        "formula_ref",
+        "formula_shared_index",
+    },
+    "Rows": {"sheet", "entries", "index", "styles", "options"},
+    "Cols": {"sheet", "columns", "max_row", "index", "styles", "options", "err"},
+    "StreamWriter": {"last_row", "styles", "closed"},
 }
 
 
