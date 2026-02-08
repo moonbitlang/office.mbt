@@ -1782,6 +1782,20 @@ Commands used:
   - Coverage delta:
     - `xlsx/cell_value.mbt` uncovered lines reduced from `2` to `0`
 
+- [x] 126. Close low-line-count residuals in `slicer_options.mbt`.
+  - DoD: cover required-field and size guard error branches in `SlicerOptions`.
+  - Delivered:
+    - Extended `xlsx/slicer_parity_test.mbt` with:
+      - `slicer options required-fields and size guards`
+      - verifies `SlicerOptions::new(...)` rejects missing required fields
+      - verifies `SlicerOptions::set_size(0, ...)` rejects non-positive dimensions
+  - Validation gates:
+    - `moon test xlsx/slicer_parity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after127.log`
+  - Coverage delta:
+    - `xlsx/slicer_options.mbt` uncovered lines reduced from `2` to `0`
+
 ## Active Item
 
-- Next item: **126** (close low-line-count residuals in `xlsx/slicer_options.mbt` with targeted parser/guard branch tests).
+- Next item: **127** (close low-line-count residuals in `xlsx/auto_filter.mbt` with targeted parser/guard branch tests).
