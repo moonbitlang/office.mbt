@@ -1572,6 +1572,18 @@ Commands used:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `19` to `12`
     - Residual `worksheet.mbt` uncovered lines are now concentrated in effectively unreachable guard/catch branches (slice/catch impossibles and defaulted-option dead paths), suitable for explicit unreachable annotation or exclusion policy.
 
+- [x] 114. Close `worksheet_types` residual coverage (`Worksheet::set_state`).
+  - DoD: eliminate remaining uncovered line in `xlsx/worksheet_types.mbt`.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with direct visibility-state mutation coverage:
+      - `Visible -> Hidden -> VeryHidden` through `Worksheet::set_state`.
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after114.log`
+    - Coverage delta:
+      - `xlsx/worksheet_types.mbt` uncovered lines reduced from `1` to `0`
+
 ## Active Item
 
-- Next item: **114** (close trivial residuals outside `worksheet.mbt`: add direct coverage for `worksheet_types::set_state`, then pick the next highest-value hotspot for bounded hardening).
+- Next item: **115** (start bounded hardening on `xlsx/write.mbt` by covering chart/shape drawing anchor branches and one rich-text color fallback branch).

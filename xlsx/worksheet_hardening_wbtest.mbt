@@ -8,6 +8,16 @@ test "worksheet wb: missing-cell getters return None" {
 }
 
 ///|
+test "worksheet wb: set_state updates worksheet visibility state" {
+  let sheet = Worksheet::new("Sheet1")
+  inspect(sheet.state(), content="Visible")
+  sheet.set_state(Hidden)
+  inspect(sheet.state(), content="Hidden")
+  sheet.set_state(VeryHidden)
+  inspect(sheet.state(), content="VeryHidden")
+}
+
+///|
 test "worksheet wb: sparkline and validation guard errors" {
   let sheet = Worksheet::new("Sheet1")
   let empty_inputs : Result[Unit, Error] = try? sheet.add_sparkline_group([], [])
