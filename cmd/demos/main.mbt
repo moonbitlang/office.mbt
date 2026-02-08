@@ -61,6 +61,20 @@ async fn write_out(out_dir : String, name : String, bytes : Bytes) -> Unit {
 }
 
 ///|
+async fn cleanup_stale_resave_files(out_dir : String) -> Unit {
+  let names = @async/fs.readdir(out_dir) catch { _ => [] }
+  for name in names {
+    if name.has_suffix("_excelize_resave.xlsx") {
+      let path = "\{out_dir}/\{name}"
+      @async/fs.remove(path) catch {
+        _ => ()
+      }
+      println("removed stale \{path}")
+    }
+  }
+}
+
+///|
 fn run_demo_bytes(
   demo : StringView,
   args : ArrayView[String],
@@ -111,6 +125,7 @@ async fn run_one(
 
 ///|
 async fn run_all(out_dir : String) -> Unit {
+  cleanup_stale_resave_files(out_dir)
   run_one("dashboard", out_dir, [])
   run_one("invoice", out_dir, [])
   run_one("pivot_slicer", out_dir, [])
