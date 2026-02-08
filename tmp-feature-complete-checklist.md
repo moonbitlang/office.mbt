@@ -1326,13 +1326,36 @@ Commands used:
     - Coverage delta:
       - `xlsx/write.mbt` uncovered lines reduced from `96` to `89`
 
-- [ ] 99. Plan next bounded hardening slice after `write.mbt` edge-branch gains.
+- [x] 99. Plan next bounded hardening slice after `write.mbt` edge-branch gains.
   - DoD: choose the next highest-value uncovered target with explicit branch scope and measurable output.
-  - Planned:
-    - inspect current uncovered hotspots in `worksheet.mbt` and `read.mbt`
-    - pick one bounded branch cluster with low implementation risk
-    - continue one-by-one implementation + commit cadence
+  - Delivered:
+    - compared post-item-98 hotspots and selected `worksheet.mbt` as the next bounded target (`210` uncovered lines at selection time)
+    - fixed-scope branch cluster chosen for low-risk, high-signal coverage:
+      - missing-cell getter `None` paths
+      - sparkline/data-validation input guard errors
+      - slicer delete empty/missing/remove branches
+      - data-validation XML append + delete clear/malformed branches
+    - implementation boundary defined:
+      - add one focused whitebox file
+      - run targeted tests + `moon check --deny-warn`
+      - record coverage delta for `xlsx/worksheet.mbt`
+
+- [x] 100. Cover `worksheet.mbt` getter/guard/error branches (missing-cell + validation/slicer slice).
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` via bounded whitebox tests for selected guard clusters.
+  - Delivered:
+    - Added `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `get_cell_rich_text` / `get_cell_formula` / `get_cell_style` / `get_cell_style_rc` missing-cell `None` paths
+      - `add_sparkline_group` empty-input error branch
+      - `add_data_validation_list` empty-values error branch
+      - `delete_slicer` empty-name, not-found, and remove-while-keeping-others branches
+      - `add_data_validation_xml` append path
+      - `delete_data_validation` empty-sqref clear path, full-delete continue path, and malformed XML error branches (`tag missing`, `sqref missing`)
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `210` to `195`
 
 ## Active Item
 
-- Next item: **99** (next bounded hardening slice selection).
+- Next item: **101** (select the next bounded worksheet/read/write hardening slice after item 100 coverage measurement).
