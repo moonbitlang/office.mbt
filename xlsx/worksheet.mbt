@@ -106,8 +106,9 @@ pub fn Worksheet::set_cell(
   self.ensure_stream_idle()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference: canonical,
         row,
@@ -119,24 +120,27 @@ pub fn Worksheet::set_cell(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference: canonical,
+        row,
+        col,
+        value,
+        value_type: String,
+        rich_text: None,
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference: canonical,
-    row,
-    col,
-    value,
-    value_type: String,
-    rich_text: None,
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -145,12 +149,10 @@ pub fn Worksheet::get_cell(
   reference : StringView,
 ) -> String? raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return Some(cell.value)
-    }
+  match self.cell_index_of(row, col) {
+    Some(i) => Some(self.cells[i].value)
+    None => None
   }
-  None
 }
 
 ///|
@@ -164,8 +166,9 @@ pub fn Worksheet::set_cell_value(
   let canonical = cell_ref_from(row, col)
   let value_type = cell_value_type(value)
   let raw_value = cell_value_raw_string(value)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference: canonical,
         row,
@@ -177,24 +180,27 @@ pub fn Worksheet::set_cell_value(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference: canonical,
+        row,
+        col,
+        value: raw_value,
+        value_type,
+        rich_text: None,
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference: canonical,
-    row,
-    col,
-    value: raw_value,
-    value_type,
-    rich_text: None,
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -203,12 +209,11 @@ pub fn Worksheet::get_cell_value_raw(
   reference : StringView,
 ) -> CellValue? raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return Some(cell_value_from_raw(cell.value_type, cell.value))
-    }
+  match self.cell_index_of(row, col) {
+    Some(i) =>
+      Some(cell_value_from_raw(self.cells[i].value_type, self.cells[i].value))
+    None => None
   }
-  None
 }
 
 ///|
@@ -257,8 +262,9 @@ pub fn Worksheet::set_cell_rich_text(
     stored_runs.push(run)
   }
   let value = rich_text_plain_text(runs)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference: canonical,
         row,
@@ -270,24 +276,27 @@ pub fn Worksheet::set_cell_rich_text(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference: canonical,
+        row,
+        col,
+        value,
+        value_type: String,
+        rich_text: Some(stored_runs),
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference: canonical,
-    row,
-    col,
-    value,
-    value_type: String,
-    rich_text: Some(stored_runs),
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -296,28 +305,30 @@ pub fn Worksheet::get_cell_rich_text(
   reference : StringView,
 ) -> Array[RichTextRun]? raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let cell = self.cells[i]
       if cell.value_type != String {
-        return None
-      }
-      match cell.rich_text {
-        Some(runs) => {
-          let copied : Array[RichTextRun] = []
-          for run in runs {
-            copied.push(run)
+        None
+      } else {
+        match cell.rich_text {
+          Some(runs) => {
+            let copied : Array[RichTextRun] = []
+            for run in runs {
+              copied.push(run)
+            }
+            Some(copied)
           }
-          return Some(copied)
-        }
-        None => {
-          let runs : Array[RichTextRun] = []
-          runs.push({ text: cell.value, font: None })
-          return Some(runs)
+          None => {
+            let runs : Array[RichTextRun] = []
+            runs.push({ text: cell.value, font: None })
+            Some(runs)
+          }
         }
       }
     }
+    None => None
   }
-  None
 }
 
 ///|
@@ -330,8 +341,9 @@ pub fn Worksheet::set_cell_formula(
   self.ensure_stream_idle()
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference: canonical,
         row,
@@ -343,24 +355,27 @@ pub fn Worksheet::set_cell_formula(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference: canonical,
+        row,
+        col,
+        value,
+        value_type: String,
+        rich_text: None,
+        formula: Some(formula),
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference: canonical,
-    row,
-    col,
-    value,
-    value_type: String,
-    rich_text: None,
-    formula: Some(formula),
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -369,15 +384,14 @@ pub fn Worksheet::get_cell_formula(
   reference : StringView,
 ) -> String? raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return match cell.formula {
+  match self.cell_index_of(row, col) {
+    Some(i) =>
+      match self.cells[i].formula {
         Some(value) => if value == "" { None } else { Some(value) }
         None => None
       }
-    }
+    None => None
   }
-  None
 }
 
 ///|
@@ -416,8 +430,9 @@ pub fn Worksheet::set_cell_formula_opts(
         value : String,
       ) -> Unit raise XlsxError {
         let canonical = cell_ref_from(row, col)
-        for i, cell in sheet.cells {
-          if cell.row == row && cell.col == col {
+        match sheet.cell_index_of(row, col) {
+          Some(i) => {
+            let style_id = sheet.cells[i].style_id
             sheet.cells[i] = {
               reference: canonical,
               row,
@@ -429,24 +444,27 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_type: Some(Array),
               formula_ref: Some(formula_ref),
               formula_shared_index: None,
-              style_id: cell.style_id,
+              style_id,
             }
-            return
+          }
+          None => {
+            let index = sheet.cells.length()
+            sheet.cells.push({
+              reference: canonical,
+              row,
+              col,
+              value,
+              value_type: String,
+              rich_text: None,
+              formula: Some(formula),
+              formula_type: Some(Array),
+              formula_ref: Some(formula_ref),
+              formula_shared_index: None,
+              style_id: 0,
+            })
+            sheet.record_cell_index_if_valid(row, col, index)
           }
         }
-        sheet.cells.push({
-          reference: canonical,
-          row,
-          col,
-          value,
-          value_type: String,
-          rich_text: None,
-          formula: Some(formula),
-          formula_type: Some(Array),
-          formula_ref: Some(formula_ref),
-          formula_shared_index: None,
-          style_id: 0,
-        })
       }
 
       for row in min_row..<=max_row {
@@ -490,8 +508,9 @@ pub fn Worksheet::set_cell_formula_opts(
         value : String,
       ) -> Unit raise XlsxError {
         let canonical = cell_ref_from(row, col)
-        for i, cell in sheet.cells {
-          if cell.row == row && cell.col == col {
+        match sheet.cell_index_of(row, col) {
+          Some(i) => {
+            let style_id = sheet.cells[i].style_id
             sheet.cells[i] = {
               reference: canonical,
               row,
@@ -503,24 +522,27 @@ pub fn Worksheet::set_cell_formula_opts(
               formula_type: Some(Shared),
               formula_ref,
               formula_shared_index: Some(shared_index),
-              style_id: cell.style_id,
+              style_id,
             }
-            return
+          }
+          None => {
+            let index = sheet.cells.length()
+            sheet.cells.push({
+              reference: canonical,
+              row,
+              col,
+              value,
+              value_type: String,
+              rich_text: None,
+              formula: Some(formula),
+              formula_type: Some(Shared),
+              formula_ref,
+              formula_shared_index: Some(shared_index),
+              style_id: 0,
+            })
+            sheet.record_cell_index_if_valid(row, col, index)
           }
         }
-        sheet.cells.push({
-          reference: canonical,
-          row,
-          col,
-          value,
-          value_type: String,
-          rich_text: None,
-          formula: Some(formula),
-          formula_type: Some(Shared),
-          formula_ref,
-          formula_shared_index: Some(shared_index),
-          style_id: 0,
-        })
       }
 
       for row in min_row..<=max_row {
@@ -709,8 +731,9 @@ pub fn Worksheet::set_cell_style(
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let cell = self.cells[i]
       self.cells[i] = {
         reference: canonical,
         row,
@@ -724,22 +747,25 @@ pub fn Worksheet::set_cell_style(
         formula_shared_index: cell.formula_shared_index,
         style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference: canonical,
+        row,
+        col,
+        value: "",
+        value_type: String,
+        rich_text: None,
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference: canonical,
-    row,
-    col,
-    value: "",
-    value_type: String,
-    rich_text: None,
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id,
-  })
 }
 
 ///|
@@ -748,12 +774,10 @@ pub fn Worksheet::get_cell_style(
   reference : StringView,
 ) -> Int? raise XlsxError {
   let (row, col) = cell_ref_to_rc(reference)
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return Some(cell.style_id)
-    }
+  match self.cell_index_of(row, col) {
+    Some(i) => Some(self.cells[i].style_id)
+    None => None
   }
-  None
 }
 
 ///|
@@ -768,8 +792,9 @@ pub fn Worksheet::set_cell_style_rc(
     raise InvalidStyleId(index=style_id)
   }
   let reference = cell_ref_from(row, col)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let cell = self.cells[i]
       self.cells[i] = {
         reference,
         row,
@@ -783,22 +808,25 @@ pub fn Worksheet::set_cell_style_rc(
         formula_shared_index: cell.formula_shared_index,
         style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference,
+        row,
+        col,
+        value: "",
+        value_type: String,
+        rich_text: None,
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference,
-    row,
-    col,
-    value: "",
-    value_type: String,
-    rich_text: None,
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id,
-  })
 }
 
 ///|
@@ -810,12 +838,10 @@ pub fn Worksheet::get_cell_style_rc(
   if row <= 0 || col <= 0 {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return Some(cell.style_id)
-    }
+  match self.cell_index_of(row, col) {
+    Some(i) => Some(self.cells[i].style_id)
+    None => None
   }
-  None
 }
 
 ///|
@@ -2259,8 +2285,9 @@ pub fn Worksheet::set_cell_rc(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let reference = cell_ref_from(row, col)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference,
         row,
@@ -2272,24 +2299,27 @@ pub fn Worksheet::set_cell_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference,
+        row,
+        col,
+        value,
+        value_type: String,
+        rich_text: None,
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference,
-    row,
-    col,
-    value,
-    value_type: String,
-    rich_text: None,
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -2303,8 +2333,9 @@ pub fn Worksheet::set_cell_value_rc(
   let reference = cell_ref_from(row, col)
   let value_type = cell_value_type(value)
   let raw_value = cell_value_raw_string(value)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference,
         row,
@@ -2316,24 +2347,27 @@ pub fn Worksheet::set_cell_value_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference,
+        row,
+        col,
+        value: raw_value,
+        value_type,
+        rich_text: None,
+        formula: None,
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference,
-    row,
-    col,
-    value: raw_value,
-    value_type,
-    rich_text: None,
-    formula: None,
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -2346,8 +2380,9 @@ pub fn Worksheet::set_cell_formula_rc(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   let reference = cell_ref_from(row, col)
-  for i, cell in self.cells {
-    if cell.row == row && cell.col == col {
+  match self.cell_index_of(row, col) {
+    Some(i) => {
+      let style_id = self.cells[i].style_id
       self.cells[i] = {
         reference,
         row,
@@ -2359,24 +2394,27 @@ pub fn Worksheet::set_cell_formula_rc(
         formula_type: None,
         formula_ref: None,
         formula_shared_index: None,
-        style_id: cell.style_id,
+        style_id,
       }
-      return
+    }
+    None => {
+      let index = self.cells.length()
+      self.cells.push({
+        reference,
+        row,
+        col,
+        value,
+        value_type: String,
+        rich_text: None,
+        formula: Some(formula),
+        formula_type: None,
+        formula_ref: None,
+        formula_shared_index: None,
+        style_id: 0,
+      })
+      self.record_cell_index_if_valid(row, col, index)
     }
   }
-  self.cells.push({
-    reference,
-    row,
-    col,
-    value,
-    value_type: String,
-    rich_text: None,
-    formula: Some(formula),
-    formula_type: None,
-    formula_ref: None,
-    formula_shared_index: None,
-    style_id: 0,
-  })
 }
 
 ///|
@@ -2388,12 +2426,10 @@ pub fn Worksheet::get_cell_rc(
   if row <= 0 || col <= 0 {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return Some(cell.value)
-    }
+  match self.cell_index_of(row, col) {
+    Some(i) => Some(self.cells[i].value)
+    None => None
   }
-  None
 }
 
 ///|
@@ -2405,12 +2441,11 @@ pub fn Worksheet::get_cell_value_raw_rc(
   if row <= 0 || col <= 0 {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
-  for cell in self.cells {
-    if cell.row == row && cell.col == col {
-      return Some(cell_value_from_raw(cell.value_type, cell.value))
-    }
+  match self.cell_index_of(row, col) {
+    Some(i) =>
+      Some(cell_value_from_raw(self.cells[i].value_type, self.cells[i].value))
+    None => None
   }
-  None
 }
 
 ///|
@@ -2891,6 +2926,7 @@ pub fn Worksheet::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3001,6 +3037,7 @@ pub fn Worksheet::remove_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3361,6 +3398,7 @@ pub fn Worksheet::duplicate_row_to(
   target_row : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
@@ -3407,6 +3445,7 @@ pub fn Worksheet::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_cell_index()
   if col <= 0 {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
@@ -3517,6 +3556,7 @@ pub fn Worksheet::remove_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
+  self.invalidate_cell_index()
   if col <= 0 {
     raise InvalidCellRef(value="\{col}:\{0}")
   }

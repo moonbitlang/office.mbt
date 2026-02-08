@@ -1330,6 +1330,8 @@ fn clone_worksheet(
     sheet_views: clone_sheet_views(sheet.sheet_views),
     dimension_ref: sheet.dimension_ref,
     cells: clone_cells(sheet.cells),
+    cell_index: {},
+    cell_index_valid: false,
     merged_cells: clone_strings(sheet.merged_cells),
     hyperlinks: clone_hyperlinks(sheet.hyperlinks),
     tables: clone_tables(sheet.tables),

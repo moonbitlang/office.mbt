@@ -77,6 +77,8 @@ pub struct Worksheet {
   sheet_views : Array[SheetView]
   mut dimension_ref : String?
   cells : Array[Cell]
+  cell_index : Map[String, Int]
+  mut cell_index_valid : Bool
   merged_cells : Array[String]
   hyperlinks : Array[Hyperlink]
   tables : Array[Table]
@@ -118,6 +120,8 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     sheet_views: [],
     dimension_ref: None,
     cells: [],
+    cell_index: {},
+    cell_index_valid: false,
     merged_cells: [],
     hyperlinks: [],
     tables: [],

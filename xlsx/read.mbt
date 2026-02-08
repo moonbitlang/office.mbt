@@ -4705,6 +4705,8 @@ fn read_zip_bytes(
         sheet_views,
         dimension_ref,
         cells,
+        cell_index: {},
+        cell_index_valid: false,
         merged_cells,
         auto_filter,
         page_margins,
