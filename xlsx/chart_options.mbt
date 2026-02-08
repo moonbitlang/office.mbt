@@ -1941,16 +1941,9 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
   let has_combo = opts.combo_charts.length() > 0
   if !has_combo {
     let (plot_tag, bar_dir) = chart_type_to_plot(opts.typ)
-    if plot_tag == "" {
-      raise UnsupportedFeature(msg="unsupported chart type")
-    }
     if plot_tag == "stockChart" {
-      let expected = match opts.typ {
-        StockHighLowClose => 3
-        StockOpenHighLowClose => 4
-        _ => 0
-      }
-      if expected > 0 && opts.series.length() != expected {
+      let expected = if opts.typ == StockHighLowClose { 3 } else { 4 }
+      if opts.series.length() != expected {
         raise InvalidSheetOperation(
           msg="stock chart requires \{expected} series",
         )
@@ -1958,13 +1951,10 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     }
     sb.write_view("      <c:\{plot_tag}>\n")
     if plot_tag == "barChart" || plot_tag == "bar3DChart" {
-      match bar_dir {
-        Some(dir) => {
-          sb.write_view("        <c:barDir val=\"")
-          sb.write_view(escape_xml_attr(dir))
-          sb.write_view("\"/>\n")
-        }
-        None => ()
+      if bar_dir is Some(dir) {
+        sb.write_view("        <c:barDir val=\"")
+        sb.write_view(escape_xml_attr(dir))
+        sb.write_view("\"/>\n")
       }
     }
     if plot_tag == "barChart" ||
@@ -1973,13 +1963,10 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       plot_tag == "line3DChart" ||
       plot_tag == "areaChart" ||
       plot_tag == "area3DChart" {
-      match chart_grouping(opts.typ) {
-        Some(value) => {
-          sb.write_view("        <c:grouping val=\"")
-          sb.write_view(escape_xml_attr(value))
-          sb.write_view("\"/>\n")
-        }
-        None => ()
+      if chart_grouping(opts.typ) is Some(value) {
+        sb.write_view("        <c:grouping val=\"")
+        sb.write_view(escape_xml_attr(value))
+        sb.write_view("\"/>\n")
       }
     }
     if plot_tag == "scatterChart" {
@@ -2127,18 +2114,12 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       plots.push(combo)
     }
     let (main_plot_tag, _main_bar_dir) = chart_type_to_plot(opts.typ)
-    if main_plot_tag == "" {
-      raise UnsupportedFeature(msg="unsupported chart type")
-    }
     let mut has_cat_val = false
     let mut has_xy = false
     let mut has_stock = false
     let mut data_table_tag : String? = None
     for plot in plots {
       let (plot_tag, _bar_dir) = chart_type_to_plot(plot.typ)
-      if plot_tag == "" {
-        raise UnsupportedFeature(msg="unsupported chart type")
-      }
       if plot_tag == "pieChart" ||
         plot_tag == "pie3DChart" ||
         plot_tag == "ofPieChart" ||
@@ -2230,28 +2211,13 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     for plot_idx in 0..<plots.length() {
       let plot = plots[plot_idx]
       let (plot_tag, bar_dir) = chart_type_to_plot(plot.typ)
-      if plot_tag == "" {
-        raise UnsupportedFeature(msg="unsupported chart type")
-      }
       if plot_tag == "stockChart" {
-        let expected = match plot.typ {
-          StockHighLowClose => 3
-          StockOpenHighLowClose => 4
-          _ => 0
-        }
-        if expected > 0 && plot.series.length() != expected {
+        let expected = if plot.typ == StockHighLowClose { 3 } else { 4 }
+        if plot.series.length() != expected {
           raise InvalidSheetOperation(
             msg="stock chart requires \{expected} series",
           )
         }
-      }
-      if plot_tag == "pieChart" ||
-        plot_tag == "pie3DChart" ||
-        plot_tag == "ofPieChart" ||
-        plot_tag == "doughnutChart" ||
-        plot_tag == "surface3DChart" ||
-        plot_tag == "surfaceChart" {
-        raise UnsupportedFeature(msg="combo chart type unsupported")
       }
       let is_xy = plot_tag == "scatterChart" || plot_tag == "bubbleChart"
       let use_secondary = plot_idx > 0 && plot.y_axis.secondary
@@ -2268,13 +2234,10 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       }
       sb.write_view("      <c:\{plot_tag}>\n")
       if plot_tag == "barChart" || plot_tag == "bar3DChart" {
-        match bar_dir {
-          Some(dir) => {
-            sb.write_view("        <c:barDir val=\"")
-            sb.write_view(escape_xml_attr(dir))
-            sb.write_view("\"/>\n")
-          }
-          None => ()
+        if bar_dir is Some(dir) {
+          sb.write_view("        <c:barDir val=\"")
+          sb.write_view(escape_xml_attr(dir))
+          sb.write_view("\"/>\n")
         }
       }
       if plot_tag == "barChart" ||
@@ -2283,13 +2246,10 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         plot_tag == "line3DChart" ||
         plot_tag == "areaChart" ||
         plot_tag == "area3DChart" {
-        match chart_grouping(plot.typ) {
-          Some(value) => {
-            sb.write_view("        <c:grouping val=\"")
-            sb.write_view(escape_xml_attr(value))
-            sb.write_view("\"/>\n")
-          }
-          None => ()
+        if chart_grouping(plot.typ) is Some(value) {
+          sb.write_view("        <c:grouping val=\"")
+          sb.write_view(escape_xml_attr(value))
+          sb.write_view("\"/>\n")
         }
       }
       if plot_tag == "scatterChart" {

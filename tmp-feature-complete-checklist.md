@@ -2403,6 +2403,30 @@ Commands used:
     - Total uncovered lines reduced from `3109` to `3065`
     - Uncovered file count reduced from `45` to `44`
 
+- [x] 160. Close residuals in `xlsx/chart_options.mbt`.
+  - DoD: cover remaining chart option mapping/writer/combo branches and remove `xlsx/chart_options.mbt` from uncovered-file list.
+  - Delivered:
+    - Added `xlsx/chart_options_wbtest.mbt` with focused whitebox coverage for:
+      - chart type/grouping/legend/shape/dash/data-label/tick-label mapping helpers.
+      - drawingML text/font/alignment/underline helper mappings and writer branches.
+      - series/marker/datalabel/point writer branch variants, including clamp/no-fill/dash branches.
+      - axis writer and plot-area writer branches (`txPr`, number formats, data table, chart root shape props).
+      - `chart_options_to_xml(...)` guard/combo branch matrix (single-plot, mixed combo, unsupported combo, stock-series guards, xy-only combo).
+    - Refactored `xlsx/chart_options.mbt` to remove structurally unreachable branches in `chart_options_to_xml(...)`:
+      - removed impossible empty-plot-tag checks (the `ChartType` mapping is exhaustive).
+      - simplified stock-series expected-count logic to deterministic branches.
+      - replaced impossible `None` arms for bar direction/grouping in known-supported plot families.
+      - removed duplicate unsupported-combo guard in the second combo loop (already validated in pre-scan).
+  - Validation gates:
+    - `moon test xlsx/chart_options_wbtest.mbt`
+    - `moon test xlsx/chart_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after171.log`
+  - Coverage delta:
+    - `xlsx/chart_options.mbt` uncovered lines reduced from `124` to `0`
+    - Total uncovered lines reduced from `3065` to `2941`
+    - Uncovered file count reduced from `44` to `43`
+
 ## Active Item
 
-- Next item: **160** (move to the next residual hotspot: `xlsx/chart_options.mbt`).
+- Next item: **161** (move to the next residual hotspot: `xlsx/formula_eval.mbt`).
