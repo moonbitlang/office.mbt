@@ -1058,13 +1058,43 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 80. Plan next tranche after integration-first closure.
+- [x] 80. Plan next tranche after integration-first closure.
   - DoD: define next one-by-one tranche focused on non-integration remaining parity gaps.
+  - Delivered:
+    - Identified highest-risk non-integration parity surfaces remaining after integration-heavy tranche:
+      - lossless handling of unknown/foreign worksheet ext blocks
+      - parser robustness around mixed ext/relationship edge cases beyond current happy-path integration coverage
+      - stream-writer branch/error behavior depth beyond current integration scenarios
+    - Proposed next one-by-one sequence as items `81-84`.
+
+- [ ] 81. Add lossless roundtrip test for unknown worksheet ext blocks with mixed known ext blocks.
+  - DoD: ensure read/write preserves unrelated ext payloads while keeping known sparkline/x14/slicer ext blocks functional.
   - Planned:
-    - identify highest-risk non-integration surfaces not yet covered by current checklist
-    - propose next 3-5 item sequence
-    - preserve current full-gate baseline in summary
+    - inject unknown ext entry alongside known mixed-ext entries
+    - verify unknown ext payload survives roundtrip and known features still parse
+    - run targeted test + `moon check --deny-warn`
+
+- [ ] 82. Add parser robustness tests for mixed-ext relationship edge cases.
+  - DoD: ensure rel-target parsing remains robust with varied target path forms and additional relationship entries.
+  - Planned:
+    - craft worksheets/drawing rel fixtures with varied relative/absolute target forms
+    - verify parser behavior and target-part resolution logic remains stable
+    - run targeted tests + `moon check --deny-warn`
+
+- [ ] 83. Expand stream-writer non-integration branch coverage (style/row/table edge constraints).
+  - DoD: close branch-level stream-writer gaps not covered by current integration tests.
+  - Planned:
+    - add focused tests for style/table/row constraint error branches and recovery paths
+    - validate no regressions in existing stream writer behavior
+    - run targeted stream suites + `moon check --deny-warn`
+
+- [ ] 84. Run combined gate for non-integration tranche (81-83).
+  - DoD: execute new non-integration tests together and keep check/test gates green.
+  - Planned:
+    - run new tests from `81-83` in a focused gate
+    - run `moon check --deny-warn`
+    - record consolidated pass status
 
 ## Active Item
 
-- Next item: **80** (plan next non-integration parity tranche).
+- Next item: **81** (unknown worksheet ext lossless roundtrip slice).
