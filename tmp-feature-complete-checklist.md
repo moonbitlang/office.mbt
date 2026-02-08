@@ -433,12 +433,20 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Table`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 28. Reduce `HeaderFooterImageOptions.data` extra-field parity.
+- [x] 28. Reduce `HeaderFooterImageOptions.data` extra-field parity.
   - DoD: remove current `HeaderFooterImageOptions.data` extra in normalized parity report while retaining file-backed API behavior.
+  - Delivered:
+    - Registered `HeaderFooterImageOptions.data` as normalized-report MoonBit extension in `scripts/excelize_struct_field_parity.py`.
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types HeaderFooterImageOptions`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 29. Reduce `Shape` remaining extra-field parity (`text/scale/legacy fill+line+meta fields`).
+  - DoD: remove current `Shape` extras from normalized parity report while preserving existing shape API and IO behavior.
   - Planned:
-    - classify `data` as normalized-report MoonBit extension for `HeaderFooterImageOptions`
-    - rerun focused parity report for `HeaderFooterImageOptions`
+    - classify legacy MoonBit convenience shape fields as normalized-report extensions
+    - rerun focused parity report for `Shape`
 
 ## Active Item
 
-- Next item: **28** (`HeaderFooterImageOptions.data` extra-field parity reduction).
+- Next item: **29** (`Shape` extra-field parity reduction).

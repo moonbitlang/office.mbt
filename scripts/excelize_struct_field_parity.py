@@ -204,6 +204,7 @@ _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
     },
     "ChartAxis": {"ax_id"},
     "Table": {"id", "columns"},
+    "HeaderFooterImageOptions": {"data"},
 }
 
 
