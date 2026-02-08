@@ -585,13 +585,46 @@ Commands used:
       - rel consistency test: `1/1` passed
       - pivot/slicer rel consistency test: `1/1` passed
 
-- [ ] 41. Expand integration parity to mixed multi-feature workbook gate.
+- [x] 41. Expand integration parity to mixed multi-feature workbook gate.
   - DoD: add a single mixed-workbook integration test covering table/chart/shape/slicer/pivot presence and basic OOXML part sanity.
+  - Delivered:
+    - Added `xlsx/integration_mixed_feature_workbook_test.mbt`:
+      - mixed workbook scenario with table + pivot + slicer + chart + shape
+      - validates key OOXML parts are present
+      - validates key XML markers for slicer cache wiring and drawing/chart/slicer presence
+    - Validation gates:
+      - `moon test xlsx/integration_mixed_feature_workbook_test.mbt`
+      - `moon check --deny-warn`
+
+- [x] 42. Run combined integration gate for all new relationship/mixed-workbook tests.
+  - DoD: run the new integration trio together and keep gate green.
+  - Delivered:
+    - Executed combined integration gate:
+      - `moon test xlsx/integration_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_mixed_feature_workbook_test.mbt`
+    - Results:
+      - relationship consistency: `1/1` passed
+      - pivot/slicer relationship consistency: `1/1` passed
+      - mixed-feature workbook sanity: `1/1` passed
+
+- [x] 43. Re-run feature-complete release gate after parity/integration expansions.
+  - DoD: rerun the full release gate command and capture final status.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`857/857`)
+      - `scripts/validate_demos.sh`: tracked demos valid; encrypted container demo intentionally skipped
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 44. Prepare next parity workstream proposal from current clean baseline.
+  - DoD: define prioritized next workstream options now that normalized struct/formula parity and integration gates are green.
   - Planned:
-    - build one mixed workbook scenario with representative features
-    - assert key parts and rels are present and readable
-    - run targeted integration gate
+    - summarize high-value remaining gaps (behavior depth, perf, Excel-open corpus breadth)
+    - propose next one-by-one checklist tranche
 
 ## Active Item
 
-- Next item: **41** (mixed multi-feature integration gate).
+- Next item: **44** (next parity workstream proposal).
