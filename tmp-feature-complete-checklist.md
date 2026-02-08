@@ -973,13 +973,27 @@ Commands used:
       - `moon test xlsx/integration_stream_writer_ooxml_consistency_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 73. Run combined gate for stream-writer integration + mixed-ext pack.
+- [x] 73. Run combined gate for stream-writer integration + mixed-ext pack.
   - DoD: execute new stream-writer integration test together with key mixed-ext regression tests and keep gate green.
+  - Delivered:
+    - Executed combined stream-writer + mixed-ext gate:
+      - `moon test xlsx/integration_stream_writer_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all five integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 74. Re-run full release gate after stream-writer integration tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `72/73`.
   - Planned:
-    - run `integration_stream_writer_ooxml_consistency_test` and representative mixed-ext tests
-    - run `moon check --deny-warn`
-    - record consolidated pass status
+    - execute full release gate command
+    - capture updated total test count and parity status
+    - refresh baseline snapshot if totals changed
 
 ## Active Item
 
-- Next item: **73** (combined stream-writer + mixed-ext integration gate).
+- Next item: **74** (full release gate after stream-writer integration tranche).
