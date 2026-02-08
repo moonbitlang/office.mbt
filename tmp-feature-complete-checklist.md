@@ -2447,6 +2447,29 @@ Commands used:
     - Total uncovered lines reduced from `2941` to `2924`
     - Uncovered file count remains `43`
 
+- [x] 162. Close residuals in `xlsx/formula_builtins.mbt`.
+  - DoD: add focused whitebox coverage for formula builtin dispatch guard branches and reduce residual uncovered lines in `xlsx/formula_builtins.mbt`.
+  - Delivered:
+    - Added `xlsx/formula_builtins_wbtest.mbt` with focused whitebox coverage for:
+      - `ROW` / `COLUMN` guard paths:
+        - missing current-cell context (`args.length()==0`)
+        - invalid arity (`args.length()>1`)
+        - invalid non-reference arg for single-arg path.
+      - `ROWS` / `COLUMNS` invalid non-reference and wrong-arity guards.
+      - `FORMULATEXT` wrong-arity guard path.
+      - `PERCENTILE.INC` `k` guard branches:
+        - out-of-range `k` returns `#N/A`
+        - non-numeric `k` conversion error propagation (`#VALUE!`).
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after173.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `457` to `446`
+    - Total uncovered lines reduced from `2924` to `2912`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **162** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`).
+- Next item: **163** (move to the next residual hotspot: `xlsx/read.mbt`).
