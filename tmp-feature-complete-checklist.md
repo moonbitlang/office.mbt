@@ -689,13 +689,40 @@ Commands used:
       - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 50. Run combined gate for new integration slices (48/49).
+- [x] 50. Run combined gate for new integration slices (48/49).
   - DoD: execute integration tests from `48` and `49` together and keep gate green.
+  - Delivered:
+    - Executed combined integration gate:
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - cross-sheet sparkline formula-reference integration: `1/1` passed
+      - mixed sparkline + slicer + x14 integration: `1/1` passed
+      - check: pass
+
+- [ ] 51. Add repeated roundtrip integration stability test for mixed ext features.
+  - DoD: validate that repeated write/read cycles preserve sparkline + x14 data-bar + slicer presence without dropping ext markers.
   - Planned:
-    - run both new integration tests in sequence
+    - build one mixed workbook scenario with all three features
+    - run two write/read cycles in one test
+    - assert key ext markers/parts remain present after each cycle
+    - run targeted test + `moon check --deny-warn`
+
+- [ ] 52. Run focused sparkline/x14/slicer integration bundle gate.
+  - DoD: execute the full sparkline-related integration set (`45`, `46`, `48`, `49`, `51`) together and keep gate green.
+  - Planned:
+    - run all new sparkline integration tests in sequence
     - run `moon check --deny-warn`
     - update checklist with consolidated result
 
+- [ ] 53. Re-run full release gate after integration tranche 45-52.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` and record outcomes.
+  - Planned:
+    - execute full release gate command
+    - capture updated totals and scenario pass/fail status
+    - update checklist baseline notes if totals changed
+
 ## Active Item
 
-- Next item: **50** (combined gate for integration slices 48/49).
+- Next item: **51** (repeated roundtrip integration stability slice).
