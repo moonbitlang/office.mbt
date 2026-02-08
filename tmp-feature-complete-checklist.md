@@ -1890,6 +1890,24 @@ Commands used:
   - Coverage delta:
     - `xlsx/formula_opts.mbt` uncovered lines reduced from `4` to `0`
 
+- [x] 133. Continue low-line-count residual reduction in `ignored_errors.mbt`.
+  - DoD: cover reachable write/parse guard branches for ignored-errors XML handling.
+  - Delivered:
+    - Added `xlsx/ignored_errors_wbtest.mbt` with focused whitebox tests:
+      - `ignored errors wb: ignored_error_xml rejects empty sqref`
+      - `ignored errors wb: parse non-self-closing ignoredError tag`
+      - `ignored errors wb: parse requires sqref attribute`
+  - Validation gates:
+    - `moon test xlsx/ignored_errors_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after135.log`
+  - Coverage delta:
+    - `xlsx/ignored_errors.mbt` uncovered lines reduced from `4` to `2`
+  - Residual notes:
+    - Remaining `ignored_errors.mbt` lines are malformed-tag structural fallbacks:
+      - no `/>` and no `>` close marker
+      - impossible slice-failure catch after computed close position
+
 ## Active Item
 
-- Next item: **133** (close low-line-count residuals in `xlsx/ignored_errors.mbt` with targeted parser/guard tests).
+- Next item: **134** (close low-line-count residuals in `xlsx/image_types.mbt` with targeted parser/guard tests).
