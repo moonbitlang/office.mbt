@@ -851,13 +851,30 @@ Commands used:
       - `moon test xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 64. Run combined gate for three-cycle mixed-ext stability slice.
+- [x] 64. Run combined gate for three-cycle mixed-ext stability slice.
   - DoD: run `59`, `60`, and `63` related integration tests together and keep gate green.
+  - Delivered:
+    - Executed combined mixed-ext stability gate:
+      - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all eight integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 65. Re-run full release gate after three-cycle mixed-ext tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `63/64`.
   - Planned:
-    - run chart-augmented mixed-ext tests plus new three-cycle stability test
-    - run `moon check --deny-warn`
-    - record consolidated pass status
+    - execute full release gate command
+    - capture updated total test count and parity status
+    - refresh baseline snapshot if totals changed
 
 ## Active Item
 
-- Next item: **64** (combined gate for three-cycle mixed-ext stability slice).
+- Next item: **65** (full release gate after three-cycle mixed-ext tranche).
