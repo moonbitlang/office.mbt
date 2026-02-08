@@ -653,12 +653,40 @@ Commands used:
       - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 47. Run combined gate for new integration slices (45/46).
+- [x] 47. Run combined gate for new integration slices (45/46).
   - DoD: execute both new integration tests together and keep gate green.
+  - Delivered:
+    - Executed combined integration gate:
+      - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - sparkline OOXML consistency: `1/1` passed
+      - mixed sparkline + x14 conditional formatting: `1/1` passed
+      - check: pass
+
+- [ ] 48. Add integration parity slice for cross-sheet sparkline formula references.
+  - DoD: validate sparkline `<xm:f>` payload correctness when ranges already include explicit sheet references and quoted sheet names.
   - Planned:
-    - run integration tests from `45` and `46`
-    - update checklist with consolidated pass status
+    - create workbook with source sheet names requiring quote escaping
+    - add sparkline options with explicit cross-sheet range refs
+    - assert worksheet OOXML formula payloads are preserved exactly and parseable
+    - run targeted integration test + `moon check --deny-warn`
+
+- [ ] 49. Add integration parity slice for mixed sparkline + slicer + x14 data-bar worksheet.
+  - DoD: validate coexistence of sparkline ext, x14 conditional formatting ext, and slicer list ext markers in one worksheet.
+  - Planned:
+    - build mixed workbook with table/pivot-backed slicer plus sparkline + data-bar CF
+    - assert all expected ext URIs/markers are present and relationships resolve
+    - run targeted integration test gate
+
+- [ ] 50. Run combined gate for new integration slices (48/49).
+  - DoD: execute integration tests from `48` and `49` together and keep gate green.
+  - Planned:
+    - run both new integration tests in sequence
+    - run `moon check --deny-warn`
+    - update checklist with consolidated result
 
 ## Active Item
 
-- Next item: **47** (combined gate for sparkline integration slices).
+- Next item: **48** (cross-sheet sparkline formula-reference integration slice).
