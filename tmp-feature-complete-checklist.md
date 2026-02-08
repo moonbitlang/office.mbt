@@ -1086,12 +1086,20 @@ Commands used:
       - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 82. Add parser robustness tests for mixed-ext relationship edge cases.
+- [x] 82. Add parser robustness tests for mixed-ext relationship edge cases.
   - DoD: ensure rel-target parsing remains robust with varied target path forms and additional relationship entries.
-  - Planned:
-    - craft worksheets/drawing rel fixtures with varied relative/absolute target forms
-    - verify parser behavior and target-part resolution logic remains stable
-    - run targeted tests + `moon check --deny-warn`
+  - Delivered:
+    - Hardened read-side relationship target selection for multi-entry rel maps:
+      - `xlsx/read.mbt` now prefers the first target that resolves to an existing part path (for workbook VBA, pivot cache definition, pivot cache records, and chartsheet chart parts)
+      - preserves previous strict behavior as fallback when no target resolves
+    - Added mixed-target-form + stale-entry regression coverage in `xlsx/ooxml_rels_error_test.mbt`:
+      - pivot cache rels: stale first relationship + absolute/prefixed target forms still roundtrip parse
+      - chartsheet chart rels: stale first relationship + absolute target still roundtrip parse
+    - Validation gates:
+      - `moon test xlsx/ooxml_rels_error_test.mbt`
+      - `moon test xlsx/pivot_test.mbt`
+      - `moon test xlsx/chart_sheet_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 83. Expand stream-writer non-integration branch coverage (style/row/table edge constraints).
   - DoD: close branch-level stream-writer gaps not covered by current integration tests.
@@ -1109,4 +1117,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **82** (mixed-ext relationship edge-case robustness slice).
+- Next item: **83** (stream-writer non-integration branch coverage slice).

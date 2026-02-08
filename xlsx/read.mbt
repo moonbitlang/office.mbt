@@ -2946,6 +2946,35 @@ fn enforce_unzip_limits(
 }
 
 ///|
+fn first_existing_rel_target_path(
+  targets : Map[String, String],
+  base_folder : StringView,
+  archive : @zip.Archive,
+) -> String? raise XlsxError {
+  for _, target in targets {
+    let path = resolve_rel_target(target, base_folder)
+    if archive.get(path) is Some(_) {
+      return Some(path)
+    }
+  }
+  None
+}
+
+///|
+fn first_existing_workbook_rel_target_path(
+  targets : Map[String, String],
+  archive : @zip.Archive,
+) -> String? raise XlsxError {
+  for _, target in targets {
+    let path = resolve_workbook_rel_target(target)
+    if archive.get(path) is Some(_) {
+      return Some(path)
+    }
+  }
+  None
+}
+
+///|
 fn read_zip_bytes(
   bytes : BytesView,
   options? : Options = Options::new(),
@@ -3086,12 +3115,20 @@ fn read_zip_bytes(
     workbook_rels, archive, decode,
   )
   let vba_targets = parse_relationship_targets(workbook_rels, rel_vba_project)
-  match first_relationship_target(vba_targets) {
-    Some(target) => {
-      let vba_path = resolve_workbook_rel_target(target)
-      let vba_bytes = match archive.get(vba_path) {
+  let vba_path = match
+    first_existing_workbook_rel_target_path(vba_targets, archive) {
+    Some(path) => Some(path)
+    None =>
+      match first_relationship_target(vba_targets) {
+        Some(target) => Some(resolve_workbook_rel_target(target))
+        None => None
+      }
+  }
+  match vba_path {
+    Some(path) => {
+      let vba_bytes = match archive.get(path) {
         Some(value) => value
-        None => raise MissingPart(path=vba_path)
+        None => raise MissingPart(path~)
       }
       workbook.vba_project = Some(vba_bytes)
     }
@@ -3351,11 +3388,21 @@ fn read_zip_bytes(
             let cache_targets = parse_relationship_targets(
               pivot_rels_xml, rel_pivot_cache,
             )
-            let cache_target = match first_relationship_target(cache_targets) {
-              Some(value) => value
-              None => raise InvalidXml(msg="pivot cache relationship missing")
+            let cache_path = match
+              first_existing_rel_target_path(
+                cache_targets, "pivotTables", archive,
+              ) {
+              Some(path) => path
+              None => {
+                let cache_target = match
+                  first_relationship_target(cache_targets) {
+                  Some(value) => value
+                  None =>
+                    raise InvalidXml(msg="pivot cache relationship missing")
+                }
+                resolve_rel_target(cache_target, "pivotTables")
+              }
             }
-            let cache_path = resolve_rel_target(cache_target, "pivotTables")
             let cache_bytes = match archive.get(cache_path) {
               Some(value) => value
               None => raise MissingPart(path=cache_path)
@@ -3374,14 +3421,23 @@ fn read_zip_bytes(
                 let record_targets = parse_relationship_targets(
                   cache_rels_xml, rel_pivot_cache_records,
                 )
-                match first_relationship_target(record_targets) {
-                  Some(record_target) => {
-                    let record_path = resolve_rel_target(
-                      record_target, "pivotCache",
-                    )
-                    let record_bytes = match archive.get(record_path) {
+                let record_path = match
+                  first_existing_rel_target_path(
+                    record_targets, "pivotCache", archive,
+                  ) {
+                  Some(path) => Some(path)
+                  None =>
+                    match first_relationship_target(record_targets) {
+                      Some(record_target) =>
+                        Some(resolve_rel_target(record_target, "pivotCache"))
+                      None => None
+                    }
+                }
+                match record_path {
+                  Some(path) => {
+                    let record_bytes = match archive.get(path) {
                       Some(value) => value
-                      None => raise MissingPart(path=record_path)
+                      None => raise MissingPart(path~)
                     }
                     Some(decode(record_bytes))
                   }
@@ -3668,11 +3724,17 @@ fn read_zip_bytes(
       let chart_targets = parse_relationship_targets(
         drawing_rels_xml, rel_chart,
       )
-      let chart_target = match first_relationship_target(chart_targets) {
-        Some(value) => value
-        None => raise InvalidXml(msg="chart target missing")
+      let chart_path = match
+        first_existing_rel_target_path(chart_targets, "drawings", archive) {
+        Some(path) => path
+        None => {
+          let chart_target = match first_relationship_target(chart_targets) {
+            Some(value) => value
+            None => raise InvalidXml(msg="chart target missing")
+          }
+          resolve_rel_target(chart_target, "drawings")
+        }
       }
-      let chart_path = resolve_rel_target(chart_target, "drawings")
       let chart_bytes = match archive.get(chart_path) {
         Some(value) => value
         None => raise MissingPart(path=chart_path)
