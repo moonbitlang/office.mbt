@@ -921,3 +921,45 @@ test "worksheet wb: col insert/remove structural edge branches" {
   inspect(alias_sheet.get_cell("B1"), content="Some(\"c\")")
   inspect(alias_sheet.get_cell("C1"), content="None")
 }
+
+///|
+test "worksheet wb: row remove residual drop and range-helper branches" {
+  let sheet = Worksheet::new("RowDrop")
+  sheet.auto_filter = Some({ range_ref: "A2:B2", columns: [] })
+  sheet.hyperlinks.push({
+    reference: "A1:A3",
+    target: "https://rows.example",
+    link_type: External,
+    display: None,
+    tooltip: None,
+  })
+  sheet.add_sparkline_group(["A2", "A4"], ["A2:A2", "A4:A4"])
+  sheet.add_picture_from_bytes("A1", [1], ".png")
+  sheet.add_picture_from_bytes("A2", [1], ".png")
+  let keep_chart = ChartOptions::new(Col)
+  keep_chart.series.push(
+    ChartSeries::new("RowDrop!$A$1:$A$2", "RowDrop!$B$1:$B$2"),
+  )
+  sheet.add_chart_with_options("A1", keep_chart)
+  let drop_chart = ChartOptions::new(Col)
+  drop_chart.series.push(
+    ChartSeries::new("RowDrop!$A$1:$A$2", "RowDrop!$B$1:$B$2"),
+  )
+  sheet.add_chart_with_options("A2", drop_chart)
+
+  sheet.insert_rows(2, 1)
+  inspect(sheet.hyperlinks()[0].reference, content="A1:A4")
+  sheet.remove_rows(2, 1)
+  inspect(sheet.hyperlinks()[0].reference, content="A1:A3")
+
+  sheet.remove_rows(2, 1)
+  inspect(sheet.auto_filter, content="None")
+  inspect(sheet.hyperlinks()[0].reference, content="A1:A2")
+  inspect(sheet.get_pictures("A1").length(), content="1")
+  inspect(sheet.get_pictures("A2").length(), content="0")
+  inspect(sheet.charts().length(), content="1")
+  inspect(sheet.charts()[0].reference, content="A1")
+  inspect(sheet.sparkline_groups().length(), content="1")
+  inspect(sheet.sparkline_groups()[0].sparklines.length(), content="1")
+  inspect(sheet.sparkline_groups()[0].sparklines[0].location, content="A3")
+}

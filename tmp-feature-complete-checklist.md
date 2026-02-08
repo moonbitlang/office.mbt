@@ -1556,6 +1556,22 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `51` to `19`
 
+- [x] 113. Cover remaining row-structure fallback branches in `worksheet.mbt`.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by targeting residual row-structure branches (`remove_rows` drop paths, row-range hyperlink adjust helpers, row auto-filter drop, sparkline row-prune fallback).
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `remove_rows` auto-filter drop-to-`None` branch
+      - `remove_rows` image/chart drop (`None`) branches
+      - row-range hyperlink adjustment helpers via `insert_rows`/`remove_rows` on range hyperlinks
+      - row sparkline prune fallback (`adjust_sparkline_group_after_row_remove` `_ => ()`)
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after113.log`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `19` to `12`
+    - Residual `worksheet.mbt` uncovered lines are now concentrated in effectively unreachable guard/catch branches (slice/catch impossibles and defaulted-option dead paths), suitable for explicit unreachable annotation or exclusion policy.
+
 ## Active Item
 
-- Next item: **113** (cover remaining `worksheet.mbt` row-structure fallbacks and helper edge branches: `remove_rows` drop paths, row-range hyperlink adjust helpers, row auto-filter `None` path, and sparkline row-prune fallback).
+- Next item: **114** (close trivial residuals outside `worksheet.mbt`: add direct coverage for `worksheet_types::set_state`, then pick the next highest-value hotspot for bounded hardening).
