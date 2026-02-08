@@ -936,13 +936,28 @@ Commands used:
       - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 70. Run combined gate after shared-helper refactor.
+- [x] 70. Run combined gate after shared-helper refactor.
   - DoD: execute migrated relationship-consistency suites plus mixed-ext stability pack to confirm refactor-only behavior.
+  - Delivered:
+    - Executed post-refactor combined integration gate:
+      - `moon test xlsx/integration_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all six integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 71. Re-run full release gate after shared-helper refactor tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `69/70`.
   - Planned:
-    - run migrated relationship tests and key mixed-ext integration tests together
-    - run `moon check --deny-warn`
-    - record consolidated pass status
+    - execute full release gate command
+    - capture updated total test count and parity status
+    - refresh baseline snapshot if totals changed
 
 ## Active Item
 
-- Next item: **70** (post-refactor combined integration gate).
+- Next item: **71** (full release gate after shared-helper refactor tranche).
