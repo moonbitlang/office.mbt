@@ -112,6 +112,13 @@ test "write part paths: invalid read-side path helpers raise InvalidXml" {
       inspect(msg, content="part rels path invalid")
     _ => fail("expected part rels path invalid for leading slash")
   }
+
+  let trailing_slash_rels_result = try? rels_path_for_part("xl/")
+  match trailing_slash_rels_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="part rels path invalid")
+    _ => fail("expected part rels path invalid for trailing slash")
+  }
 }
 
 ///|

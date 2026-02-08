@@ -1936,6 +1936,21 @@ Commands used:
   - Coverage delta:
     - `xlsx/search_sheet.mbt` uncovered lines reduced from `4` to `0`
 
+- [x] 136. Continue low-line-count residual reduction in `write_part_paths.mbt`.
+  - DoD: cover reachable invalid path-guard branch in `rels_path_for_part`.
+  - Delivered:
+    - Extended `xlsx/write_part_paths_wbtest.mbt` with:
+      - trailing-slash invalid rels path case (`rels_path_for_part("xl/")`)
+      - verifies deterministic `InvalidXml("part rels path invalid")`
+  - Validation gates:
+    - `moon test xlsx/write_part_paths_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after138.log`
+  - Coverage delta:
+    - `xlsx/write_part_paths.mbt` uncovered lines reduced from `5` to `4`
+  - Residual notes:
+    - Remaining `write_part_paths.mbt` lines are structural slice/empty-file-name fallbacks after prior prefix/slash guards.
+
 ## Active Item
 
-- Next item: **136** (close low-line-count residuals in `xlsx/write_part_paths.mbt` with targeted path/guard tests).
+- Next item: **137** (close low-line-count residuals in `xlsx/merge_cell.mbt` with targeted parser/guard tests).
