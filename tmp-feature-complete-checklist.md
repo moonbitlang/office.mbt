@@ -441,12 +441,24 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types HeaderFooterImageOptions`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 29. Reduce `Shape` remaining extra-field parity (`text/scale/legacy fill+line+meta fields`).
+- [x] 29. Reduce `Shape` remaining extra-field parity (`text/scale/legacy fill+line+meta fields`).
   - DoD: remove current `Shape` extras from normalized parity report while preserving existing shape API and IO behavior.
+  - Delivered:
+    - Registered remaining legacy convenience `Shape` fields as normalized-report MoonBit extensions in `scripts/excelize_struct_field_parity.py`:
+      - `text`, `scale_x`, `scale_y`
+      - `fill_color`, `fill_transparency`
+      - `line_color`, `line_width`
+      - `name`, `alt_text`, `print_object`, `locked`, `positioning`
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Shape`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 30. Reduce stream/iterator struct extras (`Cell`, `Rows`, `Cols`, `StreamWriter`).
+  - DoD: remove current stream/iterator extra-field parity noise from normalized report via extension allowances.
   - Planned:
-    - classify legacy MoonBit convenience shape fields as normalized-report extensions
-    - rerun focused parity report for `Shape`
+    - classify MoonBit stream/iterator implementation fields as normalized-report extensions
+    - rerun focused parity report for `Cell,Rows,Cols,StreamWriter`
 
 ## Active Item
 
-- Next item: **29** (`Shape` extra-field parity reduction).
+- Next item: **30** (`Cell/Rows/Cols/StreamWriter` extra-field parity reduction).

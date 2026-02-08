@@ -205,6 +205,20 @@ _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
     "ChartAxis": {"ax_id"},
     "Table": {"id", "columns"},
     "HeaderFooterImageOptions": {"data"},
+    "Shape": {
+        "text",
+        "scale_x",
+        "scale_y",
+        "fill_color",
+        "fill_transparency",
+        "line_color",
+        "line_width",
+        "name",
+        "alt_text",
+        "print_object",
+        "locked",
+        "positioning",
+    },
 }
 
 
