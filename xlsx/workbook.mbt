@@ -335,7 +335,12 @@ pub fn Workbook::set_zip_writer(
   self : Workbook,
   writer : (@zip.Archive) -> Bytes raise,
 ) -> Unit {
-  self.zip_writer = Some(writer)
+  let io_context = workbook_io_context(self)
+  self.set_io_context({
+    file_path: io_context.file_path,
+    zip_writer: Some(writer),
+    charset_transcoder: io_context.charset_transcoder,
+  })
 }
 
 ///|

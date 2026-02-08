@@ -25,20 +25,29 @@ fn resolve_write_options(workbook : Workbook, options : Options?) -> Options {
 }
 
 ///|
+fn resolve_write_io_context(
+  workbook : Workbook,
+  file_path_override : String?,
+) -> WorkbookIOContext {
+  let io_context = workbook_io_context(workbook)
+  match file_path_override {
+    Some(value) => workbook_io_context_with_file_path(io_context, Some(value))
+    None => io_context
+  }
+}
+
+///|
 fn write_bytes_with_io(
   workbook : Workbook,
   options : Options?,
   file_path_override : String?,
 ) -> Bytes raise XlsxError {
   let resolved = resolve_write_options(workbook, options)
-  let file_path = match file_path_override {
-    Some(value) => Some(value)
-    None => workbook.file_path
-  }
+  let io_context = resolve_write_io_context(workbook, file_path_override)
   if resolved.password == "" {
-    write_with_io(workbook, file_path, workbook.zip_writer)
+    write_with_io(workbook, io_context)
   } else {
-    let raw = write_with_io(workbook, file_path, workbook.zip_writer)
+    let raw = write_with_io(workbook, io_context)
     if resolved.password.length() == 0 {
       raw
     } else {
@@ -56,13 +65,19 @@ fn write_bytes(
 }
 
 ///|
-pub async fn[R : @async/io.Reader] open_reader(
-  reader : R,
-  password? : String = "",
-  options? : Options = Options::new(),
-  transcoder? : (String, Bytes) -> String raise XlsxError,
+fn read_io_context(
+  transcoder : ((String, Bytes) -> String raise XlsxError)?,
+) -> WorkbookIOContext {
+  workbook_io_context_with_transcoder(empty_workbook_io_context(), transcoder)
+}
+
+///|
+fn read_workbook_from_bytes(
+  bytes : Bytes,
+  password : String,
+  options : Options,
+  io_context : WorkbookIOContext,
 ) -> Workbook raise XlsxError {
-  let bytes = read_all_bytes(reader)
   let resolved_password = if password == "" {
     options.password
   } else {
@@ -70,13 +85,13 @@ pub async fn[R : @async/io.Reader] open_reader(
   }
   let resolved_options = options_with_password(options, resolved_password)
   if resolved_password == "" {
-    match transcoder {
+    match io_context.charset_transcoder {
       Some(value) =>
         read_zip_bytes(bytes, options=resolved_options, transcoder=value)
       None => read_zip_bytes(bytes, options=resolved_options)
     }
   } else {
-    match transcoder {
+    match io_context.charset_transcoder {
       Some(value) =>
         read_with_password(
           bytes,
@@ -88,6 +103,20 @@ pub async fn[R : @async/io.Reader] open_reader(
         read_with_password(bytes, resolved_password, options=resolved_options)
     }
   }
+}
+
+///|
+pub async fn[R : @async/io.Reader] open_reader(
+  reader : R,
+  password? : String = "",
+  options? : Options = Options::new(),
+  transcoder? : (String, Bytes) -> String raise XlsxError,
+) -> Workbook raise XlsxError {
+  let bytes = read_all_bytes(reader)
+  let io_context = read_io_context(transcoder)
+  let workbook = read_workbook_from_bytes(bytes, password, options, io_context)
+  workbook.set_io_context(io_context)
+  workbook
 }
 
 ///|
@@ -119,11 +148,13 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
     Some(value) => Some(value)
     None => self.charset_transcoder
   }
-  match resolved_transcoder {
-    Some(value) =>
-      open_reader(reader, password~, options=resolved_options, transcoder=value)
-    None => open_reader(reader, password~, options=resolved_options)
-  }
+  let io_context = read_io_context(resolved_transcoder)
+  let bytes = read_all_bytes(reader)
+  let workbook = read_workbook_from_bytes(
+    bytes, password, resolved_options, io_context,
+  )
+  workbook.set_io_context(io_context)
+  workbook
 }
 
 ///|
@@ -134,32 +165,12 @@ pub async fn open_file(
   transcoder? : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook raise XlsxError {
   let bytes = read_file_bytes(path)
-  let resolved_password = if password == "" {
-    options.password
-  } else {
-    password
-  }
-  let resolved_options = options_with_password(options, resolved_password)
-  let workbook = if resolved_password == "" {
-    match transcoder {
-      Some(value) =>
-        read_zip_bytes(bytes, options=resolved_options, transcoder=value)
-      None => read_zip_bytes(bytes, options=resolved_options)
-    }
-  } else {
-    match transcoder {
-      Some(value) =>
-        read_with_password(
-          bytes,
-          resolved_password,
-          options=resolved_options,
-          transcoder=value,
-        )
-      None =>
-        read_with_password(bytes, resolved_password, options=resolved_options)
-    }
-  }
-  workbook.file_path = Some(path)
+  let io_context = workbook_io_context_with_file_path(
+    read_io_context(transcoder),
+    Some(path),
+  )
+  let workbook = read_workbook_from_bytes(bytes, password, options, io_context)
+  workbook.set_io_context(io_context)
   workbook
 }
 
@@ -182,7 +193,7 @@ pub async fn Workbook::save(
   self : Workbook,
   options? : Options,
 ) -> Unit raise XlsxError {
-  match self.file_path {
+  match workbook_io_context(self).file_path {
     Some(path) =>
       match options {
         Some(value) => self.save_as(path, options=value)
@@ -213,7 +224,9 @@ pub async fn Workbook::save_as(
   @async/fs.write_file(path, bytes, create=0o644) catch {
     err => raise InvalidSheetOperation(msg="write file failed: \{err}")
   }
-  self.file_path = Some(path)
+  self.set_io_context(
+    workbook_io_context_with_file_path(workbook_io_context(self), Some(path)),
+  )
 }
 
 ///|

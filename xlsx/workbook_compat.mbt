@@ -40,7 +40,12 @@ pub fn Workbook::charset_transcoder(
   self : Workbook,
   transcoder : (String, Bytes) -> String raise XlsxError,
 ) -> Workbook {
-  self.charset_transcoder = Some(transcoder)
+  let io_context = workbook_io_context(self)
+  self.set_io_context({
+    file_path: io_context.file_path,
+    zip_writer: io_context.zip_writer,
+    charset_transcoder: Some(transcoder),
+  })
   self
 }
 

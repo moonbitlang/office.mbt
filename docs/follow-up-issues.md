@@ -59,10 +59,14 @@ Remaining follow-ups:
      - `Workbook::save_as` no longer needs to mutate `Workbook.file_path` just to
        drive content-type selection during write; the writer supports passing a
        `file_path` override internally.
+     - Added internal `WorkbookIOContext` wiring in read/write paths:
+       `open_reader`, `open_file`, `Workbook::read_zip_reader`, write wrappers,
+       and save flows now pass explicit IO context rather than directly threading
+       individual IO fields.
    - Remaining:
-     - Move `file_path`, `zip_writer`, and `charset_transcoder` toward an
-       explicit IO context passed into read/write paths (keep compat shims
-       during migration).
+     - Keep compat shims for existing field-backed APIs, but plan a follow-up to
+       hide/remove direct `Workbook` IO fields from external surface once a
+       stable IO-context API is finalized.
 
 6. **Introduce a scalable worksheet cell store (if performance becomes a priority)**
    - Options: index cache, row-grouped storage, or dual representation; maintain deterministic write output and stream-writer semantics.

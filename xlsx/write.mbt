@@ -3055,8 +3055,7 @@ fn write_theme_xml(theme_colors : Array[String]?) -> String {
 ///|
 fn write_with_io(
   workbook : Workbook,
-  file_path : String?,
-  zip_writer : ((@zip.Archive) -> Bytes raise)?,
+  io_context : WorkbookIOContext,
 ) -> Bytes raise XlsxError {
   let (shared_strings, string_map, rich_text_map, total_count) = collect_shared_strings(
     workbook,
@@ -3075,7 +3074,7 @@ fn write_with_io(
     include_calc_chain~,
   )
   let mut has_path_content_type = false
-  match file_path {
+  match io_context.file_path {
     Some(path) =>
       match extension_from_path(path) {
         Some(ext) =>
@@ -3950,7 +3949,7 @@ fn write_with_io(
     content_types_part_path,
     @encoding/utf8.encode(manifest.content_types_xml()),
   )
-  match zip_writer {
+  match io_context.zip_writer {
     Some(writer) =>
       writer(archive) catch {
         err => raise UnsupportedFeature(msg=err.to_string())
@@ -3964,7 +3963,7 @@ fn write_with_io(
 
 ///|
 pub fn write(workbook : Workbook) -> Bytes raise XlsxError {
-  write_with_io(workbook, workbook.file_path, workbook.zip_writer)
+  write_with_io(workbook, workbook_io_context(workbook))
 }
 
 ///|
@@ -3972,7 +3971,7 @@ pub fn write_with_password(
   workbook : Workbook,
   password : String,
 ) -> Bytes raise XlsxError {
-  let raw = write_with_io(workbook, workbook.file_path, workbook.zip_writer)
+  let raw = write_with_io(workbook, workbook_io_context(workbook))
   if password.length() == 0 {
     raw
   } else {
