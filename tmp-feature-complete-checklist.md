@@ -840,14 +840,24 @@ Commands used:
     - Updated baseline latest full-gate summary to `864/864`.
     - Kept demo-validation and semantic-parity status aligned with latest run.
 
-- [ ] 63. Add mixed-ext three-cycle stability integration test.
+- [x] 63. Add mixed-ext three-cycle stability integration test.
   - DoD: extend roundtrip stability coverage from two cycles to three cycles for pivot-backed chart + sparkline + x14 + slicer scenario.
+  - Delivered:
+    - Added `xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`:
+      - pivot-backed mixed-ext scenario with chart + sparkline + x14 conditional format + slicer
+      - performs three write/read cycles and verifies ext markers/parts persist
+      - validates post-cycle read behavior for chart, sparkline, conditional format, and slicer state
+    - Validation gates:
+      - `moon test xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 64. Run combined gate for three-cycle mixed-ext stability slice.
+  - DoD: run `59`, `60`, and `63` related integration tests together and keep gate green.
   - Planned:
-    - start from chart-augmented mixed-ext fixture (`59`)
-    - perform write/read/write/read/write/read cycle chain
-    - assert key ext markers and core parts persist through third cycle
-    - run targeted test + `moon check --deny-warn`
+    - run chart-augmented mixed-ext tests plus new three-cycle stability test
+    - run `moon check --deny-warn`
+    - record consolidated pass status
 
 ## Active Item
 
-- Next item: **63** (mixed-ext three-cycle stability integration slice).
+- Next item: **64** (combined gate for three-cycle mixed-ext stability slice).
