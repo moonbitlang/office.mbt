@@ -1617,6 +1617,25 @@ Commands used:
     - Coverage delta:
       - `xlsx/write.mbt` uncovered lines reduced from `78` to `68`
 
+- [x] 117. Cover non-drawing `write.mbt` option-emitter branch matrix.
+  - DoD: reduce uncovered lines in `xlsx/write.mbt` by exercising branchy sheet option emitters.
+  - Delivered:
+    - Extended `xlsx/write_hardening_wbtest.mbt` with targeted coverage for:
+      - `write_sheet_pr_xml`:
+        - empty self-closing emission path
+        - tab color indexed path with rgb-none branch
+        - outline summary left/right split branches
+        - page setup path with `auto_page_breaks` only
+      - `write_sheet_format_pr_xml` default-row-height-none path
+      - `write_sheet_views_xml` boolean attribute branches:
+        - `rightToLeft`, `showFormulas`, `showRuler`, `showZeros`
+    - Validation gates:
+      - `moon test xlsx/write_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after117.log`
+    - Coverage delta:
+      - `xlsx/write.mbt` uncovered lines reduced from `68` to `56`
+
 ## Active Item
 
-- Next item: **117** (target non-drawing `write.mbt` option emitters: `write_sheet_pr_xml`, `write_sheet_format_pr_xml`, and `write_sheet_views_xml` branch matrix).
+- Next item: **118** (continue bounded `write.mbt` hardening with remaining drawing/image/chart/shape branch fan-outs).

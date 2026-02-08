@@ -337,3 +337,65 @@ test "write hardening wb: write_drawing_xml covers slicer positioning and defaul
   inspect(xml.contains("<xdr:oneCellAnchor>"), content="true")
   inspect(xml.contains("fLocksWithSheet=\"1\" fPrintsWithSheet=\"1\""), content="true")
 }
+
+///|
+test "write hardening wb: sheet property emitters cover option branches" {
+  let empty_xml = write_sheet_pr_xml(SheetPropsOptions::new())
+  inspect(empty_xml.contains("<sheetPr/>"), content="true")
+
+  let tab_indexed_xml = write_sheet_pr_xml(
+    SheetPropsOptions::with_values(tab_color_indexed=4),
+  )
+  inspect(tab_indexed_xml.contains("<tabColor indexed=\"4\"/>"), content="true")
+
+  let outline_right_xml = write_sheet_pr_xml(
+    SheetPropsOptions::with_values(outline_summary_right=true),
+  )
+  inspect(
+    outline_right_xml.contains("<outlinePr summaryRight=\"1\"/>"),
+    content="true",
+  )
+
+  let outline_below_xml = write_sheet_pr_xml(
+    SheetPropsOptions::with_values(outline_summary_below=false),
+  )
+  inspect(
+    outline_below_xml.contains("<outlinePr summaryBelow=\"0\"/>"),
+    content="true",
+  )
+
+  let page_setup_xml = write_sheet_pr_xml(
+    SheetPropsOptions::with_values(auto_page_breaks=true),
+  )
+  inspect(
+    page_setup_xml.contains("<pageSetUpPr autoPageBreaks=\"1\"/>"),
+    content="true",
+  )
+
+  let format_xml = write_sheet_format_pr_xml(
+    SheetPropsOptions::with_values(base_col_width=8),
+  )
+  inspect(format_xml.contains("<sheetFormatPr baseColWidth=\"8\""), content="true")
+}
+
+///|
+test "write hardening wb: sheet view writer covers bool attribute branches" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.set_sheet_view(
+    0,
+    SheetViewOptions::with_values(
+      right_to_left=true,
+      show_formulas=true,
+      show_ruler=false,
+      show_zeros=false,
+    ),
+  )
+  let xml = match write_sheet_views_xml(sheet) {
+    Some(value) => value
+    None => fail("missing sheet views xml")
+  }
+  inspect(xml.contains("rightToLeft=\"1\""), content="true")
+  inspect(xml.contains("showFormulas=\"1\""), content="true")
+  inspect(xml.contains("showRuler=\"0\""), content="true")
+  inspect(xml.contains("showZeros=\"0\""), content="true")
+}
