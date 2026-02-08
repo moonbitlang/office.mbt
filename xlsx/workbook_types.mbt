@@ -20,9 +20,7 @@ pub struct Workbook {
   indexed_colors : Array[String]?
   mru_colors_xml : String?
   styles_ext_lst_xml : String?
-  mut file_path : String?
-  mut zip_writer : ((@zip.Archive) -> Bytes raise)?
-  mut charset_transcoder : ((String, Bytes) -> String raise XlsxError)?
+  mut io_context : WorkbookIOContext
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
@@ -173,9 +171,7 @@ pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
     indexed_colors: None,
     mru_colors_xml: None,
     styles_ext_lst_xml: None,
-    file_path: None,
-    zip_writer: None,
-    charset_transcoder: None,
+    io_context: empty_workbook_io_context(),
     options,
     workbook_protection: None,
     active_sheet_index: 0,

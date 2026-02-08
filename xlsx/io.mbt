@@ -144,9 +144,10 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
     Some(value) => value
     None => self.options
   }
+  let base_io_context = workbook_io_context(self)
   let resolved_transcoder = match transcoder {
     Some(value) => Some(value)
-    None => self.charset_transcoder
+    None => base_io_context.charset_transcoder
   }
   let io_context = read_io_context(resolved_transcoder)
   let bytes = read_all_bytes(reader)

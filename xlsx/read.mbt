@@ -4292,9 +4292,10 @@ fn read_zip_bytes(
     indexed_colors,
     mru_colors_xml,
     styles_ext_lst_xml,
-    file_path: None,
-    zip_writer: None,
-    charset_transcoder: transcoder,
+    io_context: workbook_io_context_with_transcoder(
+      empty_workbook_io_context(),
+      transcoder,
+    ),
     options: resolved_options,
     workbook_protection,
     active_sheet_index: safe_active_index,

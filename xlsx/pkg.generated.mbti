@@ -1701,9 +1701,7 @@ pub struct Workbook {
   indexed_colors : Array[String]?
   mru_colors_xml : String?
   styles_ext_lst_xml : String?
-  mut file_path : String?
-  mut zip_writer : ((@zip.Archive) -> Bytes raise)?
-  mut charset_transcoder : ((String, Bytes) -> String raise XlsxError)?
+  mut io_context : WorkbookIOContext
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
@@ -1949,6 +1947,12 @@ pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
 pub async fn[W : @io.Writer] Workbook::write(Self, W, options? : Options) -> Unit raise XlsxError
 pub async fn[W : @io.Writer] Workbook::write_to(Self, W, options? : Options) -> Int raise XlsxError
 pub fn Workbook::write_to_buffer(Self, options? : Options) -> Bytes raise XlsxError
+
+pub struct WorkbookIOContext {
+  file_path : String?
+  zip_writer : ((@zip.Archive) -> Bytes raise)?
+  charset_transcoder : ((String, Bytes) -> String raise XlsxError)?
+}
 
 pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
