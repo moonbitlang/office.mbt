@@ -368,3 +368,91 @@ test "worksheet wb: conditional format helper edge branches" {
     ),
   )
 }
+
+///|
+test "worksheet wb: conditional/data-validation update-failure and x14 fallback paths" {
+  let dv_update_fail = Worksheet::new("Sheet1")
+  dv_update_fail.add_data_validation_xml(
+    "<?xml version=\"1.0\"?><dataValidation type=\"list\" sqref=\"A1\"><formula1>\"Y\"</formula1></dataValidation>",
+  )
+  let dv_update_result : Result[Unit, Error] = try? dv_update_fail.delete_data_validation(sqrefs=[
+      "A2",
+    ],
+  )
+  inspect(
+    dv_update_result,
+    content=(
+      #|Err(InvalidXml(msg="data validation sqref update failed"))
+    ),
+  )
+
+  let cf_merge = Worksheet::new("Sheet1")
+  cf_merge.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  cf_merge.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"2\"><formula>2=2</formula></cfRule></conditionalFormatting>",
+  )
+  let merged = cf_merge.get_conditional_formats()
+  let merged_opts = match merged.get("A1") {
+    Some(value) => value
+    None => fail("missing merged conditional formats")
+  }
+  inspect(merged_opts.length(), content="2")
+
+  let cf_missing_tag = Worksheet::new("Sheet1")
+  cf_missing_tag.add_conditional_format_xml("<foo/>")
+  let missing_tag_result : Result[Unit, Error] = try? cf_missing_tag.unset_conditional_format(
+    "A1",
+  )
+  inspect(
+    missing_tag_result,
+    content=(
+      #|Err(InvalidXml(msg="conditionalFormatting tag missing"))
+    ),
+  )
+
+  let cf_missing_sqref = Worksheet::new("Sheet1")
+  cf_missing_sqref.add_conditional_format_xml(
+    "<conditionalFormatting><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  let missing_sqref_result : Result[Unit, Error] = try? cf_missing_sqref.unset_conditional_format(
+    "A1",
+  )
+  inspect(
+    missing_sqref_result,
+    content=(
+      #|Err(InvalidXml(msg="conditionalFormatting sqref missing"))
+    ),
+  )
+
+  let cf_update_fail = Worksheet::new("Sheet1")
+  cf_update_fail.add_conditional_format_xml(
+    "<?xml version=\"1.0\"?><conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  let update_fail_result : Result[Unit, Error] = try? cf_update_fail.unset_conditional_format(
+    "A2",
+  )
+  inspect(
+    update_fail_result,
+    content=(
+      #|Err(InvalidXml(msg="conditionalFormatting sqref update failed"))
+    ),
+  )
+
+  let x14_prune = Worksheet::new("Sheet1")
+  x14_prune.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><x14:id>unknown</x14:id><formula>1=1</formula></cfRule></conditionalFormatting>",
+  )
+  x14_prune.add_conditional_format_xml(
+    "<conditionalFormatting sqref=\"B1\"><cfRule type=\"expression\" priority=\"2\"><x14:id>broken<formula>2=2</formula></cfRule></conditionalFormatting>",
+  )
+  x14_prune.x14_data_bars["known"] = {
+    sqref: "A1",
+    bar_direction: "",
+    bar_solid: false,
+    bar_border_color: "",
+  }
+  x14_prune.unset_conditional_format("C1")
+  inspect(x14_prune.x14_data_bars.length(), content="0")
+}

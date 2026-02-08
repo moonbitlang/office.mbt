@@ -1456,6 +1456,25 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `145` to `136`
 
+- [x] 108. Cover conditional/data-validation update-failure paths and conditional aggregation fallback branches.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by hitting malformed-update branches and map aggregation/pruning edge paths.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `delete_data_validation` sqref-update failure branch (`InvalidXml: data validation sqref update failed`) using XML prolog + `<dataValidation ...>`
+      - `get_conditional_formats` same-`sqref` aggregation branch (`Some(existing)`) by appending two `<conditionalFormatting sqref=\"A1\">...` entries
+      - `unset_conditional_format` malformed branches:
+        - missing `conditionalFormatting` tag
+        - missing `sqref`
+        - sqref-update failure (`InvalidXml: conditionalFormatting sqref update failed`) via XML prolog + `<conditionalFormatting ...>`
+      - `unset_conditional_format` x14 pruning fallback branches:
+        - unknown `<x14:id>` not found in prior `x14_data_bars` map
+        - malformed `<x14:id>` without close tag
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `136` to `129`
+
 ## Active Item
 
-- Next item: **108** (choose the next bounded `worksheet.mbt` branch cluster; likely `delete_data_validation` sqref-update failure branch and remaining conditional-format parse/update edge paths).
+- Next item: **109** (cover `Worksheet` rc/row/col API guard/default branches: `set/get*_rc`, `set_row`/`set_col`, and row/col dimension getter/setter error paths).
