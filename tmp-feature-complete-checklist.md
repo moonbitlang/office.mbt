@@ -1534,6 +1534,28 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `68` to `51`
 
+- [x] 112. Cover column insert/remove structural edge branches.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by targeting column-structure guard paths and adjustment branches for auto-filter/hyperlink/table/sparkline/drawing/page-break state.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `insert_cols` / `remove_cols` invalid-column and invalid-count guards
+      - `insert_cols` adjustment branches with live `auto_filter`, range hyperlink, image, and chart references
+      - `remove_cols` adjustment branches including:
+        - merged-range drop (`adjust_range_after_col_remove -> None`)
+        - hyperlink drop + range-reference adjustment paths
+        - auto-filter column prune/shift branches and full-range drop to `None`
+        - table drop (`adjust_table_after_col_remove -> None`) and surviving-table shift
+        - sparkline prune fallback (`_ => ()`)
+        - image/chart keep+drop branches
+        - col-dimension keep/shift and column page-break adjust paths
+      - `remove_col` wrapper branch
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after112.log`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `51` to `19`
+
 ## Active Item
 
-- Next item: **112** (cover column insert/remove structural edge branches including auto-filter/hyperlink/image/chart adjustment paths and `remove_col` wrapper).
+- Next item: **113** (cover remaining `worksheet.mbt` row-structure fallbacks and helper edge branches: `remove_rows` drop paths, row-range hyperlink adjust helpers, row auto-filter `None` path, and sparkline row-prune fallback).

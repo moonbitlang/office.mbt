@@ -778,3 +778,146 @@ test "worksheet wb: duplicate-row helper edge branches" {
     content="true",
   )
 }
+
+///|
+test "worksheet wb: col insert/remove structural edge branches" {
+  let guard_sheet = Worksheet::new("Guard")
+  let bad_insert_col : Result[Unit, Error] = try? guard_sheet.insert_cols(0, 1)
+  inspect(bad_insert_col is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_insert_count : Result[Unit, Error] = try? guard_sheet.insert_cols(1, 0)
+  inspect(
+    bad_insert_count is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_remove_col : Result[Unit, Error] = try? guard_sheet.remove_cols(0, 1)
+  inspect(bad_remove_col is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_remove_count : Result[Unit, Error] = try? guard_sheet.remove_cols(1, 0)
+  inspect(
+    bad_remove_count is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+
+  let insert = Worksheet::new("Insert")
+  insert.auto_filter = Some({
+    range_ref: "A1:D4",
+    columns: [
+      { col: 1, filters: Some(["keep"]), custom_filters: None },
+      { col: 3, filters: Some(["shift"]), custom_filters: None },
+    ],
+  })
+  insert.hyperlinks.push({
+    reference: "A1:C1",
+    target: "https://example.com",
+    link_type: External,
+    display: None,
+    tooltip: None,
+  })
+  insert.add_picture_from_bytes("C3", [1], ".png")
+  let insert_chart = ChartOptions::new(Col)
+  insert_chart.series.push(
+    ChartSeries::new("Insert!$A$1:$A$2", "Insert!$B$1:$B$2"),
+  )
+  insert.add_chart_with_options("D3", insert_chart)
+  insert.insert_cols(2, 1)
+  inspect(insert.get_pictures("D3").length(), content="1")
+  inspect(insert.charts()[0].reference, content="E3")
+  inspect(insert.hyperlinks()[0].reference, content="A1:D1")
+  match insert.auto_filter {
+    Some(filter) => {
+      inspect(filter.range_ref, content="A1:E4")
+      inspect(filter.columns.length(), content="2")
+      inspect(filter.columns[0].col, content="1")
+      inspect(filter.columns[1].col, content="4")
+    }
+    None => fail("missing auto filter after col insert")
+  }
+
+  let remove = Worksheet::new("Remove")
+  remove.set_col_width(1, 9.0)
+  remove.set_col_width(4, 11.0)
+  remove.merge_cells("B1:B1")
+  remove.hyperlinks.push({
+    reference: "B1",
+    target: "https://drop.example",
+    link_type: External,
+    display: None,
+    tooltip: None,
+  })
+  remove.hyperlinks.push({
+    reference: "A1:C1",
+    target: "https://range.example",
+    link_type: External,
+    display: None,
+    tooltip: None,
+  })
+  remove.auto_filter = Some({
+    range_ref: "A1:D4",
+    columns: [
+      { col: 1, filters: Some(["left"]), custom_filters: None },
+      { col: 2, filters: Some(["drop"]), custom_filters: None },
+      { col: 4, filters: Some(["right"]), custom_filters: None },
+    ],
+  })
+  ignore(remove.add_table("B1:B2", "DropColTable", ["B"]))
+  ignore(remove.add_table("D1:E2", "KeepColTable", ["D", "E"]))
+  remove.add_sparkline_group(["B1", "D1"], ["B1:B1", "D1:D1"])
+  remove.add_picture_from_bytes("A1", [1], ".png")
+  remove.add_picture_from_bytes("B1", [1], ".png")
+  let remove_chart_a = ChartOptions::new(Col)
+  remove_chart_a.series.push(
+    ChartSeries::new("Remove!$A$1:$A$2", "Remove!$B$1:$B$2"),
+  )
+  remove.add_chart_with_options("A1", remove_chart_a)
+  let remove_chart_b = ChartOptions::new(Col)
+  remove_chart_b.series.push(
+    ChartSeries::new("Remove!$A$1:$A$2", "Remove!$B$1:$B$2"),
+  )
+  remove.add_chart_with_options("B1", remove_chart_b)
+  remove.col_breaks.push({ id: 0, min: 0, max: 16383, manual: true })
+  remove.col_breaks.push({ id: 4, min: 0, max: 16383, manual: true })
+  remove.remove_cols(2, 1)
+  inspect(remove.merged_cells().length(), content="0")
+  inspect(remove.hyperlinks().length(), content="1")
+  inspect(remove.hyperlinks()[0].reference, content="A1:B1")
+  match remove.auto_filter {
+    Some(filter) => {
+      inspect(filter.range_ref, content="A1:C4")
+      inspect(filter.columns.length(), content="2")
+      inspect(filter.columns[0].col, content="1")
+      inspect(filter.columns[1].col, content="3")
+    }
+    None => fail("missing auto filter after col remove")
+  }
+  inspect(remove.tables().length(), content="1")
+  inspect(remove.tables()[0].name, content="KeepColTable")
+  inspect(remove.tables()[0].range_ref, content="C1:D2")
+  inspect(remove.sparkline_groups().length(), content="1")
+  inspect(remove.sparkline_groups()[0].sparklines.length(), content="1")
+  inspect(remove.sparkline_groups()[0].sparklines[0].location, content="C1")
+  inspect(remove.get_pictures("A1").length(), content="1")
+  inspect(remove.get_pictures("B1").length(), content="0")
+  inspect(remove.charts().length(), content="1")
+  inspect(remove.charts()[0].reference, content="A1")
+  inspect(remove.get_col_width(1), content="Some(9)")
+  inspect(remove.get_col_width(3), content="Some(11)")
+  inspect(remove.col_breaks.length(), content="2")
+  inspect(remove.col_breaks[0].id, content="0")
+  inspect(remove.col_breaks[1].id, content="3")
+
+  let filter_drop = Worksheet::new("FilterDrop")
+  filter_drop.auto_filter = Some({
+    range_ref: "B1:B2",
+    columns: [{ col: 2, filters: Some(["x"]), custom_filters: None }],
+  })
+  filter_drop.remove_cols(2, 1)
+  inspect(filter_drop.auto_filter, content="None")
+
+  let alias_sheet = Worksheet::new("Alias")
+  alias_sheet.set_cell("A1", "a")
+  alias_sheet.set_cell("B1", "b")
+  alias_sheet.set_cell("C1", "c")
+  alias_sheet.remove_col(2)
+  inspect(alias_sheet.get_cell("A1"), content="Some(\"a\")")
+  inspect(alias_sheet.get_cell("B1"), content="Some(\"c\")")
+  inspect(alias_sheet.get_cell("C1"), content="None")
+}
