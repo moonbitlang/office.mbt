@@ -1244,13 +1244,23 @@ Commands used:
     - Coverage delta:
       - `xlsx/read_sheet_rel_parts.mbt` uncovered lines reduced from `43` to `29`
 
-- [ ] 93. Plan next bounded read-path hardening slice after `read_sheet_rel_parts` coverage gain.
+- [x] 93. Plan next bounded read-path hardening slice after `read_sheet_rel_parts` coverage gain.
   - DoD: choose next highest-value read parser target and define exact branch-focused test scope.
+  - Delivered:
+    - Reviewed remaining read-parser candidates and selected the next bounded target:
+      - `xlsx/read_drawing_xml.mbt` (`108` uncovered) as the next high-value parser hardening slice
+    - Scoped the immediate branch set for next item:
+      - anchor parsing/validation paths (`oneCellAnchor`/`twoCellAnchor` close+body errors)
+      - numeric tag parsing error branches (`parse_xml_int_tag`)
+      - drawing image anchor metadata validation branches
+
+- [ ] 94. Expand `read_drawing_xml` parser branch coverage (anchor + numeric tag validation slice).
+  - DoD: reduce uncovered lines in `xlsx/read_drawing_xml.mbt` with targeted whitebox parser tests.
   - Planned:
-    - review remaining uncovered read-parser candidates (`read_drawing_xml`, `read`, `worksheet`)
-    - pick the smallest high-impact slice with measurable delta
-    - continue one-by-one implementation with commit cadence
+    - add focused tests for malformed anchor close/body branches and invalid numeric tag parsing
+    - cover key image-anchor validation error paths (missing/ext attrs)
+    - run targeted tests + `moon check --deny-warn` and record coverage delta
 
 ## Active Item
 
-- Next item: **93** (next read-path hardening slice selection).
+- Next item: **94** (`read_drawing_xml` parser coverage slice).
