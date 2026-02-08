@@ -54,19 +54,12 @@ Completed (already landed):
 
 Remaining follow-ups:
 
-5. **Decouple IO configuration from `Workbook`**
-   - Partially implemented:
-     - `Workbook::save_as` no longer needs to mutate `Workbook.file_path` just to
-       drive content-type selection during write; the writer supports passing a
-       `file_path` override internally.
-     - Added internal `WorkbookIOContext` wiring in read/write paths:
-       `open_reader`, `open_file`, `Workbook::read_zip_reader`, write wrappers,
-       and save flows now pass explicit IO context rather than directly threading
-       individual IO fields.
-   - Remaining:
-     - Keep compat shims for existing field-backed APIs, but plan a follow-up to
-       hide/remove direct `Workbook` IO fields from external surface once a
-       stable IO-context API is finalized.
+5. **Decouple IO configuration from `Workbook` (resolved: 2026-02-08)**
+   - `Workbook` now stores a single `WorkbookIOContext` instead of separate
+     `file_path`, `zip_writer`, and `charset_transcoder` fields.
+   - Read/write/save flows use explicit IO-context plumbing end-to-end
+     (`open_reader`, `open_file`, `Workbook::read_zip_reader`, write wrappers,
+     and save paths).
 
 6. **Introduce a scalable worksheet cell store (if performance becomes a priority)**
    - Options: index cache, row-grouped storage, or dual representation; maintain deterministic write output and stream-writer semantics.
@@ -74,5 +67,8 @@ Remaining follow-ups:
 7. **Decide whether `ooxml/` should become a shared read/write “package layer”**
    - Either keep it write-only, or add parsing for `.rels` / content types and consume it from `xlsx/read`.
 
-8. **Further split `xlsx/formula_builtins.mbt` (optional)**
-   - If navigation remains painful, split built-ins by category (text/math/date/financial/lookup/etc).
+8. **Further split `xlsx/formula_builtins.mbt` (resolved: 2026-02-08)**
+   - Built-ins were split by category into:
+     `xlsx/formula_builtins.mbt` (core dispatch + core helpers),
+     `xlsx/formula_builtins_financial.mbt`, and
+     `xlsx/formula_builtins_stats.mbt`.
