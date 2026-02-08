@@ -2470,6 +2470,42 @@ Commands used:
     - Total uncovered lines reduced from `2924` to `2912`
     - Uncovered file count remains `43`
 
+- [x] 163. Close residuals in `xlsx/read.mbt`.
+  - DoD: add focused whitebox coverage for low-level read-side XML/font parsing guards and reduce residual uncovered lines in `xlsx/read.mbt`.
+  - Delivered:
+    - Added `xlsx/read_wbtest.mbt` with focused whitebox coverage for:
+      - `xml_encoding(...)` guard matrix:
+        - short input
+        - UTF-8 BOM + single-quoted encoding declaration
+        - invalid encoding character rejection
+        - unterminated encoding-quote rejection
+      - `decode_utf8(...)` error paths:
+        - non-UTF8 XML encoding without transcoder
+        - invalid UTF-8 bytes
+      - `parse_default_font(...)` fallback matrix:
+        - missing `<fonts>`
+        - missing `<name>`
+        - malformed name tag
+        - malformed `val` attribute
+        - valid name extraction
+      - `parse_font_entry(...)` attribute parsing and invalid-number guards:
+        - bool/style fields + non-`FF` ARGB normalization branch
+        - invalid `sz`, `charset`, `family`, and color `theme/indexed/tint` numeric parsing errors
+      - `parse_fonts(...)` fallback/malformed chunk branches:
+        - missing `<fonts>` body
+        - empty fonts body fallback
+        - malformed `<font` chunks missing open-end or close-tag
+  - Validation gates:
+    - `moon test xlsx/read_wbtest.mbt`
+    - `moon test xlsx/read_package_parts_wbtest.mbt`
+    - `moon test xlsx/read_sheet_rel_parts_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after174.log`
+  - Coverage delta:
+    - `xlsx/read.mbt` uncovered lines reduced from `417` to `394`
+    - Total uncovered lines reduced from `2912` to `2889`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **163** (move to the next residual hotspot: `xlsx/read.mbt`).
+- Next item: **164** (move to the next residual hotspot: `xlsx/formula_eval.mbt`, part 2).
