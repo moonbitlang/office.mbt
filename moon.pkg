@@ -5,6 +5,7 @@ import {
 }
 
 import {
+  "bobzhang/mbtexcel/cmd/demos" @demos,
   "moonbitlang/async",
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/async/process" @process,
