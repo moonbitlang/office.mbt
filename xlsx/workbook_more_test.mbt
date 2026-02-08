@@ -481,3 +481,306 @@ test "workbook: copy_sheet clones complex worksheet state" {
   inspect(dst.comments().length(), content="1")
   workbook.clear_sheet_background("Src")
 }
+
+///|
+test "workbook: missing-sheet cell/media wrapper guards" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let rich : Array[RichTextRun] = [{ text: "x", font: None }]
+  let shape = Shape::new("A1", "rect") catch {
+    err => fail("shape init failed: \{err}")
+  }
+  let control = FormControl::new("A1", "checkbox") catch {
+    err => fail("form control init failed: \{err}")
+  }
+  let slicer_opts = SlicerOptions::new("Field", "A1", "Sheet1", "Table1") catch {
+    err => fail("slicer options init failed: \{err}")
+  }
+  let chart_opts = ChartOptions::new(Bar)
+  let image_opts = GraphicOptions::new()
+
+  let set_rich : Result[Unit, Error] = try? workbook.set_cell_rich_text(
+    "Missing",
+    "A1",
+    rich[:],
+  )
+  inspect(set_rich is Err(XlsxError::SheetNotFound(_)), content="true")
+  let set_link : Result[Unit, Error] = try? workbook.set_cell_hyperlink(
+    "Missing",
+    "A1",
+    "https://example.com",
+    External,
+  )
+  inspect(set_link is Err(XlsxError::SheetNotFound(_)), content="true")
+  let set_link_opts : Result[Unit, Error] = try? workbook.set_cell_hyperlink_opts(
+    "Missing",
+    "A1",
+    "https://example.com",
+    External,
+    opts=HyperlinkOpts::new(),
+  )
+  inspect(set_link_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  let remove_link : Result[Unit, Error] = try? workbook.remove_cell_hyperlink(
+    "Missing",
+    "A1",
+  )
+  inspect(remove_link is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_cell : Result[String?, Error] = try? workbook.get_cell("Missing", "A1")
+  inspect(get_cell is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_rich : Result[Array[RichTextRun]?, Error] = try? workbook.get_cell_rich_text(
+    "Missing",
+    "A1",
+  )
+  inspect(get_rich is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_link : Result[Hyperlink?, Error] = try? workbook.get_cell_hyperlink(
+    "Missing",
+    "A1",
+  )
+  inspect(get_link is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_raw : Result[CellValue?, Error] = try? workbook.get_cell_value_raw(
+    "Missing",
+    "A1",
+  )
+  inspect(get_raw is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_type : Result[CellValueType?, Error] = try? workbook.get_cell_type(
+    "Missing",
+    "A1",
+  )
+  inspect(get_type is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_value : Result[String?, Error] = try? workbook.get_cell_value(
+    "Missing",
+    "A1",
+  )
+  inspect(get_value is Err(XlsxError::SheetNotFound(_)), content="true")
+  let calc_value : Result[String, Error] = try? workbook.calc_cell_value(
+    "Missing",
+    "A1",
+    options=Options::with_values(raw_cell_value=true),
+  )
+  inspect(calc_value is Err(XlsxError::SheetNotFound(_)), content="true")
+  let calc_rc : Result[String, Error] = try? workbook.calc_cell_value_rc(
+    "Missing",
+    1,
+    1,
+    options=Options::with_values(raw_cell_value=true),
+  )
+  inspect(calc_rc is Err(XlsxError::SheetNotFound(_)), content="true")
+  let set_formula : Result[Unit, Error] = try? workbook.set_cell_formula(
+    "Missing",
+    "A1",
+    "1+1",
+  )
+  inspect(set_formula is Err(XlsxError::SheetNotFound(_)), content="true")
+  let set_formula_opts : Result[Unit, Error] = try? workbook.set_cell_formula_opts(
+    "Missing",
+    "A1",
+    "1+1",
+  )
+  inspect(set_formula_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_formula : Result[String?, Error] = try? workbook.get_cell_formula(
+    "Missing",
+    "A1",
+  )
+  inspect(get_formula is Err(XlsxError::SheetNotFound(_)), content="true")
+  let set_style : Result[Unit, Error] = try? workbook.set_cell_style(
+    "Missing",
+    "A1",
+    0,
+  )
+  inspect(set_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_style : Result[Int?, Error] = try? workbook.get_cell_style(
+    "Missing",
+    "A1",
+  )
+  inspect(get_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_image : Result[Unit, Error] = try? workbook.add_image(
+    "Missing",
+    "A1",
+    [1],
+    ".png",
+    "image/png",
+  )
+  inspect(add_image is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_image_opts : Result[Unit, Error] = try? workbook.add_image_with_options(
+    "Missing",
+    "A1",
+    [1],
+    ".png",
+    "image/png",
+    image_opts,
+  )
+  inspect(add_image_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_picture_bytes : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
+    "Missing",
+    "A1",
+    [1],
+    ".png",
+  )
+  inspect(add_picture_bytes is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_picture_bytes_opts : Result[Unit, Error] = try? workbook.add_picture_from_bytes_with_options(
+    "Missing",
+    "A1",
+    [1],
+    ".png",
+    GraphicOptions::new(),
+  )
+  inspect(add_picture_bytes_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_hf_image : Result[Unit, Error] = try? workbook.add_header_footer_image(
+    "Missing",
+    HeaderFooterImageOptions::new(Left, [1], ".png"),
+  )
+  inspect(add_hf_image is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_pictures : Result[Array[Image], Error] = try? workbook.get_pictures(
+    "Missing",
+    "A1",
+  )
+  inspect(get_pictures is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_picture_cells : Result[Array[String], Error] = try? workbook.get_picture_cells(
+    "Missing",
+  )
+  inspect(get_picture_cells is Err(XlsxError::SheetNotFound(_)), content="true")
+  let del_picture : Result[Unit, Error] = try? workbook.delete_picture(
+    "Missing",
+    "A1",
+  )
+  inspect(del_picture is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_chart : Result[Unit, Error] = try? workbook.add_chart(
+    "Missing",
+    "A1",
+    "<chart/>",
+  )
+  inspect(add_chart is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_chart_opts : Result[Unit, Error] = try? workbook.add_chart_with_options(
+    "Missing",
+    "A1",
+    chart_opts,
+  )
+  inspect(add_chart_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  let del_chart : Result[Unit, Error] = try? workbook.delete_chart("Missing", "A1")
+  inspect(del_chart is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_shape : Result[Unit, Error] = try? workbook.add_shape("Missing", shape)
+  inspect(add_shape is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_vml : Result[Unit, Error] = try? workbook.add_vml_drawing_xml(
+    "Missing",
+    "<xml/>",
+  )
+  inspect(add_vml is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_vml_hf : Result[Unit, Error] = try? workbook.add_vml_drawing_hf_xml(
+    "Missing",
+    "<xml/>",
+  )
+  inspect(add_vml_hf is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_control : Result[Unit, Error] = try? workbook.add_form_control(
+    "Missing",
+    control,
+  )
+  inspect(add_control is Err(XlsxError::SheetNotFound(_)), content="true")
+  let get_controls : Result[Array[FormControl], Error] = try? workbook.get_form_controls(
+    "Missing",
+  )
+  inspect(get_controls is Err(XlsxError::SheetNotFound(_)), content="true")
+  let del_control : Result[Unit, Error] = try? workbook.delete_form_control(
+    "Missing",
+    "A1",
+  )
+  inspect(del_control is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_slicer : Result[Unit, Error] = try? workbook.add_slicer(
+    "Missing",
+    slicer_opts,
+  )
+  inspect(add_slicer is Err(XlsxError::SheetNotFound(_)), content="true")
+}
+
+///|
+test "workbook: add_image_with_options applies explicit option values" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let options = GraphicOptions::with_values(
+    offset_x=3,
+    offset_y=4,
+    scale_x=1.25,
+    scale_y=1.5,
+    hyperlink="https://example.com",
+    hyperlink_type=External,
+    name="CustomName",
+    alt_text="Alt",
+    lock_aspect_ratio=true,
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+    print_object=false,
+    locked=false,
+    positioning=TwoCell,
+  )
+  workbook.add_image_with_options(
+    "Sheet1",
+    "B2",
+    [1, 2, 3],
+    ".png",
+    "image/png",
+    options,
+  )
+  let pictures = workbook.get_pictures("Sheet1", "B2")
+  inspect(pictures.length(), content="1")
+  let picture = pictures[0]
+  inspect(picture.offset_x, content="3")
+  inspect(picture.offset_y, content="4")
+  inspect(picture.scale_x == 1.25, content="true")
+  inspect(picture.scale_y == 1.5, content="true")
+  inspect(picture.hyperlink, content="https://example.com")
+  inspect(picture.hyperlink_type, content="External")
+  inspect(picture.name, content="CustomName")
+  inspect(picture.alt_text, content="Alt")
+  inspect(picture.lock_aspect_ratio, content="true")
+  inspect(picture.positioning, content="TwoCell")
+  inspect(picture.print_object, content="false")
+  inspect(picture.locked, content="false")
+}
+
+///|
+test "workbook: calc_cell_value raw/options/rc/style branches" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  workbook.set_cell_formula("Sheet1", "A1", "1+1")
+  let opts = Options::with_values(raw_cell_value=true)
+  inspect(workbook.calc_cell_value("Sheet1", "A1", options=opts), content="2")
+  inspect(workbook.calc_cell_value_rc("Sheet1", 1, 1, options=opts), content="2")
+  sheet.set_cell_style("A1", 999)
+  let bad_style : Result[String, Error] = try? workbook.calc_cell_value(
+    "Sheet1",
+    "A1",
+  )
+  inspect(bad_style is Err(XlsxError::InvalidStyleId(_)), content="true")
+}
+
+///|
+async test "workbook: async missing-sheet picture/header wrappers" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let add_picture_result : Result[Unit, Error] = try? workbook.add_picture(
+    "Missing",
+    "A1",
+    "/tmp/does-not-matter.png",
+  )
+  inspect(add_picture_result is Err(XlsxError::SheetNotFound(_)), content="true")
+  let add_picture_opts_result : Result[Unit, Error] = try? workbook.add_picture_with_options(
+    "Missing",
+    "A1",
+    "/tmp/does-not-matter.png",
+    GraphicOptions::new(),
+  )
+  inspect(
+    add_picture_opts_result is Err(XlsxError::SheetNotFound(_)),
+    content="true",
+  )
+  let hf_options = HeaderFooterImageOptions::from_file(
+    Left,
+    "/tmp/does-not-matter.png",
+  ) catch {
+    err => fail("header/footer file options init failed: \{err}")
+  }
+  let add_hf_result : Result[Unit, Error] = try? workbook.add_header_footer_image_from_file(
+    "Missing",
+    hf_options,
+  )
+  inspect(add_hf_result is Err(XlsxError::SheetNotFound(_)), content="true")
+}

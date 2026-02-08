@@ -2115,6 +2115,32 @@ Commands used:
   - Coverage delta:
     - `xlsx/write.mbt` uncovered lines reduced from `9` to `0`
 
+- [x] 146. Continue bounded high-risk residual reduction in `workbook.mbt` (wrapper/cell-image slice).
+  - DoD: close a focused slice covering missing-sheet guard wrappers for cell/media/chart APIs plus `add_image_with_options` option fan-in and calc-option/style guards.
+  - Delivered:
+    - Extended `xlsx/workbook_more_test.mbt` with:
+      - `workbook: missing-sheet cell/media wrapper guards`
+      - `workbook: add_image_with_options applies explicit option values`
+      - `workbook: calc_cell_value raw/options/rc/style branches`
+      - `workbook: async missing-sheet picture/header wrappers`
+    - Covered workbook wrapper branches for:
+      - rich-text/hyperlink get-set/remove APIs
+      - formula/style get-set APIs
+      - image/picture/header-footer wrappers
+      - chart/shape/VML/form-control/slicer wrapper guards
+    - Covered computation/path branches for:
+      - `calc_cell_value` options `Some(...)` resolution
+      - raw-return fast path
+      - `InvalidStyleId` guard path
+      - `calc_cell_value_rc` reference conversion and options-`Some` forwarding
+    - Covered `add_image_with_options` explicit option fan-in (`offset/scale/link/name/alt/lock/fit/print/positioning`) on success path.
+  - Validation gates:
+    - `moon test xlsx/workbook_more_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after150.log`
+  - Coverage delta:
+    - `xlsx/workbook.mbt` uncovered lines reduced from `168` to `132`
+
 ## Active Item
 
-- Next item: **146** (start bounded high-risk residual reduction in `xlsx/workbook.mbt` with targeted branch tests/refactors).
+- Next item: **147** (continue bounded high-risk residual reduction in `xlsx/workbook.mbt`, targeting structural helper branches and remaining wrapper clusters).
