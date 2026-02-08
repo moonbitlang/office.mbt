@@ -2064,6 +2064,31 @@ Commands used:
   - Coverage delta:
     - `xlsx/ooxml_rels.mbt` uncovered lines reduced from `4` to `0`
 
+- [x] 144. Close bounded high-risk residuals in `worksheet.mbt`.
+  - DoD: remove/cover remaining structural branch hotspots in extension normalization, column-width fallback logic, conditional-format id injection, and sqref duplication helpers.
+  - Delivered:
+    - Refactored extension normalization helpers in `xlsx/worksheet.mbt`:
+      - replaced leading-dot slice/catch logic with split/join trimming in:
+        - `normalize_extension`
+        - `normalize_extension_lower_requires_dot`
+    - Refactored `Worksheet::col_width_pixels`:
+      - consolidated sheet-props fallback into `default_col_width_from_props`.
+      - replaced nested match fallback with `unwrap_or(default_sheet_base_col_width)`.
+    - Refactored `inject_x14_id_ext_lst_into_cf_rule`:
+      - replaced positional slice/catch insertion with split/rejoin around first `</cfRule>`.
+    - Refactored `Worksheet::unset_conditional_format` x14-prune pass:
+      - stored `(updated_xml, next_sqref)` pairs during first-pass update.
+      - reused stored sqref in x14 id extraction pass, removing redundant reparse branches.
+    - Refactored `duplicate_sqref_for_row`:
+      - replaced colon-find/slice/catch split with char-stream `split_sqref_range`.
+    - Removed obsolete `default_col_width_pixels` constant.
+  - Validation gates:
+    - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after148.log`
+  - Coverage delta:
+    - `xlsx/worksheet.mbt` uncovered lines reduced from `12` to `0`
+
 ## Active Item
 
-- Next item: **144** (start bounded high-risk residual reduction in `xlsx/worksheet.mbt` with targeted branch tests).
+- Next item: **145** (start bounded high-risk residual reduction in `xlsx/write.mbt` with targeted branch tests).

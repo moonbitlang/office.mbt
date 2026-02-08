@@ -1031,15 +1031,23 @@ pub fn Worksheet::delete_pivot_table(
 
 ///|
 fn normalize_extension(extension : StringView) -> String raise XlsxError {
+  fn trim_leading_dot(value : StringView) -> String {
+    let parts = Array::from_iter(value.split("."))
+    let rest : Array[String] = []
+    for i, part in parts {
+      if i > 0 {
+        rest.push(part.to_string())
+      }
+    }
+    rest.join(".")
+  }
+
   let value = extension.to_string()
   let trimmed = if value.has_prefix(".") {
     if value.length() <= 1 {
       raise UnsupportedFeature(msg="image extension missing")
     }
-    let view = value[1:] catch {
-        _ => raise UnsupportedFeature(msg="invalid image extension")
-      }
-    view.to_string()
+    trim_leading_dot(value)
   } else {
     value
   }
@@ -1054,17 +1062,22 @@ fn normalize_extension_lower_requires_dot(
   extension : StringView,
   unsupported_msg : StringView,
 ) -> String raise XlsxError {
+  fn trim_leading_dot(value : StringView) -> String {
+    let parts = Array::from_iter(value.split("."))
+    let rest : Array[String] = []
+    for i, part in parts {
+      if i > 0 {
+        rest.push(part.to_string())
+      }
+    }
+    rest.join(".")
+  }
+
   let raw = extension.to_string()
   if !raw.has_prefix(".") || raw.length() <= 1 {
     raise UnsupportedFeature(msg=unsupported_msg.to_string())
   }
-  let view = raw[1:] catch {
-      _ => raise UnsupportedFeature(msg=unsupported_msg.to_string())
-    }
-  let trimmed = view.to_string()
-  if trimmed == "" {
-    raise UnsupportedFeature(msg=unsupported_msg.to_string())
-  }
+  let trimmed = trim_leading_dot(raw)
   trimmed.to_lower()
 }
 
@@ -1112,9 +1125,6 @@ let default_picture_width_px = 200
 let default_picture_height_px = 160
 
 ///|
-let default_col_width_pixels = 64
-
-///|
 let default_row_height_pixels : Int = convert_row_height_to_pixels(15.0)
 
 ///|
@@ -1142,6 +1152,16 @@ fn convert_row_height_to_pixels(height : Double) -> Int {
 
 ///|
 fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
+  fn default_col_width_from_props(props : SheetPropsOptions) -> Int {
+    match props.default_col_width {
+      Some(w) => convert_col_width_to_pixels(w)
+      None => {
+        let base = props.base_col_width.unwrap_or(default_sheet_base_col_width)
+        convert_col_width_to_pixels(Double::from_int(base))
+      }
+    }
+  }
+
   match self.col_dimensions.get(col) {
     Some(dim) =>
       if dim.hidden {
@@ -1151,27 +1171,13 @@ fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
           Some(width) => convert_col_width_to_pixels(width)
           None => {
             let props = sheet_props_with_defaults(self.sheet_props)
-            match props.default_col_width {
-              Some(w) => convert_col_width_to_pixels(w)
-              None =>
-                match props.base_col_width {
-                  Some(v) => convert_col_width_to_pixels(Double::from_int(v))
-                  None => default_col_width_pixels
-                }
-            }
+            default_col_width_from_props(props)
           }
         }
       }
     None => {
       let props = sheet_props_with_defaults(self.sheet_props)
-      match props.default_col_width {
-        Some(w) => convert_col_width_to_pixels(w)
-        None =>
-          match props.base_col_width {
-            Some(v) => convert_col_width_to_pixels(Double::from_int(v))
-            None => default_col_width_pixels
-          }
-      }
+      default_col_width_from_props(props)
     }
   }
 }
@@ -2148,18 +2154,19 @@ fn inject_x14_id_ext_lst_into_cf_rule(
     return rule_xml
   }
   let close_tag = "</cfRule>"
-  match rule_xml.find(close_tag) {
-    Some(pos) => {
-      let before = rule_xml[:pos] catch {
-          _ => raise InvalidXml(msg="cfRule slice invalid")
-        }
-      let after = rule_xml[pos:] catch {
-          _ => raise InvalidXml(msg="cfRule slice invalid")
-        }
-      "\{before}<extLst><ext uri=\"\{ext_uri_conditional_formatting_rule_id}\" xmlns:x14=\"\{ns_spreadsheet_x14}\"><x14:id>\{escape_xml_text(id)}</x14:id></ext></extLst>\{after}"
-    }
-    None => raise InvalidXml(msg="cfRule tag invalid")
+  let parts = Array::from_iter(rule_xml.split(close_tag))
+  if parts.length() <= 1 {
+    raise InvalidXml(msg="cfRule tag invalid")
   }
+  let before = parts[0].to_string()
+  let tail : Array[String] = []
+  for i, part in parts {
+    if i > 0 {
+      tail.push(part.to_string())
+    }
+  }
+  let after = close_tag + tail.join(close_tag)
+  "\{before}<extLst><ext uri=\"\{ext_uri_conditional_formatting_rule_id}\" xmlns:x14=\"\{ns_spreadsheet_x14}\"><x14:id>\{escape_xml_text(id)}</x14:id></ext></extLst>\{after}"
 }
 
 ///|
@@ -2245,7 +2252,7 @@ pub fn Worksheet::unset_conditional_format(
   let del_cells = flat_sqref(
     range_ref.to_string().replace_all(old=",", new=" "),
   )
-  let updated : Array[String] = []
+  let updated : Array[(String, String)] = []
   for xml in self.conditional_formats {
     let tag = match tag_attributes_in(xml, "conditionalFormatting") {
       Some(value) => value
@@ -2260,27 +2267,23 @@ pub fn Worksheet::unset_conditional_format(
       continue
     }
     match replace_attr_value_in_open_tag(xml, "sqref", next_sqref) {
-      Some(value) => updated.push(value)
+      Some(value) => updated.push((value, next_sqref))
       None => raise InvalidXml(msg="conditionalFormatting sqref update failed")
     }
   }
   self.conditional_formats.clear()
-  self.conditional_formats.append(updated[:])
+  for item in updated {
+    let (xml, _sqref) = item
+    self.conditional_formats.push(xml)
+  }
   if self.x14_data_bars.length() > 0 {
     let prior : Map[String, X14DataBarProps] = {}
     for id, props in self.x14_data_bars {
       prior[id] = props
     }
     let referenced : Map[String, X14DataBarProps] = {}
-    for xml in self.conditional_formats {
-      let tag = match tag_attributes_in(xml, "conditionalFormatting") {
-        Some(value) => value
-        None => continue
-      }
-      let sqref = match attr_value(tag, "sqref") {
-        Some(value) => unescape_xml_text(value)
-        None => continue
-      }
+    for item in updated {
+      let (xml, sqref) = item
       let mut first = true
       for chunk in xml.split("<x14:id>") {
         if first {
@@ -3293,27 +3296,34 @@ fn duplicate_sqref_for_row(
   target_row : Int,
   sqref : StringView,
 ) -> Array[String] raise XlsxError {
+  fn split_sqref_range(text : StringView) -> (String, String) {
+    let left = StringBuilder::new()
+    let right = StringBuilder::new()
+    let mut seen_sep = false
+    for ch in text {
+      if !seen_sep && ch == ':' {
+        seen_sep = true
+      } else if seen_sep {
+        right.write_char(ch)
+      } else {
+        left.write_char(ch)
+      }
+    }
+    if seen_sep {
+      (left.to_string(), right.to_string())
+    } else {
+      let cell = text.to_string()
+      (cell, cell)
+    }
+  }
+
   let refs : Array[String] = []
   for part in sqref.split(" ") {
     let text = part.trim()
     if text == "" {
       continue
     }
-    let (start_ref, end_ref) = if text.contains(":") {
-      let sep = match text.find(":") {
-        Some(pos) => pos
-        None => raise InvalidCellRef(value=text.to_string())
-      }
-      let start_ref = text[:sep] catch {
-          _ => raise InvalidCellRef(value=text.to_string())
-        }
-      let end_ref = text[sep + 1:] catch {
-          _ => raise InvalidCellRef(value=text.to_string())
-        }
-      (start_ref, end_ref)
-    } else {
-      (text, text)
-    }
+    let (start_ref, end_ref) = split_sqref_range(text)
     let (row1, col1, abs_col1, abs_row1) = parse_cell_ref_with_abs(start_ref)
     let (row2, col2, abs_col2, abs_row2) = parse_cell_ref_with_abs(end_ref)
     if row1 == row2 && row1 == row {
