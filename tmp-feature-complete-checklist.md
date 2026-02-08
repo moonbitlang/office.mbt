@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 865/865`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 866/866`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -908,13 +908,24 @@ Commands used:
       - all nine integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 68. Re-run full release gate after mixed-ext stability/uniqueness tranche.
+- [x] 68. Re-run full release gate after mixed-ext stability/uniqueness tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `66/67`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`866/866`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 69. Refactor shared relationship/XML helper logic for integration tests.
+  - DoD: reduce helper duplication by introducing reusable integration test helper functions for relationship parsing and uniqueness checks.
   - Planned:
-    - execute full release gate command
-    - capture updated total test count and parity status
-    - refresh baseline snapshot if totals changed
+    - add shared helper file for rel attribute extraction, uniqueness, and target lookup
+    - migrate at least three integration tests to use shared helpers without behavior changes
+    - run targeted integration tests + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **68** (full release gate after mixed-ext stability/uniqueness tranche).
+- Next item: **69** (shared integration-helper refactor slice).
