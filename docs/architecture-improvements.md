@@ -18,6 +18,7 @@ This repo has already implemented several items from the roadmap:
     - `xlsx/read_styles_xfs.mbt`
     - `xlsx/read_workbook_xml.mbt`
     - `xlsx/read_worksheet_xml.mbt`
+    - `xlsx/read_drawing_xml.mbt`
   - `xlsx/write.mbt` helpers extracted into:
     - `xlsx/write_workbook_xml.mbt`
     - `xlsx/write_shared_strings.mbt`
