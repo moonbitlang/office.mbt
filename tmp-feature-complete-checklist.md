@@ -1769,6 +1769,19 @@ Commands used:
   - Coverage delta:
     - `xlsx/sheet_view_ops.mbt` uncovered lines reduced from `1` to `0`
 
+- [x] 125. Close low-line-count residuals in `cell_value.mbt`.
+  - DoD: cover remaining `parse_cell_bool("yes")` and invalid numeric raw-parse error branches.
+  - Delivered:
+    - Added `xlsx/cell_value_wbtest.mbt` with focused whitebox tests:
+      - `cell value wb: parse yes bool literal`
+      - `cell value wb: invalid numeric raw parse raises InvalidXml`
+  - Validation gates:
+    - `moon test xlsx/cell_value_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after126.log`
+  - Coverage delta:
+    - `xlsx/cell_value.mbt` uncovered lines reduced from `2` to `0`
+
 ## Active Item
 
-- Next item: **125** (close low-line-count residuals in `xlsx/cell_value.mbt` with targeted error/default path tests).
+- Next item: **126** (close low-line-count residuals in `xlsx/slicer_options.mbt` with targeted parser/guard branch tests).
