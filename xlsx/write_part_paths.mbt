@@ -143,10 +143,14 @@ fn archive_path_from_part_name(
     raise InvalidXml(msg="content type part name empty")
   }
   if part.has_prefix("/") {
-    let stripped = part[1:] catch {
-        _ => raise InvalidXml(msg="content type part name invalid")
+    let segments = Array::from_iter(part.split("/"))
+    let path_parts : Array[String] = []
+    for i, segment in segments {
+      if i > 0 {
+        path_parts.push(segment.to_string())
       }
-    let path = stripped.to_string()
+    }
+    let path = path_parts.join("/")
     if path == "" {
       raise InvalidXml(msg="content type part name empty")
     }
@@ -162,24 +166,22 @@ fn rels_path_for_part(part_path : StringView) -> String raise XlsxError {
   if part == "" || part.has_prefix("/") {
     raise InvalidXml(msg="part rels path invalid")
   }
-  let slash = match part.rev_find("/") {
-    Some(value) => value
-    None => return "_rels/\{part}.rels"
-  }
-  if slash + 1 >= part.length() {
-    raise InvalidXml(msg="part rels path invalid")
-  }
-  let folder = part[:slash] catch {
-      _ => raise InvalidXml(msg="part rels path invalid")
-    }
-  let file = part[slash + 1:] catch {
-      _ => raise InvalidXml(msg="part rels path invalid")
-    }
-  let file_name = file.to_string()
+  let segments = Array::from_iter(part.split("/"))
+  let file_name = segments[segments.length() - 1].to_string()
   if file_name == "" {
     raise InvalidXml(msg="part rels path invalid")
   }
-  "\{folder.to_string()}/_rels/\{file_name}.rels"
+  if segments.length() == 1 {
+    return "_rels/\{file_name}.rels"
+  }
+  let folder_parts : Array[String] = []
+  for i, segment in segments {
+    if i + 1 < segments.length() {
+      folder_parts.push(segment.to_string())
+    }
+  }
+  let folder = folder_parts.join("/")
+  "\{folder}/_rels/\{file_name}.rels"
 }
 
 ///|
