@@ -1584,6 +1584,21 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet_types.mbt` uncovered lines reduced from `1` to `0`
 
+- [x] 115. Start bounded `write.mbt` hardening (drawing anchors + rich-text fallback).
+  - DoD: reduce uncovered lines in `xlsx/write.mbt` with focused wbtests for chart/shape drawing anchor paths and rich-text color fallback.
+  - Delivered:
+    - Extended `xlsx/write_hardening_wbtest.mbt` with:
+      - chart drawing tests for none-sheet fallback in `TwoCell` and `Absolute` positioning branches
+      - shape drawing tests for none-sheet fallback anchors plus line/run-font emission branches (`line_color == ""`, strike text run)
+      - `two_cell_axis_to` zero-size-cell skip path via hidden row/column setup
+      - rich-text theme-color path without tint (`<color theme=\"...\"/>`) in shared strings
+    - Validation gates:
+      - `moon test xlsx/write_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after115.log`
+    - Coverage delta:
+      - `xlsx/write.mbt` uncovered lines reduced from `89` to `78`
+
 ## Active Item
 
-- Next item: **115** (start bounded hardening on `xlsx/write.mbt` by covering chart/shape drawing anchor branches and one rich-text color fallback branch).
+- Next item: **116** (continue bounded `write.mbt` hardening for remaining drawing/shape branches with another targeted wbtest slice).
