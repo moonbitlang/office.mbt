@@ -4170,6 +4170,40 @@ fn enforce_unzip_limits(
 }
 
 ///|
+fn archive_path_from_part_name(
+  part_name : StringView,
+) -> String raise XlsxError {
+  let part = part_name.to_string()
+  if part == "" {
+    raise InvalidXml(msg="content type part name empty")
+  }
+  if part.has_prefix("/") {
+    let stripped = part[1:] catch {
+        _ => raise InvalidXml(msg="content type part name invalid")
+      }
+    stripped.to_string()
+  } else {
+    part
+  }
+}
+
+///|
+fn rels_path_for_part(part_path : StringView) -> String raise XlsxError {
+  let part = part_path.to_string()
+  let slash = match part.rev_find("/") {
+    Some(value) => value
+    None => return "_rels/\{part}.rels"
+  }
+  let folder = part[:slash] catch {
+      _ => raise InvalidXml(msg="part rels path invalid")
+    }
+  let file = part[slash + 1:] catch {
+      _ => raise InvalidXml(msg="part rels path invalid")
+    }
+  "\{folder.to_string()}/_rels/\{file.to_string()}.rels"
+}
+
+///|
 fn read_zip_bytes(
   bytes : BytesView,
   options? : Options = Options::new(),
@@ -4181,9 +4215,28 @@ fn read_zip_bytes(
   }
   enforce_unzip_limits(archive, resolved_options)
   let decode = (value : Bytes) => decode_utf8(value, transcoder)
-  let workbook_bytes = match archive.get("xl/workbook.xml") {
+  let workbook_xml_part_path = match archive.get(content_types_part_path) {
+    Some(content_types_bytes) => {
+      let content_types_xml = decode(content_types_bytes)
+      let content_types = [
+        ct_workbook, ct_workbook_macro, ct_workbook_addin_macro, ct_workbook_template,
+        ct_workbook_template_macro,
+      ]
+      let workbook_part_name = @ooxml.find_override_part_by_content_types(
+        content_types_xml, content_types,
+      ) catch {
+        @ooxml.ParseXmlError::InvalidXml(msg~) => raise InvalidXml(msg~)
+      }
+      match workbook_part_name {
+        Some(part_name) => archive_path_from_part_name(part_name)
+        None => workbook_part_path
+      }
+    }
+    None => workbook_part_path
+  }
+  let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
-    None => raise MissingPart(path="xl/workbook.xml")
+    None => raise MissingPart(path=workbook_xml_part_path)
   }
   let workbook_xml = decode(workbook_bytes)
   let sheets = parse_workbook_sheets(workbook_xml)
@@ -4300,9 +4353,10 @@ fn read_zip_bytes(
     workbook_protection,
     active_sheet_index: safe_active_index,
   }
-  let workbook_rels = match archive.get("xl/_rels/workbook.xml.rels") {
+  let workbook_rels_path = rels_path_for_part(workbook_xml_part_path)
+  let workbook_rels = match archive.get(workbook_rels_path) {
     Some(value) => decode(value)
-    None => raise MissingPart(path="xl/_rels/workbook.xml.rels")
+    None => raise MissingPart(path=workbook_rels_path)
   }
   let slicer_cache_defs = parse_slicer_cache_definitions(
     workbook_rels, archive, decode,

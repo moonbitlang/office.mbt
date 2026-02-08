@@ -64,8 +64,16 @@ Remaining follow-ups:
 6. **Introduce a scalable worksheet cell store (if performance becomes a priority)**
    - Options: index cache, row-grouped storage, or dual representation; maintain deterministic write output and stream-writer semantics.
 
-7. **Decide whether `ooxml/` should become a shared read/write “package layer”**
-   - Either keep it write-only, or add parsing for `.rels` / content types and consume it from `xlsx/read`.
+7. **Shared OOXML read/write package layer (resolved: 2026-02-08)**
+   - Added `ooxml/read_parse.mbt` with reusable parsers for `.rels` and
+     `[Content_Types].xml` overrides.
+   - `xlsx/read` now resolves the workbook part from
+     `[Content_Types].xml` content-type overrides, and derives the matching
+     workbook `.rels` path from that resolved part.
+   - `xlsx/ooxml_rels.mbt` now delegates relationship parsing to `ooxml/`,
+     with `ParseXmlError` mapped to `XlsxError::InvalidXml`.
+   - Added regression tests for malformed relationship/content-type tags and
+     for non-default workbook part names discovered via `[Content_Types].xml`.
 
 8. **Further split `xlsx/formula_builtins.mbt` (resolved: 2026-02-08)**
    - Built-ins were split by category into:

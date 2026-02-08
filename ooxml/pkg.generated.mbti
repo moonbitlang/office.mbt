@@ -2,8 +2,18 @@
 package "bobzhang/mbtexcel/ooxml"
 
 // Values
+pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
+
+pub fn parse_content_type_overrides(StringView) -> Map[String, String] raise ParseXmlError
+
+pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
 
 // Errors
+pub suberror ParseXmlError {
+  InvalidXml(msg~ : String)
+}
+pub impl Eq for ParseXmlError
+pub impl Show for ParseXmlError
 
 // Types and methods
 pub struct ContentTypeDefault {

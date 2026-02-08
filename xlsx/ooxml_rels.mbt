@@ -3,43 +3,9 @@ fn parse_relationship_targets(
   xml : StringView,
   rel_type : StringView,
 ) -> Map[String, String] raise XlsxError {
-  let targets : Map[String, String] = {}
-  let mut first = true
-  for chunk in xml.split("<Relationship ") {
-    if first {
-      first = false
-      continue
-    }
-    let text = chunk.to_string()
-    let end = match text.find("/>") {
-      Some(pos) => pos
-      None =>
-        match text.find(">") {
-          Some(pos) => pos
-          None => raise InvalidXml(msg="relationship tag not closed")
-        }
-    }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="relationship tag invalid")
-      }
-    let rel = match attr_value(tag, "Type") {
-      Some(value) => value
-      None => continue
-    }
-    if rel != rel_type.to_string() {
-      continue
-    }
-    let id = match attr_value(tag, "Id") {
-      Some(value) => value
-      None => raise InvalidXml(msg="relationship id missing")
-    }
-    let target = match attr_value(tag, "Target") {
-      Some(value) => value
-      None => raise InvalidXml(msg="relationship target missing")
-    }
-    targets[id] = target
+  @ooxml.parse_relationship_targets(xml, rel_type) catch {
+    @ooxml.ParseXmlError::InvalidXml(msg~) => raise InvalidXml(msg~)
   }
-  targets
 }
 
 ///|
