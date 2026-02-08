@@ -3,6 +3,26 @@ set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
+LOCK_DIR="$ROOT/.tools/openxml-validator/.lock"
+
+acquire_lock() {
+  local attempts=0
+  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    sleep 0.1
+    attempts=$((attempts + 1))
+    if [[ "$attempts" -ge 600 ]]; then
+      echo "error: timeout waiting for OpenXML validator lock" >&2
+      exit 1
+    fi
+  done
+}
+
+release_lock() {
+  rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
+}
+
+mkdir -p "$ROOT/.tools/openxml-validator"
+
 if [[ $# -ne 1 ]]; then
   echo "usage: scripts/validate_xlsx.sh <path-to-xlsx>" >&2
   exit 2
@@ -47,4 +67,8 @@ require_entry "xl/workbook.xml"
 require_entry "xl/_rels/workbook.xml.rels"
 
 DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
-"$DOTNET" run --project "$DOTNET_PROJECT" -- "$XLSX"
+acquire_lock
+trap release_lock EXIT INT TERM
+"$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
+VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
+"$DOTNET" "$VALIDATOR_DLL" "$XLSX"
