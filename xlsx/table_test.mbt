@@ -52,6 +52,7 @@ test "table roundtrip" {
   }
   inspect(parsed_sheet.tables().length(), content="1")
   inspect(parsed_sheet.tables()[0].name, content="TableX")
+  inspect(parsed_sheet.tables()[0].range, content="A1:C1")
   inspect(parsed_sheet.tables()[0].range_ref, content="A1:C1")
   inspect(parsed_sheet.tables()[0].columns, content="[\"A\", \"B\", \"C\"]")
 }
@@ -113,6 +114,7 @@ test "table style flags and header row" {
     None => fail("missing sheet")
   }
   let table = parsed_sheet.tables()[0]
+  inspect(table.range, content="A2:B2")
   inspect(table.range_ref, content="A2:B2")
   inspect(table.show_header_row, content="false")
   inspect(table.show_first_column, content="true")

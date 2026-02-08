@@ -1159,6 +1159,7 @@ fn clone_tables(values : ArrayView[Table]) -> Array[Table] {
       id: 0,
       name: value.name,
       display_name: value.display_name,
+      range: value.range_ref,
       range_ref: value.range_ref,
       columns,
       style_name: value.style_name,

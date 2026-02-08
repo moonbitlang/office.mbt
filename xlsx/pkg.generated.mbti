@@ -1653,6 +1653,7 @@ pub struct Table {
   id : Int
   name : String
   display_name : String
+  range : String
   range_ref : String
   columns : Array[String]
   style_name : String

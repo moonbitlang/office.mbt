@@ -3,6 +3,7 @@ pub struct Table {
   id : Int
   name : String
   display_name : String
+  range : String
   range_ref : String
   columns : Array[String]
   style_name : String
@@ -145,6 +146,7 @@ pub fn Table::new(
     id: 0,
     name,
     display_name: display,
+    range: normalized_ref,
     range_ref: normalized_ref,
     columns: column_names,
     style_name: style,
@@ -347,11 +349,13 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
     show_row_stripes,
     show_column_stripes,
   ) = parse_table_style(xml)
+  let normalized_ref = normalize_range_ref(ref_value)
   {
     id,
     name,
     display_name,
-    range_ref: normalize_range_ref(ref_value),
+    range: normalized_ref,
+    range_ref: normalized_ref,
     columns,
     style_name,
     show_first_column,

@@ -215,13 +215,33 @@ Commands used:
       - `moon check --deny-warn`
       - `moon info && moon fmt`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known`
-- [ ] 14. Add alias parity for `Table.range` while preserving `range_ref`.
+- [x] 14. Add alias parity for `Table.range` while preserving `range_ref`.
   - DoD: public `Table` includes `range` alias mirroring Excelize field semantics and stays roundtrip-correct.
+  - Delivered:
+    - Added `range : String` field to `Table` in `xlsx/table.mbt` as alias of canonical `range_ref`.
+    - Kept IO behavior canonical on `range_ref` while maintaining alias consistency:
+      - `Table::new(...)` now sets both `range` and `range_ref` to the same normalized value.
+      - `parse_table_xml(...)` now sets both fields from normalized `ref`.
+      - table clone/adjust paths now keep both fields in sync:
+        - `clone_tables(...)` in `xlsx/workbook.mbt`
+        - row/col insert/remove table adjust helpers in `xlsx/worksheet.mbt`
+    - Added regression assertions in `xlsx/table_test.mbt`:
+      - roundtrip `table.range`
+      - header-row-adjusted range alias parity
+    - Validation gates:
+      - `moon test xlsx/table_test.mbt`
+      - `moon test xlsx/add_table_parity_test.mbt`
+      - `moon test xlsx/row_col_dimensions_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info --package xlsx && moon fmt`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Table`
+- [ ] 15. Add alias parity fields for `SparklineOptions` (`location/range/max/cust_max/min/cust_min/type`).
+  - DoD: `SparklineOptions` exposes Excelize-compatible field names while preserving current behavior.
   - Planned:
-    - add `range : String` field as alias to normalized `range_ref`
-    - keep write/read paths driven by canonical `range_ref`
-    - add regression checks for constructor/read/get_tables parity
+    - add alias fields and initialize them in `SparklineOptions::new`
+    - keep alias fields synchronized from setters and option-to-group conversion
+    - add regression checks that aliases mirror canonical MoonBit fields
 
 ## Active Item
 
-- Next item: **14** (`Table.range` alias parity).
+- Next item: **15** (`SparklineOptions` alias parity fields).
