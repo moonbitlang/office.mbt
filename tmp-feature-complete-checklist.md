@@ -665,13 +665,18 @@ Commands used:
       - mixed sparkline + x14 conditional formatting: `1/1` passed
       - check: pass
 
-- [ ] 48. Add integration parity slice for cross-sheet sparkline formula references.
+- [x] 48. Add integration parity slice for cross-sheet sparkline formula references.
   - DoD: validate sparkline `<xm:f>` payload correctness when ranges already include explicit sheet references and quoted sheet names.
-  - Planned:
-    - create workbook with source sheet names requiring quote escaping
-    - add sparkline options with explicit cross-sheet range refs
-    - assert worksheet OOXML formula payloads are preserved exactly and parseable
-    - run targeted integration test + `moon check --deny-warn`
+  - Delivered:
+    - Added `xlsx/integration_sparkline_cross_sheet_ref_test.mbt`:
+      - workbook scenario with source sheet name requiring quote escaping (`Data O'Reilly`)
+      - validates explicit cross-sheet `<xm:f>` payloads are preserved in worksheet OOXML
+      - validates read path remains parseable and returns canonical range references
+    - Fixed cross-sheet sparkline option normalization in `xlsx/sparkline.mbt`:
+      - `build_sparklines` now accepts sheet-qualified ranges by normalizing only the range portion while preserving the sheet prefix
+    - Validation gates:
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 49. Add integration parity slice for mixed sparkline + slicer + x14 data-bar worksheet.
   - DoD: validate coexistence of sparkline ext, x14 conditional formatting ext, and slicer list ext markers in one worksheet.
@@ -689,4 +694,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **48** (cross-sheet sparkline formula-reference integration slice).
+- Next item: **49** (mixed sparkline + slicer + x14 worksheet integration slice).

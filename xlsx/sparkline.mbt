@@ -1299,11 +1299,28 @@ fn build_sparklines(
   locations : ArrayView[String],
   ranges : ArrayView[String],
 ) -> Array[Sparkline] raise XlsxError {
+  fn normalize_sparkline_range_for_write(range_ref : StringView) -> String raise XlsxError {
+    let text = range_ref.to_string()
+    match text.find("!") {
+      Some(pos) => {
+        let sheet_prefix = text[:(pos + 1)] catch {
+            _ => raise InvalidCellRef(value=text)
+          }
+        let range_part = text[(pos + 1):] catch {
+            _ => raise InvalidCellRef(value=text)
+          }
+        let normalized = normalize_range_ref(range_part)
+        sheet_prefix.to_string() + normalized
+      }
+      None => normalize_range_ref(text)
+    }
+  }
+
   let sparklines : Array[Sparkline] = []
   for i, location in locations {
     let (row, col) = cell_ref_to_rc(location)
     let canonical_loc = cell_ref_from(row, col)
-    let normalized_range = normalize_range_ref(ranges[i])
+    let normalized_range = normalize_sparkline_range_for_write(ranges[i])
     sparklines.push({ range_ref: normalized_range, location: canonical_loc })
   }
   sparklines
