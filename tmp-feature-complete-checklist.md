@@ -919,13 +919,30 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 69. Refactor shared relationship/XML helper logic for integration tests.
+- [x] 69. Refactor shared relationship/XML helper logic for integration tests.
   - DoD: reduce helper duplication by introducing reusable integration test helper functions for relationship parsing and uniqueness checks.
+  - Delivered:
+    - Added shared helper file `xlsx/integration_test_helpers_test.mbt` with reusable functions:
+      - relationship attribute extraction
+      - uniqueness checks
+      - target existence lookup helpers
+    - Migrated at least three integration tests to shared helpers:
+      - `xlsx/integration_rel_consistency_test.mbt`
+      - `xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+      - `xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+    - Validation gates:
+      - `moon test xlsx/integration_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 70. Run combined gate after shared-helper refactor.
+  - DoD: execute migrated relationship-consistency suites plus mixed-ext stability pack to confirm refactor-only behavior.
   - Planned:
-    - add shared helper file for rel attribute extraction, uniqueness, and target lookup
-    - migrate at least three integration tests to use shared helpers without behavior changes
-    - run targeted integration tests + `moon check --deny-warn`
+    - run migrated relationship tests and key mixed-ext integration tests together
+    - run `moon check --deny-warn`
+    - record consolidated pass status
 
 ## Active Item
 
-- Next item: **69** (shared integration-helper refactor slice).
+- Next item: **70** (post-refactor combined integration gate).

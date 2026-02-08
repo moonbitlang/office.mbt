@@ -1,53 +1,4 @@
 ///|
-fn rel_attr_values_pivot(xml : String, attr : String) -> Array[String] {
-  let values : Array[String] = []
-  let marker = "\{attr}=\""
-  let mut first = true
-  for chunk in xml.split("<Relationship ") {
-    if first {
-      first = false
-      continue
-    }
-    let part = chunk.to_string()
-    match part.find(marker) {
-      Some(start) => {
-        let rest = part[start + marker.length():] catch { _ => "" }
-        match rest.find("\"") {
-          Some(end) => values.push((rest[:end] catch { _ => "" }).to_string())
-          None => ()
-        }
-      }
-      None => ()
-    }
-  }
-  values
-}
-
-///|
-fn unique_strings_pivot(values : ArrayView[String]) -> Bool {
-  for i in 0..<values.length() {
-    for j in (i + 1)..<values.length() {
-      if values[i] == values[j] {
-        return false
-      }
-    }
-  }
-  true
-}
-
-///|
-fn rel_target_to_part_path_pivot(target : String) -> String {
-  if target.has_prefix("/") {
-    (target[1:] catch { _ => "" }).to_string()
-  } else if target.has_prefix("../") {
-    let rest = (target[3:] catch { _ => "" }).to_string()
-    "xl/\{rest}"
-  } else {
-    "xl/\{target}"
-  }
-}
-
-///|
 test "integration pivot+slicer relationship consistency" {
   let workbook = Workbook::new()
   let data = workbook.add_sheet("Data")
@@ -87,29 +38,29 @@ test "integration pivot+slicer relationship consistency" {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing dash rels")
   }
-  let workbook_ids = rel_attr_values_pivot(workbook_rels, "Id")
-  let workbook_targets = rel_attr_values_pivot(workbook_rels, "Target")
-  let dash_ids = rel_attr_values_pivot(dash_rels, "Id")
-  let dash_targets = rel_attr_values_pivot(dash_rels, "Target")
+  let workbook_ids = integration_rel_attr_values(workbook_rels, "Id")
+  let workbook_targets = integration_rel_attr_values(workbook_rels, "Target")
+  let dash_ids = integration_rel_attr_values(dash_rels, "Id")
+  let dash_targets = integration_rel_attr_values(dash_rels, "Target")
   let mut cache_ids : Array[String] = []
   let mut cache_targets : Array[String] = []
   match archive.get("xl/slicerCaches/_rels/slicerCache1.xml.rels") {
     Some(value) => {
       let cache_rels = @encoding/utf8.decode(value)
-      cache_ids = rel_attr_values_pivot(cache_rels, "Id")
-      cache_targets = rel_attr_values_pivot(cache_rels, "Target")
+      cache_ids = integration_rel_attr_values(cache_rels, "Id")
+      cache_targets = integration_rel_attr_values(cache_rels, "Target")
     }
     None => ()
   }
 
-  inspect(unique_strings_pivot(workbook_ids[:]), content="true")
-  inspect(unique_strings_pivot(dash_ids[:]), content="true")
-  inspect(unique_strings_pivot(cache_ids[:]), content="true")
+  inspect(integration_unique_values(workbook_ids[:]), content="true")
+  inspect(integration_unique_values(dash_ids[:]), content="true")
+  inspect(integration_unique_values(cache_ids[:]), content="true")
 
   let all_targets = workbook_targets + dash_targets + cache_targets
   let mut all_exist = true
   for target in all_targets {
-    let part = rel_target_to_part_path_pivot(target)
+    let part = integration_rel_target_to_part_path(target)
     if archive.get(part) is None {
       all_exist = false
       break

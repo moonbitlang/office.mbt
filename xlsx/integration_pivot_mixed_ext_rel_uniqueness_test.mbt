@@ -1,63 +1,4 @@
 ///|
-fn rel_attr_values_three_cycle(xml : String, attr : String) -> Array[String] {
-  let values : Array[String] = []
-  let marker = "\{attr}=\""
-  let mut first = true
-  for chunk in xml.split("<Relationship ") {
-    if first {
-      first = false
-      continue
-    }
-    let part = chunk.to_string()
-    match part.find(marker) {
-      Some(start) => {
-        let rest = part[start + marker.length():] catch { _ => "" }
-        match rest.find("\"") {
-          Some(end) => values.push((rest[:end] catch { _ => "" }).to_string())
-          None => ()
-        }
-      }
-      None => ()
-    }
-  }
-  values
-}
-
-///|
-fn unique_values_three_cycle(values : ArrayView[String]) -> Bool {
-  for i in 0..<values.length() {
-    for j in (i + 1)..<values.length() {
-      if values[i] == values[j] {
-        return false
-      }
-    }
-  }
-  true
-}
-
-///|
-fn has_value_three_cycle(values : ArrayView[String], expected : String) -> Bool {
-  for value in values {
-    if value == expected {
-      return true
-    }
-  }
-  false
-}
-
-///|
-fn rel_target_to_part_path_three_cycle(target : String) -> String {
-  if target.has_prefix("/") {
-    (target[1:] catch { _ => "" }).to_string()
-  } else if target.has_prefix("../") {
-    let rest = (target[3:] catch { _ => "" }).to_string()
-    "xl/\{rest}"
-  } else {
-    "xl/\{target}"
-  }
-}
-
-///|
 test "integration three-cycle mixed ext relationship ids remain unique" {
   let workbook = Workbook::new()
   let data = workbook.add_sheet("Data")
@@ -129,15 +70,15 @@ test "integration three-cycle mixed ext relationship ids remain unique" {
       }
   }
 
-  let sheet_ids = rel_attr_values_three_cycle(sheet_rels_xml, "Id")
-  let sheet_targets = rel_attr_values_three_cycle(sheet_rels_xml, "Target")
-  let drawing_ids = rel_attr_values_three_cycle(drawing_rels_xml, "Id")
-  let drawing_targets = rel_attr_values_three_cycle(drawing_rels_xml, "Target")
+  let sheet_ids = integration_rel_attr_values(sheet_rels_xml, "Id")
+  let sheet_targets = integration_rel_attr_values(sheet_rels_xml, "Target")
+  let drawing_ids = integration_rel_attr_values(drawing_rels_xml, "Id")
+  let drawing_targets = integration_rel_attr_values(drawing_rels_xml, "Target")
 
-  inspect(unique_values_three_cycle(sheet_ids[:]), content="true")
-  inspect(unique_values_three_cycle(drawing_ids[:]), content="true")
+  inspect(integration_unique_values(sheet_ids[:]), content="true")
+  inspect(integration_unique_values(drawing_ids[:]), content="true")
   inspect(
-    has_value_three_cycle(drawing_targets[:], "../charts/chart1.xml"),
+    integration_has_value(drawing_targets[:], "../charts/chart1.xml"),
     content="true",
   )
 
@@ -150,14 +91,14 @@ test "integration three-cycle mixed ext relationship ids remain unique" {
   }
   inspect(has_drawing_target, content="true")
   inspect(
-    has_value_three_cycle(sheet_targets[:], "../slicers/slicer1.xml"),
+    integration_has_value(sheet_targets[:], "../slicers/slicer1.xml"),
     content="true",
   )
 
   let all_targets = sheet_targets + drawing_targets
   let mut all_exist = true
   for target in all_targets {
-    let part = rel_target_to_part_path_three_cycle(target)
+    let part = integration_rel_target_to_part_path(target)
     if archive.get(part) is None {
       all_exist = false
       break
