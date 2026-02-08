@@ -603,6 +603,15 @@ fn chart_type_to_plot(kind : ChartType) -> (String, String?) {
 ///|
 fn chart_grouping(kind : ChartType) -> String? {
   match kind {
+    Line | Line3D | Area | Area3D => Some("standard")
+    Col | Bar | Col3DClustered | Bar3DClustered => Some("clustered")
+    Col3DConeClustered
+    | Bar3DConeClustered
+    | Col3DPyramidClustered
+    | Bar3DPyramidClustered
+    | Col3DCylinderClustered
+    | Bar3DCylinderClustered => Some("clustered")
+    Col3D | Col3DCone | Col3DPyramid | Col3DCylinder => Some("standard")
     ColStacked
     | BarStacked
     | AreaStacked
@@ -628,6 +637,44 @@ fn chart_grouping(kind : ChartType) -> String? {
     | Col3DCylinderPercentStacked
     | Bar3DCylinderPercentStacked => Some("percentStacked")
     _ => None
+  }
+}
+
+///|
+fn plot_supports_vary_colors(plot_tag : StringView) -> Bool {
+  plot_tag == "areaChart" ||
+  plot_tag == "area3DChart" ||
+  plot_tag == "barChart" ||
+  plot_tag == "bar3DChart" ||
+  plot_tag == "bubbleChart" ||
+  plot_tag == "doughnutChart" ||
+  plot_tag == "lineChart" ||
+  plot_tag == "line3DChart" ||
+  plot_tag == "ofPieChart" ||
+  plot_tag == "pieChart" ||
+  plot_tag == "pie3DChart" ||
+  plot_tag == "radarChart" ||
+  plot_tag == "scatterChart" ||
+  plot_tag == "surface3DChart"
+}
+
+///|
+fn write_plot_vary_colors(sb : StringBuilder, vary_colors : Bool) -> Unit {
+  let value = if vary_colors { "1" } else { "0" }
+  sb.write_view("        <c:varyColors val=\"\{value}\"/>\n")
+}
+
+///|
+fn legend_position_value(position : String) -> String? {
+  let normalized = position.trim().to_lower().to_string()
+  match normalized {
+    "none" => None
+    "b" | "bottom" => Some("b")
+    "t" | "top" => Some("t")
+    "l" | "left" => Some("l")
+    "r" | "right" => Some("r")
+    "tr" | "topright" | "top_right" | "top-right" | "top right" => Some("tr")
+    _ => Some(normalized)
   }
 }
 
@@ -1529,6 +1576,8 @@ fn write_axis(
   cross_ax_id : Int,
   axis_pos : StringView,
 ) -> Unit {
+  let is_category_like = axis_tag == "catAx" || axis_tag == "serAx"
+  let is_value_like = axis_tag == "valAx" || axis_tag == "dateAx"
   sb.write_view("      <c:\{axis_tag.to_string()}>\n")
   sb.write_view("        <c:axId val=\"\{ax_id}\"/>\n")
   sb.write_view("        <c:scaling>")
@@ -1561,17 +1610,17 @@ fn write_axis(
   }
   write_axis_title(sb, axis.title, axis.title_rich)
   write_axis_num_fmt(sb, axis.num_fmt)
-  if axis.major_unit > 0.0 {
-    sb.write_view("        <c:majorUnit val=\"\{axis.major_unit}\"/>\n")
-  }
-  if axis.tick_label_skip > 0 {
-    sb.write_view("        <c:tickLblSkip val=\"\{axis.tick_label_skip}\"/>\n")
-  }
-  sb.write_view("        <c:crossAx val=\"\{cross_ax_id}\"/>\n")
   sb.write_view("        <c:tickLblPos val=\"")
   sb.write_view(escape_xml_attr(tick_label_pos_value(axis.tick_label_position)))
   sb.write_view("\"/>\n")
   write_axis_tx_pr(sb, axis)
+  sb.write_view("        <c:crossAx val=\"\{cross_ax_id}\"/>\n")
+  if is_category_like && axis.tick_label_skip > 0 {
+    sb.write_view("        <c:tickLblSkip val=\"\{axis.tick_label_skip}\"/>\n")
+  }
+  if is_value_like && axis.major_unit > 0.0 {
+    sb.write_view("        <c:majorUnit val=\"\{axis.major_unit}\"/>\n")
+  }
   sb.write_view("      </c:\{axis_tag.to_string()}>\n")
 }
 
@@ -1795,45 +1844,42 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       }
     }
     sb.write_view("      <c:\{plot_tag}>\n")
-    let vary_colors = if opts.vary_colors { "1" } else { "0" }
-    sb.write_view("        <c:varyColors val=\"\{vary_colors}\"/>\n")
+    if plot_tag == "barChart" || plot_tag == "bar3DChart" {
+      match bar_dir {
+        Some(dir) => {
+          sb.write_view("        <c:barDir val=\"")
+          sb.write_view(escape_xml_attr(dir))
+          sb.write_view("\"/>\n")
+        }
+        None => ()
+      }
+    }
+    if plot_tag == "barChart" ||
+      plot_tag == "bar3DChart" ||
+      plot_tag == "lineChart" ||
+      plot_tag == "line3DChart" ||
+      plot_tag == "areaChart" ||
+      plot_tag == "area3DChart" {
+      match chart_grouping(opts.typ) {
+        Some(value) => {
+          sb.write_view("        <c:grouping val=\"")
+          sb.write_view(escape_xml_attr(value))
+          sb.write_view("\"/>\n")
+        }
+        None => ()
+      }
+    }
     if plot_tag == "scatterChart" {
       sb.write_view("        <c:scatterStyle val=\"lineMarker\"/>\n")
     }
     if plot_tag == "radarChart" {
       sb.write_view("        <c:radarStyle val=\"standard\"/>\n")
     }
-    if plot_tag == "bubbleChart" && opts.typ == Bubble3D {
-      sb.write_view("        <c:bubble3D val=\"1\"/>\n")
-    }
-    if plot_tag == "bubbleChart" {
-      match opts.bubble_scale {
-        Some(value) =>
-          if value > 0 && value <= 300 {
-            sb.write_view("        <c:bubbleScale val=\"\{value}\"/>\n")
-          }
-        None => ()
-      }
-    }
-    if plot_tag == "doughnutChart" {
-      let raw = match opts.hole_size {
-        Some(v) => v
-        None => 75
-      }
-      let hole = if raw > 0 && raw <= 90 { raw } else { 75 }
-      sb.write_view("        <c:holeSize val=\"\{hole}\"/>\n")
-    }
     if plot_tag == "ofPieChart" {
       let typ = if opts.typ == BarOfPie { "bar" } else { "pie" }
       sb.write_view("        <c:ofPieType val=\"")
       sb.write_view(escape_xml_attr(typ))
       sb.write_view("\"/>\n")
-      if opts.plot_area.second_plot_values > 0 {
-        sb.write_view(
-          "        <c:splitPos val=\"\{opts.plot_area.second_plot_values}\"/>\n",
-        )
-      }
-      sb.write_view("        <c:serLines/>\n")
     }
     if plot_tag == "surface3DChart" && opts.typ == WireframeSurface3D {
       sb.write_view("        <c:wireframe val=\"1\"/>\n")
@@ -1841,6 +1887,16 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     if plot_tag == "surfaceChart" && opts.typ == WireframeContour {
       sb.write_view("        <c:wireframe val=\"1\"/>\n")
     }
+    if plot_supports_vary_colors(plot_tag) {
+      write_plot_vary_colors(sb, opts.vary_colors)
+    }
+    let cat_ax_id = 1
+    let val_ax_id = 2
+    let ser_ax_id = 3
+    for i, series in opts.series {
+      write_chart_series_for_plot(sb, plot_tag, series, i, 0)
+    }
+    write_chart_dlbls(sb, plot_tag, opts.legend.show_legend_key, opts.plot_area)
     if plot_tag == "stockChart" {
       sb.write_view("        <c:hiLowLines/>\n")
       if opts.typ == StockOpenHighLowClose {
@@ -1863,35 +1919,33 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         sb.write_view("        </c:upDownBars>\n")
       }
     }
-    match bar_dir {
-      Some(dir) => {
-        sb.write_view("        <c:barDir val=\"")
-        sb.write_view(escape_xml_attr(dir))
-        sb.write_view("\"/>\n")
-      }
-      None => ()
+    if plot_tag == "bubbleChart" && opts.typ == Bubble3D {
+      sb.write_view("        <c:bubble3D val=\"1\"/>\n")
     }
-    match chart_grouping(opts.typ) {
-      Some(value) =>
-        if plot_tag == "barChart" ||
-          plot_tag == "bar3DChart" ||
-          plot_tag == "areaChart" ||
-          plot_tag == "area3DChart" {
-          sb.write_view("        <c:grouping val=\"")
-          sb.write_view(escape_xml_attr(value))
-          sb.write_view("\"/>\n")
-        }
-      None => ()
-    }
-    if plot_tag == "bar3DChart" {
-      match chart_shape(opts.typ) {
-        Some(value) => {
-          sb.write_view("        <c:shape val=\"")
-          sb.write_view(escape_xml_attr(value))
-          sb.write_view("\"/>\n")
-        }
+    if plot_tag == "bubbleChart" {
+      match opts.bubble_scale {
+        Some(value) =>
+          if value > 0 && value <= 300 {
+            sb.write_view("        <c:bubbleScale val=\"\{value}\"/>\n")
+          }
         None => ()
       }
+    }
+    if plot_tag == "ofPieChart" {
+      if opts.plot_area.second_plot_values > 0 {
+        sb.write_view(
+          "        <c:splitPos val=\"\{opts.plot_area.second_plot_values}\"/>\n",
+        )
+      }
+      sb.write_view("        <c:serLines/>\n")
+    }
+    if plot_tag == "doughnutChart" {
+      let raw = match opts.hole_size {
+        Some(v) => v
+        None => 75
+      }
+      let hole = if raw > 0 && raw <= 90 { raw } else { 75 }
+      sb.write_view("        <c:holeSize val=\"\{hole}\"/>\n")
     }
     match opts.gap_width {
       Some(value) =>
@@ -1907,13 +1961,16 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         }
       None => ()
     }
-    let cat_ax_id = 1
-    let val_ax_id = 2
-    let ser_ax_id = 3
-    for i, series in opts.series {
-      write_chart_series_for_plot(sb, plot_tag, series, i, 0)
+    if plot_tag == "bar3DChart" {
+      match chart_shape(opts.typ) {
+        Some(value) => {
+          sb.write_view("        <c:shape val=\"")
+          sb.write_view(escape_xml_attr(value))
+          sb.write_view("\"/>\n")
+        }
+        None => ()
+      }
     }
-    write_chart_dlbls(sb, plot_tag, opts.legend.show_legend_key, opts.plot_area)
     if plot_tag != "pieChart" &&
       plot_tag != "pie3DChart" &&
       plot_tag != "ofPieChart" &&
@@ -2099,26 +2156,49 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         (primary_cat_id, primary_val_id)
       }
       sb.write_view("      <c:\{plot_tag}>\n")
-      let vary_colors = if plot.vary_colors { "1" } else { "0" }
-      sb.write_view("        <c:varyColors val=\"\{vary_colors}\"/>\n")
-      if plot_tag == "scatterChart" {
-        sb.write_view("        <c:scatterStyle val=\"lineMarker\"/>\n")
-      }
-      if plot_tag == "bubbleChart" && plot.typ == Bubble3D {
-        sb.write_view("        <c:bubble3D val=\"1\"/>\n")
-      }
-      if plot_tag == "bubbleChart" {
-        match plot.bubble_scale {
-          Some(value) =>
-            if value > 0 && value <= 300 {
-              sb.write_view("        <c:bubbleScale val=\"\{value}\"/>\n")
-            }
+      if plot_tag == "barChart" || plot_tag == "bar3DChart" {
+        match bar_dir {
+          Some(dir) => {
+            sb.write_view("        <c:barDir val=\"")
+            sb.write_view(escape_xml_attr(dir))
+            sb.write_view("\"/>\n")
+          }
           None => ()
         }
+      }
+      if plot_tag == "barChart" ||
+        plot_tag == "bar3DChart" ||
+        plot_tag == "lineChart" ||
+        plot_tag == "line3DChart" ||
+        plot_tag == "areaChart" ||
+        plot_tag == "area3DChart" {
+        match chart_grouping(plot.typ) {
+          Some(value) => {
+            sb.write_view("        <c:grouping val=\"")
+            sb.write_view(escape_xml_attr(value))
+            sb.write_view("\"/>\n")
+          }
+          None => ()
+        }
+      }
+      if plot_tag == "scatterChart" {
+        sb.write_view("        <c:scatterStyle val=\"lineMarker\"/>\n")
       }
       if plot_tag == "radarChart" {
         sb.write_view("        <c:radarStyle val=\"standard\"/>\n")
       }
+      if plot_supports_vary_colors(plot_tag) {
+        write_plot_vary_colors(sb, plot.vary_colors)
+      }
+      for i, series in plot.series {
+        write_chart_series_for_plot(sb, plot_tag, series, i, order_base)
+      }
+      write_chart_dlbls(
+        sb,
+        plot_tag,
+        opts.legend.show_legend_key,
+        plot.plot_area,
+      )
       if plot_tag == "stockChart" {
         sb.write_view("        <c:hiLowLines/>\n")
         if plot.typ == StockOpenHighLowClose {
@@ -2141,33 +2221,15 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
           sb.write_view("        </c:upDownBars>\n")
         }
       }
-      match bar_dir {
-        Some(dir) => {
-          sb.write_view("        <c:barDir val=\"")
-          sb.write_view(escape_xml_attr(dir))
-          sb.write_view("\"/>\n")
-        }
-        None => ()
+      if plot_tag == "bubbleChart" && plot.typ == Bubble3D {
+        sb.write_view("        <c:bubble3D val=\"1\"/>\n")
       }
-      match chart_grouping(plot.typ) {
-        Some(value) =>
-          if plot_tag == "barChart" ||
-            plot_tag == "bar3DChart" ||
-            plot_tag == "areaChart" ||
-            plot_tag == "area3DChart" {
-            sb.write_view("        <c:grouping val=\"")
-            sb.write_view(escape_xml_attr(value))
-            sb.write_view("\"/>\n")
-          }
-        None => ()
-      }
-      if plot_tag == "bar3DChart" {
-        match chart_shape(plot.typ) {
-          Some(value) => {
-            sb.write_view("        <c:shape val=\"")
-            sb.write_view(escape_xml_attr(value))
-            sb.write_view("\"/>\n")
-          }
+      if plot_tag == "bubbleChart" {
+        match plot.bubble_scale {
+          Some(value) =>
+            if value > 0 && value <= 300 {
+              sb.write_view("        <c:bubbleScale val=\"\{value}\"/>\n")
+            }
           None => ()
         }
       }
@@ -2185,15 +2247,16 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
           }
         None => ()
       }
-      for i, series in plot.series {
-        write_chart_series_for_plot(sb, plot_tag, series, i, order_base)
+      if plot_tag == "bar3DChart" {
+        match chart_shape(plot.typ) {
+          Some(value) => {
+            sb.write_view("        <c:shape val=\"")
+            sb.write_view(escape_xml_attr(value))
+            sb.write_view("\"/>\n")
+          }
+          None => ()
+        }
       }
-      write_chart_dlbls(
-        sb,
-        plot_tag,
-        opts.legend.show_legend_key,
-        plot.plot_area,
-      )
       sb.write_view("        <c:axId val=\"\{x_ax_id}\"/>\n")
       sb.write_view("        <c:axId val=\"\{y_ax_id}\"/>\n")
       sb.write_view("      </c:\{plot_tag}>\n")
@@ -2284,26 +2347,29 @@ pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
     }
   }
   sb.write_view("    </c:plotArea>\n")
-  if opts.legend.position != "none" {
-    sb.write_view("    <c:legend>\n")
-    sb.write_view("      <c:legendPos val=\"")
-    sb.write_view(escape_xml_attr(opts.legend.position))
-    sb.write_view("\"/>\n")
-    match opts.legend.font {
-      Some(font) =>
-        if font != Font::new() {
-          write_drawingml_tx_pr_with_font(sb, "      ", font)
-        }
-      None => ()
+  match legend_position_value(opts.legend.position) {
+    Some(value) => {
+      sb.write_view("    <c:legend>\n")
+      sb.write_view("      <c:legendPos val=\"")
+      sb.write_view(escape_xml_attr(value))
+      sb.write_view("\"/>\n")
+      match opts.legend.font {
+        Some(font) =>
+          if font != Font::new() {
+            write_drawingml_tx_pr_with_font(sb, "      ", font)
+          }
+        None => ()
+      }
+      sb.write_view("    </c:legend>\n")
     }
-    sb.write_view("    </c:legend>\n")
+    None => ()
   }
+  sb.write_view("    <c:plotVisOnly val=\"1\"/>\n")
   if opts.show_blanks_as != "" {
     sb.write_view("    <c:dispBlanksAs val=\"")
     sb.write_view(escape_xml_attr(opts.show_blanks_as))
     sb.write_view("\"/>\n")
   }
-  sb.write_view("    <c:plotVisOnly val=\"1\"/>\n")
   write_chart_sppr_root(sb, opts)
   sb.write_view("  </c:chart>\n")
   sb.write_view("</c:chartSpace>")

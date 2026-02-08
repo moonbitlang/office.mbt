@@ -1,4 +1,14 @@
 ///|
+
+///|
+fn find_chart_index_or_fail(xml : String, needle : String) -> Int raise Error {
+  match xml.find(needle) {
+    Some(value) => value
+    None => fail("missing needle: \{needle}")
+  }
+}
+
+///|
 test "chart package" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -173,6 +183,11 @@ test "chart options combo (col + line) secondary axis" {
   inspect(chart_part.contains("axPos val=\"r\""), content="true")
   inspect(chart_part.contains("axId val=\"3\""), content="true")
   inspect(chart_part.contains("axId val=\"4\""), content="true")
+  let line_chart_idx = find_chart_index_or_fail(chart_part, "<c:lineChart>")
+  let line_grouping_idx = find_chart_index_or_fail(
+    chart_part, "<c:grouping val=\"standard\"/>",
+  )
+  inspect(line_chart_idx < line_grouping_idx, content="true")
 }
 
 ///|
@@ -201,6 +216,11 @@ test "chart options combo (scatter + col)" {
     chart_part.contains("<c:scatterStyle val=\"lineMarker\""),
     content="true",
   )
+  let scatter_style_idx = find_chart_index_or_fail(
+    chart_part, "<c:scatterStyle",
+  )
+  let vary_colors_idx = find_chart_index_or_fail(chart_part, "<c:varyColors")
+  inspect(scatter_style_idx < vary_colors_idx, content="true")
   inspect(chart_part.contains("axId val=\"1\""), content="true")
   inspect(chart_part.contains("axId val=\"2\""), content="true")
   inspect(chart_part.contains("axId val=\"3\""), content="true")
@@ -247,6 +267,11 @@ test "chart options combo (stock + line) uses dateAx" {
   inspect(chart_part.contains("val=\"00FF00\""), content="true")
   inspect(chart_part.contains("val=\"FF0000\""), content="true")
   inspect(chart_part.contains("Sheet1!$F$2:$F$4"), content="true")
+  let stock_ser_idx = find_chart_index_or_fail(chart_part, "<c:stockChart>")
+  let ser_idx = find_chart_index_or_fail(chart_part, "<c:ser>")
+  let hi_low_idx = find_chart_index_or_fail(chart_part, "<c:hiLowLines/>")
+  inspect(stock_ser_idx < ser_idx, content="true")
+  inspect(ser_idx < hi_low_idx, content="true")
 }
 
 ///|
@@ -294,12 +319,31 @@ test "chart options legend font emits txPr" {
     None => fail("missing chart")
   }
   inspect(chart_part.contains("<c:legend>"), content="true")
+  inspect(chart_part.contains("<c:legendPos val=\"r\"/>"), content="true")
   inspect(chart_part.contains("<c:txPr>"), content="true")
   inspect(chart_part.contains("b=\"1\""), content="true")
   inspect(chart_part.contains("u=\"sng\""), content="true")
   inspect(chart_part.contains("sz=\"900\""), content="true")
   inspect(chart_part.contains("<a:latin typeface=\"Arial\""), content="true")
   inspect(chart_part.contains("<a:srgbClr val=\"123456\""), content="true")
+}
+
+///|
+test "chart options default legend maps to OOXML short value" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Col)
+  opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_part = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_part.contains("<c:legendPos val=\"b\"/>"), content="true")
 }
 
 ///|
@@ -428,6 +472,18 @@ test "chart options stacked + axis + blanks + gap/overlap" {
   inspect(chart_part.contains("<c:gapWidth val=\"200\"/>"), content="true")
   inspect(chart_part.contains("<c:overlap val=\"-20\"/>"), content="true")
   inspect(chart_part.contains("<c:dispBlanksAs val=\"zero\"/>"), content="true")
+  let bar_dir_idx = find_chart_index_or_fail(chart_part, "<c:barDir")
+  let grouping_idx = find_chart_index_or_fail(chart_part, "<c:grouping")
+  let vary_colors_idx = find_chart_index_or_fail(chart_part, "<c:varyColors")
+  let ser_idx = find_chart_index_or_fail(chart_part, "<c:ser>")
+  let gap_idx = find_chart_index_or_fail(chart_part, "<c:gapWidth")
+  let plot_vis_only_idx = find_chart_index_or_fail(chart_part, "<c:plotVisOnly")
+  let disp_blanks_idx = find_chart_index_or_fail(chart_part, "<c:dispBlanksAs")
+  inspect(bar_dir_idx < grouping_idx, content="true")
+  inspect(grouping_idx < vary_colors_idx, content="true")
+  inspect(vary_colors_idx < ser_idx, content="true")
+  inspect(ser_idx < gap_idx, content="true")
+  inspect(plot_vis_only_idx < disp_blanks_idx, content="true")
   inspect(chart_part.contains("<c:majorGridlines/>"), content="true")
   inspect(chart_part.contains("<c:minorGridlines/>"), content="true")
   inspect(chart_part.contains("<a:t>X Axis</a:t>"), content="true")
@@ -823,6 +879,13 @@ test "chart options scatter uses xVal/yVal" {
     chart_part.contains("scatterStyle val=\"lineMarker\""),
     content="true",
   )
+  let scatter_style_idx = find_chart_index_or_fail(
+    chart_part, "<c:scatterStyle",
+  )
+  let vary_colors_idx = find_chart_index_or_fail(chart_part, "<c:varyColors")
+  let ser_idx = find_chart_index_or_fail(chart_part, "<c:ser>")
+  inspect(scatter_style_idx < vary_colors_idx, content="true")
+  inspect(vary_colors_idx < ser_idx, content="true")
   inspect(chart_part.contains("<c:xVal>"), content="true")
   inspect(chart_part.contains("<c:yVal>"), content="true")
   inspect(chart_part.contains("<c:valAx>"), content="true")

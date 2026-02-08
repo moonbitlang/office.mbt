@@ -4398,15 +4398,10 @@ fn read_zip_bytes(
         legacy_drawing_rel_id is Some(_) ||
         legacy_drawing_hf_rel_id is Some(_) ||
         picture_rel_id is Some(_)
-      let rels_xml = if needs_rels {
-        let rels_path = rels_path_for(sheet_path, "worksheets")
-        let rels_bytes = match archive.get(rels_path) {
-          Some(value) => value
-          None => raise MissingPart(path=rels_path)
-        }
-        decode(rels_bytes)
-      } else {
-        ""
+      let rels_path = rels_path_for(sheet_path, "worksheets")
+      let rels_xml = match archive.get(rels_path) {
+        Some(rels_bytes) => decode(rels_bytes)
+        None => if needs_rels { raise MissingPart(path=rels_path) } else { "" }
       }
       let slicer_part_entries = if slicer_rel_ids.length() == 0 {
         []
@@ -4536,80 +4531,96 @@ fn read_zip_bytes(
         }
         parsed_tables
       }
-      let pivot_tables = if pivot_part_ids.length() == 0 {
-        []
-      } else {
-        let rel_targets = parse_relationship_targets(rels_xml, rel_pivot_table)
-        let parsed_pivots : Array[PivotTable] = []
-        for rel_id in pivot_part_ids {
-          let target = match rel_targets.get(rel_id) {
-            Some(value) => value
-            None => raise InvalidXml(msg="pivot table relationship missing")
-          }
-          let pivot_path = resolve_rel_target(target, "worksheets")
-          let pivot_bytes = match archive.get(pivot_path) {
-            Some(value) => value
-            None => raise MissingPart(path=pivot_path)
-          }
-          let pivot_xml = decode(pivot_bytes)
-          let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
-          let pivot_rels_bytes = match archive.get(pivot_rels_path) {
-            Some(value) => value
-            None => raise MissingPart(path=pivot_rels_path)
-          }
-          let pivot_rels_xml = decode(pivot_rels_bytes)
-          let cache_targets = parse_relationship_targets(
-            pivot_rels_xml, rel_pivot_cache,
-          )
-          let cache_target = match first_relationship_target(cache_targets) {
-            Some(value) => value
-            None => raise InvalidXml(msg="pivot cache relationship missing")
-          }
-          let cache_path = resolve_rel_target(cache_target, "pivotTables")
-          let cache_bytes = match archive.get(cache_path) {
-            Some(value) => value
-            None => raise MissingPart(path=cache_path)
-          }
-          let cache_xml = decode(cache_bytes)
-          let cache_id = parse_id_from_path(
-            cache_path, "xl/pivotCache/pivotCacheDefinition",
-          )
-          let pivot_id = parse_id_from_path(
-            pivot_path, "xl/pivotTables/pivotTable",
-          )
-          let cache_records_xml = match
-            archive.get(rels_path_for(cache_path, "pivotCache")) {
-            Some(value) => {
-              let cache_rels_xml = decode(value)
-              let record_targets = parse_relationship_targets(
-                cache_rels_xml, rel_pivot_cache_records,
-              )
-              match first_relationship_target(record_targets) {
-                Some(record_target) => {
-                  let record_path = resolve_rel_target(
-                    record_target, "pivotCache",
-                  )
-                  let record_bytes = match archive.get(record_path) {
-                    Some(value) => value
-                    None => raise MissingPart(path=record_path)
-                  }
-                  Some(decode(record_bytes))
-                }
-                None => None
-              }
-            }
-            None => None
-          }
-          parsed_pivots.push({
-            name: parse_pivot_table_name(pivot_xml),
-            table_id: pivot_id,
-            cache_id,
-            table_xml: pivot_xml,
-            cache_definition_xml: cache_xml,
-            cache_records_xml,
-          })
+      let pivot_tables = {
+        let rel_targets = if rels_xml == "" {
+          {}
+        } else {
+          parse_relationship_targets(rels_xml, rel_pivot_table)
         }
-        parsed_pivots
+        let pivot_rel_ids : Array[String] = []
+        if pivot_part_ids.length() > 0 {
+          for rel_id in pivot_part_ids {
+            pivot_rel_ids.push(rel_id)
+          }
+        } else {
+          for rel_id, _target in rel_targets {
+            pivot_rel_ids.push(rel_id)
+          }
+        }
+        if pivot_rel_ids.length() == 0 {
+          []
+        } else {
+          let parsed_pivots : Array[PivotTable] = []
+          for rel_id in pivot_rel_ids {
+            let target = match rel_targets.get(rel_id) {
+              Some(value) => value
+              None => raise InvalidXml(msg="pivot table relationship missing")
+            }
+            let pivot_path = resolve_rel_target(target, "worksheets")
+            let pivot_bytes = match archive.get(pivot_path) {
+              Some(value) => value
+              None => raise MissingPart(path=pivot_path)
+            }
+            let pivot_xml = decode(pivot_bytes)
+            let pivot_rels_path = rels_path_for(pivot_path, "pivotTables")
+            let pivot_rels_bytes = match archive.get(pivot_rels_path) {
+              Some(value) => value
+              None => raise MissingPart(path=pivot_rels_path)
+            }
+            let pivot_rels_xml = decode(pivot_rels_bytes)
+            let cache_targets = parse_relationship_targets(
+              pivot_rels_xml, rel_pivot_cache,
+            )
+            let cache_target = match first_relationship_target(cache_targets) {
+              Some(value) => value
+              None => raise InvalidXml(msg="pivot cache relationship missing")
+            }
+            let cache_path = resolve_rel_target(cache_target, "pivotTables")
+            let cache_bytes = match archive.get(cache_path) {
+              Some(value) => value
+              None => raise MissingPart(path=cache_path)
+            }
+            let cache_xml = decode(cache_bytes)
+            let cache_id = parse_id_from_path(
+              cache_path, "xl/pivotCache/pivotCacheDefinition",
+            )
+            let pivot_id = parse_id_from_path(
+              pivot_path, "xl/pivotTables/pivotTable",
+            )
+            let cache_records_xml = match
+              archive.get(rels_path_for(cache_path, "pivotCache")) {
+              Some(value) => {
+                let cache_rels_xml = decode(value)
+                let record_targets = parse_relationship_targets(
+                  cache_rels_xml, rel_pivot_cache_records,
+                )
+                match first_relationship_target(record_targets) {
+                  Some(record_target) => {
+                    let record_path = resolve_rel_target(
+                      record_target, "pivotCache",
+                    )
+                    let record_bytes = match archive.get(record_path) {
+                      Some(value) => value
+                      None => raise MissingPart(path=record_path)
+                    }
+                    Some(decode(record_bytes))
+                  }
+                  None => None
+                }
+              }
+              None => None
+            }
+            parsed_pivots.push({
+              name: parse_pivot_table_name(pivot_xml),
+              table_id: pivot_id,
+              cache_id,
+              table_xml: pivot_xml,
+              cache_definition_xml: cache_xml,
+              cache_records_xml,
+            })
+          }
+          parsed_pivots
+        }
       }
       let vml_targets = if legacy_drawing_rel_id is Some(_) ||
         legacy_drawing_hf_rel_id is Some(_) {

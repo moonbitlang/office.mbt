@@ -120,7 +120,7 @@ fn write_slicer_cache_xml_pivot(
   sb.write_view("    <tabular pivotCacheId=\"\{pivot_cache_id}\"")
   sb.write_view(slicer_sort_order_attr(item_desc))
   sb.write_view(" showMissing=\"0\">\n")
-  sb.write_view("      <items count=\"1\"><i s=\"1\"/></items>\n")
+  sb.write_view("      <items count=\"1\"><i x=\"0\" s=\"1\"/></items>\n")
   sb.write_view("    </tabular>\n")
   sb.write_view("  </data>\n")
   sb.write_view("</slicerCacheDefinition>")

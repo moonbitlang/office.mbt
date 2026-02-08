@@ -316,38 +316,46 @@ fn write_pivot_table_definition_xml(
     sb.write_view(" showAll=\"0\"/>\n")
   }
   sb.write_view("  </pivotFields>\n")
-  sb.write_view("  <rowFields count=\"\{row_fields.length()}\">\n")
-  for entry in row_fields {
-    let (idx, _field) = entry
-    sb.write_view("    <field x=\"\{idx}\"/>\n")
+  if row_fields.length() > 0 {
+    sb.write_view("  <rowFields count=\"\{row_fields.length()}\">\n")
+    for entry in row_fields {
+      let (idx, _field) = entry
+      sb.write_view("    <field x=\"\{idx}\"/>\n")
+    }
+    sb.write_view("  </rowFields>\n")
+    sb.write_view("  <rowItems count=\"1\"><i><x/></i></rowItems>\n")
   }
-  sb.write_view("  </rowFields>\n")
-  sb.write_view("  <colFields count=\"\{col_fields.length()}\">\n")
-  for entry in col_fields {
-    let (idx, _field) = entry
-    sb.write_view("    <field x=\"\{idx}\"/>\n")
+  if col_fields.length() > 0 {
+    sb.write_view("  <colFields count=\"\{col_fields.length()}\">\n")
+    for entry in col_fields {
+      let (idx, _field) = entry
+      sb.write_view("    <field x=\"\{idx}\"/>\n")
+    }
+    sb.write_view("  </colFields>\n")
+    sb.write_view("  <colItems count=\"1\"><i/></colItems>\n")
   }
-  sb.write_view("  </colFields>\n")
-  sb.write_view("  <pageFields count=\"\{page_fields.length()}\">\n")
-  for entry in page_fields {
-    let (idx, _field) = entry
-    sb.write_view("    <pageField fld=\"\{idx}\"/>\n")
+  if page_fields.length() > 0 {
+    sb.write_view("  <pageFields count=\"\{page_fields.length()}\">\n")
+    for entry in page_fields {
+      let (idx, _field) = entry
+      sb.write_view("    <pageField fld=\"\{idx}\"/>\n")
+    }
+    sb.write_view("  </pageFields>\n")
   }
-  sb.write_view("  </pageFields>\n")
-  sb.write_view("  <dataFields count=\"\{data_fields.length()}\">\n")
-  for entry in data_fields {
-    let (idx, field) = entry
-    sb.write_view("    <dataField fld=\"\{idx}\"")
-    let data_name = if field.name == "" { field.data } else { field.name }
-    sb.write_view(" name=\"")
-    sb.write_view(escape_xml_attr(data_name))
-    sb.write_view("\" subtotal=\"")
-    sb.write_view(escape_xml_attr(field.subtotal.to_lower()))
-    sb.write_view("\"/>\n")
+  if data_fields.length() > 0 {
+    sb.write_view("  <dataFields count=\"\{data_fields.length()}\">\n")
+    for entry in data_fields {
+      let (idx, field) = entry
+      sb.write_view("    <dataField fld=\"\{idx}\"")
+      let data_name = if field.name == "" { field.data } else { field.name }
+      sb.write_view(" name=\"")
+      sb.write_view(escape_xml_attr(data_name))
+      sb.write_view("\" subtotal=\"")
+      sb.write_view(escape_xml_attr(field.subtotal.to_lower()))
+      sb.write_view("\"/>\n")
+    }
+    sb.write_view("  </dataFields>\n")
   }
-  sb.write_view("  </dataFields>\n")
-  sb.write_view("  <rowItems count=\"1\"><i><x/></i></rowItems>\n")
-  sb.write_view("  <colItems count=\"1\"><i/></colItems>\n")
   sb.write_view("  <pivotTableStyleInfo name=\"")
   sb.write_view(escape_xml_attr(opts.pivot_table_style_name))
   sb.write_view("\" showRowHeaders=\"\{bool_attr(opts.show_row_headers)}\"")

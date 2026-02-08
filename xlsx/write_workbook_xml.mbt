@@ -2,9 +2,28 @@
 fn write_workbook_xml(
   workbook : Workbook,
   chartsheet_rel_start : Int,
+  pivot_cache_rel_entries : ArrayView[(Int, String)],
   slicer_cache_rel_ids_x14 : ArrayView[String],
   slicer_cache_rel_ids_x15 : ArrayView[String],
 ) -> String {
+  fn write_pivot_caches_xml(
+    pivot_cache_rel_entries : ArrayView[(Int, String)],
+  ) -> String? {
+    if pivot_cache_rel_entries.length() == 0 {
+      return None
+    }
+    let sb = StringBuilder::new()
+    sb.write_view("  <pivotCaches>\n")
+    for entry in pivot_cache_rel_entries {
+      let (cache_id, rel_id) = entry
+      sb.write_view("    <pivotCache cacheId=\"\{cache_id}\" r:id=\"")
+      sb.write_view(escape_xml_attr(rel_id))
+      sb.write_view("\"/>\n")
+    }
+    sb.write_view("  </pivotCaches>\n")
+    Some(sb.to_string())
+  }
+
   fn write_workbook_ext_lst_xml(
     slicer_cache_rel_ids_x14 : ArrayView[String],
     slicer_cache_rel_ids_x15 : ArrayView[String],
@@ -137,6 +156,10 @@ fn write_workbook_xml(
     None => ()
   }
   match write_calc_pr_xml(workbook.calc_props()) {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
+  match write_pivot_caches_xml(pivot_cache_rel_entries) {
     Some(value) => sb.write_view(value)
     None => ()
   }

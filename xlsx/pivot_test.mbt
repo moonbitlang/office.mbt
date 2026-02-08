@@ -20,8 +20,7 @@ test "pivot table write and relationships" {
       }
     None => fail("missing sheet1.xml")
   }
-  inspect(sheet_xml.contains("<pivotTableParts count=\"1\">"), content="true")
-  inspect(sheet_xml.contains("r:id=\"rId1\""), content="true")
+  inspect(sheet_xml.contains("<pivotTableParts"), content="false")
   let rels_xml = match archive.get("xl/worksheets/_rels/sheet1.xml.rels") {
     Some(value) =>
       @encoding/utf8.decode(value) catch {
@@ -81,6 +80,15 @@ test "pivot table write and relationships" {
     None => fail("missing workbook.xml.rels")
   }
   inspect(workbook_rels.contains("pivotCacheDefinition1.xml"), content="true")
+  let workbook_xml = match archive.get("xl/workbook.xml") {
+    Some(value) =>
+      @encoding/utf8.decode(value) catch {
+        _ => fail("workbook.xml utf8 decode failed")
+      }
+    None => fail("missing workbook.xml")
+  }
+  inspect(workbook_xml.contains("<pivotCaches>"), content="true")
+  inspect(workbook_xml.contains("<pivotCache cacheId=\"1\""), content="true")
 }
 
 ///|
@@ -207,6 +215,7 @@ test "pivot table options builder write" {
   inspect(pivot_xml.contains("showError=\"0\""), content="true")
   inspect(pivot_xml.contains("fieldPrintTitles=\"0\""), content="true")
   inspect(pivot_xml.contains("itemPrintTitles=\"0\""), content="true")
+  inspect(pivot_xml.contains("<pageFields"), content="false")
   inspect(pivot_xml.contains("<rowItems count=\"1\">"), content="true")
   inspect(pivot_xml.contains("<colItems count=\"1\">"), content="true")
   inspect(pivot_xml.contains("axis=\"axisRow\""), content="true")

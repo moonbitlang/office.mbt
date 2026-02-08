@@ -231,282 +231,6 @@ fn write_calc_chain_xml(cells : Array[(Int, String)]) -> String {
 }
 
 ///|
-let rel_drawing = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing"
-
-///|
-let rel_worksheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
-
-///|
-let rel_image = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
-
-///|
-let rel_chart = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
-
-///|
-let rel_chartsheet = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet"
-
-///|
-let rel_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table"
-
-///|
-let rel_pivot_table = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable"
-
-///|
-let rel_pivot_cache = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheDefinition"
-
-///|
-let rel_pivot_cache_records = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotCacheRecords"
-
-///|
-let rel_vml = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing"
-
-///|
-let rel_slicer = "http://schemas.microsoft.com/office/2007/relationships/slicer"
-
-///|
-let rel_slicer_cache = "http://schemas.microsoft.com/office/2007/relationships/slicerCache"
-
-///|
-let rel_vba_project = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
-
-///|
-let rel_hyperlink = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
-
-///|
-let rel_comments = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
-
-///|
-let ct_drawing = "application/vnd.openxmlformats-officedocument.drawing+xml"
-
-///|
-let ct_chart = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
-
-///|
-let ct_chartsheet = "application/vnd.openxmlformats-officedocument.spreadsheetml.chartsheet+xml"
-
-///|
-let ct_table = "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"
-
-///|
-let ct_pivot_table = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"
-
-///|
-let ct_pivot_cache_def = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml"
-
-///|
-let ct_pivot_cache_records = "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
-
-///|
-let ct_workbook = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
-
-///|
-let ct_workbook_macro = "application/vnd.ms-excel.sheet.macroEnabled.main+xml"
-
-///|
-let ct_workbook_addin_macro = "application/vnd.ms-excel.addin.macroEnabled.main+xml"
-
-///|
-let ct_workbook_template = "application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml"
-
-///|
-let ct_workbook_template_macro = "application/vnd.ms-excel.template.macroEnabled.main+xml"
-
-///|
-let ct_vba_project = "application/vnd.ms-office.vbaProject"
-
-///|
-let ct_slicer = "application/vnd.ms-excel.slicer+xml"
-
-///|
-let ct_slicer_cache = "application/vnd.ms-excel.slicerCache+xml"
-
-///|
-let ct_vml = "application/vnd.openxmlformats-officedocument.vmlDrawing"
-
-///|
-let ct_comments = "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"
-
-///|
-fn write_sheet_rels_xml(
-  drawing_target : String?,
-  table_targets : ArrayView[String],
-  pivot_table_targets : ArrayView[String],
-  slicer_targets : ArrayView[String],
-  hyperlink_targets : ArrayView[String],
-  comment_targets : ArrayView[String],
-  vml_targets : ArrayView[String],
-  image_targets : ArrayView[String],
-) -> String {
-  let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
-  let mut rel_id = 1
-  match drawing_target {
-    Some(target) => {
-      sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-      sb.write_view(rel_drawing)
-      sb.write_view("\" Target=\"")
-      sb.write_view(escape_xml_attr(target))
-      sb.write_view("\"/>\n")
-      rel_id = rel_id + 1
-    }
-    None => ()
-  }
-  for target in table_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_table)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  for target in pivot_table_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_pivot_table)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  for target in slicer_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_slicer)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  for target in hyperlink_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_hyperlink)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\" TargetMode=\"External\"/>\n")
-    rel_id = rel_id + 1
-  }
-  for target in comment_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_comments)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  for target in vml_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_vml)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  for target in image_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_image)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  sb.write_view("</Relationships>")
-  sb.to_string()
-}
-
-///|
-fn write_pivot_table_rels_xml(cache_id : Int) -> String {
-  let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
-  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
-  sb.write_view(rel_pivot_cache)
-  sb.write_view(
-    "\" Target=\"../pivotCache/pivotCacheDefinition\{cache_id}.xml\"/>\n",
-  )
-  sb.write_view("</Relationships>")
-  sb.to_string()
-}
-
-///|
-fn write_pivot_cache_rels_xml(cache_id : Int) -> String {
-  let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
-  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
-  sb.write_view(rel_pivot_cache_records)
-  sb.write_view("\" Target=\"pivotCacheRecords\{cache_id}.xml\"/>\n")
-  sb.write_view("</Relationships>")
-  sb.to_string()
-}
-
-///|
-fn write_drawing_rels_xml(
-  image_targets : Array[(Int, String)],
-  chart_targets : Array[(Int, String)],
-  hyperlink_targets : Array[DrawingHyperlink],
-) -> String {
-  let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
-  for entry in image_targets {
-    let (rel_id, target) = entry
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_image)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-  }
-  for entry in chart_targets {
-    let (rel_id, target) = entry
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_chart)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-  }
-  for entry in hyperlink_targets {
-    sb.write_view("  <Relationship Id=\"rId\{entry.rel_id}\" Type=\"")
-    sb.write_view(rel_hyperlink)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(entry.target))
-    sb.write_view("\"")
-    if entry.link_type == External {
-      sb.write_view(" TargetMode=\"External\"")
-    }
-    sb.write_view("/>\n")
-  }
-  sb.write_view("</Relationships>")
-  sb.to_string()
-}
-
-///|
-fn write_vml_rels_xml(image_targets : Array[String]) -> String {
-  let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
-  let mut rel_id = 1
-  for target in image_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_image)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
-    rel_id = rel_id + 1
-  }
-  sb.write_view("</Relationships>")
-  sb.to_string()
-}
-
-///|
 priv struct DrawingImage {
   image : Image
   rel_id : Int
@@ -930,6 +654,9 @@ fn write_drawing_xml(
     sb.write_view("          <a:off x=\"0\" y=\"0\"/>\n")
     sb.write_view("          <a:ext cx=\"\{cx}\" cy=\"\{cy}\"/>\n")
     sb.write_view("        </a:xfrm>\n")
+    sb.write_view("        <a:prstGeom prst=\"")
+    sb.write_view(escape_xml_attr(shape.shape_type.to_lower()))
+    sb.write_view("\"><a:avLst/></a:prstGeom>\n")
     if shape.fill_color != "" {
       let fill = shape.fill_color.replace_all(old="#", new="").to_upper()
       sb.write_view("        <a:solidFill><a:srgbClr val=\"")
@@ -958,9 +685,6 @@ fn write_drawing_xml(
         sb.write_view("\"/></a:solidFill></a:ln>\n")
       }
     }
-    sb.write_view("        <a:prstGeom prst=\"")
-    sb.write_view(escape_xml_attr(shape.shape_type.to_lower()))
-    sb.write_view("\"><a:avLst/></a:prstGeom>\n")
     sb.write_view("      </xdr:spPr>\n")
     if shape.paragraph.length() > 0 || shape.text != "" {
       sb.write_view("      <xdr:txBody>\n")
@@ -1203,7 +927,9 @@ fn write_drawing_xml(
     }
     sb.write_view(">\n")
     sb.write_view("          <xdr:nvSpPr>\n")
-    sb.write_view("            <xdr:cNvPr id=\"\{frame_id}\"")
+    sb.write_view("            <xdr:cNvPr id=\"\{frame_id}\" name=\"")
+    sb.write_view(escape_xml_attr(slicer.name))
+    sb.write_view("\"")
     if alt_text != "" {
       sb.write_view(" descr=\"")
       sb.write_view(escape_xml_attr(alt_text))
@@ -1218,10 +944,10 @@ fn write_drawing_xml(
     sb.write_view("              <a:ext cx=\"1828800\" cy=\"2238375\"/>\n")
     sb.write_view("            </a:xfrm>\n")
     sb.write_view(
-      "            <a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill>\n",
+      "            <a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>\n",
     )
     sb.write_view(
-      "            <a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>\n",
+      "            <a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill>\n",
     )
     sb.write_view(
       "            <a:ln w=\"1\"><a:solidFill><a:prstClr val=\"black\"/></a:solidFill></a:ln>\n",
@@ -2039,7 +1765,7 @@ fn write_worksheet_xml(
   drawing_rel_id : Int?,
   picture_rel_id : Int?,
   table_rel_ids : ArrayView[Int],
-  pivot_rel_ids : ArrayView[Int],
+  _pivot_rel_ids : ArrayView[Int],
   slicer_rel_ids_x14 : ArrayView[Int],
   slicer_rel_ids_x15 : ArrayView[Int],
   legacy_drawing_rel_id : Int?,
@@ -2081,9 +1807,6 @@ fn write_worksheet_xml(
       )
       for sqref, ids in by_sqref {
         sb.write_view("        <x14:conditionalFormatting>\n")
-        sb.write_view("          <xm:sqref>")
-        sb.write_view(escape_xml_text(sqref))
-        sb.write_view("</xm:sqref>\n")
         for id in ids {
           let props = match x14_data_bars.get(id) {
             Some(value) => value
@@ -2119,6 +1842,9 @@ fn write_worksheet_xml(
           sb.write_view("            </x14:dataBar>\n")
           sb.write_view("          </x14:cfRule>\n")
         }
+        sb.write_view("          <xm:sqref>")
+        sb.write_view(escape_xml_text(sqref))
+        sb.write_view("</xm:sqref>\n")
         sb.write_view("        </x14:conditionalFormatting>\n")
       }
       sb.write_view("      </x14:conditionalFormattings>\n")
@@ -2182,7 +1908,7 @@ fn write_worksheet_xml(
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   let needs_rels = drawing_rel_id is Some(_) ||
     table_rel_ids.length() > 0 ||
-    pivot_rel_ids.length() > 0 ||
+    _pivot_rel_ids.length() > 0 ||
     slicer_rel_ids_x14.length() > 0 ||
     slicer_rel_ids_x15.length() > 0 ||
     hyperlink_rel_ids.length() > 0 ||
@@ -2383,20 +2109,6 @@ fn write_worksheet_xml(
     }
     sb.write_view("  </mergeCells>\n")
   }
-  if table_rel_ids.length() > 0 {
-    sb.write_view("  <tableParts count=\"\{table_rel_ids.length()}\">\n")
-    for rel_id in table_rel_ids {
-      sb.write_view("    <tablePart r:id=\"rId\{rel_id}\"/>\n")
-    }
-    sb.write_view("  </tableParts>\n")
-  }
-  if pivot_rel_ids.length() > 0 {
-    sb.write_view("  <pivotTableParts count=\"\{pivot_rel_ids.length()}\">\n")
-    for rel_id in pivot_rel_ids {
-      sb.write_view("    <pivotTablePart r:id=\"rId\{rel_id}\"/>\n")
-    }
-    sb.write_view("  </pivotTableParts>\n")
-  }
   for xml in sheet.conditional_formats() {
     sb.write_view("  ")
     sb.write_view(xml)
@@ -2412,10 +2124,6 @@ fn write_worksheet_xml(
       sb.write_view("\n")
     }
     sb.write_view("  </dataValidations>\n")
-  }
-  match write_ignored_errors_xml(sheet.ignored_errors()) {
-    Some(value) => sb.write_view(value)
-    None => ()
   }
   if hyperlinks.length() > 0 {
     let mut wrote = false
@@ -2492,6 +2200,10 @@ fn write_worksheet_xml(
     Some(xml) => sb.write_view(xml)
     None => ()
   }
+  match write_ignored_errors_xml(sheet.ignored_errors()) {
+    Some(value) => sb.write_view(value)
+    None => ()
+  }
   match drawing_rel_id {
     Some(rel_id) => sb.write_view("  <drawing r:id=\"rId\{rel_id}\"/>\n")
     None => ()
@@ -2508,6 +2220,13 @@ fn write_worksheet_xml(
   match picture_rel_id {
     Some(rel_id) => sb.write_view("  <picture r:id=\"rId\{rel_id}\"/>\n")
     None => ()
+  }
+  if table_rel_ids.length() > 0 {
+    sb.write_view("  <tableParts count=\"\{table_rel_ids.length()}\">\n")
+    for rel_id in table_rel_ids {
+      sb.write_view("    <tablePart r:id=\"rId\{rel_id}\"/>\n")
+    }
+    sb.write_view("  </tableParts>\n")
   }
   match
     write_worksheet_ext_lst_xml(
@@ -3360,28 +3079,12 @@ fn write_with_io(
     Some(path) =>
       match extension_from_path(path) {
         Some(ext) =>
-          match ext {
-            "xlsx" => {
-              manifest.set_workbook_content_type(ct_workbook)
+          match workbook_content_type_for_extension(ext) {
+            Some(content_type) => {
+              manifest.set_workbook_content_type(content_type)
               has_path_content_type = true
             }
-            "xlsm" => {
-              manifest.set_workbook_content_type(ct_workbook_macro)
-              has_path_content_type = true
-            }
-            "xlam" => {
-              manifest.set_workbook_content_type(ct_workbook_addin_macro)
-              has_path_content_type = true
-            }
-            "xltx" => {
-              manifest.set_workbook_content_type(ct_workbook_template)
-              has_path_content_type = true
-            }
-            "xltm" => {
-              manifest.set_workbook_content_type(ct_workbook_template_macro)
-              has_path_content_type = true
-            }
-            _ => ()
+            None => ()
           }
         None => ()
       }
@@ -3393,12 +3096,12 @@ fn write_with_io(
   for i, _sheet in workbook.chart_sheets() {
     let sheet_id = i + 1
     manifest.add_content_override(
-      "/xl/chartsheets/sheet\{sheet_id}.xml",
+      content_override_path(chartsheet_part_path(sheet_id)),
       ct_chartsheet,
     )
     manifest.add_workbook_relationship(
       rel_chartsheet,
-      "chartsheets/sheet\{sheet_id}.xml",
+      chartsheet_workbook_rel_target(sheet_id),
     )
   }
   match workbook.vba_project {
@@ -3412,7 +3115,10 @@ fn write_with_io(
     None => ()
   }
   let archive = @zip.Archive::new()
-  archive.add("_rels/.rels", @encoding/utf8.encode(manifest.root_rels_xml()))
+  archive.add(
+    root_rels_part_path,
+    @encoding/utf8.encode(manifest.root_rels_xml()),
+  )
   let tables_by_sheet : Array[Array[(Int, Table)]] = []
   let mut next_table_id = 1
   for sheet in workbook.sheets() {
@@ -3524,7 +3230,7 @@ fn write_with_io(
           }
           let rel_id = manifest.add_workbook_relationship_with_id(
             rel_slicer_cache,
-            "slicerCaches/slicerCache\{cache_id}.xml",
+            slicer_cache_workbook_rel_target(cache_id),
           )
           slicer_cache_rel_id_by_name[cache_name] = rel_id
           workbook_slicer_cache_rel_ids_x15.push(rel_id)
@@ -3546,7 +3252,7 @@ fn write_with_io(
             Some((pivot_cache_id, pivot_sheet_id, pivot)) => {
               let rel_id = manifest.add_workbook_relationship_with_id(
                 rel_slicer_cache,
-                "slicerCaches/slicerCache\{cache_id}.xml",
+                slicer_cache_workbook_rel_target(cache_id),
               )
               slicer_cache_rel_id_by_name[cache_name] = rel_id
               workbook_slicer_cache_rel_ids_x14.push(rel_id)
@@ -3568,11 +3274,28 @@ fn write_with_io(
       }
     }
   }
+  let workbook_pivot_cache_rel_entries : Array[(Int, String)] = []
+  let pivot_cache_rel_written : Map[Int, Bool] = {}
+  for sheet_pivots in pivots_by_sheet {
+    for entry in sheet_pivots {
+      let (_pivot_id, cache_id, _pivot) = entry
+      if pivot_cache_rel_written.contains(cache_id) {
+        continue
+      }
+      pivot_cache_rel_written[cache_id] = true
+      let rel_id = manifest.add_workbook_relationship_with_id(
+        rel_pivot_cache,
+        pivot_cache_workbook_rel_target(cache_id),
+      )
+      workbook_pivot_cache_rel_entries.push((cache_id, rel_id))
+    }
+  }
   archive.add(
-    "xl/workbook.xml",
+    workbook_part_path,
     @encoding/utf8.encode(
       write_workbook_xml(
-        workbook, chartsheet_rel_start, workbook_slicer_cache_rel_ids_x14, workbook_slicer_cache_rel_ids_x15,
+        workbook, chartsheet_rel_start, workbook_pivot_cache_rel_entries, workbook_slicer_cache_rel_ids_x14,
+        workbook_slicer_cache_rel_ids_x15,
       ),
     ),
   )
@@ -3604,7 +3327,7 @@ fn write_with_io(
     for entry in sheet_tables {
       let (table_id, _table) = entry
       table_rel_ids.push(rel_id)
-      table_targets.push("../tables/table\{table_id}.xml")
+      table_targets.push(table_rel_target(table_id))
       rel_id = rel_id + 1
     }
     let pivot_rel_ids : Array[Int] = []
@@ -3612,7 +3335,7 @@ fn write_with_io(
     for entry in sheet_pivots {
       let (pivot_id, _cache_id, _pivot) = entry
       pivot_rel_ids.push(rel_id)
-      pivot_targets.push("../pivotTables/pivotTable\{pivot_id}.xml")
+      pivot_targets.push(pivot_table_rel_target(pivot_id))
       rel_id = rel_id + 1
     }
     let slicer_targets : Array[String] = []
@@ -3636,7 +3359,7 @@ fn write_with_io(
       slicer_part_index = slicer_part_index + 1
       pivot_slicer_part_id = Some(part_id)
       slicer_rel_ids_x14.push(rel_id)
-      slicer_targets.push("../slicers/slicer\{part_id}.xml")
+      slicer_targets.push(slicer_rel_target(part_id))
       rel_id = rel_id + 1
     }
     if table_slicers.length() > 0 {
@@ -3644,7 +3367,7 @@ fn write_with_io(
       slicer_part_index = slicer_part_index + 1
       table_slicer_part_id = Some(part_id)
       slicer_rel_ids_x15.push(rel_id)
-      slicer_targets.push("../slicers/slicer\{part_id}.xml")
+      slicer_targets.push(slicer_rel_target(part_id))
       rel_id = rel_id + 1
     }
     let hyperlink_targets : Array[String] = []
@@ -3677,7 +3400,7 @@ fn write_with_io(
       Some(xml) => {
         let comment_id = comment_index
         comment_index = comment_index + 1
-        comment_targets.push("../comments\{comment_id}.xml")
+        comment_targets.push(comment_rel_target(comment_id))
         comment_parts.push((comment_id, xml))
       }
       None => ()
@@ -3714,7 +3437,7 @@ fn write_with_io(
         rel_id = rel_id + 1
         let vml_id = vml_index
         vml_index = vml_index + 1
-        vml_targets.push("../drawings/vmlDrawing\{vml_id}.vml")
+        vml_targets.push(vml_rel_target(vml_id))
         vml_parts.push((vml_id, xml))
         Some(id)
       }
@@ -3758,8 +3481,8 @@ fn write_with_io(
       for image in header_footer_images {
         let file_name = "image\{image_index}.\{image.extension}"
         image_index = image_index + 1
-        archive.add("xl/media/\{file_name}", image.data)
-        header_footer_image_targets.push("../media/\{file_name}")
+        archive.add(media_part_path(file_name), image.data)
+        header_footer_image_targets.push(media_rel_target(file_name))
         if !added_extensions.contains(image.extension) {
           manifest.add_content_default(image.extension, image.content_type)
           added_extensions.set(image.extension, true)
@@ -3772,7 +3495,7 @@ fn write_with_io(
         rel_id = rel_id + 1
         let vml_id = vml_index
         vml_index = vml_index + 1
-        vml_targets.push("../drawings/vmlDrawing\{vml_id}.vml")
+        vml_targets.push(vml_rel_target(vml_id))
         vml_parts.push((vml_id, xml))
         if header_footer_image_targets.length() > 0 {
           vml_image_rels.push((vml_id, header_footer_image_targets))
@@ -3788,8 +3511,8 @@ fn write_with_io(
         rel_id = rel_id + 1
         let file_name = "image\{image_index}.\{background.extension}"
         image_index = image_index + 1
-        archive.add("xl/media/\{file_name}", background.data)
-        picture_targets.push("../media/\{file_name}")
+        archive.add(media_part_path(file_name), background.data)
+        picture_targets.push(media_rel_target(file_name))
         if !added_extensions.contains(background.extension) {
           manifest.add_content_default(
             background.extension,
@@ -3816,10 +3539,7 @@ fn write_with_io(
       legacy_drawing_rel_id,
       legacy_drawing_hf_rel_id,
     )
-    archive.add(
-      "xl/worksheets/sheet\{sheet_id}.xml",
-      @encoding/utf8.encode(sheet_xml),
-    )
+    archive.add(worksheet_part_path(sheet_id), @encoding/utf8.encode(sheet_xml))
     if drawing_rel_id is Some(_) ||
       table_targets.length() > 0 ||
       pivot_targets.length() > 0 ||
@@ -3829,7 +3549,7 @@ fn write_with_io(
       vml_targets.length() > 0 ||
       picture_targets.length() > 0 {
       let drawing_target = match drawing_rel_id {
-        Some(_) => Some("../drawings/drawing\{sheet_id}.xml")
+        Some(_) => Some(drawing_rel_target(sheet_id))
         None => None
       }
       let sheet_rels_xml = write_sheet_rels_xml(
@@ -3837,59 +3557,55 @@ fn write_with_io(
         comment_targets, vml_targets, picture_targets,
       )
       archive.add(
-        "xl/worksheets/_rels/sheet\{sheet_id}.xml.rels",
+        worksheet_rels_part_path(sheet_id),
         @encoding/utf8.encode(sheet_rels_xml),
       )
     }
     for entry in sheet_tables {
       let (table_id, table) = entry
       let table_xml = write_table_xml(table_id, table)
-      archive.add(
-        "xl/tables/table\{table_id}.xml",
-        @encoding/utf8.encode(table_xml),
+      archive.add(table_part_path(table_id), @encoding/utf8.encode(table_xml))
+      manifest.add_content_override(
+        content_override_path(table_part_path(table_id)),
+        ct_table,
       )
-      manifest.add_content_override("/xl/tables/table\{table_id}.xml", ct_table)
     }
     for entry in sheet_pivots {
       let (pivot_id, cache_id, pivot) = entry
       archive.add(
-        "xl/pivotTables/pivotTable\{pivot_id}.xml",
+        pivot_table_part_path(pivot_id),
         @encoding/utf8.encode(pivot.table_xml),
       )
       manifest.add_content_override(
-        "/xl/pivotTables/pivotTable\{pivot_id}.xml",
+        content_override_path(pivot_table_part_path(pivot_id)),
         ct_pivot_table,
       )
       let pivot_rels_xml = write_pivot_table_rels_xml(cache_id)
       archive.add(
-        "xl/pivotTables/_rels/pivotTable\{pivot_id}.xml.rels",
+        pivot_table_rels_part_path(pivot_id),
         @encoding/utf8.encode(pivot_rels_xml),
       )
       archive.add(
-        "xl/pivotCache/pivotCacheDefinition\{cache_id}.xml",
+        pivot_cache_definition_part_path(cache_id),
         @encoding/utf8.encode(pivot.cache_definition_xml),
       )
       manifest.add_content_override(
-        "/xl/pivotCache/pivotCacheDefinition\{cache_id}.xml",
+        content_override_path(pivot_cache_definition_part_path(cache_id)),
         ct_pivot_cache_def,
-      )
-      manifest.add_workbook_relationship(
-        rel_pivot_cache,
-        "pivotCache/pivotCacheDefinition\{cache_id}.xml",
       )
       match pivot.cache_records_xml {
         Some(records) => {
           archive.add(
-            "xl/pivotCache/pivotCacheRecords\{cache_id}.xml",
+            pivot_cache_records_part_path(cache_id),
             @encoding/utf8.encode(records),
           )
           manifest.add_content_override(
-            "/xl/pivotCache/pivotCacheRecords\{cache_id}.xml",
+            content_override_path(pivot_cache_records_part_path(cache_id)),
             ct_pivot_cache_records,
           )
           let cache_rels_xml = write_pivot_cache_rels_xml(cache_id)
           archive.add(
-            "xl/pivotCache/_rels/pivotCacheDefinition\{cache_id}.xml.rels",
+            pivot_cache_definition_rels_part_path(cache_id),
             @encoding/utf8.encode(cache_rels_xml),
           )
         }
@@ -3900,11 +3616,11 @@ fn write_with_io(
       Some(part_id) => {
         let slicers_xml = write_slicers_part_xml(pivot_slicers)
         archive.add(
-          "xl/slicers/slicer\{part_id}.xml",
+          slicer_part_path(part_id),
           @encoding/utf8.encode(slicers_xml),
         )
         manifest.add_content_override(
-          "/xl/slicers/slicer\{part_id}.xml",
+          content_override_path(slicer_part_path(part_id)),
           ct_slicer,
         )
       }
@@ -3914,11 +3630,11 @@ fn write_with_io(
       Some(part_id) => {
         let slicers_xml = write_slicers_part_xml(table_slicers)
         archive.add(
-          "xl/slicers/slicer\{part_id}.xml",
+          slicer_part_path(part_id),
           @encoding/utf8.encode(slicers_xml),
         )
         manifest.add_content_override(
-          "/xl/slicers/slicer\{part_id}.xml",
+          content_override_path(slicer_part_path(part_id)),
           ct_slicer,
         )
       }
@@ -3926,20 +3642,17 @@ fn write_with_io(
     }
     for part in comment_parts {
       let (comment_id, xml) = part
-      archive.add("xl/comments\{comment_id}.xml", @encoding/utf8.encode(xml))
+      archive.add(comment_part_path(comment_id), @encoding/utf8.encode(xml))
       manifest.add_content_override(
-        "/xl/comments\{comment_id}.xml",
+        content_override_path(comment_part_path(comment_id)),
         ct_comments,
       )
     }
     for part in vml_parts {
       let (vml_id, xml) = part
-      archive.add(
-        "xl/drawings/vmlDrawing\{vml_id}.vml",
-        @encoding/utf8.encode(xml),
-      )
+      archive.add(vml_part_path(vml_id), @encoding/utf8.encode(xml))
       manifest.add_content_override(
-        "/xl/drawings/vmlDrawing\{vml_id}.vml",
+        content_override_path(vml_part_path(vml_id)),
         ct_vml,
       )
     }
@@ -3950,7 +3663,7 @@ fn write_with_io(
       }
       let vml_rels_xml = write_vml_rels_xml(targets)
       archive.add(
-        "xl/drawings/_rels/vmlDrawing\{vml_id}.vml.rels",
+        vml_rels_part_path(vml_id),
         @encoding/utf8.encode(vml_rels_xml),
       )
     }
@@ -3968,7 +3681,7 @@ fn write_with_io(
     for image in sheet.images() {
       let file_name = "image\{image_index}.\{image.extension}"
       image_index = image_index + 1
-      archive.add("xl/media/\{file_name}", image.data)
+      archive.add(media_part_path(file_name), image.data)
       let image_rel_id = rel_id
       rel_id = rel_id + 1
       let mut hyperlink_rel_id : Int? = None
@@ -3982,7 +3695,7 @@ fn write_with_io(
         })
         hyperlink_rel_id = Some(link_rel_id)
       }
-      image_targets.push((image_rel_id, "../media/\{file_name}"))
+      image_targets.push((image_rel_id, media_rel_target(file_name)))
       drawing_images.push({ image, rel_id: image_rel_id, hyperlink_rel_id })
       if !added_extensions.contains(image.extension) {
         manifest.add_content_default(image.extension, image.content_type)
@@ -3992,8 +3705,8 @@ fn write_with_io(
     for chart in sheet.charts() {
       let file_name = "chart\{chart_index}.xml"
       chart_index = chart_index + 1
-      archive.add("xl/charts/\{file_name}", @encoding/utf8.encode(chart.xml))
-      chart_targets.push((rel_id, "../charts/\{file_name}"))
+      archive.add(chart_part_path(file_name), @encoding/utf8.encode(chart.xml))
+      chart_targets.push((rel_id, chart_rel_target(file_name)))
       drawing_charts.push({
         reference: chart.reference,
         offset_x: chart.offset_x,
@@ -4006,10 +3719,13 @@ fn write_with_io(
         rel_id,
       })
       rel_id = rel_id + 1
-      manifest.add_content_override("/xl/charts/\{file_name}", ct_chart)
+      manifest.add_content_override(
+        content_override_path(chart_part_path(file_name)),
+        ct_chart,
+      )
     }
     manifest.add_content_override(
-      "/xl/drawings/drawing\{sheet_id}.xml",
+      content_override_path(drawing_part_path(sheet_id)),
       ct_drawing,
     )
     for shape in sheet.shapes() {
@@ -4028,15 +3744,12 @@ fn write_with_io(
       drawing_shapes,
       drawing_slicers,
     )
-    archive.add(
-      "xl/drawings/drawing\{sheet_id}.xml",
-      @encoding/utf8.encode(drawing_xml),
-    )
+    archive.add(drawing_part_path(sheet_id), @encoding/utf8.encode(drawing_xml))
     let drawing_rels_xml = write_drawing_rels_xml(
       image_targets, chart_targets, drawing_hyperlinks,
     )
     archive.add(
-      "xl/drawings/_rels/drawing\{sheet_id}.xml.rels",
+      drawing_rels_part_path(sheet_id),
       @encoding/utf8.encode(drawing_rels_xml),
     )
   }
@@ -4084,11 +3797,11 @@ fn write_with_io(
       )
     }
     archive.add(
-      "xl/slicerCaches/slicerCache\{cache_id}.xml",
+      slicer_cache_part_path(cache_id),
       @encoding/utf8.encode(cache_xml),
     )
     manifest.add_content_override(
-      "/xl/slicerCaches/slicerCache\{cache_id}.xml",
+      content_override_path(slicer_cache_part_path(cache_id)),
       ct_slicer_cache,
     )
   }
@@ -4097,14 +3810,17 @@ fn write_with_io(
     let chart_name = "chart\{chart_index}.xml"
     chart_index = chart_index + 1
     archive.add(
-      "xl/charts/\{chart_name}",
+      chart_part_path(chart_name),
       @encoding/utf8.encode(sheet.chart_xml()),
     )
-    manifest.add_content_override("/xl/charts/\{chart_name}", ct_chart)
+    manifest.add_content_override(
+      content_override_path(chart_part_path(chart_name)),
+      ct_chart,
+    )
     let drawing_id = drawing_index
     drawing_index = drawing_index + 1
     manifest.add_content_override(
-      "/xl/drawings/drawing\{drawing_id}.xml",
+      content_override_path(drawing_part_path(drawing_id)),
       ct_drawing,
     )
     let drawing_images : Array[DrawingImage] = []
@@ -4129,22 +3845,24 @@ fn write_with_io(
       [],
     )
     archive.add(
-      "xl/drawings/drawing\{drawing_id}.xml",
+      drawing_part_path(drawing_id),
       @encoding/utf8.encode(drawing_xml),
     )
-    let chart_targets : Array[(Int, String)] = [(1, "../charts/\{chart_name}")]
+    let chart_targets : Array[(Int, String)] = [
+      (1, chart_rel_target(chart_name)),
+    ]
     let drawing_rels_xml = write_drawing_rels_xml([], chart_targets, [])
     archive.add(
-      "xl/drawings/_rels/drawing\{drawing_id}.xml.rels",
+      drawing_rels_part_path(drawing_id),
       @encoding/utf8.encode(drawing_rels_xml),
     )
     let chartsheet_xml = write_chartsheet_xml(1)
     archive.add(
-      "xl/chartsheets/sheet\{sheet_id}.xml",
+      chartsheet_part_path(sheet_id),
       @encoding/utf8.encode(chartsheet_xml),
     )
     let chartsheet_rels_xml = write_sheet_rels_xml(
-      Some("../drawings/drawing\{drawing_id}.xml"),
+      Some(drawing_rel_target(drawing_id)),
       [],
       [],
       [],
@@ -4154,17 +3872,17 @@ fn write_with_io(
       [],
     )
     archive.add(
-      "xl/chartsheets/_rels/sheet\{sheet_id}.xml.rels",
+      chartsheet_rels_part_path(sheet_id),
       @encoding/utf8.encode(chartsheet_rels_xml),
     )
   }
   match workbook.vba_project {
-    Some(value) => archive.add("xl/vbaProject.bin", value)
+    Some(value) => archive.add(vba_project_part_path, value)
     None => ()
   }
   if include_shared {
     archive.add(
-      "xl/sharedStrings.xml",
+      shared_strings_part_path,
       @encoding/utf8.encode(
         write_shared_strings_xml(shared_strings, total_count),
       ),
@@ -4172,12 +3890,12 @@ fn write_with_io(
   }
   if include_calc_chain {
     archive.add(
-      "xl/calcChain.xml",
+      calc_chain_part_path,
       @encoding/utf8.encode(write_calc_chain_xml(formula_cells)),
     )
   }
   archive.add(
-    "xl/styles.xml",
+    styles_part_path,
     @encoding/utf8.encode(
       write_styles_xml(
         workbook.styles(),
@@ -4192,7 +3910,7 @@ fn write_with_io(
     ),
   )
   archive.add(
-    "xl/theme/theme1.xml",
+    theme_part_path,
     @encoding/utf8.encode(
       match workbook.theme_xml {
         Some(xml) => xml
@@ -4201,11 +3919,11 @@ fn write_with_io(
     ),
   )
   archive.add(
-    "docProps/core.xml",
+    core_props_part_path,
     @encoding/utf8.encode(write_core_properties_xml(workbook.core_properties())),
   )
   archive.add(
-    "docProps/app.xml",
+    app_props_part_path,
     @encoding/utf8.encode(write_app_properties_xml(workbook.app_properties())),
   )
   let mut has_custom_props = false
@@ -4218,18 +3936,18 @@ fn write_with_io(
   if has_custom_props {
     manifest.add_custom_properties()
     archive.add(
-      "docProps/custom.xml",
+      custom_props_part_path,
       @encoding/utf8.encode(
         write_custom_properties_xml(workbook.custom_properties()),
       ),
     )
   }
   archive.add(
-    "xl/_rels/workbook.xml.rels",
+    workbook_rels_part_path,
     @encoding/utf8.encode(manifest.workbook_rels_xml()),
   )
   archive.add(
-    "[Content_Types].xml",
+    content_types_part_path,
     @encoding/utf8.encode(manifest.content_types_xml()),
   )
   match zip_writer {

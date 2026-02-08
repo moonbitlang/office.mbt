@@ -717,16 +717,18 @@ fn build_color_scale_rule(
   sb.write_view(
     "<cfvo type=\"\{escape_xml_attr(min_type)}\" val=\"\{escape_xml_attr(min_value)}\"/>",
   )
-  sb.write_view("<color rgb=\"\{palette_color(opt.min_color)}\"/>")
   if mid {
     sb.write_view(
       "<cfvo type=\"\{escape_xml_attr(mid_type)}\" val=\"\{escape_xml_attr(mid_value)}\"/>",
     )
-    sb.write_view("<color rgb=\"\{palette_color(opt.mid_color)}\"/>")
   }
   sb.write_view(
     "<cfvo type=\"\{escape_xml_attr(max_type)}\" val=\"\{escape_xml_attr(max_value)}\"/>",
   )
+  sb.write_view("<color rgb=\"\{palette_color(opt.min_color)}\"/>")
+  if mid {
+    sb.write_view("<color rgb=\"\{palette_color(opt.mid_color)}\"/>")
+  }
   sb.write_view("<color rgb=\"\{palette_color(opt.max_color)}\"/>")
   sb.write_view("</colorScale>")
   sb.write_view("</cfRule>")
@@ -995,9 +997,9 @@ fn parse_cf_rule(
       }
     None => ()
   }
-  let formulas = extract_tag_bodies(xml, "formula").map(value => unescape_xml_text(
-    value,
-  ))
+  let formulas = extract_tag_bodies(xml, "formula").map(value => {
+    unescape_xml_text(value)
+  })
   match rule_type {
     "cellIs" => {
       opt.format_type = "cell"

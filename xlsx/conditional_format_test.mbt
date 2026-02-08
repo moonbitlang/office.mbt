@@ -55,6 +55,15 @@ test "conditional format color scale, data bar, icon set" {
   inspect(formats[1].contains("dataBar"), content="true")
   inspect(formats[1].contains("rgb=\"FF638EC6\""), content="true")
   inspect(formats[2].contains("iconSet=\"3Stars\""), content="true")
+  let first_color = match formats[0].find("<color rgb=") {
+    Some(value) => value
+    None => fail("missing color tag")
+  }
+  let last_cfvo = match formats[0].rev_find("<cfvo") {
+    Some(value) => value
+    None => fail("missing cfvo tag")
+  }
+  inspect(last_cfvo < first_color, content="true")
 }
 
 ///|
