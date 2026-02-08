@@ -506,13 +506,23 @@ Commands used:
       - `moon check --deny-warn`
       - `moon info && moon fmt`
 
-- [ ] 34. Expand behavior-level formula parity pack 2 (lookup/array + financial edge cases).
+- [x] 34. Expand behavior-level formula parity pack 2 (lookup/array + financial edge cases).
   - DoD: add a second curated behavior parity suite for high-risk function families and keep targeted tests green.
+  - Delivered:
+    - Added `xlsx/calc_behavior_parity_pack2_test.mbt` with:
+      - lookup/array behavior parity cases (`INDEX`, `MATCH`, `VLOOKUP`, `XLOOKUP`, `IFNA+XLOOKUP`)
+      - financial behavior parity cases (`PMT`, `FV`, `PV`, `NPER`, `PPMT`)
+      - financial argument-error parity cases
+    - Validation gates:
+      - `moon test xlsx/calc_behavior_parity_pack2_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 35. Consolidate formula parity packs and run focused formula suite gate.
+  - DoD: execute all pack tests together and keep formula-focused checks green after pack additions.
   - Planned:
-    - add parity cases for lookup/array functions (`INDEX`, `MATCH`, `XLOOKUP`, `FILTER`, `SORT`)
-    - add parity/error cases for selected financial functions already implemented
-    - run targeted parity suites + `moon check --deny-warn`
+    - run `moon test` on both behavior parity packs and existing conditional parity suite
+    - refresh checklist with final formula pack gate command/output
 
 ## Active Item
 
-- Next item: **34** (behavior-level formula parity pack 2).
+- Next item: **35** (formula parity pack suite gate).
