@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 863/863`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 864/864`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -823,13 +823,31 @@ Commands used:
       - all seven integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 61. Re-run full release gate after chart-augmented mixed-ext tranche.
+- [x] 61. Re-run full release gate after chart-augmented mixed-ext tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `59/60`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`864/864`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [x] 62. Refresh baseline snapshot after item 61 full gate.
+  - DoD: ensure checklist baseline header reflects the latest full-gate totals.
+  - Delivered:
+    - Updated baseline latest full-gate summary to `864/864`.
+    - Kept demo-validation and semantic-parity status aligned with latest run.
+
+- [ ] 63. Add mixed-ext three-cycle stability integration test.
+  - DoD: extend roundtrip stability coverage from two cycles to three cycles for pivot-backed chart + sparkline + x14 + slicer scenario.
   - Planned:
-    - execute full release gate command
-    - capture updated total test count and parity status
-    - update baseline snapshot if totals changed
+    - start from chart-augmented mixed-ext fixture (`59`)
+    - perform write/read/write/read/write/read cycle chain
+    - assert key ext markers and core parts persist through third cycle
+    - run targeted test + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **61** (full release gate after chart-augmented mixed-ext tranche).
+- Next item: **63** (mixed-ext three-cycle stability integration slice).
