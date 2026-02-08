@@ -60,3 +60,106 @@ test "deflate encode lz77 matches" {
   inspect(deflate_decode(compressed) == data, content="true")
   inspect(compressed.length() < data.length(), content="true")
 }
+
+///|
+fn wb_single_symbol_table(symbol : Int) -> HuffmanTable {
+  { max_bits: 1, sym: [symbol, symbol], len: [1, 1] }
+}
+
+///|
+test "deflate wb: direct guard error branches" {
+  let reader = BitReader::new(b"")
+  let bad_ensure : Result[Unit, Error] = try? reader.ensure_bits(-1)
+  inspect(bad_ensure is Err(ZipError::OutOfBounds(_)), content="true")
+
+  let bad_length : Result[(Int, Int, Int), Error] = try? length_to_symbol(2)
+  inspect(bad_length is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let bad_dist : Result[(Int, Int, Int), Error] = try? distance_to_symbol(0)
+  inspect(bad_dist is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let bad_huffman : Result[HuffmanTable, Error] = try? build_huffman([16])
+  inspect(bad_huffman is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let writer = BitWriter::new()
+  let bad_bits : Result[Unit, Error] = try? writer.write_bits(1, -1)
+  inspect(bad_bits is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let bad_fixed : Result[(Int, Int), Error] = try? fixed_literal_code(288)
+  inspect(bad_fixed is Err(ZipError::UnsupportedFeature(_)), content="true")
+}
+
+///|
+test "deflate wb: find_match distance cap branch" {
+  let raw : Array[Byte] = Array::make(33010, (0x00).to_byte())
+  let bytes = Bytes::from_array(raw)
+  let head : Array[Int] = Array::make(1 << 15, -1)
+  let prev : Array[Int] = Array::make(bytes.length(), -1)
+  let pos = 33000
+  let h = hash3(bytes, pos)
+  head[h] = 0
+  inspect(find_match(bytes, pos, head, prev), content="(0, 0)")
+}
+
+///|
+test "deflate wb: dynamic table repeat-without-previous branch" {
+  let writer = BitWriter::new()
+  // hlit=257, hdist=1, hclen=4
+  ignore(writer.write_bits(0, 5))
+  ignore(writer.write_bits(0, 5))
+  ignore(writer.write_bits(0, 4))
+  // code-length alphabet lengths for [16, 17, 18, 0]
+  ignore(writer.write_bits(1, 3))
+  ignore(writer.write_bits(0, 3))
+  ignore(writer.write_bits(0, 3))
+  ignore(writer.write_bits(0, 3))
+  // first decoded symbol from code-length table: 16
+  ignore(writer.write_bits(0, 1))
+  let reader = BitReader::new(writer.finish())
+  let result : Result[(HuffmanTable, HuffmanTable), Error] = try? read_dynamic_tables(
+    reader,
+  )
+  match result {
+    Err(ZipError::UnsupportedFeature(msg~)) =>
+      inspect(msg, content="repeat with no previous length")
+    _ => fail("expected repeat-with-no-previous-length error")
+  }
+}
+
+///|
+test "deflate wb: decode_huffman_block validation branches" {
+  let zero_reader = BitReader::new(b"\x00")
+
+  let bad_length_result : Result[Unit, Error] = try? decode_huffman_block(
+    zero_reader,
+    wb_single_symbol_table(286),
+    wb_single_symbol_table(0),
+    [],
+  )
+  inspect(
+    bad_length_result is Err(ZipError::UnsupportedFeature(_)),
+    content="true",
+  )
+
+  let bad_dist_symbol_result : Result[Unit, Error] = try? decode_huffman_block(
+    BitReader::new(b"\x00"),
+    wb_single_symbol_table(257),
+    wb_single_symbol_table(30),
+    [],
+  )
+  inspect(
+    bad_dist_symbol_result is Err(ZipError::UnsupportedFeature(_)),
+    content="true",
+  )
+
+  let bad_backref_result : Result[Unit, Error] = try? decode_huffman_block(
+    BitReader::new(b"\x00"),
+    wb_single_symbol_table(257),
+    wb_single_symbol_table(0),
+    [],
+  )
+  inspect(
+    bad_backref_result is Err(ZipError::UnsupportedFeature(_)),
+    content="true",
+  )
+}

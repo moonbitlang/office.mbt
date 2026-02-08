@@ -337,8 +337,6 @@ fn read_dynamic_tables(
       for _ in 0..<repeat {
         lengths.push(0)
       }
-    } else {
-      raise UnsupportedFeature(msg="invalid code length symbol")
     }
   }
   let lit_lengths = lengths[:hlit]

@@ -2288,6 +2288,26 @@ Commands used:
     - Total uncovered lines reduced from `3152` to `3151`
     - Uncovered file count reduced from `51` to `50`
 
+- [x] 154. Close residuals in `zip/deflate.mbt`.
+  - DoD: cover remaining DEFLATE guard/error branches (reader/writer/huffman/match validation) and remove structurally-impossible dynamic-code fallback branch.
+  - Delivered:
+    - Refactored `zip/deflate.mbt`:
+      - removed unreachable `invalid code length symbol` fallback in `read_dynamic_tables` (the code-length alphabet is constrained to symbols `0..18`).
+    - Extended `zip/deflate_wbtest.mbt` with focused whitebox tests:
+      - direct guard errors (`ensure_bits(-1)`, invalid length/distance symbolization, invalid Huffman length, negative bit count, invalid fixed literal symbol).
+      - `find_match` distance-cap branch (`dist > 32768`).
+      - dynamic table branch for `repeat with no previous length`.
+      - `decode_huffman_block` validation branches (`invalid length symbol`, `invalid distance symbol`, `invalid back-reference distance`).
+  - Validation gates:
+    - `moon test zip/deflate_wbtest.mbt`
+    - `moon test zip/deflate_error_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after158.log`
+  - Coverage delta:
+    - `zip/deflate.mbt` uncovered lines reduced from `12` to `0`
+    - Total uncovered lines reduced from `3151` to `3139`
+    - Uncovered file count reduced from `50` to `49`
+
 ## Active Item
 
-- Next item: **154** (move to the next residual hotspot: `zip/deflate.mbt`).
+- Next item: **155** (move to the next residual hotspot: `zip/writer.mbt`).
