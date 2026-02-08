@@ -678,12 +678,16 @@ Commands used:
       - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 49. Add integration parity slice for mixed sparkline + slicer + x14 data-bar worksheet.
+- [x] 49. Add integration parity slice for mixed sparkline + slicer + x14 data-bar worksheet.
   - DoD: validate coexistence of sparkline ext, x14 conditional formatting ext, and slicer list ext markers in one worksheet.
-  - Planned:
-    - build mixed workbook with table/pivot-backed slicer plus sparkline + data-bar CF
-    - assert all expected ext URIs/markers are present and relationships resolve
-    - run targeted integration test gate
+  - Delivered:
+    - Added `xlsx/integration_sparkline_slicer_x14_test.mbt`:
+      - mixed workbook scenario combining table-backed slicer, sparkline group, and x14 data-bar conditional formatting on one worksheet
+      - validates coexistence of sparkline, conditional-formatting, and slicer ext markers/URIs in worksheet OOXML
+      - validates slicer relationships/parts are present and verifies read-roundtrip behavior for sparkline + conditional-format state
+    - Validation gates:
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 50. Run combined gate for new integration slices (48/49).
   - DoD: execute integration tests from `48` and `49` together and keep gate green.
@@ -694,4 +698,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **49** (mixed sparkline + slicer + x14 worksheet integration slice).
+- Next item: **50** (combined gate for integration slices 48/49).
