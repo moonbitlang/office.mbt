@@ -1876,6 +1876,20 @@ Commands used:
       - `fraction < 0.0` clamp after `value - floor(value)` in 1904 conversion
       - `excel_date_to_time` `None` match arm, which is precluded by the function's negative-input guard and helper behavior
 
+- [x] 132. Close low-line-count residuals in `formula_opts.mbt`.
+  - DoD: cover remaining internal mapping branches in formula-type OOXML conversion helpers and option-constructor fallback path.
+  - Delivered:
+    - Added `xlsx/formula_opts_wbtest.mbt` with focused whitebox tests:
+      - `formula opts wb: ooxml mapping covers normal and dataTable`
+      - `formula opts wb: with_values none formula_type branch`
+      - includes unknown-type fallback assertion (`formula_type_from_ooxml("unknown") == None`)
+  - Validation gates:
+    - `moon test xlsx/formula_opts_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after134.log`
+  - Coverage delta:
+    - `xlsx/formula_opts.mbt` uncovered lines reduced from `4` to `0`
+
 ## Active Item
 
-- Next item: **132** (close low-line-count residuals in `xlsx/formula_opts.mbt` with targeted option-guard tests).
+- Next item: **133** (close low-line-count residuals in `xlsx/ignored_errors.mbt` with targeted parser/guard tests).
