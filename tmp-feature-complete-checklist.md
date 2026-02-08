@@ -1383,6 +1383,22 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `195` to `177`
 
+- [x] 103. Add async blackbox coverage for worksheet file-path picture/header-footer branches.
+  - DoD: cover missing-extension/missing-file branches in async file-path helpers and re-measure `worksheet.mbt`.
+  - Delivered:
+    - Extended `xlsx/picture_ops_test.mbt` with async guard tests:
+      - `add_picture` missing-extension + missing-file branches
+      - `add_picture_with_options` missing-extension + missing-file branches using default `GraphicOptions`
+    - Extended `xlsx/header_footer_image_test.mbt` with async guard tests:
+      - `add_header_footer_image_from_file` missing `options.file` branch
+      - `add_header_footer_image_from_file` missing-file read-failure branch
+    - Validation gates:
+      - `moon test xlsx/picture_ops_test.mbt`
+      - `moon test xlsx/header_footer_image_test.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `177` to `172`
+
 ## Active Item
 
-- Next item: **103** (add async blackbox coverage for worksheet file-path picture/header-footer branches and then re-measure `worksheet.mbt` coverage).
+- Next item: **104** (select and implement the next bounded `worksheet.mbt` branch cluster, likely merged-cell anchor sizing or conditional-format edge branches).

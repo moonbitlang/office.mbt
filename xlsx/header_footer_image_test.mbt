@@ -150,6 +150,44 @@ test "header footer image file options require async api" {
 }
 
 ///|
+async test "header footer image from file path requires file option" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = HeaderFooterImageOptions::new(
+    Left,
+    [1],
+    ".png",
+    width="9pt",
+    height="8pt",
+  )
+  let result : Result[Unit, Error] = try? workbook.add_header_footer_image_from_file(
+    "Sheet1", opts,
+  )
+  inspect(
+    result,
+    content=(
+      #|Err(InvalidHeaderFooter(msg="header/footer image file path missing"))
+    ),
+  )
+}
+
+///|
+async test "header footer image from file path read failure" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = try! HeaderFooterImageOptions::from_file(
+    Left,
+    "__missing_hf__.png",
+    width="9pt",
+    height="8pt",
+  )
+  let result : Result[Unit, Error] = try? workbook.add_header_footer_image_from_file(
+    "Sheet1", opts,
+  )
+  inspect(result is Err(XlsxError::InvalidHeaderFooter(_)), content="true")
+}
+
+///|
 async test "header footer image from file path" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

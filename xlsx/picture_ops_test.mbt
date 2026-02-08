@@ -571,6 +571,56 @@ async test "picture invalid sheet name (from file path)" {
 }
 
 ///|
+async test "picture file path guards: missing extension and missing file" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let missing_extension : Result[Unit, Error] = try? workbook.add_picture(
+    "Sheet1", "A1", "missing_extension",
+  )
+  inspect(
+    missing_extension,
+    content=(
+      #|Err(UnsupportedFeature(msg="image extension missing"))
+    ),
+  )
+  let missing_file : Result[Unit, Error] = try? workbook.add_picture(
+    "Sheet1", "A1", "__missing_picture__.png",
+  )
+  inspect(
+    missing_file is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+}
+
+///|
+async test "picture with options file path guards" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let missing_extension : Result[Unit, Error] = try? workbook.add_picture_with_options(
+    "Sheet1",
+    "A1",
+    "missing_extension",
+    GraphicOptions::new(),
+  )
+  inspect(
+    missing_extension,
+    content=(
+      #|Err(UnsupportedFeature(msg="image extension missing"))
+    ),
+  )
+  let missing_file : Result[Unit, Error] = try? workbook.add_picture_with_options(
+    "Sheet1",
+    "A1",
+    "__missing_picture_with_opts__.png",
+    GraphicOptions::new(),
+  )
+  inspect(
+    missing_file is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+}
+
+///|
 async test "picture from file path" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
