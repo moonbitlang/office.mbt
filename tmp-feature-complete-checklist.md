@@ -1796,6 +1796,19 @@ Commands used:
   - Coverage delta:
     - `xlsx/slicer_options.mbt` uncovered lines reduced from `2` to `0`
 
+- [x] 127. Close low-line-count residuals in `auto_filter.mbt`.
+  - DoD: cover remaining helper-guard branches in `parse_filter_tokens` and `custom_filter_operator`.
+  - Delivered:
+    - Added `xlsx/auto_filter_wbtest.mbt` with focused whitebox tests:
+      - `auto filter wb: parse_filter_tokens rejects non-3 token input`
+      - `auto filter wb: custom_filter_operator equal and invalid branches`
+  - Validation gates:
+    - `moon test xlsx/auto_filter_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after128.log`
+  - Coverage delta:
+    - `xlsx/auto_filter.mbt` uncovered lines reduced from `3` to `0`
+
 ## Active Item
 
-- Next item: **127** (close low-line-count residuals in `xlsx/auto_filter.mbt` with targeted parser/guard branch tests).
+- Next item: **128** (close low-line-count residuals in `xlsx/defined_name.mbt` with targeted parser/guard branch tests).
