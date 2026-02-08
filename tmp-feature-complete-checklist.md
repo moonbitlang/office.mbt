@@ -2344,6 +2344,22 @@ Commands used:
     - Total uncovered lines reduced from `3131` to `3124`
     - Uncovered file count reduced from `48` to `47`
 
+- [x] 157. Close residuals in `zip/gzip.mbt`.
+  - DoD: cover remaining little-endian read guard branches in gzip header/trailer helpers.
+  - Delivered:
+    - Added `zip/gzip_wbtest.mbt` with whitebox guard tests for:
+      - `read_u16_le` out-of-bounds path.
+      - `read_u32_le` out-of-bounds path.
+  - Validation gates:
+    - `moon test zip/gzip_test.mbt`
+    - `moon test zip/gzip_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after161.log`
+  - Coverage delta:
+    - `zip/gzip.mbt` uncovered lines reduced from `2` to `0`
+    - Total uncovered lines reduced from `3124` to `3122`
+    - Uncovered file count reduced from `47` to `46`
+
 ## Active Item
 
-- Next item: **157** (move to the next residual hotspot: `zip/gzip.mbt`).
+- Next item: **158** (move to the next residual hotspot: `ooxml/read_parse.mbt`).
