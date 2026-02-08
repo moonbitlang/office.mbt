@@ -807,13 +807,29 @@ Commands used:
       - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 60. Run combined gate for chart-augmented mixed-ext slice.
+- [x] 60. Run combined gate for chart-augmented mixed-ext slice.
   - DoD: execute tests from `55`, `59`, and `57` set together and keep gate green.
+  - Delivered:
+    - Executed chart-augmented mixed-ext gate:
+      - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all seven integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 61. Re-run full release gate after chart-augmented mixed-ext tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `59/60`.
   - Planned:
-    - run targeted integration tests in sequence
-    - run `moon check --deny-warn`
-    - record consolidated results and update checklist
+    - execute full release gate command
+    - capture updated total test count and parity status
+    - update baseline snapshot if totals changed
 
 ## Active Item
 
-- Next item: **60** (combined gate for chart-augmented mixed-ext slice).
+- Next item: **61** (full release gate after chart-augmented mixed-ext tranche).
