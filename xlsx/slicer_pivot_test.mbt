@@ -76,3 +76,61 @@ test "slicer: pivot cache xml generation" {
   inspect(slicers[0].source_name, content="Region")
   inspect(slicers[0].item_desc, content="true")
 }
+
+///|
+test "slicer: preserves and allocates pivot cache slicer ids" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  ignore(
+    sheet.add_pivot_table_xml(
+      "<pivotTableDefinition name=\"PivotA\"/>",
+      "<pivotCacheDefinition xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><cacheFields count=\"1\"><cacheField name=\"Region\"/></cacheFields><extLst><ext uri=\"{725AE2AE-9491-48be-B2B4-4EB974FC3084}\"><x14:pivotCacheDefinition pivotCacheId=\"9\"/></ext></extLst></pivotCacheDefinition>",
+      name="PivotA",
+    ),
+  )
+  ignore(
+    sheet.add_pivot_table_xml(
+      "<pivotTableDefinition name=\"PivotB\"/>",
+      "<pivotCacheDefinition xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><cacheFields count=\"1\"><cacheField name=\"Region\"/></cacheFields></pivotCacheDefinition>",
+      name="PivotB",
+    ),
+  )
+  workbook.add_slicer(
+    "Sheet1",
+    SlicerOptions::new("Region", "E1", "Sheet1", "PivotA"),
+  )
+  workbook.add_slicer(
+    "Sheet1",
+    SlicerOptions::new("Region", "J1", "Sheet1", "PivotB"),
+  )
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let slicer_cache1 = match archive.get("xl/slicerCaches/slicerCache1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing slicerCache1.xml")
+  }
+  let slicer_cache2 = match archive.get("xl/slicerCaches/slicerCache2.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing slicerCache2.xml")
+  }
+  inspect(slicer_cache1.contains("pivotCacheId=\"9\""), content="true")
+  inspect(slicer_cache2.contains("pivotCacheId=\"10\""), content="true")
+  let pivot_cache1 = match
+    archive.get("xl/pivotCache/pivotCacheDefinition1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing pivotCacheDefinition1.xml")
+  }
+  let pivot_cache2 = match
+    archive.get("xl/pivotCache/pivotCacheDefinition2.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing pivotCacheDefinition2.xml")
+  }
+  inspect(
+    pivot_cache1.contains("<x14:pivotCacheDefinition pivotCacheId=\"9\"/>"),
+    content="true",
+  )
+  inspect(
+    pivot_cache2.contains("<x14:pivotCacheDefinition pivotCacheId=\"10\"/>"),
+    content="true",
+  )
+}
