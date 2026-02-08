@@ -356,12 +356,22 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
       - Result: `fill_transparency` extras removed across chart structs; remaining chart extras are now only `Chart.combo_charts`, `Chart.title_rich`, and `ChartLine.transparency`.
 
-- [ ] 20. Normalize `ChartLine.transparency` extra in parity report.
+- [x] 20. Normalize `ChartLine.transparency` extra in parity report.
   - DoD: remove `ChartLine.transparency` as an extra via known alias normalization without introducing missing-field regressions.
+  - Delivered:
+    - Updated `ChartLine` alias normalization in `scripts/excelize_struct_field_parity.py`:
+      - `type/typ`
+      - `fill/color/transparency`
+    - Re-validated focused chart parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
+      - Result: `ChartLine.transparency` extra removed; remaining chart extras now only `Chart.combo_charts` and `Chart.title_rich`.
+
+- [ ] 21. Normalize `Chart.title_rich` extra in parity report.
+  - DoD: remove `Chart.title_rich` as an extra via title alias normalization while preserving chart missing-field parity.
   - Planned:
-    - extend `ChartLine` alias normalization to cover transparency as fill companion
-    - rerun focused `ChartLine`/`Chart*` parity checks
+    - extend `Chart` alias normalization to treat `title` and `title_rich` as equivalent in report mode
+    - rerun focused chart parity checks
 
 ## Active Item
 
-- Next item: **20** (`ChartLine.transparency` extra normalization).
+- Next item: **21** (`Chart.title_rich` extra normalization).

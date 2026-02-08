@@ -155,7 +155,7 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
         {"fill", "fill_color", "fill_transparency"},
         {"bubble_size", "bubble_scale"},
     ],
-    "ChartLine": [{"type", "typ"}, {"fill", "color"}],
+    "ChartLine": [{"type", "typ"}, {"fill", "color", "transparency"}],
     "ChartDataLabel": [{"fill", "fill_color", "fill_transparency"}],
     "ChartDataPoint": [{"fill", "fill_color"}],
     "ChartMarker": [{"fill", "fill_color", "fill_transparency"}],
