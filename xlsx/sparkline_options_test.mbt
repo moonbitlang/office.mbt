@@ -176,3 +176,26 @@ test "sparkline options followups" {
   inspect(group.options.manual_max, content="Some(9)")
   inspect(group.options.display_empty_cells_as, content="zero")
 }
+
+///|
+test "sparkline options alias fields" {
+  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  inspect(opts.location, content="[\"B2\"]")
+  inspect(opts.range, content="[\"A1:A3\"]")
+  inspect(
+    (opts.max, opts.cust_max, opts.min, opts.cust_min),
+    content="(0, 0, 0, 0)",
+  )
+  opts.set_manual_max(9)
+  opts.set_manual_min(1)
+  inspect(
+    (opts.max, opts.cust_max, opts.min, opts.cust_min),
+    content="(9, 9, 1, 1)",
+  )
+  opts.clear_manual_max()
+  opts.clear_manual_min()
+  inspect(
+    (opts.max, opts.cust_max, opts.min, opts.cust_min),
+    content="(0, 0, 0, 0)",
+  )
+}

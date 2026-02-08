@@ -142,7 +142,14 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
     "FormControl": [{"type", "control_type"}, {"macro", "macro_name"}],
     "SlicerOptions": [{"macro", "macro_name"}],
     # Excelize typo in field name (historic): HighColor (Go) -> hight_color (snake).
-    "SparklineOptions": [{"hight_color", "high_color"}],
+    "SparklineOptions": [
+        {"location", "locations"},
+        {"range", "ranges"},
+        {"max", "cust_max", "manual_max"},
+        {"min", "cust_min", "manual_min"},
+        {"type", "sparkline_type"},
+        {"hight_color", "high_color"},
+    ],
 }
 
 

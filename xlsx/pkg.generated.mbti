@@ -1513,6 +1513,8 @@ pub impl Show for SparklineGroupOptions
 pub struct SparklineOptions {
   locations : Array[String]
   ranges : Array[String]
+  location : Array[String]
+  range : Array[String]
   mut sparkline_type : SparklineType
   mut style : Int
   mut weight : Double?
@@ -1533,6 +1535,10 @@ pub struct SparklineOptions {
   mut last_color : String?
   mut high_color : String?
   mut low_color : String?
+  mut max : Int
+  mut cust_max : Int
+  mut min : Int
+  mut cust_min : Int
   mut manual_max : Int?
   mut manual_min : Int?
   mut empty_cells : String?

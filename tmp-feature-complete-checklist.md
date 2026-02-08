@@ -235,13 +235,34 @@ Commands used:
       - `moon check --deny-warn`
       - `moon info --package xlsx && moon fmt`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Table`
-- [ ] 15. Add alias parity fields for `SparklineOptions` (`location/range/max/cust_max/min/cust_min/type`).
+- [x] 15. Add alias parity fields for `SparklineOptions` (`location/range/max/cust_max/min/cust_min/type`).
   - DoD: `SparklineOptions` exposes Excelize-compatible field names while preserving current behavior.
+  - Delivered:
+    - Added alias fields to `SparklineOptions` in `xlsx/sparkline.mbt`:
+      - `location`, `range`
+      - `max`, `cust_max`, `min`, `cust_min`
+    - Initialized alias fields in `SparklineOptions::new(...)` with stable defaults and canonical references.
+    - Kept numeric aliases synchronized in setters:
+      - `set_manual_max` / `clear_manual_max`
+      - `set_manual_min` / `clear_manual_min`
+    - Added regression coverage in `xlsx/sparkline_options_test.mbt`:
+      - verifies alias field initialization and setter synchronization.
+    - Updated parity normalizer in `scripts/excelize_struct_field_parity.py`:
+      - added known alias mappings for `SparklineOptions` (`location/locations`, `range/ranges`, `max|cust_max|manual_max`, `min|cust_min|manual_min`, `type/sparkline_type`, `hight_color/high_color`).
+    - Validation gates:
+      - `moon test xlsx/sparkline_options_test.mbt`
+      - `moon test xlsx/sparkline_test.mbt`
+      - `moon test xlsx/row_col_dimensions_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info --package xlsx && moon fmt`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types SparklineOptions`
+- [ ] 16. Add `Style` parity fields (`num_fmt`, `decimal_places`, `custom_num_fmt`, `neg_red`).
+  - DoD: `Style` exposes Excelize-compatible fields without changing current number-format behavior.
   - Planned:
-    - add alias fields and initialize them in `SparklineOptions::new`
-    - keep alias fields synchronized from setters and option-to-group conversion
-    - add regression checks that aliases mirror canonical MoonBit fields
+    - add optional fields to `Style` and thread them through style constructors/updaters
+    - preserve existing `number_format` as canonical behavior path
+    - add regression checks for style equality and read/write stability
 
 ## Active Item
 
-- Next item: **15** (`SparklineOptions` alias parity fields).
+- Next item: **16** (`Style` parity fields).

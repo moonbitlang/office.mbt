@@ -115,6 +115,8 @@ pub struct SparklineGroup {
 pub struct SparklineOptions {
   locations : Array[String]
   ranges : Array[String]
+  location : Array[String]
+  range : Array[String]
   mut sparkline_type : SparklineType
   mut style : Int
   mut weight : Double?
@@ -135,6 +137,10 @@ pub struct SparklineOptions {
   mut last_color : String?
   mut high_color : String?
   mut low_color : String?
+  mut max : Int
+  mut cust_max : Int
+  mut min : Int
+  mut cust_min : Int
   mut manual_max : Int?
   mut manual_min : Int?
   mut empty_cells : String?
@@ -162,6 +168,8 @@ pub fn SparklineOptions::new(
   {
     locations: locs,
     ranges: rs,
+    location: locs,
+    range: rs,
     sparkline_type: Line,
     style: 0,
     weight: None,
@@ -182,6 +190,10 @@ pub fn SparklineOptions::new(
     last_color: None,
     high_color: None,
     low_color: None,
+    max: 0,
+    cust_max: 0,
+    min: 0,
+    cust_min: 0,
     manual_max: None,
     manual_min: None,
     empty_cells: None,
@@ -397,11 +409,15 @@ pub fn SparklineOptions::set_manual_max(
   self : SparklineOptions,
   max : Int,
 ) -> Unit {
+  self.max = max
+  self.cust_max = max
   self.manual_max = Some(max)
 }
 
 ///|
 pub fn SparklineOptions::clear_manual_max(self : SparklineOptions) -> Unit {
+  self.max = 0
+  self.cust_max = 0
   self.manual_max = None
 }
 
@@ -410,11 +426,15 @@ pub fn SparklineOptions::set_manual_min(
   self : SparklineOptions,
   min : Int,
 ) -> Unit {
+  self.min = min
+  self.cust_min = min
   self.manual_min = Some(min)
 }
 
 ///|
 pub fn SparklineOptions::clear_manual_min(self : SparklineOptions) -> Unit {
+  self.min = 0
+  self.cust_min = 0
   self.manual_min = None
 }
 
