@@ -343,13 +343,25 @@ Commands used:
       - `moon info && moon fmt`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Shape`
 
-- [ ] 19. Normalize chart `fill_transparency` extras in parity report.
+- [x] 19. Normalize chart `fill_transparency` extras in parity report.
   - DoD: reduce chart extra-noise by treating `fill_transparency` as known companion alias for chart fill mappings.
+  - Delivered:
+    - Extended chart alias groups in `scripts/excelize_struct_field_parity.py`:
+      - `Chart`: `fill/fill_color/fill_transparency`
+      - `ChartDataLabel`: `fill/fill_color/fill_transparency`
+      - `ChartMarker`: `fill/fill_color/fill_transparency`
+      - `ChartPlotArea`: `fill/fill_color/fill_transparency`
+      - `ChartSeries`: `fill/fill_color/fill_transparency`
+    - Re-validated focused chart parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
+      - Result: `fill_transparency` extras removed across chart structs; remaining chart extras are now only `Chart.combo_charts`, `Chart.title_rich`, and `ChartLine.transparency`.
+
+- [ ] 20. Normalize `ChartLine.transparency` extra in parity report.
+  - DoD: remove `ChartLine.transparency` as an extra via known alias normalization without introducing missing-field regressions.
   - Planned:
-    - extend chart alias groups in `scripts/excelize_struct_field_parity.py` for `Chart*` fill fields
-    - ensure no chart missing-fields regressions
-    - rerun focused parity report for `Chart*`
+    - extend `ChartLine` alias normalization to cover transparency as fill companion
+    - rerun focused `ChartLine`/`Chart*` parity checks
 
 ## Active Item
 
-- Next item: **19** (chart `fill_transparency` extra normalization).
+- Next item: **20** (`ChartLine.transparency` extra normalization).

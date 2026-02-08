@@ -152,15 +152,18 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
     ],
     "Chart": [
         {"type", "typ"},
-        {"fill", "fill_color"},
+        {"fill", "fill_color", "fill_transparency"},
         {"bubble_size", "bubble_scale"},
     ],
     "ChartLine": [{"type", "typ"}, {"fill", "color"}],
-    "ChartDataLabel": [{"fill", "fill_color"}],
+    "ChartDataLabel": [{"fill", "fill_color", "fill_transparency"}],
     "ChartDataPoint": [{"fill", "fill_color"}],
-    "ChartMarker": [{"fill", "fill_color"}],
-    "ChartPlotArea": [{"fill", "fill_color"}],
-    "ChartSeries": [{"sizes", "bubble_size"}, {"fill", "fill_color"}],
+    "ChartMarker": [{"fill", "fill_color", "fill_transparency"}],
+    "ChartPlotArea": [{"fill", "fill_color", "fill_transparency"}],
+    "ChartSeries": [
+        {"sizes", "bubble_size"},
+        {"fill", "fill_color", "fill_transparency"},
+    ],
     "ChartUpDownBar": [{"fill", "fill_color"}],
     "Shape": [
         {"cell", "reference"},
