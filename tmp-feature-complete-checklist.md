@@ -1217,13 +1217,40 @@ Commands used:
     - Coverage delta:
       - `xlsx/header_footer_image_read.mbt` uncovered lines reduced from `24` to `11`
 
-- [ ] 91. Plan next bounded read-path hardening slice after header/footer parser coverage.
+- [x] 91. Plan next bounded read-path hardening slice after header/footer parser coverage.
   - DoD: choose next high-value uncovered read-path file and define test-first scope.
+  - Delivered:
+    - Compared remaining read-path uncovered surfaces after item 90:
+      - `xlsx/read_sheet_rel_parts.mbt`: `43` uncovered
+      - `xlsx/read_drawing_xml.mbt`: `108` uncovered
+    - Selected bounded next slice:
+      - `xlsx/read_sheet_rel_parts.mbt` parser edge branches (comments/table/pivot relation-id readers)
+    - Defined target validation:
+      - add whitebox tests for error/edge branches
+      - run focused tests + `moon check --deny-warn`
+      - confirm measurable uncovered-line reduction for the file
+
+- [x] 92. Expand `read_sheet_rel_parts` branch coverage with targeted whitebox parser tests.
+  - DoD: cover comment/table/pivot rel parsing edge branches and reduce uncovered lines in `xlsx/read_sheet_rel_parts.mbt`.
+  - Delivered:
+    - Added `xlsx/read_sheet_rel_parts_wbtest.mbt`:
+      - `parse_comment_authors`: missing authors and malformed author chunk handling
+      - `parse_comments_xml`: no-list path, malformed/missing-ref errors, author fallback/text-empty/rich-text-fallback paths
+      - `parse_table_part_ids`: expanded tag path and missing-id error
+      - `parse_pivot_table_part_ids`: expanded tag path and missing-id error
+    - Validation gates:
+      - `moon test xlsx/read_sheet_rel_parts_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/read_sheet_rel_parts.mbt` uncovered lines reduced from `43` to `29`
+
+- [ ] 93. Plan next bounded read-path hardening slice after `read_sheet_rel_parts` coverage gain.
+  - DoD: choose next highest-value read parser target and define exact branch-focused test scope.
   - Planned:
-    - compare remaining uncovered counts in `read_sheet_rel_parts` and `read_drawing_xml`
-    - pick one file-level slice with explicit branch targets
-    - execute with commit-by-commit cadence
+    - review remaining uncovered read-parser candidates (`read_drawing_xml`, `read`, `worksheet`)
+    - pick the smallest high-impact slice with measurable delta
+    - continue one-by-one implementation with commit cadence
 
 ## Active Item
 
-- Next item: **91** (next read-path hardening slice selection).
+- Next item: **93** (next read-path hardening slice selection).
