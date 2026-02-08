@@ -15,7 +15,20 @@ test "sparkline write" {
     None => fail("missing sheet1.xml")
   }
   inspect(sheet_xml.contains("sparklineGroups"), content="true")
-  inspect(sheet_xml.contains("<xm:f>A1:A3</xm:f>"), content="true")
+  inspect(
+    sheet_xml.contains(
+      "xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"",
+    ),
+    content="true",
+  )
+  inspect(
+    sheet_xml.contains(
+      "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"",
+    ),
+    content="true",
+  )
+  inspect(sheet_xml.contains("mc:Ignorable=\"x14\""), content="true")
+  inspect(sheet_xml.contains("<xm:f>'Sheet1'!A1:A3</xm:f>"), content="true")
   inspect(sheet_xml.contains("<xm:sqref>B2</xm:sqref>"), content="true")
 }
 

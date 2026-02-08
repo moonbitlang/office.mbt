@@ -842,16 +842,39 @@ fn write_sparkline_color_xml(
 }
 
 ///|
-fn write_sparkline_ext_xml(groups : ArrayView[SparklineGroup]) -> String {
+fn quote_sheet_name_for_formula(sheet_name : StringView) -> String {
+  "'" + sheet_name.to_string().replace_all(old="'", new="''") + "'"
+}
+
+///|
+fn sparkline_formula_ref_for_xml(
+  sheet_name : StringView,
+  range_ref : StringView,
+) -> String {
+  if range_ref.contains("!") {
+    range_ref.to_string()
+  } else {
+    "\{quote_sheet_name_for_formula(sheet_name)}!\{range_ref.to_string()}"
+  }
+}
+
+///|
+fn write_sparkline_ext_xml(
+  sheet_name : StringView,
+  groups : ArrayView[SparklineGroup],
+) -> String {
   let sb = StringBuilder::new()
   sb.write_view("  <extLst>\n")
-  sb.write_view(write_sparkline_ext_block_xml(groups))
+  sb.write_view(write_sparkline_ext_block_xml(sheet_name, groups))
   sb.write_view("  </extLst>\n")
   sb.to_string()
 }
 
 ///|
-fn write_sparkline_ext_block_xml(groups : ArrayView[SparklineGroup]) -> String {
+fn write_sparkline_ext_block_xml(
+  sheet_name : StringView,
+  groups : ArrayView[SparklineGroup],
+) -> String {
   let sb = StringBuilder::new()
   sb.write_view("    <ext uri=\"")
   sb.write_view(sparkline_ext_uri)
@@ -925,7 +948,11 @@ fn write_sparkline_ext_block_xml(groups : ArrayView[SparklineGroup]) -> String {
     for sparkline in group.sparklines {
       sb.write_view("            <x14:sparkline>\n")
       sb.write_view("              <xm:f>")
-      sb.write_view(escape_xml_text(sparkline.range_ref))
+      sb.write_view(
+        escape_xml_text(
+          sparkline_formula_ref_for_xml(sheet_name, sparkline.range_ref),
+        ),
+      )
       sb.write_view("</xm:f>\n")
       sb.write_view("              <xm:sqref>")
       sb.write_view(escape_xml_text(sparkline.location))
@@ -988,6 +1015,21 @@ fn find_sparkline_color_in_body(
 fn parse_sparkline_groups(
   xml : StringView,
 ) -> Array[SparklineGroup] raise XlsxError {
+  fn normalize_sparkline_range_ref(
+    range_ref : StringView,
+  ) -> String raise XlsxError {
+    let text = range_ref.to_string()
+    match text.find("!") {
+      Some(pos) => {
+        let range_part = text[pos + 1:] catch {
+            _ => raise InvalidCellRef(value=text)
+          }
+        normalize_range_ref(range_part)
+      }
+      None => normalize_range_ref(text)
+    }
+  }
+
   let groups : Array[SparklineGroup] = []
   let mut first = true
   for chunk in xml.split("<x14:sparklineGroup") {
@@ -1156,7 +1198,7 @@ fn parse_sparkline_groups(
       }
       let (row, col) = cell_ref_to_rc(location)
       let canonical_loc = cell_ref_from(row, col)
-      let normalized_range = normalize_range_ref(range)
+      let normalized_range = normalize_sparkline_range_ref(range)
       sparklines.push({ range_ref: normalized_range, location: canonical_loc })
     }
     if sparklines.length() > 0 {

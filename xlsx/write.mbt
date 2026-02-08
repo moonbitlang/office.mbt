@@ -1479,7 +1479,7 @@ fn write_worksheet_xml(
       return None
     }
     if has_sparklines && !has_slicers && !has_conditional {
-      return Some(write_sparkline_ext_xml(sparkline_groups))
+      return Some(write_sparkline_ext_xml(sheet.name(), sparkline_groups))
     }
     let sb = StringBuilder::new()
     sb.write_view("  <extLst>\n")
@@ -1488,7 +1488,9 @@ fn write_worksheet_xml(
       None => ()
     }
     if has_sparklines {
-      sb.write_view(write_sparkline_ext_block_xml(sparkline_groups))
+      sb.write_view(
+        write_sparkline_ext_block_xml(sheet.name(), sparkline_groups),
+      )
     }
     if slicer_rel_ids_x14.length() > 0 {
       sb.write_view(
@@ -1531,15 +1533,28 @@ fn write_worksheet_xml(
     legacy_drawing_rel_id is Some(_) ||
     legacy_drawing_hf_rel_id is Some(_) ||
     picture_rel_id is Some(_)
+  let needs_x14_ns = sheet.sparkline_groups().length() > 0 ||
+    sheet.x14_data_bars.length() > 0 ||
+    slicer_rel_ids_x14.length() > 0 ||
+    slicer_rel_ids_x15.length() > 0
+  sb.write_view(
+    "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"",
+  )
   if needs_rels {
     sb.write_view(
-      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\n",
-    )
-  } else {
-    sb.write_view(
-      "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">\n",
+      " xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"",
     )
   }
+  if needs_x14_ns {
+    sb.write_view(
+      " xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"",
+    )
+    sb.write_view(
+      " xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"",
+    )
+    sb.write_view(" mc:Ignorable=\"x14\"")
+  }
+  sb.write_view(">\n")
   match sheet.sheet_props {
     Some(options) =>
       if sheet_props_has_sheet_pr(options) {
