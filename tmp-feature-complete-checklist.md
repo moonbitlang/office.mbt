@@ -1184,13 +1184,46 @@ Commands used:
       - check: pass
     - Refreshed top-level checklist `Branch/HEAD` metadata to current commit.
 
-- [ ] 89. Identify next post-parity hardening slice from current clean baseline.
+- [x] 89. Identify next post-parity hardening slice from current clean baseline.
   - DoD: select the next highest-value one-by-one gap with explicit DoD and validation commands.
+  - Delivered:
+    - Ran fresh coverage scan and reviewed highest uncovered-risk files in core IO path:
+      - `xlsx/header_footer_image_read.mbt` (`24` uncovered)
+      - `xlsx/read_sheet_rel_parts.mbt` (`43` uncovered)
+      - `xlsx/read_drawing_xml.mbt` (`108` uncovered)
+      - `xlsx/read.mbt` (`419` uncovered)
+    - Selected bounded next slice:
+      - header/footer image read parser edge branches (`xlsx/header_footer_image_read.mbt`)
+    - Defined concrete DoD for next item:
+      - add whitebox tests for helper parsers and VML relationship fallback/overwrite/error paths
+      - verify targeted tests + `moon check --deny-warn`
+      - confirm uncovered count is reduced from the 24-line baseline
+
+- [x] 90. Expand `header_footer_image_read` branch coverage with focused whitebox tests.
+  - DoD: cover helper/parser edge branches and reduce uncovered lines in `xlsx/header_footer_image_read.mbt`.
+  - Delivered:
+    - Added `xlsx/header_footer_image_read_wbtest.mbt` with focused coverage:
+      - `parse_header_footer_shape_id` invalid-shape and valid-first-page cases
+      - `parse_style_value` missing-key/empty-value/no-semicolon cases
+      - `extension_from_path` empty-extension and normal-extension cases
+      - `parse_header_footer_images_from_vml`:
+        - `r:id` fallback path
+        - duplicate shape-id overwrite branch
+        - unsupported extension filtering
+        - missing-target-part error path (`MissingPart`)
+    - Validation gates:
+      - `moon test xlsx/header_footer_image_read_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/header_footer_image_read.mbt` uncovered lines reduced from `24` to `11`
+
+- [ ] 91. Plan next bounded read-path hardening slice after header/footer parser coverage.
+  - DoD: choose next high-value uncovered read-path file and define test-first scope.
   - Planned:
-    - inspect current remaining risk surfaces (non-OOXML-parser and non-stream-writer)
-    - choose one bounded slice and define objective pass/fail criteria
-    - continue commit-by-commit execution from the selected item
+    - compare remaining uncovered counts in `read_sheet_rel_parts` and `read_drawing_xml`
+    - pick one file-level slice with explicit branch targets
+    - execute with commit-by-commit cadence
 
 ## Active Item
 
-- Next item: **89** (next hardening slice selection from clean baseline).
+- Next item: **91** (next read-path hardening slice selection).
