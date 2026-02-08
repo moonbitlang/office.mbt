@@ -162,6 +162,11 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
     "ChartPlotArea": [{"fill", "fill_color"}],
     "ChartSeries": [{"sizes", "bubble_size"}, {"fill", "fill_color"}],
     "ChartUpDownBar": [{"fill", "fill_color"}],
+    "Shape": [
+        {"cell", "reference"},
+        {"type", "shape_type"},
+        {"macro", "macro_name", "macro_alias"},
+    ],
 }
 
 

@@ -24,18 +24,56 @@ pub fn ShapeLine::with_values(color? : String, width? : Double) -> ShapeLine {
 }
 
 ///|
+pub struct ShapeFill {
+  mut color : String?
+  mut transparency : Int?
+} derive(Eq, Show)
+
+///|
+pub fn ShapeFill::new() -> ShapeFill {
+  { color: None, transparency: None }
+}
+
+///|
+pub fn ShapeFill::with_values(
+  color? : String,
+  transparency? : Int,
+) -> ShapeFill raise XlsxError {
+  let fill = ShapeFill::new()
+  match color {
+    Some(value) => fill.color = Some(value)
+    None => ()
+  }
+  match transparency {
+    Some(value) => {
+      if value < 0 || value > 100 {
+        raise InvalidSheetOperation(msg="shape fill transparency out of range")
+      }
+      fill.transparency = Some(value)
+    }
+    None => ()
+  }
+  fill
+}
+
+///|
 pub struct Shape {
   reference : String
+  cell : String
   shape_type : String
+  macro_alias : String
   macro_name : String
+  format : GraphicOptions
   text : String
   paragraph : Array[RichTextRun]
   width : Int
   height : Int
   scale_x : Double
   scale_y : Double
+  fill : ShapeFill
   fill_color : String
   fill_transparency : Int
+  line : ShapeLine
   line_color : String
   line_width : Double
   name : String
@@ -47,6 +85,53 @@ pub struct Shape {
 
 ///|
 let default_shape_size = 160
+
+///|
+fn shape_graphic_options(
+  scale_x : Double,
+  scale_y : Double,
+  name : String,
+  alt_text : String,
+  print_object : Bool,
+  locked : Bool,
+  positioning : PicturePositioning,
+) -> GraphicOptions {
+  let format = GraphicOptions::new()
+  format.scale_x = Some(scale_x)
+  format.scale_y = Some(scale_y)
+  format.name = Some(name)
+  format.alt_text = Some(alt_text)
+  format.print_object = Some(print_object)
+  format.locked = Some(locked)
+  format.positioning = Some(positioning)
+  format
+}
+
+///|
+fn shape_fill_from_values(
+  fill_color : String,
+  fill_transparency : Int,
+) -> ShapeFill {
+  let fill = ShapeFill::new()
+  if fill_color != "" {
+    fill.color = Some(fill_color)
+  }
+  fill.transparency = Some(fill_transparency)
+  fill
+}
+
+///|
+fn shape_line_from_values(
+  line_color : String,
+  line_width : Double,
+) -> ShapeLine {
+  let line = ShapeLine::new()
+  if line_color != "" {
+    line.color = Some(line_color)
+  }
+  line.width = Some(line_width)
+  line
+}
 
 ///|
 pub fn Shape::new(
@@ -88,18 +173,28 @@ pub fn Shape::new(
     raise InvalidSheetOperation(msg="shape line width must be > 0")
   }
   ignore(cell_ref_to_rc(reference))
+  let format = shape_graphic_options(
+    scale_x, scale_y, name, alt_text, print_object, locked, positioning,
+  )
+  let fill = shape_fill_from_values(fill_color, fill_transparency)
+  let line = shape_line_from_values(line_color, line_width)
   {
     reference,
+    cell: reference,
     shape_type,
+    macro_alias: macro_name,
     macro_name,
+    format,
     text,
     paragraph,
     width,
     height,
     scale_x,
     scale_y,
+    fill,
     fill_color,
     fill_transparency,
+    line,
     line_color,
     line_width,
     name,

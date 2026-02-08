@@ -62,6 +62,16 @@ test "shape new validates basic fields" {
     (try? Shape::new("??", "rect")) is Err(InvalidCellRef(_)),
     content="true",
   )
+  inspect(
+    (try? ShapeFill::with_values(transparency=-1))
+    is Err(InvalidSheetOperation(_)),
+    content="true",
+  )
+  inspect(
+    (try? ShapeFill::with_values(transparency=101))
+    is Err(InvalidSheetOperation(_)),
+    content="true",
+  )
 }
 
 ///|
@@ -72,6 +82,12 @@ test "shape new happy path with options" {
   let line2 = ShapeLine::with_values()
   inspect(line2.color, content="None")
   inspect(line2.width, content="None")
+  let fill = ShapeFill::with_values(color="00FF00", transparency=25)
+  inspect(fill.color, content="Some(\"00FF00\")")
+  inspect(fill.transparency, content="Some(25)")
+  let fill2 = ShapeFill::with_values()
+  inspect(fill2.color, content="None")
+  inspect(fill2.transparency, content="None")
   let shape = Shape::new(
     "B2",
     "rect",
@@ -92,15 +108,28 @@ test "shape new happy path with options" {
     positioning=TwoCell,
   )
   inspect(shape.reference, content="B2")
+  inspect(shape.cell, content="B2")
   inspect(shape.shape_type, content="rect")
+  inspect(shape.macro_alias, content="Macro1")
   inspect(shape.macro_name, content="Macro1")
   inspect(shape.text, content="Hello")
   inspect(shape.width, content="120")
   inspect(shape.height, content="80")
   inspect(shape.scale_x, content="1.5")
   inspect(shape.scale_y, content="2")
+  inspect(shape.format.scale_x, content="Some(1.5)")
+  inspect(shape.format.scale_y, content="Some(2)")
+  inspect(shape.format.name, content="Some(\"S1\")")
+  inspect(shape.format.alt_text, content="Some(\"Alt\")")
+  inspect(shape.format.print_object, content="Some(false)")
+  inspect(shape.format.locked, content="Some(false)")
+  inspect(shape.format.positioning, content="Some(TwoCell)")
+  inspect(shape.fill.color, content="Some(\"00FF00\")")
+  inspect(shape.fill.transparency, content="Some(25)")
   inspect(shape.fill_color, content="00FF00")
   inspect(shape.fill_transparency, content="25")
+  inspect(shape.line.color, content="Some(\"0000FF\")")
+  inspect(shape.line.width, content="Some(1.25)")
   inspect(shape.line_color, content="0000FF")
   inspect(shape.line_width, content="1.25")
   inspect(shape.name, content="S1")

@@ -311,14 +311,45 @@ Commands used:
       - `moon info && moon fmt`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
 
-- [ ] 18. Reduce shape missing-field parity (`Shape cell/type/macro/format/fill/line`).
+- [x] 18. Reduce shape missing-field parity (`Shape cell/type/macro/format/fill/line`).
   - DoD: remove current Shape “missing” field set in parity report via concrete aliases and/or normalization.
+  - Delivered:
+    - Added concrete `Shape` parity aliases in `xlsx/shape.mbt`:
+      - `cell : String`
+      - `macro_alias : String`
+      - `format : GraphicOptions`
+      - `fill : ShapeFill`
+      - `line : ShapeLine`
+    - Added `ShapeFill` model in `xlsx/shape.mbt`:
+      - `ShapeFill::new`
+      - `ShapeFill::with_values` with transparency validation
+    - Added shared shape alias constructors in `xlsx/shape.mbt`:
+      - `shape_graphic_options`
+      - `shape_fill_from_values`
+      - `shape_line_from_values`
+    - Updated drawing read path in `xlsx/read_drawing_xml.mbt` to populate new shape alias fields.
+    - Extended parity normalizer in `scripts/excelize_struct_field_parity.py` for `Shape`:
+      - `cell/reference`
+      - `type/shape_type`
+      - `macro/macro_name/macro_alias`
+    - Added/extended regression coverage:
+      - `xlsx/shape_test.mbt` validates new fill model and shape alias fields.
+      - `xlsx/shape_read_test.mbt` validates read-path population of alias fields.
+    - Validation gates:
+      - `moon test xlsx/shape_test.mbt`
+      - `moon test xlsx/shape_read_test.mbt`
+      - `moon test xlsx/shape_form_control_slicer_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Shape`
+
+- [ ] 19. Normalize chart `fill_transparency` extras in parity report.
+  - DoD: reduce chart extra-noise by treating `fill_transparency` as known companion alias for chart fill mappings.
   - Planned:
-    - inspect `Shape` model vs Excelize `Shape`
-    - add safe aliases (`type`, `macro`, `fill`, `line`) where non-breaking
-    - keep writer/read paths behaviorally stable
-    - add shape regression tests and rerun parity report
+    - extend chart alias groups in `scripts/excelize_struct_field_parity.py` for `Chart*` fill fields
+    - ensure no chart missing-fields regressions
+    - rerun focused parity report for `Chart*`
 
 ## Active Item
 
-- Next item: **18** (shape missing-field parity reduction).
+- Next item: **19** (chart `fill_transparency` extra normalization).

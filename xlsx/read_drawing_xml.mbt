@@ -657,18 +657,28 @@ fn parse_drawing_shapes(
       None => ()
     }
     let text = ""
+    let format = shape_graphic_options(
+      1.0, 1.0, name, alt_text, print_object, locked, positioning,
+    )
+    let fill = shape_fill_from_values(fill_color, fill_transparency)
+    let line = shape_line_from_values(line_color, line_width)
     shapes.push({
       reference,
+      cell: reference,
       shape_type,
+      macro_alias: macro_name,
       macro_name,
+      format,
       text,
       paragraph,
       width,
       height,
       scale_x: 1.0,
       scale_y: 1.0,
+      fill,
       fill_color,
       fill_transparency,
+      line,
       line_color,
       line_width,
       name,
