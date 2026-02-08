@@ -1908,6 +1908,21 @@ Commands used:
       - no `/>` and no `>` close marker
       - impossible slice-failure catch after computed close position
 
+- [x] 134. Continue low-line-count residual reduction in `image_types.mbt`.
+  - DoD: cover reachable image-extension normalization guards and `tif` content-type alias mapping.
+  - Delivered:
+    - Added `xlsx/image_types_wbtest.mbt` with focused whitebox tests:
+      - `image types wb: normalize image extension rejects dot-only and empty`
+      - `image types wb: content type recognizes tif alias`
+  - Validation gates:
+    - `moon test xlsx/image_types_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after136.log`
+  - Coverage delta:
+    - `xlsx/image_types.mbt` uncovered lines reduced from `4` to `1`
+  - Residual notes:
+    - Remaining `image_types.mbt` uncovered line is a structural slice catch fallback when stripping the leading dot after prior length checks.
+
 ## Active Item
 
-- Next item: **134** (close low-line-count residuals in `xlsx/image_types.mbt` with targeted parser/guard tests).
+- Next item: **135** (close low-line-count residuals in `xlsx/search_sheet.mbt` with targeted parser/guard tests).
