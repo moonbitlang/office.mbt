@@ -2427,6 +2427,26 @@ Commands used:
     - Total uncovered lines reduced from `3065` to `2941`
     - Uncovered file count reduced from `44` to `43`
 
+- [x] 161. Close residuals in `xlsx/formula_eval.mbt`.
+  - DoD: add focused whitebox coverage for formula-eval helper guard paths and reduce residual uncovered lines in `xlsx/formula_eval.mbt`.
+  - Delivered:
+    - Added `xlsx/formula_eval_wbtest.mbt` with focused whitebox coverage for:
+      - `anchorarray_values` invalid-ref/error guard path.
+      - `range_column` / `range_row` invalid-index guards.
+      - `munit_range_values_from_expr` bad-arity and invalid-dimension paths.
+      - `transpose_range_values_from_expr` bad-arity path and scalar passthrough path.
+      - `number_matrix_from_range` empty-range error and bool coercion branch.
+      - `matrix_minor` column-skip behavior and `new_matrix` non-positive-size branch.
+      - `prepare_trend_growth_mtx_x` / `prepare_trend_growth_mtx_y` zero-value error guards.
+  - Validation gates:
+    - `moon test xlsx/formula_eval_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after172.log`
+  - Coverage delta:
+    - `xlsx/formula_eval.mbt` uncovered lines reduced from `502` to `485`
+    - Total uncovered lines reduced from `2941` to `2924`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **161** (move to the next residual hotspot: `xlsx/formula_eval.mbt`).
+- Next item: **162** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`).
