@@ -1809,6 +1809,35 @@ Commands used:
   - Coverage delta:
     - `xlsx/auto_filter.mbt` uncovered lines reduced from `3` to `0`
 
+- [x] 128. Close low-line-count residuals in `defined_name.mbt`.
+  - DoD: cover remaining scope-normalization, builtin-name detection, and too-long-name guard branches.
+  - Delivered:
+    - Added `xlsx/defined_name_wbtest.mbt` with focused whitebox tests:
+      - `defined name wb: normalize empty scope to Workbook`
+      - `defined name wb: builtin name detection includes print area`
+      - `defined name wb: reject too-long names`
+  - Validation gates:
+    - `moon test xlsx/defined_name_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after129.log`
+  - Coverage delta:
+    - `xlsx/defined_name.mbt` uncovered lines reduced from `3` to `0`
+
+- [x] 129. Continue low-line-count residual reduction in `sqref.mbt`.
+  - DoD: cover reachable `flat_sqref` branches for empty-token skip and repeated single-column accumulation.
+  - Delivered:
+    - Added `xlsx/sqref_wbtest.mbt` with:
+      - `sqref wb: flat_sqref trims empty tokens and merges repeated single-column refs`
+      - exercises `delete_cells_from_sqref("A1  A2", {})` to trigger both reachable branches.
+  - Validation gates:
+    - `moon test xlsx/sqref_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after130.log`
+  - Coverage delta:
+    - `xlsx/sqref.mbt` uncovered lines reduced from `3` to `1`
+  - Residual notes:
+    - Remaining `xlsx/sqref.mbt` uncovered line is a structural map re-fetch fallback (`None => ()`) after iterating pre-collected map keys.
+
 ## Active Item
 
-- Next item: **128** (close low-line-count residuals in `xlsx/defined_name.mbt` with targeted parser/guard branch tests).
+- Next item: **130** (close low-line-count residuals in `xlsx/cell_ref.mbt` with targeted parser/guard branch tests).
