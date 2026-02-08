@@ -2032,6 +2032,38 @@ Commands used:
   - Coverage delta:
     - `xlsx/write_workbook_xml.mbt` uncovered lines reduced from `8` to `0`
 
+- [x] 142. Close low-line-count residuals in `write_part_paths.mbt`.
+  - DoD: eliminate structural slice-catch residual branches in part-name/rels-path helpers while preserving path semantics.
+  - Delivered:
+    - Refactored `archive_path_from_part_name` in `xlsx/write_part_paths.mbt`:
+      - replaced `part[1:] catch` stripping with split/join path-part normalization.
+    - Refactored `rels_path_for_part` in `xlsx/write_part_paths.mbt`:
+      - replaced `rev_find` + slice-catch flow with split-based folder/file extraction.
+      - preserved invalid-path guard behavior for empty/leading-slash/trailing-slash inputs.
+  - Validation gates:
+    - `moon test xlsx/write_part_paths_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after144.log`
+  - Coverage delta:
+    - `xlsx/write_part_paths.mbt` uncovered lines reduced from `4` to `0`
+
+- [x] 143. Close low-line-count residuals in `ooxml_rels.mbt`.
+  - DoD: eliminate remaining structural slice-catch residuals in id parsing and relationship-target prefix stripping.
+  - Delivered:
+    - Refactored `parse_id_from_path` in `xlsx/ooxml_rels.mbt`:
+      - replaced `path[start:end] catch` with bounded character collection + parse-int fallback.
+    - Added helper `drop_first_path_segment` and applied it in:
+      - `resolve_rel_target` (absolute-target branch)
+      - `resolve_workbook_rel_target` (absolute-target and `../` branches)
+    - Extended `xlsx/ooxml_rels_wbtest.mbt`:
+      - added edge case `parse_id_from_path("a.xml", "a.x") == 0` to cover prefix-overlap guard.
+  - Validation gates:
+    - `moon test xlsx/ooxml_rels_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after146.log`
+  - Coverage delta:
+    - `xlsx/ooxml_rels.mbt` uncovered lines reduced from `4` to `0`
+
 ## Active Item
 
-- Next item: **142** (continue low-line-count residual reduction in `xlsx/write_part_paths.mbt` with targeted branch tests).
+- Next item: **144** (start bounded high-risk residual reduction in `xlsx/worksheet.mbt` with targeted branch tests).

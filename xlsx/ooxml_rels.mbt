@@ -37,10 +37,30 @@ fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
   }
   let start = prefix_str.length()
   let end = path_str.length() - 4
-  let slice = path_str[start:end] catch { _ => return 0 }
-  @strconv.parse_int(slice.to_string(), base=10) catch {
+  if start > end {
+    return 0
+  }
+  let sb = StringBuilder::new()
+  for i, ch in path_str {
+    if i >= start && i < end {
+      sb.write_view(ch.to_string())
+    }
+  }
+  @strconv.parse_int(sb.to_string(), base=10) catch {
     _ => 0
   }
+}
+
+///|
+fn drop_first_path_segment(path : StringView) -> String {
+  let parts = Array::from_iter(path.split("/"))
+  let rest : Array[String] = []
+  for i, part in parts {
+    if i > 0 {
+      rest.push(part.to_string())
+    }
+  }
+  rest.join("/")
 }
 
 ///|
@@ -73,10 +93,7 @@ fn resolve_rel_target(
 ) -> String raise XlsxError {
   let target_str = target.to_string()
   let raw = if target_str.has_prefix("/") {
-    let rest = target_str[1:] catch {
-        _ => raise InvalidXml(msg="relationship target invalid")
-      }
-    rest.to_string()
+    drop_first_path_segment(target_str)
   } else if target_str.has_prefix("../") {
     "xl/" + base_folder.to_string() + "/" + target_str
   } else if target_str.has_prefix("xl/") {
@@ -100,15 +117,9 @@ fn resolve_rel_target(
 fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
   let target_str = target.to_string()
   let raw = if target_str.has_prefix("/") {
-    let rest = target_str[1:] catch {
-        _ => raise InvalidXml(msg="relationship target invalid")
-      }
-    rest.to_string()
+    drop_first_path_segment(target_str)
   } else if target_str.has_prefix("../") {
-    let rest = target_str[3:] catch {
-        _ => raise InvalidXml(msg="relationship target invalid")
-      }
-    "xl/" + rest.to_string()
+    "xl/" + drop_first_path_segment(target_str)
   } else if target_str.has_prefix("xl/") {
     target_str
   } else {

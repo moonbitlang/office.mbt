@@ -56,6 +56,7 @@ test "ooxml_rels: parse_id_from_path extracts numeric suffix" {
     ),
     content="0",
   )
+  inspect(parse_id_from_path("a.xml", "a.x"), content="0")
 }
 
 ///|
