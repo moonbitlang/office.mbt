@@ -2244,6 +2244,22 @@ fn write_with_io(
       }
     }
   }
+  let pivot_cache_slicer_id_by_cache_id : Map[Int, Int] = {}
+  let mut next_pivot_cache_slicer_id = 1
+  for sheet_pivots in pivots_by_sheet {
+    for entry in sheet_pivots {
+      let (_pivot_id, cache_id, pivot) = entry
+      match parse_pivot_cache_slicer_id(pivot.cache_definition_xml) {
+        Some(id) => {
+          pivot_cache_slicer_id_by_cache_id[cache_id] = id
+          if id >= next_pivot_cache_slicer_id {
+            next_pivot_cache_slicer_id = id + 1
+          }
+        }
+        None => ()
+      }
+    }
+  }
   let slicer_cache_id_by_name : Map[String, Int] = {}
   let slicer_cache_rel_id_by_name : Map[String, String] = {}
   let resolved_slicer_caches : Array[ResolvedSlicerCache] = []
@@ -2296,7 +2312,17 @@ fn write_with_io(
         }
         None =>
           match pivot_lookup.get(source_key) {
-            Some((pivot_cache_id, pivot_sheet_id, pivot)) => {
+            Some((pivot_cache_ref_id, pivot_sheet_id, pivot)) => {
+              let slicer_pivot_cache_id = match
+                pivot_cache_slicer_id_by_cache_id.get(pivot_cache_ref_id) {
+                Some(id) => id
+                None => {
+                  let id = next_pivot_cache_slicer_id
+                  next_pivot_cache_slicer_id = next_pivot_cache_slicer_id + 1
+                  pivot_cache_slicer_id_by_cache_id[pivot_cache_ref_id] = id
+                  id
+                }
+              }
               let rel_id = manifest.add_workbook_relationship_with_id(
                 rel_slicer_cache,
                 slicer_cache_workbook_rel_target(cache_id),
@@ -2311,7 +2337,7 @@ fn write_with_io(
                 is_table_slicer: false,
                 table_id: None,
                 table_column: None,
-                pivot_cache_id: Some(pivot_cache_id),
+                pivot_cache_id: Some(slicer_pivot_cache_id),
                 pivot_sheet_id: Some(pivot_sheet_id),
                 pivot_table_name: Some(pivot.name),
               })
@@ -2632,9 +2658,18 @@ fn write_with_io(
         pivot_table_rels_part_path(pivot_id),
         @encoding/utf8.encode(pivot_rels_xml),
       )
+      let cache_definition_xml = match
+        pivot_cache_slicer_id_by_cache_id.get(cache_id) {
+        Some(slicer_pivot_cache_id) =>
+          ensure_pivot_cache_slicer_id(
+            pivot.cache_definition_xml,
+            slicer_pivot_cache_id,
+          )
+        None => pivot.cache_definition_xml
+      }
       archive.add(
         pivot_cache_definition_part_path(cache_id),
-        @encoding/utf8.encode(pivot.cache_definition_xml),
+        @encoding/utf8.encode(cache_definition_xml),
       )
       manifest.add_content_override(
         content_override_path(pivot_cache_definition_part_path(cache_id)),

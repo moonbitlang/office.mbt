@@ -57,11 +57,29 @@ pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
 }
 
 ///|
+let slicer_ns_main = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+
+///|
+let slicer_ns_x = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+
+///|
+let slicer_ns_x15 = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"
+
+///|
+let slicer_ns_x14 = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+
+///|
+let slicer_ns_xr10 = "http://schemas.microsoft.com/office/spreadsheetml/2016/revision10"
+
+///|
+let slicer_ext_uri_pivot_cache_definition = "{725AE2AE-9491-48be-B2B4-4EB974FC3084}"
+
+///|
 fn write_slicers_part_xml(slicers : ArrayView[Slicer]) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<slicers xmlns=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:xr10=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\">\n",
+    "<slicers xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:xr10=\"\{slicer_ns_xr10}\">\n",
   )
   for slicer in slicers {
     sb.write_view("  <slicer name=\"")
@@ -105,7 +123,7 @@ fn write_slicer_cache_xml_pivot(
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<slicerCacheDefinition xmlns=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\" xmlns:xr10=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" name=\"",
+    "<slicerCacheDefinition xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
   )
   sb.write_view(escape_xml_attr(cache_name))
   sb.write_view("\" sourceName=\"")
@@ -138,7 +156,7 @@ fn write_slicer_cache_xml_table(
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
-    "<slicerCacheDefinition xmlns=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\" xmlns:xr10=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" name=\"",
+    "<slicerCacheDefinition xmlns=\"\{slicer_ns_main}\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:x=\"\{slicer_ns_x}\" xmlns:x15=\"\{slicer_ns_x15}\" xmlns:xr10=\"\{slicer_ns_xr10}\" name=\"",
   )
   sb.write_view(escape_xml_attr(cache_name))
   sb.write_view("\" sourceName=\"")
@@ -155,4 +173,84 @@ fn write_slicer_cache_xml_table(
   sb.write_view("  </extLst>\n")
   sb.write_view("</slicerCacheDefinition>")
   sb.to_string()
+}
+
+///|
+fn parse_pivot_cache_slicer_id(cache_xml : StringView) -> Int? raise XlsxError {
+  match tag_attributes_in(cache_xml, "x14:pivotCacheDefinition") {
+    Some(tag) =>
+      match attr_value(tag, "pivotCacheId") {
+        Some(raw) =>
+          try @strconv.parse_int(raw, base=10) catch {
+            _ => None
+          } noraise {
+            value => Some(value)
+          }
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+fn ensure_pivot_cache_slicer_id(
+  cache_xml : StringView,
+  pivot_cache_id : Int,
+) -> String raise XlsxError {
+  let mut xml = cache_xml.to_string()
+  if parse_pivot_cache_slicer_id(xml) is Some(_) {
+    return xml
+  }
+  if !xml.contains("xmlns:x14=\"\{slicer_ns_x14}\"") {
+    let needle = "<pivotCacheDefinition"
+    match xml.find(needle) {
+      Some(start) => {
+        let rest = xml[start:] catch {
+            _ => raise InvalidXml(msg="pivot cache xml slice invalid")
+          }
+        match rest.find(">") {
+          Some(end_rel) => {
+            let end = start + end_rel
+            let before = xml[:end] catch {
+                _ => raise InvalidXml(msg="pivot cache open tag invalid")
+              }
+            let after = xml[end:] catch {
+                _ => raise InvalidXml(msg="pivot cache open tag invalid")
+              }
+            xml = "\{before} xmlns:x14=\"\{slicer_ns_x14}\"\{after}"
+          }
+          None => ()
+        }
+      }
+      None => ()
+    }
+  }
+  if xml.contains("uri=\"\{slicer_ext_uri_pivot_cache_definition}\"") {
+    return xml
+  }
+  let ext_entry = "    <ext uri=\"\{slicer_ext_uri_pivot_cache_definition}\">\n      <x14:pivotCacheDefinition pivotCacheId=\"\{pivot_cache_id}\"/>\n    </ext>\n"
+  match xml.find("</extLst>") {
+    Some(pos) => {
+      let head = xml[:pos] catch {
+          _ => raise InvalidXml(msg="pivot cache extLst invalid")
+        }
+      let tail = xml[pos:] catch {
+          _ => raise InvalidXml(msg="pivot cache extLst invalid")
+        }
+      return "\{head}\{ext_entry}\{tail}"
+    }
+    None => ()
+  }
+  match xml.find("</pivotCacheDefinition>") {
+    Some(pos) => {
+      let head = xml[:pos] catch {
+          _ => raise InvalidXml(msg="pivot cache close tag invalid")
+        }
+      let tail = xml[pos:] catch {
+          _ => raise InvalidXml(msg="pivot cache close tag invalid")
+        }
+      "\{head}  <extLst>\n\{ext_entry}  </extLst>\n\{tail}"
+    }
+    None => xml
+  }
 }
