@@ -1356,6 +1356,33 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `210` to `195`
 
+- [x] 101. Plan next bounded worksheet hardening slice after item 100.
+  - DoD: pick a low-risk branch cluster with measurable coverage gains and explicit scope.
+  - Delivered:
+    - compared remaining `worksheet.mbt` hotspots after item 100 (`195` uncovered)
+    - selected a bounded picture/header-footer + wrapper cluster:
+      - `add_pivot_table` wrapper pass-through
+      - `normalize_extension` missing/dotted paths via `add_image`
+      - `normalize_picture_options` scale guard via `add_image`
+      - `check_header_footer_image_size` width/height guard via `add_header_footer_image`
+      - `add_picture_from_bytes_with_options` default-option branch fan-in
+    - constrained implementation to one existing wbtest file + targeted validation + coverage delta
+
+- [x] 102. Cover worksheet picture/header-footer guard branches and wrapper defaults.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by exercising selected image/header-footer branch cluster.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused tests for:
+      - `add_pivot_table` wrapper branch
+      - `add_image` dotted extension success + missing extension guards (`"."`, `""`)
+      - `add_image` invalid scale guard (`scale_x <= 0`)
+      - `add_header_footer_image` width/height empty guard errors
+      - `add_picture_from_bytes_with_options` default-`GraphicOptions` branch fan-in (offset/scale/hyperlink/name/flags/positioning defaults)
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `195` to `177`
+
 ## Active Item
 
-- Next item: **101** (select the next bounded worksheet/read/write hardening slice after item 100 coverage measurement).
+- Next item: **103** (add async blackbox coverage for worksheet file-path picture/header-footer branches and then re-measure `worksheet.mbt` coverage).

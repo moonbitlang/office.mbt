@@ -108,3 +108,102 @@ test "worksheet wb: data validation append/clear/error branches" {
     ),
   )
 }
+
+///|
+test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
+  let sheet = Worksheet::new("Sheet1")
+  ignore(
+    sheet.add_pivot_table(
+      "<pivotTableDefinition/>",
+      "<pivotCacheDefinition/>",
+      name="Pivot1",
+    ),
+  )
+  inspect(sheet.pivot_tables().length(), content="1")
+
+  sheet.add_image("A1", [1], ".png", "image/png")
+  inspect(sheet.get_pictures("A1").length(), content="1")
+
+  let dot_extension : Result[Unit, Error] = try? sheet.add_image(
+    "A1",
+    [1],
+    ".",
+    "image/png",
+  )
+  inspect(
+    dot_extension,
+    content=(
+      #|Err(UnsupportedFeature(msg="image extension missing"))
+    ),
+  )
+  let empty_extension : Result[Unit, Error] = try? sheet.add_image(
+    "A1",
+    [1],
+    "",
+    "image/png",
+  )
+  inspect(
+    empty_extension,
+    content=(
+      #|Err(UnsupportedFeature(msg="image extension missing"))
+    ),
+  )
+  let invalid_scale : Result[Unit, Error] = try? sheet.add_image(
+    "A1",
+    [1],
+    ".png",
+    "image/png",
+    scale_x=0.0,
+  )
+  inspect(
+    invalid_scale,
+    content=(
+      #|Err(InvalidSheetOperation(msg="picture scale must be > 0"))
+    ),
+  )
+
+  let missing_width : Result[Unit, Error] = try? sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(Left, [1], ".png", width="", height="8pt"),
+  )
+  inspect(
+    missing_width,
+    content=(
+      #|Err(InvalidHeaderFooter(msg="header/footer width empty"))
+    ),
+  )
+  let missing_height : Result[Unit, Error] = try? sheet.add_header_footer_image(
+    HeaderFooterImageOptions::new(Left, [1], ".png", width="9pt", height=""),
+  )
+  inspect(
+    missing_height,
+    content=(
+      #|Err(InvalidHeaderFooter(msg="header/footer height empty"))
+    ),
+  )
+}
+
+///|
+test "worksheet wb: add_picture_from_bytes_with_options default branches" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.add_picture_from_bytes_with_options(
+    "B2",
+    [1, 2, 3],
+    ".png",
+    GraphicOptions::new(),
+  )
+  let pictures = sheet.get_pictures("B2")
+  inspect(pictures.length(), content="1")
+  let image = pictures[0]
+  inspect(image.offset_x, content="0")
+  inspect(image.offset_y, content="0")
+  inspect(image.scale_x == 1.0, content="true")
+  inspect(image.scale_y == 1.0, content="true")
+  inspect(image.hyperlink == "", content="true")
+  inspect(image.hyperlink_type, content="Unset")
+  inspect(image.name == "", content="true")
+  inspect(image.alt_text == "", content="true")
+  inspect(image.lock_aspect_ratio, content="false")
+  inspect(image.print_object, content="true")
+  inspect(image.locked, content="true")
+  inspect(image.positioning, content="OneCell")
+}
