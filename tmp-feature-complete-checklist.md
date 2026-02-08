@@ -879,14 +879,24 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 66. Add mixed-ext relationship-id uniqueness test across three-cycle roundtrip output.
+- [x] 66. Add mixed-ext relationship-id uniqueness test across three-cycle roundtrip output.
   - DoD: verify relationship IDs/targets in worksheet and drawing rels remain unique/non-duplicated after three-cycle roundtrip.
+  - Delivered:
+    - Added `xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`:
+      - reuses pivot-backed mixed-ext scenario with three write/read cycles
+      - validates worksheet/drawing relationship IDs remain unique in final-cycle output
+      - validates relationship targets are present and resolve to existing OOXML parts
+    - Validation gates:
+      - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 67. Run combined gate for three-cycle mixed-ext stability + relationship uniqueness.
+  - DoD: execute `63`, `64`, and `66` related integration tests together and keep gate green.
   - Planned:
-    - reuse three-cycle fixture from `63`
-    - parse final-cycle worksheet and drawing rels
-    - assert unique `Id` values and valid target fan-out for drawing/chart/slicer
-    - run targeted integration test + `moon check --deny-warn`
+    - run mixed-ext integration pack plus new relationship-uniqueness test
+    - run `moon check --deny-warn`
+    - record consolidated pass status
 
 ## Active Item
 
-- Next item: **66** (mixed-ext relationship-id uniqueness after three cycles).
+- Next item: **67** (combined mixed-ext stability + relationship uniqueness gate).
