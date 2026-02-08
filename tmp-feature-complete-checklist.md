@@ -1132,13 +1132,24 @@ Commands used:
       - tests: `1/1`, `9/9`, `10/10`, `1/1` passed
       - check: pass
 
-- [ ] 85. Re-run full release gate after non-integration tranche (81-84).
+- [x] 85. Re-run full release gate after non-integration tranche (81-84).
   - DoD: ensure full project gates remain green after non-integration changes.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`879/879`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 86. Refresh baseline snapshot after non-integration tranche closure.
+  - DoD: synchronize top-level baseline metadata/totals with latest full-gate results.
   - Planned:
-    - run `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
-    - record totals and any deltas from prior baseline
-    - keep checklist baseline synchronized with latest totals
+    - update `Last updated` and `Branch/HEAD` metadata
+    - update latest full-gate totals to `879/879`
+    - keep parity snapshot notes consistent with post-item-85 state
 
 ## Active Item
 
-- Next item: **85** (full release gate after non-integration tranche).
+- Next item: **86** (baseline snapshot refresh after item 85 gate).
