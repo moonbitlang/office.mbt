@@ -37,16 +37,18 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
       name="PivotData",
     ),
   )
-  workbook.add_slicer("Dash", SlicerOptions::new("Region", "A1", "Data", "PivotData"))
+  workbook.add_slicer(
+    "Dash",
+    SlicerOptions::new("Region", "A1", "Data", "PivotData"),
+  )
 
   dash.set_cell_value("C2", Numeric(10.0))
   dash.set_cell_value("C3", Numeric(24.0))
   dash.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(
-    ["G2", "G3", "G4"],
-    ["'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5"],
-  )
+  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+    "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
+  ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dash", sparkline_opts)
@@ -89,11 +91,17 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
     None => fail("missing dash xml after cycle 3")
   }
 
-  inspect(sheet_xml3.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"), content="true")
-  inspect(sheet_xml3.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"), content="true")
+  inspect(
+    sheet_xml3.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"),
+    content="true",
+  )
+  inspect(
+    sheet_xml3.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"),
+    content="true",
+  )
   inspect(
     sheet_xml3.contains("{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}") ||
-      sheet_xml3.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}"),
+    sheet_xml3.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}"),
     content="true",
   )
   inspect(sheet_xml3.contains("x14:sparklineGroups"), content="true")
@@ -105,8 +113,15 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
     content="1",
   )
   inspect(archive3.get("xl/charts/chart1.xml") is Some(_), content="true")
-  inspect(archive3.get("xl/drawings/drawing1.xml") is Some(_) || archive3.get("xl/drawings/drawing2.xml") is Some(_), content="true")
-  inspect(archive3.get("xl/slicerCaches/slicerCache1.xml") is Some(_), content="true")
+  inspect(
+    archive3.get("xl/drawings/drawing1.xml") is Some(_) ||
+    archive3.get("xl/drawings/drawing2.xml") is Some(_),
+    content="true",
+  )
+  inspect(
+    archive3.get("xl/slicerCaches/slicerCache1.xml") is Some(_),
+    content="true",
+  )
   inspect(archive3.get("xl/slicers/slicer1.xml") is Some(_), content="true")
   inspect(
     archive3.get("xl/pivotCache/pivotCacheDefinition1.xml") is Some(_),

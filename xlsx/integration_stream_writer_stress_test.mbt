@@ -17,19 +17,13 @@ test "integration stream writer stress with styles formulas and table" {
       StreamCell::new("\{n}"),
       StreamCell::new("\{double}"),
       StreamCell::new("\{triple}"),
-      StreamCell::new(
-        "\{total}",
-        formula="SUM(B\{row}:C\{row})",
-        style_id=style_id,
-      ),
+      StreamCell::new("\{total}", formula="SUM(B\{row}:C\{row})", style_id~),
     ])
   }
   ignore(
-    writer.add_table(
-      "A1:D1201",
-      "StreamStress",
-      ["N", "Double", "Triple", "Total"],
-    ),
+    writer.add_table("A1:D1201", "StreamStress", [
+      "N", "Double", "Triple", "Total",
+    ]),
   )
   writer.flush()
 
@@ -57,7 +51,10 @@ test "integration stream writer stress with styles formulas and table" {
     Some(value) => value
     None => fail("missing parsed Data sheet")
   }
-  inspect(sheet.get_row(1), content="[\"N\", \"Double\", \"Triple\", \"Total\"]")
+  inspect(
+    sheet.get_row(1),
+    content="[\"N\", \"Double\", \"Triple\", \"Total\"]",
+  )
   inspect(sheet.get_cell_formula("D1201"), content="Some(\"SUM(B1201:C1201)\")")
   inspect(sheet.get_cell("D1201"), content="Some(\"6000\")")
   inspect(parsed.get_col_style("Data", 4), content="Some(\{style_id})")

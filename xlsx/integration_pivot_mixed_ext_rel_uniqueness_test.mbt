@@ -23,16 +23,18 @@ test "integration three-cycle mixed ext relationship ids remain unique" {
       name="PivotData",
     ),
   )
-  workbook.add_slicer("Dash", SlicerOptions::new("Region", "A1", "Data", "PivotData"))
+  workbook.add_slicer(
+    "Dash",
+    SlicerOptions::new("Region", "A1", "Data", "PivotData"),
+  )
 
   dash.set_cell_value("C2", Numeric(10.0))
   dash.set_cell_value("C3", Numeric(24.0))
   dash.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(
-    ["G2", "G3", "G4"],
-    ["'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5"],
-  )
+  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+    "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
+  ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dash", sparkline_opts)
@@ -57,11 +59,13 @@ test "integration three-cycle mixed ext relationship ids remain unique" {
   let bytes3 = write(read(bytes2))
   let archive = @zip.read(bytes3)
 
-  let sheet_rels_xml = match archive.get("xl/worksheets/_rels/sheet2.xml.rels") {
+  let sheet_rels_xml = match
+    archive.get("xl/worksheets/_rels/sheet2.xml.rels") {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing sheet rels")
   }
-  let drawing_rels_xml = match archive.get("xl/drawings/_rels/drawing1.xml.rels") {
+  let drawing_rels_xml = match
+    archive.get("xl/drawings/_rels/drawing1.xml.rels") {
     Some(value) => @encoding/utf8.decode(value)
     None =>
       match archive.get("xl/drawings/_rels/drawing2.xml.rels") {

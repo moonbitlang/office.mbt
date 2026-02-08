@@ -25,10 +25,9 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
     SlicerOptions::new("Region", "A1", "Data", "MixTable"),
   )
 
-  let sparkline_opts = SparklineOptions::new(
-    ["G2", "G3", "G4"],
-    ["'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5"],
-  )
+  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+    "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
+  ])
   sparkline_opts.set_markers(true)
   workbook.add_sparkline_options("Dash", sparkline_opts)
 
@@ -76,14 +75,23 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing updated dash xml")
   }
-  inspect(updated_sheet_xml.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"), content="true")
-  inspect(updated_sheet_xml.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"), content="true")
   inspect(
-    updated_sheet_xml.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}") ||
-      updated_sheet_xml.contains("{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}"),
+    updated_sheet_xml.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"),
     content="true",
   )
-  inspect(updated_sheet_xml.contains("x14:conditionalFormattings"), content="true")
+  inspect(
+    updated_sheet_xml.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"),
+    content="true",
+  )
+  inspect(
+    updated_sheet_xml.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}") ||
+    updated_sheet_xml.contains("{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}"),
+    content="true",
+  )
+  inspect(
+    updated_sheet_xml.contains("x14:conditionalFormattings"),
+    content="true",
+  )
   inspect(updated_sheet_xml.contains("x14:sparklineGroups"), content="true")
   inspect(updated_sheet_xml.contains("x14:slicerList"), content="true")
 

@@ -75,16 +75,18 @@ test "integration pivot-backed slicer with sparkline and x14 data bar" {
       name="PivotData",
     ),
   )
-  workbook.add_slicer("Dash", SlicerOptions::new("Region", "A1", "Data", "PivotData"))
+  workbook.add_slicer(
+    "Dash",
+    SlicerOptions::new("Region", "A1", "Data", "PivotData"),
+  )
 
   dash.set_cell_value("C2", Numeric(10.0))
   dash.set_cell_value("C3", Numeric(24.0))
   dash.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(
-    ["G2", "G3", "G4"],
-    ["'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5"],
-  )
+  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+    "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
+  ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dash", sparkline_opts)
@@ -109,11 +111,17 @@ test "integration pivot-backed slicer with sparkline and x14 data bar" {
     None => fail("missing dash rels")
   }
 
-  inspect(sheet_xml.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"), content="true")
-  inspect(sheet_xml.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"), content="true")
+  inspect(
+    sheet_xml.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"),
+    content="true",
+  )
+  inspect(
+    sheet_xml.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"),
+    content="true",
+  )
   inspect(
     sheet_xml.contains("{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}") ||
-      sheet_xml.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}"),
+    sheet_xml.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}"),
     content="true",
   )
   inspect(sheet_xml.contains("x14:sparklineGroups"), content="true")
@@ -126,8 +134,14 @@ test "integration pivot-backed slicer with sparkline and x14 data bar" {
   )
 
   let targets = rel_attr_values_pivot_mix(rels_xml, "Target")
-  inspect(has_value_pivot_mix(targets[:], "../slicers/slicer1.xml"), content="true")
-  inspect(archive.get("xl/slicerCaches/slicerCache1.xml") is Some(_), content="true")
+  inspect(
+    has_value_pivot_mix(targets[:], "../slicers/slicer1.xml"),
+    content="true",
+  )
+  inspect(
+    archive.get("xl/slicerCaches/slicerCache1.xml") is Some(_),
+    content="true",
+  )
   inspect(archive.get("xl/slicers/slicer1.xml") is Some(_), content="true")
   inspect(
     archive.get("xl/pivotCache/pivotCacheDefinition1.xml") is Some(_),
