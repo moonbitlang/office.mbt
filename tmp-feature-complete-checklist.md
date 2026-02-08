@@ -890,13 +890,31 @@ Commands used:
       - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 67. Run combined gate for three-cycle mixed-ext stability + relationship uniqueness.
+- [x] 67. Run combined gate for three-cycle mixed-ext stability + relationship uniqueness.
   - DoD: execute `63`, `64`, and `66` related integration tests together and keep gate green.
+  - Delivered:
+    - Executed combined mixed-ext stability/uniqueness gate:
+      - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_three_cycle_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all nine integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 68. Re-run full release gate after mixed-ext stability/uniqueness tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `66/67`.
   - Planned:
-    - run mixed-ext integration pack plus new relationship-uniqueness test
-    - run `moon check --deny-warn`
-    - record consolidated pass status
+    - execute full release gate command
+    - capture updated total test count and parity status
+    - refresh baseline snapshot if totals changed
 
 ## Active Item
 
-- Next item: **67** (combined mixed-ext stability + relationship uniqueness gate).
+- Next item: **68** (full release gate after mixed-ext stability/uniqueness tranche).
