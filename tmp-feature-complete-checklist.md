@@ -1272,13 +1272,39 @@ Commands used:
     - Coverage delta:
       - `xlsx/read_drawing_xml.mbt` uncovered lines reduced from `108` to `90`
 
-- [ ] 95. Plan next bounded parser hardening slice after `read_drawing_xml` coverage gain.
+- [x] 95. Plan next bounded parser hardening slice after `read_drawing_xml` coverage gain.
   - DoD: choose next high-impact uncovered parser file and define explicit branch targets.
+  - Delivered:
+    - Compared remaining parser-heavy candidates from coverage:
+      - `xlsx/read.mbt` (`419` uncovered before this slice)
+      - `xlsx/worksheet.mbt` (`210` uncovered)
+      - `xlsx/write.mbt` (`96` uncovered)
+    - Selected bounded next read-path hardening target:
+      - `read_with_password` non-encrypted branches in `xlsx/read.mbt` (transcoder `Some`/`None` paths)
+    - Defined measurable DoD:
+      - add targeted tests for both non-encrypted `read_with_password` branch variants
+      - run focused tests + `moon check --deny-warn`
+      - confirm `xlsx/read.mbt` uncovered-line reduction
+
+- [x] 96. Cover non-encrypted `read_with_password` branch variants in `xlsx/read.mbt`.
+  - DoD: execute both transcoder and non-transcoder branches in `read_with_password` when input is not encrypted.
+  - Delivered:
+    - Added focused tests in `xlsx/encryption_wbtest.mbt`:
+      - `read_with_password non-encrypted workbook accepts transcoder path`
+      - `read_with_password non-encrypted workbook without transcoder`
+    - Validation gates:
+      - `moon test xlsx/encryption_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/read.mbt` uncovered lines reduced from `419` to `417`
+
+- [ ] 97. Plan next bounded hardening slice after `read_with_password` branch closure.
+  - DoD: choose the next smallest high-value parser/serializer target with explicit branch scope.
   - Planned:
-    - compare remaining uncovered parser candidates (`read`, `worksheet`, `write`)
-    - select smallest high-value slice with measurable coverage delta
-    - continue one-by-one commit cadence
+    - inspect remaining uncovered clusters in `write.mbt` and `worksheet.mbt`
+    - pick one bounded slice with clear branch list and measurable delta
+    - continue one-by-one implementation + commit cadence
 
 ## Active Item
 
-- Next item: **95** (next parser hardening slice selection).
+- Next item: **97** (next bounded hardening slice selection).

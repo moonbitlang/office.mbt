@@ -504,6 +504,39 @@ test "read encrypted without password" {
 }
 
 ///|
+test "read_with_password non-encrypted workbook accepts transcoder path" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell("A1", "Plain")
+  let bytes = write(workbook)
+  let transcoder = (_name : String, data : Bytes) => {
+    @encoding/utf8.decode(data) catch {
+      _ => raise InvalidXml(msg="transcoder decode failed")
+    }
+  }
+  let parsed = read_with_password(bytes, "ignored", transcoder~)
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing Sheet1")
+  }
+  inspect(parsed_sheet.get_cell("A1"), content="Some(\"Plain\")")
+}
+
+///|
+test "read_with_password non-encrypted workbook without transcoder" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell("A1", "PlainNoTranscoder")
+  let bytes = write(workbook)
+  let parsed = read_with_password(bytes, "ignored")
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing Sheet1")
+  }
+  inspect(parsed_sheet.get_cell("A1"), content="Some(\"PlainNoTranscoder\")")
+}
+
+///|
 test "write encrypted roundtrip" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
