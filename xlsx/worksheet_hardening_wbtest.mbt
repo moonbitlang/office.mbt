@@ -713,3 +713,68 @@ test "worksheet wb: row insert/remove structural guard and adjustment branches" 
   sheet.remove_row(5)
   inspect(sheet.get_cell("A5"), content="None")
 }
+
+///|
+test "worksheet wb: duplicate-row helper edge branches" {
+  let (row, col, abs_col, abs_row) = parse_cell_ref_with_abs("$B$3")
+  inspect(row, content="3")
+  inspect(col, content="2")
+  inspect(abs_col, content="true")
+  inspect(abs_row, content="true")
+  let bad_no_col : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
+    "1A",
+  )
+  inspect(bad_no_col is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_invalid_char : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
+    "A1X",
+  )
+  inspect(bad_invalid_char is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_no_row : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
+    "A",
+  )
+  inspect(bad_no_row is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_zero_row : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
+    "A0",
+  )
+  inspect(bad_zero_row is Err(XlsxError::InvalidCellRef(_)), content="true")
+
+  inspect(format_cell_ref_with_abs(3, 2, true, true) == "$B$3", content="true")
+  let bad_format : Result[String, Error] = try? format_cell_ref_with_abs(
+    0, 1, false, false,
+  )
+  inspect(bad_format is Err(XlsxError::InvalidCellRef(_)), content="true")
+
+  let refs = duplicate_sqref_for_row(1, 2, "  A1:A1   B1:B2  ")
+  inspect(refs, content="[\"A2:A2\"]")
+
+  inspect(duplicate_xml_sqref("<foo/>", 1, 2), content="None")
+  inspect(
+    duplicate_xml_sqref("<dataValidation type=\"list\"></dataValidation>", 1, 2),
+    content="None",
+  )
+
+  let dv = Worksheet::new("Sheet1")
+  dv.add_data_validation_xml("<foo/>")
+  dv.duplicate_data_validations(1, 2)
+  inspect(dv.data_validations().length(), content="1")
+
+  let merge_early = Worksheet::new("MergeEarly")
+  merge_early.merge_cells("A1:A3")
+  merge_early.duplicate_merge_cells(1, 2)
+  inspect(merge_early.merged_cells().length(), content="1")
+
+  let merge_shift = Worksheet::new("MergeShift")
+  merge_shift.merge_cells("A4:B4")
+  merge_shift.duplicate_merge_cells(3, 1)
+  inspect(merge_shift.merged_cells().contains("A1:B1"), content="true")
+
+  let duplicate = Worksheet::new("Duplicate")
+  duplicate.set_row(1, ["A"][:])
+  duplicate.duplicate_row(1)
+  inspect(duplicate.get_row(2), content="[\"A\"]")
+  let bad_target : Result[Unit, Error] = try? duplicate.duplicate_row_to(1, 1)
+  inspect(
+    bad_target is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+}

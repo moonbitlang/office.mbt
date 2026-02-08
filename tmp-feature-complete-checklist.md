@@ -1511,6 +1511,29 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `86` to `68`
 
+- [x] 111. Cover duplicate-row helper edge branches.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by targeting duplicate-row helper parse/format/no-op/guard branches.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `parse_cell_ref_with_abs`:
+        - absolute col/row parsing (`$B$3`)
+        - invalid-ref error branches (`1A`, `A1X`, `A`, `A0`)
+      - `format_cell_ref_with_abs`:
+        - `$` output branches for absolute col/row
+        - invalid-row guard branch
+      - `duplicate_sqref_for_row` empty-token skip branch
+      - `duplicate_xml_sqref` no-op branches (`conditionalFormatting`/`dataValidation` tag missing, `sqref` missing)
+      - `duplicate_data_validations` `None` branch
+      - `duplicate_merge_cells`:
+        - early-return branch when target row lies inside an existing merged span
+        - `source_row = row + 1` branch for downward-to-upward duplication
+      - `duplicate_row` wrapper branch and `duplicate_row_to` same-target guard branch
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `68` to `51`
+
 ## Active Item
 
-- Next item: **111** (cover duplicate-row helper edge branches: absolute-reference parsing/formatting, `duplicate_xml_sqref` no-op paths, and `duplicate_merge_cells` branch exits).
+- Next item: **112** (cover column insert/remove structural edge branches including auto-filter/hyperlink/image/chart adjustment paths and `remove_col` wrapper).
