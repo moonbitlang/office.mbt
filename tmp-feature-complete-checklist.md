@@ -1599,6 +1599,24 @@ Commands used:
     - Coverage delta:
       - `xlsx/write.mbt` uncovered lines reduced from `89` to `78`
 
+- [x] 116. Continue bounded `write.mbt` hardening on drawing anchor/slicer branches.
+  - DoD: reduce uncovered lines in `xlsx/write.mbt` by covering remaining chart absolute-with-sheet and slicer positioning/default option branches.
+  - Delivered:
+    - Extended `xlsx/write_hardening_wbtest.mbt` with:
+      - `write_drawing_xml(Some(sheet), chart=Absolute)` branch coverage
+      - slicer drawing branch matrix coverage:
+        - `scale_x` / `scale_y` `Some(v)` normalization paths
+        - default `positioning=None -> TwoCell`
+        - `TwoCell`, `Absolute`, and `OneCell` anchor/close branches
+        - default `locked` / `print_object` fallbacks
+      - validation assertions for both table-slicer and pivot-slicer markup-choice paths
+    - Validation gates:
+      - `moon test xlsx/write_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after116.log`
+    - Coverage delta:
+      - `xlsx/write.mbt` uncovered lines reduced from `78` to `68`
+
 ## Active Item
 
-- Next item: **116** (continue bounded `write.mbt` hardening for remaining drawing/shape branches with another targeted wbtest slice).
+- Next item: **117** (target non-drawing `write.mbt` option emitters: `write_sheet_pr_xml`, `write_sheet_format_pr_xml`, and `write_sheet_views_xml` branch matrix).

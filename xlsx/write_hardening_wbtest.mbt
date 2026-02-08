@@ -93,6 +93,45 @@ fn wb_shape_for_anchor(
 }
 
 ///|
+fn wb_drawing_slicer(
+  name : String,
+  positioning : PicturePositioning?,
+  scale_x : Double?,
+  scale_y : Double?,
+  is_table_slicer : Bool,
+) -> DrawingSlicer {
+  let format = GraphicOptions::new()
+  match positioning {
+    Some(value) => format.positioning = Some(value)
+    None => ()
+  }
+  match scale_x {
+    Some(value) => format.scale_x = Some(value)
+    None => ()
+  }
+  match scale_y {
+    Some(value) => format.scale_y = Some(value)
+    None => ()
+  }
+  let slicer : Slicer = {
+    name,
+    cache: "Slicer_" + name,
+    source_name: name,
+    cell: "C3",
+    table_sheet: "Sheet1",
+    table_name: "Table1",
+    caption: "",
+    macro_name: "",
+    width: 200,
+    height: 200,
+    display_header: None,
+    item_desc: false,
+    format,
+  }
+  { slicer, is_table_slicer }
+}
+
+///|
 test "write hardening wb: write_drawing_xml uses None-sheet fallback for two-cell anchors" {
   let xml = write_drawing_xml(None, [wb_drawing_image(TwoCell)], [], [], [])
   inspect(xml.contains("<xdr:twoCellAnchor>"), content="true")
@@ -258,4 +297,43 @@ test "write hardening wb: two_cell_axis_to skips zero-size cells" {
   let xml = write_drawing_xml(Some(sheet), [wb_drawing_image(TwoCell)], [], [], [])
   inspect(xml.contains("<xdr:twoCellAnchor>"), content="true")
   inspect(xml.contains("<xdr:col>2</xdr:col>"), content="true")
+}
+
+///|
+test "write hardening wb: write_drawing_xml covers chart absolute with sheet anchors" {
+  let sheet = Worksheet::new("Sheet1")
+  let xml = write_drawing_xml(
+    Some(sheet),
+    [],
+    [wb_drawing_chart(Absolute)],
+    [],
+    [],
+  )
+  inspect(xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"), content="true")
+  inspect(wb_count_substr(xml, "<xdr:to>"), content="1")
+}
+
+///|
+test "write hardening wb: write_drawing_xml covers slicer positioning and defaults" {
+  let two = wb_drawing_slicer("SlicerTwo", None, Some(0.0), Some(-1.0), true)
+  let abs = wb_drawing_slicer(
+    "SlicerAbs",
+    Some(Absolute),
+    None,
+    None,
+    false,
+  )
+  let one = wb_drawing_slicer(
+    "SlicerOne",
+    Some(OneCell),
+    None,
+    None,
+    false,
+  )
+  let xml = write_drawing_xml(None, [], [], [], [two, abs, one])
+  inspect(xml.contains("Requires=\"sle15\""), content="true")
+  inspect(xml.contains("Requires=\"a14\""), content="true")
+  inspect(xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"), content="true")
+  inspect(xml.contains("<xdr:oneCellAnchor>"), content="true")
+  inspect(xml.contains("fLocksWithSheet=\"1\" fPrintsWithSheet=\"1\""), content="true")
 }
