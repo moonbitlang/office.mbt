@@ -88,7 +88,7 @@ fn wb_shape_for_anchor(
     "rect",
     paragraph=[{ text: "shape", font: Some(font) }],
     line_width=2.0,
-    positioning=positioning,
+    positioning~,
   )
 }
 
@@ -263,7 +263,10 @@ test "write hardening wb: write_drawing_xml covers chart none-sheet anchor branc
     [],
     [],
   )
-  inspect(xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"), content="true")
+  inspect(
+    xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
+  )
   inspect(wb_count_substr(xml, "<xdr:graphicFrame>"), content="2")
   inspect(wb_count_substr(xml, "</xdr:twoCellAnchor>") >= 2, content="true")
 }
@@ -276,14 +279,11 @@ test "write hardening wb: write_drawing_xml covers shape none-sheet and run-font
   let shape_abs = wb_shape_for_anchor(Absolute) catch {
     err => fail("shape init failed: \{err}")
   }
-  let xml = write_drawing_xml(
-    None,
-    [],
-    [],
-    [shape_two, shape_abs],
-    [],
+  let xml = write_drawing_xml(None, [], [], [shape_two, shape_abs], [])
+  inspect(
+    xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
   )
-  inspect(xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"), content="true")
   inspect(xml.contains("<a:ln w=\"25400\"/>"), content="true")
   inspect(xml.contains("strike=\"sngStrike\""), content="true")
   inspect(wb_count_substr(xml, "<xdr:sp>"), content="2")
@@ -294,7 +294,13 @@ test "write hardening wb: two_cell_axis_to skips zero-size cells" {
   let sheet = Worksheet::new("Sheet1")
   sheet.set_col_visible(2, false)
   sheet.set_row_visible(3, false)
-  let xml = write_drawing_xml(Some(sheet), [wb_drawing_image(TwoCell)], [], [], [])
+  let xml = write_drawing_xml(
+    Some(sheet),
+    [wb_drawing_image(TwoCell)],
+    [],
+    [],
+    [],
+  )
   inspect(xml.contains("<xdr:twoCellAnchor>"), content="true")
   inspect(xml.contains("<xdr:col>2</xdr:col>"), content="true")
 }
@@ -309,33 +315,30 @@ test "write hardening wb: write_drawing_xml covers chart absolute with sheet anc
     [],
     [],
   )
-  inspect(xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"), content="true")
+  inspect(
+    xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
+  )
   inspect(wb_count_substr(xml, "<xdr:to>"), content="1")
 }
 
 ///|
 test "write hardening wb: write_drawing_xml covers slicer positioning and defaults" {
   let two = wb_drawing_slicer("SlicerTwo", None, Some(0.0), Some(-1.0), true)
-  let abs = wb_drawing_slicer(
-    "SlicerAbs",
-    Some(Absolute),
-    None,
-    None,
-    false,
-  )
-  let one = wb_drawing_slicer(
-    "SlicerOne",
-    Some(OneCell),
-    None,
-    None,
-    false,
-  )
+  let abs = wb_drawing_slicer("SlicerAbs", Some(Absolute), None, None, false)
+  let one = wb_drawing_slicer("SlicerOne", Some(OneCell), None, None, false)
   let xml = write_drawing_xml(None, [], [], [], [two, abs, one])
   inspect(xml.contains("Requires=\"sle15\""), content="true")
   inspect(xml.contains("Requires=\"a14\""), content="true")
-  inspect(xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"), content="true")
+  inspect(
+    xml.contains("<xdr:twoCellAnchor editAs=\"absolute\">"),
+    content="true",
+  )
   inspect(xml.contains("<xdr:oneCellAnchor>"), content="true")
-  inspect(xml.contains("fLocksWithSheet=\"1\" fPrintsWithSheet=\"1\""), content="true")
+  inspect(
+    xml.contains("fLocksWithSheet=\"1\" fPrintsWithSheet=\"1\""),
+    content="true",
+  )
 }
 
 ///|
@@ -375,7 +378,10 @@ test "write hardening wb: sheet property emitters cover option branches" {
   let format_xml = write_sheet_format_pr_xml(
     SheetPropsOptions::with_values(base_col_width=8),
   )
-  inspect(format_xml.contains("<sheetFormatPr baseColWidth=\"8\""), content="true")
+  inspect(
+    format_xml.contains("<sheetFormatPr baseColWidth=\"8\""),
+    content="true",
+  )
 }
 
 ///|
@@ -472,16 +478,8 @@ test "write hardening wb: write_worksheet_xml covers x14 map aggregation and unk
 test "write hardening wb: write_theme_xml covers custom palette and fallback branches" {
   let custom = write_theme_xml(
     Some([
-      "111111",
-      "222222",
-      "333333",
-      "444444",
-      "555555",
-      "666666",
-      "777777",
-      "888888",
-      "999999",
-      "AAAAAA",
+      "111111", "222222", "333333", "444444", "555555", "666666", "777777", "888888",
+      "999999", "AAAAAA",
     ]),
   )
   inspect(custom.contains("<a:themeElements>"), content="true")
@@ -574,7 +572,10 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     None,
     None,
   )
-  inspect(missing_rich is Err(XlsxError::InvalidSharedString(_)), content="true")
+  inspect(
+    missing_rich is Err(XlsxError::InvalidSharedString(_)),
+    content="true",
+  )
 
   let plain_missing = Worksheet::new("PlainMissing")
   plain_missing.cells.push({
@@ -615,13 +616,15 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     {},
     {},
     {},
-    [{
-      reference: "A1",
-      target: "",
-      link_type: Unset,
-      display: None,
-      tooltip: None,
-    }],
+    [
+      {
+        reference: "A1",
+        target: "",
+        link_type: Unset,
+        display: None,
+        tooltip: None,
+      },
+    ],
     None,
     None,
     [],
@@ -640,13 +643,15 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     {},
     {},
     {},
-    [{
-      reference: "A1",
-      target: "https://example.com",
-      link_type: External,
-      display: None,
-      tooltip: None,
-    }],
+    [
+      {
+        reference: "A1",
+        target: "https://example.com",
+        link_type: External,
+        display: None,
+        tooltip: None,
+      },
+    ],
     None,
     None,
     [],
@@ -664,22 +669,20 @@ test "write hardening wb: write_with_io covers file-path extension fallback bran
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
 
-  let no_ext = write_with_io(
-    workbook,
-    { file_path: Some("demo"), zip_writer: None, charset_transcoder: None },
-  ) catch {
+  let no_ext = write_with_io(workbook, {
+    file_path: Some("demo"),
+    zip_writer: None,
+    charset_transcoder: None,
+  }) catch {
     err => fail("write_with_io without extension failed: \{err}")
   }
   inspect(no_ext.length() > 0, content="true")
 
-  let unsupported_ext = write_with_io(
-    workbook,
-    {
-      file_path: Some("demo.unsupported"),
-      zip_writer: None,
-      charset_transcoder: None,
-    },
-  ) catch {
+  let unsupported_ext = write_with_io(workbook, {
+    file_path: Some("demo.unsupported"),
+    zip_writer: None,
+    charset_transcoder: None,
+  }) catch {
     err => fail("write_with_io unsupported extension failed: \{err}")
   }
   inspect(unsupported_ext.length() > 0, content="true")
@@ -689,9 +692,7 @@ test "write hardening wb: write_with_io covers file-path extension fallback bran
 test "write hardening wb: write_with_password empty password returns raw bytes" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let raw = write(workbook) catch {
-    err => fail("write failed: \{err}")
-  }
+  let raw = write(workbook) catch { err => fail("write failed: \{err}") }
   let with_empty_password = write_with_password(workbook, "") catch {
     err => fail("write_with_password failed: \{err}")
   }
@@ -713,9 +714,7 @@ test "write hardening wb: write merges base vml with form-control and comment vm
     width: None,
     height: None,
   })
-  let bytes = write(workbook) catch {
-    err => fail("write failed: \{err}")
-  }
+  let bytes = write(workbook) catch { err => fail("write failed: \{err}") }
   inspect(bytes.length() > 0, content="true")
 }
 
@@ -786,9 +785,7 @@ test "write hardening wb: write handles duplicate pivot cache relationship entri
     cache_definition_xml: "<pivotCacheDefinition/>",
     cache_records_xml: None,
   })
-  let bytes = write(workbook) catch {
-    err => fail("write failed: \{err}")
-  }
+  let bytes = write(workbook) catch { err => fail("write failed: \{err}") }
   inspect(bytes.length() > 0, content="true")
 }
 

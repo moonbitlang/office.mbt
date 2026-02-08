@@ -1603,12 +1603,14 @@ fn write_worksheet_xml(
     cols.sort_by((a, b) => a - b)
     sb.write_view("  <cols>\n")
     for col in cols {
-      let dim = sheet.col_dimensions.get(col).unwrap_or({
-        width: None,
-        hidden: false,
-        outline_level: 0,
-        style_id: None,
-      })
+      let dim = sheet.col_dimensions
+        .get(col)
+        .unwrap_or({
+          width: None,
+          hidden: false,
+          outline_level: 0,
+          style_id: None,
+        })
       write_col_attributes(sb, col, dim)
     }
     sb.write_view("  </cols>\n")

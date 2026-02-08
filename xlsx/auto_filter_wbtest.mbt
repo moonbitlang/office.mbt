@@ -1,8 +1,7 @@
 ///|
 test "auto filter wb: parse_filter_tokens rejects non-3 token input" {
   let bad_tokens : Result[(Int, String), Error] = try? parse_filter_tokens([
-    "x",
-    "==",
+    "x", "==",
   ])
   inspect(bad_tokens is Err(XlsxError::InvalidAutoFilter(_)), content="true")
 }

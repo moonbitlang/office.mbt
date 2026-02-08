@@ -34,10 +34,7 @@ test "slicer duplicate names and cache reuse" {
 ///|
 test "slicer options required-fields and size guards" {
   let missing : Result[SlicerOptions, Error] = try? SlicerOptions::new(
-    "",
-    "A1",
-    "Sheet1",
-    "Table1",
+    "", "A1", "Sheet1", "Table1",
   )
   inspect(missing is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 

@@ -42,10 +42,7 @@ test "workbook protection mismatched password on no-hash protection" {
   let bad : Result[Unit, Error] = try? workbook.unprotect_workbook(
     password="secret",
   )
-  inspect(
-    bad is Err(XlsxError::InvalidWorkbookProtection(_)),
-    content="true",
-  )
+  inspect(bad is Err(XlsxError::InvalidWorkbookProtection(_)), content="true")
 }
 
 ///|

@@ -794,14 +794,18 @@ test "worksheet wb: col insert/remove structural edge branches" {
   let guard_sheet = Worksheet::new("Guard")
   let bad_insert_col : Result[Unit, Error] = try? guard_sheet.insert_cols(0, 1)
   inspect(bad_insert_col is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_insert_count : Result[Unit, Error] = try? guard_sheet.insert_cols(1, 0)
+  let bad_insert_count : Result[Unit, Error] = try? guard_sheet.insert_cols(
+    1, 0,
+  )
   inspect(
     bad_insert_count is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
   let bad_remove_col : Result[Unit, Error] = try? guard_sheet.remove_cols(0, 1)
   inspect(bad_remove_col is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_remove_count : Result[Unit, Error] = try? guard_sheet.remove_cols(1, 0)
+  let bad_remove_count : Result[Unit, Error] = try? guard_sheet.remove_cols(
+    1, 0,
+  )
   inspect(
     bad_remove_count is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
