@@ -303,3 +303,68 @@ test "worksheet wb: autofit hits hidden/zero/outline pixel branches" {
   inspect(outline_image.width_emu, content="609600")
   inspect(outline_image.height_emu, content="171450")
 }
+
+///|
+test "worksheet wb: chart option guards and reference helper copies" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.add_picture_from_bytes("A1", [1], ".png")
+
+  let opts = ChartOptions::new(Col)
+  opts.series.push(ChartSeries::new("Sheet1!$A$1:$A$2", "Sheet1!$B$1:$B$2"))
+  opts.format = GraphicOptions::with_values(scale_x=1.25, scale_y=0.75)
+  sheet.add_chart_with_options("B2", opts)
+  inspect(sheet.charts().length(), content="1")
+
+  let shifted_image = image_with_reference(sheet.get_pictures("A1")[0], "D5")
+  inspect(shifted_image.reference, content="D5")
+  let shifted_chart = chart_with_reference(sheet.charts()[0], "E6")
+  inspect(shifted_chart.reference, content="E6")
+
+  let bad_offset_opts = ChartOptions::new(Col)
+  bad_offset_opts.format = GraphicOptions::with_values(
+    offset_x=-1,
+    offset_y=0,
+    scale_x=1.0,
+    scale_y=1.0,
+  )
+  let bad_offset : Result[Unit, Error] = try? sheet.add_chart_with_options(
+    "C3", bad_offset_opts,
+  )
+  inspect(
+    bad_offset,
+    content=(
+      #|Err(InvalidSheetOperation(msg="chart offset must be >= 0"))
+    ),
+  )
+
+  let bad_scale_opts = ChartOptions::new(Col)
+  bad_scale_opts.format = GraphicOptions::with_values(scale_x=0.0, scale_y=1.0)
+  let bad_scale : Result[Unit, Error] = try? sheet.add_chart_with_options(
+    "C3", bad_scale_opts,
+  )
+  inspect(
+    bad_scale,
+    content=(
+      #|Err(InvalidSheetOperation(msg="chart scale must be > 0"))
+    ),
+  )
+}
+
+///|
+test "worksheet wb: conditional format helper edge branches" {
+  inspect(pad_left_dec(1234, 2), content="1234")
+  let existing_ext = "<cfRule type=\"expression\"><extLst></extLst></cfRule>"
+  inspect(
+    inject_x14_id_ext_lst_into_cf_rule(existing_ext, "id1"),
+    content=existing_ext,
+  )
+  let invalid_rule : Result[String, Error] = try? inject_x14_id_ext_lst_into_cf_rule(
+    "<cfRule/>", "id1",
+  )
+  inspect(
+    invalid_rule,
+    content=(
+      #|Err(InvalidXml(msg="cfRule tag invalid"))
+    ),
+  )
+}

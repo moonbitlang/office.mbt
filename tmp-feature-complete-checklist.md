@@ -1439,6 +1439,23 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `154` to `145`
 
+- [x] 107. Cover chart-option guard branches and conditional-format helper fallbacks.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by targeting chart guard branches and direct helper edge paths.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with:
+      - `add_chart_with_options` explicit `scale_x/scale_y` branch coverage via `GraphicOptions::with_values(...)`
+      - chart guard errors for invalid offset (`chart offset must be >= 0`) and invalid scale (`chart scale must be > 0`)
+      - direct helper coverage for `image_with_reference` and `chart_with_reference`
+      - conditional-format helper edges:
+        - `pad_left_dec` early return branch
+        - `inject_x14_id_ext_lst_into_cf_rule` existing-`extLst` fast-return branch
+        - `inject_x14_id_ext_lst_into_cf_rule` invalid close-tag error branch
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `145` to `136`
+
 ## Active Item
 
-- Next item: **107** (select the next bounded `worksheet.mbt` edge cluster, likely chart-option guard branches and conditional-format helper fallbacks).
+- Next item: **108** (choose the next bounded `worksheet.mbt` branch cluster; likely `delete_data_validation` sqref-update failure branch and remaining conditional-format parse/update edge paths).
