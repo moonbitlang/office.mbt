@@ -30,6 +30,10 @@ test "ooxml_rels: rels_path_for converts worksheets path to rels path" {
     rels_path_for("xl/worksheets/sheet1.xml", "worksheets"),
     content="xl/worksheets/_rels/sheet1.xml.rels",
   )
+  inspect(
+    rels_path_for("sheet1.xml", "worksheets"),
+    content="xl/worksheets/_rels/sheet1.xml.rels",
+  )
 }
 
 ///|
@@ -43,6 +47,12 @@ test "ooxml_rels: parse_id_from_path extracts numeric suffix" {
   inspect(
     parse_id_from_path(
       "xl/pivotTables/pivotTable.xml", "xl/pivotTables/pivotTable",
+    ),
+    content="0",
+  )
+  inspect(
+    parse_id_from_path(
+      "xl/pivotTables/pivotTable12.bin", "xl/pivotTables/pivotTable",
     ),
     content="0",
   )
@@ -113,5 +123,22 @@ test "ooxml_rels: resolve target rejects escaping root via dot segments" {
       fail(
         "expected InvalidXml for relative escape in resolve_workbook_rel_target",
       )
+  }
+}
+
+///|
+test "ooxml_rels: normalize and resolve invalid-path guards" {
+  let normalize_result = try? normalize_rel_part_path("./")
+  match normalize_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="relationship target invalid")
+    _ => fail("expected InvalidXml for normalize_rel_part_path(\"./\")")
+  }
+
+  let rel_result = try? resolve_rel_target("/docProps/core.xml", "worksheets")
+  match rel_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="relationship target invalid")
+    _ => fail("expected InvalidXml for non-xl absolute resolve_rel_target")
   }
 }

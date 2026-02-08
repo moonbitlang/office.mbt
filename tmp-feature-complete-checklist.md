@@ -1995,6 +1995,23 @@ Commands used:
   - Coverage delta:
     - `xlsx/data_validation.mbt` uncovered lines reduced from `8` to `0`
 
+- [x] 140. Continue low-line-count residual reduction in `ooxml_rels.mbt`.
+  - DoD: cover reachable relationship-path helper branches for fallback rels path, invalid id-prefix/suffix, invalid normalization, and non-`xl/` absolute target rejection.
+  - Delivered:
+    - Extended `xlsx/ooxml_rels_wbtest.mbt` with:
+      - rels-path fallback case for non-prefixed part path
+      - `parse_id_from_path` non-xml suffix fallback (`0`)
+      - `normalize_rel_part_path("./")` invalid-path guard
+      - `resolve_rel_target("/docProps/core.xml", ...)` non-`xl/` normalized-path guard
+  - Validation gates:
+    - `moon test xlsx/ooxml_rels_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after142.log`
+  - Coverage delta:
+    - `xlsx/ooxml_rels.mbt` uncovered lines reduced from `8` to `4`
+  - Residual notes:
+    - Remaining `ooxml_rels.mbt` lines are structural slice-catch fallbacks around already-guarded prefix/suffix slicing.
+
 ## Active Item
 
-- Next item: **140** (close low-line-count residuals in `xlsx/ooxml_rels.mbt` with targeted parser/guard tests).
+- Next item: **141** (close low-line-count residuals in `xlsx/write_workbook_xml.mbt` with targeted branch tests).
