@@ -2382,6 +2382,27 @@ Commands used:
     - Total uncovered lines reduced from `3122` to `3109`
     - Uncovered file count reduced from `46` to `45`
 
+- [x] 159. Close residuals in `xlsx/cfb.mbt`.
+  - DoD: cover remaining CFB builder/write/read branch guards and remove `xlsx/cfb.mbt` from uncovered-file list.
+  - Delivered:
+    - Added `xlsx/cfb_wbtest.mbt` with focused whitebox suites for CFB internals:
+      - primitive read helper OOB guards (`read_u16_le`/`read_u32_le`/`read_u64_le`).
+      - `CfbBuilder::put`, `prepare`, and chain-reader guard paths.
+      - `cfb_read` invalid-header/signature/name guard paths and DIFAT branch handling.
+      - `CfbReader::read_stream` missing-entry/type/mini-stream/mini-chain guard paths.
+      - residual-branch closures for:
+        - `CfbBuilder::locate` low-range FAT recompute branch (`fat_sectors <= 109` path in loop).
+        - `CfbBuilder::write_msat` non-terminal DIFAT-link branch (`self.write_uint32(offset + 1)`).
+        - `CfbBuilder::write_directory_entry` empty-`cls_id` branch (zero CLSID emission).
+  - Validation gates:
+    - `moon test xlsx/cfb_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after163.log`
+  - Coverage delta:
+    - `xlsx/cfb.mbt` uncovered lines reduced from `44` to `0`
+    - Total uncovered lines reduced from `3109` to `3065`
+    - Uncovered file count reduced from `45` to `44`
+
 ## Active Item
 
-- Next item: **159** (move to the next residual hotspot: `xlsx/cfb.mbt`).
+- Next item: **160** (move to the next residual hotspot: `xlsx/chart_options.mbt`).
