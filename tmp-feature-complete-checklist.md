@@ -1012,12 +1012,16 @@ Commands used:
       - cross-feature worksheet mutation operations (row/col insert/remove) after mixed-ext setup
     - Next actionable one-by-one sequence appended as items `76-78`.
 
-- [ ] 76. Add integration slice for x14 icon-set + sparkline + slicer coexistence.
+- [x] 76. Add integration slice for x14 icon-set + sparkline + slicer coexistence.
   - DoD: validate icon-set x14 conditional formatting ext can coexist with sparkline and slicer ext blocks in one worksheet.
-  - Planned:
-    - build mixed worksheet with slicer + sparkline + icon-set CF (x14 path)
-    - assert ext markers and key relationships/parts are present
-    - run targeted integration test + `moon check --deny-warn`
+  - Delivered:
+    - Added `xlsx/integration_iconset_sparkline_slicer_x14_test.mbt`:
+      - builds a real sparkline+slicer worksheet and injects x14 icon-set conditional-formatting ext block
+      - validates coexistence of x14 icon-set, sparkline, and slicer ext markers in worksheet OOXML
+      - validates read-roundtrip behavior for icon-set conditional format, sparkline groups, and slicer discovery
+    - Validation gates:
+      - `moon test xlsx/integration_iconset_sparkline_slicer_x14_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 77. Add stream-writer stress integration slice (1000+ rows) with table + formulas + styles.
   - DoD: validate stream-writer remains OOXML-correct under higher row volume and richer cell styling/formula combinations.
@@ -1035,4 +1039,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **76** (x14 icon-set + sparkline + slicer integration slice).
+- Next item: **77** (stream-writer stress integration slice).
