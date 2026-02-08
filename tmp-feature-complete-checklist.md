@@ -1656,6 +1656,37 @@ Commands used:
     - Coverage delta:
       - `xlsx/write.mbt` uncovered lines reduced from `56` to `42`
 
+- [x] 119. Final bounded `write.mbt` hardening on theme/worksheet IO+error paths.
+  - DoD: reduce uncovered lines in `xlsx/write.mbt` by covering remaining reachable theme override, worksheet value/hyperlink error, and write wrapper branches.
+  - Delivered:
+    - Extended `xlsx/write_hardening_wbtest.mbt` with targeted coverage for:
+      - `write_theme_xml`:
+        - custom palette override emission
+        - invalid custom palette length fallback to `default_theme_xml`
+      - `write_worksheet_xml`:
+        - formula-cell `Bool` + `Error` value-type emission branches
+        - missing rich-text/shared-string map error branches (`InvalidSharedString`)
+        - hyperlink emission behavior:
+          - all-`Unset` links skip `<hyperlinks>` block
+          - missing external hyperlink relationship errors (`InvalidHyperlink`)
+      - write wrappers:
+        - `write_with_io` file-path extension fallback paths (no-extension / unsupported extension)
+        - `write_with_password` empty-password passthrough branch
+      - VML/comment/form-control merge path in `write(...)` with base VML + controls + comments
+      - slicer write failure branches:
+        - slicer source missing
+        - slicer table field missing
+      - duplicate pivot-cache relationship handling in write path
+      - custom zip-writer failure mapping to `UnsupportedFeature`
+  - Validation gates:
+    - `moon test xlsx/write_hardening_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after120.log`
+  - Coverage delta:
+    - `xlsx/write.mbt` uncovered lines reduced from `42` to `10`
+  - Residual notes:
+    - Remaining `xlsx/write.mbt` uncovered lines are concentrated in structurally unreachable branches (`Map` key re-fetch guards, redundant `Unset` match arm guarded by early `continue`, and impossible slicer-cache field-missing states after normalization), plus the default zip backend error-wrap branch that is difficult to deterministically fault-inject.
+
 ## Active Item
 
-- Next item: **119** (final bounded `write.mbt` slice for theme override path + worksheet hyperlink/cell error branches where reachable).
+- Next item: **120** (`workbook_types/workbook` residual branch hardening for sheet-name guards, chart-sheet state mutation path, and workbook-protection mismatch guard path).

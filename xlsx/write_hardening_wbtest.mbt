@@ -467,3 +467,338 @@ test "write hardening wb: write_worksheet_xml covers x14 map aggregation and unk
   inspect(xml.contains("<x14:conditionalFormatting>"), content="true")
   inspect(xml.contains("<foo/>"), content="true")
 }
+
+///|
+test "write hardening wb: write_theme_xml covers custom palette and fallback branches" {
+  let custom = write_theme_xml(
+    Some([
+      "111111",
+      "222222",
+      "333333",
+      "444444",
+      "555555",
+      "666666",
+      "777777",
+      "888888",
+      "999999",
+      "AAAAAA",
+    ]),
+  )
+  inspect(custom.contains("<a:themeElements>"), content="true")
+  inspect(custom.contains("val=\"111111\""), content="true")
+
+  let fallback = write_theme_xml(Some(["FFFFFF"]))
+  inspect(fallback == default_theme_xml, content="true")
+}
+
+///|
+test "write hardening wb: write_worksheet_xml covers formula bool and error branches" {
+  let sheet = Worksheet::new("FormulaBranches")
+  sheet.cells.push({
+    reference: "A1",
+    row: 1,
+    col: 1,
+    value: "1",
+    value_type: Bool,
+    rich_text: None,
+    formula: Some("1=1"),
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
+    style_id: 0,
+  })
+  sheet.cells.push({
+    reference: "A2",
+    row: 2,
+    col: 1,
+    value: "#N/A",
+    value_type: Error,
+    rich_text: None,
+    formula: Some("NA()"),
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
+    style_id: 0,
+  })
+  let xml = write_worksheet_xml(
+    sheet,
+    {},
+    {},
+    {},
+    [],
+    None,
+    None,
+    [],
+    [],
+    [],
+    [],
+    None,
+    None,
+  ) catch {
+    err => fail("write_worksheet_xml failed: \{err}")
+  }
+  inspect(xml.contains("r=\"A1\" t=\"b\""), content="true")
+  inspect(xml.contains("<f>1=1</f><v>1</v>"), content="true")
+  inspect(xml.contains("r=\"A2\" t=\"e\""), content="true")
+  inspect(xml.contains("<f>NA()</f><v>#N/A</v>"), content="true")
+}
+
+///|
+test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink error branches" {
+  let rich_missing = Worksheet::new("RichMissing")
+  rich_missing.cells.push({
+    reference: "A1",
+    row: 1,
+    col: 1,
+    value: "ignored",
+    value_type: String,
+    rich_text: Some([{ text: "R", font: None }]),
+    formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
+    style_id: 0,
+  })
+  let missing_rich : Result[String, Error] = try? write_worksheet_xml(
+    rich_missing,
+    {},
+    {},
+    {},
+    [],
+    None,
+    None,
+    [],
+    [],
+    [],
+    [],
+    None,
+    None,
+  )
+  inspect(missing_rich is Err(XlsxError::InvalidSharedString(_)), content="true")
+
+  let plain_missing = Worksheet::new("PlainMissing")
+  plain_missing.cells.push({
+    reference: "A1",
+    row: 1,
+    col: 1,
+    value: "plain",
+    value_type: String,
+    rich_text: None,
+    formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
+    style_id: 0,
+  })
+  let missing_plain : Result[String, Error] = try? write_worksheet_xml(
+    plain_missing,
+    {},
+    {},
+    {},
+    [],
+    None,
+    None,
+    [],
+    [],
+    [],
+    [],
+    None,
+    None,
+  )
+  inspect(
+    missing_plain is Err(XlsxError::InvalidSharedString(_)),
+    content="true",
+  )
+
+  let no_hyperlinks_xml = write_worksheet_xml(
+    Worksheet::new("NoLinks"),
+    {},
+    {},
+    {},
+    [{
+      reference: "A1",
+      target: "",
+      link_type: Unset,
+      display: None,
+      tooltip: None,
+    }],
+    None,
+    None,
+    [],
+    [],
+    [],
+    [],
+    None,
+    None,
+  ) catch {
+    err => fail("write_worksheet_xml failed: \{err}")
+  }
+  inspect(no_hyperlinks_xml.contains("<hyperlinks>"), content="false")
+
+  let missing_rel : Result[String, Error] = try? write_worksheet_xml(
+    Worksheet::new("MissingRel"),
+    {},
+    {},
+    {},
+    [{
+      reference: "A1",
+      target: "https://example.com",
+      link_type: External,
+      display: None,
+      tooltip: None,
+    }],
+    None,
+    None,
+    [],
+    [],
+    [],
+    [],
+    None,
+    None,
+  )
+  inspect(missing_rel is Err(XlsxError::InvalidHyperlink(_)), content="true")
+}
+
+///|
+test "write hardening wb: write_with_io covers file-path extension fallback branches" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+
+  let no_ext = write_with_io(
+    workbook,
+    { file_path: Some("demo"), zip_writer: None, charset_transcoder: None },
+  ) catch {
+    err => fail("write_with_io without extension failed: \{err}")
+  }
+  inspect(no_ext.length() > 0, content="true")
+
+  let unsupported_ext = write_with_io(
+    workbook,
+    {
+      file_path: Some("demo.unsupported"),
+      zip_writer: None,
+      charset_transcoder: None,
+    },
+  ) catch {
+    err => fail("write_with_io unsupported extension failed: \{err}")
+  }
+  inspect(unsupported_ext.length() > 0, content="true")
+}
+
+///|
+test "write hardening wb: write_with_password empty password returns raw bytes" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let raw = write(workbook) catch {
+    err => fail("write failed: \{err}")
+  }
+  let with_empty_password = write_with_password(workbook, "") catch {
+    err => fail("write_with_password failed: \{err}")
+  }
+  inspect(raw == with_empty_password, content="true")
+}
+
+///|
+test "write hardening wb: write merges base vml with form-control and comment vml" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.add_vml_drawing_xml("<xml>base</xml>")
+  sheet.add_form_control(FormControl::new("A1", "Button"))
+  sheet.add_comment({
+    cell: "B2",
+    author: "A",
+    author_id: None,
+    text: "c",
+    paragraph: [],
+    width: None,
+    height: None,
+  })
+  let bytes = write(workbook) catch {
+    err => fail("write failed: \{err}")
+  }
+  inspect(bytes.length() > 0, content="true")
+}
+
+///|
+test "write hardening wb: write fails for slicer source missing" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.slicers.push({
+    name: "BadSlicer",
+    cache: "Slicer_BadSlicer",
+    source_name: "Field",
+    cell: "A1",
+    table_sheet: "Sheet1",
+    table_name: "MissingTable",
+    caption: "",
+    macro_name: "",
+    width: 200,
+    height: 200,
+    display_header: None,
+    item_desc: false,
+    format: GraphicOptions::new(),
+  })
+  let result : Result[Bytes, Error] = try? write(workbook)
+  inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+}
+
+///|
+test "write hardening wb: write fails for slicer table field missing" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  ignore(sheet.add_table("A1:B2", "Table1", ["A", "B"]))
+  sheet.slicers.push({
+    name: "BadField",
+    cache: "Slicer_BadField",
+    source_name: "MissingColumn",
+    cell: "A1",
+    table_sheet: "Sheet1",
+    table_name: "Table1",
+    caption: "",
+    macro_name: "",
+    width: 200,
+    height: 200,
+    display_header: None,
+    item_desc: false,
+    format: GraphicOptions::new(),
+  })
+  let result : Result[Bytes, Error] = try? write(workbook)
+  inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+}
+
+///|
+test "write hardening wb: write handles duplicate pivot cache relationship entries" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.pivot_tables.push({
+    name: "",
+    table_id: 1,
+    cache_id: 1,
+    table_xml: "<pivotTableDefinition/>",
+    cache_definition_xml: "<pivotCacheDefinition/>",
+    cache_records_xml: None,
+  })
+  sheet.pivot_tables.push({
+    name: "",
+    table_id: 2,
+    cache_id: 1,
+    table_xml: "<pivotTableDefinition/>",
+    cache_definition_xml: "<pivotCacheDefinition/>",
+    cache_records_xml: None,
+  })
+  let bytes = write(workbook) catch {
+    err => fail("write failed: \{err}")
+  }
+  inspect(bytes.length() > 0, content="true")
+}
+
+///|
+test "write hardening wb: failing custom zip writer maps to UnsupportedFeature" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_zip_writer(_archive => {
+    raise InvalidSheetOperation(msg="zip writer failed")
+  })
+  let result : Result[Bytes, Error] = try? workbook.write_to_buffer()
+  inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")
+}
