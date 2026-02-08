@@ -172,6 +172,7 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
         {"type", "shape_type"},
         {"macro", "macro_name", "macro_alias"},
     ],
+    "Style": [{"num_fmt", "number_format"}],
 }
 
 

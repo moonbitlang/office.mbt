@@ -412,12 +412,22 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types ChartAxis`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 26. Reduce `Style.number_format` extra-field parity.
+- [x] 26. Reduce `Style.number_format` extra-field parity.
   - DoD: remove current `Style.number_format` extra from normalized parity report without changing style runtime behavior.
+  - Delivered:
+    - Added `Style` alias normalization in `scripts/excelize_struct_field_parity.py`:
+      - `num_fmt/number_format`
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Style`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 27. Reduce `Table` extra-field parity (`id/display_name/range_ref/columns`).
+  - DoD: remove current `Table` extras from normalized parity report via safe aliasing or normalized-report extension allowances.
   - Planned:
-    - normalize `Style` number-format field naming in parity report mode
-    - rerun focused parity report for `Style`
+    - normalize `name/display_name` and `range/range_ref` where appropriate
+    - classify `id` and `columns` as MoonBit extensions if they remain unmatched
+    - rerun focused parity report for `Table`
 
 ## Active Item
 
-- Next item: **26** (`Style.number_format` extra-field parity reduction).
+- Next item: **27** (`Table` extra-field parity reduction).
