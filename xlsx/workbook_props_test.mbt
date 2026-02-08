@@ -62,3 +62,18 @@ test "invalid calc props" {
     content="Err(InvalidWorkbookProperty(msg=\"invalid calc mode\"))",
   )
 }
+
+///|
+test "calc props normalize auto + r1c1 variants" {
+  let workbook = Workbook::new()
+  let calc_opts = CalcPropsOptions::with_values(
+    calc_mode="AUTO",
+    ref_mode="r1c1",
+  )
+  workbook.set_calc_props(Some(calc_opts))
+  let bytes = write(workbook)
+  let parsed = read(bytes)
+  let props = parsed.get_calc_props()
+  inspect(props.calc_mode, content="Some(\"auto\")")
+  inspect(props.ref_mode, content="Some(\"R1C1\")")
+}

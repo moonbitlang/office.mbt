@@ -1711,6 +1711,24 @@ Commands used:
     - `xlsx/workbook_types.mbt` uncovered lines reduced from `4` to `0`
     - `xlsx/workbook_props.mbt` uncovered lines reduced from `4` to `3`
 
+- [x] 121. Continue bounded `workbook_props.mbt` normalization/protection hardening.
+  - DoD: cover remaining reachable normalization branches for calc mode (`"auto"`), ref mode (`"R1C1"`), and explicit workbook protection algorithm option path.
+  - Delivered:
+    - Extended `xlsx/workbook_props_test.mbt` with:
+      - `calc props normalize auto + r1c1 variants`
+      - verifies case-insensitive normalization (`"AUTO"` -> `"auto"`, `"r1c1"` -> `"R1C1"`) through write/read roundtrip
+    - Extended `xlsx/workbook_protection_test.mbt` with:
+      - `workbook protection with explicit algorithm option`
+      - sets `algorithm_name="SHA-512"` in protection options to exercise non-default algorithm selection branch
+      - verifies workbook XML contains `workbookAlgorithmName="SHA-512"` and password unprotect succeeds
+  - Validation gates:
+    - `moon test xlsx/workbook_props_test.mbt`
+    - `moon test xlsx/workbook_protection_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after122.log`
+  - Coverage delta:
+    - `xlsx/workbook_props.mbt` uncovered lines reduced from `3` to `1`
+
 ## Active Item
 
-- Next item: **121** (bounded `workbook_props.mbt` hardening for remaining reachable normalization branches: calc mode `"auto"`, ref mode `"R1C1"`, and custom workbook-protection algorithm option path).
+- Next item: **122** (close the final `workbook_props.mbt` calc-mode normalization branch by exercising `"autoNoTable"` input normalization path).
