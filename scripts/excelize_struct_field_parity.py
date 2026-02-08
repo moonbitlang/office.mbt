@@ -173,6 +173,7 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
         {"macro", "macro_name", "macro_alias"},
     ],
     "Style": [{"num_fmt", "number_format"}],
+    "Table": [{"name", "display_name"}, {"range", "range_ref"}],
 }
 
 
@@ -202,6 +203,7 @@ _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
         "scheme",
     },
     "ChartAxis": {"ax_id"},
+    "Table": {"id", "columns"},
 }
 
 

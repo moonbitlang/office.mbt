@@ -421,13 +421,24 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Style`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 27. Reduce `Table` extra-field parity (`id/display_name/range_ref/columns`).
+- [x] 27. Reduce `Table` extra-field parity (`id/display_name/range_ref/columns`).
   - DoD: remove current `Table` extras from normalized parity report via safe aliasing or normalized-report extension allowances.
+  - Delivered:
+    - Added `Table` alias normalization in `scripts/excelize_struct_field_parity.py`:
+      - `name/display_name`
+      - `range/range_ref`
+    - Registered MoonBit extension fields for normalized report mode:
+      - `id`, `columns`
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Table`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 28. Reduce `HeaderFooterImageOptions.data` extra-field parity.
+  - DoD: remove current `HeaderFooterImageOptions.data` extra in normalized parity report while retaining file-backed API behavior.
   - Planned:
-    - normalize `name/display_name` and `range/range_ref` where appropriate
-    - classify `id` and `columns` as MoonBit extensions if they remain unmatched
-    - rerun focused parity report for `Table`
+    - classify `data` as normalized-report MoonBit extension for `HeaderFooterImageOptions`
+    - rerun focused parity report for `HeaderFooterImageOptions`
 
 ## Active Item
 
-- Next item: **27** (`Table` extra-field parity reduction).
+- Next item: **28** (`HeaderFooterImageOptions.data` extra-field parity reduction).
