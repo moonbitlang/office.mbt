@@ -1023,12 +1023,16 @@ Commands used:
       - `moon test xlsx/integration_iconset_sparkline_slicer_x14_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 77. Add stream-writer stress integration slice (1000+ rows) with table + formulas + styles.
+- [x] 77. Add stream-writer stress integration slice (1000+ rows) with table + formulas + styles.
   - DoD: validate stream-writer remains OOXML-correct under higher row volume and richer cell styling/formula combinations.
-  - Planned:
-    - create stream-writer scenario with >=1000 rows, styled cells, formulas, and table metadata
-    - assert key worksheet/table XML markers and roundtrip behavior
-    - run targeted integration test + `moon check --deny-warn`
+  - Delivered:
+    - Added `xlsx/integration_stream_writer_stress_test.mbt`:
+      - stream-writer scenario with 1200 data rows, styled/formula cells, and table metadata
+      - validates worksheet/table OOXML markers and high-row formula payloads
+      - validates read-roundtrip behavior for formulas, values, column style/width, and table metadata
+    - Validation gates:
+      - `moon test xlsx/integration_stream_writer_stress_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 78. Run combined gate for items 76/77.
   - DoD: execute new integration tests for icon-set coexistence and stream-writer stress together and keep gate green.
@@ -1039,4 +1043,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **77** (stream-writer stress integration slice).
+- Next item: **78** (combined gate for icon-set + stream stress slices).
