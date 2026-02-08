@@ -642,12 +642,16 @@ Commands used:
       - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 46. Add integration parity slice for mixed sparkline + x14 conditional formatting.
+- [x] 46. Add integration parity slice for mixed sparkline + x14 conditional formatting.
   - DoD: validate coexistence of sparkline groups and x14 conditional formatting in the same worksheet OOXML.
-  - Planned:
-    - build mixed workbook scenario with sparkline + data bar/icon-set rules
-    - assert both feature XML sections/markers are present
-    - run targeted integration test gate
+  - Delivered:
+    - Added `xlsx/integration_sparkline_x14_conditional_test.mbt`:
+      - mixed workbook scenario with sparkline groups and x14 data-bar conditional formatting
+      - validates coexistence of both feature ext blocks (`{05C60535...}` and `{78C0D931...}`) in worksheet OOXML
+      - validates key `x14`/`xm` markers and verifies read-roundtrip behavior for both sparkline and conditional-format state
+    - Validation gates:
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 47. Run combined gate for new integration slices (45/46).
   - DoD: execute both new integration tests together and keep gate green.
@@ -657,4 +661,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **46** (mixed sparkline + x14 conditional-format integration slice).
+- Next item: **47** (combined gate for sparkline integration slices).
