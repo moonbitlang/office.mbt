@@ -2237,6 +2237,26 @@ Commands used:
     - Total uncovered lines reduced from `3252` to `3186`
     - Uncovered file count reduced from `54` to `53`
 
+- [x] 151. Close residuals in `write_worksheet_layout_xml.mbt`.
+  - DoD: cover remaining worksheet-layout XML branches (margins/print/page setup/header-footer/sheet-protection/page-breaks/auto-filter) and bring file residuals to zero.
+  - Delivered:
+    - Added `xlsx/write_worksheet_layout_xml_wbtest.mbt` with focused branch tests for:
+      - print options (`Some(false)` and horizontal-`None`/vertical-only cases).
+      - page margin fallback defaults and page setup sparse-option branches.
+      - header/footer toggle + optional attributes.
+      - sheet-protection optional attribute emission (`algorithm/hash/salt/spin/autoFilter`).
+      - page-break min/max/manual branches.
+      - auto-filter custom `and="1"` path and out-of-range column error path.
+  - Validation gates:
+    - `moon test xlsx/write_worksheet_layout_xml_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after154.log`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after155.log`
+  - Coverage delta:
+    - `xlsx/write_worksheet_layout_xml.mbt` uncovered lines reduced from `19` to `0`
+    - Total uncovered lines reduced from `3186` to `3159`
+    - Uncovered file count reduced from `53` to `52`
+
 ## Active Item
 
-- Next item: **151** (move to the next residual hotspot: `xlsx/write_worksheet_layout_xml.mbt`).
+- Next item: **152** (move to the next residual hotspot: `xlsx/xml.mbt`).
