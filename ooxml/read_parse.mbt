@@ -66,9 +66,7 @@ fn attr_value(
         }
       }
       if matched {
-        let value = tag[value_start:i] catch {
-            _ => raise InvalidXml(msg="attribute out of range")
-          }
+        let value = tag.to_string().unsafe_substring(start=value_start, end=i)
         return Some(value.to_string())
       }
     }
@@ -115,9 +113,7 @@ pub fn parse_relationship_targets(
       Some(pos) => pos
       None => raise InvalidXml(msg="relationship tag not closed")
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="relationship tag invalid")
-      }
+    let tag = text.unsafe_substring(start=0, end~)
     let rel = match attr_value(tag, "Type") {
       Some(value) => value
       None => continue
@@ -154,9 +150,7 @@ pub fn parse_content_type_overrides(
       Some(pos) => pos
       None => raise InvalidXml(msg="content type override tag not closed")
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="content type override tag invalid")
-      }
+    let tag = text.unsafe_substring(start=0, end~)
     let part_name = match attr_value(tag, "PartName") {
       Some(value) => value
       None => raise InvalidXml(msg="content type override part name missing")

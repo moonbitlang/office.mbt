@@ -2360,6 +2360,28 @@ Commands used:
     - Total uncovered lines reduced from `3124` to `3122`
     - Uncovered file count reduced from `47` to `46`
 
+- [x] 158. Close residuals in `ooxml/read_parse.mbt`.
+  - DoD: cover remaining XML-attribute parser and OOXML relation/content-type branch paths while removing structurally-dead slice-catch fallbacks.
+  - Delivered:
+    - Refactored `ooxml/read_parse.mbt`:
+      - replaced bounded slice-catch paths with deterministic substring extraction in:
+        - `attr_value` (matched-value extraction)
+        - `parse_relationship_targets` (relationship tag extraction)
+        - `parse_content_type_overrides` (override tag extraction)
+    - Added `ooxml/read_parse_wbtest.mbt`:
+      - covered `attr_value` edge branches (leading-space break, empty-name token skip, whitespace around `=`, missing quote handling, unterminated quote error, attribute-name mismatch path).
+      - covered relationship branch where missing `Type` causes `continue` (non-fatal skip).
+      - covered content-type override required-attribute errors for missing `PartName` and missing `ContentType`.
+  - Validation gates:
+    - `moon test ooxml/read_parse_test.mbt`
+    - `moon test ooxml/read_parse_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after162.log`
+  - Coverage delta:
+    - `ooxml/read_parse.mbt` uncovered lines reduced from `13` to `0`
+    - Total uncovered lines reduced from `3122` to `3109`
+    - Uncovered file count reduced from `46` to `45`
+
 ## Active Item
 
-- Next item: **158** (move to the next residual hotspot: `ooxml/read_parse.mbt`).
+- Next item: **159** (move to the next residual hotspot: `xlsx/cfb.mbt`).
