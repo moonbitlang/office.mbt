@@ -1965,6 +1965,20 @@ Commands used:
   - Coverage delta:
     - `xlsx/merge_cell.mbt` uncovered lines reduced from `6` to `0`
 
+- [x] 138. Close low-line-count residuals in `sheet_view.mbt`.
+  - DoD: cover remaining optional-field none paths, invalid-view normalization ignore branch, and empty-view-list index guard.
+  - Delivered:
+    - Added `xlsx/sheet_view_wbtest.mbt` with focused whitebox tests:
+      - `sheet view wb: Selection::with_values defaults cover none branches`
+      - `sheet view wb: invalid view mode is ignored and defaults are preserved`
+      - `sheet view wb: normalize_view_index rejects empty view list`
+  - Validation gates:
+    - `moon test xlsx/sheet_view_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after140.log`
+  - Coverage delta:
+    - `xlsx/sheet_view.mbt` uncovered lines reduced from `6` to `0`
+
 ## Active Item
 
-- Next item: **138** (close low-line-count residuals in `xlsx/sheet_view.mbt` with targeted parser/guard tests).
+- Next item: **139** (close low-line-count residuals in `xlsx/data_validation.mbt` with targeted parser/guard tests).
