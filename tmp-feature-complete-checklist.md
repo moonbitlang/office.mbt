@@ -770,13 +770,28 @@ Commands used:
       - all three integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 57. Run expanded mixed-ext integration gate for tranche 45-56.
+- [x] 57. Run expanded mixed-ext integration gate for tranche 45-56.
   - DoD: execute the full mixed-ext integration pack (`45`, `46`, `48`, `49`, `51`, `55`) together and keep gate green.
+  - Delivered:
+    - Executed expanded mixed-ext integration gate:
+      - `moon test xlsx/integration_sparkline_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_sparkline_x14_conditional_test.mbt`
+      - `moon test xlsx/integration_sparkline_cross_sheet_ref_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all six integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 58. Re-run full release gate after pivot-backed mixed-ext tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` and record outcomes after item `55+`.
   - Planned:
-    - run six integration tests in one focused gate command chain
-    - run `moon check --deny-warn`
-    - record consolidated pass status and update checklist
+    - execute full release gate command
+    - capture updated `moon test` total and parity status
+    - update checklist baseline notes if totals changed
 
 ## Active Item
 
-- Next item: **57** (expanded mixed-ext integration gate).
+- Next item: **58** (full release gate after pivot-backed mixed-ext tranche).
