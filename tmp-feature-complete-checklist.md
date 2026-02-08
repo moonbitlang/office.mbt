@@ -747,13 +747,16 @@ Commands used:
       - added latest full-gate status (`moon test 862/862`, demos/parity pass)
     - Verified checklist consistency with tranche `45-53` outcomes and totals.
 
-- [ ] 55. Add integration parity slice for pivot-backed slicer + sparkline + x14 data-bar coexistence.
+- [x] 55. Add integration parity slice for pivot-backed slicer + sparkline + x14 data-bar coexistence.
   - DoD: validate a single worksheet can host pivot-backed slicer ext wiring together with sparkline and x14 conditional-formatting ext blocks.
-  - Planned:
-    - build a mixed workbook using pivot-backed slicer (not table-backed)
-    - add sparkline group and x14 data-bar CF on the slicer worksheet
-    - assert ext URIs/markers and key relationship targets are present
-    - run targeted integration test + `moon check --deny-warn`
+  - Delivered:
+    - Added `xlsx/integration_pivot_sparkline_x14_test.mbt`:
+      - mixed workbook scenario combining pivot-backed slicer, sparkline group, and x14 data-bar conditional formatting
+      - validates coexistence of sparkline/conditional/slicer ext markers and slicer relationship targets/parts
+      - validates read-roundtrip behavior for sparkline, conditional formats, and slicer discovery
+    - Validation gates:
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 56. Run combined gate for new pivot-backed mixed-ext slice.
   - DoD: execute tests from `55` plus existing mixed-ext stability tests and keep gate green.
@@ -764,4 +767,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **55** (pivot-backed mixed-ext integration slice).
+- Next item: **56** (combined gate for pivot-backed mixed-ext slice).
