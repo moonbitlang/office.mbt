@@ -517,12 +517,47 @@ Commands used:
       - `moon test xlsx/calc_behavior_parity_pack2_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 35. Consolidate formula parity packs and run focused formula suite gate.
+- [x] 35. Consolidate formula parity packs and run focused formula suite gate.
   - DoD: execute all pack tests together and keep formula-focused checks green after pack additions.
+  - Delivered:
+    - Executed focused formula parity gate:
+      - `moon test xlsx/calc_behavior_parity_pack1_test.mbt`
+      - `moon test xlsx/calc_behavior_parity_pack2_test.mbt`
+      - `moon test xlsx/calc_conditional_parity_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - pack1: `2/2` passed
+      - pack2: `3/3` passed
+      - conditional parity suite: `4/4` passed
+      - check: pass
+
+- [x] 36. Run broader formula regression gate and record outcome.
+  - DoD: run broader formula-related suites (`calc_test` plus formula-eval suites) after parity-pack additions.
+  - Delivered:
+    - Executed broader formula regression gate:
+      - `moon test xlsx/calc_test.mbt`
+      - `moon test xlsx/formula_eval_more_test.mbt`
+      - `moon test xlsx/calc_xlfn_more_test.mbt`
+    - Results:
+      - `calc_test`: `183/183` passed
+      - `formula_eval_more_test`: `2/2` passed
+      - `calc_xlfn_more_test`: `1/1` passed
+
+- [x] 37. Refresh formula parity baseline after behavior-pack gates.
+  - DoD: rerun formula parity heuristic command and ensure checklist baseline/formula notes are consistent with current script and tests.
+  - Delivered:
+    - Re-ran formula parity heuristic:
+      - `python3 scripts/excelize_formula_parity.py`
+      - Result: Excelize `458`, MoonBit `474`, missing `0`
+    - Verified checklist baseline/formula notes remain aligned with current script output.
+
+- [ ] 38. Start integration-focused parity backlog after formula/struct baseline closure.
+  - DoD: define and execute the next integration-focused parity slice (OOXML cross-part consistency) with tests.
   - Planned:
-    - run `moon test` on both behavior parity packs and existing conditional parity suite
-    - refresh checklist with final formula pack gate command/output
+    - choose a concrete integration slice (charts+tables, pivots, or drawing rels)
+    - add regression test(s) at workbook/output level
+    - run targeted integration gates and commit
 
 ## Active Item
 
-- Next item: **35** (formula parity pack suite gate).
+- Next item: **38** (integration-focused parity slice).
