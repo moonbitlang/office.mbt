@@ -1425,6 +1425,20 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `172` to `154`
 
+- [x] 106. Cover merged-cell anchor sizing and row/col pixel-helper branches.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by exercising merged-anchor and dimension helper branches used by picture auto-fit.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with:
+      - merged-range auto-fit test (`A1:B2`) that drives `merged_rect_for_cell` + `anchor_cell_size_pixels` merged loops
+      - auto-fit branch tests for hidden dimensions (`set_col_visible(false)`, `set_row_visible(false)`)
+      - auto-fit branch tests for explicit zero dimensions (`set_col_width(0.0)`, `set_row_height(0.0)`)
+      - outline-only dimension branches (`set_col_outline_level`, `set_row_outline_level`) to exercise width/height default fallback paths
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `154` to `145`
+
 ## Active Item
 
-- Next item: **106** (choose the next bounded `worksheet.mbt` cluster, likely merged-cell anchor sizing and row/col pixel helpers).
+- Next item: **107** (select the next bounded `worksheet.mbt` edge cluster, likely chart-option guard branches and conditional-format helper fallbacks).

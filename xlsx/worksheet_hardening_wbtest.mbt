@@ -236,3 +236,70 @@ test "worksheet wb: picture option Some branches and guard errors" {
     ),
   )
 }
+
+///|
+test "worksheet wb: autofit merged anchor sums merged row/col spans" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.merge_cells("A1:B2")
+  sheet.set_col_width(1, 10.0)
+  sheet.set_col_width(2, 20.0)
+  sheet.set_row_height(1, 10.0)
+  sheet.set_row_height(2, 20.0)
+  sheet.add_picture_from_bytes(
+    "A1",
+    [1, 2, 3],
+    ".png",
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  let pictures = sheet.get_pictures("A1")
+  inspect(pictures.length(), content="1")
+  let image = pictures[0]
+  inspect(image.width_emu, content="2286000")
+  inspect(image.height_emu, content="342900")
+}
+
+///|
+test "worksheet wb: autofit hits hidden/zero/outline pixel branches" {
+  let hidden = Worksheet::new("Hidden")
+  hidden.set_col_visible(1, false)
+  hidden.set_row_visible(1, false)
+  hidden.add_picture_from_bytes(
+    "A1",
+    [1],
+    ".png",
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  let hidden_image = hidden.get_pictures("A1")[0]
+  inspect(hidden_image.width_emu, content="0")
+  inspect(hidden_image.height_emu, content="0")
+
+  let zero = Worksheet::new("Zero")
+  zero.set_col_width(1, 0.0)
+  zero.set_row_height(1, 0.0)
+  zero.add_picture_from_bytes(
+    "A1",
+    [1],
+    ".png",
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  let zero_image = zero.get_pictures("A1")[0]
+  inspect(zero_image.width_emu, content="0")
+  inspect(zero_image.height_emu, content="0")
+
+  let outline = Worksheet::new("Outline")
+  outline.set_col_outline_level(1, 1)
+  outline.set_row_outline_level(1, 1)
+  outline.add_picture_from_bytes(
+    "A1",
+    [1],
+    ".png",
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  let outline_image = outline.get_pictures("A1")[0]
+  inspect(outline_image.width_emu, content="609600")
+  inspect(outline_image.height_emu, content="171450")
+}
