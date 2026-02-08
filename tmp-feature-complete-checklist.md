@@ -1475,6 +1475,27 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `136` to `129`
 
+- [x] 109. Cover `Worksheet` rc/row/col API guard/default branches.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by targeting `set/get*_rc`, `set_row`/`set_col`, and row/col dimension error/default paths.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `set_cell_value_rc` / `set_cell_formula_rc` existing-cell update (`Some(i)`) branches
+      - `get_cell_rc` invalid-ref and not-found branches
+      - `get_cell_value_raw_rc` invalid-ref + `Some` + `None` branches
+      - `set_row` / `set_col` / `get_col` invalid-ref guards
+      - row/column dimension API guard/default branches:
+        - invalid index guards for row/col height/visibility/outline/style getters/setters
+        - negative width/height guards
+        - out-of-range outline-level guards
+        - default `None`/`true`/`0` fallbacks for row/col getters
+      - `set_row_dimension` / `set_col_dimension` remove-default branches by toggling style back to `0`
+      - `col_width_pixels` / `row_height_pixels` default-sheet-props branches via auto-fit with explicit `default_col_width` and `default_row_height`
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `129` to `86`
+
 ## Active Item
 
-- Next item: **109** (cover `Worksheet` rc/row/col API guard/default branches: `set/get*_rc`, `set_row`/`set_col`, and row/col dimension getter/setter error paths).
+- Next item: **110** (cover insert/remove row/col structural edge branches around auto-filter/images/charts adjustments and row/col count validation guards).

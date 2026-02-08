@@ -456,3 +456,205 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   x14_prune.unset_conditional_format("C1")
   inspect(x14_prune.x14_data_bars.length(), content="0")
 }
+
+///|
+test "worksheet wb: rc cell api update branches and row/col basic guards" {
+  let sheet = Worksheet::new("Sheet1")
+  sheet.set_cell_style_rc(2, 2, 7)
+  sheet.set_cell_value_rc(2, 2, Numeric(7.0))
+  sheet.set_cell_value_rc(2, 2, String("txt"))
+  sheet.set_cell_formula_rc(2, 2, "1+1", value="2")
+  inspect(sheet.get_cell_rc(2, 2), content="Some(\"2\")")
+  inspect(sheet.get_cell_formula("B2"), content="Some(\"1+1\")")
+  inspect(sheet.get_cell_value_raw_rc(2, 2) is Some(_), content="true")
+  inspect(sheet.get_cell_rc(9, 9), content="None")
+  inspect(sheet.get_cell_value_raw_rc(9, 9), content="None")
+
+  let bad_get_rc : Result[String?, Error] = try? sheet.get_cell_rc(0, 1)
+  inspect(bad_get_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_get_raw_rc : Result[CellValue?, Error] = try? sheet.get_cell_value_raw_rc(
+    0, 1,
+  )
+  inspect(bad_get_raw_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
+
+  let bad_set_row : Result[Unit, Error] = try? sheet.set_row(0, ["A"][:])
+  inspect(bad_set_row is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_set_col : Result[Unit, Error] = try? sheet.set_col(0, ["A"][:])
+  inspect(bad_set_col is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_get_col : Result[Array[String], Error] = try? sheet.get_col(0)
+  inspect(bad_get_col is Err(XlsxError::InvalidCellRef(_)), content="true")
+}
+
+///|
+test "worksheet wb: row/col dimension guard and default branches" {
+  let sheet = Worksheet::new("Sheet1")
+
+  inspect(sheet.get_row_height(5), content="None")
+  inspect(sheet.row_visible(5), content="true")
+  inspect(sheet.row_outline_level(5), content="0")
+  inspect(sheet.get_row_style(5), content="None")
+  inspect(sheet.get_col_width(5), content="None")
+  inspect(sheet.col_visible(5), content="true")
+  inspect(sheet.col_outline_level(5), content="0")
+  inspect(sheet.get_col_style(5), content="None")
+
+  let bad_set_row_height_rc : Result[Unit, Error] = try? sheet.set_row_height(
+    0, 1.0,
+  )
+  inspect(
+    bad_set_row_height_rc is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_row_height_neg : Result[Unit, Error] = try? sheet.set_row_height(
+    1, -1.0,
+  )
+  inspect(
+    bad_set_row_height_neg is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_get_row_height : Result[Double?, Error] = try? sheet.get_row_height(0)
+  inspect(
+    bad_get_row_height is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_row_visible : Result[Unit, Error] = try? sheet.set_row_visible(
+    0, true,
+  )
+  inspect(
+    bad_set_row_visible is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_row_visible : Result[Bool, Error] = try? sheet.row_visible(0)
+  inspect(bad_row_visible is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_set_row_outline_row : Result[Unit, Error] = try? sheet.set_row_outline_level(
+    0, 1,
+  )
+  inspect(
+    bad_set_row_outline_row is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_row_outline_level : Result[Unit, Error] = try? sheet.set_row_outline_level(
+    1, 8,
+  )
+  inspect(
+    bad_set_row_outline_level is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_row_outline_level : Result[Int, Error] = try? sheet.row_outline_level(
+    0,
+  )
+  inspect(
+    bad_row_outline_level is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_row_style_range_bounds : Result[Unit, Error] = try? sheet.set_row_style_range(
+    0, 1, 1,
+  )
+  inspect(
+    bad_row_style_range_bounds is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_row_style_range_order : Result[Unit, Error] = try? sheet.set_row_style_range(
+    2, 1, 1,
+  )
+  inspect(
+    bad_row_style_range_order is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_get_row_style : Result[Int?, Error] = try? sheet.get_row_style(0)
+  inspect(
+    bad_get_row_style is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+
+  let bad_set_col_width_rc : Result[Unit, Error] = try? sheet.set_col_width(
+    0, 1.0,
+  )
+  inspect(
+    bad_set_col_width_rc is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_col_width_neg : Result[Unit, Error] = try? sheet.set_col_width(
+    1, -1.0,
+  )
+  inspect(
+    bad_set_col_width_neg is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_get_col_width : Result[Double?, Error] = try? sheet.get_col_width(0)
+  inspect(
+    bad_get_col_width is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_col_visible : Result[Unit, Error] = try? sheet.set_col_visible(
+    0, true,
+  )
+  inspect(
+    bad_set_col_visible is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_col_visible : Result[Bool, Error] = try? sheet.col_visible(0)
+  inspect(bad_col_visible is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_set_col_outline_col : Result[Unit, Error] = try? sheet.set_col_outline_level(
+    0, 1,
+  )
+  inspect(
+    bad_set_col_outline_col is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_col_outline_level : Result[Unit, Error] = try? sheet.set_col_outline_level(
+    1, 8,
+  )
+  inspect(
+    bad_set_col_outline_level is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_col_outline_level : Result[Int, Error] = try? sheet.col_outline_level(
+    0,
+  )
+  inspect(
+    bad_col_outline_level is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_set_col_style : Result[Unit, Error] = try? sheet.set_col_style(0, 1)
+  inspect(
+    bad_set_col_style is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+  let bad_get_col_style : Result[Int?, Error] = try? sheet.get_col_style(0)
+  inspect(
+    bad_get_col_style is Err(XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
+
+  sheet.set_row_style(2, 1)
+  inspect(sheet.get_row_style(2), content="Some(1)")
+  sheet.set_row_style(2, 0)
+  inspect(sheet.get_row_style(2), content="None")
+  sheet.set_col_style(2, 1)
+  inspect(sheet.get_col_style(2), content="Some(1)")
+  sheet.set_col_style(2, 0)
+  inspect(sheet.get_col_style(2), content="None")
+
+  let defaults = Worksheet::new("Defaults")
+  defaults.set_sheet_props(
+    Some(
+      SheetPropsOptions::with_values(
+        default_col_width=12.5,
+        default_row_height=18.0,
+      ),
+    ),
+  )
+  defaults.set_col_outline_level(3, 1)
+  defaults.set_row_outline_level(3, 1)
+  defaults.add_picture_from_bytes(
+    "C3",
+    [1],
+    ".png",
+    auto_fit=true,
+    auto_fit_ignore_aspect=true,
+  )
+  let image = defaults.get_pictures("C3")[0]
+  inspect(image.width_emu, content="952500")
+  inspect(image.height_emu, content="209550")
+}
