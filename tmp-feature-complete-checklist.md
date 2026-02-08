@@ -1496,6 +1496,21 @@ Commands used:
     - Coverage delta:
       - `xlsx/worksheet.mbt` uncovered lines reduced from `129` to `86`
 
+- [x] 110. Cover row insert/remove structural guard and adjustment branches.
+  - DoD: reduce uncovered lines in `xlsx/worksheet.mbt` by covering `insert_rows`/`remove_rows` guard paths and adjustment branches for auto-filter/drawing/table/merge state.
+  - Delivered:
+    - Extended `xlsx/worksheet_hardening_wbtest.mbt` with focused coverage for:
+      - `insert_rows`/`remove_rows` invalid-row and invalid-count guards
+      - `insert_rows` adjustment branches with live `auto_filter`, image, and chart references
+      - `remove_rows` adjustment branches with live `auto_filter`, image, and chart references
+      - merged-range drop (`adjust_range_after_row_remove -> None`) and table drop (`adjust_table_after_row_remove -> None`) branches
+      - `remove_row` wrapper branch
+    - Validation gates:
+      - `moon test xlsx/worksheet_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/worksheet.mbt` uncovered lines reduced from `86` to `68`
+
 ## Active Item
 
-- Next item: **110** (cover insert/remove row/col structural edge branches around auto-filter/images/charts adjustments and row/col count validation guards).
+- Next item: **111** (cover duplicate-row helper edge branches: absolute-reference parsing/formatting, `duplicate_xml_sqref` no-op paths, and `duplicate_merge_cells` branch exits).

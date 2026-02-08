@@ -658,3 +658,58 @@ test "worksheet wb: row/col dimension guard and default branches" {
   inspect(image.width_emu, content="952500")
   inspect(image.height_emu, content="209550")
 }
+
+///|
+test "worksheet wb: row insert/remove structural guard and adjustment branches" {
+  let sheet = Worksheet::new("Sheet1")
+  let bad_insert_row : Result[Unit, Error] = try? sheet.insert_rows(0, 1)
+  inspect(bad_insert_row is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_insert_count : Result[Unit, Error] = try? sheet.insert_rows(1, 0)
+  inspect(
+    bad_insert_count is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let bad_remove_row : Result[Unit, Error] = try? sheet.remove_rows(0, 1)
+  inspect(bad_remove_row is Err(XlsxError::InvalidCellRef(_)), content="true")
+  let bad_remove_count : Result[Unit, Error] = try? sheet.remove_rows(1, 0)
+  inspect(
+    bad_remove_count is Err(XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+
+  sheet.set_auto_filter("A1:B4", [])
+  sheet.set_cell("A1", "head")
+  sheet.set_cell("A3", "value")
+  sheet.set_row_height(1, 12.0)
+  sheet.add_picture_from_bytes("C3", [1], ".png")
+  let chart = ChartOptions::new(Col)
+  chart.series.push(ChartSeries::new("Sheet1!$A$1:$A$2", "Sheet1!$B$1:$B$2"))
+  sheet.add_chart_with_options("D3", chart)
+  sheet.insert_rows(2, 1)
+  inspect(sheet.get_pictures("C4").length(), content="1")
+  inspect(sheet.charts()[0].reference, content="D4")
+  match sheet.auto_filter {
+    Some(filter) => inspect(filter.range_ref, content="A1:B5")
+    None => fail("missing auto filter after row insert")
+  }
+
+  sheet.remove_rows(2, 1)
+  inspect(sheet.get_pictures("C3").length(), content="1")
+  inspect(sheet.charts()[0].reference, content="D3")
+  inspect(sheet.get_row_height(1), content="Some(12)")
+  match sheet.auto_filter {
+    Some(filter) => inspect(filter.range_ref, content="A1:B4")
+    None => fail("missing auto filter after row remove")
+  }
+
+  let drop = Worksheet::new("Drop")
+  drop.merge_cells("A2:A2")
+  ignore(drop.add_table("C2:D2", "DropTable", ["C", "D"]))
+  drop.remove_rows(2, 1)
+  inspect(drop.merged_cells().length(), content="0")
+  inspect(drop.tables().length(), content="0")
+
+  sheet.set_cell("A5", "tail")
+  sheet.remove_row(5)
+  inspect(sheet.get_cell("A5"), content="None")
+}
