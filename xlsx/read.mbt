@@ -1521,6 +1521,84 @@ fn parse_x14_data_bars(
 }
 
 ///|
+fn worksheet_ext_uri_is_known(uri : StringView) -> Bool {
+  match uri.to_string() {
+    "{78C0D931-6437-407d-A8EE-F0AAD7539E65}" => true
+    "{05C60535-1F16-4fd2-B633-F4F36F0B64E0}" => true
+    "{A8765BA9-456A-4dab-B4F3-ACF838C121DE}" => true
+    "{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}" => true
+    _ => false
+  }
+}
+
+///|
+fn parse_unknown_worksheet_ext_blocks(
+  xml : StringView,
+) -> Array[String] raise XlsxError {
+  let unknown : Array[String] = []
+  let text = xml.to_string()
+  let ext_start = match text.rev_find("<extLst") {
+    Some(pos) => pos
+    None => return unknown
+  }
+  let ext_tail = text[ext_start:] catch {
+      _ => raise InvalidXml(msg="worksheet extLst slice invalid")
+    }
+  let open_end = match ext_tail.find(">") {
+    Some(pos) => pos
+    None => raise InvalidXml(msg="worksheet extLst open tag invalid")
+  }
+  let close_rel = match ext_tail.find("</extLst>") {
+    Some(pos) => pos
+    None => raise InvalidXml(msg="worksheet extLst close tag missing")
+  }
+  let body = ext_tail[open_end + 1:close_rel] catch {
+      _ => raise InvalidXml(msg="worksheet extLst body invalid")
+    }
+  let mut first = true
+  for chunk in body.to_string().split("<ext ") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let full = "<ext " + text
+    let end = match full.find("</ext>") {
+      Some(pos) => pos + "</ext>".length()
+      None =>
+        match full.find("/>") {
+          Some(pos) => pos + 2
+          None => raise InvalidXml(msg="worksheet ext block not closed")
+        }
+    }
+    let block = full[:end] catch {
+        _ => raise InvalidXml(msg="worksheet ext block invalid")
+      }
+    let open_end = match block.find(">") {
+      Some(pos) => pos
+      None => raise InvalidXml(msg="worksheet ext open tag invalid")
+    }
+    let open_tag = block[:open_end] catch {
+        _ => raise InvalidXml(msg="worksheet ext open tag invalid")
+      }
+    let uri = match attr_value(open_tag, "uri") {
+      Some(value) => value.to_string()
+      None => ""
+    }
+    if worksheet_ext_uri_is_known(uri) {
+      continue
+    }
+    if block.contains("<x14:sparklineGroups") ||
+      block.contains("<x14:conditionalFormattings") ||
+      block.contains("<x14:slicerList") {
+      continue
+    }
+    unknown.push(block.to_string())
+  }
+  unknown
+}
+
+///|
 fn parse_conditional_formats_x14(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
@@ -3083,6 +3161,7 @@ fn read_zip_bytes(
         conditional_formats.push(cf)
       }
       let x14_data_bars = parse_x14_data_bars(sheet_xml)
+      let unknown_ext_blocks = parse_unknown_worksheet_ext_blocks(sheet_xml)
       let ignored_errors = parse_ignored_errors(sheet_xml)
       let mut needs_hyperlink_rels = false
       for link in hyperlink_elements {
@@ -3430,6 +3509,7 @@ fn read_zip_bytes(
         data_validations,
         conditional_formats,
         x14_data_bars,
+        unknown_ext_blocks,
         x14_cf_rule_id_counter: 1,
         ignored_errors,
         comments,

@@ -1392,6 +1392,7 @@ fn write_worksheet_xml(
     slicer_rel_ids_x15 : ArrayView[Int],
     sparkline_groups : ArrayView[SparklineGroup],
     x14_data_bars : Map[String, X14DataBarProps],
+    unknown_ext_blocks : ArrayView[String],
   ) -> String? {
     fn write_x14_conditional_formattings_ext_block_xml(
       x14_data_bars : Map[String, X14DataBarProps],
@@ -1475,10 +1476,11 @@ fn write_worksheet_xml(
     let has_slicers = slicer_rel_ids_x14.length() > 0 ||
       slicer_rel_ids_x15.length() > 0
     let has_sparklines = sparkline_groups.length() > 0
-    if !has_slicers && !has_sparklines && !has_conditional {
+    let has_unknown = unknown_ext_blocks.length() > 0
+    if !has_slicers && !has_sparklines && !has_conditional && !has_unknown {
       return None
     }
-    if has_sparklines && !has_slicers && !has_conditional {
+    if has_sparklines && !has_slicers && !has_conditional && !has_unknown {
       return Some(write_sparkline_ext_xml(sheet.name(), sparkline_groups))
     }
     let sb = StringBuilder::new()
@@ -1517,6 +1519,20 @@ fn write_worksheet_xml(
       }
       sb.write_view("      </x14:slicerList>\n")
       sb.write_view("    </ext>\n")
+    }
+    if unknown_ext_blocks.length() > 0 {
+      for block in unknown_ext_blocks {
+        let block_text = block.to_string()
+        if block_text.has_prefix("<ext") {
+          sb.write_view("    ")
+          sb.write_view(block_text)
+        } else {
+          sb.write_view(block_text)
+        }
+        if !block_text.has_suffix("\n") {
+          sb.write_view("\n")
+        }
+      }
     }
     sb.write_view("  </extLst>\n")
     Some(sb.to_string())
@@ -1865,6 +1881,7 @@ fn write_worksheet_xml(
       slicer_rel_ids_x15,
       sheet.sparkline_groups(),
       sheet.x14_data_bars,
+      sheet.unknown_ext_blocks[:],
     ) {
     Some(xml) => sb.write_view(xml)
     None => ()

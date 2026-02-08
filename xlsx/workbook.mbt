@@ -1352,6 +1352,7 @@ fn clone_worksheet(
     data_validations: clone_strings(sheet.data_validations),
     conditional_formats: clone_strings(sheet.conditional_formats),
     x14_data_bars: clone_x14_data_bars(sheet.x14_data_bars),
+    unknown_ext_blocks: clone_strings(sheet.unknown_ext_blocks),
     x14_cf_rule_id_counter: sheet.x14_cf_rule_id_counter,
     ignored_errors: clone_ignored_errors(sheet.ignored_errors),
     comments: clone_comments(sheet.comments),

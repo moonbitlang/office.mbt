@@ -93,6 +93,7 @@ pub struct Worksheet {
   data_validations : Array[String]
   conditional_formats : Array[String]
   x14_data_bars : Map[String, X14DataBarProps]
+  unknown_ext_blocks : Array[String]
   mut x14_cf_rule_id_counter : Int
   ignored_errors : Array[IgnoredError]
   comments : Array[Comment]
@@ -136,6 +137,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     data_validations: [],
     conditional_formats: [],
     x14_data_bars: {},
+    unknown_ext_blocks: [],
     x14_cf_rule_id_counter: 1,
     ignored_errors: [],
     comments: [],

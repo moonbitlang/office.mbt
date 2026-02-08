@@ -1067,12 +1067,24 @@ Commands used:
       - stream-writer branch/error behavior depth beyond current integration scenarios
     - Proposed next one-by-one sequence as items `81-84`.
 
-- [ ] 81. Add lossless roundtrip test for unknown worksheet ext blocks with mixed known ext blocks.
+- [x] 81. Add lossless roundtrip test for unknown worksheet ext blocks with mixed known ext blocks.
   - DoD: ensure read/write preserves unrelated ext payloads while keeping known sparkline/x14/slicer ext blocks functional.
-  - Planned:
-    - inject unknown ext entry alongside known mixed-ext entries
-    - verify unknown ext payload survives roundtrip and known features still parse
-    - run targeted test + `moon check --deny-warn`
+  - Delivered:
+    - Added unknown-ext preservation support in worksheet read/write path:
+      - `xlsx/read.mbt` now captures unknown worksheet-level `extLst` entries (excluding known sparkline/x14/slicer entries)
+      - `xlsx/write.mbt` now re-emits preserved unknown worksheet `ext` blocks alongside known ext blocks
+      - `Worksheet` model now stores preserved unknown worksheet ext entries (`unknown_ext_blocks`) and clone path retains them
+    - Added `xlsx/integration_unknown_ext_roundtrip_test.mbt`:
+      - injects unknown ext entry into mixed sparkline+x14+slicer worksheet
+      - validates unknown ext payload survives roundtrip
+      - validates known mixed-ext features still parse and emit correctly
+    - Validation gates:
+      - `moon test xlsx/integration_unknown_ext_roundtrip_test.mbt`
+      - `moon test xlsx/integration_iconset_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 82. Add parser robustness tests for mixed-ext relationship edge cases.
   - DoD: ensure rel-target parsing remains robust with varied target path forms and additional relationship entries.
@@ -1097,4 +1109,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **81** (unknown worksheet ext lossless roundtrip slice).
+- Next item: **82** (mixed-ext relationship edge-case robustness slice).
