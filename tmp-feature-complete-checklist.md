@@ -1636,6 +1636,26 @@ Commands used:
     - Coverage delta:
       - `xlsx/write.mbt` uncovered lines reduced from `68` to `56`
 
+- [x] 118. Continue `write.mbt` hardening on worksheet-dimension and ext-list branches.
+  - DoD: reduce uncovered lines in `xlsx/write.mbt` by exercising worksheet dimension aggregation branches and ext-list map/fallback branches.
+  - Delivered:
+    - Extended `xlsx/write_hardening_wbtest.mbt` with targeted coverage for:
+      - `worksheet_dimension(...)` min/max update branches across:
+        - cells (`min_col` update),
+        - merged ranges (`min_row`/`min_col` updates),
+        - tables (`min/max row/col` updates),
+        - auto-filter expansion updates
+      - `write_worksheet_xml(...)` x14 ext-list helper paths:
+        - skip-default data-bar props branch
+        - same-`sqref` aggregation (`Some(ids)`) branch
+        - unknown ext block passthrough fallback branch
+    - Validation gates:
+      - `moon test xlsx/write_hardening_wbtest.mbt`
+      - `moon check --deny-warn`
+      - `moon coverage analyze > /tmp/mbtexcel_uncovered_after118.log`
+    - Coverage delta:
+      - `xlsx/write.mbt` uncovered lines reduced from `56` to `42`
+
 ## Active Item
 
-- Next item: **118** (continue bounded `write.mbt` hardening with remaining drawing/image/chart/shape branch fan-outs).
+- Next item: **119** (final bounded `write.mbt` slice for theme override path + worksheet hyperlink/cell error branches where reachable).

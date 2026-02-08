@@ -399,3 +399,71 @@ test "write hardening wb: sheet view writer covers bool attribute branches" {
   inspect(xml.contains("showRuler=\"0\""), content="true")
   inspect(xml.contains("showZeros=\"0\""), content="true")
 }
+
+///|
+test "write hardening wb: worksheet_dimension covers cell merge and table min/max branches" {
+  let sheet = Worksheet::new("Dim")
+  sheet.set_cell("D3", "x")
+  sheet.set_cell("C4", "y")
+  sheet.merge_cells("B2:B5")
+  ignore(sheet.add_table("A1:E6", "DimTable", ["A", "B", "C", "D", "E"]))
+  let dimension = worksheet_dimension(sheet) catch {
+    err => fail("worksheet_dimension failed: \{err}")
+  }
+  inspect(dimension, content="Some(\"A1:E6\")")
+}
+
+///|
+test "write hardening wb: worksheet_dimension covers auto-filter expansion branches" {
+  let sheet = Worksheet::new("FilterDim")
+  sheet.set_cell("C3", "x")
+  sheet.auto_filter = Some({ range_ref: "B2:D4", columns: [] })
+  let dimension = worksheet_dimension(sheet) catch {
+    err => fail("worksheet_dimension failed: \{err}")
+  }
+  inspect(dimension, content="Some(\"B2:D4\")")
+}
+
+///|
+test "write hardening wb: write_worksheet_xml covers x14 map aggregation and unknown ext fallback" {
+  let sheet = Worksheet::new("Exts")
+  sheet.x14_data_bars["skip"] = {
+    sqref: "A1",
+    bar_direction: "",
+    bar_solid: false,
+    bar_border_color: "",
+  }
+  sheet.x14_data_bars["id1"] = {
+    sqref: "A1",
+    bar_direction: "leftToRight",
+    bar_solid: false,
+    bar_border_color: "",
+  }
+  sheet.x14_data_bars["id2"] = {
+    sqref: "A1",
+    bar_direction: "",
+    bar_solid: true,
+    bar_border_color: "",
+  }
+  sheet.unknown_ext_blocks.push("<foo/>")
+  let xml = write_worksheet_xml(
+    sheet,
+    {},
+    {},
+    {},
+    [],
+    None,
+    None,
+    [],
+    [],
+    [],
+    [],
+    None,
+    None,
+  ) catch {
+    err => fail("write_worksheet_xml failed: \{err}")
+  }
+  inspect(xml.contains("<extLst>"), content="true")
+  inspect(xml.contains("<x14:conditionalFormatting>"), content="true")
+  inspect(xml.contains("<foo/>"), content="true")
+}
