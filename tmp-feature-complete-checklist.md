@@ -551,13 +551,25 @@ Commands used:
       - Result: Excelize `458`, MoonBit `474`, missing `0`
     - Verified checklist baseline/formula notes remain aligned with current script output.
 
-- [ ] 38. Start integration-focused parity backlog after formula/struct baseline closure.
+- [x] 38. Start integration-focused parity backlog after formula/struct baseline closure.
   - DoD: define and execute the next integration-focused parity slice (OOXML cross-part consistency) with tests.
+  - Delivered:
+    - Added `xlsx/integration_rel_consistency_test.mbt`:
+      - mixed workbook setup (table + chart + shape)
+      - validates worksheet/drawing relationship IDs are unique
+      - validates key rel targets exist (`drawing1.xml`, `table1.xml`, `chart1.xml`)
+      - validates referenced OOXML parts are present in archive
+    - Validation gates:
+      - `moon test xlsx/integration_rel_consistency_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 39. Add integration parity slice for pivot/slicer relationship consistency.
+  - DoD: validate pivot/slicer OOXML relationship wiring and target-part existence in a mixed workbook.
   - Planned:
-    - choose a concrete integration slice (charts+tables, pivots, or drawing rels)
-    - add regression test(s) at workbook/output level
-    - run targeted integration gates and commit
+    - build a workbook with pivot + slicer parts
+    - assert rel target presence and unique IDs across relevant `_rels` parts
+    - run targeted integration test gate
 
 ## Active Item
 
-- Next item: **38** (integration-focused parity slice).
+- Next item: **39** (pivot/slicer integration parity slice).
