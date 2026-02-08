@@ -2185,6 +2185,35 @@ Commands used:
     - Total uncovered lines reduced from `3335` to `3262`
     - Uncovered file count reduced from `56` to `55`
 
+- [x] 149. Close residuals in `workbook_compat.mbt`.
+  - DoD: remove remaining wrapper lookup duplication in compat adapters and cover residual parse/compat branches with focused tests.
+  - Delivered:
+    - Refactored `xlsx/workbook_compat.mbt`:
+      - migrated compat wrappers to `require_sheet` in:
+        - `set_sheet_row`
+        - `set_sheet_col`
+        - `set_col_width_range`
+        - `set_col_visible_range`
+        - `set_col_outline_level_range`
+        - `set_col_style_range`
+    - Extended tests:
+      - `xlsx/sheet_name_workbook_compat_test.mbt`:
+        - added valid-name missing-sheet checks (`SheetNotFound`) for all compat range wrappers.
+      - `xlsx/col_range_test.mbt`:
+        - added parser edge coverage for single-column range, too-many segments (`A:B:C`), and descending range (`D:B`).
+      - `xlsx/compat_test.mbt`:
+        - added non-formula cell preservation assertion in `update_linked_value`.
+  - Validation gates:
+    - `moon test xlsx/sheet_name_workbook_compat_test.mbt`
+    - `moon test xlsx/col_range_test.mbt`
+    - `moon test xlsx/compat_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after151.log`
+  - Coverage delta:
+    - `xlsx/workbook_compat.mbt` uncovered lines reduced from `10` to `0`
+    - Total uncovered lines reduced from `3262` to `3252`
+    - Uncovered file count reduced from `55` to `54`
+
 ## Active Item
 
-- Next item: **149** (move to next low-line-count residual file, starting with `xlsx/workbook_compat.mbt`).
+- Next item: **150** (move to the next residual hotspot, starting with `xlsx/write_comments_vml.mbt`).

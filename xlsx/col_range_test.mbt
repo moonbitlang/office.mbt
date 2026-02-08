@@ -55,3 +55,21 @@ test "column range setters" {
     content="[Some(1), Some(1), Some(1)]",
   )
 }
+
+///|
+test "column range parser edge branches" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_col_width_range("Sheet1", "C", 9.0)
+  inspect(workbook.get_col_width("Sheet1", 3), content="Some(9)")
+
+  let too_many_parts : Result[Unit, Error] = try? workbook.set_col_width_range(
+    "Sheet1", "A:B:C", 10.0,
+  )
+  inspect(too_many_parts is Err(XlsxError::InvalidCellRef(_)), content="true")
+
+  let descending : Result[Unit, Error] = try? workbook.set_col_width_range(
+    "Sheet1", "D:B", 10.0,
+  )
+  inspect(descending is Err(XlsxError::InvalidCellRef(_)), content="true")
+}

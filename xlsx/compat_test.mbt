@@ -67,11 +67,13 @@ test "update linked value clears formula cache" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   workbook.set_cell_formula("Sheet1", "A1", "SUM(1,2)", value="3")
+  workbook.set_cell("Sheet1", "B1", "keep")
   workbook.set_calc_props(
     Some(CalcPropsOptions::with_values(calc_mode="manual")),
   )
   workbook.update_linked_value()
   inspect(sheet.get_cell("A1"), content="Some(\"\")")
+  inspect(sheet.get_cell("B1"), content="Some(\"keep\")")
   let props = workbook.get_calc_props()
   inspect(props.calc_mode, content="None")
 }

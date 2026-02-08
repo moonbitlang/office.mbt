@@ -115,11 +115,7 @@ pub fn Workbook::set_sheet_row(
   cell : StringView,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let (row, col) = cell_ref_to_rc(cell)
   let mut col_index = col
   for value in values {
@@ -136,11 +132,7 @@ pub fn Workbook::set_sheet_col(
   cell : StringView,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let (row, col) = cell_ref_to_rc(cell)
   let mut row_index = row
   for value in values {
@@ -189,11 +181,7 @@ pub fn Workbook::set_col_width_range(
   columns : StringView,
   width : Double,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
     sheet.set_col_width(col, width)
@@ -207,11 +195,7 @@ pub fn Workbook::set_col_visible_range(
   columns : StringView,
   visible : Bool,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
     sheet.set_col_visible(col, visible)
@@ -225,11 +209,7 @@ pub fn Workbook::set_col_outline_level_range(
   columns : StringView,
   level : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
     sheet.set_col_outline_level(col, level)
@@ -243,11 +223,7 @@ pub fn Workbook::set_col_style_range(
   columns : StringView,
   style_id : Int,
 ) -> Unit raise XlsxError {
-  check_sheet_name(sheet_name)
-  let sheet = match self.sheet(sheet_name) {
-    Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
-  }
+  let sheet = self.require_sheet(sheet_name)
   let (start, end) = parse_column_range(columns)
   for col in start..<=end {
     sheet.set_col_style(col, style_id)
