@@ -1631,6 +1631,10 @@ pub fn StreamWriter::sheet_id(Self) -> Int
 
 pub struct Style {
   number_format : NumberFormat?
+  num_fmt : Int?
+  decimal_places : Int?
+  custom_num_fmt : String?
+  neg_red : Bool?
   font : Font?
   fill : Fill?
   border : Array[Border]?

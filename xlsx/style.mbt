@@ -745,6 +745,10 @@ pub fn Alignment::with_values(
 /// ```
 pub struct Style {
   number_format : NumberFormat?
+  num_fmt : Int?
+  decimal_places : Int?
+  custom_num_fmt : String?
+  neg_red : Bool?
   font : Font?
   fill : Fill?
   border : Array[Border]?
@@ -757,6 +761,10 @@ pub struct Style {
 pub fn Style::new() -> Style {
   {
     number_format: None,
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: None,
     border: None,
@@ -782,6 +790,10 @@ pub fn Style::new() -> Style {
 pub fn Style::number_format(format_code : String) -> Style {
   {
     number_format: Some(Custom(format_code)),
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: None,
     border: None,
@@ -807,6 +819,10 @@ pub fn Style::number_format(format_code : String) -> Style {
 pub fn Style::builtin_number_format(id : Int) -> Style {
   {
     number_format: Some(Builtin(id)),
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: None,
     border: None,
@@ -859,6 +875,10 @@ pub fn Style::excelize_currency_num_fmt(
 pub fn Style::font(font : Font) -> Style {
   {
     number_format: None,
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: Some(font),
     fill: None,
     border: None,
@@ -872,6 +892,10 @@ pub fn Style::font(font : Font) -> Style {
 pub fn Style::with_font(self : Style, font : Font) -> Style {
   {
     number_format: self.number_format,
+    num_fmt: self.num_fmt,
+    decimal_places: self.decimal_places,
+    custom_num_fmt: self.custom_num_fmt,
+    neg_red: self.neg_red,
     font: Some(font),
     fill: self.fill,
     border: self.border,
@@ -885,6 +909,10 @@ pub fn Style::with_font(self : Style, font : Font) -> Style {
 pub fn Style::fill(fill : Fill) -> Style {
   {
     number_format: None,
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: Some(fill),
     border: None,
@@ -898,6 +926,10 @@ pub fn Style::fill(fill : Fill) -> Style {
 pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
   {
     number_format: self.number_format,
+    num_fmt: self.num_fmt,
+    decimal_places: self.decimal_places,
+    custom_num_fmt: self.custom_num_fmt,
+    neg_red: self.neg_red,
     font: self.font,
     fill: Some(fill),
     border: self.border,
@@ -921,6 +953,10 @@ pub fn Style::with_fill(self : Style, fill : Fill) -> Style {
 pub fn Style::border(border : Array[Border]) -> Style {
   {
     number_format: None,
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: None,
     border: Some(border),
@@ -934,6 +970,10 @@ pub fn Style::border(border : Array[Border]) -> Style {
 pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
   {
     number_format: self.number_format,
+    num_fmt: self.num_fmt,
+    decimal_places: self.decimal_places,
+    custom_num_fmt: self.custom_num_fmt,
+    neg_red: self.neg_red,
     font: self.font,
     fill: self.fill,
     border: Some(border),
@@ -947,6 +987,10 @@ pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
 pub fn Style::protection(protection : Protection) -> Style {
   {
     number_format: None,
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: None,
     border: None,
@@ -959,6 +1003,10 @@ pub fn Style::protection(protection : Protection) -> Style {
 pub fn Style::with_protection(self : Style, protection : Protection) -> Style {
   {
     number_format: self.number_format,
+    num_fmt: self.num_fmt,
+    decimal_places: self.decimal_places,
+    custom_num_fmt: self.custom_num_fmt,
+    neg_red: self.neg_red,
     font: self.font,
     fill: self.fill,
     border: self.border,
@@ -971,6 +1019,10 @@ pub fn Style::with_protection(self : Style, protection : Protection) -> Style {
 pub fn Style::alignment(alignment : Alignment) -> Style {
   {
     number_format: None,
+    num_fmt: None,
+    decimal_places: None,
+    custom_num_fmt: None,
+    neg_red: None,
     font: None,
     fill: None,
     border: None,
@@ -983,6 +1035,10 @@ pub fn Style::alignment(alignment : Alignment) -> Style {
 pub fn Style::with_alignment(self : Style, alignment : Alignment) -> Style {
   {
     number_format: self.number_format,
+    num_fmt: self.num_fmt,
+    decimal_places: self.decimal_places,
+    custom_num_fmt: self.custom_num_fmt,
+    neg_red: self.neg_red,
     font: self.font,
     fill: self.fill,
     border: self.border,

@@ -256,13 +256,41 @@ Commands used:
       - `moon check --deny-warn`
       - `moon info --package xlsx && moon fmt`
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types SparklineOptions`
-- [ ] 16. Add `Style` parity fields (`num_fmt`, `decimal_places`, `custom_num_fmt`, `neg_red`).
+- [x] 16. Add `Style` parity fields (`num_fmt`, `decimal_places`, `custom_num_fmt`, `neg_red`).
   - DoD: `Style` exposes Excelize-compatible fields without changing current number-format behavior.
+  - Delivered:
+    - Added optional parity fields to `Style` in `xlsx/style.mbt`:
+      - `num_fmt : Int?`
+      - `decimal_places : Int?`
+      - `custom_num_fmt : String?`
+      - `neg_red : Bool?`
+    - Threaded fields through all `Style` constructors/updaters:
+      - `Style::new`
+      - `Style::number_format`
+      - `Style::builtin_number_format`
+      - `Style::font` / `with_font`
+      - `Style::fill` / `with_fill`
+      - `Style::border` / `with_border`
+      - `Style::protection` / `with_protection`
+      - `Style::alignment` / `with_alignment`
+    - Preserved existing behavior path:
+      - `number_format` remains canonical for read/write and formatting behavior.
+    - Validation gates:
+      - `moon test xlsx/style_test.mbt`
+      - `moon test xlsx/value_format_test.mbt`
+      - `moon test xlsx/value_format_more_test.mbt`
+      - `moon test xlsx/options_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info --package xlsx && moon fmt`
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Style`
+- [ ] 17. Reduce chart missing-field parity (`Chart* fill/type/sizes/legend` baseline aliases).
+  - DoD: eliminate current chart “missing” field set from parity report via concrete fields or canonical alias normalization.
   - Planned:
-    - add optional fields to `Style` and thread them through style constructors/updaters
-    - preserve existing `number_format` as canonical behavior path
-    - add regression checks for style equality and read/write stability
+    - inspect `Chart`, `ChartSeries`, `ChartLine`, `ChartDataLabel`, `ChartDataPoint`, `ChartMarker`, `ChartPlotArea`, `ChartUpDownBar`
+    - add safe alias fields where non-breaking
+    - add/adjust parity normalizer aliases for unavoidable keyword/name differences (`type` vs `typ`)
+    - validate existing chart behavior and chart tests remain green
 
 ## Active Item
 
-- Next item: **16** (`Style` parity fields).
+- Next item: **17** (chart missing-field parity reduction).
