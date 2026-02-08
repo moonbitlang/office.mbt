@@ -480,7 +480,7 @@ Commands used:
       - API name parity remains `169/169`, missing `0`
       - API test-reference coverage remains uncovered `0`
       - normalized struct field parity is now `0` differences
-      - formula parity heuristic remains Excelize `458` vs MoonBit `45` (missing `433`)
+      - formula parity heuristic (current script) is Excelize `458` vs MoonBit `474` (missing `0`, extra `16`)
 
 - [x] 32. Recalibrate formula parity heuristic against full MoonBit formula dispatch.
   - DoD: eliminate false “missing function” noise from heuristic by scanning real formula dispatch sites.
@@ -495,13 +495,24 @@ Commands used:
       - Result: Excelize `458`, MoonBit `474`, missing `0`
       - `--show-extra` reports `16` dynamic-array-era functions present in MoonBit but absent in current Excelize method-derived list.
 
-- [ ] 33. Validate formula parity quality with targeted behavior tests (not name-heuristic only).
+- [x] 33. Validate formula parity quality with targeted behavior tests (not name-heuristic only).
   - DoD: add or extend parity tests for a curated high-impact function subset and verify behavior-level parity.
+  - Delivered:
+    - Added `xlsx/calc_behavior_parity_pack1_test.mbt` with behavior-level parity coverage across math/text/date/logical/workday functions.
+    - Added parity-error coverage in the same file for invalid argument shapes and boundary inputs.
+    - Validation gates:
+      - `moon test xlsx/calc_behavior_parity_pack1_test.mbt`
+      - `moon test xlsx/calc_conditional_parity_test.mbt`
+      - `moon check --deny-warn`
+      - `moon info && moon fmt`
+
+- [ ] 34. Expand behavior-level formula parity pack 2 (lookup/array + financial edge cases).
+  - DoD: add a second curated behavior parity suite for high-risk function families and keep targeted tests green.
   - Planned:
-    - select representative functions across math/text/date/logical categories
-    - add/extend parity tests in formula test suites
-    - run targeted formula tests + `moon check --deny-warn`
+    - add parity cases for lookup/array functions (`INDEX`, `MATCH`, `XLOOKUP`, `FILTER`, `SORT`)
+    - add parity/error cases for selected financial functions already implemented
+    - run targeted parity suites + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **33** (behavior-level formula parity tests).
+- Next item: **34** (behavior-level formula parity pack 2).
