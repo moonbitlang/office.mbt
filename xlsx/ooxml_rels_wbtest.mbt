@@ -76,3 +76,42 @@ test "ooxml_rels: resolve_workbook_rel_target treats relative as under xl/" {
     content="xl/worksheets/sheet1.xml",
   )
 }
+
+///|
+test "ooxml_rels: resolve target normalizes dot segments" {
+  inspect(
+    resolve_rel_target(".././drawings/../drawings/d1.xml", "worksheets"),
+    content="xl/drawings/d1.xml",
+  )
+  inspect(
+    resolve_rel_target("./tables/table1.xml", "worksheets"),
+    content="xl/worksheets/tables/table1.xml",
+  )
+  inspect(
+    resolve_workbook_rel_target("./worksheets/./sheet1.xml"),
+    content="xl/worksheets/sheet1.xml",
+  )
+  inspect(
+    resolve_workbook_rel_target("worksheets/../worksheets/sheet1.xml"),
+    content="xl/worksheets/sheet1.xml",
+  )
+}
+
+///|
+test "ooxml_rels: resolve target rejects escaping root via dot segments" {
+  let rel_result = try? resolve_rel_target("../../../sheet1.xml", "worksheets")
+  match rel_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="relationship target invalid")
+    _ => fail("expected InvalidXml for relative escape in resolve_rel_target")
+  }
+  let workbook_result = try? resolve_workbook_rel_target("../../sheet1.xml")
+  match workbook_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="relationship target invalid")
+    _ =>
+      fail(
+        "expected InvalidXml for relative escape in resolve_workbook_rel_target",
+      )
+  }
+}

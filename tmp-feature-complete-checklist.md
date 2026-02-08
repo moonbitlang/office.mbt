@@ -1151,13 +1151,31 @@ Commands used:
       - latest full release gate total updated to `moon test 879/879`
     - Confirmed parity snapshot note consistency with post-item-85 gate state
 
-- [ ] 87. Normalize dot-segment relationship targets (`./`, repeated `../`) in read-side resolvers.
+- [x] 87. Normalize dot-segment relationship targets (`./`, repeated `../`) in read-side resolvers.
   - DoD: resolve relationship targets with dot-segments to canonical part paths before archive lookup.
+  - Delivered:
+    - Implemented dot-segment normalization in `xlsx/ooxml_rels.mbt`:
+      - added `normalize_rel_part_path` and applied it in both `resolve_rel_target` and `resolve_workbook_rel_target`
+      - preserved workbook `../` compatibility while normalizing
+      - reject escaped/non-`xl/` normalized targets as invalid relationship paths
+    - Added whitebox resolver coverage in `xlsx/ooxml_rels_wbtest.mbt`:
+      - normalization of `./` and mixed `.././..` sequences
+      - rejection of root-escape targets
+    - Validation gates:
+      - `moon test xlsx/ooxml_rels_wbtest.mbt`
+      - `moon test xlsx/ooxml_rels_error_test.mbt`
+      - `moon test xlsx/pivot_test.mbt`
+      - `moon test xlsx/chart_sheet_test.mbt`
+      - `moon test xlsx/integration_unknown_ext_roundtrip_test.mbt`
+      - `moon check --deny-warn`
+
+- [ ] 88. Run focused gate and baseline-note refresh after relationship-target normalization.
+  - DoD: ensure latest resolver hardening is reflected in gate notes and active baseline metadata.
   - Planned:
-    - add resolver tests for dot-segment target forms in `xlsx/ooxml_rels_wbtest.mbt`
-    - implement path normalization in `xlsx/ooxml_rels.mbt` for both worksheet and workbook target resolvers
-    - run targeted rel tests + `moon check --deny-warn`
+    - rerun focused tranche gate covering items `82`, `87`, and stream regressions
+    - refresh `Branch/HEAD` and latest-gate note if totals/commits changed
+    - keep checklist in sync for next one-by-one tranche selection
 
 ## Active Item
 
-- Next item: **87** (dot-segment relationship target normalization).
+- Next item: **88** (post-normalization focused gate and baseline-note refresh).

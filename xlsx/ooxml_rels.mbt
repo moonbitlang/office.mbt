@@ -44,21 +44,41 @@ fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
 }
 
 ///|
+fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
+  let segments : Array[String] = []
+  for chunk in path.split("/") {
+    let segment = chunk.to_string()
+    if segment == "" || segment == "." {
+      continue
+    }
+    if segment == ".." {
+      if segments.length() == 0 {
+        raise InvalidXml(msg="relationship target invalid")
+      }
+      ignore(segments.pop())
+      continue
+    }
+    segments.push(segment)
+  }
+  if segments.length() == 0 {
+    raise InvalidXml(msg="relationship target invalid")
+  }
+  segments.join("/")
+}
+
+///|
 fn resolve_rel_target(
   target : StringView,
   base_folder : StringView,
 ) -> String raise XlsxError {
   let target_str = target.to_string()
-  if target_str.has_prefix("/") {
+  let raw = if target_str.has_prefix("/") {
     let rest = target_str[1:] catch {
         _ => raise InvalidXml(msg="relationship target invalid")
       }
     rest.to_string()
   } else if target_str.has_prefix("../") {
-    let rest = target_str[3:] catch {
-        _ => raise InvalidXml(msg="relationship target invalid")
-      }
-    "xl/" + rest.to_string()
+    "xl/" + base_folder.to_string() + "/" + target_str
   } else if target_str.has_prefix("xl/") {
     target_str
   } else {
@@ -69,14 +89,19 @@ fn resolve_rel_target(
       "xl/" + base + "/" + target_str
     }
   }
+  let normalized = normalize_rel_part_path(raw)
+  if !normalized.has_prefix("xl/") {
+    raise InvalidXml(msg="relationship target invalid")
+  }
+  normalized
 }
 
 ///|
 fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
   let target_str = target.to_string()
-  if target_str.has_prefix("/") {
+  let raw = if target_str.has_prefix("/") {
     let rest = target_str[1:] catch {
-        _ => raise InvalidXml(msg="relationship target invalid")
+      _ => raise InvalidXml(msg="relationship target invalid")
       }
     rest.to_string()
   } else if target_str.has_prefix("../") {
@@ -89,4 +114,9 @@ fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
   } else {
     "xl/" + target_str
   }
+  let normalized = normalize_rel_part_path(raw)
+  if !normalized.has_prefix("xl/") {
+    raise InvalidXml(msg="relationship target invalid")
+  }
+  normalized
 }
