@@ -1,7 +1,7 @@
 # Temporary Feature-Complete Checklist
 
 Last updated: 2026-02-08  
-Branch/HEAD: `main` @ `d2e1924`  
+Branch/HEAD: `main` @ `7f1ccaf`  
 Excelize snapshot: `37b730a`
 
 ## Baseline Snapshot (Completed)
@@ -11,6 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
+- Latest full release gate: `moon test 862/862`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -738,13 +739,29 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 54. Refresh checklist baseline totals after tranche 45-53 closure.
+- [x] 54. Refresh checklist baseline totals after tranche 45-53 closure.
   - DoD: align baseline summary counts (test totals and notes) with latest full gate run.
+  - Delivered:
+    - Updated baseline header snapshot with latest branch head and full-gate outcome:
+      - refreshed `Branch/HEAD` pointer
+      - added latest full-gate status (`moon test 862/862`, demos/parity pass)
+    - Verified checklist consistency with tranche `45-53` outcomes and totals.
+
+- [ ] 55. Add integration parity slice for pivot-backed slicer + sparkline + x14 data-bar coexistence.
+  - DoD: validate a single worksheet can host pivot-backed slicer ext wiring together with sparkline and x14 conditional-formatting ext blocks.
   - Planned:
-    - update baseline test total to latest full-gate result
-    - keep command and scenario notes synchronized
-    - run quick sanity check on checklist consistency
+    - build a mixed workbook using pivot-backed slicer (not table-backed)
+    - add sparkline group and x14 data-bar CF on the slicer worksheet
+    - assert ext URIs/markers and key relationship targets are present
+    - run targeted integration test + `moon check --deny-warn`
+
+- [ ] 56. Run combined gate for new pivot-backed mixed-ext slice.
+  - DoD: execute tests from `55` plus existing mixed-ext stability tests and keep gate green.
+  - Planned:
+    - run `integration_sparkline_slicer_x14_test`, `integration_mixed_ext_roundtrip_stability_test`, and new `55` test
+    - run `moon check --deny-warn`
+    - record consolidated results
 
 ## Active Item
 
-- Next item: **54** (refresh baseline totals after tranche closure).
+- Next item: **55** (pivot-backed mixed-ext integration slice).
