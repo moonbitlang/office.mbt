@@ -1101,12 +1101,23 @@ Commands used:
       - `moon test xlsx/chart_sheet_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 83. Expand stream-writer non-integration branch coverage (style/row/table edge constraints).
+- [x] 83. Expand stream-writer non-integration branch coverage (style/row/table edge constraints).
   - DoD: close branch-level stream-writer gaps not covered by current integration tests.
-  - Planned:
-    - add focused tests for style/table/row constraint error branches and recovery paths
-    - validate no regressions in existing stream writer behavior
-    - run targeted stream suites + `moon check --deny-warn`
+  - Delivered:
+    - Added focused stream-writer branch tests in `xlsx/stream_more_test.mbt`:
+      - invalid `set_row_cells` style-id validation path
+      - invalid column-index paths for `set_col_visible`, `set_col_outline_level`, and `set_col_style`
+      - invalid style-id path in `set_col_style`
+      - row outline-level validation path in row options
+      - closed-writer and success paths for `insert_page_break`
+    - Added whitebox guard test in `xlsx/stream_wbtest.mbt`:
+      - direct `apply_row_opts` non-positive-row validation branch
+    - Coverage confirmation:
+      - reran `moon coverage analyze` and verified `xlsx/stream.mbt` is no longer listed with uncovered lines
+    - Validation gates:
+      - `moon test xlsx/stream_more_test.mbt`
+      - `moon test xlsx/stream_wbtest.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 84. Run combined gate for non-integration tranche (81-83).
   - DoD: execute new non-integration tests together and keep check/test gates green.
@@ -1117,4 +1128,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **83** (stream-writer non-integration branch coverage slice).
+- Next item: **84** (combined non-integration tranche gate).
