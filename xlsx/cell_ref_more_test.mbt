@@ -137,3 +137,18 @@ test "cell ref invalid inputs" {
     ),
   )
 }
+
+///|
+test "cell ref row/col guards and split overflow row parse" {
+  let from_bad_row : Result[String, Error] = try? cell_ref_from(0, 1)
+  inspect(from_bad_row is Err(_), content="true")
+
+  let join_bad_row : Result[String, Error] = try? join_cell_name("A", 0)
+  inspect(join_bad_row is Err(_), content="true")
+
+  let huge_row = "A" + "9".repeat(5000)
+  let split_overflow : Result[(String, Int), Error] = try? split_cell_name(
+    huge_row,
+  )
+  inspect(split_overflow is Err(_), content="true")
+}

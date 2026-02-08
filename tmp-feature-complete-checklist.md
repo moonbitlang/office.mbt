@@ -1838,6 +1838,24 @@ Commands used:
   - Residual notes:
     - Remaining `xlsx/sqref.mbt` uncovered line is a structural map re-fetch fallback (`None => ()`) after iterating pre-collected map keys.
 
+- [x] 130. Continue low-line-count residual reduction in `cell_ref.mbt`.
+  - DoD: cover reachable guard/catch branches in `cell_ref_from`, `join_cell_name`, and `split_cell_name`.
+  - Delivered:
+    - Extended `xlsx/cell_ref_more_test.mbt` with:
+      - `cell ref row/col guards and split overflow row parse`
+      - covers:
+        - `cell_ref_from(0, 1)` invalid row guard
+        - `join_cell_name("A", 0)` row guard
+        - `split_cell_name` parse-int catch path via oversized numeric suffix
+  - Validation gates:
+    - `moon test xlsx/cell_ref_more_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after131.log`
+  - Coverage delta:
+    - `xlsx/cell_ref.mbt` uncovered lines reduced from `4` to `1`
+  - Residual notes:
+    - Remaining `xlsx/cell_ref.mbt` uncovered line is `column_name_to_number`'s `value <= 0` post-loop guard, which appears structurally unreachable under valid per-character accumulation constraints.
+
 ## Active Item
 
-- Next item: **130** (close low-line-count residuals in `xlsx/cell_ref.mbt` with targeted parser/guard branch tests).
+- Next item: **131** (close low-line-count residuals in `xlsx/date_convert.mbt` with targeted parse/edge-case tests).
