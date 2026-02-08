@@ -701,13 +701,17 @@ Commands used:
       - mixed sparkline + slicer + x14 integration: `1/1` passed
       - check: pass
 
-- [ ] 51. Add repeated roundtrip integration stability test for mixed ext features.
+- [x] 51. Add repeated roundtrip integration stability test for mixed ext features.
   - DoD: validate that repeated write/read cycles preserve sparkline + x14 data-bar + slicer presence without dropping ext markers.
-  - Planned:
-    - build one mixed workbook scenario with all three features
-    - run two write/read cycles in one test
-    - assert key ext markers/parts remain present after each cycle
-    - run targeted test + `moon check --deny-warn`
+  - Delivered:
+    - Added `xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`:
+      - mixed workbook scenario containing sparkline group, table-backed slicer, and x14 data-bar conditional format
+      - performs repeated write/read cycles (write→read→write→read)
+      - validates key ext URIs/markers and slicer parts remain present across cycles
+      - validates read-roundtrip behavior for sparkline and conditional-format state after second cycle
+    - Validation gates:
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 52. Run focused sparkline/x14/slicer integration bundle gate.
   - DoD: execute the full sparkline-related integration set (`45`, `46`, `48`, `49`, `51`) together and keep gate green.
@@ -725,4 +729,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **51** (repeated roundtrip integration stability slice).
+- Next item: **52** (focused sparkline/x14/slicer integration bundle gate).
