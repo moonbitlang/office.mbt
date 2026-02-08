@@ -1,7 +1,7 @@
 # Temporary Feature-Complete Checklist
 
 Last updated: 2026-02-08  
-Branch/HEAD: `main` @ `cea5a46`  
+Branch/HEAD: `main` @ `29b2de3`  
 Excelize snapshot: `37b730a`
 
 ## Baseline Snapshot (Completed)
@@ -1169,13 +1169,28 @@ Commands used:
       - `moon test xlsx/integration_unknown_ext_roundtrip_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 88. Run focused gate and baseline-note refresh after relationship-target normalization.
+- [x] 88. Run focused gate and baseline-note refresh after relationship-target normalization.
   - DoD: ensure latest resolver hardening is reflected in gate notes and active baseline metadata.
+  - Delivered:
+    - Executed focused post-normalization gate:
+      - `moon test xlsx/integration_unknown_ext_roundtrip_test.mbt`
+      - `moon test xlsx/ooxml_rels_error_test.mbt`
+      - `moon test xlsx/ooxml_rels_wbtest.mbt`
+      - `moon test xlsx/stream_more_test.mbt`
+      - `moon test xlsx/stream_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - tests: `1/1`, `9/9`, `8/8`, `10/10`, `1/1` passed
+      - check: pass
+    - Refreshed top-level checklist `Branch/HEAD` metadata to current commit.
+
+- [ ] 89. Identify next post-parity hardening slice from current clean baseline.
+  - DoD: select the next highest-value one-by-one gap with explicit DoD and validation commands.
   - Planned:
-    - rerun focused tranche gate covering items `82`, `87`, and stream regressions
-    - refresh `Branch/HEAD` and latest-gate note if totals/commits changed
-    - keep checklist in sync for next one-by-one tranche selection
+    - inspect current remaining risk surfaces (non-OOXML-parser and non-stream-writer)
+    - choose one bounded slice and define objective pass/fail criteria
+    - continue commit-by-commit execution from the selected item
 
 ## Active Item
 
-- Next item: **88** (post-normalization focused gate and baseline-note refresh).
+- Next item: **89** (next hardening slice selection from clean baseline).
