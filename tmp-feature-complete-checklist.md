@@ -2012,6 +2012,26 @@ Commands used:
   - Residual notes:
     - Remaining `ooxml_rels.mbt` lines are structural slice-catch fallbacks around already-guarded prefix/suffix slicing.
 
+- [x] 141. Close low-line-count residuals in `write_workbook_xml.mbt`.
+  - DoD: cover active-tab fallback, very-hidden sheet state emission, defined-name guard/comment/scope branches, and sparse workbookPr option-match branches.
+  - Delivered:
+    - Added `xlsx/write_workbook_xml_wbtest.mbt` with focused whitebox tests:
+      - `write workbook xml wb: covers active-tab fallback and defined-name guards`
+      - `write workbook xml wb: write_workbook_pr_xml handles sparse options`
+    - Covered branches:
+      - `safe_active` fallback (`active_sheet_index < 0 || >= len`)
+      - `state="veryHidden"` workbook sheet state emission
+      - defined-name `continue` guard for empty `name` / `refers_to`
+      - defined-name optional `comment` emission
+      - missing-scope `localSheetId` `None => ()` branch
+      - `write_workbook_pr_xml` `None` match arms for `date_1904` / `filter_privacy` / `code_name`
+  - Validation gates:
+    - `moon test xlsx/write_workbook_xml_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after143.log`
+  - Coverage delta:
+    - `xlsx/write_workbook_xml.mbt` uncovered lines reduced from `8` to `0`
+
 ## Active Item
 
-- Next item: **141** (close low-line-count residuals in `xlsx/write_workbook_xml.mbt` with targeted branch tests).
+- Next item: **142** (continue low-line-count residual reduction in `xlsx/write_part_paths.mbt` with targeted branch tests).
