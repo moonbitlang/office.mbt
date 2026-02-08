@@ -81,7 +81,9 @@ test "read_sheet_rel_parts wb: parse_table_part_ids supports expanded tags and v
     #|    <tablePart />
     #|  </tableParts>
     #|</worksheet>
-  let result : Result[Array[String], Error] = try? parse_table_part_ids(missing_id)
+  let result : Result[Array[String], Error] = try? parse_table_part_ids(
+    missing_id,
+  )
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="tablePart id missing")

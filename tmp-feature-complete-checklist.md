@@ -1254,13 +1254,31 @@ Commands used:
       - numeric tag parsing error branches (`parse_xml_int_tag`)
       - drawing image anchor metadata validation branches
 
-- [ ] 94. Expand `read_drawing_xml` parser branch coverage (anchor + numeric tag validation slice).
+- [x] 94. Expand `read_drawing_xml` parser branch coverage (anchor + numeric tag validation slice).
   - DoD: reduce uncovered lines in `xlsx/read_drawing_xml.mbt` with targeted whitebox parser tests.
+  - Delivered:
+    - Added `xlsx/read_drawing_xml_wbtest.mbt` with focused parser/validation coverage:
+      - `parse_xml_int_tag` missing/invalid numeric tag branches
+      - `drawing_axis_span_emu` reverse-order and same-index span branches
+      - `parse_drawing_anchors` malformed close-tag branches and `editAs` positioning handling
+      - `parse_drawing_images` edge/error branches:
+        - empty relationship-map path (`drawing image target missing`)
+        - missing `xdr:from`
+        - missing `xdr:ext`
+        - invalid/missing `cx`/`cy` attrs
+    - Validation gates:
+      - `moon test xlsx/read_drawing_xml_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Coverage delta:
+      - `xlsx/read_drawing_xml.mbt` uncovered lines reduced from `108` to `90`
+
+- [ ] 95. Plan next bounded parser hardening slice after `read_drawing_xml` coverage gain.
+  - DoD: choose next high-impact uncovered parser file and define explicit branch targets.
   - Planned:
-    - add focused tests for malformed anchor close/body branches and invalid numeric tag parsing
-    - cover key image-anchor validation error paths (missing/ext attrs)
-    - run targeted tests + `moon check --deny-warn` and record coverage delta
+    - compare remaining uncovered parser candidates (`read`, `worksheet`, `write`)
+    - select smallest high-value slice with measurable coverage delta
+    - continue one-by-one commit cadence
 
 ## Active Item
 
-- Next item: **94** (`read_drawing_xml` parser coverage slice).
+- Next item: **95** (next parser hardening slice selection).

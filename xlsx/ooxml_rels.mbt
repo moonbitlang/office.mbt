@@ -101,7 +101,7 @@ fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
   let target_str = target.to_string()
   let raw = if target_str.has_prefix("/") {
     let rest = target_str[1:] catch {
-      _ => raise InvalidXml(msg="relationship target invalid")
+        _ => raise InvalidXml(msg="relationship target invalid")
       }
     rest.to_string()
   } else if target_str.has_prefix("../") {

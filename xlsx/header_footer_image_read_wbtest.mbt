@@ -13,10 +13,7 @@ test "header/footer image read wb: shape id parser handles invalid cases" {
 ///|
 test "header/footer image read wb: style and extension parsing edge cases" {
   inspect(parse_style_value("height:20pt", "width"), content="None")
-  inspect(
-    parse_style_value("width:   ;height:20pt", "width"),
-    content="None",
-  )
+  inspect(parse_style_value("width:   ;height:20pt", "width"), content="None")
   inspect(parse_style_value("width:10pt", "width"), content="Some(\"10pt\")")
 
   inspect(extension_from_path("xl/media/image."), content="None")
@@ -61,7 +58,11 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
     #|  </v:shape>
     #|</xml>
 
-  let images = parse_header_footer_images_from_vml(vml_xml, Some(rels_xml), archive)
+  let images = parse_header_footer_images_from_vml(
+    vml_xml,
+    Some(rels_xml),
+    archive,
+  )
   inspect(images.length(), content="1")
   inspect(images[0].position, content="Left")
   inspect(images[0].is_footer, content="false")
