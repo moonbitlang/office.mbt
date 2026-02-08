@@ -183,6 +183,14 @@ _STRUCT_EQUIVALENTS: dict[str, str] = {
 # differences when --normalize-known is enabled.
 _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
     "Chart": {"combo_charts"},
+    "Fill": {
+        "fg_theme",
+        "fg_indexed",
+        "fg_tint",
+        "bg_theme",
+        "bg_indexed",
+        "bg_tint",
+    },
 }
 
 

@@ -384,13 +384,21 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 23. Reduce style `Fill` extra-field parity (`fg_theme/bg_theme/indexed/tint`).
+- [x] 23. Reduce style `Fill` extra-field parity (`fg_theme/bg_theme/indexed/tint`).
   - DoD: remove current `Fill` extras from normalized parity report via concrete alias fields or accepted alias normalization.
+  - Delivered:
+    - Added normalized-report MoonBit-extension allowances for style fill tint/theme/indexed fields in `scripts/excelize_struct_field_parity.py`:
+      - `fg_theme`, `fg_indexed`, `fg_tint`, `bg_theme`, `bg_indexed`, `bg_tint`
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Fill`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 24. Reduce style `Font` extra-field parity (`outline/shadow/condense/extend/family_number/scheme`).
+  - DoD: remove current `Font` extras from normalized parity report via accepted extension normalization.
   - Planned:
-    - inspect `Style.Fill` model vs Excelize `Fill` struct field names
-    - add safe aliases and/or normalize known naming differences for theme/indexed/tint
-    - rerun focused parity report for `Fill`
+    - register current MoonBit font extension fields in normalized parity report allowances
+    - rerun focused parity report for `Font`
 
 ## Active Item
 
-- Next item: **23** (`Fill` extra-field parity reduction).
+- Next item: **24** (`Font` extra-field parity reduction).
