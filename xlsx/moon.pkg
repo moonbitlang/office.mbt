@@ -1,0 +1,21 @@
+import {
+  "bobzhang/mbtexcel/zip",
+  "bobzhang/mbtexcel/ooxml",
+  "bobzhang/mbtexcel/crypto",
+  "bobzhang/mbtexcel/base64",
+  "moonbitlang/core/encoding/utf8" @encoding/utf8,
+  "moonbitlang/core/encoding/utf16" @encoding/utf16,
+  "moonbitlang/async/io" @async/io,
+  "moonbitlang/async/fs" @async/fs,
+  "moonbitlang/core/random",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/ref",
+  "moonbitlang/core/strconv",
+  "moonbitlang/core/math",
+  "moonbitlang/core/env",
+  "moonbitlang/x/time",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"

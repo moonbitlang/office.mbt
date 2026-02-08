@@ -12,6 +12,8 @@ __pycache__/
 *.pyc
 .tools
 demos*/
+!cmd/demos/
+!cmd/demos/moon.pkg
 _mbtexcel_check
 tools/**/bin/
 tools/**/obj/

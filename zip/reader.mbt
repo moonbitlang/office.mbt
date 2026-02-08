@@ -176,7 +176,7 @@ fn find_end_of_central(bytes : BytesView) -> Int? raise ZipError {
     if read_u32_le_at_raw(bytes, i) == end_of_central_sig.reinterpret_as_uint() {
       return Some(i)
     }
-  } else {
+  } nobreak {
     None
   }
 }

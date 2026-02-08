@@ -1,0 +1,7 @@
+import {
+  "bobzhang/mbtexcel" @lib,
+}
+
+options(
+  "is-main": true,
+)

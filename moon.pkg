@@ -1,0 +1,14 @@
+import {
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/x/time",
+  "moonbitlang/async/io" @async/io,
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async/fs,
+  "moonbitlang/async/process" @process,
+  "moonbitlang/core/encoding/utf8" @encoding/utf8,
+  "moonbitlang/core/env",
+  "bobzhang/mbtexcel/zip",
+} for "test"
