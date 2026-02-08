@@ -152,6 +152,7 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
     ],
     "Chart": [
         {"type", "typ"},
+        {"title", "title_rich"},
         {"fill", "fill_color", "fill_transparency"},
         {"bubble_size", "bubble_scale"},
     ],
@@ -176,6 +177,12 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
 # Some Excelize structs map to differently named MoonBit structs.
 _STRUCT_EQUIVALENTS: dict[str, str] = {
     "Chart": "ChartOptions",
+}
+
+# MoonBit-only public extension fields that should not be counted as parity
+# differences when --normalize-known is enabled.
+_KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
+    "Chart": {"combo_charts"},
 }
 
 
@@ -251,6 +258,10 @@ def main() -> int:
         mb_set = set(mb_fields)
         missing = [f for f in go_fields if f not in mb_set]
         extra = [f for f in mb_fields if f not in go_set]
+        if args.normalize_known:
+            known_extra = _KNOWN_MOONBIT_EXTRAS.get(go_name, set())
+            if known_extra:
+                extra = [f for f in extra if f not in known_extra]
         if missing or extra:
             rows.append((go_name, missing, extra, go_s.file))
 

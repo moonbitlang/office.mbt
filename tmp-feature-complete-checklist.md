@@ -366,12 +366,31 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
       - Result: `ChartLine.transparency` extra removed; remaining chart extras now only `Chart.combo_charts` and `Chart.title_rich`.
 
-- [ ] 21. Normalize `Chart.title_rich` extra in parity report.
+- [x] 21. Normalize `Chart.title_rich` extra in parity report.
   - DoD: remove `Chart.title_rich` as an extra via title alias normalization while preserving chart missing-field parity.
+  - Delivered:
+    - Extended `Chart` alias normalization in `scripts/excelize_struct_field_parity.py`:
+      - `title/title_rich`
+    - Re-validated focused chart parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
+      - Result: `Chart.title_rich` extra removed; remaining chart extra is `Chart.combo_charts`.
+
+- [x] 22. Normalize `Chart.combo_charts` extra as known MoonBit extension.
+  - DoD: suppress `Chart.combo_charts` in normalized parity output while keeping non-normalized report behavior unchanged.
+  - Delivered:
+    - Added `_KNOWN_MOONBIT_EXTRAS` handling in `scripts/excelize_struct_field_parity.py`.
+    - Registered `Chart.combo_charts` as a normalized-report-only MoonBit extension.
+    - Re-validated focused chart parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Chart,ChartLine,ChartDataLabel,ChartDataPoint,ChartMarker,ChartPlotArea,ChartSeries,ChartUpDownBar`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 23. Reduce style `Fill` extra-field parity (`fg_theme/bg_theme/indexed/tint`).
+  - DoD: remove current `Fill` extras from normalized parity report via concrete alias fields or accepted alias normalization.
   - Planned:
-    - extend `Chart` alias normalization to treat `title` and `title_rich` as equivalent in report mode
-    - rerun focused chart parity checks
+    - inspect `Style.Fill` model vs Excelize `Fill` struct field names
+    - add safe aliases and/or normalize known naming differences for theme/indexed/tint
+    - rerun focused parity report for `Fill`
 
 ## Active Item
 
-- Next item: **21** (`Chart.title_rich` extra normalization).
+- Next item: **23** (`Fill` extra-field parity reduction).
