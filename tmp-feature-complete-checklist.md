@@ -796,12 +796,16 @@ Commands used:
       - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 59. Add integration parity slice for chart + pivot-backed mixed-ext coexistence.
+- [x] 59. Add integration parity slice for chart + pivot-backed mixed-ext coexistence.
   - DoD: validate adding a chart to the pivot-backed mixed-ext worksheet does not break ext wiring or relationships.
-  - Planned:
-    - build on pivot-backed mixed-ext scenario from `55` and add chart part on same worksheet
-    - assert drawing/chart/slicer targets and ext markers coexist
-    - run targeted integration test + `moon check --deny-warn`
+  - Delivered:
+    - Added `xlsx/integration_pivot_sparkline_x14_chart_test.mbt`:
+      - extends pivot-backed mixed-ext worksheet with an additional chart part
+      - validates coexistence of sparkline/conditional/slicer ext markers with chart/drawing OOXML parts
+      - validates sheet relationship markers and read-roundtrip behavior for chart + mixed-ext state
+    - Validation gates:
+      - `moon test xlsx/integration_pivot_sparkline_x14_chart_test.mbt`
+      - `moon check --deny-warn`
 
 - [ ] 60. Run combined gate for chart-augmented mixed-ext slice.
   - DoD: execute tests from `55`, `59`, and `57` set together and keep gate green.
@@ -812,4 +816,4 @@ Commands used:
 
 ## Active Item
 
-- Next item: **59** (chart + pivot-backed mixed-ext integration slice).
+- Next item: **60** (combined gate for chart-augmented mixed-ext slice).
