@@ -191,6 +191,14 @@ _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
         "bg_indexed",
         "bg_tint",
     },
+    "Font": {
+        "outline",
+        "shadow",
+        "condense",
+        "extend",
+        "family_number",
+        "scheme",
+    },
 }
 
 

@@ -393,12 +393,22 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Fill`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 24. Reduce style `Font` extra-field parity (`outline/shadow/condense/extend/family_number/scheme`).
+- [x] 24. Reduce style `Font` extra-field parity (`outline/shadow/condense/extend/family_number/scheme`).
   - DoD: remove current `Font` extras from normalized parity report via accepted extension normalization.
+  - Delivered:
+    - Added normalized-report MoonBit-extension allowances for font extension fields in `scripts/excelize_struct_field_parity.py`:
+      - `outline`, `shadow`, `condense`, `extend`, `family_number`, `scheme`
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Font`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 25. Reduce `ChartAxis` extra-field parity (`title_rich`, `ax_id`).
+  - DoD: remove current `ChartAxis` extras from normalized parity report via safe aliasing and/or extension normalization.
   - Planned:
-    - register current MoonBit font extension fields in normalized parity report allowances
-    - rerun focused parity report for `Font`
+    - normalize `title/title_rich` for `ChartAxis`
+    - decide whether to suppress `ax_id` as MoonBit-only extension in normalized report
+    - rerun focused parity report for `ChartAxis`
 
 ## Active Item
 
-- Next item: **24** (`Font` extra-field parity reduction).
+- Next item: **25** (`ChartAxis` extra-field parity reduction).
