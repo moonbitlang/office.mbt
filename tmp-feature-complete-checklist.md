@@ -1119,13 +1119,26 @@ Commands used:
       - `moon test xlsx/stream_wbtest.mbt`
       - `moon check --deny-warn`
 
-- [ ] 84. Run combined gate for non-integration tranche (81-83).
+- [x] 84. Run combined gate for non-integration tranche (81-83).
   - DoD: execute new non-integration tests together and keep check/test gates green.
+  - Delivered:
+    - Executed focused tranche gate:
+      - `moon test xlsx/integration_unknown_ext_roundtrip_test.mbt`
+      - `moon test xlsx/ooxml_rels_error_test.mbt`
+      - `moon test xlsx/stream_more_test.mbt`
+      - `moon test xlsx/stream_wbtest.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - tests: `1/1`, `9/9`, `10/10`, `1/1` passed
+      - check: pass
+
+- [ ] 85. Re-run full release gate after non-integration tranche (81-84).
+  - DoD: ensure full project gates remain green after non-integration changes.
   - Planned:
-    - run new tests from `81-83` in a focused gate
-    - run `moon check --deny-warn`
-    - record consolidated pass status
+    - run `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - record totals and any deltas from prior baseline
+    - keep checklist baseline synchronized with latest totals
 
 ## Active Item
 
-- Next item: **84** (combined non-integration tranche gate).
+- Next item: **85** (full release gate after non-integration tranche).
