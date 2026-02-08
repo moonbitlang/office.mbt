@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 862/862`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 863/863`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -785,13 +785,31 @@ Commands used:
       - all six integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 58. Re-run full release gate after pivot-backed mixed-ext tranche.
+- [x] 58. Re-run full release gate after pivot-backed mixed-ext tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` and record outcomes after item `55+`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`863/863`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 59. Add integration parity slice for chart + pivot-backed mixed-ext coexistence.
+  - DoD: validate adding a chart to the pivot-backed mixed-ext worksheet does not break ext wiring or relationships.
   - Planned:
-    - execute full release gate command
-    - capture updated `moon test` total and parity status
-    - update checklist baseline notes if totals changed
+    - build on pivot-backed mixed-ext scenario from `55` and add chart part on same worksheet
+    - assert drawing/chart/slicer targets and ext markers coexist
+    - run targeted integration test + `moon check --deny-warn`
+
+- [ ] 60. Run combined gate for chart-augmented mixed-ext slice.
+  - DoD: execute tests from `55`, `59`, and `57` set together and keep gate green.
+  - Planned:
+    - run targeted integration tests in sequence
+    - run `moon check --deny-warn`
+    - record consolidated results and update checklist
 
 ## Active Item
 
-- Next item: **58** (full release gate after pivot-backed mixed-ext tranche).
+- Next item: **59** (chart + pivot-backed mixed-ext integration slice).
