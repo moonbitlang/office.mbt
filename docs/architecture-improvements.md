@@ -24,6 +24,10 @@ This repo has already implemented several items from the roadmap:
 - [x] Phase 1: centralize OOXML string + `.rels` helpers
   - `xlsx/ooxml_utils.mbt`
   - `xlsx/ooxml_rels.mbt`
+- [x] Phase 1: extract workbook package-part resolution from read hub
+  - `xlsx/read_package_parts.mbt` now owns workbook part selection from
+    `[Content_Types].xml` and fallback behavior.
+  - Covered by `xlsx/read_package_parts_wbtest.mbt`.
 - [x] Phase 2: extract pure libraries out of `xlsx/`
   - `crypto/` (AES + hashes)
   - `base64/` (codec; `xlsx/base64.mbt` keeps error-mapping wrappers)

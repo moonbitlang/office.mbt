@@ -4181,25 +4181,7 @@ fn read_zip_bytes(
   }
   enforce_unzip_limits(archive, resolved_options)
   let decode = (value : Bytes) => decode_utf8(value, transcoder)
-  let workbook_xml_part_path = match archive.get(content_types_part_path) {
-    Some(content_types_bytes) => {
-      let content_types_xml = decode(content_types_bytes)
-      let content_types = [
-        ct_workbook, ct_workbook_macro, ct_workbook_addin_macro, ct_workbook_template,
-        ct_workbook_template_macro,
-      ]
-      let workbook_part_name = @ooxml.find_override_part_by_content_types(
-        content_types_xml, content_types,
-      ) catch {
-        @ooxml.ParseXmlError::InvalidXml(msg~) => raise InvalidXml(msg~)
-      }
-      match workbook_part_name {
-        Some(part_name) => archive_path_from_part_name(part_name)
-        None => workbook_part_path
-      }
-    }
-    None => workbook_part_path
-  }
+  let workbook_xml_part_path = resolve_workbook_xml_part_path(archive, decode)
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
     None => raise MissingPart(path=workbook_xml_part_path)
