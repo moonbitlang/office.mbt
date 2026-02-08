@@ -353,14 +353,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     None => raise MissingEndOfCentral
   }
   let reader = Reader::new(bytes, eocd_offset)
-  let sig = reader.read_u32()
-  if sig != end_of_central_sig {
-    raise InvalidSignature(
-      expected=end_of_central_sig,
-      actual=sig,
-      offset=eocd_offset,
-    )
-  }
+  ignore(reader.read_u32())
   let disk_no = reader.read_u16()
   let disk_start = reader.read_u16()
   let disk_entries = reader.read_u16()

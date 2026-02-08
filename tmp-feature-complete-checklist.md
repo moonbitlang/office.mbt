@@ -2326,6 +2326,24 @@ Commands used:
     - Total uncovered lines reduced from `3139` to `3131`
     - Uncovered file count reduced from `49` to `48`
 
+- [x] 156. Close residuals in `zip/reader.mbt`.
+  - DoD: cover remaining reader helper guard branches and remove impossible EOCD signature re-check residual.
+  - Delivered:
+    - Refactored `zip/reader.mbt`:
+      - removed redundant EOCD signature re-check in `read(...)` after `find_end_of_central(...)` has already validated the same signature at the returned offset.
+    - Extended `zip/reader_wbtest.mbt` with direct whitebox guard tests for:
+      - `Reader::read_bytes(-1)` and `Reader::skip(-1)`.
+      - `u64_to_int` overflow.
+      - out-of-bounds guards in `read_u16_le_at`, `read_u32_le_at_raw`, and `read_u64_le_at`.
+  - Validation gates:
+    - `moon test zip/reader_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after160.log`
+  - Coverage delta:
+    - `zip/reader.mbt` uncovered lines reduced from `7` to `0`
+    - Total uncovered lines reduced from `3131` to `3124`
+    - Uncovered file count reduced from `48` to `47`
+
 ## Active Item
 
-- Next item: **156** (move to the next residual hotspot: `zip/reader.mbt`).
+- Next item: **157** (move to the next residual hotspot: `zip/gzip.mbt`).
