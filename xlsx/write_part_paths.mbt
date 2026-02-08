@@ -135,6 +135,54 @@ fn content_override_path(part_path : String) -> String {
 }
 
 ///|
+fn archive_path_from_part_name(
+  part_name : StringView,
+) -> String raise XlsxError {
+  let part = part_name.to_string()
+  if part == "" {
+    raise InvalidXml(msg="content type part name empty")
+  }
+  if part.has_prefix("/") {
+    let stripped = part[1:] catch {
+        _ => raise InvalidXml(msg="content type part name invalid")
+      }
+    let path = stripped.to_string()
+    if path == "" {
+      raise InvalidXml(msg="content type part name empty")
+    }
+    path
+  } else {
+    part
+  }
+}
+
+///|
+fn rels_path_for_part(part_path : StringView) -> String raise XlsxError {
+  let part = part_path.to_string()
+  if part == "" || part.has_prefix("/") {
+    raise InvalidXml(msg="part rels path invalid")
+  }
+  let slash = match part.rev_find("/") {
+    Some(value) => value
+    None => return "_rels/\{part}.rels"
+  }
+  if slash + 1 >= part.length() {
+    raise InvalidXml(msg="part rels path invalid")
+  }
+  let folder = part[:slash] catch {
+      _ => raise InvalidXml(msg="part rels path invalid")
+    }
+  let file = part[slash + 1:] catch {
+      _ => raise InvalidXml(msg="part rels path invalid")
+    }
+  let file_name = file.to_string()
+  if file_name == "" {
+    raise InvalidXml(msg="part rels path invalid")
+  }
+  "\{folder.to_string()}/_rels/\{file_name}.rels"
+}
+
+///|
 fn drawing_rel_target(sheet_id : Int) -> String {
   "../drawings/drawing\{sheet_id}.xml"
 }

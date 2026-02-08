@@ -4170,40 +4170,6 @@ fn enforce_unzip_limits(
 }
 
 ///|
-fn archive_path_from_part_name(
-  part_name : StringView,
-) -> String raise XlsxError {
-  let part = part_name.to_string()
-  if part == "" {
-    raise InvalidXml(msg="content type part name empty")
-  }
-  if part.has_prefix("/") {
-    let stripped = part[1:] catch {
-        _ => raise InvalidXml(msg="content type part name invalid")
-      }
-    stripped.to_string()
-  } else {
-    part
-  }
-}
-
-///|
-fn rels_path_for_part(part_path : StringView) -> String raise XlsxError {
-  let part = part_path.to_string()
-  let slash = match part.rev_find("/") {
-    Some(value) => value
-    None => return "_rels/\{part}.rels"
-  }
-  let folder = part[:slash] catch {
-      _ => raise InvalidXml(msg="part rels path invalid")
-    }
-  let file = part[slash + 1:] catch {
-      _ => raise InvalidXml(msg="part rels path invalid")
-    }
-  "\{folder.to_string()}/_rels/\{file.to_string()}.rels"
-}
-
-///|
 fn read_zip_bytes(
   bytes : BytesView,
   options? : Options = Options::new(),

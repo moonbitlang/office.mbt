@@ -69,6 +69,52 @@ test "write part paths: static package part names and override path" {
 }
 
 ///|
+test "write part paths: read-side path helpers are stable" {
+  inspect(
+    (
+      archive_path_from_part_name("/xl/workbook.xml"),
+      archive_path_from_part_name("xl/workbook.xml"),
+      rels_path_for_part("xl/workbook.xml"),
+      rels_path_for_part("workbook.xml"),
+    ),
+    content=(
+      #|("xl/workbook.xml", "xl/workbook.xml", "xl/_rels/workbook.xml.rels", "_rels/workbook.xml.rels")
+    ),
+  )
+}
+
+///|
+test "write part paths: invalid read-side path helpers raise InvalidXml" {
+  let empty_part_result = try? archive_path_from_part_name("")
+  match empty_part_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="content type part name empty")
+    _ => fail("expected content type part name empty")
+  }
+
+  let slash_part_result = try? archive_path_from_part_name("/")
+  match slash_part_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="content type part name empty")
+    _ => fail("expected content type part name empty for /")
+  }
+
+  let empty_rels_result = try? rels_path_for_part("")
+  match empty_rels_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="part rels path invalid")
+    _ => fail("expected part rels path invalid")
+  }
+
+  let slash_rels_result = try? rels_path_for_part("/xl/workbook.xml")
+  match slash_rels_result {
+    Err(XlsxError::InvalidXml(msg~)) =>
+      inspect(msg, content="part rels path invalid")
+    _ => fail("expected part rels path invalid for leading slash")
+  }
+}
+
+///|
 test "write part paths: relationship targets are stable" {
   inspect(
     (
