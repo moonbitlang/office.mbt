@@ -38,6 +38,13 @@ test "excel date to time 1904" {
     (t3.year(), t3.month(), t3.day(), t3.hour(), t3.minute(), t3.second()),
     content="(1904, 1, 2, 0, 0, 0)",
   )
+
+  // Crosses year boundary via `add_days_to_date` month rollover.
+  let t4 = excel_date_to_time(366.0, use_1904_format=true)
+  inspect(
+    (t4.year(), t4.month(), t4.day(), t4.hour(), t4.minute(), t4.second()),
+    content="(1905, 1, 1, 0, 0, 0)",
+  )
 }
 
 ///|

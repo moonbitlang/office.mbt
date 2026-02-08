@@ -1856,6 +1856,26 @@ Commands used:
   - Residual notes:
     - Remaining `xlsx/cell_ref.mbt` uncovered line is `column_name_to_number`'s `value <= 0` post-loop guard, which appears structurally unreachable under valid per-character accumulation constraints.
 
+- [x] 131. Continue low-line-count residual reduction in `date_convert.mbt`.
+  - DoD: cover reachable 1904 date conversion branches (year rollover in `add_days_to_date` and negative-serial `None` return in helper).
+  - Delivered:
+    - Extended `xlsx/date_convert_test.mbt`:
+      - added 1904 year-boundary case (`excel_date_to_time(366.0, use_1904_format=true) -> 1905-01-01`) to exercise month/year rollover path
+    - Added `xlsx/date_convert_wbtest.mbt`:
+      - `date convert wb: 1904 serial negative returns None`
+      - directly covers helper-level negative serial branch
+  - Validation gates:
+    - `moon test xlsx/date_convert_test.mbt`
+    - `moon test xlsx/date_convert_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after132.log`
+  - Coverage delta:
+    - `xlsx/date_convert.mbt` uncovered lines reduced from `4` to `2`
+  - Residual notes:
+    - Remaining `xlsx/date_convert.mbt` uncovered lines are structural fallbacks:
+      - `fraction < 0.0` clamp after `value - floor(value)` in 1904 conversion
+      - `excel_date_to_time` `None` match arm, which is precluded by the function's negative-input guard and helper behavior
+
 ## Active Item
 
-- Next item: **131** (close low-line-count residuals in `xlsx/date_convert.mbt` with targeted parse/edge-case tests).
+- Next item: **132** (close low-line-count residuals in `xlsx/formula_opts.mbt` with targeted option-guard tests).
