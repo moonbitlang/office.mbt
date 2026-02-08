@@ -2089,6 +2089,32 @@ Commands used:
   - Coverage delta:
     - `xlsx/worksheet.mbt` uncovered lines reduced from `12` to `0`
 
+- [x] 145. Close bounded high-risk residuals in `write.mbt`.
+  - DoD: eliminate remaining structural fallback branches in worksheet-XML write paths and slicer-cache materialization.
+  - Delivered:
+    - Refactored x14 conditional-format ext emission in `xlsx/write.mbt`:
+      - replaced `id -> props` re-fetch branch with grouped entries map:
+        `Map[String, Array[(String, X14DataBarProps)]]`.
+    - Refactored worksheet column write loop:
+      - replaced key re-fetch match with `unwrap_or` fallback literal for deterministic write path.
+    - Simplified hyperlink write branching:
+      - kept outer `Unset` guard and switched to two-way `External` vs `Location` emission.
+    - Removed unreachable empty-target skip in VML image rel emission loop.
+    - Refactored slicer-cache resolution model:
+      - replaced optional-field matrix with `ResolvedSlicerCacheSource` enum:
+        - `Table(Int, Int)`
+        - `Pivot(Int, Int, String)`
+      - updated cache XML materialization to match enum variants directly.
+  - Validation gates:
+    - `moon test xlsx/write_hardening_wbtest.mbt`
+    - `moon test xlsx/slicer_parity_test.mbt`
+    - `moon test xlsx/shape_form_control_slicer_test.mbt`
+    - `moon test xlsx/pivot_slicer_cross_sheet_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after149.log`
+  - Coverage delta:
+    - `xlsx/write.mbt` uncovered lines reduced from `9` to `0`
+
 ## Active Item
 
-- Next item: **145** (start bounded high-risk residual reduction in `xlsx/write.mbt` with targeted branch tests).
+- Next item: **146** (start bounded high-risk residual reduction in `xlsx/workbook.mbt` with targeted branch tests/refactors).

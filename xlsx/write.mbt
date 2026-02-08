@@ -269,12 +269,13 @@ priv struct ResolvedSlicerCache {
   cache_name : String
   source_name : String
   item_desc : Bool
-  is_table_slicer : Bool
-  table_id : Int?
-  table_column : Int?
-  pivot_cache_id : Int?
-  pivot_sheet_id : Int?
-  pivot_table_name : String?
+  source : ResolvedSlicerCacheSource
+}
+
+///|
+priv enum ResolvedSlicerCacheSource {
+  Table(Int, Int)
+  Pivot(Int, Int, String)
 }
 
 ///|
@@ -1397,7 +1398,7 @@ fn write_worksheet_xml(
     fn write_x14_conditional_formattings_ext_block_xml(
       x14_data_bars : Map[String, X14DataBarProps],
     ) -> String? {
-      let by_sqref : Map[String, Array[String]] = {}
+      let by_sqref : Map[String, Array[(String, X14DataBarProps)]] = {}
       for id, props in x14_data_bars {
         if props.bar_direction == "" &&
           !props.bar_solid &&
@@ -1406,10 +1407,10 @@ fn write_worksheet_xml(
         }
         match by_sqref.get(props.sqref) {
           Some(ids) => {
-            ids.push(id)
+            ids.push((id, props))
             by_sqref[props.sqref] = ids
           }
-          None => by_sqref[props.sqref] = [id]
+          None => by_sqref[props.sqref] = [(id, props)]
         }
       }
       if by_sqref.length() == 0 {
@@ -1422,13 +1423,10 @@ fn write_worksheet_xml(
       sb.write_view(
         "      <x14:conditionalFormattings xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" xmlns:xm=\"http://schemas.microsoft.com/office/excel/2006/main\">\n",
       )
-      for sqref, ids in by_sqref {
+      for sqref, entries in by_sqref {
         sb.write_view("        <x14:conditionalFormatting>\n")
-        for id in ids {
-          let props = match x14_data_bars.get(id) {
-            Some(value) => value
-            None => continue
-          }
+        for entry in entries {
+          let (id, props) = entry
           sb.write_view("          <x14:cfRule type=\"dataBar\" id=\"")
           sb.write_view(escape_xml_attr(id))
           sb.write_view("\">\n")
@@ -1605,10 +1603,13 @@ fn write_worksheet_xml(
     cols.sort_by((a, b) => a - b)
     sb.write_view("  <cols>\n")
     for col in cols {
-      match sheet.col_dimensions.get(col) {
-        Some(dim) => write_col_attributes(sb, col, dim)
-        None => ()
-      }
+      let dim = sheet.col_dimensions.get(col).unwrap_or({
+        width: None,
+        hidden: false,
+        outline_level: 0,
+        style_id: None,
+      })
+      write_col_attributes(sb, col, dim)
     }
     sb.write_view("  </cols>\n")
   }
@@ -1785,18 +1786,15 @@ fn write_worksheet_xml(
       sb.write_view("    <hyperlink ref=\"")
       sb.write_view(escape_xml_attr(link.reference))
       sb.write_view("\"")
-      match link.link_type {
-        External =>
-          match hyperlink_rel_ids.get(link.reference) {
-            Some(rel_id) => sb.write_view(" r:id=\"rId\{rel_id}\"")
-            None => raise InvalidHyperlink(msg="hyperlink relationship missing")
-          }
-        Location => {
-          sb.write_view(" location=\"")
-          sb.write_view(escape_xml_attr(link.target))
-          sb.write_view("\"")
+      if link.link_type == External {
+        match hyperlink_rel_ids.get(link.reference) {
+          Some(rel_id) => sb.write_view(" r:id=\"rId\{rel_id}\"")
+          None => raise InvalidHyperlink(msg="hyperlink relationship missing")
         }
-        Unset => ()
+      } else {
+        sb.write_view(" location=\"")
+        sb.write_view(escape_xml_attr(link.target))
+        sb.write_view("\"")
       }
       match link.display {
         Some(value) => {
@@ -2319,12 +2317,7 @@ fn write_with_io(
             cache_name,
             source_name: slicer.source_name,
             item_desc: slicer.item_desc,
-            is_table_slicer: true,
-            table_id: Some(table_id),
-            table_column: Some(col),
-            pivot_cache_id: None,
-            pivot_sheet_id: None,
-            pivot_table_name: None,
+            source: Table(table_id, col),
           })
         }
         None =>
@@ -2351,12 +2344,7 @@ fn write_with_io(
                 cache_name,
                 source_name: slicer.source_name,
                 item_desc: slicer.item_desc,
-                is_table_slicer: false,
-                table_id: None,
-                table_column: None,
-                pivot_cache_id: Some(slicer_pivot_cache_id),
-                pivot_sheet_id: Some(pivot_sheet_id),
-                pivot_table_name: Some(pivot.name),
+                source: Pivot(slicer_pivot_cache_id, pivot_sheet_id, pivot.name),
               })
             }
             None => raise InvalidSheetOperation(msg="slicer source missing")
@@ -2757,9 +2745,6 @@ fn write_with_io(
     }
     for part in vml_image_rels {
       let (vml_id, targets) = part
-      if targets.length() == 0 {
-        continue
-      }
       let vml_rels_xml = write_vml_rels_xml(targets)
       archive.add(
         vml_rels_part_path(vml_id),
@@ -2854,46 +2839,24 @@ fn write_with_io(
   }
   for entry in resolved_slicer_caches {
     let cache_id = entry.cache_id
-    let cache_xml = if entry.is_table_slicer {
-      let table_id = match entry.table_id {
-        Some(v) => v
-        None => raise InvalidSheetOperation(msg="slicer cache table id missing")
-      }
-      let column = match entry.table_column {
-        Some(v) => v
-        None =>
-          raise InvalidSheetOperation(msg="slicer cache table column missing")
-      }
-      write_slicer_cache_xml_table(
-        entry.cache_name,
-        entry.source_name,
-        table_id,
-        column,
-        entry.item_desc,
-      )
-    } else {
-      let pivot_cache_id = match entry.pivot_cache_id {
-        Some(v) => v
-        None => raise InvalidSheetOperation(msg="slicer cache pivot id missing")
-      }
-      let pivot_sheet_id = match entry.pivot_sheet_id {
-        Some(v) => v
-        None =>
-          raise InvalidSheetOperation(msg="slicer cache pivot sheet id missing")
-      }
-      let pivot_name = match entry.pivot_table_name {
-        Some(v) => v
-        None =>
-          raise InvalidSheetOperation(msg="slicer cache pivot name missing")
-      }
-      write_slicer_cache_xml_pivot(
-        entry.cache_name,
-        entry.source_name,
-        pivot_sheet_id,
-        pivot_name,
-        pivot_cache_id,
-        entry.item_desc,
-      )
+    let cache_xml = match entry.source {
+      Table(table_id, column) =>
+        write_slicer_cache_xml_table(
+          entry.cache_name,
+          entry.source_name,
+          table_id,
+          column,
+          entry.item_desc,
+        )
+      Pivot(pivot_cache_id, pivot_sheet_id, pivot_name) =>
+        write_slicer_cache_xml_pivot(
+          entry.cache_name,
+          entry.source_name,
+          pivot_sheet_id,
+          pivot_name,
+          pivot_cache_id,
+          entry.item_desc,
+        )
     }
     archive.add(
       slicer_cache_part_path(cache_id),
