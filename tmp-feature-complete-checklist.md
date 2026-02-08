@@ -1979,6 +1979,22 @@ Commands used:
   - Coverage delta:
     - `xlsx/sheet_view.mbt` uncovered lines reduced from `6` to `0`
 
+- [x] 139. Close low-line-count residuals in `data_validation.mbt`.
+  - DoD: cover remaining data-validation XML write/parse guard and optional-attribute branches.
+  - Delivered:
+    - Added `xlsx/data_validation_wbtest.mbt` with focused whitebox tests:
+      - `data validation wb: data_validation_xml rejects empty sqref`
+      - `data validation wb: data_validation_xml emits showDropDown when enabled`
+      - `data validation wb: parse requires dataValidation tag`
+      - `data validation wb: parse defaults with minimal tag and optional attrs`
+      - `data validation wb: parse requires sqref attribute`
+  - Validation gates:
+    - `moon test xlsx/data_validation_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after141.log`
+  - Coverage delta:
+    - `xlsx/data_validation.mbt` uncovered lines reduced from `8` to `0`
+
 ## Active Item
 
-- Next item: **139** (close low-line-count residuals in `xlsx/data_validation.mbt` with targeted parser/guard tests).
+- Next item: **140** (close low-line-count residuals in `xlsx/ooxml_rels.mbt` with targeted parser/guard tests).
