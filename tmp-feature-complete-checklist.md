@@ -1034,13 +1034,26 @@ Commands used:
       - `moon test xlsx/integration_stream_writer_stress_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 78. Run combined gate for items 76/77.
+- [x] 78. Run combined gate for items 76/77.
   - DoD: execute new integration tests for icon-set coexistence and stream-writer stress together and keep gate green.
+  - Delivered:
+    - Executed combined icon-set + stream-stress gate:
+      - `moon test xlsx/integration_iconset_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_stream_writer_ooxml_consistency_test.mbt`
+      - `moon test xlsx/integration_stream_writer_stress_test.mbt`
+      - `moon test xlsx/integration_pivot_mixed_ext_rel_uniqueness_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all four integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 79. Re-run full release gate after icon-set + stream-stress tranche.
+  - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `76-78`.
   - Planned:
-    - run both new integration tests and a quick mixed-ext regression slice
-    - run `moon check --deny-warn`
-    - record consolidated pass status
+    - execute full release gate command
+    - capture updated total test count and parity status
+    - refresh baseline snapshot if totals changed
 
 ## Active Item
 
-- Next item: **78** (combined gate for icon-set + stream stress slices).
+- Next item: **79** (full release gate after icon-set + stream-stress tranche).
