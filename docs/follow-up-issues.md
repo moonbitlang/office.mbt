@@ -23,6 +23,14 @@ These are non-blocking follow-ups discovered while investigating slow tests.
    - Biggest remaining gaps are concentrated in `xlsx/formula_builtins.mbt`, `xlsx/formula_eval.mbt`, `xlsx/read.mbt`, `xlsx/write.mbt`, `xlsx/workbook.mbt`, and `xlsx/worksheet.mbt`.
    - Prefer black-box tests; many remaining uncovered lines appear to be defensive/unreachable branches (worth auditing and possibly simplifying).
 
+6. **OpenXML validator failures on complex demo outputs (resolved: 2026-02-08)**
+   - Fixed and regression-covered: chart child ordering/enum mapping, worksheet x14 conditional-format ext ordering, pivot cache references, and pivot/slicer XML schema shape.
+   - `cmd/demos` outputs `dashboard.xlsx`, `combo_chart.xlsx`, `interactive_controls.xlsx`, and `pivot_slicer.xlsx` now validate with `scripts/validate_xlsx.sh`.
+
+7. **Validator handling for encrypted demo workbooks (resolved: 2026-02-08)**
+   - Added `scripts/validate_demos.sh` to validate the canonical `cmd/demos` output set and skip the encrypted demo using encrypted-shape detection (ZIP encrypted-package parts or encrypted container signatures).
+   - This avoids false negatives from `secure_password.xlsx` when running bulk demo validation.
+
 ## Architecture refactor backlog
 
 These are follow-ups discovered while reviewing the current package architecture
