@@ -1951,6 +1951,20 @@ Commands used:
   - Residual notes:
     - Remaining `write_part_paths.mbt` lines are structural slice/empty-file-name fallbacks after prior prefix/slash guards.
 
+- [x] 137. Close low-line-count residuals in `merge_cell.mbt`.
+  - DoD: cover remaining `get_end_axis`, `rect_union`, and overlap-merge loop branches.
+  - Delivered:
+    - Added `xlsx/merge_cell_wbtest.mbt` with focused whitebox tests:
+      - `merge cell wb: get_end_axis falls back to start when no colon is present`
+      - `merge cell wb: rect_union covers min/max branch matrix`
+      - `merge cell wb: merge_overlap_ranges handles used-j continue path`
+  - Validation gates:
+    - `moon test xlsx/merge_cell_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after139.log`
+  - Coverage delta:
+    - `xlsx/merge_cell.mbt` uncovered lines reduced from `6` to `0`
+
 ## Active Item
 
-- Next item: **137** (close low-line-count residuals in `xlsx/merge_cell.mbt` with targeted parser/guard tests).
+- Next item: **138** (close low-line-count residuals in `xlsx/sheet_view.mbt` with targeted parser/guard tests).
