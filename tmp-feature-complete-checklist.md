@@ -727,13 +727,24 @@ Commands used:
       - all five integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 53. Re-run full release gate after integration tranche 45-52.
+- [x] 53. Re-run full release gate after integration tranche 45-52.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` and record outcomes.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`862/862`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 54. Refresh checklist baseline totals after tranche 45-53 closure.
+  - DoD: align baseline summary counts (test totals and notes) with latest full gate run.
   - Planned:
-    - execute full release gate command
-    - capture updated totals and scenario pass/fail status
-    - update checklist baseline notes if totals changed
+    - update baseline test total to latest full-gate result
+    - keep command and scenario notes synchronized
+    - run quick sanity check on checklist consistency
 
 ## Active Item
 
-- Next item: **53** (full release gate after integration tranche 45-52).
+- Next item: **54** (refresh baseline totals after tranche closure).

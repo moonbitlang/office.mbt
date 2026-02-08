@@ -27,10 +27,9 @@ test "integration sparkline and x14 conditional formatting coexistence" {
   sheet.set_cell_value("C4", Numeric(11.0))
   sheet.set_cell_value("D4", Numeric(16.0))
 
-  let sparkline_opts = SparklineOptions::new(
-    ["E2", "E3", "E4"],
-    ["B2:D2", "B3:D3", "B4:D4"],
-  )
+  let sparkline_opts = SparklineOptions::new(["E2", "E3", "E4"], [
+    "B2:D2", "B3:D3", "B4:D4",
+  ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_empty_cells("span")
   sparkline_opts.set_series_color("00AA00")
@@ -54,15 +53,13 @@ test "integration sparkline and x14 conditional formatting coexistence" {
 
   inspect(
     count_xml_tag_mixed(
-      sheet_xml,
-      "<ext uri=\"{78C0D931-6437-407d-A8EE-F0AAD7539E65}\">",
+      sheet_xml, "<ext uri=\"{78C0D931-6437-407d-A8EE-F0AAD7539E65}\">",
     ),
     content="1",
   )
   inspect(
     count_xml_tag_mixed(
-      sheet_xml,
-      "<ext uri=\"{05C60535-1F16-4fd2-B633-F4F36F0B64E0}\">",
+      sheet_xml, "<ext uri=\"{05C60535-1F16-4fd2-B633-F4F36F0B64E0}\">",
     ),
     content="1",
   )
@@ -86,7 +83,10 @@ test "integration sparkline and x14 conditional formatting coexistence" {
     content="true",
   )
   inspect(count_xml_tag_mixed(sheet_xml, "<x14:sparkline>"), content="3")
-  inspect(count_xml_tag_mixed(sheet_xml, "<x14:cfRule type=\"dataBar\""), content="1")
+  inspect(
+    count_xml_tag_mixed(sheet_xml, "<x14:cfRule type=\"dataBar\""),
+    content="1",
+  )
 
   let parsed = read(bytes)
   let parsed_sheet = match parsed.sheet("Sheet1") {

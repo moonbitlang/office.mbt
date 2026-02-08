@@ -1299,14 +1299,16 @@ fn build_sparklines(
   locations : ArrayView[String],
   ranges : ArrayView[String],
 ) -> Array[Sparkline] raise XlsxError {
-  fn normalize_sparkline_range_for_write(range_ref : StringView) -> String raise XlsxError {
+  fn normalize_sparkline_range_for_write(
+    range_ref : StringView,
+  ) -> String raise XlsxError {
     let text = range_ref.to_string()
     match text.find("!") {
       Some(pos) => {
-        let sheet_prefix = text[:(pos + 1)] catch {
+        let sheet_prefix = text[:pos + 1] catch {
             _ => raise InvalidCellRef(value=text)
           }
-        let range_part = text[(pos + 1):] catch {
+        let range_part = text[pos + 1:] catch {
             _ => raise InvalidCellRef(value=text)
           }
         let normalized = normalize_range_ref(range_part)

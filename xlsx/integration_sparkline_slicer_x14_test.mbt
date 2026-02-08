@@ -13,7 +13,10 @@ fn count_xml_tag_sparkline_slicer(xml : String, tag : String) -> Int {
 }
 
 ///|
-fn rel_attr_values_sparkline_slicer(xml : String, attr : String) -> Array[String] {
+fn rel_attr_values_sparkline_slicer(
+  xml : String,
+  attr : String,
+) -> Array[String] {
   let values : Array[String] = []
   let marker = "\{attr}=\""
   let mut first = true
@@ -84,10 +87,9 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
   dashboard.set_cell_value("C3", Numeric(24.0))
   dashboard.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(
-    ["G2", "G3", "G4"],
-    ["'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5"],
-  )
+  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+    "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
+  ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dashboard", sparkline_opts)
@@ -112,17 +114,26 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
     None => fail("missing dashboard rels")
   }
 
-  inspect(sheet_xml.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"), content="true")
-  inspect(sheet_xml.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"), content="true")
+  inspect(
+    sheet_xml.contains("{05C60535-1F16-4fd2-B633-F4F36F0B64E0}"),
+    content="true",
+  )
+  inspect(
+    sheet_xml.contains("{78C0D931-6437-407d-A8EE-F0AAD7539E65}"),
+    content="true",
+  )
   inspect(
     sheet_xml.contains("{A8765BA9-456A-4dab-B4F3-ACF838C121DE}") ||
-      sheet_xml.contains("{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}"),
+    sheet_xml.contains("{3A4CF648-6AED-40f4-86FF-DC5316D8AED3}"),
     content="true",
   )
   inspect(sheet_xml.contains("x14:sparklineGroups"), content="true")
   inspect(sheet_xml.contains("x14:conditionalFormattings"), content="true")
   inspect(sheet_xml.contains("x14:slicerList"), content="true")
-  inspect(count_xml_tag_sparkline_slicer(sheet_xml, "<x14:sparkline>"), content="3")
+  inspect(
+    count_xml_tag_sparkline_slicer(sheet_xml, "<x14:sparkline>"),
+    content="3",
+  )
   inspect(
     count_xml_tag_sparkline_slicer(sheet_xml, "<x14:cfRule type=\"dataBar\""),
     content="1",
@@ -133,7 +144,10 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
     has_value_sparkline_slicer(sheet_targets[:], "../slicers/slicer1.xml"),
     content="true",
   )
-  inspect(archive.get("xl/slicerCaches/slicerCache1.xml") is Some(_), content="true")
+  inspect(
+    archive.get("xl/slicerCaches/slicerCache1.xml") is Some(_),
+    content="true",
+  )
   inspect(archive.get("xl/slicers/slicer1.xml") is Some(_), content="true")
 
   let parsed = read(bytes)
@@ -142,7 +156,10 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
     None => fail("missing parsed dashboard")
   }
   inspect(parsed_dashboard.sparkline_groups().length(), content="1")
-  inspect(parsed_dashboard.sparkline_groups()[0].sparklines.length(), content="3")
+  inspect(
+    parsed_dashboard.sparkline_groups()[0].sparklines.length(),
+    content="3",
+  )
   let formats = parsed.get_conditional_formats("Dashboard")
   let opts = match formats.get("C2:C4") {
     Some(value) => value

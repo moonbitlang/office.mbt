@@ -75,6 +75,9 @@ test "integration sparkline ooxml consistency" {
   inspect(sheet_xml.contains("rgb=\"FFC0504D\""), content="true")
   inspect(sheet_xml.contains("x14:colorHigh"), content="true")
   inspect(sheet_xml.contains("rgb=\"FF9BBB59\""), content="true")
-  inspect(count_xml_tag_sparkline(sheet_xml, "<x14:sparklineGroup type="), content="1")
+  inspect(
+    count_xml_tag_sparkline(sheet_xml, "<x14:sparklineGroup type="),
+    content="1",
+  )
   inspect(count_xml_tag_sparkline(sheet_xml, "<x14:sparkline>"), content="2")
 }

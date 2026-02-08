@@ -25,10 +25,9 @@ test "integration sparkline cross-sheet formula references" {
   source.set_cell_value("C3", Numeric(14.0))
   source.set_cell_value("D3", Numeric(10.0))
 
-  let options = SparklineOptions::new(
-    ["H2", "H3"],
-    ["'Data O''Reilly'!B2:D2", "'Data O''Reilly'!B3:D3"],
-  )
+  let options = SparklineOptions::new(["H2", "H3"], [
+    "'Data O''Reilly'!B2:D2", "'Data O''Reilly'!B3:D3",
+  ])
   options.set_markers(true)
   options.set_empty_cells("span")
   dashboard.add_sparkline_options(options)
@@ -52,7 +51,10 @@ test "integration sparkline cross-sheet formula references" {
     dashboard_xml.contains("<xm:f>'Dashboard'!B2:D2</xm:f>"),
     content="false",
   )
-  inspect(count_xml_tag_cross_sheet(dashboard_xml, "<x14:sparkline>"), content="2")
+  inspect(
+    count_xml_tag_cross_sheet(dashboard_xml, "<x14:sparkline>"),
+    content="2",
+  )
   inspect(dashboard_xml.contains("<xm:sqref>H2</xm:sqref>"), content="true")
   inspect(dashboard_xml.contains("<xm:sqref>H3</xm:sqref>"), content="true")
 
@@ -62,7 +64,10 @@ test "integration sparkline cross-sheet formula references" {
     None => fail("missing parsed dashboard sheet")
   }
   inspect(parsed_dashboard.sparkline_groups().length(), content="1")
-  inspect(parsed_dashboard.sparkline_groups()[0].sparklines.length(), content="2")
+  inspect(
+    parsed_dashboard.sparkline_groups()[0].sparklines.length(),
+    content="2",
+  )
   inspect(
     parsed_dashboard.sparkline_groups()[0].sparklines[0].range_ref,
     content="B2:D2",
