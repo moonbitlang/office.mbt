@@ -166,6 +166,7 @@ _KNOWN_ALIASES: dict[str, list[set[str]]] = {
         {"fill", "fill_color", "fill_transparency"},
     ],
     "ChartUpDownBar": [{"fill", "fill_color"}],
+    "ChartAxis": [{"title", "title_rich"}],
     "Shape": [
         {"cell", "reference"},
         {"type", "shape_type"},
@@ -199,6 +200,7 @@ _KNOWN_MOONBIT_EXTRAS: dict[str, set[str]] = {
         "family_number",
         "scheme",
     },
+    "ChartAxis": {"ax_id"},
 }
 
 

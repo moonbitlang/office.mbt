@@ -402,13 +402,22 @@ Commands used:
       - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types Font`
       - Result: `No field-level differences found (heuristic).`
 
-- [ ] 25. Reduce `ChartAxis` extra-field parity (`title_rich`, `ax_id`).
+- [x] 25. Reduce `ChartAxis` extra-field parity (`title_rich`, `ax_id`).
   - DoD: remove current `ChartAxis` extras from normalized parity report via safe aliasing and/or extension normalization.
+  - Delivered:
+    - Added `ChartAxis` title alias normalization in `scripts/excelize_struct_field_parity.py`:
+      - `title/title_rich`
+    - Registered `ChartAxis.ax_id` as normalized-report MoonBit extension.
+    - Re-validated focused parity output:
+      - `python3 scripts/excelize_struct_field_parity.py --normalize-known --types ChartAxis`
+      - Result: `No field-level differences found (heuristic).`
+
+- [ ] 26. Reduce `Style.number_format` extra-field parity.
+  - DoD: remove current `Style.number_format` extra from normalized parity report without changing style runtime behavior.
   - Planned:
-    - normalize `title/title_rich` for `ChartAxis`
-    - decide whether to suppress `ax_id` as MoonBit-only extension in normalized report
-    - rerun focused parity report for `ChartAxis`
+    - normalize `Style` number-format field naming in parity report mode
+    - rerun focused parity report for `Style`
 
 ## Active Item
 
-- Next item: **25** (`ChartAxis` extra-field parity reduction).
+- Next item: **26** (`Style.number_format` extra-field parity reduction).
