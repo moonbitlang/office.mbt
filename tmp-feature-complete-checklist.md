@@ -11,7 +11,7 @@ Excelize snapshot: `37b730a`
 - Excelize API names referenced in MoonBit tests (heuristic): uncovered `0`
 - Struct field parity differences (`--normalize-known`): `0` structs differ
 - Formula parity heuristic: Excelize `458` vs MoonBit `474`, missing `0` (extra `16`)
-- Latest full release gate: `moon test 866/866`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
+- Latest full release gate: `moon test 867/867`, demos valid, semantic parity (`dashboard`/`controls`/`cf`) pass
 
 Commands used:
 
@@ -987,13 +987,24 @@ Commands used:
       - all five integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 74. Re-run full release gate after stream-writer integration tranche.
+- [x] 74. Re-run full release gate after stream-writer integration tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `72/73`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`867/867`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 75. Refresh post-tranche feature-completeness gap list.
+  - DoD: enumerate remaining high-value gaps after integration-heavy tranche (45-74) and propose next one-by-one sequence.
   - Planned:
-    - execute full release gate command
-    - capture updated total test count and parity status
-    - refresh baseline snapshot if totals changed
+    - summarize what is now covered by integration gates
+    - list uncovered/under-tested feature groups with priority
+    - append next actionable one-by-one items
 
 ## Active Item
 
-- Next item: **74** (full release gate after stream-writer integration tranche).
+- Next item: **75** (refresh post-tranche feature-completeness gaps).
