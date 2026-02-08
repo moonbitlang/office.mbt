@@ -563,13 +563,35 @@ Commands used:
       - `moon test xlsx/integration_rel_consistency_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 39. Add integration parity slice for pivot/slicer relationship consistency.
+- [x] 39. Add integration parity slice for pivot/slicer relationship consistency.
   - DoD: validate pivot/slicer OOXML relationship wiring and target-part existence in a mixed workbook.
+  - Delivered:
+    - Added `xlsx/integration_pivot_slicer_rel_consistency_test.mbt`:
+      - mixed workbook setup (table + pivot + pivot-backed slicer)
+      - validates unique relationship IDs in workbook and dashboard worksheet rels
+      - validates rel targets resolve to existing OOXML parts
+      - validates slicer cache and slicer parts are present
+    - Validation gates:
+      - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+      - `moon check --deny-warn`
+
+- [x] 40. Run integration parity slice gate for relationship consistency tests.
+  - DoD: run all new integration relationship-consistency tests together and keep gate green.
+  - Delivered:
+    - Executed integration relationship gate:
+      - `moon test xlsx/integration_rel_consistency_test.mbt`
+      - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+    - Results:
+      - rel consistency test: `1/1` passed
+      - pivot/slicer rel consistency test: `1/1` passed
+
+- [ ] 41. Expand integration parity to mixed multi-feature workbook gate.
+  - DoD: add a single mixed-workbook integration test covering table/chart/shape/slicer/pivot presence and basic OOXML part sanity.
   - Planned:
-    - build a workbook with pivot + slicer parts
-    - assert rel target presence and unique IDs across relevant `_rels` parts
-    - run targeted integration test gate
+    - build one mixed workbook scenario with representative features
+    - assert key parts and rels are present and readable
+    - run targeted integration gate
 
 ## Active Item
 
-- Next item: **39** (pivot/slicer integration parity slice).
+- Next item: **41** (mixed multi-feature integration gate).
