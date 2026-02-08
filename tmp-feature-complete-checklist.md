@@ -758,13 +758,25 @@ Commands used:
       - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
       - `moon check --deny-warn`
 
-- [ ] 56. Run combined gate for new pivot-backed mixed-ext slice.
+- [x] 56. Run combined gate for new pivot-backed mixed-ext slice.
   - DoD: execute tests from `55` plus existing mixed-ext stability tests and keep gate green.
+  - Delivered:
+    - Executed combined mixed-ext gate:
+      - `moon test xlsx/integration_sparkline_slicer_x14_test.mbt`
+      - `moon test xlsx/integration_mixed_ext_roundtrip_stability_test.mbt`
+      - `moon test xlsx/integration_pivot_sparkline_x14_test.mbt`
+      - `moon check --deny-warn`
+    - Results:
+      - all three integration tests: `1/1` passed each
+      - check: pass
+
+- [ ] 57. Run expanded mixed-ext integration gate for tranche 45-56.
+  - DoD: execute the full mixed-ext integration pack (`45`, `46`, `48`, `49`, `51`, `55`) together and keep gate green.
   - Planned:
-    - run `integration_sparkline_slicer_x14_test`, `integration_mixed_ext_roundtrip_stability_test`, and new `55` test
+    - run six integration tests in one focused gate command chain
     - run `moon check --deny-warn`
-    - record consolidated results
+    - record consolidated pass status and update checklist
 
 ## Active Item
 
-- Next item: **56** (combined gate for pivot-backed mixed-ext slice).
+- Next item: **57** (expanded mixed-ext integration gate).
