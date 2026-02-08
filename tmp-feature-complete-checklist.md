@@ -2308,6 +2308,24 @@ Commands used:
     - Total uncovered lines reduced from `3151` to `3139`
     - Uncovered file count reduced from `50` to `49`
 
+- [x] 155. Close residuals in `zip/writer.mbt`.
+  - DoD: cover remaining writer helper/zip64 branches and remove impossible overflow checks tied to fixed-size zip64 extra headers.
+  - Delivered:
+    - Refactored `zip/writer.mbt`:
+      - removed impossible `extra field too long` checks for `local_extra`/`central_extra` (zip64 extra in this writer is structurally bounded to at most 28 bytes).
+    - Extended `zip/writer_wbtest.mbt` with focused whitebox tests:
+      - helper guard errors (`write_u16_le` overflow, `to_u32`/`to_u64` negative input).
+      - `build_zip64_extra` branch where `uncomp`/`comp` are `None`.
+      - `write_data_descriptor` zip64-size branch (`zip64_sizes=true`) with descriptor-length and field-value assertions.
+  - Validation gates:
+    - `moon test zip/writer_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage analyze > /tmp/mbtexcel_uncovered_after159.log`
+  - Coverage delta:
+    - `zip/writer.mbt` uncovered lines reduced from `8` to `0`
+    - Total uncovered lines reduced from `3139` to `3131`
+    - Uncovered file count reduced from `49` to `48`
+
 ## Active Item
 
-- Next item: **155** (move to the next residual hotspot: `zip/writer.mbt`).
+- Next item: **156** (move to the next residual hotspot: `zip/reader.mbt`).

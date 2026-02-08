@@ -65,3 +65,37 @@ test "zip write zip64 structures" {
   let zip64_sig = read_u32_le_at_raw(bytes, zip64_offset.to_int())
   inspect(zip64_sig == zip64_eocd_sig.reinterpret_as_uint(), content="true")
 }
+
+///|
+test "zip writer wb: helper guard and zip64 descriptor branches" {
+  let out : Array[Byte] = []
+  let bad_u16 : Result[Unit, Error] = try? write_u16_le(out, -1)
+  inspect(bad_u16 is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let bad_u32 : Result[UInt, Error] = try? to_u32(-1)
+  inspect(bad_u32 is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let bad_u64 : Result[UInt64, Error] = try? to_u64(-1)
+  inspect(bad_u64 is Err(ZipError::UnsupportedFeature(_)), content="true")
+
+  let offset_only = build_zip64_extra(uncomp=None, comp=None, offset=Some(7))
+  inspect(offset_only.length(), content="12")
+
+  let descriptor : Array[Byte] = []
+  write_data_descriptor(
+    descriptor,
+    (0x01020304).reinterpret_as_uint(),
+    5,
+    6,
+    true,
+  )
+  let desc_bytes = Bytes::from_array(descriptor)
+  inspect(desc_bytes.length(), content="24")
+  inspect(
+    read_u32_le_at_raw(desc_bytes, 0) ==
+    data_descriptor_sig.reinterpret_as_uint(),
+    content="true",
+  )
+  inspect(read_u64_le_at(desc_bytes, 8), content="5")
+  inspect(read_u64_le_at(desc_bytes, 16), content="6")
+}

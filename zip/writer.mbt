@@ -149,9 +149,6 @@ fn write_with_options(
       comp=if needs_zip64_sizes { Some(payload_len) } else { None },
       offset=None,
     )
-    if local_extra.length() > 0xFFFF {
-      raise UnsupportedFeature(msg="extra field too long")
-    }
     write_u32_le(out, local_header_sig.reinterpret_as_uint())
     write_u16_le(out, version)
     write_u16_le(out, flags)
@@ -191,9 +188,6 @@ fn write_with_options(
       comp=if needs_zip64_sizes { Some(payload_len) } else { None },
       offset=if needs_zip64_offset { Some(local_offset) } else { None },
     )
-    if central_extra.length() > 0xFFFF {
-      raise UnsupportedFeature(msg="extra field too long")
-    }
     write_u32_le(central, central_header_sig.reinterpret_as_uint())
     write_u16_le(central, version)
     write_u16_le(central, version)
