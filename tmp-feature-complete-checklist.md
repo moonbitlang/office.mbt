@@ -951,13 +951,24 @@ Commands used:
       - all six integration tests: `1/1` passed each
       - check: pass
 
-- [ ] 71. Re-run full release gate after shared-helper refactor tranche.
+- [x] 71. Re-run full release gate after shared-helper refactor tranche.
   - DoD: rerun `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py` after item `69/70`.
+  - Delivered:
+    - Executed full gate:
+      - `moon check && moon test && scripts/validate_demos.sh && python3 scripts/semantic_parity.py`
+    - Results:
+      - `moon check`: pass
+      - `moon test`: pass (`866/866`)
+      - `scripts/validate_demos.sh`: all tracked demos valid (`secure_password.xlsx` encrypted-container intentionally skipped)
+      - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
+
+- [ ] 72. Add stream-writer parity integration slice with mixed feature workbook controls.
+  - DoD: validate stream-writer generated workbook does not regress key OOXML integrity markers under larger row volume.
   - Planned:
-    - execute full release gate command
-    - capture updated total test count and parity status
-    - refresh baseline snapshot if totals changed
+    - generate stream-writer workbook with representative formatting/formula/table interactions
+    - assert key worksheet/workbook OOXML markers and archive part presence
+    - run targeted integration test + `moon check --deny-warn`
 
 ## Active Item
 
-- Next item: **71** (full release gate after shared-helper refactor tranche).
+- Next item: **72** (stream-writer parity integration slice).
