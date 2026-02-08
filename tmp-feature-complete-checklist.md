@@ -1,7 +1,7 @@
 # Temporary Feature-Complete Checklist
 
 Last updated: 2026-02-08  
-Branch/HEAD: `main` @ `2a11cba`  
+Branch/HEAD: `main` @ `d2e1924`  
 Excelize snapshot: `37b730a`
 
 ## Baseline Snapshot (Completed)
@@ -619,12 +619,38 @@ Commands used:
       - `scripts/validate_demos.sh`: tracked demos valid; encrypted container demo intentionally skipped
       - `scripts/semantic_parity.py`: pass for `dashboard`, `controls`, `cf`
 
-- [ ] 44. Prepare next parity workstream proposal from current clean baseline.
+- [x] 44. Prepare next parity workstream proposal from current clean baseline.
   - DoD: define prioritized next workstream options now that normalized struct/formula parity and integration gates are green.
+  - Delivered:
+    - Defined three prioritized workstreams:
+      - **A. Integration depth**: add OOXML-consistency integration tests for historically fragile features (sparklines/x14/ext parts).
+      - **B. Corpus breadth**: expand integration scenario coverage beyond current relationship checks to mixed feature combinations.
+      - **C. Stability/perf smoke**: keep stream/big-workbook regressions under continuous gate checks.
+    - Chosen next one-by-one tranche order:
+      - `45`: sparkline OOXML integration consistency test
+      - `46`: mixed sparkline + x14 conditional-format integration test
+      - `47`: run combined gate for new integration slices
+
+- [ ] 45. Add integration parity slice for sparkline OOXML consistency.
+  - DoD: add a workbook-level test that validates sparkline XML namespace/ext markers and key range/location payloads.
   - Planned:
-    - summarize high-value remaining gaps (behavior depth, perf, Excel-open corpus breadth)
-    - propose next one-by-one checklist tranche
+    - generate a workbook with representative sparkline options
+    - assert worksheet XML contains expected `x14`/`xm` content and sparkline entries
+    - run targeted test + `moon check --deny-warn`
+
+- [ ] 46. Add integration parity slice for mixed sparkline + x14 conditional formatting.
+  - DoD: validate coexistence of sparkline groups and x14 conditional formatting in the same worksheet OOXML.
+  - Planned:
+    - build mixed workbook scenario with sparkline + data bar/icon-set rules
+    - assert both feature XML sections/markers are present
+    - run targeted integration test gate
+
+- [ ] 47. Run combined gate for new integration slices (45/46).
+  - DoD: execute both new integration tests together and keep gate green.
+  - Planned:
+    - run integration tests from `45` and `46`
+    - update checklist with consolidated pass status
 
 ## Active Item
 
-- Next item: **44** (next parity workstream proposal).
+- Next item: **45** (sparkline integration parity slice).
