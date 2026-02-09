@@ -3890,6 +3890,31 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3957/4748` to `3999/4748` (`+42` lines).
 
+- [x] 214. Close residuals in `xlsx/formula_builtins.mbt` (part 45).
+  - DoD: reduce uncovered normal-distribution and confidence-interval helper branches (`NORM*`, `CONFIDENCE*` family).
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with direct helper coverage for:
+      - `normdist_values`, `norminv_values`
+      - `norm_s_dist_values`, `norms_dist_values`, `norm_s_inv_values`
+      - `confidence_values`, `confidence_t_values`
+    - Added targeted branch cases to trigger:
+      - CDF/PDF success branches in normal distribution helpers
+      - `NORMINV` probability-range guard and numeric success path
+      - standard-normal dist/inv numeric success paths
+      - `CONFIDENCE` parse-error guards for each argument, domain guard, and numeric success path
+      - `CONFIDENCE.T` parse-error guards for each argument, domain guard, `size==1` divide guard, and numeric success path.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3999/4748` to `4050/4748` (`+51` lines).
+
 ## Active Item
 
-- Next item: **214** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 45, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **215** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 46, using wbtest-targeted coverage summary as the comparable metric).
