@@ -8223,3 +8223,318 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: percentile trend and database edge dispatch part 22" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE.INC",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE.EXC",
+        [Expr::Number(1.0), Expr::String("bad")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE.EXC",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK",
+        [Expr::Number(1.0), Expr::String("bad")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.INC",
+        [Expr::Number(1.0), Expr::String("bad")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.EXC",
+        [Expr::Number(1.0), Expr::String("bad")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.EXC",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUARTILE.INC",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUARTILE.EXC",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SIGN", [Expr::Number(4.0)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SIGN", [Expr::String("bad")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SIGN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SERIESSUM",
+        [
+          Expr::Number(1.0),
+          Expr::String("bad"),
+          Expr::Number(1.0),
+          Expr::List([Expr::Number(1.0)]),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SERIESSUM",
+        [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::String("bad"),
+          Expr::List([Expr::Number(1.0)]),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SERIESSUM",
+        [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::List([Expr::String("")]),
+        ][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match eval_function(workbook, "Sheet1", "GROWTH", [][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "TREND", [][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "COUNTIFS", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AVERAGEIFS",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DSUM",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DCOUNT", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DGET",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  sheet.set_cell_value("A1", String("Field"))
+  sheet.set_cell_value("B1", String("Qty"))
+  sheet.set_cell_value("A2", String("X"))
+  sheet.set_cell_value("B2", Numeric(10.0))
+  sheet.set_cell_value("D1", String("Field"))
+  sheet.set_cell_value("D2", String("X"))
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DCOUNT",
+        [
+          Expr::Range("", "A1", "B2"),
+          Expr::FuncCall("", []),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+}

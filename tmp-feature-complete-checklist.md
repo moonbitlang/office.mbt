@@ -3323,6 +3323,28 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `2325/4748` to `2354/4748` (`+29` lines).
 
+- [x] 191. Close residuals in `xlsx/formula_builtins.mbt` (part 22).
+  - DoD: clear remaining top-level dispatch edge branches around percentile/rank, trend wrappers, and database arity edge cases.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a focused edge-dispatch block covering:
+      - `PERCENTILE`, `PERCENTILE.INC`, `PERCENTILE.EXC`, `PERCENTRANK*`, `QUARTILE*` edge guards
+      - `SIGN` value/error/arity branches and extra `SERIESSUM` conversion branches
+      - wrapper entry for `GROWTH` and `TREND`
+      - `COUNTIFS` and `AVERAGEIFS` insufficient-arity paths
+      - insufficient-arity paths for `DSUM`, `DCOUNT`, `DGET`
+      - special `DCOUNT` field branch via `Expr::FuncCall("", [])` to hit the `field = Empty` dispatch path
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `2354/4748` to `2383/4748` (`+29` lines).
+
 ## Active Item
 
-- Next item: **191** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 22, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **192** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 23, using wbtest-targeted coverage summary as the comparable metric).
