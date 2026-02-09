@@ -19366,6 +19366,19 @@ test "formula builtins wb: normal/confidence helper branches part 45" {
     ),
     content="true",
   )
+  inspect(
+    is_formula_error(
+      confidence_values(
+        [
+          FormulaValue::Number(0.0 / 0.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(10.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
 
   inspect(
     is_formula_error(
@@ -19484,6 +19497,19 @@ test "formula builtins wb: gamma/loginv helper branches part 46" {
         ][:],
       ),
       1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      loginv_values(
+        [
+          FormulaValue::Number(0.0 / 0.0),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_num,
     ),
     content="true",
   )

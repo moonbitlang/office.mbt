@@ -4451,6 +4451,31 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `4663/4748` to `4665/4748` (`+2` lines).
 
+- [x] 236. Close residuals in `xlsx/formula_builtins.mbt` (part 67).
+  - DoD: reduce reachable residuals in statistical-helper NaN validation paths for `CONFIDENCE*` and `LOGINV`.
+  - Delivered:
+    - Added a `confidence_values` NaN-alpha case:
+      - `confidence_values([NaN, 1, 10]) -> #NUM!`
+      - Covers NaN guard handling that returns `#NUM!` for invalid alpha.
+    - Added a `loginv_values` NaN-probability case:
+      - `loginv_values([NaN, 0, 1]) -> #NUM!`
+      - Covers NaN guard handling that returns `#NUM!` for invalid probability.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4665/4748` to `4667/4748` (`+2` lines).
+
 ## Active Item
 
-- Next item: **236** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 67, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **237** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 68, using wbtest-targeted coverage summary as the comparable metric).
