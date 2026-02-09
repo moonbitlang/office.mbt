@@ -5902,4 +5902,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **311** (add aggregate gate preflight step for parity-doc reference check, with optional env skip toggle).
+- [x] 311. Add parity-doc reference preflight to aggregate gate.
+  - DoD: run parity-doc reference check before aggregate parity execution, with optional skip env.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - runs `scripts/check_parity_docs_refs.sh` by default
+      - supports `SKIP_PARITY_DOCS_PREFLIGHT=1` skip toggle
+      - includes docs preflight toggle in startup env diagnostics.
+    - Updated docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **312** (add aggregate gate env diagnostics for `SKIP_PARITY_DOCS_PREFLIGHT` to parity-env helper output for consistency).
