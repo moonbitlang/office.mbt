@@ -265,6 +265,8 @@ Use `scripts/check_parity_preflight_matrix_smoke.sh --json` for
 machine-readable matrix-smoke output in CI.
 Use `scripts/check_parity_preflight_matrix_smoke_contract.sh` to validate
 matrix-smoke checker JSON schema and CLI usage contract behavior.
+Use `scripts/check_parity_preflight_matrix_smoke_contract.sh --json` for
+machine-readable contract-check output in CI.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

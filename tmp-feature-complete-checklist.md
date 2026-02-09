@@ -6650,4 +6650,31 @@ Commands used:
 
 ## Active Item
 
-- Next item: **344** (add `--json` output mode for matrix-smoke contract checker).
+- [x] 344. Add `--json` output mode for matrix-smoke contract checker.
+  - DoD: expose machine-readable contract-check results while preserving
+    default plain output and exit semantics.
+  - Delivered:
+    - Refactored `scripts/check_parity_preflight_matrix_smoke_contract.sh`:
+      - adds CLI parsing with `--json` support
+      - emits structured JSON payload:
+        - top-level `result` (`pass|fail`)
+        - per-check entries under `checks[]` with `check`, `ok`, `detail`
+      - preserves plain-text pass/fail output in default mode
+      - preserves non-zero exit on any failed check
+      - validates invalid args with usage:
+        - `Usage: scripts/check_parity_preflight_matrix_smoke_contract.sh [--json]`
+    - Updated docs for JSON mode usage:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke_contract.sh --json`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `scripts/check_parity_docs_refs.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **345** (add contract checker for matrix-smoke contract checker `--json` output and CLI usage).
