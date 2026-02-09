@@ -33,6 +33,7 @@ scripts/check_parity_wrappers.sh
 scripts/check_parity_wrappers.sh --json
 scripts/check_parity_docs_refs.sh
 scripts/check_parity_docs_wrapper_coverage.sh
+scripts/check_parity_env_helper.sh
 scripts/show_parity_env.sh
 scripts/show_parity_env.sh --json
 scripts/show_parity_preflight_status.sh

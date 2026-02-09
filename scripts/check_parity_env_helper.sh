@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+json_output="$(scripts/show_parity_env.sh --json)"
+PARITY_ENV_JSON="$json_output" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["PARITY_ENV_JSON"])
+required_keys = [
+    "PARITY_JSON_REPORT",
+    "SEMANTIC_PARITY_REPORT",
+    "SEMANTIC_PARITY_ARGS",
+    "SEMANTIC_PARITY_SUMMARY_ARGS",
+    "SKIP_PARITY_WRAPPER_PREFLIGHT",
+    "SKIP_PARITY_DOCS_PREFLIGHT",
+    "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
+    "SHOW_PARITY_PREFLIGHT_STATUS",
+]
+missing = [k for k in required_keys if k not in payload]
+if missing:
+    raise SystemExit(f"missing keys in show_parity_env json output: {missing}")
+PY
+
+set +e
+invalid_output="$(scripts/show_parity_env.sh --nope 2>&1)"
+invalid_code=$?
+set -e
+if [[ $invalid_code -ne 2 ]]; then
+  echo "Expected exit code 2 for invalid args, got ${invalid_code}"
+  exit 1
+fi
+if ! rg -Fq "Usage: scripts/show_parity_env.sh [--json]" <<<"$invalid_output"; then
+  echo "show_parity_env invalid-arg usage message mismatch."
+  exit 1
+fi
+
+echo "Parity env helper regression check passed."

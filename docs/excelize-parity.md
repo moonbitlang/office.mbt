@@ -217,6 +217,8 @@ Use `scripts/check_parity_docs_refs.sh` to verify parity-doc script references
 resolve to existing files.
 Use `scripts/check_parity_docs_wrapper_coverage.sh` to verify wrapper scripts
 remain covered by parity docs.
+Use `scripts/check_parity_env_helper.sh` to run regression checks for
+`scripts/show_parity_env.sh` (`--json` contract + invalid-arg behavior).
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

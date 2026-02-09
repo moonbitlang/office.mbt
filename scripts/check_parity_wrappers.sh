@@ -22,6 +22,7 @@ wrappers=(
   "scripts/test_semantic_parity_report.sh"
   "scripts/test_semantic_parity_report_compact.sh"
   "scripts/test_parity_gates.sh"
+  "scripts/check_parity_env_helper.sh"
   "scripts/show_parity_env.sh"
 )
 

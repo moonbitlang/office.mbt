@@ -6106,4 +6106,28 @@ Commands used:
 
 ## Active Item
 
-- Next item: **324** (add parity env helper invalid-args regression check script).
+- [x] 324. Add parity env helper invalid-args regression check script.
+  - DoD: provide a stable regression checker for `show_parity_env.sh` interface
+    behavior (`--json` output and invalid-arg handling).
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_env_helper.sh`
+    - Regression checker validates:
+      - `scripts/show_parity_env.sh --json` output parses and contains required keys
+      - invalid args return exit code `2` and expected usage text
+    - Added script to wrapper/doc coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_env_helper.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **325** (wire parity env helper regression check into aggregate gate preflight).
