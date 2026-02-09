@@ -5830,4 +5830,16 @@ Commands used:
 
 ## Active Item
 
-- Next item: **306** (add a minimal parity CLI usage section to `README.mbt.md` linking to docs/excelize-parity.md and primary wrapper commands).
+- [x] 306. Add minimal parity command section to README.
+  - DoD: expose primary parity wrapper commands from top-level README and link to detailed docs.
+  - Delivered:
+    - Updated `README.mbt.md` with a `Parity Commands` section including:
+      - link to `docs/excelize-parity.md`
+      - `test_parity_gates`, `test_semantic_parity`, `test_semantic_parity_fast`, `test_semantic_parity_ultrasmoke`
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **307** (add a quick parity command index file under docs for direct script discovery without narrative context).

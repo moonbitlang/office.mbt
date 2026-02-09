@@ -217,6 +217,21 @@ Run the combined parity + demo regression gate:
 scripts/test_parity_gates.sh
 ```
 
+## Parity Commands
+
+For semantic parity and CI wrapper usage details, see:
+
+- `docs/excelize-parity.md`
+
+Common commands:
+
+```sh
+scripts/test_parity_gates.sh
+scripts/test_semantic_parity.sh
+scripts/test_semantic_parity_fast.sh
+scripts/test_semantic_parity_ultrasmoke.sh
+```
+
 See `docs/demos.md` for what each demo generates and how the code is structured.
 
 ## API Reference
