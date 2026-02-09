@@ -2662,6 +2662,37 @@ Commands used:
     - Total uncovered lines reduced from `2679` to `2634`
     - Uncovered file count remains `43`
 
+- [x] 169. Close residuals in `xlsx/read.mbt` (part 2).
+  - DoD: add focused whitebox coverage for early read-side parser edge branches (`xml_encoding`, font defaults, fill parsing) and reduce residual uncovered lines in `xlsx/read.mbt`.
+  - Delivered:
+    - Extended `xlsx/read_wbtest.mbt` with focused coverage for:
+      - `xml_encoding`:
+        - XML declaration with no encoding attribute
+        - empty encoding value guard
+      - `parse_font_entry` implicit/default attribute branches:
+        - `<i/>`, `<outline/>`, `<condense/>`, `<extend/>` val-missing truthy defaults
+        - `<u/>` default underline fallback (`"single"`)
+        - val-missing no-op branches for `sz`, `charset`, `name`, `family`, `vertAlign`, `scheme`
+      - `parse_fill_entry` gradient/pattern branch matrix:
+        - gradient numeric-attribute parse guards (`bottom`, `degree`, `left`, `right`, `top`)
+        - gradient stop-position parse guard
+        - gradient color parsing for 6-digit and 8-digit RGB (including transparency)
+        - single-stop gradient fallback (no two-color pair)
+        - pattern default/unknown `patternType` handling
+        - pattern fg/bg theme/indexed/tint numeric-parse guards
+    - Added helper assertion for fill parse errors:
+      - `is_invalid_xml_fill_error(...)`
+  - Validation gates:
+    - `moon test xlsx/read_wbtest.mbt`
+    - `moon test xlsx/read_package_parts_wbtest.mbt`
+    - `moon test xlsx/read_sheet_rel_parts_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after180.log`
+  - Coverage delta:
+    - `xlsx/read.mbt` uncovered lines reduced from `394` to `359`
+    - Total uncovered lines reduced from `2634` to `2599`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **169** (move to the next residual hotspot: `xlsx/read.mbt`, part 2).
+- Next item: **170** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 5).
