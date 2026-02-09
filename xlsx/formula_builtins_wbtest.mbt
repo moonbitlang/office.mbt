@@ -16156,6 +16156,53 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
   )
   inspect(
     is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::Number(-1.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::Number(1.0), Expr::FuncCall("MUNIT", [Expr::Number(0.0)])][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::Number(1.0),
+          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
+          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
       eval_function(workbook, "Sheet1", "LOOKUP", [Expr::Number(2.0)][:], ctx),
       formula_error_value,
     ),
