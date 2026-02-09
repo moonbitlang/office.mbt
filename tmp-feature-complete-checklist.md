@@ -5408,4 +5408,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **280** (add summary-helper option to show only failing scenarios from JSON reports for quick breakage triage).
+- [x] 280. Add failure-only mode to parity JSON summary helper.
+  - DoD: allow summary output to focus only on non-pass scenarios for breakage triage.
+  - Delivered:
+    - Extended `scripts/semantic_parity_report_summary.py` with:
+      - `--only-failures`
+    - Behavior:
+      - scenario summary prints only entries where `status != pass`
+      - prints `- (none)` when no failing scenarios exist
+      - `--top-slowest` respects failure filtering when combined
+    - Added usage example in:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --only-failures`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **281** (add semantic parity script support for external fixture-root override to ease CI matrix experiments).

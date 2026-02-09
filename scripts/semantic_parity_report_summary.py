@@ -22,6 +22,11 @@ def main() -> int:
         default=0,
         help="Print top N slowest scenarios by duration_ms.",
     )
+    parser.add_argument(
+        "--only-failures",
+        action="store_true",
+        help="Show only non-pass scenarios in scenario summary output.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -37,7 +42,14 @@ def main() -> int:
     print(f"Selected scenarios: {', '.join(data.get('selected_scenarios', []))}")
     print("Scenario summary:")
 
-    scenarios = data.get("scenarios", [])
+    all_scenarios = data.get("scenarios", [])
+    scenarios = all_scenarios
+    if args.only_failures:
+        scenarios = [s for s in all_scenarios if s.get("status") != "pass"]
+
+    if not scenarios:
+        print("- (none)")
+
     for scenario in scenarios:
         summary = scenario.get("summary", {})
         print(
@@ -54,7 +66,7 @@ def main() -> int:
     if args.top_slowest > 0:
         print(f"Top {args.top_slowest} slowest scenarios:")
         ranked = sorted(
-            scenarios,
+            scenarios if args.only_failures else all_scenarios,
             key=lambda scenario: float(scenario.get("duration_ms", 0.0)),
             reverse=True,
         )
