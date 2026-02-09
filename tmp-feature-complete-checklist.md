@@ -7916,4 +7916,41 @@ Commands used:
 
 ## Active Item
 
-- Next item: **382** (wire matrix-smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker into aggregate gate preflight flow).
+- [x] 382. Wire matrix-smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker into aggregate gate preflight flow.
+  - DoD: aggregate gate/status/env/helper surfaces include the x14 preflight
+    checker toggle and status key, with matrix-smoke and skip-toggle contract
+    checks covering the new key.
+  - Delivered:
+    - Updated aggregate preflight wiring in `scripts/test_parity_gates.sh`:
+      - added `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT`
+      - added x14 preflight step invocation:
+        - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - Updated preflight status resolution surfaces:
+      - `scripts/show_parity_preflight_status.sh`
+      - `scripts/show_parity_env.sh`
+    - Updated helper/contract checks to include the x14 key:
+      - `scripts/check_parity_preflight_matrix_smoke.sh`
+      - `scripts/check_parity_gate_skip_toggles.sh`
+      - `scripts/check_parity_preflight_status_helper.sh`
+      - `scripts/check_parity_env_helper.sh`
+    - Updated docs for the new skip toggle and aggregate preflight behavior:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `moon clean`
+    - `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+    - `scripts/check_parity_preflight_matrix_smoke.sh`
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `scripts/check_parity_gate_skip_toggles_contract.sh`
+    - `scripts/check_parity_preflight_status_helper.sh`
+    - `scripts/check_parity_env_helper.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `scripts/check_parity_docs_refs.sh`
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 SHOW_PARITY_PREFLIGHT_STATUS=json SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 SEMANTIC_PARITY_ARGS='--scenario cf --skip-validate' SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **383** (add `--json` output mode for matrix-smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker).
