@@ -16623,6 +16623,215 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
 }
 
 ///|
+test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_string_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "OCT2HEX",
+        [Expr::Number(7.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELI",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELJ",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELK",
+        [Expr::Number(1.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELK",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELK",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELK",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELY",
+        [Expr::Number(1.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELY",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELY",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELY",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DELTA",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "DELTA", [Expr::Number(0.0)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERF",
+        [Expr::Number(0.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERF",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERF.PRECISE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+}
+
+///|
 test "formula builtins wb: info type and meta dispatch part 40" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

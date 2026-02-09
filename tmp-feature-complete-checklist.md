@@ -4106,6 +4106,33 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `4525/4748` to `4554/4748` (`+29` lines).
 
+- [x] 222. Close residuals in `xlsx/formula_builtins.mbt` (part 53).
+  - DoD: reduce uncovered `OCT2*`/`BESSEL*`/`DELTA`/`ERF*` dispatch branches in the early math-function switch region.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with dispatch-level coverage through `eval_function(...)` for:
+      - `OCT2HEX` (2-argument places branch)
+      - `BESSELI`, `BESSELJ`, `BESSELK`, `BESSELY`
+      - `DELTA`
+      - `ERF`, `ERF.PRECISE`
+    - Added targeted branch cases to trigger:
+      - `OCT2HEX` second-argument forwarding branch
+      - `BESSELI`/`BESSELJ` argument parse-error propagation branches
+      - `BESSELK` and `BESSELY` order-dispatch branches (`order==0` and `order>1`) plus both left/right parse-error propagation branches
+      - `DELTA` first-arg parse-error branch and default-second-argument branch
+      - `ERF` two-argument computation branch and first-arg parse-error branch
+      - `ERF.PRECISE` parse-error branch.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4554/4748` to `4573/4748` (`+19` lines).
+
 ## Active Item
 
-- Next item: **222** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 53, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **223** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 54, using wbtest-targeted coverage summary as the comparable metric).
