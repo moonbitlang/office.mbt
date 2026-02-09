@@ -2848,6 +2848,43 @@ Commands used:
     - Total uncovered lines reduced from `2488` to `2468`
     - Uncovered file count remains `43`
 
+- [x] 174. Close residuals in `xlsx/formula_eval.mbt` (part 4).
+  - DoD: add focused whitebox coverage for date-serial and weekend-mask helper branches and reduce residual uncovered lines in `xlsx/formula_eval.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_eval_wbtest.mbt` with focused helper coverage for:
+      - `value_as_date_serial(...)`:
+        - bool-to-serial coercion
+        - date-text parse path
+        - negative numeric-text `#NUM!` path
+        - numeric-text parse path
+        - invalid text `#VALUE!` path
+        - `Error(...)` propagation path
+      - `date_parts_from_serial(...)` none path and `date_parts_from_value(...)` error-propagation path
+      - calendar helpers:
+        - `days_in_year(...)` leap/non-leap branches
+        - `weekday_monday1(...)` range sanity branching on negative-day arithmetic
+        - `weekday_sun1(...)` Sunday remap branch
+        - `iso_week_number(...)` invalid-date and high-date execution paths
+      - `weekend_mask_from_value(...)`:
+        - numeric weekend-code branches (including one-day weekend code)
+        - 7-char binary mask parse branch
+        - invalid mask-character guard
+        - numeric-text parse path
+        - invalid text guard
+        - invalid code guard from `parse_code`
+        - `value_as_number` error propagation branch
+      - `is_workday_mask(...)` serial->date none branch
+  - Validation gates:
+    - `moon test xlsx/formula_eval_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after185.log`
+  - Coverage delta:
+    - `xlsx/formula_eval.mbt` uncovered lines reduced from `309` to `289`
+    - Total uncovered lines reduced from `2468` to `2448`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **174** (move to the next residual hotspot: `xlsx/formula_eval.mbt`, part 4).
+- Next item: **175** (move to the next residual hotspot: `xlsx/read.mbt`, part 5).

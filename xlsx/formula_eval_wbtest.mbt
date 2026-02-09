@@ -2313,3 +2313,144 @@ test "formula eval wb: array shape advanced function branches part 3" {
     content="true",
   )
 }
+
+///|
+test "formula eval wb: date serial and weekend helper branches part 4" {
+  inspect(
+    match value_as_date_serial(Bool(true)) {
+      Ok(num) => num == 1.0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match value_as_date_serial(String("2024-01-01")) {
+      Ok(num) => num > 45000.0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match value_as_date_serial(String("-1")) {
+      Err(Error(err)) => err == formula_error_num
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match value_as_date_serial(String("12.5")) {
+      Ok(num) => num == 12.5
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match value_as_date_serial(String("not-a-date")) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match value_as_date_serial(Error(formula_error_na)) {
+      Err(Error(err)) => err == formula_error_na
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(date_parts_from_serial(-1.0) is None, content="true")
+  inspect(
+    match date_parts_from_value(Error(formula_error_ref)) {
+      Err(Error(err)) => err == formula_error_ref
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(days_in_year(2024), content="366")
+  inspect(days_in_year(2023), content="365")
+  inspect(
+    match weekday_monday1(-1, 1, 1) {
+      value => value >= 1 && value <= 7
+    },
+    content="true",
+  )
+  inspect(weekday_sun1(2024, 6, 23), content="1")
+  inspect(iso_week_number(10000, 1, 1) is None, content="true")
+  inspect(
+    match iso_week_number(9999, 12, 31) {
+      Some(value) => value > 0
+      None => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match weekend_mask_from_value(Number(2.0)) {
+      Ok((mask, workdays)) => mask[6] == 1 && mask[0] == 1 && workdays == 5
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(Number(12.0)) {
+      Ok((mask, workdays)) => mask[0] == 1 && workdays == 6
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(String("0101010")) {
+      Ok((mask, workdays)) =>
+        mask[0] == 0 &&
+        mask[1] == 1 &&
+        mask[2] == 0 &&
+        mask[3] == 1 &&
+        mask[4] == 0 &&
+        mask[5] == 1 &&
+        mask[6] == 0 &&
+        workdays == 4
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(String("01010x0")) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(String("2")) {
+      Ok((mask, workdays)) => mask[6] == 1 && mask[0] == 1 && workdays == 5
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(String("abc")) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(Number(99.0)) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match weekend_mask_from_value(Error(formula_error_na)) {
+      Err(Error(err)) => err == formula_error_na
+      _ => false
+    },
+    content="true",
+  )
+
+  let weekend_mask : Array[Int] = [0, 0, 0, 0, 0, 1, 1]
+  inspect(is_workday_mask(weekend_mask, -1.0), content="false")
+}
