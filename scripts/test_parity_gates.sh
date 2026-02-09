@@ -6,6 +6,9 @@ cd "$ROOT_DIR"
 
 PARITY_JSON_REPORT="${PARITY_JSON_REPORT:-_build/semantic_parity/report.json}"
 
+echo "==> parity wrapper preflight"
+scripts/check_parity_wrappers.sh
+
 echo "==> semantic parity"
 scripts/test_semantic_parity.sh --json-report "$PARITY_JSON_REPORT"
 python3 scripts/semantic_parity_report_summary.py "$PARITY_JSON_REPORT"

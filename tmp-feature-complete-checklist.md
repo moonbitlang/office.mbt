@@ -5719,4 +5719,18 @@ Commands used:
 
 ## Active Item
 
-- Next item: **299** (add parity-wrapper self-check to aggregate gate preflight so wrapper misconfiguration fails early).
+- [x] 299. Add wrapper self-check preflight to aggregate parity gate.
+  - DoD: ensure `scripts/test_parity_gates.sh` fails early on wrapper misconfiguration.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh` to run:
+      - `scripts/check_parity_wrappers.sh`
+      - before semantic parity/demo regression stages.
+    - Updated docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **300** (add optional env toggle to skip wrapper preflight in aggregate gate when CI already guarantees script integrity).

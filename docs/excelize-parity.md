@@ -160,6 +160,7 @@ scripts/test_parity_gates.sh
 By default this also emits a semantic parity JSON artifact at
 `_build/semantic_parity/report.json` and prints its compact summary. Override
 path via `PARITY_JSON_REPORT=/path/to/report.json`.
+It also runs `scripts/check_parity_wrappers.sh` as a preflight step.
 
 For a fast pre-commit semantic subset (currently `cf` + `controls`):
 
