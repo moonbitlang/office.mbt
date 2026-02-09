@@ -4830,4 +4830,35 @@ Commands used:
 
 ## Active Item
 
-- Next item: **250** (extend demo-level hardening to interactive controls/form-control output and verify control parts/relations stay consistent after roundtrip).
+- [x] 250. Integration-focused parity hardening: interactive controls/form-control demo roundtrip.
+  - DoD: extend demo-level roundtrip validation to form-control-heavy output and lock VML/drawing/chart relationship + defined-name invariants.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_interactive_controls_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_interactive_controls_archive`) that validates:
+      - required parts exist (`sheet1/sheet2`, `sheet1 rels`, `drawing1`, `drawing rels`, `vmlDrawing1.vml`, `chart1.xml`).
+      - workbook/sheet/drawing relationship IDs are unique.
+      - sheet rel targets include both drawing and VML drawing targets.
+      - drawing rel targets include chart target.
+      - worksheet keeps both drawing hooks (`<drawing .../>`, `<legacyDrawing .../>`) and expected data validation block.
+      - workbook defined names for the control-driven model are present (e.g. `BasePrice`, `ShippingOn`).
+      - VML payload keeps control object types and linked cells (`B4/B5/B6`).
+      - content types include VML drawing, chart, and drawing MIME overrides.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_interactive_controls_bytes()`
+      - parsed workbook sheet identity sanity (`UI`, `Model`)
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_interactive_controls_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_sparklines_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_stream_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **251** (continue demo-level hardening on multi-feature dashboard/ooxml_showcase output, focusing on cross-part relationship graph integrity after roundtrip).
