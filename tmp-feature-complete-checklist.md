@@ -5308,4 +5308,16 @@ Commands used:
 
 ## Active Item
 
-- Next item: **274** (add scenario-filter validation: fail fast with a clear message when `--scenario` is provided but resolves to an empty set).
+- [x] 274. Add scenario-filter empty-selection guard.
+  - DoD: fail with a clear message if `--scenario` filtering ever resolves to zero scenarios.
+  - Delivered:
+    - Added defensive check in `scripts/semantic_parity.py`:
+      - when `--scenario` is present and the filtered scenario set is empty, print an explicit error and exit non-zero.
+  - Validation gates:
+    - `scripts/test_semantic_parity_fast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **275** (add semantic parity JSON report output mode for machine-readable CI artifact consumption).

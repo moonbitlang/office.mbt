@@ -454,6 +454,12 @@ def main() -> int:
         selected = tuple(s for s in SCENARIOS if s.name in keep)
     if args.sort_scenarios:
         selected = tuple(sorted(selected, key=lambda scenario: scenario.name))
+    if args.scenario and not selected:
+        print(
+            "No scenarios selected after applying --scenario filters.",
+            file=sys.stderr,
+        )
+        return 2
 
     selected_names = ", ".join(s.name for s in selected)
     print("Semantic parity run configuration:")
