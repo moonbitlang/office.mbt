@@ -2988,6 +2988,47 @@ Commands used:
     - Total uncovered lines reduced from `2342` to `2236`
     - Uncovered file count reduced from `43` to `38`
 
+- [x] 178. Close residuals in `xlsx/formula_builtins.mbt` (part 9).
+  - DoD: add focused whitebox coverage for logical/info dispatch and conversion-helper branches in `eval_function(...)` plus direct helper branches in `formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused wbtests for:
+      - logical/info dispatch branches:
+        - `CHOOSE` index `<= 0` path
+        - `IF` false-branch default (`Bool(false)`)
+        - `IFERROR` non-error passthrough branch
+        - `IFNA` non-`#N/A` passthrough branch
+        - `SWITCH` compare error propagation branch
+        - `ISBLANK`/`ISERR`/`ISERROR` false branches
+        - `ISLOGICAL` string branch
+        - `ISNA` false branch
+        - `ISTEXT` false branch
+        - `ISNONTEXT` true branch
+        - `SHEET` missing-sheet (`#N/A`) and wrong-arity guard
+        - `SHEETS` wrong-arity guard
+        - `T` empty-cell branch
+      - aggregate helper branches via dispatch:
+        - `SUM` bool + empty-cell path
+        - `SUMSQ` list empty-string/numeric-string/bool-error paths, scalar-bool path, and scalar-error ignore path
+        - `GCD` list-empty guard, error propagation, bool + empty handling path
+        - `LCM` list-empty guard
+      - direct helper branch probes:
+        - `bitwise_values(...)` unknown-op fallback
+        - `arabic_string_value(...)` `'D'` path and sign-only zero path
+        - `base_values(...)` third-arg conversion-error forwarding
+        - `dec2x_limits(...)` fallback branch
+        - `hex_digit_value(...)` lowercase hex branch
+        - `oct2dec_string(...)` parse-error guard
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze --package xlsx > /tmp/mbtexcel_uncovered_after189.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `173` to `142`
+    - Total uncovered lines reduced from `2236` to `2205`
+    - Uncovered file count remains `38`
+
 ## Active Item
 
-- Next item: **178** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 9).
+- Next item: **179** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 10).

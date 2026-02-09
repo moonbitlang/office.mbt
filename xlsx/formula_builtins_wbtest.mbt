@@ -4295,3 +4295,357 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: logical info and conversion helper branches part 9" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHOOSE",
+        [Expr::Number(0.0), Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IF",
+        [Expr::Bool(false), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IFERROR",
+        [Expr::Bool(true), Expr::Number(99.0)][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IFNA",
+        [Expr::Number(1.0), Expr::Number(99.0)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SWITCH",
+        [
+          Expr::FuncCall("NA", []),
+          Expr::Number(1.0),
+          Expr::String("a"),
+          Expr::Number(2.0),
+          Expr::String("b"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISBLANK", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISERR", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISERROR", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISLOGICAL",
+        [Expr::String("TRUE")][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISNA", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISNONTEXT",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "MissingSheet", "SHEET", [][:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEET",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEETS",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "T", [Expr::Cell("", "Z99")][:], ctx),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "N",
+        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUM",
+        [Expr::Bool(true), Expr::Number(1.0), Expr::Cell("", "Z99")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMSQ",
+        [Expr::List([Expr::String("")])][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMSQ",
+        [Expr::List([Expr::String("2")])][:],
+        ctx,
+      ),
+      4.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMSQ",
+        [Expr::List([Expr::Bool(true)])][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SUMSQ", [Expr::Bool(true)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMSQ",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+
+  let empty_exprs : Array[Expr] = []
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "GCD",
+        [Expr::List(empty_exprs)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "GCD",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "GCD",
+        [Expr::Bool(true), Expr::Number(2.0), Expr::Cell("", "Z99")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LCM",
+        [Expr::List(empty_exprs)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      bitwise_values(
+        "BITUNKNOWN",
+        [FormulaValue::Number(1.0), FormulaValue::Number(1.0)][:],
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(is_formula_number(arabic_string_value("D"), 500.0), content="true")
+  inspect(is_formula_number(arabic_string_value("-"), 0.0), content="true")
+  inspect(
+    is_formula_error(
+      base_values(
+        [
+          FormulaValue::Number(10.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(dec2x_limits("UNKNOWN") == (0.0, 0.0, 10), content="true")
+  inspect(hex_digit_value('a') == Some(10), content="true")
+  inspect(
+    is_formula_error(oct2dec_string("a"), formula_error_num),
+    content="true",
+  )
+}
