@@ -15,6 +15,14 @@ fn is_formula_number(value : FormulaValue, expected : Double) -> Bool {
 }
 
 ///|
+fn is_formula_number_any(value : FormulaValue) -> Bool {
+  match value {
+    Number(_) => true
+    _ => false
+  }
+}
+
+///|
 fn is_formula_string(value : FormulaValue, expected : String) -> Bool {
   match value {
     String(text) => text == expected
@@ -14177,6 +14185,539 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         [Expr::String("00:00:00"), Expr::String("x")][:],
         ctx,
       ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+}
+
+///|
+test "formula builtins wb: date-time and calendar dispatch part 35" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [Expr::Number(1.0), Expr::Number(2.0), Expr::String("d")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [Expr::Number(1.0), Expr::Number(31.0), Expr::String("md")][:],
+        ctx,
+      ),
+      30.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [Expr::Number(2.0), Expr::Number(1.0), Expr::String("d")][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS",
+        [Expr::Number(2.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DAYS", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [Expr::Number(1.0), Expr::Number(31.0)][:],
+        ctx,
+      ),
+      30.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [Expr::Number(1.0), Expr::Number(31.0), Expr::Bool(true)][:],
+        ctx,
+      ),
+      29.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DAYS360", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISOWEEKNUM",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EDATE",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      32.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "EDATE", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EOMONTH",
+        [Expr::Number(1.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      31.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "EOMONTH", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "YEARFRAC",
+        [Expr::Number(1.0), Expr::Number(2.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "YEARFRAC", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::Number(1.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::Number(1.0), Expr::Number(17.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::Number(1.0), Expr::Number(9.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "WEEKDAY", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::Number(1.0), Expr::Number(17.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::Number(1.0), Expr::Number(99.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "WEEKNUM", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS",
+        [Expr::Number(1.0), Expr::Number(5.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS",
+        [Expr::Number(1.0), Expr::Number(5.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [Expr::Number(1.0), Expr::Number(5.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [
+          Expr::Number(1.0),
+          Expr::Number(5.0),
+          Expr::Number(2.0),
+          Expr::Number(3.0),
+        ][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY",
+        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "WORKDAY", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Number(2.0),
+          Expr::Number(3.0),
+        ][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(eval_function(workbook, "Sheet1", "NOW", [][:], ctx)),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "NOW", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(workbook, "Sheet1", "TODAY", [][:], ctx),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "TODAY", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "YEAR", [Expr::Number(1.0)][:], ctx),
+      1900.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MONTH", [Expr::Number(1.0)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "DAY", [Expr::Number(1.0)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "HOUR", [Expr::Number(0.0)][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MINUTE", [Expr::Number(0.0)][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SECOND", [Expr::Number(0.0)][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "YEAR", [Expr::String("bad")][:], ctx),
       formula_error_value,
     ),
     content="true",
