@@ -6871,3 +6871,331 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: engineering dispatch happy paths part 17" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERMUT",
+        [Expr::Number(5.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERMUTATIONA",
+        [Expr::Number(5.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      25.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "ABS", [Expr::Number(-2.0)][:], ctx),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "INT", [Expr::Number(2.8)][:], ctx),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "LN", [Expr::Number(2.0)][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "EXP", [Expr::Number(1.0)][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DECIMAL",
+        [Expr::String("10"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROMAN",
+        [Expr::Number(9.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      "IX",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "ARABIC", [Expr::String("IX")][:], ctx),
+      9.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BASE",
+        [Expr::Number(10.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "1010",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2DEC",
+        [Expr::String("1010")][:],
+        ctx,
+      ),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2HEX",
+        [Expr::String("1010")][:],
+        ctx,
+      ),
+      "A",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2OCT",
+        [Expr::String("1010")][:],
+        ctx,
+      ),
+      "12",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "DEC2BIN", [Expr::Number(10.0)][:], ctx),
+      "1010",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "DEC2HEX", [Expr::Number(10.0)][:], ctx),
+      "A",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "DEC2OCT", [Expr::Number(10.0)][:], ctx),
+      "12",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "HEX2BIN", [Expr::String("A")][:], ctx),
+      "1010",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "HEX2DEC", [Expr::String("A")][:], ctx),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "HEX2OCT", [Expr::String("A")][:], ctx),
+      "12",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "OCT2BIN", [Expr::String("12")][:], ctx),
+      "1010",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "OCT2DEC", [Expr::String("12")][:], ctx),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "OCT2HEX", [Expr::String("12")][:], ctx),
+      "A",
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELI",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELJ",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELK",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BESSELY",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DELTA",
+        [Expr::Number(3.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "ERF", [Expr::Number(0.5)][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERF.PRECISE",
+        [Expr::Number(0.5)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "ERFC", [Expr::Number(0.5)][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERFC.PRECISE",
+        [Expr::Number(0.5)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+}
