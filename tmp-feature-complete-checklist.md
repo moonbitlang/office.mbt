@@ -2769,6 +2769,52 @@ Commands used:
     - Total uncovered lines reduced from `2543` to `2518`
     - Uncovered file count remains `43`
 
+- [x] 172. Close residuals in `xlsx/read.mbt` (part 4).
+  - DoD: add focused whitebox coverage for mid-read parser helpers (`definedNames`, `mergeCells`, classic/x14 validations, x14 cfvo/icon-set helpers, dimension parsing) and reduce residual uncovered lines in `xlsx/read.mbt`.
+  - Delivered:
+    - Extended `xlsx/read_wbtest.mbt` with new helper assertions:
+      - `is_invalid_xml_string_array_error(...)`
+      - `is_invalid_xml_defined_name_error(...)`
+    - Added focused wbtests for `parse_defined_names(...)`:
+      - valid workbook/local-scoped names with `comment` and `localSheetId`
+      - missing `name` guard
+      - invalid `localSheetId` numeric guard
+      - missing `</definedName>` close-tag guard
+      - out-of-range `localSheetId` guard
+    - Added focused wbtests for `parse_merge_cells(...)`:
+      - single-cell `ref` expansion (`A1` -> `A1:A1`)
+      - missing `ref` guard
+    - Added focused wbtests for `parse_data_validations(...)` and `parse_conditional_formats(...)`:
+      - self-closing `<dataValidation .../>` and `<conditionalFormatting .../>` branches
+      - `dataValidation` unclosed-tag error guard
+    - Added focused wbtests for `parse_data_validations_x14(...)`:
+      - default `allowBlank="0"` / empty-type branches
+      - formula extraction from raw `x14:formula1` text and nested `xm:f` for `formula2`
+      - no-formula branch
+      - missing `xm:sqref` error guard
+    - Added focused wbtests for x14 helper functions:
+      - `build_icon_set_rule_xml_from_x14(...)`:
+        - `percent="1"` emission branch
+        - explicit cfvo loop branch
+        - unknown icon-style fallback (`icon_set_steps == None`) branch
+      - `parse_x14_cfvo_values(...)`:
+        - `xm:f` and `f` value extraction paths
+        - self-closing cfvo path
+        - missing-type skip path
+      - `color_text_from_rgb_x14(...)` non-`FF` branch
+      - `parse_sheet_dimension(...)` non-self-closing dimension branch and missing-ref `None` path
+  - Validation gates:
+    - `moon test xlsx/read_wbtest.mbt`
+    - `moon test xlsx/read_package_parts_wbtest.mbt`
+    - `moon test xlsx/read_sheet_rel_parts_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after183.log`
+  - Coverage delta:
+    - `xlsx/read.mbt` uncovered lines reduced from `334` to `304`
+    - Total uncovered lines reduced from `2518` to `2488`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **172** (move to the next residual hotspot: `xlsx/read.mbt`, part 4).
+- Next item: **173** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 6).

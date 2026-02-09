@@ -52,6 +52,28 @@ fn border_color_by_type(borders : Array[Border], typ : String) -> String? {
 }
 
 ///|
+fn is_invalid_xml_string_array_error(
+  result : Result[Array[String], XlsxError],
+  expected_msg : String,
+) -> Bool {
+  match result {
+    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    _ => false
+  }
+}
+
+///|
+fn is_invalid_xml_defined_name_error(
+  result : Result[Array[DefinedName], XlsxError],
+  expected_msg : String,
+) -> Bool {
+  match result {
+    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    _ => false
+  }
+}
+
+///|
 test "read wb: xml encoding parser guard paths" {
   inspect(xml_encoding(b"abc") is None, content="true")
   inspect(xml_encoding(b"<?xml version=\"1.0\"?><x/>") is None, content="true")
@@ -497,4 +519,206 @@ test "read wb: protection alignment and pivot parser guard branches" {
     content="",
   )
   inspect(parse_pivot_table_name("<worksheet/>"), content="")
+}
+
+///|
+test "read wb: defined names merge cells and classic validation guards" {
+  let sheet_names : Array[String] = ["Sheet1"]
+
+  let defined_names = parse_defined_names(
+    (
+      #|<definedNames>
+      #|  <definedName name="WBName" comment="note">Sheet1!$A$1</definedName>
+      #|  <definedName name="LocalName" localSheetId="0">Sheet1!$B$1</definedName>
+      #|</definedNames>
+      #|,
+    ),
+    sheet_names,
+  )
+  inspect(defined_names.length(), content="2")
+  inspect(defined_names[0].name, content="WBName")
+  inspect(defined_names[0].comment, content="note")
+  inspect(defined_names[0].scope, content="Workbook")
+  inspect(defined_names[1].scope, content="Sheet1")
+
+  inspect(
+    is_invalid_xml_defined_name_error(
+      try? parse_defined_names(
+        "<definedNames><definedName >Sheet1!$A$1</definedName></definedNames>", sheet_names,
+      ),
+      "definedName name missing",
+    ),
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_defined_name_error(
+      try? parse_defined_names(
+        "<definedNames><definedName name=\"A\" localSheetId=\"bad\">Sheet1!$A$1</definedName></definedNames>",
+        sheet_names,
+      ),
+      "definedName localSheetId invalid",
+    ),
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_defined_name_error(
+      try? parse_defined_names(
+        "<definedNames><definedName name=\"A\">Sheet1!$A$1</definedNames>", sheet_names,
+      ),
+      "definedName close missing",
+    ),
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_defined_name_error(
+      try? parse_defined_names(
+        "<definedNames><definedName name=\"A\" localSheetId=\"5\">Sheet1!$A$1</definedName></definedNames>",
+        sheet_names,
+      ),
+      "definedName localSheetId missing",
+    ),
+    content="true",
+  )
+
+  let merged = parse_merge_cells(
+    "<mergeCells><mergeCell ref=\"A1\"/></mergeCells>",
+  )
+  inspect(merged.length(), content="1")
+  inspect(merged[0], content="A1:A1")
+  inspect(
+    is_invalid_xml_string_array_error(
+      try? parse_merge_cells("<mergeCells><mergeCell /></mergeCells>"),
+      "mergeCell ref missing",
+    ),
+    content="true",
+  )
+
+  let validations = parse_data_validations(
+    "<dataValidations><dataValidation type=\"whole\" sqref=\"A1\"/></dataValidations>",
+  )
+  inspect(validations.length(), content="1")
+  inspect(validations[0].contains("sqref=\"A1\""), content="true")
+  inspect(
+    is_invalid_xml_string_array_error(
+      try? parse_data_validations(
+        "<dataValidations><dataValidation type=\"whole\"></dataValidations>",
+      ),
+      "dataValidation tag not closed",
+    ),
+    content="true",
+  )
+
+  let cf_self_close = parse_conditional_formats(
+    "<worksheet><conditionalFormatting sqref=\"A1\"/></worksheet>",
+  )
+  inspect(cf_self_close.length(), content="1")
+  inspect(cf_self_close[0].contains("sqref=\"A1\""), content="true")
+}
+
+///|
+test "read wb: x14 validation and icon-set helper guard branches" {
+  let x14_validations_default = parse_data_validations_x14(
+    (
+      #|<worksheet>
+      #|  <x14:dataValidation >
+      #|    <xm:sqref>A1</xm:sqref>
+      #|    <x14:formula1>PlainText</x14:formula1>
+      #|    <x14:formula2><xm:f>7</xm:f></x14:formula2>
+      #|  </x14:dataValidation>
+      #|</worksheet>
+      #|,
+    ),
+  )
+  inspect(x14_validations_default.length(), content="1")
+  inspect(
+    x14_validations_default[0].contains("<dataValidation allowBlank=\"0\""),
+    content="true",
+  )
+  inspect(
+    x14_validations_default[0].contains("<formula1>PlainText</formula1>"),
+    content="true",
+  )
+  inspect(
+    x14_validations_default[0].contains("<formula2>7</formula2>"),
+    content="true",
+  )
+
+  let x14_validations_no_formula = parse_data_validations_x14(
+    (
+      #|<worksheet>
+      #|  <x14:dataValidation allowBlank="1" type="list">
+      #|    <xm:sqref>B1</xm:sqref>
+      #|  </x14:dataValidation>
+      #|</worksheet>
+      #|,
+    ),
+  )
+  inspect(x14_validations_no_formula.length(), content="1")
+  inspect(
+    x14_validations_no_formula[0].contains("type=\"list\""),
+    content="true",
+  )
+  inspect(!x14_validations_no_formula[0].contains("<formula1>"), content="true")
+
+  inspect(
+    is_invalid_xml_string_array_error(
+      try? parse_data_validations_x14(
+        "<worksheet><x14:dataValidation allowBlank=\"1\"></x14:dataValidation></worksheet>",
+      ),
+      "x14:dataValidation sqref missing",
+    ),
+    content="true",
+  )
+
+  let opt_percent = ConditionalFormatOptions::new("icon_set")
+  opt_percent.icon_style = "3Arrows"
+  opt_percent.percent = true
+  let icon_rule_with_cfvo = build_icon_set_rule_xml_from_x14(
+    opt_percent,
+    3,
+    ["<cfvo type=\"num\" val=\"1\"/>"][:],
+  )
+  inspect(icon_rule_with_cfvo.contains("percent=\"1\""), content="true")
+  inspect(
+    icon_rule_with_cfvo.contains("<cfvo type=\"num\" val=\"1\"/>"),
+    content="true",
+  )
+
+  let opt_unknown = ConditionalFormatOptions::new("icon_set")
+  opt_unknown.icon_style = "unknown-style"
+  let empty_cfvos : Array[String] = []
+  let icon_rule_unknown = build_icon_set_rule_xml_from_x14(
+    opt_unknown, 1, empty_cfvos,
+  )
+  inspect(!icon_rule_unknown.contains("<cfvo"), content="true")
+
+  let x14_cfvos = parse_x14_cfvo_values(
+    (
+      #|<worksheet>
+      #|  <x14:cfvo type="num"><xm:f>5</xm:f></x14:cfvo>
+      #|  <x14:cfvo type="num"><f>9</f></x14:cfvo>
+      #|  <x14:cfvo type="percent"/>
+      #|  <x14:cfvo><xm:f>1</xm:f></x14:cfvo>
+      #|</worksheet>
+      #|,
+    ),
+  )
+  inspect(x14_cfvos.length(), content="3")
+  inspect(x14_cfvos[0], content="<cfvo type=\"num\" val=\"5\"/>")
+  inspect(x14_cfvos[1], content="<cfvo type=\"num\" val=\"9\"/>")
+  inspect(x14_cfvos[2], content="<cfvo type=\"percent\"/>")
+
+  inspect(color_text_from_rgb_x14("FF112233"), content="#112233")
+  inspect(color_text_from_rgb_x14("00112233"), content="#00112233")
+
+  inspect(
+    parse_sheet_dimension(
+      "<worksheet><dimension ref=\"A1:B2\"></dimension></worksheet>",
+    ),
+    content="Some(\"A1:B2\")",
+  )
+  inspect(
+    parse_sheet_dimension("<worksheet><dimension/></worksheet>"),
+    content="None",
+  )
 }
