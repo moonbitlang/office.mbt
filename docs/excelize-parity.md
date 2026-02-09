@@ -129,6 +129,7 @@ python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.
 python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --top-slowest 3
 python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --only-failures
 python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --sort-scenarios
+python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --no-metadata
 ```
 
 For a one-command flow (generate report + print summary):

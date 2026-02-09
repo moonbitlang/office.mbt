@@ -32,6 +32,11 @@ def main() -> int:
         action="store_true",
         help="Sort scenario summary output by scenario name.",
     )
+    parser.add_argument(
+        "--no-metadata",
+        action="store_true",
+        help="Hide report metadata header lines.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -42,7 +47,7 @@ def main() -> int:
     metadata = data.get("metadata", {})
 
     print(f"Report: {report_path}")
-    if metadata:
+    if metadata and not args.no_metadata:
         print(f"Tool: {metadata.get('tool')}")
         print(f"Python: {metadata.get('python_version')}")
         print(f"Generated UTC: {metadata.get('generated_at_utc')}")

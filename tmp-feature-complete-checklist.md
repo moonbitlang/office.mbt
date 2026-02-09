@@ -5506,4 +5506,17 @@ Commands used:
 
 ## Active Item
 
-- Next item: **286** (add summary-helper option to hide verbose metadata lines when only scenario metrics are desired).
+- [x] 286. Add metadata-hiding mode to parity JSON summary helper.
+  - DoD: allow compact summaries that omit provenance header lines.
+  - Delivered:
+    - Added `--no-metadata` to `scripts/semantic_parity_report_summary.py`.
+    - When enabled, summary output omits tool/python/timestamp/argv lines.
+    - Added usage example in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_args.json --no-metadata`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **287** (add summary-helper option to emit JSON output for downstream tooling instead of plain text).
