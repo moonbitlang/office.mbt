@@ -2815,6 +2815,39 @@ Commands used:
     - Total uncovered lines reduced from `2518` to `2488`
     - Uncovered file count remains `43`
 
+- [x] 173. Close residuals in `xlsx/formula_builtins.mbt` (part 6).
+  - DoD: add focused whitebox coverage for the `SUBSTITUTE`/search-conversion dispatch cluster and reduce residual uncovered lines in `xlsx/formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused wbtests for:
+      - `SUBSTITUTE`:
+        - first/second/third argument coercion-error forwarding
+        - fourth `instance_num` coercion-error forwarding
+        - empty `old_text` guard (`#VALUE!`)
+        - no-match `instance_num` loop-break path
+        - positive nth-instance replacement branch
+      - DBCS/search arity branches:
+        - `FINDB` third-argument numeric path
+        - `SEARCH` wrong-arity guard
+        - `SEARCHB` third-argument numeric path + wrong-arity guard
+      - `EXACT` left/right coercion-error forwarding
+      - `FIXED` first-arg coercion error + one-arg decimal inference branch
+      - `VALUETOTEXT`:
+        - one-arg default-format path (`format=0`)
+        - non-numeric no-quote branch (`format=0`)
+        - wrong-arity guard
+      - dispatch alias sanity:
+        - `LOGINV` execution path
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after184.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `316` to `298`
+    - Total uncovered lines reduced from `2488` to `2468`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **173** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 6).
+- Next item: **174** (move to the next residual hotspot: `xlsx/formula_eval.mbt`, part 4).

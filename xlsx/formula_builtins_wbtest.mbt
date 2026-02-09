@@ -2113,3 +2113,248 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: substitute and conversion guard branches part 6" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [Expr::FuncCall("NA", []), Expr::String("a"), Expr::String("b")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [Expr::String("abc"), Expr::FuncCall("NA", []), Expr::String("b")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [Expr::String("abc"), Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [
+          Expr::String("abc"),
+          Expr::String("a"),
+          Expr::String("b"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [Expr::String("abc"), Expr::String(""), Expr::String("x")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [
+          Expr::String("abc"),
+          Expr::String("z"),
+          Expr::String("x"),
+          Expr::Number(1.0),
+        ][:],
+        ctx,
+      ),
+      "abc",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [
+          Expr::String("a-a-a"),
+          Expr::String("a"),
+          Expr::String("x"),
+          Expr::Number(2.0),
+        ][:],
+        ctx,
+      ),
+      "a-x-a",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [Expr::String("a"), Expr::String("abc"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SEARCH", [Expr::String("a")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCHB",
+        [Expr::String("a"), Expr::String("abc"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SEARCHB", [Expr::String("a")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EXACT",
+        [Expr::FuncCall("NA", []), Expr::String("a")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EXACT",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIXED",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIXED",
+        [Expr::String("12.345")][:],
+        ctx,
+      ),
+      "12.345",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VALUETOTEXT",
+        [Expr::String("alpha")][:],
+        ctx,
+      ),
+      "alpha",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "VALUETOTEXT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOGINV",
+        [Expr::Number(0.5), Expr::Number(0.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+}
