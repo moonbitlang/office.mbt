@@ -3694,6 +3694,38 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3620/4748` to `3662/4748` (`+42` lines).
 
+- [x] 207. Close residuals in `xlsx/formula_builtins.mbt` (part 38).
+  - DoD: reduce uncovered lookup/reference dispatch branches in `INDEX`..`INDIRECT`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused branch coverage for:
+      - `INDEX`, `MATCH`
+      - `VLOOKUP`, `HLOOKUP`, `LOOKUP`
+      - `XLOOKUP`
+      - `ANCHORARRAY`
+      - `ADDRESS`
+      - `INDIRECT`
+      - plus targeted `ISTEXT` numeric-string/text-string coercion checks
+    - Added targeted success/error/arity scenarios to trigger:
+      - `INDEX` 2-arg/3-arg success + bounds/arity guards
+      - `MATCH` explicit `match_type` parsing and invalid-arity path
+      - `VLOOKUP`/`HLOOKUP` default-vs-explicit `range_lookup` paths and arity guards
+      - `LOOKUP` vector/matrix/explicit-result-range execution paths
+      - `XLOOKUP` `if_not_found` return path, scalar return, and list-return branches
+      - `ANCHORARRAY` dispatch through a formula-backed anchor cell
+      - `ADDRESS` default parameter branches, R1C1 branch, sheet-text branch, and arity guard
+      - `INDIRECT` A1 range path, R1C1 single-cell path, parse-failure path, and arity guard
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3662/4748` to `3711/4748` (`+49` lines).
+
 ## Active Item
 
-- Next item: **207** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 38, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **208** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 39, using wbtest-targeted coverage summary as the comparable metric).

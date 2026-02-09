@@ -15654,3 +15654,500 @@ test "formula builtins wb: text utility dispatch part 37" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: lookup and reference dispatch part 38" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(10.0))
+  sheet.set_cell_value("C1", Numeric(100.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(20.0))
+  sheet.set_cell_value("C2", Numeric(200.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("B3", Numeric(30.0))
+  sheet.set_cell_value("C3", Numeric(300.0))
+  sheet.set_cell_value("D1", Numeric(1.0))
+  sheet.set_cell_value("E1", Numeric(2.0))
+  sheet.set_cell_value("F1", Numeric(3.0))
+  sheet.set_cell_value("D2", Numeric(11.0))
+  sheet.set_cell_value("E2", Numeric(22.0))
+  sheet.set_cell_value("F2", Numeric(33.0))
+  sheet.set_cell_value("D3", Numeric(44.0))
+  sheet.set_cell_value("E3", Numeric(55.0))
+  sheet.set_cell_value("F3", Numeric(66.0))
+  sheet.set_cell_formula("G1", "1+1", value="2")
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [Expr::Range("", "A1", "C3"), Expr::Number(2.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+      200.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [Expr::Range("", "A1", "C3"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [Expr::Range("", "A1", "C3"), Expr::Number(0.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [Expr::Range("", "A1", "C3"), Expr::Number(5.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [Expr::Range("", "A1", "C3")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MATCH",
+        [Expr::Number(2.0), Expr::Range("", "A1", "A3"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MATCH", [Expr::Number(2.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "B3"),
+          Expr::Number(2.0),
+          Expr::Bool(false),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VLOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "A1", "B3"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VLOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "A1", "B3")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "D1", "F2"),
+          Expr::Number(2.0),
+          Expr::Bool(false),
+        ][:],
+        ctx,
+      ),
+      22.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HLOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "D1", "F2"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      22.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HLOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "D1", "F2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "A1", "A3")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "A1", "B3")][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "LOOKUP", [Expr::Number(2.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(9.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+          Expr::String("NF"),
+        ][:],
+        ctx,
+      ),
+      "NF",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "C3"),
+        ][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 2
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "D1", "F1"),
+          Expr::Range("", "D2", "F3"),
+        ][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 2
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "A1", "A3")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ANCHORARRAY",
+        [Expr::Cell("", "G1")][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 1
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      "$A$1",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Bool(true),
+          Expr::String("Sheet1"),
+        ][:],
+        ctx,
+      ),
+      "Sheet1!$A$1",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [
+          Expr::Number(1.0),
+          Expr::Number(2.0),
+          Expr::Number(1.0),
+          Expr::Bool(false),
+        ][:],
+        ctx,
+      ),
+      "R1C2",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [
+          Expr::Number(1.0),
+          Expr::Number(20000.0),
+          Expr::Number(1.0),
+          Expr::Bool(true),
+        ][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ADDRESS", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("A1:B2")][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 4
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("[]")][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("R1C1"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "INDIRECT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("1")][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("abc")][:], ctx),
+      true,
+    ),
+    content="true",
+  )
+}
