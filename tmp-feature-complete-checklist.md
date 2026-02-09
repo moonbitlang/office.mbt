@@ -5842,4 +5842,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **307** (add a quick parity command index file under docs for direct script discovery without narrative context).
+- [x] 307. Add quick parity command index document.
+  - DoD: provide a concise script index for parity workflows without long narrative context.
+  - Delivered:
+    - Added `docs/parity-commands.md` with grouped command index:
+      - core gates
+      - fast loops
+      - report flows
+      - diagnostics helpers
+      - common env toggles
+    - Linked from `docs/excelize-parity.md`.
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **308** (add a minimal parity-docs link section in README pointing to both detailed and quick-index docs).

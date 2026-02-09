@@ -93,6 +93,8 @@ types and edge-case behaviors.
 
 ## Parity regression command
 
+For a quick script-only index, see `docs/parity-commands.md`.
+
 Use this fixed-entrypoint script for local/CI semantic parity checks:
 
 ```sh
