@@ -5917,4 +5917,17 @@ Commands used:
 
 ## Active Item
 
-- Next item: **312** (add aggregate gate env diagnostics for `SKIP_PARITY_DOCS_PREFLIGHT` to parity-env helper output for consistency).
+- [x] 312. Add docs/wrapper preflight skip toggles to parity env helper.
+  - DoD: include docs/wrapper preflight skip env values in parity env diagnostics helper.
+  - Delivered:
+    - Updated `scripts/show_parity_env.sh` to print:
+      - `SKIP_PARITY_WRAPPER_PREFLIGHT`
+      - `SKIP_PARITY_DOCS_PREFLIGHT`
+  - Validation gates:
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/show_parity_env.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **313** (add docs parity command index entries for new docs-check preflight and ultrasmoke/report-compact env patterns).
