@@ -6393,3 +6393,232 @@ test "formula builtins wb: correl forecast and stats dispatch part 14" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: text dispatch happy paths part 15" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "LEN", [Expr::String("abc")][:], ctx),
+      3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "LENB", [Expr::String("abc")][:], ctx),
+      3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "LOWER", [Expr::String("AbC")][:], ctx),
+      "abc",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "UPPER", [Expr::String("AbC")][:], ctx),
+      "ABC",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PROPER",
+        [Expr::String("hELLo")][:],
+        ctx,
+      ),
+      "Hello",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "DBCS", [Expr::String("abc")][:], ctx),
+      "abc",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRIM",
+        [Expr::String("  a   b  ")][:],
+        ctx,
+      ),
+      "a b",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFT",
+        [Expr::String("abcde"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "ab",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFTB",
+        [Expr::String("abcde"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "ab",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHT",
+        [Expr::String("abcde"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "de",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHTB",
+        [Expr::String("abcde"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "de",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::String("abcde"), Expr::Number(2.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "bc",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abcde"), Expr::Number(2.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "bc",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::String("ab"), Expr::Number(3.0)][:],
+        ctx,
+      ),
+      "ababab",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::String("abcdef"),
+          Expr::Number(2.0),
+          Expr::Number(3.0),
+          Expr::String("Z"),
+        ][:],
+        ctx,
+      ),
+      "aZef",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::String("abcdef"),
+          Expr::Number(2.0),
+          Expr::Number(3.0),
+          Expr::String("Z"),
+        ][:],
+        ctx,
+      ),
+      "aZef",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [Expr::String("a-b-c"), Expr::String("-"), Expr::String("+")][:],
+        ctx,
+      ),
+      "a+b+c",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [
+          Expr::String("a-b-c"),
+          Expr::String("-"),
+          Expr::String("+"),
+          Expr::Number(2.0),
+        ][:],
+        ctx,
+      ),
+      "a-b+c",
+    ),
+    content="true",
+  )
+}

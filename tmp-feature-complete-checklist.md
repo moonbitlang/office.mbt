@@ -3173,6 +3173,27 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `1837/4748` to `1887/4748` (`+50` lines).
 
+- [x] 184. Close residuals in `xlsx/formula_builtins.mbt` (part 15).
+  - DoD: increase coverage in text-function dispatch wrappers and their primary success branches.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a focused text-dispatch happy-path block covering:
+      - `LEN`, `LENB`, `LOWER`, `UPPER`, `PROPER`, `DBCS`, `TRIM`
+      - `LEFT`, `LEFTB`, `RIGHT`, `RIGHTB`
+      - `MID`, `MIDB`
+      - `REPT`, `REPLACE`, `REPLACEB`
+      - `SUBSTITUTE` (3-arg and 4-arg forms)
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `1887/4748` to `1931/4748` (`+44` lines).
+
 ## Active Item
 
-- Next item: **184** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 15, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **185** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 16, using wbtest-targeted coverage summary as the comparable metric).
