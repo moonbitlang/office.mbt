@@ -15,6 +15,7 @@ required_keys = [
     "env_helper_preflight",
     "preflight_status_helper_preflight",
     "gate_toggle_consistency_preflight",
+    "gate_toggle_contract_preflight",
     "docs_preflight",
     "docs_wrapper_coverage_preflight",
     "env",
@@ -28,6 +29,7 @@ required_env = [
     "SKIP_PARITY_ENV_HELPER_PREFLIGHT",
     "SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT",
     "SKIP_PARITY_GATE_TOGGLE_PREFLIGHT",
+    "SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT",
     "SKIP_PARITY_DOCS_PREFLIGHT",
     "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
 ]
@@ -41,6 +43,7 @@ overridden_output="$(
   SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 \
   SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 \
   SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 \
+  SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 \
   SKIP_PARITY_DOCS_PREFLIGHT=1 \
   SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1 \
   scripts/show_parity_preflight_status.sh --json
@@ -58,6 +61,8 @@ if payload["preflight_status_helper_preflight"] != "skipped":
     raise SystemExit("preflight_status_helper_preflight did not resolve to skipped")
 if payload["gate_toggle_consistency_preflight"] != "skipped":
     raise SystemExit("gate_toggle_consistency_preflight did not resolve to skipped")
+if payload["gate_toggle_contract_preflight"] != "skipped":
+    raise SystemExit("gate_toggle_contract_preflight did not resolve to skipped")
 if payload["docs_preflight"] != "skipped":
     raise SystemExit("docs_preflight did not resolve to skipped")
 if payload["docs_wrapper_coverage_preflight"] != "n/a (docs preflight skipped)":

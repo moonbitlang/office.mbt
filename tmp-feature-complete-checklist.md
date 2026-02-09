@@ -6313,4 +6313,35 @@ Commands used:
 
 ## Active Item
 
-- Next item: **332** (wire skip-toggle checker contract check into aggregate gate preflight).
+- [x] 332. Wire skip-toggle checker contract check into aggregate gate preflight.
+  - DoD: enforce skip-toggle checker contract validation in aggregate preflight
+    by default with explicit skip toggle and helper alignment.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - runs `scripts/check_parity_gate_skip_toggles_contract.sh` by default
+      - adds `SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1` skip toggle
+      - prints new toggle in startup env diagnostics
+    - Updated `scripts/show_parity_preflight_status.sh`:
+      - adds `gate_toggle_contract_preflight` status to plain/JSON output
+      - includes `SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT` in JSON env payload
+    - Updated `scripts/show_parity_env.sh`:
+      - includes `SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT` in plain/JSON output
+    - Updated regression checkers:
+      - `scripts/check_parity_env_helper.sh` required keys
+      - `scripts/check_parity_preflight_status_helper.sh` required keys and skip-state assertion
+      - `scripts/check_parity_gate_skip_toggles.sh` expected toggle list
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 scripts/show_parity_env.sh --json`
+    - `SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 scripts/show_parity_preflight_status.sh --json`
+    - `SHOW_PARITY_PREFLIGHT_STATUS=json SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `scripts/check_parity_gate_skip_toggles_contract.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **333** (add compact JSON mode to preflight status helper).

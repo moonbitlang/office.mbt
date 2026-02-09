@@ -17,6 +17,7 @@ skip_docs_coverage="${SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT:-0}"
 skip_env_helper="${SKIP_PARITY_ENV_HELPER_PREFLIGHT:-0}"
 skip_preflight_status_helper="${SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT:-0}"
 skip_gate_toggle="${SKIP_PARITY_GATE_TOGGLE_PREFLIGHT:-0}"
+skip_gate_toggle_contract="${SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT:-0}"
 
 wrapper_status="enabled"
 if [[ "$skip_wrapper" == "1" ]]; then
@@ -50,12 +51,18 @@ if [[ "$skip_gate_toggle" == "1" ]]; then
   gate_toggle_status="skipped"
 fi
 
+gate_toggle_contract_status="enabled"
+if [[ "$skip_gate_toggle_contract" == "1" ]]; then
+  gate_toggle_contract_status="skipped"
+fi
+
 if [[ $json_mode -eq 1 ]]; then
   printf '{\n'
   printf '  "wrapper_preflight": "%s",\n' "$wrapper_status"
   printf '  "env_helper_preflight": "%s",\n' "$env_helper_status"
   printf '  "preflight_status_helper_preflight": "%s",\n' "$preflight_status_helper_status"
   printf '  "gate_toggle_consistency_preflight": "%s",\n' "$gate_toggle_status"
+  printf '  "gate_toggle_contract_preflight": "%s",\n' "$gate_toggle_contract_status"
   printf '  "docs_preflight": "%s",\n' "$docs_status"
   printf '  "docs_wrapper_coverage_preflight": "%s",\n' "$docs_coverage_status"
   printf '  "env": {\n'
@@ -63,6 +70,7 @@ if [[ $json_mode -eq 1 ]]; then
   printf '    "SKIP_PARITY_ENV_HELPER_PREFLIGHT": "%s",\n' "$skip_env_helper"
   printf '    "SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT": "%s",\n' "$skip_preflight_status_helper"
   printf '    "SKIP_PARITY_GATE_TOGGLE_PREFLIGHT": "%s",\n' "$skip_gate_toggle"
+  printf '    "SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT": "%s",\n' "$skip_gate_toggle_contract"
   printf '    "SKIP_PARITY_DOCS_PREFLIGHT": "%s",\n' "$skip_docs"
   printf '    "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT": "%s"\n' "$skip_docs_coverage"
   printf '  }\n'
@@ -75,5 +83,6 @@ echo "- wrapper preflight: ${wrapper_status}"
 echo "- env helper preflight: ${env_helper_status}"
 echo "- preflight-status helper preflight: ${preflight_status_helper_status}"
 echo "- gate-toggle consistency preflight: ${gate_toggle_status}"
+echo "- gate-toggle contract preflight: ${gate_toggle_contract_status}"
 echo "- docs preflight: ${docs_status}"
 echo "- docs wrapper coverage preflight: ${docs_coverage_status}"
