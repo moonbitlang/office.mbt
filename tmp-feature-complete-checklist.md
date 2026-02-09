@@ -3302,6 +3302,27 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `2282/4748` to `2325/4748` (`+43` lines).
 
+- [x] 190. Close residuals in `xlsx/formula_builtins.mbt` (part 21).
+  - DoD: reduce uncovered dispatch branches across correlation/regression wrappers and `SUM*IF*`/`SUMPRODUCT` guard paths.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a focused dispatch branch block covering:
+      - wrong-arity guards for `CORREL`, `COVAR`, `COVARIANCE.P`, `COVARIANCE.S`, `PEARSON`, `RSQ`, `SLOPE`, `INTERCEPT`, `FORECAST`, `FORECAST.LINEAR`, `FISHER`, `FISHERINV`, `STEYX`
+      - `MINA`/`MAXA` wrapper execution
+      - arity/shape guards for `COUNTBLANK`, `COUNTIF`, `COUNTIFS`, `SUMIF`, `SUMPRODUCT`, `SUMX2MY2`, `SUMX2PY2`, `SUMXMY2`, `SUMIFS`, `AVERAGEIF`
+      - scalar-only and error-forwarding `SUMPRODUCT` paths
+      - 2-arg `SUMIF` and `AVERAGEIF` paths where optional ranges are omitted
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `2325/4748` to `2354/4748` (`+29` lines).
+
 ## Active Item
 
-- Next item: **190** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 21, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **191** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 22, using wbtest-targeted coverage summary as the comparable metric).
