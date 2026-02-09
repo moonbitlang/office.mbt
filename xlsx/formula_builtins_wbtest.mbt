@@ -6622,3 +6622,252 @@ test "formula builtins wb: text dispatch happy paths part 15" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("A4", Numeric(4.0))
+  sheet.set_cell_value("B1", Numeric(10.0))
+  sheet.set_cell_value("B2", Numeric(20.0))
+  sheet.set_cell_value("B3", Numeric(30.0))
+  sheet.set_cell_value("B4", Numeric(40.0))
+  sheet.set_cell_value("C1", String("x"))
+  sheet.set_cell_value("C2", String("y"))
+  sheet.set_cell_value("C3", String("x"))
+  sheet.set_cell_value("C4", String("y"))
+  sheet.set_cell_value("D2", Numeric(1.0))
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COUNTBLANK",
+        [Expr::Range("", "D1", "D3")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COUNTIF",
+        [Expr::Range("", "A1", "A4"), Expr::String(">2")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COUNTIFS",
+        [
+          Expr::Range("", "A1", "A4"),
+          Expr::String(">=2"),
+          Expr::Range("", "C1", "C4"),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMIF",
+        [
+          Expr::Range("", "C1", "C4"),
+          Expr::String("x"),
+          Expr::Range("", "B1", "B4"),
+        ][:],
+        ctx,
+      ),
+      40.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMIFS",
+        [
+          Expr::Range("", "B1", "B4"),
+          Expr::Range("", "C1", "C4"),
+          Expr::String("x"),
+          Expr::Range("", "A1", "A4"),
+          Expr::String(">1"),
+        ][:],
+        ctx,
+      ),
+      30.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AVERAGEIF",
+        [
+          Expr::Range("", "C1", "C4"),
+          Expr::String("x"),
+          Expr::Range("", "B1", "B4"),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AVERAGEIFS",
+        [
+          Expr::Range("", "B1", "B4"),
+          Expr::Range("", "C1", "C4"),
+          Expr::String("y"),
+          Expr::Range("", "A1", "A4"),
+          Expr::String(">1"),
+        ][:],
+        ctx,
+      ),
+      30.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MAXIFS",
+        [
+          Expr::Range("", "B1", "B4"),
+          Expr::Range("", "C1", "C4"),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      30.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MINIFS",
+        [
+          Expr::Range("", "B1", "B4"),
+          Expr::Range("", "C1", "C4"),
+          Expr::String("y"),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMPRODUCT",
+        [Expr::Range("", "A1", "A4"), Expr::Range("", "B1", "B4")][:],
+        ctx,
+      ),
+      300.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMX2MY2",
+        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")][:],
+        ctx,
+      ),
+      -495.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMX2PY2",
+        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")][:],
+        ctx,
+      ),
+      505.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUMXMY2",
+        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")][:],
+        ctx,
+      ),
+      405.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FREQUENCY",
+        [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+        ][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+}
