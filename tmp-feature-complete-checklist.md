@@ -4890,4 +4890,32 @@ Commands used:
 
 ## Active Item
 
-- Next item: **252** (continue demo-level graph hardening on `ooxml_showcase` to cover broader mixed-part scenarios and keep relationship-target closure checks green after roundtrip).
+- [x] 252. Integration-focused parity hardening: `ooxml_showcase` mixed-part roundtrip graph.
+  - DoD: add demo-level roundtrip checks for the mixed-part showcase workbook to keep relationship-target closure stable across comments/VML/header-image/hyperlink scenarios.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_ooxml_showcase_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_ooxml_showcase_archive`) that validates:
+      - required parts exist (`sheet1/sheet2`, `sheet1 rels`, comments, two VML drawings, VML rels, media images).
+      - relationship IDs are unique at workbook/sheet/VML levels.
+      - expected relationship targets are present:
+        - workbook -> `sheet1`, `sheet2`
+        - sheet1 -> comments, both VML drawings, header image, external hyperlink target
+        - vmlDrawing2 -> embedded image
+      - worksheet XML keeps legacy hooks (`legacyDrawing`, `legacyDrawingHF`, `picture`) and internal hyperlink location.
+      - comments payload retains expected author/cell reference.
+      - content types include comments + VML drawing + PNG.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_ooxml_showcase_bytes()`
+      - parsed workbook sheet identity sanity (`Showcase`, `Data`)
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_ooxml_showcase_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **253** (expand demo-level hardening to remaining medium-complexity demos such as `invoice` or `tracker_heatmap`, prioritizing relationship/content-type closure + roundtrip stability).
