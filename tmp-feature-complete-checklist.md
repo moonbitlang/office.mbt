@@ -4861,4 +4861,33 @@ Commands used:
 
 ## Active Item
 
-- Next item: **251** (continue demo-level hardening on multi-feature dashboard/ooxml_showcase output, focusing on cross-part relationship graph integrity after roundtrip).
+- [x] 251. Integration-focused parity hardening: dashboard multi-feature relationship graph roundtrip.
+  - DoD: add demo-level roundtrip checks for a multi-feature workbook to ensure cross-part relationship graph integrity (worksheet/table/drawing/image/chart/calcChain) remains stable.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_dashboard_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_dashboard_archive`) that validates:
+      - required parts exist across workbook graph:
+        - sheets, sheet rels, table, drawing + drawing rels, chart, image, calcChain.
+      - relationship IDs are unique at workbook/sheet/drawing levels.
+      - expected relationship targets are present:
+        - workbook -> `sheet1`, `sheet2`, `calcChain`
+        - sheet1 -> `table1`
+        - sheet2 -> `drawing2`
+        - drawing2 -> `image1`, `chart1`
+      - worksheet and drawing XML keep core bindings (`<drawing .../>`, chart/image embeds).
+      - content types include PNG, table, drawing, chart, and calcChain overrides.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_dashboard_bytes()`
+      - parsed workbook sheet identity sanity (`Data`, `Dashboard`)
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_dashboard_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **252** (continue demo-level graph hardening on `ooxml_showcase` to cover broader mixed-part scenarios and keep relationship-target closure checks green after roundtrip).
