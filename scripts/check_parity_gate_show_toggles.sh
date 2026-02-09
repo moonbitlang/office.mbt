@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 required_patterns=(
+  "SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT"
+  "parity gate show-toggle contract preflight"
+  "scripts/check_parity_gate_show_toggles.sh"
   "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT"
   "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 requires SHOW_PARITY_PREFLIGHT_STATUS=json"
   "scripts/show_parity_preflight_status.sh --json --compact"

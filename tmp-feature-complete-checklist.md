@@ -6445,4 +6445,40 @@ Commands used:
 
 ## Active Item
 
-- Next item: **338** (wire aggregate gate show-toggle contract check into preflight flow).
+- [x] 338. Wire aggregate gate show-toggle contract check into preflight flow.
+  - DoD: run the show-toggle contract checker in aggregate preflight with a
+    dedicated skip toggle and keep helper/env/status surfaces consistent.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - adds `SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=0|1` handling
+      - runs `scripts/check_parity_gate_show_toggles.sh` in preflight flow
+    - Updated helper/status/env consistency:
+      - `scripts/show_parity_preflight_status.sh` includes
+        `gate_show_toggle_contract_preflight` status and
+        `SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT` env key (json + compact + plain)
+      - `scripts/show_parity_env.sh` includes
+        `SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT` in plain/JSON output
+      - `scripts/check_parity_env_helper.sh` requires the new skip key
+      - `scripts/check_parity_preflight_status_helper.sh` requires the new
+        status/env keys and verifies skipped-resolution behavior
+      - `scripts/check_parity_gate_skip_toggles.sh` expects the new skip key
+    - Hardened `scripts/check_parity_gate_show_toggles.sh` to assert aggregate
+      gate wiring patterns for show-toggle preflight are present.
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `scripts/check_parity_gate_show_toggles.sh`
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `scripts/check_parity_gate_skip_toggles_contract.sh`
+    - `scripts/check_parity_preflight_status_helper.sh`
+    - `scripts/check_parity_env_helper.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `scripts/check_parity_docs_refs.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **339** (add aggregate preflight matrix smoke checker for skip/show toggle combinations).
