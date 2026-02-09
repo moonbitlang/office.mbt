@@ -5061,4 +5061,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **260** (strengthen semantic parity fingerprinting with relationship-target checks so chart/control scenarios compare structure, not only counts/types).
+- [x] 260. Strengthen semantic parity fingerprints with relationship-target checks.
+  - DoD: include `.rels` target-graph comparisons so chart/control scenarios validate structural linkages, not only object counts/types.
+  - Delivered:
+    - Extended `scripts/semantic_parity.py` fingerprint extraction with:
+      - `workbook_rel_targets` from `xl/_rels/workbook.xml.rels`
+      - `worksheet_rel_targets` from `xl/worksheets/_rels/sheet*.xml.rels`
+      - `drawing_rel_targets` from `xl/drawings/_rels/drawing*.xml.rels`
+    - Added these keys to all active parity scenarios:
+      - `dashboard`, `controls`, `cf`, `controls_rerun`
+  - Validation gates:
+    - `python3 scripts/semantic_parity.py`
+    - `moon check --deny-warn`
+
+## Active Item
+
+- Next item: **261** (add a dedicated semantic-parity regression test command that runs the parity runner with fixed output dirs and fail-fast logging for CI consumption).

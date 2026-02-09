@@ -37,6 +37,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             "x14_conditional_formatting",
             "data_validations",
             "chart_types",
+            "workbook_rel_targets",
+            "worksheet_rel_targets",
+            "drawing_rel_targets",
         ),
     ),
     Scenario(
@@ -56,6 +59,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             "x14_conditional_formatting",
             "data_validations",
             "chart_types",
+            "workbook_rel_targets",
+            "worksheet_rel_targets",
+            "drawing_rel_targets",
         ),
     ),
     Scenario(
@@ -76,6 +82,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             "data_validations",
             "cf_rule_types",
             "chart_types",
+            "workbook_rel_targets",
+            "worksheet_rel_targets",
+            "drawing_rel_targets",
         ),
     ),
     Scenario(
@@ -95,6 +104,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             "x14_conditional_formatting",
             "data_validations",
             "chart_types",
+            "workbook_rel_targets",
+            "worksheet_rel_targets",
+            "drawing_rel_targets",
         ),
     ),
 )
@@ -116,6 +128,10 @@ def workbook_sheet_names(workbook_xml: str) -> list[str]:
     return re.findall(r"<sheet[^>]*\\bname=\"([^\"]+)\"", workbook_xml)
 
 
+def rel_targets(rels_xml: str) -> list[str]:
+    return re.findall(r"<Relationship[^>]*\\bTarget=\"([^\"]+)\"", rels_xml)
+
+
 def fingerprint(path: Path) -> dict[str, object]:
     with zipfile.ZipFile(path) as z:
         names = z.namelist()
@@ -131,7 +147,28 @@ def fingerprint(path: Path) -> dict[str, object]:
             for n in names
             if re.fullmatch(r"xl/pivotCache/pivotCacheDefinition\\d+\\.xml", n)
         ]
+        worksheet_rel_names = [
+            n
+            for n in names
+            if re.fullmatch(r"xl/worksheets/_rels/sheet\\d+\\.xml\\.rels", n)
+        ]
+        drawing_rel_names = [
+            n
+            for n in names
+            if re.fullmatch(r"xl/drawings/_rels/drawing\\d+\\.xml\\.rels", n)
+        ]
         workbook_xml = read_text_from_zip(z, "xl/workbook.xml")
+        workbook_rel_targets: list[str] = []
+        worksheet_rel_targets: list[str] = []
+        drawing_rel_targets: list[str] = []
+        if "xl/_rels/workbook.xml.rels" in names:
+            workbook_rel_targets = rel_targets(
+                read_text_from_zip(z, "xl/_rels/workbook.xml.rels")
+            )
+        for rel_name in worksheet_rel_names:
+            worksheet_rel_targets.extend(rel_targets(read_text_from_zip(z, rel_name)))
+        for rel_name in drawing_rel_names:
+            drawing_rel_targets.extend(rel_targets(read_text_from_zip(z, rel_name)))
         conditional_count = 0
         x14_conditional_count = 0
         data_validation_count = 0
@@ -173,6 +210,9 @@ def fingerprint(path: Path) -> dict[str, object]:
             "form_controls": form_control_count,
             "form_control_types": sorted(form_control_types),
             "chart_types": sorted(chart_types),
+            "workbook_rel_targets": sorted(workbook_rel_targets),
+            "worksheet_rel_targets": sorted(worksheet_rel_targets),
+            "drawing_rel_targets": sorted(drawing_rel_targets),
         }
 
 
