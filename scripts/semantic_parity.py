@@ -319,13 +319,13 @@ def fingerprint(path: Path) -> dict[str, object]:
         }
 
 
-def copy_fixture_outputs(repo_root: Path, excelize_out: Path) -> None:
+def copy_fixture_outputs(fixture_root: Path, excelize_out: Path) -> None:
     mapping = {
-        "dashboard.xlsx": repo_root / "demos_out_go" / "dashboard.xlsx",
-        "controls.xlsx": repo_root / "demos_out_go" / "excelize_controls.xlsx",
-        "controls_rerun.xlsx": repo_root / "demos_out_go" / "excelize_controls_rerun.xlsx",
-        "cf.xlsx": repo_root / "demos_out_go" / "excelize_cf.xlsx",
-        "shared_strings.xlsx": repo_root / "excelize" / "test" / "SharedStrings.xlsx",
+        "dashboard.xlsx": fixture_root / "demos_out_go" / "dashboard.xlsx",
+        "controls.xlsx": fixture_root / "demos_out_go" / "excelize_controls.xlsx",
+        "controls_rerun.xlsx": fixture_root / "demos_out_go" / "excelize_controls_rerun.xlsx",
+        "cf.xlsx": fixture_root / "demos_out_go" / "excelize_cf.xlsx",
+        "shared_strings.xlsx": fixture_root / "excelize" / "test" / "SharedStrings.xlsx",
     }
     excelize_out.mkdir(parents=True, exist_ok=True)
     for out_name, src in mapping.items():
@@ -339,10 +339,12 @@ def can_run_go() -> bool:
     return shutil.which("go") is not None
 
 
-def generate_excelize_outputs(repo_root: Path, excelize_out: Path) -> str:
+def generate_excelize_outputs(
+    repo_root: Path, fixture_root: Path, excelize_out: Path
+) -> str:
     excelize_out.mkdir(parents=True, exist_ok=True)
     excelize_dir = repo_root / "excelize"
-    shared_strings_fixture = repo_root / "excelize" / "test" / "SharedStrings.xlsx"
+    shared_strings_fixture = fixture_root / "excelize" / "test" / "SharedStrings.xlsx"
     if can_run_go():
         run(["go", "run", "./_mbtexcel_gen_dashboard/main.go", str(excelize_out / "dashboard.xlsx")], cwd=excelize_dir)
         run(["go", "run", "./_mbtexcel_gen_controls/main.go", str(excelize_out / "controls.xlsx")], cwd=excelize_dir)
@@ -358,7 +360,7 @@ def generate_excelize_outputs(repo_root: Path, excelize_out: Path) -> str:
         run(["go", "run", "./_mbtexcel_gen_cf/main.go", str(excelize_out / "cf.xlsx")], cwd=excelize_dir)
         shutil.copyfile(shared_strings_fixture, excelize_out / "shared_strings.xlsx")
         return "go-generated"
-    copy_fixture_outputs(repo_root, excelize_out)
+    copy_fixture_outputs(fixture_root, excelize_out)
     return "fixture-copied"
 
 
@@ -390,6 +392,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run semantic parity checks against Excelize outputs.")
     parser.add_argument("--mbt-dir", default="_build/semantic_parity/mbt")
     parser.add_argument("--excelize-dir", default="_build/semantic_parity/excelize")
+    parser.add_argument(
+        "--fixture-root",
+        default=".",
+        help="Root directory containing fixture paths (demos_out_go/, excelize/test/).",
+    )
     parser.add_argument("--skip-validate", action="store_true")
     parser.add_argument(
         "--validate-excelize",
@@ -441,11 +448,14 @@ def main() -> int:
         return 0
 
     repo_root = Path(__file__).resolve().parents[1]
+    fixture_root = Path(args.fixture_root)
+    if not fixture_root.is_absolute():
+        fixture_root = (repo_root / fixture_root).resolve()
     mbt_out = (repo_root / args.mbt_dir).resolve()
     excelize_out = (repo_root / args.excelize_dir).resolve()
 
     run(["moon", "run", "cmd/parity", "--", str(mbt_out)], cwd=repo_root)
-    excelize_source = generate_excelize_outputs(repo_root, excelize_out)
+    excelize_source = generate_excelize_outputs(repo_root, fixture_root, excelize_out)
 
     if not args.skip_validate:
         validate_xlsx_outputs(repo_root, mbt_out)
@@ -469,6 +479,7 @@ def main() -> int:
     print("Semantic parity run configuration:")
     print(f"- mbtexcel output dir: {mbt_out}")
     print(f"- excelize output dir: {excelize_out}")
+    print(f"- fixture root: {fixture_root}")
     print(f"- selected scenarios: {selected_names}")
     print(f"- skip validator: {args.skip_validate}")
     print(f"- validate excelize outputs: {args.validate_excelize}")
@@ -567,6 +578,7 @@ def main() -> int:
             "excelize_output_source": excelize_source,
             "mbtexcel_output_dir": str(mbt_out),
             "excelize_output_dir": str(excelize_out),
+            "fixture_root": str(fixture_root),
             "selected_scenarios": [s.name for s in selected],
             "skip_validate": args.skip_validate,
             "validate_excelize": args.validate_excelize,

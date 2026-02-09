@@ -5426,4 +5426,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **281** (add semantic parity script support for external fixture-root override to ease CI matrix experiments).
+- [x] 281. Add external fixture-root override for semantic parity.
+  - DoD: allow parity runs to source fixture files from an alternate root path.
+  - Delivered:
+    - Added `--fixture-root <dir>` to `scripts/semantic_parity.py`.
+    - Fixture path resolution for fallback fixtures now uses:
+      - `<fixture-root>/demos_out_go/...`
+      - `<fixture-root>/excelize/test/SharedStrings.xlsx`
+    - Run configuration and JSON report now include resolved `fixture_root`.
+    - Updated docs in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_semantic_parity_fast.sh --fixture-root .`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **282** (add semantic parity “dry-run config” mode to print resolved paths/options without generating or comparing workbooks).

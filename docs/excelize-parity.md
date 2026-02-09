@@ -102,7 +102,7 @@ scripts/test_semantic_parity.sh
 It runs `scripts/semantic_parity.py` with stable output directories under
 `_build/semantic_parity/` and fails fast on any scenario mismatch. Extra
 arguments are forwarded to the Python runner (for example,
-`--scenario controls`, `--sort-scenarios`, or `--print-fingerprints-on-fail`).
+`--scenario controls`, `--sort-scenarios`, `--fixture-root <dir>`, or `--print-fingerprints-on-fail`).
 The wrapper also enables compact per-scenario summaries and timing output in
 successful runs.
 
