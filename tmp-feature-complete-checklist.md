@@ -5519,4 +5519,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **287** (add summary-helper option to emit JSON output for downstream tooling instead of plain text).
+- [x] 287. Add JSON-output mode to parity report summary helper.
+  - DoD: allow summary helper to emit machine-readable JSON instead of plain text.
+  - Delivered:
+    - Added `--as-json` to `scripts/semantic_parity_report_summary.py`.
+    - Output payload includes:
+      - report/result/mismatch_count/total_compare_ms
+      - selected scenarios
+      - filtered scenario entries (respecting `--only-failures`, `--sort-scenarios`)
+      - optional `top_slowest` section (when requested)
+      - optional metadata (unless `--no-metadata`)
+    - Added usage example to `docs/excelize-parity.md`.
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_args.json --as-json --sort-scenarios --top-slowest 1`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **288** (add a compact mode to summary helper that emits only minimal fields for lightweight CI log parsing).

@@ -37,6 +37,11 @@ def main() -> int:
         action="store_true",
         help="Hide report metadata header lines.",
     )
+    parser.add_argument(
+        "--as-json",
+        action="store_true",
+        help="Emit summary as JSON instead of human-readable text.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -45,6 +50,40 @@ def main() -> int:
 
     data = json.loads(report_path.read_text())
     metadata = data.get("metadata", {})
+    selected = data.get("selected_scenarios", [])
+    if args.sort_scenarios:
+        selected = sorted(selected)
+
+    all_scenarios = data.get("scenarios", [])
+    if args.sort_scenarios:
+        all_scenarios = sorted(all_scenarios, key=lambda s: str(s.get("name")))
+    scenarios = all_scenarios
+    if args.only_failures:
+        scenarios = [s for s in all_scenarios if s.get("status") != "pass"]
+
+    ranked = sorted(
+        scenarios if args.only_failures else all_scenarios,
+        key=lambda scenario: float(scenario.get("duration_ms", 0.0)),
+        reverse=True,
+    )
+    mismatches = data.get("mismatches", [])
+
+    if args.as_json:
+        payload: dict[str, object] = {
+            "report": str(report_path),
+            "result": data.get("result"),
+            "mismatch_count": data.get("mismatch_count"),
+            "total_compare_ms": data.get("total_scenario_compare_ms"),
+            "selected_scenarios": selected,
+            "scenarios": scenarios,
+            "mismatches": mismatches,
+        }
+        if not args.no_metadata:
+            payload["metadata"] = metadata
+        if args.top_slowest > 0:
+            payload["top_slowest"] = ranked[: args.top_slowest]
+        print(json.dumps(payload, sort_keys=True))
+        return 0
 
     print(f"Report: {report_path}")
     if metadata and not args.no_metadata:
@@ -57,18 +96,8 @@ def main() -> int:
     print(f"Result: {data.get('result')}")
     print(f"Mismatch count: {data.get('mismatch_count')}")
     print(f"Total compare ms: {data.get('total_scenario_compare_ms')}")
-    selected = data.get("selected_scenarios", [])
-    if args.sort_scenarios:
-        selected = sorted(selected)
     print(f"Selected scenarios: {', '.join(selected)}")
     print("Scenario summary:")
-
-    all_scenarios = data.get("scenarios", [])
-    if args.sort_scenarios:
-        all_scenarios = sorted(all_scenarios, key=lambda s: str(s.get("name")))
-    scenarios = all_scenarios
-    if args.only_failures:
-        scenarios = [s for s in all_scenarios if s.get("status") != "pass"]
 
     if not scenarios:
         print("- (none)")
@@ -88,11 +117,6 @@ def main() -> int:
 
     if args.top_slowest > 0:
         print(f"Top {args.top_slowest} slowest scenarios:")
-        ranked = sorted(
-            scenarios if args.only_failures else all_scenarios,
-            key=lambda scenario: float(scenario.get("duration_ms", 0.0)),
-            reverse=True,
-        )
         for scenario in ranked[: args.top_slowest]:
             print(
                 "- "
@@ -101,7 +125,6 @@ def main() -> int:
                 f"status={scenario.get('status')}"
             )
 
-    mismatches = data.get("mismatches", [])
     if mismatches:
         print("Mismatches:")
         for msg in mismatches:
