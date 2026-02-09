@@ -11,8 +11,12 @@ if [[ "${SHOW_PARITY_ENV:-0}" == "1" ]]; then
   scripts/show_parity_env.sh
 fi
 
-echo "Running semantic parity fingerprint regression checks..."
-python3 scripts/semantic_parity_fingerprint_test.py
+if [[ "${SKIP_PARITY_FINGERPRINT_CHECK:-0}" == "1" ]]; then
+  echo "Skipping semantic parity fingerprint regression checks."
+else
+  echo "Running semantic parity fingerprint regression checks..."
+  python3 scripts/semantic_parity_fingerprint_test.py
+fi
 
 echo "Cleaning semantic parity output directories..."
 rm -rf "$MBT_DIR" "$EXCELIZE_DIR"

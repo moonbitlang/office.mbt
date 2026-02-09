@@ -148,6 +148,8 @@ to `scripts/test_semantic_parity.sh` (for example `--skip-validate`).
 Use `scripts/show_parity_env.sh` to print current override values in CI logs.
 Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
 overrides automatically before running.
+Set `SKIP_PARITY_FINGERPRINT_CHECK=1` to skip the fingerprint pre-check in
+minimal smoke loops.
 
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 

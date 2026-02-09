@@ -5657,4 +5657,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **295** (add wrapper option/env to skip fingerprint regression pre-check when intentionally running minimal smoke loops).
+- [x] 295. Add env control to skip fingerprint pre-check in smoke loops.
+  - DoD: allow parity wrappers to skip fingerprint regression pre-checks for intentionally minimal runs.
+  - Delivered:
+    - Updated `scripts/test_semantic_parity.sh` with:
+      - `SKIP_PARITY_FINGERPRINT_CHECK=1` support
+    - Behavior:
+      - pre-check runs by default
+      - skipped only when env var is explicitly set to `1`
+    - Added docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SKIP_PARITY_FINGERPRINT_CHECK=1 scripts/test_semantic_parity_fast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **296** (add a single “ultra smoke” parity wrapper that combines skip-validate + skip-fingerprint + fast scenarios for fastest local sanity checks).
