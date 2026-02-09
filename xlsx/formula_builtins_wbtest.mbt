@@ -21248,6 +21248,18 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
     content="true",
   )
   inspect(
+    is_formula_error(
+      ztest_values(
+        [
+          FormulaValue::List([FormulaValue::Number(1.0)]),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+  inspect(
     is_formula_number_any(
       ztest_values(
         [
@@ -21326,6 +21338,19 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
         ][:],
       ),
       formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      prob_values(
+        [
+          FormulaValue::List([FormulaValue::String("x")]),
+          FormulaValue::List([FormulaValue::Number(1.0)]),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_num,
     ),
     content="true",
   )

@@ -4422,10 +4422,35 @@ Commands used:
   - Coverage delta (wbtest-targeted summary metric):
     - Method:
       - `moon coverage clean`
-      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `4649/4748` to `4663/4748` (`+14` lines).
 
+- [x] 235. Close residuals in `xlsx/formula_builtins.mbt` (part 66).
+  - DoD: reduce remaining reachable helper residuals in `ztest_values` sigma fallback and `prob_values` mixed-type pair handling.
+  - Delivered:
+    - Added a `ztest_values` case with implicit sigma over a single-element sample:
+      - `ztest_values([List([1]), 1]) -> #DIV/0!`
+      - Covers the `stdev_values(false, ...)` error-forwarding branch in sigma fallback.
+    - Added a `prob_values` mixed-type pair case:
+      - `prob_values([List(["x"]), List([1]), 1]) -> #NUM!`
+      - Covers the loop-time non-`(Number, Number)` branch returning `#NUM!`.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4663/4748` to `4665/4748` (`+2` lines).
+
 ## Active Item
 
-- Next item: **235** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 66, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **236** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 67, using wbtest-targeted coverage summary as the comparable metric).
