@@ -3369,6 +3369,28 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `2383/4748` to `2502/4748` (`+119` lines).
 
+- [x] 193. Close residuals in `xlsx/formula_builtins.mbt` (part 24).
+  - DoD: reduce uncovered dispatch branches for `GESTEP`, bitwise, trig/hyperbolic, random, and logarithm wrappers.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a focused dispatch branch block covering:
+      - `GESTEP` arity/conversion/default-step branches
+      - `BITAND`, `BITLSHIFT`, `BITOR`, `BITRSHIFT`, `BITXOR` wrapper execution
+      - trig/hyperbolic wrappers and `_XLFN` aliases: `ACOT`, `ACOTH`, `COT`, `COTH`, `CSC`, `CSCH`, `SEC`, `SECH`
+      - guard branches for `ACOS`, `ACOSH`, `ASIN`, `ASINH`, `ATAN`, `ATAN2`, `ATANH`, `COS`, `COSH`, `SIN`, `SINH`, `TAN`, `TANH`
+      - random/math wrappers: `RAND`, `RANDARRAY`, `RANDBETWEEN`, `PI`, `SQRTPI`, `DEGREES`, `RADIANS`
+      - logarithm wrappers: `LOG`, `LOG10` including arity and special-base/zero edge paths
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `2502/4748` to `2663/4748` (`+161` lines).
+
 ## Active Item
 
-- Next item: **193** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 24, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **194** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 25, using wbtest-targeted coverage summary as the comparable metric).
