@@ -22164,3 +22164,44 @@ test "formula builtins wb: chi and f helper branches part 51" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: residual hotspot probes part 75" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = workbook.sheet("Sheet1").unwrap()
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("C1", Numeric(3.0))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::Number(2.5), Expr::Range("", "A1", "C1")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISOWEEKNUM",
+        [Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+
+  inspect(gammainv_double(0.1, 0.1, 0.1) > 0.0, content="true")
+  inspect(gammainv_double(0.9, 0.1, 0.1) > 0.0, content="true")
+}

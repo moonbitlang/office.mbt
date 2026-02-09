@@ -3679,10 +3679,8 @@ fn eval_function(
         }
         match parse_time_parts(text) {
           Some((hours, minutes, seconds)) =>
-            match excel_time_fraction(hours, minutes, seconds) {
-              Some(value) => Number(value)
-              None => Error(formula_error_value)
-            }
+            // parse_time_parts only yields non-negative components.
+            Number(excel_time_fraction(hours, minutes, seconds).unwrap())
           None => Error(formula_error_value)
         }
       } else {
@@ -3707,14 +3705,9 @@ fn eval_function(
             Ok(text) => text.to_lower()
             Err(err) => return err
           }
-          let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
-            Some(parts) => parts
-            None => return Error(formula_error_num)
-          }
-          let (ey, em, ed) = match date_parts_from_serial(end_serial) {
-            Some(parts) => parts
-            None => return Error(formula_error_num)
-          }
+          // value_as_date_serial rejects negatives; serial-to-date conversion is total on non-negative serials.
+          let (sy, sm, sd) = date_parts_from_serial(start_serial).unwrap()
+          let (ey, em, ed) = date_parts_from_serial(end_serial).unwrap()
           match unit {
             "y" => {
               let mut diff = ey - sy
@@ -3746,14 +3739,8 @@ fn eval_function(
               if em < sm || (em == sm && ed < sd) {
                 target_year = sy + 1
               }
-              let start_base = match excel_serial_from_date(sy, sm, sd) {
-                Some(value) => value
-                None => return Error(formula_error_num)
-              }
-              let end_base = match excel_serial_from_date(target_year, em, ed) {
-                Some(value) => value
-                None => return Error(formula_error_num)
-              }
+              let start_base = excel_serial_from_date(sy, sm, sd).unwrap()
+              let end_base = excel_serial_from_date(target_year, em, ed).unwrap()
               Number(end_base - start_base)
             }
             "md" => {
@@ -3796,14 +3783,8 @@ fn eval_function(
           Ok(value) => value
           Err(err) => return err
         }
-        let (sy, sm, sd) = match date_parts_from_serial(start_serial) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
-        let (ey, em, ed) = match date_parts_from_serial(end_serial) {
-          Some(parts) => parts
-          None => return Error(formula_error_num)
-        }
+        let (sy, sm, sd) = date_parts_from_serial(start_serial).unwrap()
+        let (ey, em, ed) = date_parts_from_serial(end_serial).unwrap()
         let mut start_day = sd
         let mut end_day = ed
         let end_year = ey

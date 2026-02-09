@@ -4665,6 +4665,35 @@ Commands used:
     - `xlsx/formula_builtins.mbt` changed from `4660/4706` to `4654/4694`.
     - Uncovered lines reduced from `46` to `40` (`-6`).
 
+- [x] 244. Close residuals in `xlsx/formula_builtins.mbt` (part 75).
+  - DoD: eliminate date/time dead-option branches using established converter invariants and add focused wbtests for remaining lookup/week/gamma hotspots.
+  - Delivered:
+    - Refactored dead option branches in `formula_builtins.mbt`:
+      - `TIMEVALUE`: replaced nested `excel_time_fraction` `Some/None` match with direct `unwrap()` on parsed non-negative time components.
+      - `DATEDIF`: replaced `date_parts_from_serial` and `excel_serial_from_date` `Some/None` branches with required extraction (`unwrap()`), retaining existing valid-input behavior.
+      - `DAYS360`: replaced `date_parts_from_serial` `Some/None` branches with required extraction (`unwrap()`).
+    - Added focused wbtest block `formula builtins wb: residual hotspot probes part 75` in `xlsx/formula_builtins_wbtest.mbt`:
+      - covers 2-arg `LOOKUP` row-vector path (`A1:C1`).
+      - covers `ISOWEEKNUM(0)` -> `#NUM!` edge branch.
+      - probes `gammainv_double` with small-shape parameters (`0.1,0.1`) to exercise iterative edge flow.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info --package xlsx && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` changed from `4654/4694` to `4657/4687`.
+    - Uncovered lines reduced from `40` to `30` (`-10`).
+    - Remaining caret residual: `xlsx/formula_builtins.mbt:1847` (`RANDBETWEEN` overflow fallback).
+
 ## Active Item
 
-- Next item: **244** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 75, prioritizing remaining reachable branches from caret output).
+- Next item: **245** (decide whether `RANDBETWEEN` overflow fallback at `xlsx/formula_builtins.mbt:1847` should be removed as dead path, guarded with explicit overflow-safe arithmetic, or covered with deterministic stress input).
