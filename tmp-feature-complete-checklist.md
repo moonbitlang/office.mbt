@@ -5076,4 +5076,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **261** (add a dedicated semantic-parity regression test command that runs the parity runner with fixed output dirs and fail-fast logging for CI consumption).
+- [x] 261. Add dedicated semantic-parity regression command for CI use.
+  - DoD: provide a single shell entrypoint that runs semantic parity with fixed output dirs and fail-fast behavior suitable for CI logs.
+  - Delivered:
+    - Added executable wrapper script:
+      - `scripts/test_semantic_parity.sh`
+    - Script behavior:
+      - cleans `_build/semantic_parity/mbt` and `_build/semantic_parity/excelize`
+      - runs `scripts/semantic_parity.py` with fixed dirs
+      - forwards extra CLI arguments and fails fast
+    - Documented usage in `docs/excelize-parity.md` (`Parity regression command` section).
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh`
+    - `moon check --deny-warn`
+
+## Active Item
+
+- Next item: **262** (add one aggregate parity gate script that runs both semantic parity and demo roundtrip suites for a single CI-ready command).

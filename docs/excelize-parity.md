@@ -91,6 +91,19 @@ types and edge-case behaviors.
   supported function coverage and edge-case behavior may differ (this hasn’t
   been exhaustively parity-audited here).
 
+## Parity regression command
+
+Use this fixed-entrypoint script for local/CI semantic parity checks:
+
+```sh
+scripts/test_semantic_parity.sh
+```
+
+It runs `scripts/semantic_parity.py` with stable output directories under
+`_build/semantic_parity/` and fails fast on any scenario mismatch. Extra
+arguments are forwarded to the Python runner (for example,
+`--scenario controls`).
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+MBT_DIR="_build/semantic_parity/mbt"
+EXCELIZE_DIR="_build/semantic_parity/excelize"
+
+echo "Cleaning semantic parity output directories..."
+rm -rf "$MBT_DIR" "$EXCELIZE_DIR"
+
+echo "Running semantic parity regression..."
+python3 scripts/semantic_parity.py \
+  --mbt-dir "$MBT_DIR" \
+  --excelize-dir "$EXCELIZE_DIR" \
+  "$@"
+
+echo "Semantic parity regression suite passed."
