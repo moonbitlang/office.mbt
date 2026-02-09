@@ -4608,6 +4608,33 @@ Commands used:
     - `xlsx/formula_builtins.mbt` changed from `4659/4711` to `4662/4711`.
     - Uncovered lines reduced from `52` to `49` (`-3`).
 
+- [x] 242. Close residuals in `xlsx/formula_builtins.mbt` (part 73).
+  - DoD: prune dead scalar branches and redundant exception forwarding in logical/stat/address helpers without behavioral change.
+  - Delivered:
+    - Refactored `AND` evaluation to match directly on original `FormulaValue`:
+      - removed redundant nested `normalize_scalar` branching and unreachable inner `List(_)` arm.
+    - Simplified `stdev_values` loop branching:
+      - removed impossible per-iteration `Error(err)` arm after mean pre-check (`mean_value` gating).
+      - collapsed remaining no-op scalar cases into `_ => ()`.
+    - Removed redundant `catch` wrapper around `address_a1` in `ADDRESS`:
+      - existing input validation (`row_num > 0`, `col_num > 0`, `abs_num in 1..4`) already guarantees safe call.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` changed from `4662/4711` to `4660/4706`.
+    - Uncovered lines reduced from `49` to `46` (`-3`).
+
 ## Active Item
 
-- Next item: **242** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 73, prioritizing remaining reachable branches from caret output).
+- Next item: **243** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 74, prioritizing remaining reachable branches from caret output).

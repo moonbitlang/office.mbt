@@ -2639,23 +2639,19 @@ fn eval_function(
         let mut result = true
         for value in values {
           match value {
-            List(_) => return Error(formula_error_value)
-            _ =>
-              match normalize_scalar(value) {
-                Empty => ()
-                Error(err) => return Error(err)
-                Number(num) => result = result && num != 0.0
-                Bool(flag) => result = result && flag
-                String(text) =>
-                  if text == "TRUE" {
-                    ()
-                  } else if text == "FALSE" {
-                    return Bool(false)
-                  } else {
-                    return Error(formula_error_value)
-                  }
-                List(_) => return Error(formula_error_value)
+            Empty => ()
+            Error(err) => return Error(err)
+            Number(num) => result = result && num != 0.0
+            Bool(flag) => result = result && flag
+            String(text) =>
+              if text == "TRUE" {
+                ()
+              } else if text == "FALSE" {
+                return Bool(false)
+              } else {
+                return Error(formula_error_value)
               }
+            List(_) => return Error(formula_error_value)
           }
         }
         Bool(result)
@@ -4493,9 +4489,7 @@ fn eval_function(
           ""
         }
         let address = if a1 {
-          address_a1(row_num, col_num, abs_num) catch {
-            _ => return Error(formula_error_value)
-          }
+          address_a1(row_num, col_num, abs_num)
         } else {
           address_r1c1(row_num, col_num, abs_num)
         }
@@ -5851,7 +5845,6 @@ fn stdev_values(
   let mut count = -1
   for value in flatten_values(values) {
     match normalize_scalar(value) {
-      Error(err) => return Error(err)
       Number(num) => {
         let (next_sum, next_count) = stdev_add(sum, count, num, mean)
         sum = next_sum
@@ -5882,7 +5875,7 @@ fn stdev_values(
             None => ()
           }
         }
-      Empty | List(_) => ()
+      _ => ()
     }
   }
   if count > 0 && sum >= 0.0 {
