@@ -2922,6 +2922,33 @@ Commands used:
     - Total uncovered lines reduced from `2448` to `2432`
     - Uncovered file count remains `43`
 
+- [x] 176. Close residuals in `xlsx/formula_builtins.mbt` (part 7).
+  - DoD: add focused whitebox coverage for date/time and lookup dispatch guards in `eval_function(...)` and reduce residual uncovered lines in `xlsx/formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused wbtests for:
+      - `UNIQUE` scalar/list/error coercion branches
+      - date/time family guard branches:
+        - `DATE`, `TIME`, `DATEVALUE`, `TIMEVALUE`
+        - `DATEDIF`, `DAYS`, `DAYS360`, `ISOWEEKNUM`
+        - `EDATE`, `EOMONTH`, `YEARFRAC`
+        - `WEEKDAY`, `WEEKNUM`
+        - `NETWORKDAYS`, `NETWORKDAYS.INTL`, `WORKDAY`, `WORKDAY.INTL`
+        - `NOW`, `TODAY`, `YEAR`, `MONTH`, `DAY`, `HOUR`, `MINUTE`, `SECOND`
+      - lookup/index family guard/default branches:
+        - `INDEX`, `MATCH` (including default `match_type`)
+        - `VLOOKUP`, `HLOOKUP`
+        - `LOOKUP` 2-arg and 3-arg error/default/vector-shape mismatch branches
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after187.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `298` to `212`
+    - Total uncovered lines reduced from `2432` to `2342`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **176** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 7).
+- Next item: **177** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 8).

@@ -2358,3 +2358,1322 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: date-time and lookup guard branches part 7" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => panic()
+  }
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", String("one"))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("B2", String("two"))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("B3", String("three"))
+  sheet.set_cell_value("D1", Numeric(1.0))
+  sheet.set_cell_value("E1", Numeric(2.0))
+  sheet.set_cell_value("F1", Numeric(3.0))
+  sheet.set_cell_value("D2", String("d1"))
+  sheet.set_cell_value("E2", String("d2"))
+  sheet.set_cell_value("F2", String("d3"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [Expr::List([Expr::Number(1.0), Expr::Number(1.0), Expr::Number(2.0)])][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 3
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "UNIQUE", [Expr::Number(7.0)][:], ctx) {
+      List(list) => list.length() == 1 && is_formula_number(list[0], 7.0)
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [Expr::List([Expr::FuncCall("NA", [])])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATE",
+        [Expr::Number(10000.0), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATE",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIME",
+        [Expr::FuncCall("NA", []), Expr::Number(0.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEVALUE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEVALUE",
+        [Expr::String("9999-13-01")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIMEVALUE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIMEVALUE",
+        [Expr::String("-1:00:00")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::FuncCall("NA", []),
+          Expr::String("2024-01-01"),
+          Expr::String("D"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-01-01"),
+          Expr::FuncCall("NA", []),
+          Expr::String("D"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-01-01"),
+          Expr::String("2024-01-01"),
+          Expr::String("D"),
+        ][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-01-01"),
+          Expr::String("2024-01-02"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [Expr::Number(1.0e20), Expr::Number(1.0e20 + 1.0), Expr::String("D")][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [Expr::Number(1.0), Expr::Number(1.0e20), Expr::String("D")][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-06-30"),
+          Expr::String("2025-01-01"),
+          Expr::String("Y"),
+        ][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-01-31"),
+          Expr::String("2024-03-01"),
+          Expr::String("M"),
+        ][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-01-31"),
+          Expr::String("2024-03-01"),
+          Expr::String("YM"),
+        ][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-11-15"),
+          Expr::String("2025-02-14"),
+          Expr::String("YM"),
+        ][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-11-15"),
+          Expr::String("2025-02-14"),
+          Expr::String("YD"),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-03-20"),
+          Expr::String("2024-04-10"),
+          Expr::String("MD"),
+        ][:],
+        ctx,
+      ),
+      21.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEDIF",
+        [
+          Expr::String("2024-01-01"),
+          Expr::String("2024-01-02"),
+          Expr::String("BAD"),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [Expr::FuncCall("NA", []), Expr::String("2024-01-31"), Expr::Bool(true)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [Expr::String("2024-01-31"), Expr::FuncCall("NA", []), Expr::Bool(true)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [Expr::Number(1.0e20), Expr::String("2024-01-31"), Expr::Bool(true)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [Expr::String("2024-01-31"), Expr::Number(1.0e20), Expr::Bool(true)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [
+          Expr::String("2024-01-31"),
+          Expr::String("2024-03-31"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [
+          Expr::String("2024-01-31"),
+          Expr::String("2024-03-31"),
+          Expr::Bool(true),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [
+          Expr::String("2024-02-29"),
+          Expr::String("2024-03-15"),
+          Expr::Bool(false),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [
+          Expr::String("2024-01-15"),
+          Expr::String("2024-01-31"),
+          Expr::Bool(false),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAYS360",
+        [
+          Expr::String("2024-01-30"),
+          Expr::String("2024-01-31"),
+          Expr::Bool(false),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISOWEEKNUM",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EDATE",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EDATE",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EDATE",
+        [Expr::String("9999-12-31"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EOMONTH",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EOMONTH",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EOMONTH",
+        [Expr::String("9999-12-01"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "YEARFRAC",
+        [Expr::FuncCall("NA", []), Expr::String("2024-01-02")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "YEARFRAC",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "YEARFRAC",
+        [
+          Expr::String("2024-01-01"),
+          Expr::String("2024-01-02"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "YEARFRAC",
+        [Expr::String("2024-01-01"), Expr::String("2024-01-31")][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "YEARFRAC",
+        [Expr::String("2024-01-01")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKDAY",
+        [Expr::String("2024-01-01"), Expr::Number(99.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::String("2023-01-07"), Expr::Number(16.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::String("2021-01-01"), Expr::Number(21.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS",
+        [Expr::FuncCall("NA", []), Expr::String("2024-01-02")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [Expr::FuncCall("NA", []), Expr::String("2024-01-02")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [Expr::String("2024-01-01"), Expr::String("2024-01-07")][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [
+          Expr::String("2024-01-01"),
+          Expr::String("2024-01-07"),
+          Expr::Number(1.0),
+          Expr::List([Expr::String("2024-01-03")]),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NETWORKDAYS.INTL",
+        [Expr::String("2024-01-01")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Expr::String("2024-01-01"), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [
+          Expr::String("2024-01-01"),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::List([Expr::String("2024-01-03")]),
+        ][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WORKDAY.INTL",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "NOW", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "TODAY", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "YEAR", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MONTH", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DAY", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "HOUR", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MINUTE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SECOND", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [Expr::Range("", "A1", "B3"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDEX",
+        [
+          Expr::Range("", "A1", "B3"),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MATCH",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MATCH",
+        [Expr::Number(2.0), Expr::Range("", "A1", "A3")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "B3"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "B3"),
+          Expr::Number(2.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "D1", "F2"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "D1", "F2"),
+          Expr::Number(2.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::FuncCall("NA", []), Expr::Range("", "A1", "A3")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::Number(0.0), Expr::Range("", "A1", "A3")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::Number(0.0), Expr::Range("", "D1", "F2")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [Expr::FuncCall("NA", []), Expr::Range("", "D1", "F2")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "B2"),
+          Expr::Range("", "B1", "B2"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A2"),
+          Expr::Range("", "A1", "B2"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B2"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOOKUP",
+        [
+          Expr::FuncCall("NA", []),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+}
