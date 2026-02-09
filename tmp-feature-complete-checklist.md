@@ -3589,6 +3589,30 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3418/4748` to `3462/4748` (`+44` lines).
 
+- [x] 203. Close residuals in `xlsx/formula_builtins.mbt` (part 34).
+  - DoD: reduce uncovered dispatch/wrapper branches in dynamic-array and date-time entrypoints.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a focused dispatch block covering:
+      - dynamic-array wrappers: `SEQUENCE`, `TAKE`, `DROP`, `CHOOSECOLS`, `CHOOSEROWS`,
+        `HSTACK`, `VSTACK`, `EXPAND`, `WRAPROWS`, `WRAPCOLS`, `TOCOL`, `TOROW`, `SORT`,
+        `SORTBY`, `FILTER`, `UNIQUE`
+      - date-time wrappers: `DATE`, `TIME`, `DATEVALUE`, `TIMEVALUE`
+    - Added both success and arity/validation error assertions to trigger:
+      - direct wrapper-dispatch lines (`SEQUENCE`..`FILTER`)
+      - `UNIQUE` 3-arg `exactly_once` branch and invalid-arity branch
+      - `DATE/TIME/DATEVALUE/TIMEVALUE` valid parse branches and invalid-arity/error paths
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3462/4748` to `3494/4748` (`+32` lines).
+
 ## Active Item
 
-- Next item: **203** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 34, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **204** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 35, using wbtest-targeted coverage summary as the comparable metric).

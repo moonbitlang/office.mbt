@@ -13678,3 +13678,507 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("C1", Bool(true))
+  sheet.set_cell_value("C2", Bool(false))
+  sheet.set_cell_value("D1", Numeric(1.0))
+  sheet.set_cell_value("D2", Numeric(1.0))
+  sheet.set_cell_value("D3", Numeric(2.0))
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEQUENCE",
+        [Expr::Number(2.0), Expr::Number(2.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SEQUENCE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TAKE",
+        [Expr::Range("", "A1", "B2"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TAKE",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DROP",
+        [Expr::Range("", "A1", "B2"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DROP",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHOOSECOLS",
+        [Expr::Range("", "A1", "B2"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHOOSEROWS",
+        [Expr::Range("", "A1", "B2"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHOOSECOLS",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHOOSEROWS",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HSTACK",
+        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VSTACK",
+        [Expr::Range("", "A1", "B1"), Expr::Range("", "A2", "B2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "HSTACK", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EXPAND",
+        [
+          Expr::Range("", "A1", "B2"),
+          Expr::Number(3.0),
+          Expr::Number(3.0),
+          Expr::Number(0.0),
+        ][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EXPAND",
+        [Expr::Range("", "A1", "B2"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WRAPROWS",
+        [Expr::Range("", "A1", "B1"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WRAPCOLS",
+        [Expr::Range("", "A1", "B1"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WRAPROWS",
+        [Expr::Range("", "A1", "B2"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TOCOL",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TOROW",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TOCOL",
+        [Expr::Range("", "A1", "B2"), Expr::Number(9.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SORT",
+        [Expr::Range("", "A1", "B2"), Expr::Number(1.0), Expr::Number(-1.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SORTBY",
+        [
+          Expr::Range("", "A1", "B2"),
+          Expr::Range("", "B1", "B2"),
+          Expr::Number(-1.0),
+        ][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FILTER",
+        [Expr::Range("", "A1", "A2"), Expr::Range("", "C1", "C2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FILTER",
+        [Expr::Range("", "A1", "A2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [Expr::Range("", "D1", "D3"), Expr::Bool(false), Expr::Bool(true)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "UNIQUE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATE",
+        [Expr::Number(1900.0), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATE",
+        [Expr::Number(1900.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIME",
+        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIME",
+        [Expr::Number(-1.0), Expr::Number(0.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIME",
+        [Expr::Number(0.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEVALUE",
+        [Expr::String("1900-01-01")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEVALUE",
+        [Expr::String("not-a-date")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATEVALUE",
+        [Expr::String("1900-01-01"), Expr::String("x")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIMEVALUE",
+        [Expr::String("00:00:00")][:],
+        ctx,
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIMEVALUE",
+        [Expr::String("not-a-time")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIMEVALUE",
+        [Expr::String("00:00:00"), Expr::String("x")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+}
