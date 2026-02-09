@@ -112,6 +112,7 @@ wrappers=(
   "scripts/check_parity_preflight_matrix_smoke_contract_x82.sh"
   "scripts/check_parity_preflight_matrix_smoke_contract_x83.sh"
   "scripts/check_parity_preflight_matrix_smoke_contract_x84.sh"
+  "scripts/check_parity_preflight_matrix_smoke_contract_x85.sh"
   "scripts/show_parity_env.sh"
 )
 
