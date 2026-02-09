@@ -4724,4 +4724,29 @@ Commands used:
 
 ## Active Item
 
-- Next item: **246** (start integration-focused parity hardening by selecting one writer subsystem and adding roundtrip/open-in-Excel regression coverage before further refactors).
+- [x] 246. Integration-focused parity hardening: pivot+slicer writer demo roundtrip.
+  - DoD: add end-to-end regression coverage on the demo writer path that validates pivot/slicer OOXML package structure before and after `read -> write` roundtrip.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+    - Implemented reusable archive assertion helper (`assert_demo_pivot_slicer_archive`) that validates:
+      - required parts exist (`pivotTable`, `pivotCacheDefinition`, `slicer`, `slicerCache`, `sheet2 rels`).
+      - workbook/sheet relationship IDs are unique and key targets are present.
+      - worksheet ext markup contains `mc:Ignorable="x14"` and `<x14:slicerList>`.
+      - slicer cache critical fields (`pivotTable tabId/name`, `pivotCacheId`, `xr10` namespace).
+      - slicer payload fields (`cache="Slicer_Region"`, `caption="Region"`).
+      - content types include slicer and slicerCache MIME overrides.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_pivot_slicer_bytes()`
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+    - `moon test xlsx/integration_pivot_slicer_rel_consistency_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **247** (apply the same demo-level roundtrip consistency hardening pattern to another high-risk writer subsystem, e.g. chart+drawing relations or stream-writer package consistency).
