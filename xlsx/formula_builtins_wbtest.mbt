@@ -7371,3 +7371,166 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: database dispatch happy paths part 19" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", String("Field"))
+  sheet.set_cell_value("B1", String("Qty"))
+  sheet.set_cell_value("A2", String("X"))
+  sheet.set_cell_value("B2", Numeric(10.0))
+  sheet.set_cell_value("A3", String("Y"))
+  sheet.set_cell_value("B3", Numeric(20.0))
+  sheet.set_cell_value("A4", String("X"))
+  sheet.set_cell_value("B4", Numeric(30.0))
+
+  sheet.set_cell_value("D1", String("Field"))
+  sheet.set_cell_value("D2", String("X"))
+  sheet.set_cell_value("F1", String("Field"))
+  sheet.set_cell_value("F2", String("Y"))
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DSUM",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      40.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAVERAGE",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DMAX",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      30.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DMIN",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DPRODUCT",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      300.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DCOUNT",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DCOUNTA",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Field"),
+          Expr::Range("", "D1", "D2"),
+        ][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DGET",
+        [
+          Expr::Range("", "A1", "B4"),
+          Expr::String("Qty"),
+          Expr::Range("", "F1", "F2"),
+        ][:],
+        ctx,
+      ),
+      20.0,
+    ),
+    content="true",
+  )
+}
