@@ -95,6 +95,7 @@ wrappers=(
   "scripts/check_parity_preflight_matrix_smoke_contract_x70.sh"
   "scripts/check_parity_preflight_matrix_smoke_contract_x71.sh"
   "scripts/check_parity_preflight_matrix_smoke_contract_x72.sh"
+  "scripts/check_parity_preflight_matrix_smoke_contract_x73.sh"
   "scripts/check_parity_wrappers.sh"
   "scripts/check_parity_docs_refs.sh"
   "scripts/check_parity_docs_wrapper_coverage.sh"
