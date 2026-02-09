@@ -6184,3 +6184,212 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: correl forecast and stats dispatch part 14" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+  let x_data = Expr::List([
+    Expr::Number(1.0),
+    Expr::Number(2.0),
+    Expr::Number(3.0),
+    Expr::Number(4.0),
+  ])
+  let y_data = Expr::List([
+    Expr::Number(2.0),
+    Expr::Number(4.0),
+    Expr::Number(6.0),
+    Expr::Number(8.0),
+  ])
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SIGN", [Expr::Number(-7.0)][:], ctx),
+      -1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SERIESSUM",
+        [
+          Expr::Number(2.0),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+        ][:],
+        ctx,
+      ),
+      34.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "CORREL", [y_data, x_data][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "COVAR", [y_data, x_data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COVARIANCE.P",
+        [y_data, x_data][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COVARIANCE.S",
+        [y_data, x_data][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "PEARSON", [y_data, x_data][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "RSQ", [y_data, x_data][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SLOPE", [y_data, x_data][:], ctx),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "INTERCEPT", [y_data, x_data][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FORECAST",
+        [Expr::Number(5.0), y_data, x_data][:],
+        ctx,
+      ),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FORECAST.LINEAR",
+        [Expr::Number(5.0), y_data, x_data][:],
+        ctx,
+      ),
+      10.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "FISHER", [Expr::Number(0.5)][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FISHERINV",
+        [Expr::Number(0.5)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "STEYX", [y_data, x_data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MEDIAN", [x_data][:], ctx),
+      2.5,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MIN", [x_data][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MAX", [x_data][:], ctx),
+      4.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "COUNT", [x_data][:], ctx),
+      4.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "COUNTA", [x_data][:], ctx),
+      4.0,
+    ),
+    content="true",
+  )
+}
