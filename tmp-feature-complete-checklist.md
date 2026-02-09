@@ -3915,6 +3915,34 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3999/4748` to `4050/4748` (`+51` lines).
 
+- [x] 215. Close residuals in `xlsx/formula_builtins.mbt` (part 46).
+  - DoD: reduce uncovered `LOGINV` and `GAMMA*` helper branches (including direct gamma helper primitives).
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with direct helper coverage for:
+      - `loginv_values`
+      - `gamma_value`, `gamma_pdf`, `gamma_cdf`
+      - `gamma_dist_values`
+      - `gammainv_double`, `gamma_inv_values`
+      - `gammaln_values`
+    - Added targeted branch cases to trigger:
+      - `LOGINV` domain guards and numeric success path
+      - `GAMMA` domain guard and numeric success path
+      - `GAMMA.DIST` parse-error guards for all arguments, numeric-domain guards, and cdf/pdf success branches
+      - `GAMMAINV` parse-error guards, probability/domain guards, and numeric success path
+      - direct iterative `gammainv_double` execution branch
+      - `GAMMALN` domain guard and numeric success path.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4050/4748` to `4108/4748` (`+58` lines).
+
 ## Active Item
 
-- Next item: **215** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 46, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **216** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 47, using wbtest-targeted coverage summary as the comparable metric).
