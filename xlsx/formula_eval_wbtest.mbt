@@ -50,7 +50,11 @@ test "formula eval wb: anchorarray and range guards" {
     content="true",
   )
 
-  let range = wb_range([Number(1.0), Number(2.0), Number(3.0), Number(4.0)], 2, 2)
+  let range = wb_range(
+    [Number(1.0), Number(2.0), Number(3.0), Number(4.0)],
+    2,
+    2,
+  )
   inspect(range_column(range, -1) is None, content="true")
   inspect(range_row(range, 2) is None, content="true")
 }
@@ -61,7 +65,12 @@ test "formula eval wb: munit and transpose guard paths" {
   ignore(workbook.add_sheet("Sheet1"))
   let ctx = CalcContext::new()
 
-  let munit_bad_arity = munit_range_values_from_expr(workbook, "Sheet1", [], ctx)
+  let munit_bad_arity = munit_range_values_from_expr(
+    workbook,
+    "Sheet1",
+    [],
+    ctx,
+  )
   inspect(munit_bad_arity.rows, content="1")
   inspect(munit_bad_arity.cols, content="1")
   inspect(munit_bad_arity.values.length(), content="1")
@@ -74,7 +83,10 @@ test "formula eval wb: munit and transpose guard paths" {
   )
 
   let munit_bad_value = munit_range_values_from_expr(
-    workbook, "Sheet1", [String("not-number")], ctx,
+    workbook,
+    "Sheet1",
+    [String("not-number")],
+    ctx,
   )
   inspect(munit_bad_value.values.length(), content="1")
   inspect(
@@ -86,7 +98,10 @@ test "formula eval wb: munit and transpose guard paths" {
   )
 
   let transpose_bad_arity = transpose_range_values_from_expr(
-    workbook, "Sheet1", [], ctx,
+    workbook,
+    "Sheet1",
+    [],
+    ctx,
   )
   inspect(transpose_bad_arity.rows, content="1")
   inspect(transpose_bad_arity.cols, content="1")
@@ -100,7 +115,10 @@ test "formula eval wb: munit and transpose guard paths" {
   )
 
   let transpose_scalar = transpose_range_values_from_expr(
-    workbook, "Sheet1", [Number(7.0)], ctx,
+    workbook,
+    "Sheet1",
+    [Number(7.0)],
+    ctx,
   )
   inspect(transpose_scalar.values.length(), content="1")
   inspect(
@@ -131,7 +149,8 @@ test "formula eval wb: matrix and trend helper guards" {
   )
   inspect(
     match bool_matrix_result {
-      Ok(matrix) => matrix.length() == 1 && matrix[0].length() == 1 && matrix[0][0] == 1.0
+      Ok(matrix) =>
+        matrix.length() == 1 && matrix[0].length() == 1 && matrix[0][0] == 1.0
       _ => false
     },
     content="true",
@@ -181,23 +200,27 @@ test "formula eval wb: sequence randarray and slice guards" {
   )
   inspect(
     wb_is_error(
-      sequence_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-start"),
-      ][:]),
+      sequence_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::String("bad-start"),
+        ][:],
+      ),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      sequence_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-step"),
-      ][:]),
+      sequence_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::String("bad-step"),
+        ][:],
+      ),
       formula_error_value,
     ),
     content="true",
@@ -213,13 +236,15 @@ test "formula eval wb: sequence randarray and slice guards" {
     content="true",
   )
 
-  let rand_float = randarray_values([
-    FormulaValue::Number(1.0),
-    FormulaValue::Number(2.0),
-    FormulaValue::Number(0.0),
-    FormulaValue::Number(1.0),
-    FormulaValue::Bool(false),
-  ][:])
+  let rand_float = randarray_values(
+    [
+      FormulaValue::Number(1.0),
+      FormulaValue::Number(2.0),
+      FormulaValue::Number(0.0),
+      FormulaValue::Number(1.0),
+      FormulaValue::Bool(false),
+    ][:],
+  )
   let rand_float_ok = match rand_float {
     FormulaValue::List(list) => list.length() == 2 && wb_is_number(list[0])
     _ => false
@@ -227,66 +252,68 @@ test "formula eval wb: sequence randarray and slice guards" {
   inspect(rand_float_ok, content="true")
   inspect(
     wb_is_error(
-      randarray_values([
-        FormulaValue::String("bad-rows"),
-      ][:]),
+      randarray_values([FormulaValue::String("bad-rows")][:]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-cols"),
-      ][:]),
+      randarray_values(
+        [FormulaValue::Number(1.0), FormulaValue::String("bad-cols")][:],
+      ),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-min"),
-      ][:]),
+      randarray_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::String("bad-min"),
+        ][:],
+      ),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::String("bad-max"),
-      ][:]),
+      randarray_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(0.0),
+          FormulaValue::String("bad-max"),
+        ][:],
+      ),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-whole"),
-      ][:]),
+      randarray_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::String("bad-whole"),
+        ][:],
+      ),
       formula_error_value,
     ),
     content="true",
   )
 
-  let range = wb_range([
-    Number(1.0),
-    Number(2.0),
-    Number(3.0),
-    Number(4.0),
-  ], 2, 2)
+  let range = wb_range(
+    [Number(1.0), Number(2.0), Number(3.0), Number(4.0)],
+    2,
+    2,
+  )
   inspect(
     match slice_range_values(range, 0, 0, 0, 1) {
       Err(Error(err)) => err == formula_error_value
@@ -430,14 +457,7 @@ test "formula eval wb: range transforms and index guards" {
   )
   inspect(
     wb_is_error(
-      wrap_values(
-        workbook,
-        "Sheet1",
-        [base_expr][:],
-        [base_list][:],
-        ctx,
-        true,
-      ),
+      wrap_values(workbook, "Sheet1", [base_expr][:], [base_list][:], ctx, true),
       formula_error_value,
     ),
     content="true",
@@ -532,12 +552,11 @@ test "formula eval wb: sort filter and tocol-torow guards" {
   ignore(workbook.add_sheet("Sheet1"))
   let ctx = CalcContext::new()
   let vec_range = wb_range([Number(1.0), Number(2.0)], 1, 2)
-  let matrix_range = wb_range([
-    Number(1.0),
-    Number(2.0),
-    Number(3.0),
-    Number(4.0),
-  ], 2, 2)
+  let matrix_range = wb_range(
+    [Number(1.0), Number(2.0), Number(3.0), Number(4.0)],
+    2,
+    2,
+  )
 
   inspect(
     match sort_range_values(vec_range, 0, 1) {
@@ -609,10 +628,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
-        [
-          Expr::Number(0.0),
-          Expr::Number(0.0),
-        ][:],
+        [Expr::Number(0.0), Expr::Number(0.0)][:],
         [
           FormulaValue::List([
             FormulaValue::Number(1.0),
@@ -631,11 +647,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
-        [
-          Expr::Number(0.0),
-          Expr::Number(0.0),
-          Expr::Number(0.0),
-        ][:],
+        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)][:],
         [
           FormulaValue::List([
             FormulaValue::Number(1.0),
@@ -678,11 +690,17 @@ test "formula eval wb: sort filter and tocol-torow guards" {
   )
 
   inspect(
-    wb_is_error(filter_range_values(matrix_range, vec_range, None), formula_error_value),
+    wb_is_error(
+      filter_range_values(matrix_range, vec_range, None),
+      formula_error_value,
+    ),
     content="true",
   )
   inspect(
-    wb_is_error(filter_range_values(vec_range, matrix_range, None), formula_error_value),
+    wb_is_error(
+      filter_range_values(vec_range, matrix_range, None),
+      formula_error_value,
+    ),
     content="true",
   )
   inspect(
@@ -729,6 +747,1568 @@ test "formula eval wb: sort filter and tocol-torow guards" {
         false,
       ),
       formula_error_value,
+    ),
+    content="true",
+  )
+}
+
+///|
+fn wb_shape_eq(shape : (Int, Int)?, rows : Int, cols : Int) -> Bool {
+  match shape {
+    Some((shape_rows, shape_cols)) => shape_rows == rows && shape_cols == cols
+    None => false
+  }
+}
+
+///|
+fn wb_shape_none(shape : (Int, Int)?) -> Bool {
+  match shape {
+    None => true
+    _ => false
+  }
+}
+
+///|
+fn wb_shape_some(shape : (Int, Int)?) -> Bool {
+  match shape {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
+fn wb_shape(
+  workbook : Workbook,
+  sheet_name : String,
+  expr : Expr,
+) -> (Int, Int)? {
+  array_shape_from_expr(workbook, sheet_name, expr, CalcContext::new()) catch {
+    _ => None
+  }
+}
+
+///|
+test "formula eval wb: shape helper branches part 3" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+
+  inspect(
+    wb_shape_none(array_shape_binary(Some((1, 2)), Some((2, 1)))),
+    content="true",
+  )
+  inspect(wb_shape_none(array_shape_binary(None, Some((1, 1)))), content="true")
+
+  inspect(
+    effective_range_bounds(workbook, "Sheet1", 3, 1, 1, 1),
+    content="(3, 1, 1, 1)",
+  )
+  inspect(
+    effective_range_bounds(workbook, "Missing", 1, 5000, 1, 4),
+    content="(1, 5000, 1, 4)",
+  )
+  inspect(
+    effective_range_bounds(workbook, "Sheet1", 1, 5000, 1, 4),
+    content="(1, 2500, 1, 4)",
+  )
+  inspect(
+    effective_range_bounds(workbook, "Sheet1", 1, 4, 1, 5000),
+    content="(1, 4, 1, 2500)",
+  )
+
+  let empty_values : Array[FormulaValue] = []
+  let empty_list_range = range_from_expr_or_value(
+    workbook,
+    "Sheet1",
+    Expr::Number(1.0),
+    FormulaValue::List(empty_values),
+    CalcContext::new(),
+  )
+  inspect(empty_list_range.rows, content="1")
+  inspect(empty_list_range.cols, content="1")
+  inspect(
+    match empty_list_range.values[0] {
+      Empty => true
+      _ => false
+    },
+    content="true",
+  )
+
+  let transpose_bad = range_from_expr_or_value(
+    workbook,
+    "Sheet1",
+    Expr::FuncCall("TRANSPOSE", [Expr::Number(1.0), Expr::Number(2.0)]),
+    FormulaValue::List([FormulaValue::Number(1.0)]),
+    CalcContext::new(),
+  )
+  inspect(transpose_bad.rows, content="1")
+  inspect(transpose_bad.cols, content="1")
+  inspect(
+    match transpose_bad.values[0] {
+      Error(err) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+
+  let seq_mismatch = range_from_expr_or_value(
+    workbook,
+    "Sheet1",
+    Expr::FuncCall("SEQUENCE", [Expr::Number(1.0), Expr::Number(2.0)]),
+    FormulaValue::List([FormulaValue::Number(1.0)]),
+    CalcContext::new(),
+  )
+  inspect(seq_mismatch.rows, content="1")
+  inspect(seq_mismatch.cols, content="1")
+
+  let seq_shape_none = range_from_expr_or_value(
+    workbook,
+    "Sheet1",
+    Expr::FuncCall("SEQUENCE", [Expr::String("bad")]),
+    FormulaValue::List([FormulaValue::Number(1.0)]),
+    CalcContext::new(),
+  )
+  inspect(seq_shape_none.rows, content="1")
+  inspect(seq_shape_none.cols, content="1")
+
+  inspect(
+    wb_is_error(
+      eval_numeric_binary(BinaryOp::Concat, Number(1.0), Number(2.0)),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_is_error(
+      eval_numeric_binary(BinaryOp::Add, String("bad"), Number(2.0)),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_is_error(
+      eval_numeric_binary(BinaryOp::Add, Number(1.0), String("bad")),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_is_error(
+      eval_list_binary(BinaryOp::Add, Number(1.0), Number(2.0)),
+      formula_error_value,
+    ),
+    content="true",
+  )
+}
+
+///|
+test "formula eval wb: array shape dispatcher guards part 3" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Data"))
+  let sheet1 = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => {
+      inspect(false, content="true")
+      return
+    }
+  }
+  sheet1.set_cell_value("A1", Numeric(1.0))
+  sheet1.set_cell_value("B1", Numeric(2.0))
+  sheet1.set_cell_value("A2", Numeric(3.0))
+  sheet1.set_cell_value("B2", Numeric(4.0))
+  sheet1.set_cell_value("A3", Numeric(5.0))
+  sheet1.set_cell_value("D1", Error(formula_error_ref))
+  sheet1.set_cell_formula("A4", "SEQUENCE(2,3)")
+  sheet1.set_cell_formula("A5", "1+")
+
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::Unary(UnaryOp::Plus, Expr::Number(1.0)),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+      ),
+      1,
+      3,
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TRANSPOSE", [Expr::Number(1.0), Expr::Number(2.0)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("_XLFN.MUNIT", [Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MUNIT", [Expr::Number(2.0), Expr::Number(3.0)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("SEQUENCE", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("SEQUENCE", [Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("SEQUENCE", [Expr::Number(1.0), Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("SEQUENCE", [Expr::Number(2.0)]),
+      ),
+      2,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("SEQUENCE", [Expr::Number(0.0), Expr::Number(1.0)]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("RANDARRAY", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("RANDARRAY", [Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("RANDARRAY", [Expr::Number(1.0), Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("RANDARRAY", [Expr::Number(0.0), Expr::Number(1.0)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("RANDARRAY", [Expr::Number(2.0), Expr::Number(3.0)]),
+      ),
+      2,
+      3,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("RANDARRAY", [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Number(0.0),
+          Expr::Number(1.0),
+          Expr::Bool(true),
+          Expr::Number(7.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MINVERSE", [Expr::Range("", "A1", "B2")]),
+      ),
+      2,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MINVERSE", [Expr::Range("", "A1", "B3")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MINVERSE", [
+          Expr::Range("", "A1", "B2"),
+          Expr::Number(1.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MMULT", [Expr::Range("", "A1", "B2")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MMULT", [
+          Expr::Range("", "A1", "B2"),
+          Expr::Range("", "A1", "A1"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [Expr::Cell("", "D1"), Expr::String(",")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b"), Expr::Cell("", "D1")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b"), Expr::String("")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [
+          Expr::String("a,b"),
+          Expr::String(","),
+          Expr::Cell("", "D1"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [
+          Expr::String("a,b"),
+          Expr::String(","),
+          Expr::String(""),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [
+          Expr::String("a,b"),
+          Expr::String(","),
+          Expr::String(""),
+          Expr::Bool(false),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [
+          Expr::String("a,b"),
+          Expr::String(","),
+          Expr::String(""),
+          Expr::Bool(false),
+          Expr::Number(2.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [
+          Expr::String(""),
+          Expr::String(","),
+          Expr::String(""),
+          Expr::Bool(true),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b"), Expr::String(",")]),
+      ),
+      1,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b")]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FREQUENCY", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Range("", "D1", "D1"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FREQUENCY", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MODE.MULT", [Expr::Number(1.0)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_some(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("MODE.MULT", [
+          Expr::List([Expr::Number(1.0), Expr::Number(1.0), Expr::Number(2.0)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("MODE.MULT", []))),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("ANCHORARRAY", [Expr::Number(1.0)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(workbook, "Sheet1", Expr::FuncCall("ANCHORARRAY", [])),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("Missing", "A1")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("", "bad_ref")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("Sheet1", "A1")]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("", "A5")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("", "A4")]),
+      ),
+      2,
+      3,
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::Bool(true)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("A1"), Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("Data!A1:B2")]),
+      ),
+      2,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("bad!:A1")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("A1:bad!")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("A1")]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_some(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("A")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("bad!")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [
+          Expr::String("R1C1:R2C2"),
+          Expr::Bool(false),
+        ]),
+      ),
+      2,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("BAD:R2C2"), Expr::Bool(false)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("R1C1:BAD"), Expr::Bool(false)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [
+          Expr::String("R0C1:R1C1"),
+          Expr::Bool(false),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [
+          Expr::String("R1C1:R0C1"),
+          Expr::Bool(false),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("R1C1"), Expr::Bool(false)]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [Expr::String("BAD"), Expr::Bool(false)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("INDIRECT", [
+          Expr::String("A1"),
+          Expr::Bool(false),
+          Expr::Number(1.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+}
+
+///|
+test "formula eval wb: array shape advanced function branches part 3" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => {
+      inspect(false, content="true")
+      return
+    }
+  }
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(2.0))
+  sheet.set_cell_value("A3", Numeric(3.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("B3", Numeric(6.0))
+  sheet.set_cell_value("C1", Error(formula_error_ref))
+
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("TREND", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TREND", [Expr::String("bad")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TREND", [
+          Expr::Range("", "A1", "A3"),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TREND", [
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "A1", "A3"),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TREND", [
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "A1", "A3"),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TREND", [
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "A1", "A2"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("SORT", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("SORTBY", [
+          Expr::List([Expr::Number(3.0), Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::List([
+            Expr::Number(30.0),
+            Expr::Number(10.0),
+            Expr::Number(20.0),
+          ]),
+        ]),
+      ),
+      1,
+      3,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("SORTBY", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("UNIQUE", [
+          Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("UNIQUE", [
+          Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+          Expr::Bool(false),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("UNIQUE", [Expr::Range("", "C1", "C1")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("UNIQUE", []))),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FILTER", [
+          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
+          Expr::List([Expr::Bool(true), Expr::Bool(false)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FILTER", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::List([Expr::Bool(true), Expr::Bool(false)]),
+        ]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FILTER", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::List([Expr::String("bad"), Expr::Bool(true)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FILTER", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::List([Expr::Bool(false), Expr::Bool(false)]),
+          Expr::Number(99.0),
+        ]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("FILTER", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::List([Expr::Number(1.0)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::List([Expr::Number(10.0), Expr::Number(20.0)]),
+        ]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::FuncCall("TRANSPOSE", [
+            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          ]),
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::FuncCall("TRANSPOSE", [
+            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          ]),
+          Expr::FuncCall("TRANSPOSE", [
+            Expr::List([Expr::Number(10.0), Expr::Number(20.0)]),
+          ]),
+        ]),
+      ),
+      1,
+      1,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("XLOOKUP", [
+          Expr::Number(1.0),
+          Expr::FuncCall("TRANSPOSE", [
+            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          ]),
+          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
+        ]),
+      ),
+      1,
+      2,
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TAKE", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TAKE", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(1.0),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TAKE", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(0.0),
+        ]),
+      ),
+      1,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TAKE", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(1.0),
+          Expr::Number(0.0),
+        ]),
+      ),
+      1,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TAKE", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(3.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TAKE", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("DROP", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("DROP", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(1.0),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("DROP", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(2.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("DROP", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(0.0),
+        ]),
+      ),
+      1,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("DROP", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("CHOOSECOLS", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(0.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("CHOOSECOLS", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("CHOOSEROWS", [
+          Expr::FuncCall("TRANSPOSE", [
+            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          ]),
+          Expr::Number(0.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("CHOOSEROWS", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("HSTACK", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("EXPAND", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("EXPAND", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(1.0),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("EXPAND", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("EXPAND", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("WRAPROWS", [Expr::List([Expr::Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("WRAPROWS", [
+          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
+          Expr::Number(2.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("WRAPROWS", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("WRAPROWS", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(0.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("WRAPROWS", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+          Expr::Number(2.0),
+        ]),
+      ),
+      2,
+      2,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_eq(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("WRAPCOLS", [
+          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+          Expr::Number(2.0),
+        ]),
+      ),
+      2,
+      2,
+    ),
+    content="true",
+  )
+
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TOCOL", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TOCOL", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(4.0),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TOCOL", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(0.0),
+          Expr::String("bad"),
+        ]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        Expr::FuncCall("TOCOL", [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Number(0.0),
+          Expr::Bool(false),
+          Expr::Number(1.0),
+        ]),
+      ),
     ),
     content="true",
   )

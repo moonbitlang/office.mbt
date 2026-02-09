@@ -71,7 +71,8 @@ test "cfb wb: prepare and read-chain guard branches" {
     0,
   )
   inspect(
-    chain_long is Err(XlsxError::InvalidEncryptionInfo(msg="cfb chain too long")),
+    chain_long
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb chain too long")),
     content="true",
   )
 }
@@ -85,11 +86,11 @@ test "cfb wb: large builder/write and cfb_read difat branches" {
   let bytes = builder.write()
   inspect(bytes.length() > 0, content="true")
 
-  let reader = cfb_read(bytes) catch { err =>
-    fail("expected big cfb to parse, got \{err}")
+  let reader = cfb_read(bytes) catch {
+    err => fail("expected big cfb to parse, got \{err}")
   }
-  let stream = reader.read_stream("BigStream") catch { err =>
-    fail("expected BigStream, got \{err}")
+  let stream = reader.read_stream("BigStream") catch {
+    err => fail("expected BigStream, got \{err}")
   }
   inspect(stream.length(), content="8388608")
 
@@ -106,7 +107,8 @@ test "cfb wb: large builder/write and cfb_read difat branches" {
 test "cfb wb: cfb_read short/signature/invalid-name branches" {
   let short_header : Result[CfbReader, Error] = try? cfb_read(b"short")
   inspect(
-    short_header is Err(XlsxError::InvalidEncryptionInfo(msg="cfb header too short")),
+    short_header
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb header too short")),
     content="true",
   )
 
@@ -115,7 +117,8 @@ test "cfb wb: cfb_read short/signature/invalid-name branches" {
     Bytes::from_array(bad_sig),
   )
   inspect(
-    invalid_sig is Err(XlsxError::InvalidEncryptionInfo(msg="invalid cfb signature")),
+    invalid_sig
+    is Err(XlsxError::InvalidEncryptionInfo(msg="invalid cfb signature")),
     content="true",
   )
 
@@ -135,7 +138,8 @@ test "cfb wb: cfb_read short/signature/invalid-name branches" {
     Bytes::from_array(invalid_name),
   )
   inspect(
-    bad_name_result is Err(XlsxError::InvalidEncryptionInfo(msg="invalid cfb name")),
+    bad_name_result
+    is Err(XlsxError::InvalidEncryptionInfo(msg="invalid cfb name")),
     content="true",
   )
 }
@@ -166,9 +170,12 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 5, start: 0, size: 1 }],
     mini_stream: Bytes::default(),
   }
-  let not_stream_result : Result[Bytes, Error] = try? not_stream.read_stream("x")
+  let not_stream_result : Result[Bytes, Error] = try? not_stream.read_stream(
+    "x",
+  )
   inspect(
-    not_stream_result is Err(XlsxError::InvalidEncryptionInfo(msg="cfb entry is not a stream")),
+    not_stream_result
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb entry is not a stream")),
     content="true",
   )
 
@@ -192,9 +199,12 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 2, start: 0, size: 1 }],
     mini_stream: Bytes::default(),
   }
-  let mini_missing_result : Result[Bytes, Error] = try? mini_missing.read_stream("x")
+  let mini_missing_result : Result[Bytes, Error] = try? mini_missing.read_stream(
+    "x",
+  )
   inspect(
-    mini_missing_result is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini stream missing")),
+    mini_missing_result
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini stream missing")),
     content="true",
   )
 
@@ -209,7 +219,10 @@ test "cfb wb: read_stream guard branches" {
   }
   let mini_oob_result : Result[Bytes, Error] = try? mini_oob.read_stream("x")
   inspect(
-    mini_oob_result is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini stream out of bounds")),
+    mini_oob_result
+    is Err(
+      XlsxError::InvalidEncryptionInfo(msg="cfb mini stream out of bounds")
+    ),
     content="true",
   )
 
@@ -226,7 +239,8 @@ test "cfb wb: read_stream guard branches" {
     "x",
   )
   inspect(
-    mini_chain_oob_result is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain out of bounds")),
+    mini_chain_oob_result
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain out of bounds")),
     content="true",
   )
 
@@ -243,7 +257,8 @@ test "cfb wb: read_stream guard branches" {
     "x",
   )
   inspect(
-    mini_chain_long_result is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain too long")),
+    mini_chain_long_result
+    is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain too long")),
     content="true",
   )
 }

@@ -1,6 +1,6 @@
 ///|
 fn wb_series(name? : String = "Series1") -> ChartSeries {
-  try! ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name=name)
+  try! ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name~)
 }
 
 ///|
@@ -36,8 +36,14 @@ fn wb_rich_font(
 
 ///|
 test "chart options wb: helper mappings" {
-  inspect(chart_type_to_plot(ColPercentStacked), content="(\"barChart\", Some(\"col\"))")
-  inspect(chart_type_to_plot(BarStacked), content="(\"barChart\", Some(\"bar\"))")
+  inspect(
+    chart_type_to_plot(ColPercentStacked),
+    content="(\"barChart\", Some(\"col\"))",
+  )
+  inspect(
+    chart_type_to_plot(BarStacked),
+    content="(\"barChart\", Some(\"bar\"))",
+  )
   inspect(
     chart_type_to_plot(BarPercentStacked),
     content="(\"barChart\", Some(\"bar\"))",
@@ -47,7 +53,10 @@ test "chart options wb: helper mappings" {
     content="(\"bar3DChart\", Some(\"bar\"))",
   )
   inspect(chart_type_to_plot(AreaStacked), content="(\"areaChart\", None)")
-  inspect(chart_type_to_plot(AreaPercentStacked), content="(\"areaChart\", None)")
+  inspect(
+    chart_type_to_plot(AreaPercentStacked),
+    content="(\"areaChart\", None)",
+  )
   inspect(chart_type_to_plot(Area3D), content="(\"area3DChart\", None)")
   inspect(chart_type_to_plot(Area3DStacked), content="(\"area3DChart\", None)")
   inspect(
@@ -67,7 +76,10 @@ test "chart options wb: helper mappings" {
   inspect(legend_position_value("custom"), content="Some(\"custom\")")
 
   inspect(chart_shape(Col3DPyramidPercentStacked), content="Some(\"pyramid\")")
-  inspect(chart_shape(Col3DCylinderPercentStacked), content="Some(\"cylinder\")")
+  inspect(
+    chart_shape(Col3DCylinderPercentStacked),
+    content="Some(\"cylinder\")",
+  )
 
   inspect(chart_dash_value(Solid), content="Some(\"solid\")")
   inspect(chart_dash_value(LgDash), content="Some(\"lgDash\")")
@@ -145,21 +157,14 @@ test "chart options wb: helper mappings" {
     content="Some(\"dotDotDashHeavy\")",
   )
   inspect(drawingml_underline_value("wavy"), content="Some(\"wavy\")")
-  inspect(
-    drawingml_underline_value("wavyHeavy"),
-    content="Some(\"wavyHeavy\")",
-  )
+  inspect(drawingml_underline_value("wavyHeavy"), content="Some(\"wavyHeavy\")")
   inspect(drawingml_underline_value("wavyDbl"), content="Some(\"wavyDbl\")")
 }
 
 ///|
 test "chart options wb: rich text and title writers" {
   let sb = StringBuilder::new()
-  write_drawingml_r_pr(
-    sb,
-    "  ",
-    Some(wb_rich_font(italic=true, strike=true)),
-  )
+  write_drawingml_r_pr(sb, "  ", Some(wb_rich_font(italic=true, strike=true)))
   let xml = sb.to_string()
   inspect(xml.contains(" i=\"1\""), content="true")
   inspect(xml.contains("strike=\"sngStrike\""), content="true")
@@ -167,7 +172,10 @@ test "chart options wb: rich text and title writers" {
 
   let sb_none = StringBuilder::new()
   write_drawingml_r_pr(sb_none, "  ", None)
-  inspect(sb_none.to_string().contains("<a:rPr lang=\"en-US\"/>"), content="true")
+  inspect(
+    sb_none.to_string().contains("<a:rPr lang=\"en-US\"/>"),
+    content="true",
+  )
 
   let title_empty_runs = StringBuilder::new()
   write_chart_title(title_empty_runs, "", Some([]))
@@ -189,13 +197,19 @@ test "chart options wb: rich text and title writers" {
   )
   write_drawingml_def_r_pr_from_font(def_some_sb, "", decorated_font)
   inspect(def_some_sb.to_string().contains(" i=\"1\""), content="true")
-  inspect(def_some_sb.to_string().contains("strike=\"sngStrike\""), content="true")
+  inspect(
+    def_some_sb.to_string().contains("strike=\"sngStrike\""),
+    content="true",
+  )
   inspect(def_some_sb.to_string().contains(" u=\""), content="false")
 
   let tx_pr_align_sb = StringBuilder::new()
   let tx_alignment = Alignment::with_values(vertical="vert")
   write_drawingml_tx_pr_with_font_and_alignment(
-    tx_pr_align_sb, "  ", Font::new(), tx_alignment,
+    tx_pr_align_sb,
+    "  ",
+    Font::new(),
+    tx_alignment,
   )
   inspect(tx_pr_align_sb.to_string().contains("vert=\"vert\""), content="true")
 
@@ -247,7 +261,10 @@ test "chart options wb: series shape and data label writers" {
   marker_open_ln.border.width = 1.0
   let marker_open_ln_sb = StringBuilder::new()
   write_chart_series_marker(marker_open_ln_sb, marker_open_ln)
-  inspect(marker_open_ln_sb.to_string().contains("<a:ln w=\"12700\"/>"), content="true")
+  inspect(
+    marker_open_ln_sb.to_string().contains("<a:ln w=\"12700\"/>"),
+    content="true",
+  )
 
   let marker_color_ln = ChartMarker::new(symbol="diamond", size=4)
   marker_color_ln.border.typ = Solid
@@ -256,7 +273,9 @@ test "chart options wb: series shape and data label writers" {
   let marker_color_ln_sb = StringBuilder::new()
   write_chart_series_marker(marker_color_ln_sb, marker_color_ln)
   inspect(
-    marker_color_ln_sb.to_string().contains("<a:solidFill><a:srgbClr val=\"778899\"><a:alpha val=\"0\"/>"),
+    marker_color_ln_sb
+    .to_string()
+    .contains("<a:solidFill><a:srgbClr val=\"778899\"><a:alpha val=\"0\"/>"),
     content="true",
   )
 
@@ -265,7 +284,10 @@ test "chart options wb: series shape and data label writers" {
   dlbl_series.data_label.fill_transparency = -1
   let dlbl_sb = StringBuilder::new()
   write_chart_series_dlbls(dlbl_sb, dlbl_series)
-  inspect(dlbl_sb.to_string().contains("<a:srgbClr val=\"AABBCC\"/>"), content="true")
+  inspect(
+    dlbl_sb.to_string().contains("<a:srgbClr val=\"AABBCC\"/>"),
+    content="true",
+  )
   inspect(dlbl_sb.to_string().contains("<a:alpha"), content="false")
 
   let dpt_empty_sb = StringBuilder::new()
@@ -277,7 +299,10 @@ test "chart options wb: series shape and data label writers" {
   scatter.data_point.push(ChartDataPoint::new(0, fill_color="#00FF00"))
   let scatter_sb = StringBuilder::new()
   write_chart_series_for_plot(scatter_sb, "scatterChart", scatter, 0, 0)
-  inspect(scatter_sb.to_string().contains("<c:smooth val=\"1\"/>"), content="true")
+  inspect(
+    scatter_sb.to_string().contains("<c:smooth val=\"1\"/>"),
+    content="true",
+  )
   inspect(scatter_sb.to_string().contains("<c:dPt>"), content="true")
 
   let bubble = wb_series(name="Bubble")
@@ -286,7 +311,10 @@ test "chart options wb: series shape and data label writers" {
   try! bubble.set_bubble_size("Sheet1!$C$2:$C$4")
   let bubble_sb = StringBuilder::new()
   write_chart_series_for_plot(bubble_sb, "bubbleChart", bubble, 0, 0)
-  inspect(bubble_sb.to_string().contains("<c:smooth val=\"1\"/>"), content="true")
+  inspect(
+    bubble_sb.to_string().contains("<c:smooth val=\"1\"/>"),
+    content="true",
+  )
   inspect(bubble_sb.to_string().contains("<c:bubbleSize>"), content="true")
 }
 
@@ -303,17 +331,26 @@ test "chart options wb: axis and plot area writer branches" {
 
   let cat_axis_sb = StringBuilder::new()
   write_axis(cat_axis_sb, "catAx", axis, 7, 8, "b", Col)
-  inspect(cat_axis_sb.to_string().contains("<c:logBase val=\"10"), content="true")
+  inspect(
+    cat_axis_sb.to_string().contains("<c:logBase val=\"10"),
+    content="true",
+  )
   inspect(cat_axis_sb.to_string().contains("<c:max val=\"99"), content="true")
   inspect(cat_axis_sb.to_string().contains("<c:min val=\"1"), content="true")
-  inspect(cat_axis_sb.to_string().contains("<c:tickLblSkip val=\"2\"/>"), content="true")
+  inspect(
+    cat_axis_sb.to_string().contains("<c:tickLblSkip val=\"2\"/>"),
+    content="true",
+  )
   inspect(cat_axis_sb.to_string().contains("<a:defRPr/>"), content="true")
 
   let val_axis = ChartAxis::new()
   val_axis.major_unit = 2.5
   let val_axis_sb = StringBuilder::new()
   write_axis(val_axis_sb, "valAx", val_axis, 2, 1, "l", Col)
-  inspect(val_axis_sb.to_string().contains("<c:majorUnit val=\"2.5\"/>"), content="true")
+  inspect(
+    val_axis_sb.to_string().contains("<c:majorUnit val=\"2.5\"/>"),
+    content="true",
+  )
 
   let axis_tx_none_vertical = ChartAxis::new()
   axis_tx_none_vertical.alignment = Alignment::with_values(text_rotation=10)
@@ -327,7 +364,9 @@ test "chart options wb: axis and plot area writer branches" {
   let axis_num_fmt_sb = StringBuilder::new()
   write_axis_num_fmt(axis_num_fmt_sb, ChartNumFmt::new(source_linked=false))
   inspect(
-    axis_num_fmt_sb.to_string().contains("formatCode=\"General\" sourceLinked=\"0\""),
+    axis_num_fmt_sb
+    .to_string()
+    .contains("formatCode=\"General\" sourceLinked=\"0\""),
     content="true",
   )
 
@@ -336,7 +375,9 @@ test "chart options wb: axis and plot area writer branches" {
   let dlbl_plot_sb = StringBuilder::new()
   write_chart_dlbls(dlbl_plot_sb, "pieChart", false, dlbl_plot)
   inspect(
-    dlbl_plot_sb.to_string().contains("formatCode=\"General\" sourceLinked=\"0\""),
+    dlbl_plot_sb
+    .to_string()
+    .contains("formatCode=\"General\" sourceLinked=\"0\""),
     content="true",
   )
 
@@ -345,7 +386,10 @@ test "chart options wb: axis and plot area writer branches" {
   plot_opts.plot_area.fill_transparency = -1
   let plot_sppr_sb = StringBuilder::new()
   write_plot_area_sppr(plot_sppr_sb, plot_opts)
-  inspect(plot_sppr_sb.to_string().contains("<a:srgbClr val=\"112233\"/>"), content="true")
+  inspect(
+    plot_sppr_sb.to_string().contains("<a:srgbClr val=\"112233\"/>"),
+    content="true",
+  )
   inspect(plot_sppr_sb.to_string().contains("<a:alpha"), content="false")
 
   let dtable_opts = ChartOptions::new(Col)
@@ -355,7 +399,10 @@ test "chart options wb: axis and plot area writer branches" {
   inspect(dtable_skip_sb.to_string(), content="")
   let dtable_emit_sb = StringBuilder::new()
   write_plot_area_d_table(dtable_emit_sb, "barChart", dtable_opts)
-  inspect(dtable_emit_sb.to_string().contains("showKeys val=\"0\""), content="true")
+  inspect(
+    dtable_emit_sb.to_string().contains("showKeys val=\"0\""),
+    content="true",
+  )
 
   let root_no_line = ChartOptions::new(Col)
   root_no_line.fill_color = "#112233"
@@ -371,7 +418,10 @@ test "chart options wb: axis and plot area writer branches" {
   root_open_ln.border.width = 1.0
   let root_open_ln_sb = StringBuilder::new()
   write_chart_sppr_root(root_open_ln_sb, root_open_ln)
-  inspect(root_open_ln_sb.to_string().contains("<a:ln w=\"12700\"/>"), content="true")
+  inspect(
+    root_open_ln_sb.to_string().contains("<a:ln w=\"12700\"/>"),
+    content="true",
+  )
 
   let root_color_ln = ChartOptions::new(Col)
   root_color_ln.border.typ = Solid
@@ -379,7 +429,10 @@ test "chart options wb: axis and plot area writer branches" {
   root_color_ln.border.transparency = 200
   let root_color_ln_sb = StringBuilder::new()
   write_chart_sppr_root(root_color_ln_sb, root_color_ln)
-  inspect(root_color_ln_sb.to_string().contains("alpha val=\"0\""), content="true")
+  inspect(
+    root_color_ln_sb.to_string().contains("alpha val=\"0\""),
+    content="true",
+  )
 
   let root_color_ln_zero = ChartOptions::new(Col)
   root_color_ln_zero.border.typ = Solid
@@ -388,7 +441,9 @@ test "chart options wb: axis and plot area writer branches" {
   let root_color_ln_zero_sb = StringBuilder::new()
   write_chart_sppr_root(root_color_ln_zero_sb, root_color_ln_zero)
   inspect(
-    root_color_ln_zero_sb.to_string().contains("<a:solidFill><a:srgbClr val=\"556677\"/>"),
+    root_color_ln_zero_sb
+    .to_string()
+    .contains("<a:solidFill><a:srgbClr val=\"556677\"/>"),
     content="true",
   )
 
@@ -407,7 +462,10 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_open_border.width = 1.0
   let sppr_open_sb = StringBuilder::new()
   write_chart_sppr(sppr_open_sb, "", sppr_open_border)
-  inspect(sppr_open_sb.to_string().contains("<a:ln w=\"12700\"/>"), content="true")
+  inspect(
+    sppr_open_sb.to_string().contains("<a:ln w=\"12700\"/>"),
+    content="true",
+  )
 
   let sppr_color_alpha = ChartLine::new()
   sppr_color_alpha.typ = Solid
@@ -415,7 +473,10 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_color_alpha.transparency = 50
   let sppr_color_alpha_sb = StringBuilder::new()
   write_chart_sppr(sppr_color_alpha_sb, "", sppr_color_alpha)
-  inspect(sppr_color_alpha_sb.to_string().contains("alpha val=\"50000\""), content="true")
+  inspect(
+    sppr_color_alpha_sb.to_string().contains("alpha val=\"50000\""),
+    content="true",
+  )
 
   let sppr_color_zero = ChartLine::new()
   sppr_color_zero.typ = Solid
@@ -424,7 +485,9 @@ test "chart options wb: axis and plot area writer branches" {
   let sppr_color_zero_sb = StringBuilder::new()
   write_chart_sppr(sppr_color_zero_sb, "", sppr_color_zero)
   inspect(
-    sppr_color_zero_sb.to_string().contains("<a:solidFill><a:srgbClr val=\"112244\"/>"),
+    sppr_color_zero_sb
+    .to_string()
+    .contains("<a:solidFill><a:srgbClr val=\"112244\"/>"),
     content="true",
   )
 
@@ -435,8 +498,14 @@ test "chart options wb: axis and plot area writer branches" {
   sppr_dash.dash = Dash
   let sppr_dash_sb = StringBuilder::new()
   write_chart_sppr(sppr_dash_sb, "", sppr_dash)
-  inspect(sppr_dash_sb.to_string().contains("alpha val=\"90000\""), content="true")
-  inspect(sppr_dash_sb.to_string().contains("prstDash val=\"dash\""), content="true")
+  inspect(
+    sppr_dash_sb.to_string().contains("alpha val=\"90000\""),
+    content="true",
+  )
+  inspect(
+    sppr_dash_sb.to_string().contains("prstDash val=\"dash\""),
+    content="true",
+  )
 
   let sppr_neg = ChartLine::new()
   sppr_neg.typ = Solid
@@ -457,7 +526,10 @@ test "chart options wb: axis and plot area writer branches" {
   let sppr_gt_sb = StringBuilder::new()
   write_chart_sppr(sppr_gt_sb, "", sppr_gt)
   inspect(sppr_gt_sb.to_string().contains("alpha val=\"0\""), content="true")
-  inspect(sppr_gt_sb.to_string().contains("prstDash val=\"dot\""), content="true")
+  inspect(
+    sppr_gt_sb.to_string().contains("prstDash val=\"dot\""),
+    content="true",
+  )
 }
 
 ///|
@@ -465,7 +537,8 @@ test "chart options wb: chart_options_to_xml guard and single-plot branches" {
   let empty = ChartOptions::new(Col)
   let empty_result : Result[String, Error] = try? chart_options_to_xml(empty)
   inspect(
-    empty_result is Err(XlsxError::InvalidSheetOperation(msg="chart series empty")),
+    empty_result
+    is Err(XlsxError::InvalidSheetOperation(msg="chart series empty")),
     content="true",
   )
 
@@ -476,7 +549,8 @@ test "chart options wb: chart_options_to_xml guard and single-plot branches" {
     combo_empty,
   )
   inspect(
-    combo_empty_result is Err(XlsxError::InvalidSheetOperation(msg="combo chart series empty")),
+    combo_empty_result
+    is Err(XlsxError::InvalidSheetOperation(msg="combo chart series empty")),
     content="true",
   )
 
@@ -529,7 +603,10 @@ test "chart options wb: combo branches and guards" {
   mixed.add_combo_chart(cone3d)
 
   let mixed_xml = chart_options_to_xml(mixed)
-  inspect(mixed_xml.contains("<c:radarStyle val=\"standard\"/>"), content="true")
+  inspect(
+    mixed_xml.contains("<c:radarStyle val=\"standard\"/>"),
+    content="true",
+  )
   inspect(mixed_xml.contains("<c:bubble3D val=\"1\"/>"), content="true")
   inspect(mixed_xml.contains("<c:bubbleScale val=\"150\"/>"), content="true")
   inspect(mixed_xml.contains("<c:gapWidth val=\"220\"/>"), content="true")
@@ -547,7 +624,8 @@ test "chart options wb: combo branches and guards" {
     unsupported_combo,
   )
   inspect(
-    unsupported_result is Err(XlsxError::UnsupportedFeature(msg="combo chart type unsupported")),
+    unsupported_result
+    is Err(XlsxError::UnsupportedFeature(msg="combo chart type unsupported")),
     content="true",
   )
 
@@ -560,7 +638,10 @@ test "chart options wb: combo branches and guards" {
     stock_combo_bad,
   )
   inspect(
-    stock_result is Err(XlsxError::InvalidSheetOperation(msg="stock chart requires 3 series")),
+    stock_result
+    is Err(
+      XlsxError::InvalidSheetOperation(msg="stock chart requires 3 series")
+    ),
     content="true",
   )
 

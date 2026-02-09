@@ -2566,6 +2566,36 @@ Commands used:
     - Total uncovered lines reduced from `2843` to `2825`
     - Uncovered file count remains `43`
 
+- [x] 166. Close residuals in `xlsx/formula_eval.mbt` (part 3).
+  - DoD: add focused whitebox coverage for `array_shape_from_expr` spill-dispatch branches and nearby helper fallback paths, then reduce residual uncovered lines in `xlsx/formula_eval.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_eval_wbtest.mbt` with part-3 whitebox coverage and helper assertions for:
+      - shape helpers and fallbacks:
+        - `array_shape_binary` mismatch/none paths
+        - `effective_range_bounds` invalid/unknown-sheet and both large-range clipping branches
+        - `range_from_expr_or_value` empty-list fallback, transpose branch, and shape-mismatch/shape-none fallbacks
+        - `eval_numeric_binary` unsupported-op + left/right coercion error branches
+        - `eval_list_binary` non-list fallback branch
+      - dynamic-array shape dispatcher (`array_shape_from_expr`) branches across:
+        - unary/list expressions
+        - `TRANSPOSE`, `MUNIT`, `SEQUENCE`, `RANDARRAY`, `MINVERSE`, `MMULT`
+        - `TEXTSPLIT`, `FREQUENCY`, `MODE.MULT`
+        - `ANCHORARRAY` argument/sheet/reference/formula-parse/formula-present paths
+        - `INDIRECT` A1 and R1C1 parsing/error/arity branches
+        - `TREND` input matrix/error/arity branches
+        - `SORT`/`SORTBY`/`UNIQUE`/`FILTER`/`XLOOKUP`
+        - `TAKE`/`DROP`/`CHOOSECOLS`/`CHOOSEROWS`
+        - `HSTACK` arity, `EXPAND`, `WRAPROWS`/`WRAPCOLS`, `TOCOL`
+  - Validation gates:
+    - `moon test xlsx/formula_eval_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after177.log`
+  - Coverage delta:
+    - `xlsx/formula_eval.mbt` uncovered lines reduced from `439` to `314`
+    - Total uncovered lines reduced from `2825` to `2694`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **166** (move to the next residual hotspot: `xlsx/formula_eval.mbt`, part 3).
+- Next item: **167** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 3).

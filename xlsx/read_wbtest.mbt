@@ -13,8 +13,7 @@ fn is_invalid_xml_error(
 test "read wb: xml encoding parser guard paths" {
   inspect(xml_encoding(b"abc") is None, content="true")
 
-  let with_bom_single_quote =
-    b"\xEF\xBB\xBF<?xml version='1.0' encoding='UTF-16'?><x/>"
+  let with_bom_single_quote = b"\xEF\xBB\xBF<?xml version='1.0' encoding='UTF-16'?><x/>"
   inspect(
     match xml_encoding(with_bom_single_quote) {
       Some(value) => value == "UTF-16"
@@ -23,8 +22,14 @@ test "read wb: xml encoding parser guard paths" {
     content="true",
   )
 
-  inspect(xml_encoding(b"<?xml version=\"1.0\" encoding=\"UT@8\"?><x/>") is None, content="true")
-  inspect(xml_encoding(b"<?xml version=\"1.0\" encoding=\"UTF-8?><x/>") is None, content="true")
+  inspect(
+    xml_encoding(b"<?xml version=\"1.0\" encoding=\"UT@8\"?><x/>") is None,
+    content="true",
+  )
+  inspect(
+    xml_encoding(b"<?xml version=\"1.0\" encoding=\"UTF-8?><x/>") is None,
+    content="true",
+  )
 }
 
 ///|
@@ -35,7 +40,8 @@ test "read wb: decode_utf8 invalid paths" {
   )
   inspect(
     match requires_transcoder {
-      Err(XlsxError::InvalidXml(msg~)) => msg.contains("requires charset transcoder")
+      Err(XlsxError::InvalidXml(msg~)) =>
+        msg.contains("requires charset transcoder")
       _ => false
     },
     content="true",
@@ -69,14 +75,16 @@ test "read wb: parse_default_font fallback matrix" {
 ///|
 test "read wb: parse_font_entry attributes and invalid numerics" {
   let font = parse_font_entry(
-    #|<font>
-    #|  <b val="1"/><i val="1"/><strike val="1"/><outline val="1"/>
-    #|  <shadow val="1"/><condense val="1"/><extend val="1"/>
-    #|  <u val="double"/><sz val="11"/><charset val="1"/>
-    #|  <name val="Aptos"/><family val="3"/><vertAlign val="superscript"/>
-    #|  <scheme val="minor"/><color rgb="ABCDEF12" theme="1" indexed="2" tint="0.5"/>
-    #|</font>
-    #|,
+    (
+      #|<font>
+      #|  <b val="1"/><i val="1"/><strike val="1"/><outline val="1"/>
+      #|  <shadow val="1"/><condense val="1"/><extend val="1"/>
+      #|  <u val="double"/><sz val="11"/><charset val="1"/>
+      #|  <name val="Aptos"/><family val="3"/><vertAlign val="superscript"/>
+      #|  <scheme val="minor"/><color rgb="ABCDEF12" theme="1" indexed="2" tint="0.5"/>
+      #|</font>
+      #|,
+    ),
   )
   inspect(font.bold is Some(true), content="true")
   inspect(font.italic is Some(true), content="true")
