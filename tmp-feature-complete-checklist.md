@@ -3640,6 +3640,33 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3494/4748` to `3554/4748` (`+60` lines).
 
+- [x] 205. Close residuals in `xlsx/formula_builtins.mbt` (part 36).
+  - DoD: reduce uncovered logical/info dispatch branches in the tail section (`CHOOSE` through `ISNUMBER`).
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused branch coverage for:
+      - `CHOOSE`, `CONCAT`
+      - `IF`, `IFERROR`, `IFNA`, `IFS`, `SWITCH`
+      - `ISBLANK`, `ISERR`, `ISEVEN`, `ISODD`, `ISERROR`, `ISLOGICAL`, `ISNA`, `ISNUMBER`
+    - Added targeted assertions for branch-heavy cases:
+      - `CHOOSE` parse-failure/out-of-range/zero-index paths
+      - `IF` one-arg/true/false/error-coercion paths
+      - `IFERROR` error/empty/non-error branches
+      - `IFNA` NA vs non-NA error split
+      - `IFS` invalid-arity, first-match, no-match, and condition-error paths
+      - `SWITCH` invalid-arity, default fallback, direct match, and no-default (`#N/A`) paths
+      - all `IS*` arity guards plus representative true/false/error branches.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3554/4748` to `3620/4748` (`+66` lines).
+
 ## Active Item
 
-- Next item: **205** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 36, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **206** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 37, using wbtest-targeted coverage summary as the comparable metric).
