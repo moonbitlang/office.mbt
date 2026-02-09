@@ -5703,4 +5703,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **298** (add parity-wrapper self-check option to emit machine-readable JSON for CI diagnostics).
+- [x] 298. Add JSON mode to parity-wrapper self-check script.
+  - DoD: emit machine-readable wrapper self-check output for CI diagnostics.
+  - Delivered:
+    - Extended `scripts/check_parity_wrappers.sh` with:
+      - `--json` option
+    - JSON output includes:
+      - overall `result` (`pass`/`fail`)
+      - per-script `{path, status}` entries
+    - Updated docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/check_parity_wrappers.sh --json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **299** (add parity-wrapper self-check to aggregate gate preflight so wrapper misconfiguration fails early).

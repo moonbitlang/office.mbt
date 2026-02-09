@@ -194,7 +194,7 @@ Use this quick map when choosing a parity command:
   - full parity gate: semantic parity + demo roundtrip/openxml checks
 
 Use `scripts/check_parity_wrappers.sh` to verify wrapper script presence and
-execute bits in local/CI environments.
+execute bits in local/CI environments (`--json` for machine-readable output).
 
 ## How to keep this doc up to date
 
