@@ -202,6 +202,8 @@ Use this quick map when choosing a parity command:
 
 Use `scripts/check_parity_wrappers.sh` to verify wrapper script presence and
 execute bits in local/CI environments (`--json` for machine-readable output).
+Use `scripts/check_parity_docs_refs.sh` to verify parity-doc script references
+resolve to existing files.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

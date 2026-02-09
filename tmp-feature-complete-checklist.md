@@ -5881,4 +5881,25 @@ Commands used:
 
 ## Active Item
 
-- Next item: **310** (add a parity-docs consistency check script that verifies key referenced script paths exist).
+- [x] 310. Add parity-docs script-reference consistency checker.
+  - DoD: verify script references in parity docs resolve to existing files (and `.sh` execute bits).
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_docs_refs.sh`
+    - Script behavior:
+      - scans `docs/excelize-parity.md` and `docs/parity-commands.md` for `scripts/...` paths
+      - verifies file existence
+      - verifies execute bit for shell scripts
+      - reports `[OK]`/`[MISSING]`/`[NOT EXECUTABLE]` and exits non-zero on failures
+    - Added docs references in:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+    - Ensured macOS bash compatibility by avoiding `mapfile`.
+  - Validation gates:
+    - `scripts/check_parity_docs_refs.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **311** (add aggregate gate preflight step for parity-doc reference check, with optional env skip toggle).
