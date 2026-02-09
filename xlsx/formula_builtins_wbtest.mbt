@@ -16824,3 +16824,187 @@ test "formula builtins wb: info type and meta dispatch part 40" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: aggregation helper branches part 41" {
+  inspect(
+    is_formula_error(
+      sum_values([FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      sum_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Bool(true),
+          FormulaValue::Bool(false),
+          FormulaValue::String("2.5"),
+          FormulaValue::String("bad"),
+          FormulaValue::Empty,
+        ][:],
+      ),
+      4.5,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      sumsq_values(
+        [
+          FormulaValue::List([
+            FormulaValue::Number(2.0),
+            FormulaValue::String("3"),
+            FormulaValue::Empty,
+            FormulaValue::List([]),
+          ]),
+        ][:],
+      ),
+      13.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      sumsq_values([FormulaValue::List([FormulaValue::String("bad")])][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      sumsq_values([FormulaValue::List([FormulaValue::Bool(true)])][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      sumsq_values(
+        [FormulaValue::List([FormulaValue::Error(formula_error_na)])][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      sumsq_values(
+        [
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+          FormulaValue::String(""),
+          FormulaValue::String("3"),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Empty,
+        ][:],
+      ),
+      14.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      sumsq_values([FormulaValue::String("bad")][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  let numbers_empty_allowed : Array[Double] = []
+  inspect(
+    match
+      gcd_lcm_collect(FormulaValue::String(""), numbers_empty_allowed, true) {
+      Ok(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(numbers_empty_allowed.length() == 0, content="true")
+
+  let numbers_parse_some : Array[Double] = []
+  inspect(
+    match
+      gcd_lcm_collect(FormulaValue::String("2.5"), numbers_parse_some, true) {
+      Ok(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(numbers_parse_some.length() == 1, content="true")
+  inspect(numbers_parse_some[0] == 2.5, content="true")
+
+  let numbers_empty_disallowed : Array[Double] = []
+  inspect(
+    match
+      gcd_lcm_collect(FormulaValue::String(""), numbers_empty_disallowed, false) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(is_formula_error(gcd_values([]), formula_error_value), content="true")
+  inspect(
+    is_formula_error(
+      gcd_values([FormulaValue::Number(-1.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(gcd_values([FormulaValue::Number(6.0)][:]), 6.0),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      gcd_values([FormulaValue::Number(6.0), FormulaValue::Number(-2.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      gcd_values([FormulaValue::Number(6.0), FormulaValue::Number(4.0)][:]),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(is_formula_error(lcm_values([]), formula_error_value), content="true")
+  inspect(
+    is_formula_error(
+      lcm_values([FormulaValue::String("bad")][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      lcm_values([FormulaValue::Number(-1.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(lcm_values([FormulaValue::Number(6.0)][:]), 6.0),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      lcm_values([FormulaValue::Number(6.0), FormulaValue::Number(-2.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      lcm_values([FormulaValue::Number(2.0), FormulaValue::Number(3.0)][:]),
+      6.0,
+    ),
+    content="true",
+  )
+}

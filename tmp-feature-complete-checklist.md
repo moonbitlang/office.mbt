@@ -3780,6 +3780,33 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3746/4748` to `3800/4748` (`+54` lines).
 
+- [x] 210. Close residuals in `xlsx/formula_builtins.mbt` (part 41).
+  - DoD: reduce uncovered aggregation/helper branches in `sum`/`sumsq` and `gcd`/`lcm` helper logic.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with direct helper coverage for:
+      - `sum_values`
+      - `sumsq_values`
+      - `gcd_lcm_collect`
+      - `gcd_values`
+      - `lcm_values`
+    - Added targeted branch cases to trigger:
+      - `sum_values` error propagation and mixed scalar coercion branches (number/bool/string/empty)
+      - `sumsq_values` list path (`Number`, numeric `String`, empty `String`, invalid `String`, `Bool`, `Error`, `Empty`, nested `List`)
+      - `gcd_lcm_collect` empty-string allow/disallow split and numeric-string parsing branch
+      - `gcd_values`/`lcm_values` empty-input, negative-input, single-value fast path, and multi-value update path
+      - explicit error-return path in `lcm_values` via invalid string input collection.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3800/4748` to `3833/4748` (`+33` lines).
+
 ## Active Item
 
-- Next item: **210** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 41, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **211** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 42, using wbtest-targeted coverage summary as the comparable metric).
