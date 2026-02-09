@@ -16346,3 +16346,481 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: info type and meta dispatch part 40" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Sheet2"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("B1", Numeric(5.0))
+  sheet.set_cell_formula("A1", "1+1", value="2")
+
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("1")][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("abc")][:], ctx),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ISTEXT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISNONTEXT",
+        [Expr::String("abc")][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISNONTEXT",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ISNONTEXT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISREF",
+        [Expr::Range("", "A1", "A1")][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "ISREF", [Expr::Number(1.0)][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ISREF", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISFORMULA",
+        [Expr::Cell("", "A1")][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISFORMULA",
+        [Expr::Cell("", "B1")][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISFORMULA",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ISFORMULA", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERROR.TYPE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      7.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERROR.TYPE",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ERROR.TYPE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SHEET", [][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEET",
+        [Expr::Cell("Sheet2", "A1")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEET",
+        [Expr::String("NoSuchSheet")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEET",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SHEETS", [][:], ctx),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEETS",
+        [Expr::Range("", "A1", "A1")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SHEETS", [Expr::Number(1.0)][:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEETS",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "TYPE", [Expr::Number(1.0)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TYPE",
+        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])][:],
+        ctx,
+      ),
+      64.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TYPE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      16.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "TYPE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "T", [Expr::FuncCall("NA", [])][:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "T", [Expr::Number(1.0)][:], ctx),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "T", [Expr::String("abc")][:], ctx),
+      "abc",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "T", [Expr::Bool(true)][:], ctx),
+      "TRUE",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "T", [Expr::Cell("", "Z99")][:], ctx),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "T",
+        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "T", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "NA", [][:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "NA", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "N", [Expr::FuncCall("NA", [])][:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "N", [Expr::Number(3.0)][:], ctx),
+      3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "N", [Expr::Bool(true)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "N", [Expr::String("12.5")][:], ctx),
+      12.5,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "N", [Expr::String("TRUE")][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "N", [Expr::String("abc")][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "N", [Expr::Cell("", "Z99")][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "N",
+        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "N", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "NO_SUCH_DEFINED", [][:], ctx),
+      formula_error_name,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NO_SUCH_DEFINED",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_name,
+    ),
+    content="true",
+  )
+}

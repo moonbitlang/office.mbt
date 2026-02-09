@@ -3752,6 +3752,34 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3711/4748` to `3746/4748` (`+35` lines).
 
+- [x] 209. Close residuals in `xlsx/formula_builtins.mbt` (part 40).
+  - DoD: reduce uncovered info/type/meta dispatch branches around `ISTEXT`..`N` and unknown-name fallback.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused branch coverage for:
+      - `ISTEXT`, `ISNONTEXT`, `ISREF`, `ISFORMULA`
+      - `ERROR.TYPE`
+      - `SHEET`, `SHEETS`
+      - `TYPE`, `T`, `NA`, `N`
+      - unknown-name fallback (`NO_SUCH_DEFINED`) with/without args
+    - Added targeted branch cases to trigger:
+      - numeric-string vs text-string split in `ISTEXT`
+      - reference-expression detection and formula-cell detection paths
+      - sheet lookup success/failure and arity guards
+      - `TYPE` list/error code paths
+      - all scalar branches in `T` and `N`
+      - default name-resolution `#NAME?` behavior for unknown functions.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3746/4748` to `3800/4748` (`+54` lines).
+
 ## Active Item
 
-- Next item: **209** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 40, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **210** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 41, using wbtest-targeted coverage summary as the comparable metric).
