@@ -6580,4 +6580,34 @@ Commands used:
 
 ## Active Item
 
-- Next item: **342** (add contract checker for preflight matrix smoke `--json` output and CLI usage).
+- [x] 342. Add contract checker for preflight matrix smoke `--json` output and CLI usage.
+  - DoD: lock JSON/CLI behavior of matrix-smoke checker with a dedicated
+    regression guard script and wire it into wrapper/docs coverage.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+    - Contract checker validates:
+      - `scripts/check_parity_preflight_matrix_smoke.sh --json` contains:
+        - top-level `result` in `pass|fail`
+        - top-level `checks` list
+        - per-entry `check`, `ok`, `detail` fields with expected types
+        - required check names for pattern, matrix cases, and invalid show-toggle guards
+      - invalid args return code `2` with usage:
+        - `Usage: scripts/check_parity_preflight_matrix_smoke.sh [--json]`
+    - Added script to wrapper/docs coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_preflight_matrix_smoke_contract.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `scripts/check_parity_docs_refs.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **343** (wire matrix-smoke contract checker into aggregate gate preflight flow).

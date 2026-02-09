@@ -259,6 +259,8 @@ Use `scripts/check_parity_preflight_matrix_smoke.sh` to run a small matrix of
 skip/show-toggle combinations against aggregate preflight status resolution.
 Use `scripts/check_parity_preflight_matrix_smoke.sh --json` for
 machine-readable matrix-smoke output in CI.
+Use `scripts/check_parity_preflight_matrix_smoke_contract.sh` to validate
+matrix-smoke checker JSON schema and CLI usage contract behavior.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles
