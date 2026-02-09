@@ -31,6 +31,14 @@ fn is_formula_string(value : FormulaValue, expected : String) -> Bool {
 }
 
 ///|
+fn is_formula_string_any(value : FormulaValue) -> Bool {
+  match value {
+    String(_) => true
+    _ => false
+  }
+}
+
+///|
 fn is_formula_bool(value : FormulaValue, expected : Bool) -> Bool {
   match value {
     Bool(flag) => flag == expected
@@ -15314,6 +15322,333 @@ test "formula builtins wb: logical-info dispatch part 36" {
   inspect(
     is_formula_error(
       eval_function(workbook, "Sheet1", "ISNUMBER", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+}
+
+///|
+test "formula builtins wb: text utility dispatch part 37" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "CHAR", [Expr::Number(65.0)][:], ctx),
+      "A",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "CHAR", [Expr::Number(-1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "CHAR", [Expr::Number(40000.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHAR",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "CHAR", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "UNICHAR", [Expr::Number(65.0)][:], ctx),
+      "A",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "UNICHAR", [Expr::Number(0.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNICHAR",
+        [Expr::Number(60000.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNICHAR",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "UNICHAR", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "CLEAN", [Expr::String("abc")][:], ctx),
+      "abc",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CLEAN",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "CLEAN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ENCODEURL",
+        [Expr::String("a b")][:],
+        ctx,
+      ),
+      "a%20b",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ENCODEURL",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ENCODEURL", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BAHTTEXT",
+        [Expr::Number(12.5)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BAHTTEXT",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "BAHTTEXT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "CODE", [Expr::String("A")][:], ctx),
+      65.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "CODE", [Expr::String("")][:], ctx),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "CODE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "UNICODE", [Expr::String("A")][:], ctx),
+      65.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "UNICODE", [Expr::String("")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "UNICODE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HYPERLINK",
+        [Expr::String("https://example.com")][:],
+        ctx,
+      ),
+      "https://example.com",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HYPERLINK",
+        [Expr::String("https://example.com"), Expr::String("label")][:],
+        ctx,
+      ),
+      "label",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HYPERLINK",
+        [Expr::String("https://example.com"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HYPERLINK",
+        [
+          Expr::String("https://example.com"),
+          Expr::String("label"),
+          Expr::String("extra"),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DISPIMG",
+        [Expr::Number(7.0), Expr::String("img-id")][:],
+        ctx,
+      ),
+      7.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "_XLFN.DISPIMG",
+        [Expr::Number(9.0), Expr::String("img-id2")][:],
+        ctx,
+      ),
+      9.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DISPIMG", [Expr::Number(7.0)][:], ctx),
       formula_error_value,
     ),
     content="true",
