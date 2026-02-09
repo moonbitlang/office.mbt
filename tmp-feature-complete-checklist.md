@@ -5930,4 +5930,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **313** (add docs parity command index entries for new docs-check preflight and ultrasmoke/report-compact env patterns).
+- [x] 313. Expand parity command index with new preflight/env patterns.
+  - DoD: reflect latest preflight toggles and common combined env command patterns in parity command index.
+  - Delivered:
+    - Updated `docs/parity-commands.md`:
+      - added `SKIP_PARITY_DOCS_PREFLIGHT` to env toggle list
+      - added `Combined env patterns` section with:
+        - ultrasmoke loop command
+        - compact CI report flow with fast parity args
+        - aggregate gate with both preflights skipped
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **314** (add a tiny regression check script that verifies parity command docs mention all current wrapper scripts).

@@ -42,9 +42,27 @@ python3 scripts/semantic_parity.py --dry-run-config
 ```sh
 PARITY_JSON_REPORT=/path/to/report.json
 SKIP_PARITY_WRAPPER_PREFLIGHT=1
+SKIP_PARITY_DOCS_PREFLIGHT=1
 SEMANTIC_PARITY_ARGS='--skip-validate'
 SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 3'
 REDACT_PARITY_SUMMARY=1
 SHOW_PARITY_ENV=1
 SKIP_PARITY_FINGERPRINT_CHECK=1
+```
+
+## Combined env patterns
+
+```sh
+# Fastest local sanity loop.
+scripts/test_semantic_parity_ultrasmoke.sh
+
+# Compact CI JSON output with fast parity options.
+SEMANTIC_PARITY_ARGS='--skip-validate' \
+SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' \
+scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios
+
+# Aggregate gate with preflights skipped (when externally guaranteed).
+SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
+SKIP_PARITY_DOCS_PREFLIGHT=1 \
+scripts/test_parity_gates.sh
 ```
