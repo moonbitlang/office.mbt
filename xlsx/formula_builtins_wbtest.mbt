@@ -23,6 +23,14 @@ fn is_formula_string(value : FormulaValue, expected : String) -> Bool {
 }
 
 ///|
+fn is_formula_bool(value : FormulaValue, expected : Bool) -> Bool {
+  match value {
+    Bool(flag) => flag == expected
+    _ => false
+  }
+}
+
+///|
 test "formula builtins wb: row column and formulatxt guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -1317,6 +1325,790 @@ test "formula builtins wb: text/search guard branches part 4" {
         ctx,
       ),
       formula_error_value,
+    ),
+    content="true",
+  )
+}
+
+///|
+test "formula builtins wb: logical and text primitive guard branches part 5" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+  let long_rept_text = "x".repeat(20000)
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MOD",
+        [Expr::Number(10.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUOTIENT",
+        [Expr::Number(10.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AND",
+        [Expr::Cell("", "Z99"), Expr::Bool(true)][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AND",
+        [Expr::FuncCall("NA", []), Expr::Bool(true)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AND",
+        [Expr::Range("", "A1", "A1")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "OR",
+        [Expr::Cell("", "Z99"), Expr::String("FALSE")][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "OR",
+        [Expr::FuncCall("NA", []), Expr::String("FALSE")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "OR",
+        [Expr::Range("", "A1", "A1"), Expr::String("FALSE")][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "NOT",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "NOT", [Expr::String("TRUE")][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "NOT", [Expr::String("FALSE")][:], ctx),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "NOT", [Expr::Cell("", "Z99")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XOR",
+        [Expr::Number(1.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      true,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XOR",
+        [Expr::Cell("", "Z99"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEN",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LENB",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOWER",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UPPER",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PROPER",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DBCS",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRIM",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFT",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFT",
+        [Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFTB",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFTB",
+        [Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "LEFTB", [Expr::String("abc")][:], ctx),
+      "a",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFTB",
+        [Expr::String("abc"), Expr::Number(10.0)][:],
+        ctx,
+      ),
+      "abc",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHT",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHT",
+        [Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHTB",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHTB",
+        [Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "RIGHTB", [Expr::String("abc")][:], ctx),
+      "c",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHTB",
+        [Expr::String("abc"), Expr::Number(10.0)][:],
+        ctx,
+      ),
+      "abc",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::String("abc"), Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::String("abc"), Expr::Number(2.0), Expr::Number(10.0)][:],
+        ctx,
+      ),
+      "bc",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::Number(10.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("你a"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("你a"), Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "你",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::String("x"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::String(long_rept_text), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::FuncCall("NA", []),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::String("abc"),
+          Expr::FuncCall("NA", []),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::String("abc"),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::String("abc"),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::String("abc"),
+          Expr::Number(10.0),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      "abcx",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::FuncCall("NA", []),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::String("abc"),
+          Expr::FuncCall("NA", []),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::String("abc"),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::String("abc"),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::String("abc"),
+          Expr::Number(10.0),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      "abcx",
     ),
     content="true",
   )

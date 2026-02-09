@@ -2693,6 +2693,40 @@ Commands used:
     - Total uncovered lines reduced from `2634` to `2599`
     - Uncovered file count remains `43`
 
+- [x] 170. Close residuals in `xlsx/formula_builtins.mbt` (part 5).
+  - DoD: add focused whitebox coverage for logical/text primitive guard paths and reduce residual uncovered lines in `xlsx/formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused coverage for:
+      - logical guard/error branches:
+        - `MOD` / `QUOTIENT` second-arg coercion error forwarding
+        - `AND` empty-cell handling and error propagation
+        - `OR` empty-cell and string-`FALSE` handling plus error propagation
+        - `NOT` error forwarding, `"TRUE"`/`"FALSE"` text branches, and non-scalar (`Empty`) guard
+        - `XOR` numeric true-count and empty-input element handling
+      - text primitive guard/error branches:
+        - `LEN` / `LENB` / `LOWER` / `UPPER` / `PROPER` / `DBCS` / `TRIM` string-coercion error forwarding
+        - `LEFT` / `LEFTB` / `RIGHT` / `RIGHTB` first-arg and count-arg coercion error branches
+        - `LEFTB` / `RIGHTB` default-count and count>=len branches
+      - substring/replace guard paths:
+        - `MID` / `MIDB` first/start/count coercion error branches
+        - `MID` end-clamp branch
+        - `MIDB` zero-count and start-out-of-range empty-result branches
+        - `MIDB` DBCS partial/full-char branches
+        - `REPT` text/count coercion errors and max-length overflow guard
+        - `REPLACE` / `REPLACEB` all four coercion error branches and start-clamp branch
+    - Added helper assertion in `xlsx/formula_builtins_wbtest.mbt`:
+      - `is_formula_bool(...)`
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after181.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `372` to `316`
+    - Total uncovered lines reduced from `2599` to `2543`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **170** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 5).
+- Next item: **171** (move to the next residual hotspot: `xlsx/read.mbt`, part 3).
