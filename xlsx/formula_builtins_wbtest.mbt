@@ -20276,6 +20276,7 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   )
 
   inspect(hypgeom_args_invalid(1.0, 3.0, 2.0, 5.0) == false, content="true")
+  inspect(hypgeom_args_invalid(1.0, 2.0, 3.0, 5.0) == false, content="true")
   inspect(hypgeom_args_invalid(3.0, 3.0, 2.0, 5.0) == true, content="true")
   inspect(hypgeom_raw(1.0, 3.0, 2.0, 5.0) == 0.6, content="true")
 
@@ -20287,6 +20288,51 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
           FormulaValue::Number(3.0),
           FormulaValue::Number(2.0),
           FormulaValue::Number(5.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      hypgeom_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(5.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      hypgeom_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(5.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      hypgeom_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
           FormulaValue::Bool(true),
         ][:],
       ),
@@ -20363,6 +20409,48 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
           FormulaValue::Number(3.0),
           FormulaValue::Number(2.0),
           FormulaValue::Number(5.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      hypgeomdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(5.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      hypgeomdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(5.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      hypgeomdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
         ][:],
       ),
       formula_error_na,
@@ -20648,6 +20736,24 @@ test "formula builtins wb: negbinom and tdist helper branches part 49" {
   )
   inspect(
     is_formula_error(
+      tdist_2t_values(
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_2t_values(
+        [FormulaValue::Number(1.0), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
       tdist_2t_values([FormulaValue::Number(1.0), FormulaValue::Number(0.0)][:]),
       formula_error_num,
     ),
@@ -20664,6 +20770,24 @@ test "formula builtins wb: negbinom and tdist helper branches part 49" {
     is_formula_error(
       tdist_rt_values([FormulaValue::Number(1.0), FormulaValue::Number(0.0)][:]),
       formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_rt_values(
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_rt_values(
+        [FormulaValue::Number(1.0), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
     ),
     content="true",
   )
@@ -20692,6 +20816,45 @@ test "formula builtins wb: negbinom and tdist helper branches part 49" {
         ][:],
       ),
       formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values(
+        [
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
     ),
     content="true",
   )
