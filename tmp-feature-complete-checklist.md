@@ -5442,4 +5442,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **282** (add semantic parity “dry-run config” mode to print resolved paths/options without generating or comparing workbooks).
+- [x] 282. Add semantic parity dry-run config mode.
+  - DoD: print resolved config and exit without generating/comparing workbooks.
+  - Delivered:
+    - Added `--dry-run-config` to `scripts/semantic_parity.py`.
+    - Dry-run output includes resolved output dirs, fixture root, selected scenarios, and key flags.
+    - Refactored control flow so scenario selection/config validation happens before expensive generation.
+    - Added docs examples in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `python3 scripts/semantic_parity.py --dry-run-config --scenario cf`
+    - `scripts/test_semantic_parity_fast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **283** (add JSON summary helper option to print selected scenarios in deterministic sorted order for stable diffing).

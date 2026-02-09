@@ -438,6 +438,11 @@ def main() -> int:
         "--json-report",
         help="Write machine-readable parity report JSON to this path.",
     )
+    parser.add_argument(
+        "--dry-run-config",
+        action="store_true",
+        help="Print resolved configuration and exit without running parity.",
+    )
     args = parser.parse_args()
 
     if args.list_scenarios:
@@ -454,14 +459,6 @@ def main() -> int:
     mbt_out = (repo_root / args.mbt_dir).resolve()
     excelize_out = (repo_root / args.excelize_dir).resolve()
 
-    run(["moon", "run", "cmd/parity", "--", str(mbt_out)], cwd=repo_root)
-    excelize_source = generate_excelize_outputs(repo_root, fixture_root, excelize_out)
-
-    if not args.skip_validate:
-        validate_xlsx_outputs(repo_root, mbt_out)
-        if args.validate_excelize:
-            validate_xlsx_outputs(repo_root, excelize_out)
-
     selected = SCENARIOS
     if args.scenario:
         keep = set(args.scenario)
@@ -476,6 +473,26 @@ def main() -> int:
         return 2
 
     selected_names = ", ".join(s.name for s in selected)
+    if args.dry_run_config:
+        print("Semantic parity run configuration (dry-run):")
+        print(f"- mbtexcel output dir: {mbt_out}")
+        print(f"- excelize output dir: {excelize_out}")
+        print(f"- fixture root: {fixture_root}")
+        print(f"- selected scenarios: {selected_names}")
+        print(f"- skip validator: {args.skip_validate}")
+        print(f"- validate excelize outputs: {args.validate_excelize}")
+        print(f"- sort scenarios: {args.sort_scenarios}")
+        print(f"- json report: {args.json_report}")
+        return 0
+
+    run(["moon", "run", "cmd/parity", "--", str(mbt_out)], cwd=repo_root)
+    excelize_source = generate_excelize_outputs(repo_root, fixture_root, excelize_out)
+
+    if not args.skip_validate:
+        validate_xlsx_outputs(repo_root, mbt_out)
+        if args.validate_excelize:
+            validate_xlsx_outputs(repo_root, excelize_out)
+
     print("Semantic parity run configuration:")
     print(f"- mbtexcel output dir: {mbt_out}")
     print(f"- excelize output dir: {excelize_out}")

@@ -110,6 +110,7 @@ To discover all available semantic parity scenarios without running generation:
 
 ```sh
 python3 scripts/semantic_parity.py --list-scenarios
+python3 scripts/semantic_parity.py --dry-run-config --scenario cf
 ```
 
 To emit a machine-readable CI artifact:
