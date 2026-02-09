@@ -3124,6 +3124,33 @@ Commands used:
       - Total uncovered lines: `3520`
       - Uncovered file count: `62`
 
+- [x] 182. Close residuals in `xlsx/formula_builtins.mbt` (part 13).
+  - DoD: increase direct dispatch coverage for statistical wrappers at the top of `eval_function`.
+  - Delivered:
+    - Added `is_formula_list` helper in `xlsx/formula_builtins_wbtest.mbt`.
+    - Added a new focused wbtest block that exercises happy-path statistical dispatch wrappers:
+      - `TRUE`/`FALSE`, `SUM`, `PRODUCT`, `AVERAGE`, `AVERAGEA`
+      - `STDEV`/`STDEVA`/`STDEV.P`/`STDEVPA`
+      - `VAR`/`VARA`/`VAR.P`/`VARPA`
+      - `TRIMMEAN`, `AVEDEV`, `DEVSQ`, `GEOMEAN`, `HARMEAN`, `KURT`, `SKEW`, `SKEW.P`
+      - `STANDARDIZE`, `LARGE`, `SMALL`
+      - `MODE`/`MODE.SNGL`/`MODE.MULT`
+      - `PERCENTILE`/`PERCENTILE.INC`/`PERCENTILE.EXC`
+      - `PERCENTRANK`/`PERCENTRANK.INC`/`PERCENTRANK.EXC`
+      - `QUARTILE`/`QUARTILE.INC`/`QUARTILE.EXC`
+      - `RANK`/`RANK.EQ`
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (post-compiler-update comparable metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `1727/4748` to `1837/4748` (`+110` lines).
+
 ## Active Item
 
-- Next item: **182** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 13, using the post-compiler-update coverage baseline).
+- Next item: **183** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 14, using wbtest-targeted coverage summary as the comparable metric).

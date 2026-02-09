@@ -31,6 +31,14 @@ fn is_formula_bool(value : FormulaValue, expected : Bool) -> Bool {
 }
 
 ///|
+fn is_formula_list(value : FormulaValue) -> Bool {
+  match value {
+    List(_) => true
+    _ => false
+  }
+}
+
+///|
 test "formula builtins wb: row column and formulatxt guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -5769,6 +5777,410 @@ test "formula builtins wb: residual reachable guards part 12" {
       norm_s_inv_values([FormulaValue::Number(0.0)][:]),
       formula_error_num,
     ),
+    content="true",
+  )
+}
+
+///|
+test "formula builtins wb: statistical dispatch happy paths part 13" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+  let data = Expr::List([
+    Expr::Number(1.0),
+    Expr::Number(2.0),
+    Expr::Number(3.0),
+    Expr::Number(4.0),
+  ])
+  let dup_data = Expr::List([
+    Expr::Number(1.0),
+    Expr::Number(1.0),
+    Expr::Number(2.0),
+    Expr::Number(3.0),
+  ])
+
+  inspect(
+    is_formula_bool(eval_function(workbook, "Sheet1", "TRUE", [][:], ctx), true),
+    content="true",
+  )
+  inspect(
+    is_formula_bool(
+      eval_function(workbook, "Sheet1", "FALSE", [][:], ctx),
+      false,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SUM", [data][:], ctx),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "PRODUCT", [data][:], ctx),
+      24.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "AVERAGE", [data][:], ctx),
+      2.5,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "AVERAGEA", [data][:], ctx),
+      2.5,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match eval_function(workbook, "Sheet1", "STDEV", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "STDEVA", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "STDEV.P", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "STDEVPA", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match eval_function(workbook, "Sheet1", "VAR", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "VARA", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "VAR.P", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "VARPA", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRIMMEAN",
+        [data, Expr::Number(0.25)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "AVEDEV", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "DEVSQ", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "GEOMEAN", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "HARMEAN", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "KURT", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "SKEW", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "SKEW.P", [data][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "STANDARDIZE",
+        [Expr::Number(2.0), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LARGE",
+        [data, Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SMALL",
+        [data, Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MODE", [dup_data][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "MODE.SNGL", [dup_data][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(workbook, "Sheet1", "MODE.MULT", [dup_data][:], ctx),
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE",
+        [data, Expr::Number(0.5)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE.INC",
+        [data, Expr::Number(0.5)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTILE.EXC",
+        [data, Expr::Number(0.5)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK",
+        [data, Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.INC",
+        [data, Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.EXC",
+        [data, Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUARTILE",
+        [data, Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUARTILE.INC",
+        [data, Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUARTILE.EXC",
+        [data, Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RANK",
+        [Expr::Number(3.0), data][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RANK.EQ",
+        [Expr::Number(3.0), data, Expr::Number(0.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
     content="true",
   )
 }
