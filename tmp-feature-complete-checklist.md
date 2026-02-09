@@ -5574,4 +5574,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **290** (add semantic parity wrapper support for passing summary-helper flags through env vars to simplify CI job templates).
+- [x] 290. Add wrapper support for env-driven summary-helper flags.
+  - DoD: allow CI jobs to customize summary output without editing wrapper command lines.
+  - Delivered:
+    - Updated wrappers:
+      - `scripts/test_semantic_parity_report.sh`
+      - `scripts/test_semantic_parity_report_compact.sh`
+    - Added env passthrough:
+      - `SEMANTIC_PARITY_SUMMARY_ARGS`
+    - Wrapper behavior:
+      - splits and forwards env-provided flags to `semantic_parity_report_summary.py`
+      - keeps existing default behavior when env var is unset.
+    - Updated docs in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **291** (add semantic parity wrapper support for env-driven core parity flags, e.g. `--skip-validate`, to reduce duplication in CI templates).

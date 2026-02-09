@@ -141,6 +141,9 @@ scripts/test_semantic_parity_report.sh
 scripts/test_semantic_parity_report_compact.sh
 ```
 
+Both wrappers accept `SEMANTIC_PARITY_SUMMARY_ARGS` to forward extra flags to
+`semantic_parity_report_summary.py` (for example `--top-slowest 3`).
+
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
 ```sh
