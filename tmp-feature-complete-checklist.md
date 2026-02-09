@@ -5016,4 +5016,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **257** (add a single convenience regression entrypoint/filter for all demo-roundtrip hardening tests to make future validation runs cheaper).
+- [x] 257. Add convenience entrypoint for demo-roundtrip regression suite.
+  - DoD: provide a single command path that runs all demo-roundtrip hardening tests plus demo OpenXML-validity checks.
+  - Delivered:
+    - Added executable helper script:
+      - `scripts/test_demo_roundtrip.sh`
+    - Script behavior:
+      - auto-discovers `mbtexcel_demo_*_roundtrip_test.mbt`
+      - runs each with `moon test`
+      - runs `moon test demos_openxml_validity_test.mbt`
+      - fails fast on first error and prints progress markers.
+  - Validation gates:
+    - `scripts/test_demo_roundtrip.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **258** (wire this demo-roundtrip script into project docs/CI notes and then continue any remaining feature-parity items from the checklist backlog).
