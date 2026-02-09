@@ -3726,6 +3726,32 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3662/4748` to `3711/4748` (`+49` lines).
 
+- [x] 208. Close residuals in `xlsx/formula_builtins.mbt` (part 39).
+  - DoD: reduce uncovered F-distribution helper branches around `FINV*` and `FTEST`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with direct helper coverage for:
+      - `finv_values`
+      - `finv_rt_values`
+      - `ftest_collect`
+      - `ftest_values`
+    - Added focused cases for:
+      - valid numeric paths in `finv_values`/`finv_rt_values` (hitting `max_deg`, `get_beta_inv`, and rounded result flow)
+      - probability and degree validation guards (`#NUM!`)
+      - propagated input error path (`#N/A`)
+      - `ftest_collect` non-numeric skip branch
+      - `ftest_values` divide-by-zero guards (`n<=1`) and success probability path.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3711/4748` to `3746/4748` (`+35` lines).
+
 ## Active Item
 
-- Next item: **208** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 39, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **209** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 40, using wbtest-targeted coverage summary as the comparable metric).

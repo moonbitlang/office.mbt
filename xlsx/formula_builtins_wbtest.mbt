@@ -16151,3 +16151,198 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: finv and ftest helper branches part 39" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("A2", Numeric(100.0))
+  sheet.set_cell_value("A3", Numeric(1000.0))
+  sheet.set_cell_value("B1", Numeric(1.0))
+  sheet.set_cell_value("B2", Numeric(2.0))
+  sheet.set_cell_value("B3", Numeric(3.0))
+
+  inspect(
+    is_formula_number_any(
+      finv_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_values(
+        [
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(0.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_values(
+        [
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      finv_rt_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_rt_values(
+        [
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_rt_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_rt_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(0.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_rt_values(
+        [
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(5.0),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  let (n_collect, accu_collect) = ftest_collect([
+    FormulaValue::Number(1.0),
+    FormulaValue::String("x"),
+    FormulaValue::Number(3.0),
+  ])
+  inspect(n_collect == 2.0, content="true")
+  inspect(accu_collect != 0.0, content="true")
+
+  inspect(
+    is_formula_error(
+      ftest_values(
+        workbook,
+        "Sheet1",
+        [Expr::Range("", "A1", "A1"), Expr::Range("", "B1", "B3")][:],
+        [FormulaValue::Empty, FormulaValue::Empty][:],
+        ctx,
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      ftest_values(
+        workbook,
+        "Sheet1",
+        [Expr::Range("", "A1", "A3"), Expr::Range("", "B1", "B1")][:],
+        [FormulaValue::Empty, FormulaValue::Empty][:],
+        ctx,
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      ftest_values(
+        workbook,
+        "Sheet1",
+        [Expr::Range("", "A1", "A3"), Expr::Range("", "B1", "B3")][:],
+        [FormulaValue::Empty, FormulaValue::Empty][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+}
