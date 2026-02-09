@@ -153,7 +153,8 @@ Use `scripts/show_parity_env.sh` to print current override values in CI logs.
 Use `scripts/show_parity_env.sh --json` for machine-readable CI parsing.
 The helper includes wrapper/env-helper/preflight-status-helper/gate-toggle/
 gate-toggle-contract/gate-show-toggle/preflight-matrix-smoke/
-preflight-matrix-smoke-contract/docs/docs-coverage preflight toggles and
+preflight-matrix-smoke-contract/preflight-matrix-smoke-contract-contract/
+docs/docs-coverage preflight toggles and
 `SHOW_PARITY_PREFLIGHT_STATUS`/`SHOW_PARITY_PREFLIGHT_STATUS_COMPACT` so
 aggregate gate env diagnostics stay aligned.
 Use `scripts/show_parity_preflight_status.sh` to print the effective preflight
@@ -197,6 +198,10 @@ It runs `scripts/check_parity_preflight_matrix_smoke_contract.sh` as a
 preflight matrix smoke contract preflight.
 Set `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_PREFLIGHT=1` to bypass this
 preflight.
+It runs `scripts/check_parity_preflight_matrix_smoke_contract_contract.sh` as a
+preflight matrix smoke contract-contract preflight.
+Set `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_PREFLIGHT=1` to
+bypass this preflight.
 It runs `scripts/check_parity_docs_refs.sh` as an additional docs preflight.
 Set `SKIP_PARITY_DOCS_PREFLIGHT=1` to bypass docs preflight when needed.
 It also runs `scripts/check_parity_docs_wrapper_coverage.sh` by default.
