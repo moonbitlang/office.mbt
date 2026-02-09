@@ -2949,6 +2949,45 @@ Commands used:
     - Total uncovered lines reduced from `2432` to `2342`
     - Uncovered file count remains `43`
 
+- [x] 177. Close residuals in `xlsx/formula_builtins.mbt` (part 8).
+  - DoD: add focused whitebox coverage for `XLOOKUP`/`ADDRESS`/`INDIRECT` dispatch guards and remaining date/time error-propagation branches in `eval_function(...)`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused wbtests for:
+      - `XLOOKUP`:
+        - arity guard
+        - `match_mode`/`search_mode` conversion errors
+        - invalid `match_mode` and invalid `search_mode` guards
+        - non-vector lookup range guard
+        - lookup error propagation path
+        - row-orientation return-range width mismatch and success path
+        - column-orientation return-range height mismatch and list-return path
+      - `ADDRESS`:
+        - row/col conversion-error forwarding
+        - non-positive row/col guard
+        - `abs_num` conversion-error forwarding and bounds guard
+        - `a1` and sheet-text conversion-error forwarding
+      - `INDIRECT`:
+        - first/second argument conversion-error forwarding
+        - invalid A1 range token guards
+        - R1C1 range/single parse failure guards
+        - successful R1C1 range list branch
+      - Remaining error-propagation branches:
+        - `DATE` month conversion error
+        - `TIME` minute conversion error
+        - `WEEKNUM` invalid return type (`#NUM!`)
+        - `MONTH`/`DAY`/`HOUR`/`MINUTE`/`SECOND` error propagation
+        - `HYPERLINK` and `CHOOSE` conversion-error propagation
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze --package xlsx > /tmp/mbtexcel_uncovered_after188.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `212` to `173`
+    - Total uncovered lines reduced from `2342` to `2236`
+    - Uncovered file count reduced from `43` to `38`
+
 ## Active Item
 
-- Next item: **177** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 8).
+- Next item: **178** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 9).

@@ -3677,3 +3677,621 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: xlookup address indirect guard branches part 8" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => panic()
+  }
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("C1", Numeric(3.0))
+  sheet.set_cell_value("A2", String("a"))
+  sheet.set_cell_value("B2", String("b"))
+  sheet.set_cell_value("C2", String("c"))
+  sheet.set_cell_value("A3", Numeric(10.0))
+  sheet.set_cell_value("B3", Numeric(20.0))
+  sheet.set_cell_value("C3", Numeric(30.0))
+  sheet.set_cell_value("D1", Numeric(1.0))
+  sheet.set_cell_value("D2", Numeric(2.0))
+  sheet.set_cell_value("D3", Numeric(3.0))
+  sheet.set_cell_value("E1", String("u1"))
+  sheet.set_cell_value("F1", String("v1"))
+  sheet.set_cell_value("E2", String("u2"))
+  sheet.set_cell_value("F2", String("v2"))
+  sheet.set_cell_value("E3", String("u3"))
+  sheet.set_cell_value("F3", String("v3"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATE",
+        [Expr::Number(2024.0), Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIME",
+        [Expr::Number(1.0), Expr::FuncCall("NA", []), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "WEEKNUM",
+        [Expr::String("2024-01-01"), Expr::Number(99.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MONTH",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DAY",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HOUR",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MINUTE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SECOND",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [Expr::Number(2.0), Expr::Range("", "A1", "A3")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+          Expr::String("nf"),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+          Expr::String("nf"),
+          Expr::Number(0.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+          Expr::String("nf"),
+          Expr::Number(3.0),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+          Expr::String("nf"),
+          Expr::Number(0.0),
+          Expr::Number(0.0),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "B2"),
+          Expr::Range("", "B1", "B2"),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::FuncCall("NA", []),
+          Expr::Range("", "A1", "A3"),
+          Expr::Range("", "B1", "B3"),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "C1"),
+          Expr::Range("", "A2", "B2"),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "A1", "C1"),
+          Expr::Range("", "A2", "C2"),
+        ][:],
+        ctx,
+      ),
+      "b",
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "D1", "D3"),
+          Expr::Range("", "E1", "F2"),
+        ][:],
+        ctx,
+      ) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "XLOOKUP",
+        [
+          Expr::Number(2.0),
+          Expr::Range("", "D1", "D3"),
+          Expr::Range("", "E1", "F3"),
+        ][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 2
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [Expr::Number(0.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [Expr::Number(1.0), Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(5.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ADDRESS",
+        [
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Number(1.0),
+          Expr::Bool(true),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("A1"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("Sheet1!A1")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("[]:A1")][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("A1:[]")][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("R1C1:R1C2"), Expr::Bool(false)][:],
+        ctx,
+      ) {
+      List(list) => list.length() == 2
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("BAD:R1C2"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("R1C1:BAD"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("R0C1:R1C1"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("R1C1:R0C1"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("R0C1"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "INDIRECT",
+        [Expr::String("BAD"), Expr::Bool(false)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HYPERLINK",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHOOSE",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+}
