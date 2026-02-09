@@ -2596,6 +2596,31 @@ Commands used:
     - Total uncovered lines reduced from `2825` to `2694`
     - Uncovered file count remains `43`
 
+- [x] 167. Close residuals in `xlsx/formula_builtins.mbt` (part 3).
+  - DoD: add focused whitebox coverage for `IFS`-family guard paths and conversion-function error branches, then reduce residual uncovered lines in `xlsx/formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with part-3 focused coverage for:
+      - `AVERAGEIFS`:
+        - even-arity `#N/A` guard
+        - matched non-numeric values (count remains zero) -> `#DIV/0!`
+        - out-of-bounds average-range access -> `#VALUE!`
+      - `MAXIFS` / `MINIFS`:
+        - even-arity `#N/A` guards
+        - too-few-args `#VALUE!` guards
+      - conversion/coercion error branches:
+        - `ABS` / `INT` error forwarding
+        - `DECIMAL` first/second argument coercion errors
+        - `ARABIC`, `HEX2BIN`, `HEX2DEC`, `HEX2OCT` string coercion error forwarding
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after178.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `429` to `414`
+    - Total uncovered lines reduced from `2694` to `2679`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **167** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 3).
+- Next item: **168** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 4).

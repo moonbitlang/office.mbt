@@ -380,3 +380,172 @@ test "formula builtins wb: complex aggregate mixed input paths" {
   )
   inspect(is_formula_error(imsum_error, formula_error_na), content="true")
 }
+
+///|
+test "formula builtins wb: ifs and conversion guard branches part 3" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", String("text"))
+  sheet.set_cell_value("B1", Numeric(1.0))
+  sheet.set_cell_value("B2", Numeric(1.0))
+
+  let averageifs_even = eval_function(
+    workbook,
+    "Sheet1",
+    "AVERAGEIFS",
+    [
+      Expr::Range("", "A1", "A1"),
+      Expr::Range("", "B1", "B1"),
+      Expr::Number(1.0),
+      Expr::Number(1.0),
+    ][:],
+    ctx,
+  )
+  inspect(is_formula_error(averageifs_even, formula_error_na), content="true")
+
+  let averageifs_div = eval_function(
+    workbook,
+    "Sheet1",
+    "AVERAGEIFS",
+    [
+      Expr::Range("", "A1", "A1"),
+      Expr::Range("", "B1", "B1"),
+      Expr::Number(1.0),
+    ][:],
+    ctx,
+  )
+  inspect(is_formula_error(averageifs_div, formula_error_div), content="true")
+
+  let averageifs_oob = eval_function(
+    workbook,
+    "Sheet1",
+    "AVERAGEIFS",
+    [
+      Expr::Range("", "A1", "A1"),
+      Expr::Range("", "B1", "B2"),
+      Expr::Number(1.0),
+    ][:],
+    ctx,
+  )
+  inspect(is_formula_error(averageifs_oob, formula_error_value), content="true")
+
+  let maxifs_even = eval_function(
+    workbook,
+    "Sheet1",
+    "MAXIFS",
+    [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)][:],
+    ctx,
+  )
+  inspect(is_formula_error(maxifs_even, formula_error_na), content="true")
+
+  let maxifs_bad_arity = eval_function(
+    workbook,
+    "Sheet1",
+    "MAXIFS",
+    [Expr::Number(1.0), Expr::Number(1.0)][:],
+    ctx,
+  )
+  inspect(
+    is_formula_error(maxifs_bad_arity, formula_error_value),
+    content="true",
+  )
+
+  let minifs_even = eval_function(
+    workbook,
+    "Sheet1",
+    "MINIFS",
+    [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)][:],
+    ctx,
+  )
+  inspect(is_formula_error(minifs_even, formula_error_na), content="true")
+
+  let minifs_bad_arity = eval_function(
+    workbook,
+    "Sheet1",
+    "MINIFS",
+    [Expr::Number(1.0), Expr::Number(1.0)][:],
+    ctx,
+  )
+  inspect(
+    is_formula_error(minifs_bad_arity, formula_error_value),
+    content="true",
+  )
+
+  let abs_bad = eval_function(
+    workbook,
+    "Sheet1",
+    "ABS",
+    [Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(abs_bad, formula_error_na), content="true")
+
+  let int_bad = eval_function(
+    workbook,
+    "Sheet1",
+    "INT",
+    [Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(int_bad, formula_error_na), content="true")
+
+  let decimal_bad_text = eval_function(
+    workbook,
+    "Sheet1",
+    "DECIMAL",
+    [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+    ctx,
+  )
+  inspect(is_formula_error(decimal_bad_text, formula_error_na), content="true")
+
+  let decimal_bad_radix = eval_function(
+    workbook,
+    "Sheet1",
+    "DECIMAL",
+    [Expr::String("10"), Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(decimal_bad_radix, formula_error_na), content="true")
+
+  let arabic_bad = eval_function(
+    workbook,
+    "Sheet1",
+    "ARABIC",
+    [Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(arabic_bad, formula_error_na), content="true")
+
+  let hex2bin_bad = eval_function(
+    workbook,
+    "Sheet1",
+    "HEX2BIN",
+    [Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(hex2bin_bad, formula_error_na), content="true")
+
+  let hex2dec_bad = eval_function(
+    workbook,
+    "Sheet1",
+    "HEX2DEC",
+    [Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(hex2dec_bad, formula_error_na), content="true")
+
+  let hex2oct_bad = eval_function(
+    workbook,
+    "Sheet1",
+    "HEX2OCT",
+    [Expr::FuncCall("NA", [])][:],
+    ctx,
+  )
+  inspect(is_formula_error(hex2oct_bad, formula_error_na), content="true")
+}
