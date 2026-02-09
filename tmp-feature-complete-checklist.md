@@ -5194,4 +5194,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **267** (add a compact semantic-parity summary mode that prints key counts per scenario on success for trend tracking in CI logs).
+- [x] 267. Add compact semantic-parity success summaries for CI trend tracking.
+  - DoD: provide a mode that prints compact key counts per scenario on success.
+  - Delivered:
+    - Added `--print-summary` option to `scripts/semantic_parity.py`.
+    - Added stable summary key set for each passing scenario:
+      - worksheet/table/chart/drawing counts
+      - form-control + conditional-format counts
+      - shared-string count and key part-presence booleans
+    - Updated `scripts/test_semantic_parity.sh` to run parity with `--print-summary` by default.
+    - Updated `docs/excelize-parity.md` to mention summary output behavior.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **268** (add scenario-level runtime/duration reporting in semantic parity output to spot slow regressions quickly).

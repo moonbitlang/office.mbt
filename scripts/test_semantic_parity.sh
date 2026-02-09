@@ -17,6 +17,7 @@ echo "Running semantic parity regression..."
 python3 scripts/semantic_parity.py \
   --mbt-dir "$MBT_DIR" \
   --excelize-dir "$EXCELIZE_DIR" \
+  --print-summary \
   "$@"
 
 echo "Semantic parity regression suite passed."

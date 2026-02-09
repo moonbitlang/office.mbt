@@ -20,6 +20,22 @@ class Scenario:
     keys: tuple[str, ...]
 
 
+SUMMARY_KEYS: tuple[str, ...] = (
+    "worksheets",
+    "tables",
+    "charts",
+    "drawings",
+    "vml_drawings",
+    "form_controls",
+    "conditional_formatting",
+    "x14_conditional_formatting",
+    "data_validations",
+    "shared_string_items",
+    "has_shared_strings_part",
+    "has_calc_chain_part",
+)
+
+
 SCENARIOS: tuple[Scenario, ...] = (
     Scenario(
         name="dashboard",
@@ -365,6 +381,10 @@ def compare_scenario(
     return mismatches, mbt, excelize
 
 
+def summary_view(fingerprint_data: dict[str, object]) -> dict[str, object]:
+    return {key: fingerprint_data.get(key) for key in SUMMARY_KEYS}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run semantic parity checks against Excelize outputs.")
     parser.add_argument("--mbt-dir", default="_build/semantic_parity/mbt")
@@ -385,6 +405,11 @@ def main() -> int:
         "--print-fingerprints-on-fail",
         action="store_true",
         help="Print selected fingerprint keys for failing scenarios.",
+    )
+    parser.add_argument(
+        "--print-summary",
+        action="store_true",
+        help="Print compact per-scenario summary keys on success.",
     )
     args = parser.parse_args()
 
@@ -435,6 +460,13 @@ def main() -> int:
                 print(json.dumps(selected_excelize, indent=2, sort_keys=True))
         else:
             print(f"[PASS] {scenario.name}")
+            if args.print_summary:
+                print(
+                    "  summary: "
+                    + json.dumps(
+                        summary_view(mbt_fingerprint), sort_keys=True
+                    )
+                )
 
     if all_mismatches:
         print("\nMismatches:")
