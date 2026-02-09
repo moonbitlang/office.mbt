@@ -4346,10 +4346,35 @@ Commands used:
   - Coverage delta (wbtest-targeted summary metric):
     - Method:
       - `moon coverage clean`
-      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `4635/4748` to `4637/4748` (`+2` lines).
 
+- [x] 232. Close residuals in `xlsx/formula_builtins.mbt` (part 63).
+  - DoD: reduce reachable helper-function residuals in bitwise dispatch, Roman/Arabic parsing, BASE argument parsing, and `dec2x_values` error forwarding.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` helper coverage with:
+      - `bitwise_values("BITAND", [Error(#N/A), Number])` and `bitwise_values("BITAND", [Number, Error(#N/A)])` to hit both tuple error-forwarding branches
+      - `arabic_char_value('V')` and `arabic_char_value('L')` char-table branches
+      - `arabic_string_value("III")` to cover repeated-char collapse loop path
+      - `base_values([Error(#N/A), Number])` and `base_values([Number, Error(#N/A)])` first/second argument parse-error branches
+      - `dec2x_values("DEC2BIN", [Error(#N/A)])` first-argument parse-error branch.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4637/4748` to `4645/4748` (`+8` lines).
+
 ## Active Item
 
-- Next item: **232** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 63, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **233** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 64, using wbtest-targeted coverage summary as the comparable metric).

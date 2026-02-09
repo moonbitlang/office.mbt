@@ -18378,10 +18378,33 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
     ),
     content="true",
   )
+  inspect(
+    is_formula_error(
+      bitwise_values(
+        "BITAND",
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(1.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      bitwise_values(
+        "BITAND",
+        [FormulaValue::Number(1.0), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
 
   inspect(arabic_char_value('M') == 1000, content="true")
+  inspect(arabic_char_value('V') == 5, content="true")
+  inspect(arabic_char_value('L') == 50, content="true")
   inspect(arabic_char_value('Q') == 0, content="true")
   inspect(is_formula_number(arabic_string_value(""), 0.0), content="true")
+  inspect(is_formula_number(arabic_string_value("III"), 3.0), content="true")
   inspect(is_formula_number(arabic_string_value("MCM"), 1900.0), content="true")
   inspect(
     is_formula_number(arabic_string_value("  -X "), -10.0),
@@ -18411,6 +18434,24 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
         ][:],
       ),
       formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      base_values(
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      base_values(
+        [FormulaValue::Number(10.0), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
     ),
     content="true",
   )
@@ -18479,6 +18520,13 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
     is_formula_error(
       dec2x_values("DEC2BIN", [FormulaValue::Number(600.0)][:]),
       formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      dec2x_values("DEC2BIN", [FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
     ),
     content="true",
   )
