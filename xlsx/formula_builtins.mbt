@@ -1129,11 +1129,7 @@ fn eval_function(
     "BIN2DEC" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(_) =>
-            match value_as_string(values[0]) {
-              Ok(text) => bin2dec_string(text)
-              Err(err) => err
-            }
+          Ok(_) => bin2dec_string(formula_value_string(values[0]))
           Err(err) => err
         }
       } else {
@@ -1146,23 +1142,19 @@ fn eval_function(
         Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
-          Ok(_) =>
-            match value_as_string(values[0]) {
-              Ok(text) => {
-                let decimal = bin2dec_string(text)
-                match decimal {
-                  Error(_) => decimal
-                  _ => {
-                    let new_values : Array[FormulaValue] = [decimal]
-                    if values.length() == 2 {
-                      new_values.push(values[1])
-                    }
-                    dec2x_values("BIN2HEX", new_values)
-                  }
+          Ok(_) => {
+            let decimal = bin2dec_string(formula_value_string(values[0]))
+            match decimal {
+              Error(_) => decimal
+              _ => {
+                let new_values : Array[FormulaValue] = [decimal]
+                if values.length() == 2 {
+                  new_values.push(values[1])
                 }
+                dec2x_values("BIN2HEX", new_values)
               }
-              Err(err) => err
             }
+          }
           Err(err) => err
         }
       }
@@ -1173,23 +1165,19 @@ fn eval_function(
         Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
-          Ok(_) =>
-            match value_as_string(values[0]) {
-              Ok(text) => {
-                let decimal = bin2dec_string(text)
-                match decimal {
-                  Error(_) => decimal
-                  _ => {
-                    let new_values : Array[FormulaValue] = [decimal]
-                    if values.length() == 2 {
-                      new_values.push(values[1])
-                    }
-                    dec2x_values("BIN2OCT", new_values)
-                  }
+          Ok(_) => {
+            let decimal = bin2dec_string(formula_value_string(values[0]))
+            match decimal {
+              Error(_) => decimal
+              _ => {
+                let new_values : Array[FormulaValue] = [decimal]
+                if values.length() == 2 {
+                  new_values.push(values[1])
                 }
+                dec2x_values("BIN2OCT", new_values)
               }
-              Err(err) => err
             }
+          }
           Err(err) => err
         }
       }
@@ -1258,29 +1246,21 @@ fn eval_function(
         Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
-          Ok(_) =>
-            match value_as_string(values[0]) {
-              Ok(text) => {
-                let decimal = oct2dec_string(text)
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
-                }
-                dec2x_values("OCT2BIN", new_values)
-              }
-              Err(err) => err
+          Ok(_) => {
+            let decimal = oct2dec_string(formula_value_string(values[0]))
+            let new_values : Array[FormulaValue] = [decimal]
+            if values.length() == 2 {
+              new_values.push(values[1])
             }
+            dec2x_values("OCT2BIN", new_values)
+          }
           Err(err) => err
         }
       }
     "OCT2DEC" =>
       if values.length() == 1 {
         match value_as_number(values[0]) {
-          Ok(_) =>
-            match value_as_string(values[0]) {
-              Ok(text) => oct2dec_string(text)
-              Err(err) => err
-            }
+          Ok(_) => oct2dec_string(formula_value_string(values[0]))
           Err(err) => err
         }
       } else {
@@ -1293,18 +1273,14 @@ fn eval_function(
         Error(formula_error_value)
       } else {
         match value_as_number(values[0]) {
-          Ok(_) =>
-            match value_as_string(values[0]) {
-              Ok(text) => {
-                let decimal = oct2dec_string(text)
-                let new_values : Array[FormulaValue] = [decimal]
-                if values.length() == 2 {
-                  new_values.push(values[1])
-                }
-                dec2x_values("OCT2HEX", new_values)
-              }
-              Err(err) => err
+          Ok(_) => {
+            let decimal = oct2dec_string(formula_value_string(values[0]))
+            let new_values : Array[FormulaValue] = [decimal]
+            if values.length() == 2 {
+              new_values.push(values[1])
             }
+            dec2x_values("OCT2HEX", new_values)
+          }
           Err(err) => err
         }
       }
@@ -6005,20 +5981,12 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   ).to_int()
   let start = discard
   let end = numbers.length() - discard
-  if end <= start {
-    return Error(formula_error_div)
-  }
   let mut sum = 0.0
-  let mut count = 0
+  let count = end - start
   for i in start..<end {
     sum = sum + numbers[i]
-    count = count + 1
   }
-  if count == 0 {
-    Error(formula_error_div)
-  } else {
-    Number(sum / Double::from_int(count))
-  }
+  Number(sum / Double::from_int(count))
 }
 
 ///|
@@ -7299,7 +7267,6 @@ fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   let avg_input : Array[FormulaValue] = [values[0]]
   let mean = match average_values(avg_input) {
     Number(num) => num
-    Error(_) => return Error(formula_error_na)
     _ => return Error(formula_error_na)
   }
   let x = match value_as_number(values[1]) {
@@ -7315,8 +7282,7 @@ fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let stdev_input : Array[FormulaValue] = [values[0]]
     match stdev_values(false, stdev_input) {
       Number(num) => num
-      Error(err) => return Error(err)
-      _ => return Error(formula_error_div)
+      value => return value
     }
   }
   let list = list_from_value(values[0])
