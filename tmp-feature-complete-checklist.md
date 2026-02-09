@@ -6053,4 +6053,24 @@ Commands used:
 
 ## Active Item
 
-- Next item: **321** (add aggregate gate toggle to print preflight status helper output at startup).
+- [x] 321. Add aggregate gate toggle to print preflight status helper output at startup.
+  - DoD: allow aggregate gate runs to emit resolved preflight status without
+    manually calling helper scripts.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - adds `SHOW_PARITY_PREFLIGHT_STATUS` toggle (`0`, `1`, `json`)
+      - prints toggle value in startup config banner
+      - calls `scripts/show_parity_preflight_status.sh` when enabled
+      - fails fast on unsupported toggle values
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `SHOW_PARITY_PREFLIGHT_STATUS=1 SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `SHOW_PARITY_PREFLIGHT_STATUS=bad scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **322** (add preflight-status toggle visibility to parity env helper).
