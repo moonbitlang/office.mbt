@@ -3431,6 +3431,29 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `2866/4748` to `3002/4748` (`+136` lines).
 
+- [x] 196. Close residuals in `xlsx/formula_builtins.mbt` (part 27).
+  - DoD: reduce uncovered branches in the remaining complex-dispatch group following `IMPOWER`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused tests for:
+      - `IMPRODUCT`, `IMREAL`, `IMSEC`, `IMSECH`, `IMSIN`, `IMSINH`, `IMSQRT`
+      - `IMSUB`, `IMSUM`, `IMTAN`
+    - Added both happy-path and guard/error path assertions to hit:
+      - arity guards (`#VALUE!`)
+      - parse/conversion errors
+      - propagated `#N/A` from `NA()`
+      - `IMPRODUCT` flattening behavior with mixed number/bool/empty/list inputs.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3002/4748` to `3086/4748` (`+84` lines).
+
 ## Active Item
 
-- Next item: **196** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 27, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **197** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 28, using wbtest-targeted coverage summary as the comparable metric).

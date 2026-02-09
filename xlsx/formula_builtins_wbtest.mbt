@@ -10537,3 +10537,350 @@ test "formula builtins wb: complex function dispatch branches part 26" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: complex aggregate dispatch branches part 27" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    match eval_function(workbook, "Sheet1", "IMPRODUCT", [][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPRODUCT",
+        [
+          Expr::String("1+i"),
+          Expr::Number(2.0),
+          Expr::Bool(true),
+          Expr::String(""),
+          Expr::List([Expr::List([Expr::Number(3.0)])]),
+        ][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPRODUCT",
+        [Expr::String("1+i"), Expr::String("bad")][:],
+        ctx,
+      ) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPRODUCT",
+        [Expr::FuncCall("NA", []), Expr::String("1+i")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMREAL",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMREAL", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMREAL", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSEC", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSEC", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSEC", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSECH",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSECH", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSECH", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSIN", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSIN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSIN", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSINH",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSINH", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSINH", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSQRT",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSQRT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSQRT", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSUB",
+        [Expr::String("2+3i"), Expr::String("1+i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSUB", [Expr::String("2+3i")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSUB",
+        [Expr::String("bad"), Expr::String("1+i")][:],
+        ctx,
+      ) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSUB",
+        [Expr::String("1+i"), Expr::String("bad")][:],
+        ctx,
+      ) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMSUM", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSUM",
+        [Expr::String("1+i"), Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMSUM",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMSUM", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMTAN", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMTAN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMTAN", [Expr::String("bad")][:], ctx) {
+      Error(_) => true
+      _ => false
+    },
+    content="true",
+  )
+}
