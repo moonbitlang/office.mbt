@@ -17008,3 +17008,299 @@ test "formula builtins wb: aggregation helper branches part 41" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: bitwise/radix helper branches part 42" {
+  inspect(
+    match bitwise_number(FormulaValue::Bool(true)) {
+      Ok(num) => num == 1.0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match bitwise_number(FormulaValue::Empty) {
+      Ok(num) => num == 0.0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match bitwise_number(FormulaValue::String("5")) {
+      Ok(num) => num == 5.0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match bitwise_number(FormulaValue::String("bad")) {
+      Err(Error(err)) => err == formula_error_num
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match bitwise_number(FormulaValue::List([])) {
+      Ok(num) => num == 0.0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      bitwise_number(
+        FormulaValue::List([FormulaValue::List([FormulaValue::String("bad")])]),
+      ) {
+      Err(Error(err)) => err == formula_error_num
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      bitwise_values("BITAND", [FormulaValue::Number(1.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      bitwise_values(
+        "BITAND",
+        [FormulaValue::Number(-1.0), FormulaValue::Number(1.0)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      bitwise_values(
+        "BITAND",
+        [FormulaValue::Number(6.0), FormulaValue::Number(3.0)][:],
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      bitwise_values(
+        "BITOR",
+        [FormulaValue::Number(6.0), FormulaValue::Number(3.0)][:],
+      ),
+      7.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      bitwise_values(
+        "BITXOR",
+        [FormulaValue::Number(6.0), FormulaValue::Number(3.0)][:],
+      ),
+      5.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      bitwise_values(
+        "BITLSHIFT",
+        [FormulaValue::Number(2.0), FormulaValue::Number(2.0)][:],
+      ),
+      8.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      bitwise_values(
+        "BITRSHIFT",
+        [FormulaValue::Number(8.0), FormulaValue::Number(2.0)][:],
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(arabic_char_value('M') == 1000, content="true")
+  inspect(arabic_char_value('Q') == 0, content="true")
+  inspect(is_formula_number(arabic_string_value(""), 0.0), content="true")
+  inspect(is_formula_number(arabic_string_value("MCM"), 1900.0), content="true")
+  inspect(
+    is_formula_number(arabic_string_value("  -X "), -10.0),
+    content="true",
+  )
+  let long_roman = "I".repeat(256)
+  inspect(
+    is_formula_error(arabic_string_value(long_roman), formula_error_value),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      base_values([FormulaValue::Number(10.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      base_values(
+        [
+          FormulaValue::Number(10.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::String("2"),
+          FormulaValue::String("extra"),
+        ][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      base_values([FormulaValue::Number(10.0), FormulaValue::Number(1.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      base_values(
+        [
+          FormulaValue::Number(10.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::String("bad"),
+        ][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      base_values(
+        [
+          FormulaValue::Number(31.0),
+          FormulaValue::Number(16.0),
+          FormulaValue::String("4"),
+        ][:],
+      ),
+      "001F",
+    ),
+    content="true",
+  )
+
+  inspect(dec2x_limits("DEC2BIN") == (511.0, -512.0, 2), content="true")
+  inspect(
+    dec2x_limits("DEC2HEX") == (549755813887.0, -549755813888.0, 16),
+    content="true",
+  )
+  inspect(
+    dec2x_limits("DEC2OCT") == (536870911.0, -536870912.0, 8),
+    content="true",
+  )
+  inspect(
+    is_formula_error(dec2x_values("DEC2BIN", []), formula_error_value),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      dec2x_values(
+        "DEC2BIN",
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      dec2x_values("DEC2BIN", [FormulaValue::Number(600.0)][:]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      dec2x_values(
+        "DEC2BIN",
+        [FormulaValue::Number(5.0), FormulaValue::Number(-1.0)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      dec2x_values(
+        "DEC2BIN",
+        [FormulaValue::Number(5.0), FormulaValue::Number(1.0)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      dec2x_values(
+        "DEC2HEX",
+        [FormulaValue::Number(26.0), FormulaValue::Number(4.0)][:],
+      ),
+      "001A",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      dec2x_values("DEC2HEX", [FormulaValue::Number(-1.0)][:]),
+      "FFFFFFFFFF",
+    ),
+    content="true",
+  )
+
+  inspect(is_formula_number(bin2dec_string("101"), 5.0), content="true")
+  inspect(is_formula_number(bin2dec_string("1111111111"), -1.0), content="true")
+  inspect(
+    is_formula_error(bin2dec_string("10A"), formula_error_num),
+    content="true",
+  )
+
+  inspect(hex_digit_value('0') == Some(0), content="true")
+  inspect(hex_digit_value('F') == Some(15), content="true")
+  inspect(hex_digit_value('g') == None, content="true")
+  inspect(is_formula_number(hex2dec_string("1A"), 26.0), content="true")
+  inspect(is_formula_number(hex2dec_string("FFFFFFFFFF"), -1.0), content="true")
+  inspect(
+    is_formula_error(hex2dec_string("1G"), formula_error_num),
+    content="true",
+  )
+
+  inspect(is_formula_number(oct2dec_string("17"), 15.0), content="true")
+  inspect(is_formula_number(oct2dec_string("7777777777"), -1.0), content="true")
+  inspect(
+    is_formula_error(oct2dec_string("8"), formula_error_num),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(combin_values(3.0, 5.0), formula_error_value),
+    content="true",
+  )
+  inspect(is_formula_number(combin_values(5.0, 0.0), 1.0), content="true")
+  inspect(is_formula_number(combin_values(4.0, 4.0), 1.0), content="true")
+  inspect(is_formula_number(combin_values(5.0, 2.0), 10.0), content="true")
+  inspect(is_formula_number(combin_values(5.9, 2.1), 10.0), content="true")
+
+  inspect(factorial_double(0.0) == 1.0, content="true")
+  inspect(factorial_double(5.0) == 120.0, content="true")
+  inspect(binom_coeff_double(5.0, 2.0) == 10.0, content="true")
+  inspect(double_factorial_double(6.0) == 48.0, content="true")
+  inspect(double_factorial_double(7.0) == 105.0, content="true")
+}

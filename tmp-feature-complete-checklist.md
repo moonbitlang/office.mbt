@@ -3807,6 +3807,37 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3800/4748` to `3833/4748` (`+33` lines).
 
+- [x] 211. Close residuals in `xlsx/formula_builtins.mbt` (part 42).
+  - DoD: reduce uncovered conversion/bitwise/combinatorics helper branches around `bitwise_*`, radix conversion helpers, and `combin*` primitives.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused direct helper coverage for:
+      - `bitwise_number`
+      - `bitwise_values` (`BITAND`/`BITOR`/`BITXOR`/`BITLSHIFT`/`BITRSHIFT`)
+      - `arabic_char_value`, `arabic_string_value`
+      - `base_values`
+      - `dec2x_limits`, `dec2x_values`
+      - `bin2dec_string`, `hex_digit_value`, `hex2dec_string`, `oct2dec_string`
+      - `combin_values`, `factorial_double`, `binom_coeff_double`, `double_factorial_double`
+    - Added targeted branch cases to trigger:
+      - scalar coercion paths in `bitwise_number` (`Bool`, `Empty`, numeric `String`) and parse-error path
+      - arity/range validation plus all bitwise operator dispatch branches in `bitwise_values`
+      - Roman numeral parsing trim/sign/subtractive notation branches and UTF-16 length guard
+      - `base_values` arity/base/min-length parse guards and zero-padding success path
+      - `dec2x_values` arity/range/places validation plus padded positive and negative-trimmed outputs
+      - valid and invalid digit branches for binary/hex/octal string-to-decimal helpers, including signed 10-digit paths
+      - `combin_values` guard/shortcut/general paths and direct factorial/binomial/double-factorial primitive checks.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3833/4748` to `3904/4748` (`+71` lines).
+
 ## Active Item
 
-- Next item: **211** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 42, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **212** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 43, using wbtest-targeted coverage summary as the comparable metric).
