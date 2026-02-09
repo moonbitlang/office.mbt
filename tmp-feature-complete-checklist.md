@@ -5870,4 +5870,15 @@ Commands used:
 
 ## Active Item
 
-- Next item: **309** (add parity command index mention in docs wrapper-guide section for cross-navigation symmetry).
+- [x] 309. Add command-index cross-link in wrapper guide section.
+  - DoD: ensure wrapper guide section explicitly points to flat command index doc.
+  - Delivered:
+    - Updated `docs/excelize-parity.md` wrapper guide with direct link to:
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **310** (add a parity-docs consistency check script that verifies key referenced script paths exist).
