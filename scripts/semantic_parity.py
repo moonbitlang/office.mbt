@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -411,6 +412,11 @@ def main() -> int:
         action="store_true",
         help="Print compact per-scenario summary keys on success.",
     )
+    parser.add_argument(
+        "--print-durations",
+        action="store_true",
+        help="Print per-scenario comparison durations.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -432,7 +438,9 @@ def main() -> int:
 
     print(f"Excelize output source: {excelize_source}")
     all_mismatches: list[str] = []
+    compare_start = time.perf_counter()
     for scenario in selected:
+        scenario_start = time.perf_counter()
         mbt_file = mbt_out / scenario.mbt_file
         excelize_file = excelize_out / scenario.excelize_file
         if not mbt_file.exists():
@@ -444,9 +452,13 @@ def main() -> int:
         mismatches, mbt_fingerprint, excelize_fingerprint = compare_scenario(
             mbt_file, excelize_file, scenario
         )
+        duration_ms = (time.perf_counter() - scenario_start) * 1000.0
+        status_suffix = (
+            f" ({duration_ms:.1f} ms)" if args.print_durations else ""
+        )
         if mismatches:
             all_mismatches.extend(mismatches)
-            print(f"[FAIL] {scenario.name}")
+            print(f"[FAIL] {scenario.name}{status_suffix}")
             if args.print_fingerprints_on_fail:
                 selected_mbt = {
                     key: mbt_fingerprint.get(key) for key in scenario.keys
@@ -459,7 +471,7 @@ def main() -> int:
                 print("  excelize fingerprint:")
                 print(json.dumps(selected_excelize, indent=2, sort_keys=True))
         else:
-            print(f"[PASS] {scenario.name}")
+            print(f"[PASS] {scenario.name}{status_suffix}")
             if args.print_summary:
                 print(
                     "  summary: "
@@ -472,7 +484,14 @@ def main() -> int:
         print("\nMismatches:")
         for msg in all_mismatches:
             print(f"- {msg}")
+        if args.print_durations:
+            total_ms = (time.perf_counter() - compare_start) * 1000.0
+            print(f"\nTotal scenario compare time: {total_ms:.1f} ms")
         return 1
+
+    if args.print_durations:
+        total_ms = (time.perf_counter() - compare_start) * 1000.0
+        print(f"Total scenario compare time: {total_ms:.1f} ms")
 
     print("\nSemantic parity checks passed.")
     return 0

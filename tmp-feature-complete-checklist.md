@@ -5211,4 +5211,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **268** (add scenario-level runtime/duration reporting in semantic parity output to spot slow regressions quickly).
+- [x] 268. Add scenario-level runtime reporting in semantic parity output.
+  - DoD: print per-scenario compare duration and total compare time in parity logs.
+  - Delivered:
+    - Added `--print-durations` option to `scripts/semantic_parity.py`.
+    - Parity output now includes:
+      - per-scenario elapsed milliseconds on `[PASS]`/`[FAIL]`
+      - total scenario compare time summary
+    - Enabled duration output by default in:
+      - `scripts/test_semantic_parity.sh`
+    - Updated docs wording in:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **269** (add sorted-scenario execution support to semantic parity CLI for deterministic custom subsets in CI).

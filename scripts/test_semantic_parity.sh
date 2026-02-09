@@ -18,6 +18,7 @@ python3 scripts/semantic_parity.py \
   --mbt-dir "$MBT_DIR" \
   --excelize-dir "$EXCELIZE_DIR" \
   --print-summary \
+  --print-durations \
   "$@"
 
 echo "Semantic parity regression suite passed."

@@ -103,7 +103,8 @@ It runs `scripts/semantic_parity.py` with stable output directories under
 `_build/semantic_parity/` and fails fast on any scenario mismatch. Extra
 arguments are forwarded to the Python runner (for example,
 `--scenario controls` or `--print-fingerprints-on-fail`).
-The wrapper also enables compact per-scenario summaries in successful runs.
+The wrapper also enables compact per-scenario summaries and timing output in
+successful runs.
 
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
