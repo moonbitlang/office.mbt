@@ -5457,4 +5457,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **283** (add JSON summary helper option to print selected scenarios in deterministic sorted order for stable diffing).
+- [x] 283. Add deterministic sorted-output mode to parity JSON summary helper.
+  - DoD: support sorted scenario output for stable human/CI diffing.
+  - Delivered:
+    - Added `--sort-scenarios` to `scripts/semantic_parity_report_summary.py`.
+    - Sorting behavior:
+      - selected scenario list sorted by name
+      - scenario summary entries sorted by scenario name
+    - Added usage example in:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **284** (add semantic parity JSON report metadata field for tool/version info to improve artifact provenance).

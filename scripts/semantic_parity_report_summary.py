@@ -27,6 +27,11 @@ def main() -> int:
         action="store_true",
         help="Show only non-pass scenarios in scenario summary output.",
     )
+    parser.add_argument(
+        "--sort-scenarios",
+        action="store_true",
+        help="Sort scenario summary output by scenario name.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -39,10 +44,15 @@ def main() -> int:
     print(f"Result: {data.get('result')}")
     print(f"Mismatch count: {data.get('mismatch_count')}")
     print(f"Total compare ms: {data.get('total_scenario_compare_ms')}")
-    print(f"Selected scenarios: {', '.join(data.get('selected_scenarios', []))}")
+    selected = data.get("selected_scenarios", [])
+    if args.sort_scenarios:
+        selected = sorted(selected)
+    print(f"Selected scenarios: {', '.join(selected)}")
     print("Scenario summary:")
 
     all_scenarios = data.get("scenarios", [])
+    if args.sort_scenarios:
+        all_scenarios = sorted(all_scenarios, key=lambda s: str(s.get("name")))
     scenarios = all_scenarios
     if args.only_failures:
         scenarios = [s for s in all_scenarios if s.get("status") != "pass"]
