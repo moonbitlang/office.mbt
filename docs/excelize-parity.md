@@ -171,6 +171,7 @@ For ultra-fast local loops that intentionally skip OOXML validator checks:
 
 ```sh
 scripts/test_semantic_parity_ultrafast.sh
+scripts/test_semantic_parity_ultrasmoke.sh
 ```
 
 ## Wrapper guide
@@ -183,6 +184,8 @@ Use this quick map when choosing a parity command:
   - fast pre-commit subset (`cf`, `controls`)
 - `scripts/test_semantic_parity_ultrafast.sh`:
   - fastest local subset loop with `--skip-validate`
+- `scripts/test_semantic_parity_ultrasmoke.sh`:
+  - fastest sanity loop: fast subset + `--skip-validate` + skipped fingerprint pre-check
 - `scripts/test_semantic_parity_report.sh`:
   - semantic parity + human-readable report summary
 - `scripts/test_semantic_parity_report_compact.sh`:

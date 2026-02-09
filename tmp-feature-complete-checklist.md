@@ -5673,4 +5673,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **296** (add a single “ultra smoke” parity wrapper that combines skip-validate + skip-fingerprint + fast scenarios for fastest local sanity checks).
+- [x] 296. Add “ultrasmoke” parity wrapper for fastest sanity checks.
+  - DoD: provide one command that runs fast scenarios while skipping both validator and fingerprint pre-check.
+  - Delivered:
+    - Added executable wrapper:
+      - `scripts/test_semantic_parity_ultrasmoke.sh`
+    - Wrapper behavior:
+      - runs `scripts/test_semantic_parity_fast.sh --skip-validate`
+      - forces `SKIP_PARITY_FINGERPRINT_CHECK=1`
+    - Updated docs (`docs/excelize-parity.md`) command list + wrapper guide.
+  - Validation gates:
+    - `scripts/test_semantic_parity_ultrasmoke.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **297** (add lightweight parity-wrapper self-check script to verify key wrapper scripts are executable and discoverable).
