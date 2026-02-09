@@ -21,6 +21,37 @@ fn is_invalid_xml_fill_error(
 }
 
 ///|
+fn is_invalid_xml_alignment_error(
+  result : Result[Alignment?, XlsxError],
+  expected_msg : String,
+) -> Bool {
+  match result {
+    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    _ => false
+  }
+}
+
+///|
+fn has_border_type(borders : Array[Border], typ : String) -> Bool {
+  for border in borders {
+    if border.typ == typ {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn border_color_by_type(borders : Array[Border], typ : String) -> String? {
+  for border in borders {
+    if border.typ == typ {
+      return border.color
+    }
+  }
+  None
+}
+
+///|
 test "read wb: xml encoding parser guard paths" {
   inspect(xml_encoding(b"abc") is None, content="true")
   inspect(xml_encoding(b"<?xml version=\"1.0\"?><x/>") is None, content="true")
@@ -329,4 +360,141 @@ test "read wb: parse_fill_entry gradient and pattern guard branches" {
     ),
     content="true",
   )
+}
+
+///|
+test "read wb: parse_fills and borders structural guard branches" {
+  let no_fills = parse_fills("<styleSheet/>")
+  inspect(no_fills.length(), content="0")
+
+  let malformed_fill_open = parse_fills("<fills><fill</fills>")
+  inspect(malformed_fill_open.length(), content="0")
+
+  let self_closing_fill = parse_fills("<fills><fill/></fills>")
+  inspect(self_closing_fill.length(), content="1")
+
+  let missing_fill_close = parse_fills("<fills><fill><patternFill/></fills>")
+  inspect(missing_fill_close.length(), content="0")
+
+  let parsed_fill = parse_fills(
+    (
+      #|<fills>
+      #|  <fill><patternFill patternType="solid"><fgColor rgb="FF112233"/></patternFill></fill>
+      #|</fills>
+      #|,
+    ),
+  )
+  inspect(parsed_fill.length(), content="1")
+  inspect(parsed_fill[0].typ, content="Some(\"pattern\")")
+
+  let no_borders = parse_borders("<styleSheet/>")
+  inspect(no_borders.length(), content="1")
+  inspect(no_borders[0].length(), content="0")
+
+  let empty_borders = parse_borders("<borders></borders>")
+  inspect(empty_borders.length(), content="1")
+  inspect(empty_borders[0].length(), content="0")
+
+  let malformed_border_open = parse_borders("<borders><border</borders>")
+  inspect(malformed_border_open.length(), content="1")
+  inspect(malformed_border_open[0].length(), content="0")
+
+  let self_closing_border = parse_borders("<borders><border/></borders>")
+  inspect(self_closing_border.length(), content="1")
+  inspect(self_closing_border[0].length(), content="0")
+
+  let missing_border_close = parse_borders("<borders><border><left/></borders>")
+  inspect(missing_border_close.length(), content="1")
+  inspect(missing_border_close[0].length(), content="0")
+
+  let parsed_borders = parse_borders(
+    (
+      #|<borders>
+      #|  <border diagonalUp="1" diagonalDown="1">
+      #|    <left style="thin"><foo/></left>
+      #|    <right style="thin"><color rgb="80112233"/></right>
+      #|    <top style="thin"><color/></top>
+      #|    <bottom style="thin"/>
+      #|    <diagonal style="thin"/>
+      #|    <vertical style="thin"/>
+      #|    <horizontal style="thin"/>
+      #|  </border>
+      #|  <border><diagonal style="thin"/></border>
+      #|</borders>
+      #|,
+    ),
+  )
+  inspect(parsed_borders.length(), content="2")
+  inspect(parsed_borders[0].length(), content="8")
+  inspect(parsed_borders[1].length(), content="1")
+  inspect(has_border_type(parsed_borders[0], "diagonalUp"), content="true")
+  inspect(has_border_type(parsed_borders[0], "diagonalDown"), content="true")
+  inspect(has_border_type(parsed_borders[0], "vertical"), content="true")
+  inspect(has_border_type(parsed_borders[0], "horizontal"), content="true")
+  inspect(has_border_type(parsed_borders[1], "diagonal"), content="true")
+  inspect(
+    border_color_by_type(parsed_borders[0], "right"),
+    content="Some(\"80112233\")",
+  )
+}
+
+///|
+test "read wb: protection alignment and pivot parser guard branches" {
+  inspect(
+    parse_protection_entry("<xf><protection/></xf>") is None,
+    content="true",
+  )
+  inspect(
+    match parse_protection_entry("<xf><protection hidden=\"1\"/></xf>") {
+      Some(value) => value.hidden == Some(true) && value.locked is None
+      None => false
+    },
+    content="true",
+  )
+
+  inspect(
+    parse_alignment_entry("<xf><alignment/></xf>") is None,
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_alignment_error(
+      try? parse_alignment_entry("<xf><alignment textRotation=\"bad\"/></xf>"),
+      "textRotation invalid",
+    ),
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_alignment_error(
+      try? parse_alignment_entry("<xf><alignment indent=\"bad\"/></xf>"),
+      "indent invalid",
+    ),
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_alignment_error(
+      try? parse_alignment_entry("<xf><alignment readingOrder=\"bad\"/></xf>"),
+      "readingOrder invalid",
+    ),
+    content="true",
+  )
+  inspect(
+    is_invalid_xml_alignment_error(
+      try? parse_alignment_entry("<xf><alignment relativeIndent=\"bad\"/></xf>"),
+      "relativeIndent invalid",
+    ),
+    content="true",
+  )
+  inspect(
+    match parse_alignment_entry("<xf><alignment horizontal=\"center\"/></xf>") {
+      Some(value) => value.horizontal == Some("center")
+      None => false
+    },
+    content="true",
+  )
+
+  inspect(
+    parse_pivot_table_name("<pivotTableDefinition cacheId=\"1\"/>"),
+    content="",
+  )
+  inspect(parse_pivot_table_name("<worksheet/>"), content="")
 }

@@ -2727,6 +2727,48 @@ Commands used:
     - Total uncovered lines reduced from `2599` to `2543`
     - Uncovered file count remains `43`
 
+- [x] 171. Close residuals in `xlsx/read.mbt` (part 3).
+  - DoD: add focused whitebox coverage for read-side structural parser branches (`fills`, `borders`, `protection`, `alignment`, `pivot name`) and reduce residual uncovered lines in `xlsx/read.mbt`.
+  - Delivered:
+    - Extended `xlsx/read_wbtest.mbt` with new helper assertions:
+      - `is_invalid_xml_alignment_error(...)`
+      - `has_border_type(...)`
+      - `border_color_by_type(...)`
+    - Added focused wbtests for `parse_fills(...)` branch matrix:
+      - missing `<fills>` fallback (empty result)
+      - malformed `<fill` open-tag path
+      - self-closing `<fill/>` entry handling
+      - missing `</fill>` skip path
+      - normal parsed fill path with pattern type assertion
+    - Added focused wbtests for `parse_borders(...)` / `parse_border_entry(...)` branch matrix:
+      - missing `<borders>` fallback (`[[]]`)
+      - empty `<borders></borders>` fallback
+      - malformed `<border` open-tag skip path
+      - self-closing `<border/>` path
+      - missing `</border>` skip path
+      - rich border parse path covering:
+        - diagonal up/down fan-out
+        - diagonal passthrough when no diagonal flags
+        - vertical/horizontal side emission
+        - non-`FF` 8-digit RGB preservation branch
+        - side body without `<color>` branch
+    - Added focused wbtests for small parser guards:
+      - `parse_protection_entry(...)` no-attr `None` path and hidden-only parse
+      - `parse_alignment_entry(...)` no-attr `None` path
+      - `parse_alignment_entry(...)` invalid numeric attributes (`textRotation`, `indent`, `readingOrder`, `relativeIndent`)
+      - `parse_pivot_table_name(...)` missing-name and missing-tag empty-string paths
+  - Validation gates:
+    - `moon test xlsx/read_wbtest.mbt`
+    - `moon test xlsx/read_package_parts_wbtest.mbt`
+    - `moon test xlsx/read_sheet_rel_parts_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after182.log`
+  - Coverage delta:
+    - `xlsx/read.mbt` uncovered lines reduced from `359` to `334`
+    - Total uncovered lines reduced from `2543` to `2518`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **171** (move to the next residual hotspot: `xlsx/read.mbt`, part 3).
+- Next item: **172** (move to the next residual hotspot: `xlsx/read.mbt`, part 4).
