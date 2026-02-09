@@ -5990,4 +5990,16 @@ Commands used:
 
 ## Active Item
 
-- Next item: **317** (add parity docs-reference checker coverage for new wrapper-coverage checker script in aggregate preflight docs notes).
+- [x] 317. Add self-coverage for docs-wrapper coverage checker script.
+  - DoD: ensure docs-wrapper coverage checker also verifies docs references for itself.
+  - Delivered:
+    - Updated `scripts/check_parity_docs_wrapper_coverage.sh` wrapper list to include:
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+  - Validation gates:
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **318** (add aggregate gate preflight entry for docs-wrapper coverage checker skip toggle to parity env helper docs section).
