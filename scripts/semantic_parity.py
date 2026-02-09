@@ -427,6 +427,10 @@ def main() -> int:
         action="store_true",
         help="List available scenarios and exit.",
     )
+    parser.add_argument(
+        "--json-report",
+        help="Write machine-readable parity report JSON to this path.",
+    )
     args = parser.parse_args()
 
     if args.list_scenarios:
@@ -471,16 +475,39 @@ def main() -> int:
 
     print(f"Excelize output source: {excelize_source}")
     all_mismatches: list[str] = []
+    scenario_reports: list[dict[str, object]] = []
     compare_start = time.perf_counter()
     for scenario in selected:
         scenario_start = time.perf_counter()
         mbt_file = mbt_out / scenario.mbt_file
         excelize_file = excelize_out / scenario.excelize_file
         if not mbt_file.exists():
-            all_mismatches.append(f"{scenario.name}: missing mbtexcel file: {mbt_file}")
+            msg = f"{scenario.name}: missing mbtexcel file: {mbt_file}"
+            all_mismatches.append(msg)
+            scenario_reports.append(
+                {
+                    "name": scenario.name,
+                    "status": "missing_mbtexcel_file",
+                    "duration_ms": (time.perf_counter() - scenario_start) * 1000.0,
+                    "mbt_file": str(mbt_file),
+                    "excelize_file": str(excelize_file),
+                    "mismatches": [msg],
+                }
+            )
             continue
         if not excelize_file.exists():
-            all_mismatches.append(f"{scenario.name}: missing excelize file: {excelize_file}")
+            msg = f"{scenario.name}: missing excelize file: {excelize_file}"
+            all_mismatches.append(msg)
+            scenario_reports.append(
+                {
+                    "name": scenario.name,
+                    "status": "missing_excelize_file",
+                    "duration_ms": (time.perf_counter() - scenario_start) * 1000.0,
+                    "mbt_file": str(mbt_file),
+                    "excelize_file": str(excelize_file),
+                    "mismatches": [msg],
+                }
+            )
             continue
         mismatches, mbt_fingerprint, excelize_fingerprint = compare_scenario(
             mbt_file, excelize_file, scenario
@@ -512,18 +539,54 @@ def main() -> int:
                         summary_view(mbt_fingerprint), sort_keys=True
                     )
                 )
+        scenario_reports.append(
+            {
+                "name": scenario.name,
+                "status": "fail" if mismatches else "pass",
+                "duration_ms": duration_ms,
+                "mbt_file": str(mbt_file),
+                "excelize_file": str(excelize_file),
+                "keys": list(scenario.keys),
+                "mismatches": mismatches,
+                "mbtexcel": {key: mbt_fingerprint.get(key) for key in scenario.keys},
+                "excelize": {
+                    key: excelize_fingerprint.get(key) for key in scenario.keys
+                },
+                "summary": summary_view(mbt_fingerprint),
+            }
+        )
+
+    total_ms = (time.perf_counter() - compare_start) * 1000.0
+    if args.json_report:
+        report_path = Path(args.json_report)
+        if not report_path.is_absolute():
+            report_path = (repo_root / report_path).resolve()
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report = {
+            "result": "pass" if not all_mismatches else "fail",
+            "excelize_output_source": excelize_source,
+            "mbtexcel_output_dir": str(mbt_out),
+            "excelize_output_dir": str(excelize_out),
+            "selected_scenarios": [s.name for s in selected],
+            "skip_validate": args.skip_validate,
+            "validate_excelize": args.validate_excelize,
+            "total_scenario_compare_ms": total_ms,
+            "mismatch_count": len(all_mismatches),
+            "mismatches": all_mismatches,
+            "scenarios": scenario_reports,
+        }
+        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        print(f"JSON report written: {report_path}")
 
     if all_mismatches:
         print("\nMismatches:")
         for msg in all_mismatches:
             print(f"- {msg}")
         if args.print_durations:
-            total_ms = (time.perf_counter() - compare_start) * 1000.0
             print(f"\nTotal scenario compare time: {total_ms:.1f} ms")
         return 1
 
     if args.print_durations:
-        total_ms = (time.perf_counter() - compare_start) * 1000.0
         print(f"Total scenario compare time: {total_ms:.1f} ms")
 
     print("\nSemantic parity checks passed.")

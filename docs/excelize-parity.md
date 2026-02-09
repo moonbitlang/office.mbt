@@ -112,6 +112,12 @@ To discover all available semantic parity scenarios without running generation:
 python3 scripts/semantic_parity.py --list-scenarios
 ```
 
+To emit a machine-readable CI artifact:
+
+```sh
+scripts/test_semantic_parity.sh --json-report _build/semantic_parity/report.json
+```
+
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
 ```sh

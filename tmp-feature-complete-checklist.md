@@ -5320,4 +5320,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **275** (add semantic parity JSON report output mode for machine-readable CI artifact consumption).
+- [x] 275. Add semantic parity JSON report output mode for CI artifacts.
+  - DoD: emit a machine-readable report describing scenario results, mismatches, timings, and selected keys.
+  - Delivered:
+    - Added `--json-report <path>` option to `scripts/semantic_parity.py`.
+    - Report includes:
+      - overall result/mismatch count
+      - selected scenarios and config flags
+      - total compare duration
+      - per-scenario status/duration/mismatches
+      - per-scenario selected-key fingerprints for `mbtexcel` and `excelize`
+    - JSON report is written even when run fails (after scenario processing).
+    - Added usage example to `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_semantic_parity_fast.sh --json-report _build/semantic_parity/report_fast.json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **276** (add a helper script to summarize key metrics from the semantic parity JSON report for quick human scanning).
