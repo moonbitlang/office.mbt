@@ -422,7 +422,19 @@ def main() -> int:
         action="store_true",
         help="Run selected scenarios in alphabetical order.",
     )
+    parser.add_argument(
+        "--list-scenarios",
+        action="store_true",
+        help="List available scenarios and exit.",
+    )
     args = parser.parse_args()
+
+    if args.list_scenarios:
+        for scenario in SCENARIOS:
+            print(
+                f"{scenario.name}\tmbt={scenario.mbt_file}\texcelize={scenario.excelize_file}"
+            )
+        return 0
 
     repo_root = Path(__file__).resolve().parents[1]
     mbt_out = (repo_root / args.mbt_dir).resolve()

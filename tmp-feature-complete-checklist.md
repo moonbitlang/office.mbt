@@ -5293,4 +5293,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **273** (add semantic parity “list scenarios” CLI output for discoverability and scriptability).
+- [x] 273. Add semantic parity “list scenarios” CLI output.
+  - DoD: provide a non-executing CLI mode to enumerate available scenarios for discoverability/scriptability.
+  - Delivered:
+    - Added `--list-scenarios` to `scripts/semantic_parity.py`.
+    - Listing output includes scenario name plus `mbt` and `excelize` workbook filenames.
+    - Mode exits early without generating/parsing workbooks.
+    - Added usage note to `docs/excelize-parity.md`.
+  - Validation gates:
+    - `python3 scripts/semantic_parity.py --list-scenarios`
+    - `scripts/test_semantic_parity_fast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **274** (add scenario-filter validation: fail fast with a clear message when `--scenario` is provided but resolves to an empty set).

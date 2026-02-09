@@ -106,6 +106,12 @@ arguments are forwarded to the Python runner (for example,
 The wrapper also enables compact per-scenario summaries and timing output in
 successful runs.
 
+To discover all available semantic parity scenarios without running generation:
+
+```sh
+python3 scripts/semantic_parity.py --list-scenarios
+```
+
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
 ```sh
