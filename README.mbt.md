@@ -211,6 +211,12 @@ Run the demo roundtrip regression gate (local/CI):
 scripts/test_demo_roundtrip.sh
 ```
 
+Run the combined parity + demo regression gate:
+
+```sh
+scripts/test_parity_gates.sh
+```
+
 See `docs/demos.md` for what each demo generates and how the code is structured.
 
 ## API Reference

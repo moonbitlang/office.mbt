@@ -104,6 +104,12 @@ It runs `scripts/semantic_parity.py` with stable output directories under
 arguments are forwarded to the Python runner (for example,
 `--scenario controls`).
 
+For the full parity gate (semantic parity + demo roundtrip/openxml suites):
+
+```sh
+scripts/test_parity_gates.sh
+```
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the

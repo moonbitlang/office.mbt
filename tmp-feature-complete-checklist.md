@@ -5092,4 +5092,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **262** (add one aggregate parity gate script that runs both semantic parity and demo roundtrip suites for a single CI-ready command).
+- [x] 262. Add aggregate parity gate command for CI.
+  - DoD: provide a single command that executes both semantic parity and demo roundtrip/openxml regression suites.
+  - Delivered:
+    - Added executable script:
+      - `scripts/test_parity_gates.sh`
+    - Script behavior:
+      - runs `scripts/test_semantic_parity.sh`
+      - then runs `scripts/test_demo_roundtrip.sh`
+      - fails fast and prints gate-stage progress markers.
+    - Documented command in:
+      - `README.mbt.md` (Demos section)
+      - `docs/excelize-parity.md` (`Parity regression command` section)
+  - Validation gates:
+    - `scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+
+## Active Item
+
+- Next item: **263** (expand semantic parity scenario coverage with a new non-control workbook profile and fixture plumbing).
