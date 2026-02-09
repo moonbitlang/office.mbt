@@ -6211,4 +6211,29 @@ Commands used:
 
 ## Active Item
 
-- Next item: **328** (add aggregate gate skip-toggle consistency checker script).
+- [x] 328. Add aggregate gate skip-toggle consistency checker script.
+  - DoD: provide a single regression script that verifies aggregate preflight
+    skip-toggle keys stay synchronized across gate and helper surfaces.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_gate_skip_toggles.sh`
+    - Checker enforces expected skip-toggle keys exist in:
+      - `scripts/test_parity_gates.sh`
+      - `scripts/show_parity_env.sh --json` output
+      - `scripts/show_parity_preflight_status.sh --json` env object
+    - Added script to wrapper/doc coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **329** (wire skip-toggle consistency checker into aggregate gate preflight).

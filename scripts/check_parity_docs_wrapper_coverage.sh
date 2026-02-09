@@ -19,6 +19,7 @@ wrappers=(
   "scripts/test_parity_gates.sh"
   "scripts/check_parity_env_helper.sh"
   "scripts/check_parity_preflight_status_helper.sh"
+  "scripts/check_parity_gate_skip_toggles.sh"
   "scripts/check_parity_wrappers.sh"
   "scripts/check_parity_docs_refs.sh"
   "scripts/check_parity_docs_wrapper_coverage.sh"
