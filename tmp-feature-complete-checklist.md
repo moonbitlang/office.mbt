@@ -5156,4 +5156,25 @@ Commands used:
 
 ## Active Item
 
-- Next item: **265** (extend semantic parity fingerprints to include presence of key package parts like `sharedStrings`, `calcChain`, and verify them scenario-by-scenario).
+- [x] 265. Extend semantic parity fingerprints with key package-part presence signals.
+  - DoD: fingerprint and compare key package-part presence (`sharedStrings`, `calcChain`, `styles`, `theme`) where scenario parity should hold.
+  - Delivered:
+    - Added fingerprint keys in `scripts/semantic_parity.py`:
+      - `has_shared_strings_part`
+      - `has_calc_chain_part`
+      - `has_styles_part`
+      - `has_theme_part`
+    - Wired keys into scenario comparisons:
+      - `dashboard`: sharedStrings/styles/theme
+      - `controls`, `controls_rerun`, `cf`, `shared_strings`: sharedStrings/calcChain/styles/theme
+    - Extended regression checks in:
+      - `scripts/semantic_parity_fingerprint_test.py`
+      - now asserts part-presence invariants for dashboard/controls/shared_strings fixtures.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **266** (add semantic parity CLI output mode that prints per-scenario fingerprints when mismatches occur to accelerate debugging).

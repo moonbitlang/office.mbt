@@ -21,6 +21,11 @@ def main() -> int:
     assert_equal(dashboard["charts"], 1, "dashboard chart count")
     assert_equal(dashboard["drawings"], 1, "dashboard drawing count")
     assert_equal(dashboard["chart_types"], ["lineChart"], "dashboard chart types")
+    assert_equal(
+        dashboard["has_shared_strings_part"], True, "dashboard sharedStrings part"
+    )
+    assert_equal(dashboard["has_styles_part"], True, "dashboard styles part")
+    assert_equal(dashboard["has_theme_part"], True, "dashboard theme part")
 
     controls = semantic_parity.fingerprint(
         repo_root / "demos_out_go" / "excelize_controls.xlsx"
@@ -37,6 +42,12 @@ def main() -> int:
         ["../drawings/vmlDrawing1.vml"],
         "controls worksheet rel targets",
     )
+    assert_equal(
+        controls["has_shared_strings_part"], True, "controls sharedStrings part"
+    )
+    assert_equal(controls["has_calc_chain_part"], False, "controls calcChain part")
+    assert_equal(controls["has_styles_part"], True, "controls styles part")
+    assert_equal(controls["has_theme_part"], True, "controls theme part")
 
     shared_strings = semantic_parity.fingerprint(
         repo_root / "excelize" / "test" / "SharedStrings.xlsx"
@@ -50,6 +61,16 @@ def main() -> int:
     assert_equal(
         shared_strings["shared_string_items"], 2, "shared_strings item count"
     )
+    assert_equal(
+        shared_strings["has_shared_strings_part"],
+        True,
+        "shared_strings sharedStrings part",
+    )
+    assert_equal(
+        shared_strings["has_calc_chain_part"], False, "shared_strings calcChain part"
+    )
+    assert_equal(shared_strings["has_styles_part"], True, "shared_strings styles part")
+    assert_equal(shared_strings["has_theme_part"], True, "shared_strings theme part")
 
     assert_equal(
         semantic_parity.normalize_rel_target("/xl/sharedStrings.xml"),

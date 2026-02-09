@@ -37,6 +37,9 @@ SCENARIOS: tuple[Scenario, ...] = (
             "x14_conditional_formatting",
             "data_validations",
             "chart_types",
+            "has_shared_strings_part",
+            "has_styles_part",
+            "has_theme_part",
             "workbook_rel_targets",
             "worksheet_rel_targets",
             "drawing_rel_targets",
@@ -59,6 +62,10 @@ SCENARIOS: tuple[Scenario, ...] = (
             "x14_conditional_formatting",
             "data_validations",
             "chart_types",
+            "has_shared_strings_part",
+            "has_calc_chain_part",
+            "has_styles_part",
+            "has_theme_part",
             "workbook_rel_targets",
             "worksheet_rel_targets",
             "drawing_rel_targets",
@@ -82,6 +89,10 @@ SCENARIOS: tuple[Scenario, ...] = (
             "data_validations",
             "cf_rule_types",
             "chart_types",
+            "has_shared_strings_part",
+            "has_calc_chain_part",
+            "has_styles_part",
+            "has_theme_part",
             "workbook_rel_targets",
             "worksheet_rel_targets",
             "drawing_rel_targets",
@@ -104,6 +115,10 @@ SCENARIOS: tuple[Scenario, ...] = (
             "x14_conditional_formatting",
             "data_validations",
             "chart_types",
+            "has_shared_strings_part",
+            "has_calc_chain_part",
+            "has_styles_part",
+            "has_theme_part",
             "workbook_rel_targets",
             "worksheet_rel_targets",
             "drawing_rel_targets",
@@ -117,6 +132,10 @@ SCENARIOS: tuple[Scenario, ...] = (
             "sheet_names",
             "worksheets",
             "shared_string_items",
+            "has_shared_strings_part",
+            "has_calc_chain_part",
+            "has_styles_part",
+            "has_theme_part",
             "workbook_rel_targets",
             "worksheet_rel_targets",
             "drawing_rel_targets",
@@ -209,6 +228,10 @@ def fingerprint(path: Path) -> dict[str, object]:
             if re.fullmatch(r"xl/drawings/_rels/drawing\d+\.xml\.rels", n)
         ]
         workbook_xml = read_text_from_zip(z, "xl/workbook.xml")
+        has_shared_strings_part = "xl/sharedStrings.xml" in names
+        has_calc_chain_part = "xl/calcChain.xml" in names
+        has_styles_part = "xl/styles.xml" in names
+        has_theme_part = "xl/theme/theme1.xml" in names
         workbook_rel_targets: list[str] = []
         worksheet_rel_targets: list[str] = []
         drawing_rel_targets: list[str] = []
@@ -265,6 +288,10 @@ def fingerprint(path: Path) -> dict[str, object]:
             "data_validations": data_validation_count,
             "cf_rule_types": sorted(cf_rule_types),
             "shared_string_items": shared_string_items,
+            "has_shared_strings_part": has_shared_strings_part,
+            "has_calc_chain_part": has_calc_chain_part,
+            "has_styles_part": has_styles_part,
+            "has_theme_part": has_theme_part,
             "form_controls": form_control_count,
             "form_control_types": sorted(form_control_types),
             "chart_types": sorted(chart_types),
