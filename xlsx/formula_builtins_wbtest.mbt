@@ -22201,6 +22201,21 @@ test "formula builtins wb: residual hotspot probes part 75" {
     ),
     content="true",
   )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RANDBETWEEN",
+        [Expr::Number(1.0e20), Expr::Number(1.0e20 + 65536.0)][:],
+        ctx,
+      ) {
+      Number(value) =>
+        value >= trunc_double(1.0e20) && value <= trunc_double(1.0e20 + 65536.0)
+      _ => false
+    },
+    content="true",
+  )
 
   inspect(gammainv_double(0.1, 0.1, 0.1) > 0.0, content="true")
   inspect(gammainv_double(0.9, 0.1, 0.1) > 0.0, content="true")

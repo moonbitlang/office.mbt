@@ -1838,15 +1838,12 @@ fn eval_function(
             if top < bottom {
               Error(formula_error_num)
             } else {
-              let bottom_int = Double::to_int(trunc_double(bottom))
-              let top_int = Double::to_int(trunc_double(top))
-              let range = top_int - bottom_int + 1
-              let rand_value = if range > 0 {
-                rand_state.int(limit=range)
-              } else {
-                0
-              }
-              Number(Double::from_int(rand_value + bottom_int))
+              // Keep sampling overflow-safe for very wide bounds by staying in Double space.
+              let bottom_int = trunc_double(bottom)
+              let top_int = trunc_double(top)
+              let range = top_int - bottom_int + 1.0
+              let rand_value = Double::floor(rand_state.double() * range)
+              Number(bottom_int + rand_value)
             }
           (Err(err), _) => err
           (_, Err(err)) => err

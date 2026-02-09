@@ -4694,6 +4694,34 @@ Commands used:
     - Uncovered lines reduced from `40` to `30` (`-10`).
     - Remaining caret residual: `xlsx/formula_builtins.mbt:1847` (`RANDBETWEEN` overflow fallback).
 
+- [x] 245. Close final caret residual in `xlsx/formula_builtins.mbt` (part 76).
+  - DoD: eliminate the remaining `RANDBETWEEN` overflow-fallback residual while keeping behavior stable for normal and wide numeric bounds.
+  - Delivered:
+    - Refactored `RANDBETWEEN` sampling in `xlsx/formula_builtins.mbt`:
+      - replaced `Int`-range arithmetic (`top_int - bottom_int + 1`) with overflow-safe `Double`-span sampling:
+        - `bottom_int = trunc_double(bottom)`
+        - `top_int = trunc_double(top)`
+        - `rand_value = floor(rand_state.double() * (top_int - bottom_int + 1.0))`
+      - this removes the dead overflow fallback branch and preserves ordered-bound semantics.
+    - Extended wbtest probe block in `xlsx/formula_builtins_wbtest.mbt`:
+      - added wide-range `RANDBETWEEN(1.0e20, 1.0e20 + 65536.0)` assertion to ensure sampled value remains in truncated inclusive bounds.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info --package xlsx && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` changed from `4657/4687` to `4654/4683`.
+    - Caret residual entries for `xlsx/formula_builtins.mbt` are now empty.
+
 ## Active Item
 
-- Next item: **245** (decide whether `RANDBETWEEN` overflow fallback at `xlsx/formula_builtins.mbt:1847` should be removed as dead path, guarded with explicit overflow-safe arithmetic, or covered with deterministic stress input).
+- Next item: **246** (start integration-focused parity hardening by selecting one writer subsystem and adding roundtrip/open-in-Excel regression coverage before further refactors).
