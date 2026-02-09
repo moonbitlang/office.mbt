@@ -2885,6 +2885,43 @@ Commands used:
     - Total uncovered lines reduced from `2468` to `2448`
     - Uncovered file count remains `43`
 
+- [x] 175. Close residuals in `xlsx/read.mbt` (part 5).
+  - DoD: add focused whitebox coverage for worksheet-view and sheet-props read helpers, including malformed-tag and invalid-numeric branches, and reduce residual uncovered lines in `xlsx/read.mbt`.
+  - Delivered:
+    - Extended `xlsx/read_wbtest.mbt` with focused wbtests for:
+      - `parse_sheet_dimension(...)` malformed non-closed tag guard
+      - `parse_sheet_view_pane(...)`:
+        - tag-not-closed guard
+        - invalid `xSplit` / `ySplit` numeric guards
+        - default/no-attr pane branch
+        - full pane attribute parse branch
+      - `parse_sheet_view_selections(...)`:
+        - tag-not-closed guard
+        - default/no-attr selection branch
+        - full selection attribute parse branch
+      - `parse_sheet_views(...)`:
+        - invalid `zoomScale` guard
+        - invalid `workbookViewId` guard
+        - missing `</sheetView>` close-tag guard
+        - non-self-closing view branch parsing pane + selections
+        - missing `workbookViewId` default branch
+      - `parse_sheet_props(...)`:
+        - tab-color-only branch that initializes options when `sheetPr` is absent
+        - indexed/rgb/theme/tint parse branches
+        - invalid tab-color indexed guard
+        - `sheetPr` branch with missing `codeName` path
+  - Validation gates:
+    - `moon test xlsx/read_wbtest.mbt`
+    - `moon test xlsx/read_package_parts_wbtest.mbt`
+    - `moon test xlsx/read_sheet_rel_parts_wbtest.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after186.log`
+  - Coverage delta:
+    - `xlsx/read.mbt` uncovered lines reduced from `304` to `288`
+    - Total uncovered lines reduced from `2448` to `2432`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **175** (move to the next residual hotspot: `xlsx/read.mbt`, part 5).
+- Next item: **176** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 7).

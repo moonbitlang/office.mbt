@@ -722,3 +722,198 @@ test "read wb: x14 validation and icon-set helper guard branches" {
     content="None",
   )
 }
+
+///|
+test "read wb: sheet views and sheet props parser guard branches part 5" {
+  let dimension_err = try? parse_sheet_dimension(
+    "<worksheet><dimension ref=\"A1\"",
+  )
+  inspect(
+    match dimension_err {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "dimension tag not closed"
+      _ => false
+    },
+    content="true",
+  )
+
+  let pane_not_closed = try? parse_sheet_view_pane("<pane ")
+  inspect(
+    match pane_not_closed {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "pane tag not closed"
+      _ => false
+    },
+    content="true",
+  )
+  let pane_bad_xsplit = try? parse_sheet_view_pane("<pane xSplit=\"x\"/>")
+  inspect(
+    match pane_bad_xsplit {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "pane xSplit invalid"
+      _ => false
+    },
+    content="true",
+  )
+  let pane_bad_ysplit = try? parse_sheet_view_pane("<pane ySplit=\"x\"/>")
+  inspect(
+    match pane_bad_ysplit {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "pane ySplit invalid"
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match parse_sheet_view_pane("<pane />") {
+      Some(pane) =>
+        pane.active_pane == "" &&
+        pane.state == "" &&
+        pane.top_left_cell == "" &&
+        pane.x_split == 0.0 &&
+        pane.y_split == 0.0
+      None => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      parse_sheet_view_pane(
+        "<pane activePane=\"bottomRight\" state=\"frozen\" topLeftCell=\"C3\" xSplit=\"1.5\" ySplit=\"2\"/>",
+      ) {
+      Some(pane) =>
+        pane.active_pane == "bottomRight" &&
+        pane.state == "frozen" &&
+        pane.top_left_cell == "C3" &&
+        pane.x_split == 1.5 &&
+        pane.y_split == 2.0
+      None => false
+    },
+    content="true",
+  )
+
+  let selection_not_closed = try? parse_sheet_view_selections("<selection ")
+  inspect(
+    match selection_not_closed {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "selection tag not closed"
+      _ => false
+    },
+    content="true",
+  )
+  let selection_defaults = parse_sheet_view_selections("<selection />")
+  inspect(selection_defaults.length(), content="1")
+  inspect(
+    selection_defaults[0].sqref == "" &&
+    selection_defaults[0].active_cell == "" &&
+    selection_defaults[0].pane == "",
+    content="true",
+  )
+  let selections = parse_sheet_view_selections(
+    "<selection sqref=\"B2\" activeCell=\"B2\" pane=\"topRight\"/>",
+  )
+  inspect(selections.length(), content="1")
+  inspect(
+    selections[0].sqref == "B2" &&
+    selections[0].active_cell == "B2" &&
+    selections[0].pane == "topRight",
+    content="true",
+  )
+
+  let sheet_view_bad_zoom = try? parse_sheet_views(
+    "<sheetViews><sheetView zoomScale=\"x\"/></sheetViews>",
+  )
+  inspect(
+    match sheet_view_bad_zoom {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "sheetView zoomScale invalid"
+      _ => false
+    },
+    content="true",
+  )
+  let sheet_view_bad_id = try? parse_sheet_views(
+    "<sheetViews><sheetView workbookViewId=\"x\"/></sheetViews>",
+  )
+  inspect(
+    match sheet_view_bad_id {
+      Err(XlsxError::InvalidXml(msg~)) =>
+        msg == "sheetView workbookViewId invalid"
+      _ => false
+    },
+    content="true",
+  )
+  let sheet_view_missing_close = try? parse_sheet_views(
+    "<sheetViews><sheetView workbookViewId=\"0\"></sheetViews>",
+  )
+  inspect(
+    match sheet_view_missing_close {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "sheetView close missing"
+      _ => false
+    },
+    content="true",
+  )
+
+  let parsed_views = parse_sheet_views(
+    (
+      #|<sheetViews>
+      #|  <sheetView workbookViewId="2" showRuler="1" view="pageLayout">
+      #|    <pane activePane="topRight" state="frozen" topLeftCell="B2" xSplit="1" ySplit="0"/>
+      #|    <selection sqref="B2" activeCell="B2" pane="topRight"/>
+      #|  </sheetView>
+      #|</sheetViews>
+      #|,
+    ),
+  )
+  inspect(parsed_views.length(), content="1")
+  inspect(
+    match parsed_views[0].show_ruler {
+      Some(v) => v == true
+      None => false
+    },
+    content="true",
+  )
+  inspect(
+    match parsed_views[0].view {
+      Some(v) => v == "pageLayout"
+      None => false
+    },
+    content="true",
+  )
+  inspect(parsed_views[0].workbook_view_id, content="2")
+  inspect(parsed_views[0].pane is Some(_), content="true")
+  inspect(parsed_views[0].selection.length(), content="1")
+
+  let parsed_views_default_id = parse_sheet_views(
+    "<sheetViews><sheetView showRuler=\"1\"/></sheetViews>",
+  )
+  inspect(parsed_views_default_id.length(), content="1")
+  inspect(parsed_views_default_id[0].workbook_view_id, content="0")
+
+  let props_from_tab_color = parse_sheet_props(
+    "<worksheet><tabColor indexed=\"3\" rgb=\"FF112233\" theme=\"4\" tint=\"0.5\"/></worksheet>",
+  )
+  inspect(props_from_tab_color is Some(_), content="true")
+  inspect(
+    match props_from_tab_color {
+      Some(opts) =>
+        opts.tab_color_indexed == Some(3) &&
+        opts.tab_color_rgb == Some("FF112233") &&
+        opts.tab_color_theme == Some(4) &&
+        opts.tab_color_tint == Some(0.5)
+      None => false
+    },
+    content="true",
+  )
+  let tab_color_bad_indexed = try? parse_sheet_props(
+    "<worksheet><tabColor indexed=\"x\"/></worksheet>",
+  )
+  inspect(
+    match tab_color_bad_indexed {
+      Err(XlsxError::InvalidXml(msg~)) => msg == "tabColor indexed invalid"
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      parse_sheet_props("<worksheet><sheetPr published=\"1\"/></worksheet>") {
+      Some(opts) => opts.code_name is None && opts.published == Some(true)
+      None => false
+    },
+    content="true",
+  )
+}
