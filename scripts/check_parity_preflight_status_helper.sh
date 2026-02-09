@@ -13,6 +13,7 @@ payload = json.loads(os.environ["PARITY_PREFLIGHT_JSON"])
 required_keys = [
     "wrapper_preflight",
     "env_helper_preflight",
+    "preflight_status_helper_preflight",
     "docs_preflight",
     "docs_wrapper_coverage_preflight",
     "env",
@@ -24,6 +25,7 @@ env = payload["env"]
 required_env = [
     "SKIP_PARITY_WRAPPER_PREFLIGHT",
     "SKIP_PARITY_ENV_HELPER_PREFLIGHT",
+    "SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT",
     "SKIP_PARITY_DOCS_PREFLIGHT",
     "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
 ]
@@ -35,6 +37,7 @@ PY
 overridden_output="$(
   SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
   SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 \
+  SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 \
   SKIP_PARITY_DOCS_PREFLIGHT=1 \
   SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1 \
   scripts/show_parity_preflight_status.sh --json
@@ -48,6 +51,8 @@ if payload["wrapper_preflight"] != "skipped":
     raise SystemExit("wrapper_preflight did not resolve to skipped")
 if payload["env_helper_preflight"] != "skipped":
     raise SystemExit("env_helper_preflight did not resolve to skipped")
+if payload["preflight_status_helper_preflight"] != "skipped":
+    raise SystemExit("preflight_status_helper_preflight did not resolve to skipped")
 if payload["docs_preflight"] != "skipped":
     raise SystemExit("docs_preflight did not resolve to skipped")
 if payload["docs_wrapper_coverage_preflight"] != "n/a (docs preflight skipped)":
