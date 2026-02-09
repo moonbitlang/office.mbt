@@ -3064,6 +3064,38 @@ Commands used:
     - Total uncovered lines reduced from `2205` to `2164`
     - Uncovered file count remains `38`
 
+- [x] 180. Close residuals in `xlsx/formula_builtins.mbt` (part 11).
+  - DoD: add focused whitebox coverage for remaining reachable helper branches in multinomial/product/average/stdev/variance/trimmean and chi/f-test helpers.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused wbtests for:
+      - `ISLOGICAL` false branch and `SHEET` reference-arg branch
+      - helper edge paths:
+        - `sumsq_values` list-error and scalar-empty paths
+        - `gcd_lcm_collect` recursive list path
+        - `bitwise_number` bool/string/error branches
+        - `multinomial_collect` list/error/bool/string/empty branches
+        - `product_values` list-error/list-bool-empty/scalar-error/scalar-bool/scalar-empty paths
+        - `average_values` and `averagea_values` error/text/bool/empty paths
+        - `stdev_values` error branch and stdeva text/bool/empty handling path
+        - `variance_values` error and text branches
+        - `trimmean_values` empty-number-set guard
+      - statistical test helpers:
+        - `ztest_values` zero-denominator guard
+        - `prob_values` empty-range, invalid-probability, and sum!=1 guards
+        - `chiinv_values` probability==1 fast path
+        - `chitest_values` actual/expected numeric-conversion error forwarding
+        - `ftest_values` left/right zero-variance guards
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze --package xlsx > /tmp/mbtexcel_uncovered_after191.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `101` to `67`
+    - Total uncovered lines reduced from `2164` to `2130`
+    - Uncovered file count remains `38`
+
 ## Active Item
 
-- Next item: **180** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 11).
+- Next item: **181** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 12).

@@ -5159,3 +5159,399 @@ test "formula builtins wb: distribution helper guard branches part 10" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: stats and chi/f helper branches part 11" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_bool(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ISLOGICAL",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      false,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SHEET",
+        [Expr::Range("", "A1", "A1")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      sumsq_values(
+        [FormulaValue::List([FormulaValue::Error(formula_error_na)])][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(sumsq_values([FormulaValue::Empty][:]), 0.0),
+    content="true",
+  )
+
+  let gcd_numbers : Array[Double] = []
+  inspect(
+    match
+      gcd_lcm_collect(
+        FormulaValue::List([FormulaValue::Number(3.0)]),
+        gcd_numbers,
+        false,
+      ) {
+      Ok(_) => gcd_numbers.length() == 1 && gcd_numbers[0] == 3.0
+      Err(_) => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match bitwise_number(FormulaValue::Bool(true)) {
+      Ok(num) => num == 1.0
+      Err(_) => false
+    },
+    content="true",
+  )
+  inspect(
+    match bitwise_number(FormulaValue::String("2")) {
+      Ok(num) => num == 2.0
+      Err(_) => false
+    },
+    content="true",
+  )
+  inspect(
+    match bitwise_number(FormulaValue::Error(formula_error_na)) {
+      Ok(_) => false
+      Err(err) => is_formula_error(err, formula_error_na)
+    },
+    content="true",
+  )
+
+  let multinomial_numbers1 : Array[Double] = []
+  inspect(
+    match
+      multinomial_collect(
+        FormulaValue::List([FormulaValue::Number(2.0)]),
+        multinomial_numbers1,
+      ) {
+      Ok(_) =>
+        multinomial_numbers1.length() == 1 && multinomial_numbers1[0] == 2.0
+      Err(_) => false
+    },
+    content="true",
+  )
+  let multinomial_numbers2 : Array[Double] = []
+  inspect(
+    match
+      multinomial_collect(
+        FormulaValue::Error(formula_error_na),
+        multinomial_numbers2,
+      ) {
+      Ok(_) => false
+      Err(err) => is_formula_error(err, formula_error_na)
+    },
+    content="true",
+  )
+  let multinomial_numbers3 : Array[Double] = []
+  inspect(
+    match multinomial_collect(FormulaValue::Bool(true), multinomial_numbers3) {
+      Ok(_) =>
+        multinomial_numbers3.length() == 1 && multinomial_numbers3[0] == 1.0
+      Err(_) => false
+    },
+    content="true",
+  )
+  let multinomial_numbers4 : Array[Double] = []
+  inspect(
+    match multinomial_collect(FormulaValue::String("2"), multinomial_numbers4) {
+      Ok(_) =>
+        multinomial_numbers4.length() == 1 && multinomial_numbers4[0] == 2.0
+      Err(_) => false
+    },
+    content="true",
+  )
+  let multinomial_numbers5 : Array[Double] = []
+  inspect(
+    match multinomial_collect(FormulaValue::Empty, multinomial_numbers5) {
+      Ok(_) => multinomial_numbers5.length() == 0
+      Err(_) => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      product_values(
+        [FormulaValue::List([FormulaValue::Error(formula_error_na)])][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      product_values(
+        [FormulaValue::List([FormulaValue::Bool(true), FormulaValue::Empty])][:],
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      product_values([FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(product_values([FormulaValue::Bool(false)][:]), 0.0),
+    content="true",
+  )
+  inspect(
+    is_formula_number(product_values([FormulaValue::Empty][:]), 1.0),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      average_values([FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      average_values(
+        [
+          FormulaValue::String("2"),
+          FormulaValue::Bool(true),
+          FormulaValue::Empty,
+        ][:],
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      averagea_values([FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      averagea_values([FormulaValue::String("2"), FormulaValue::Empty][:]),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      stdev_values(false, [FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      stdev_values(
+        true,
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Bool(true),
+          FormulaValue::String("TRUE"),
+          FormulaValue::String("2"),
+          FormulaValue::String("abc"),
+          FormulaValue::Empty,
+        ][:],
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      variance_values([FormulaValue::Error(formula_error_na)][:], true, false),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      variance_values(
+        [FormulaValue::String("TRUE"), FormulaValue::String("2")][:],
+        false,
+        true,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      trimmean_values(
+        [FormulaValue::String("abc"), FormulaValue::Number(0.2)][:],
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      ztest_values(
+        [
+          FormulaValue::List([
+            FormulaValue::Number(1.0),
+            FormulaValue::Number(1.0),
+          ]),
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(0.0),
+        ][:],
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      prob_values(
+        [
+          FormulaValue::List([]),
+          FormulaValue::List([]),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      prob_values(
+        [
+          FormulaValue::List([FormulaValue::Number(1.0)]),
+          FormulaValue::List([FormulaValue::Number(2.0)]),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      prob_values(
+        [
+          FormulaValue::List([FormulaValue::Number(1.0)]),
+          FormulaValue::List([FormulaValue::Number(0.5)]),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      chiinv_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)][:]),
+      0.0,
+    ),
+    content="true",
+  )
+
+  let args_a : Array[Expr] = [
+    Expr::List([Expr::String("x"), Expr::Number(1.0)]),
+    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+  ]
+  let values_a : Array[FormulaValue] = [
+    FormulaValue::List([
+      FormulaValue::Error(formula_error_na),
+      FormulaValue::Number(1.0),
+    ]),
+    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
+  ]
+  inspect(
+    is_formula_error(
+      chitest_values(workbook, "Sheet1", args_a[:], values_a[:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  let args_b : Array[Expr] = [
+    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+    Expr::List([Expr::String("x"), Expr::Number(1.0)]),
+  ]
+  let values_b : Array[FormulaValue] = [
+    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
+    FormulaValue::List([
+      FormulaValue::Error(formula_error_na),
+      FormulaValue::Number(1.0),
+    ]),
+  ]
+  inspect(
+    is_formula_error(
+      chitest_values(workbook, "Sheet1", args_b[:], values_b[:], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  let args_c : Array[Expr] = [
+    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+    Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+  ]
+  let values_c : Array[FormulaValue] = [
+    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
+    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
+  ]
+  inspect(
+    is_formula_error(
+      ftest_values(workbook, "Sheet1", args_c[:], values_c[:], ctx),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  let args_d : Array[Expr] = [
+    Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+  ]
+  let values_d : Array[FormulaValue] = [
+    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
+    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
+  ]
+  inspect(
+    is_formula_error(
+      ftest_values(workbook, "Sheet1", args_d[:], values_d[:], ctx),
+      formula_error_div,
+    ),
+    content="true",
+  )
+}
