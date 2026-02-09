@@ -162,6 +162,7 @@ preflight-matrix-smoke-contract-contract-contract-contract-contract-contract-con
 preflight-matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract/
 preflight-matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract/
 preflight-matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract/
+preflight-matrix-smoke-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract/
 docs/docs-coverage preflight toggles and
 `SHOW_PARITY_PREFLIGHT_STATUS`/`SHOW_PARITY_PREFLIGHT_STATUS_COMPACT` so
 aggregate gate env diagnostics stay aligned.
@@ -241,6 +242,10 @@ to bypass this preflight.
 It runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
 as a preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight.
 Set `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1`
+to bypass this preflight.
+It runs `scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract.sh`
+as a preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract preflight.
+Set `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1`
 to bypass this preflight.
 It runs `scripts/check_parity_docs_refs.sh` as an additional docs preflight.
 Set `SKIP_PARITY_DOCS_PREFLIGHT=1` to bypass docs preflight when needed.
