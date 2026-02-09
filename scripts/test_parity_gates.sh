@@ -13,6 +13,7 @@ SKIP_PREFLIGHT_STATUS_HELPER_PREFLIGHT="${SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PR
 SKIP_GATE_TOGGLE_PREFLIGHT="${SKIP_PARITY_GATE_TOGGLE_PREFLIGHT:-0}"
 SKIP_GATE_TOGGLE_CONTRACT_PREFLIGHT="${SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT:-0}"
 SHOW_PREFLIGHT_STATUS="${SHOW_PARITY_PREFLIGHT_STATUS:-0}"
+SHOW_PREFLIGHT_STATUS_COMPACT="${SHOW_PARITY_PREFLIGHT_STATUS_COMPACT:-0}"
 
 echo "Parity gate configuration:"
 echo "- PARITY_JSON_REPORT=${PARITY_JSON_REPORT}"
@@ -24,6 +25,7 @@ echo "- SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=${SKIP_PREFLIGHT_STATUS_HE
 echo "- SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=${SKIP_GATE_TOGGLE_PREFLIGHT}"
 echo "- SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=${SKIP_GATE_TOGGLE_CONTRACT_PREFLIGHT}"
 echo "- SHOW_PARITY_PREFLIGHT_STATUS=${SHOW_PREFLIGHT_STATUS}"
+echo "- SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=${SHOW_PREFLIGHT_STATUS_COMPACT}"
 echo "- SHOW_PARITY_ENV=${SHOW_PARITY_ENV:-0}"
 echo "- SEMANTIC_PARITY_ARGS=${SEMANTIC_PARITY_ARGS:-<unset>}"
 echo "- SEMANTIC_PARITY_SUMMARY_ARGS=${SEMANTIC_PARITY_SUMMARY_ARGS:-<unset>}"
@@ -32,12 +34,31 @@ case "$SHOW_PREFLIGHT_STATUS" in
   0)
     ;;
   1)
+    if [[ "$SHOW_PREFLIGHT_STATUS_COMPACT" == "1" ]]; then
+      echo "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 requires SHOW_PARITY_PREFLIGHT_STATUS=json"
+      exit 2
+    elif [[ "$SHOW_PREFLIGHT_STATUS_COMPACT" != "0" ]]; then
+      echo "Invalid SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=${SHOW_PREFLIGHT_STATUS_COMPACT} (expected 0 or 1)"
+      exit 2
+    fi
     echo "==> preflight status resolution"
     scripts/show_parity_preflight_status.sh
     ;;
   json)
-    echo "==> preflight status resolution (json)"
-    scripts/show_parity_preflight_status.sh --json
+    case "$SHOW_PREFLIGHT_STATUS_COMPACT" in
+      0)
+        echo "==> preflight status resolution (json)"
+        scripts/show_parity_preflight_status.sh --json
+        ;;
+      1)
+        echo "==> preflight status resolution (json, compact)"
+        scripts/show_parity_preflight_status.sh --json --compact
+        ;;
+      *)
+        echo "Invalid SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=${SHOW_PREFLIGHT_STATUS_COMPACT} (expected 0 or 1)"
+        exit 2
+        ;;
+    esac
     ;;
   *)
     echo "Invalid SHOW_PARITY_PREFLIGHT_STATUS=${SHOW_PREFLIGHT_STATUS} (expected 0, 1, or json)"

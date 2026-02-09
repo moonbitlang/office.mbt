@@ -23,6 +23,7 @@ required_keys = [
     "SKIP_PARITY_DOCS_PREFLIGHT",
     "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
     "SHOW_PARITY_PREFLIGHT_STATUS",
+    "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT",
 ]
 missing = [k for k in required_keys if k not in payload]
 if missing:

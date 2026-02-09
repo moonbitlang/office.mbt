@@ -153,7 +153,8 @@ Use `scripts/show_parity_env.sh` to print current override values in CI logs.
 Use `scripts/show_parity_env.sh --json` for machine-readable CI parsing.
 The helper includes wrapper/env-helper/preflight-status-helper/gate-toggle/
 gate-toggle-contract/docs/docs-coverage preflight toggles and
-`SHOW_PARITY_PREFLIGHT_STATUS` so aggregate gate env diagnostics stay aligned.
+`SHOW_PARITY_PREFLIGHT_STATUS`/`SHOW_PARITY_PREFLIGHT_STATUS_COMPACT` so
+aggregate gate env diagnostics stay aligned.
 Use `scripts/show_parity_preflight_status.sh` to print the effective preflight
 resolution from current env toggles.
 Use `scripts/show_parity_preflight_status.sh --json --compact` for single-line
@@ -192,6 +193,8 @@ Set `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1` to bypass wrapper-coverage preflight
 The script prints active parity-related env toggles at startup.
 Set `SHOW_PARITY_PREFLIGHT_STATUS=1` (or `json`) to print effective preflight
 resolution via `scripts/show_parity_preflight_status.sh` during gate startup.
+Set `SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1` (with
+`SHOW_PARITY_PREFLIGHT_STATUS=json`) to emit compact one-line JSON status.
 For compact, single-line status logs, run
 `scripts/show_parity_preflight_status.sh --json --compact`.
 

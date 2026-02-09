@@ -47,6 +47,11 @@ payload = {
         "default": "0",
         "options": "0|1|json",
     },
+    "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT": {
+        "value": os.getenv("SHOW_PARITY_PREFLIGHT_STATUS_COMPACT"),
+        "default": "0",
+        "options": "0|1",
+    },
 }
 
 print(json.dumps(payload, indent=2, sort_keys=False))
@@ -67,3 +72,4 @@ echo "- SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=${SKIP_PARITY_GATE_TOGGLE_CON
 echo "- SKIP_PARITY_DOCS_PREFLIGHT=${SKIP_PARITY_DOCS_PREFLIGHT:-<unset>} (default: 0)"
 echo "- SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=${SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT:-<unset>} (default: 0)"
 echo "- SHOW_PARITY_PREFLIGHT_STATUS=${SHOW_PARITY_PREFLIGHT_STATUS:-<unset>} (default: 0; options: 0|1|json)"
+echo "- SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=${SHOW_PARITY_PREFLIGHT_STATUS_COMPACT:-<unset>} (default: 0; options: 0|1)"

@@ -6396,4 +6396,28 @@ Commands used:
 
 ## Active Item
 
-- Next item: **336** (add aggregate gate toggle to print compact preflight status JSON).
+- [x] 336. Add aggregate gate toggle to print compact preflight status JSON.
+  - DoD: enable compact preflight-status JSON emission directly from aggregate
+    gate startup flow with explicit env toggle controls.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - adds `SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1` toggle
+      - supports compact JSON output when `SHOW_PARITY_PREFLIGHT_STATUS=json`
+      - validates invalid toggle combinations/values with exit code `2`
+    - Updated `scripts/show_parity_env.sh`:
+      - includes `SHOW_PARITY_PREFLIGHT_STATUS_COMPACT` in plain/JSON output
+    - Updated env helper regression checker required keys:
+      - `scripts/check_parity_env_helper.sh`
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 scripts/show_parity_env.sh --json`
+    - `SHOW_PARITY_PREFLIGHT_STATUS=json SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `SHOW_PARITY_PREFLIGHT_STATUS=1 SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **337** (extend aggregate gate contract checks for compact preflight toggle behavior).
