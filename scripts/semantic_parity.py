@@ -417,6 +417,11 @@ def main() -> int:
         action="store_true",
         help="Print per-scenario comparison durations.",
     )
+    parser.add_argument(
+        "--sort-scenarios",
+        action="store_true",
+        help="Run selected scenarios in alphabetical order.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -435,6 +440,8 @@ def main() -> int:
     if args.scenario:
         keep = set(args.scenario)
         selected = tuple(s for s in SCENARIOS if s.name in keep)
+    if args.sort_scenarios:
+        selected = tuple(sorted(selected, key=lambda scenario: scenario.name))
 
     print(f"Excelize output source: {excelize_source}")
     all_mismatches: list[str] = []

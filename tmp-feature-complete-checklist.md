@@ -5229,4 +5229,17 @@ Commands used:
 
 ## Active Item
 
-- Next item: **269** (add sorted-scenario execution support to semantic parity CLI for deterministic custom subsets in CI).
+- [x] 269. Add sorted-scenario execution support for deterministic custom subsets.
+  - DoD: allow semantic parity runs to execute selected scenarios in a deterministic sorted order.
+  - Delivered:
+    - Added `--sort-scenarios` flag to `scripts/semantic_parity.py`.
+    - When enabled, selected scenarios are executed in alphabetical name order.
+    - Documented `--sort-scenarios` usage in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh --scenario shared_strings --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **270** (add parity-run metadata banner with selected scenarios and output dirs for clearer CI diagnostics).
