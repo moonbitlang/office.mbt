@@ -193,6 +193,9 @@ Use this quick map when choosing a parity command:
 - `scripts/test_parity_gates.sh`:
   - full parity gate: semantic parity + demo roundtrip/openxml checks
 
+Use `scripts/check_parity_wrappers.sh` to verify wrapper script presence and
+execute bits in local/CI environments.
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the

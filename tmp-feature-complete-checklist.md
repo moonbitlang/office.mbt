@@ -5689,4 +5689,18 @@ Commands used:
 
 ## Active Item
 
-- Next item: **297** (add lightweight parity-wrapper self-check script to verify key wrapper scripts are executable and discoverable).
+- [x] 297. Add parity-wrapper self-check script.
+  - DoD: provide a quick check that key parity wrapper scripts exist and are executable.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_wrappers.sh`
+    - Script validates presence + execute bit for core parity wrappers and reports `[OK]`/`[MISSING]`/`[NOT EXECUTABLE]`.
+    - Added docs note to `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/check_parity_wrappers.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **298** (add parity-wrapper self-check option to emit machine-readable JSON for CI diagnostics).
