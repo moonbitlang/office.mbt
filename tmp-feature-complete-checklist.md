@@ -6014,4 +6014,24 @@ Commands used:
 
 ## Active Item
 
-- Next item: **319** (add a lightweight script to print effective aggregate preflight status resolution from env toggles only).
+- [x] 319. Add helper to show effective aggregate preflight resolution.
+  - DoD: provide a lightweight command that resolves aggregate preflight statuses from env toggles only.
+  - Delivered:
+    - Added executable script:
+      - `scripts/show_parity_preflight_status.sh`
+    - Script prints effective status for:
+      - wrapper preflight
+      - docs preflight
+      - docs-wrapper-coverage preflight (including n/a when docs preflight is skipped)
+    - Added docs references in:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `scripts/show_parity_preflight_status.sh`
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/show_parity_preflight_status.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **320** (add parity preflight status helper JSON mode for CI parsers).
