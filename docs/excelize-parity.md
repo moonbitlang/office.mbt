@@ -241,11 +241,13 @@ Use `scripts/check_parity_env_helper.sh` to run regression checks for
 Use `scripts/check_parity_preflight_status_helper.sh` to run regression checks
 for `scripts/show_parity_preflight_status.sh` contract behavior.
 Use `scripts/check_parity_gate_skip_toggles.sh` to enforce skip-toggle key
-consistency across aggregate-gate scripts/helpers.
+consistency across aggregate-gate scripts and helpers.
 Use `scripts/check_parity_gate_skip_toggles.sh --json` for machine-readable
 consistency output in CI pipelines.
 Use `scripts/check_parity_gate_skip_toggles_contract.sh` to validate skip-toggle
 checker CLI contract (`--json` schema + invalid-arg behavior).
+Use `scripts/check_parity_gate_show_toggles.sh` to validate aggregate gate
+show-toggle contract behavior for compact preflight status output.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

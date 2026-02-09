@@ -26,6 +26,7 @@ wrappers=(
   "scripts/check_parity_preflight_status_helper.sh"
   "scripts/check_parity_gate_skip_toggles.sh"
   "scripts/check_parity_gate_skip_toggles_contract.sh"
+  "scripts/check_parity_gate_show_toggles.sh"
   "scripts/show_parity_env.sh"
 )
 

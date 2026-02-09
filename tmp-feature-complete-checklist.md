@@ -6420,4 +6420,29 @@ Commands used:
 
 ## Active Item
 
-- Next item: **337** (extend aggregate gate contract checks for compact preflight toggle behavior).
+- [x] 337. Extend aggregate gate contract checks for compact preflight toggle behavior.
+  - DoD: enforce aggregate gate show-toggle contract invariants around compact
+    preflight-status output without invoking full heavy gate paths.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_gate_show_toggles.sh`
+    - Contract checker validates:
+      - required compact-toggle handling patterns exist in `scripts/test_parity_gates.sh`
+      - compact-without-json guard exits `2` with expected message
+      - invalid compact toggle value exits `2` with expected message
+    - Added script to wrapper/doc coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_gate_show_toggles.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **338** (wire aggregate gate show-toggle contract check into preflight flow).
