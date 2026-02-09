@@ -7199,3 +7199,175 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: reference and aggregate dispatch happy paths part 18" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  sheet.set_cell_formula("B2", "SUM(1,2)", value="3")
+
+  let ctx = CalcContext::new()
+  ctx.current_ref = "C5"
+
+  inspect(
+    is_formula_number(eval_function(workbook, "Sheet1", "ROW", [][:], ctx), 5.0),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "ROW", [Expr::Cell("", "B7")][:], ctx),
+      7.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROW",
+        [Expr::Range("", "D2", "A9")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "COLUMN", [][:], ctx),
+      3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COLUMN",
+        [Expr::Cell("", "B7")][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COLUMN",
+        [Expr::Range("", "D2", "A9")][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROWS",
+        [Expr::Range("", "D2", "A9")][:],
+        ctx,
+      ),
+      8.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COLUMNS",
+        [Expr::Range("", "D2", "A9")][:],
+        ctx,
+      ),
+      4.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FORMULATEXT",
+        [Expr::Cell("", "B2")][:],
+        ctx,
+      ),
+      "SUM(1,2)",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FORMULATEXT",
+        [Expr::Range("", "B2", "C2")][:],
+        ctx,
+      ),
+      "SUM(1,2)",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FORMULATEXT",
+        [Expr::Cell("", "C3")][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBTOTAL",
+        [Expr::Number(9.0), Expr::Number(2.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+      5.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "AGGREGATE",
+        [
+          Expr::Number(9.0),
+          Expr::Number(0.0),
+          Expr::Number(2.0),
+          Expr::Number(3.0),
+        ][:],
+        ctx,
+      ),
+      5.0,
+    ),
+    content="true",
+  )
+}
