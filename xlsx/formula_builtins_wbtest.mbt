@@ -10130,3 +10130,410 @@ test "formula builtins wb: distribution and finance alias dispatch part 25" {
     )
   }
 }
+
+///|
+test "formula builtins wb: complex function dispatch branches part 26" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMABS", [Expr::String("1+2i")][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMABS", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMABS",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMAGINARY",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMAGINARY", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMARGUMENT",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMARGUMENT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMCONJUGATE",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCONJUGATE", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMCOS", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCOS", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMCOSH",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCOSH", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMCOT", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCOT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCSC", [Expr::String("0")][:], ctx),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMCSC", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCSC", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCSCH", [Expr::String("0")][:], ctx),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMCSCH",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMCSCH", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMDIV",
+        [Expr::String("1+2i"), Expr::String("0")][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMDIV",
+        [Expr::String("1+2i"), Expr::String("1+i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMDIV", [Expr::String("1+2i")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMDIV",
+        [Expr::FuncCall("NA", []), Expr::String("1+i")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMEXP", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMEXP", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMLN", [Expr::String("0")][:], ctx),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "IMLN", [Expr::String("1+2i")][:], ctx) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMLN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMLOG10", [Expr::String("0")][:], ctx),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMLOG10",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMLOG10", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMLOG2", [Expr::String("0")][:], ctx),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMLOG2",
+        [Expr::String("1+2i")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "IMLOG2", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPOWER",
+        [Expr::String("0"), Expr::String("0")][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPOWER",
+        [Expr::String("1+i"), Expr::String("2")][:],
+        ctx,
+      ) {
+      String(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPOWER",
+        [Expr::String("1+i")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPOWER",
+        [Expr::FuncCall("NA", []), Expr::String("2")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+}
