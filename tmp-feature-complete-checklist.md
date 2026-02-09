@@ -6073,4 +6073,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **322** (add preflight-status toggle visibility to parity env helper).
+- [x] 322. Add preflight-status toggle visibility to parity env helper.
+  - DoD: include `SHOW_PARITY_PREFLIGHT_STATUS` in parity env diagnostics output.
+  - Delivered:
+    - Updated `scripts/show_parity_env.sh`:
+      - prints `SHOW_PARITY_PREFLIGHT_STATUS` value
+      - documents supported values (`0|1|json`) in default hint text
+    - Updated `docs/excelize-parity.md` helper note to mention
+      `SHOW_PARITY_PREFLIGHT_STATUS` alignment.
+  - Validation gates:
+    - `SHOW_PARITY_PREFLIGHT_STATUS=json scripts/show_parity_env.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **323** (add JSON mode to parity env helper for CI parsing).
