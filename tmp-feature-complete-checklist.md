@@ -6157,4 +6157,29 @@ Commands used:
 
 ## Active Item
 
-- Next item: **326** (add regression checker for preflight status helper contract).
+- [x] 326. Add regression checker for preflight status helper contract.
+  - DoD: enforce `show_parity_preflight_status.sh` JSON/interface stability with
+    a repeatable checker script.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_preflight_status_helper.sh`
+    - Regression checker validates:
+      - default `--json` output parses and contains required keys/env fields
+      - overridden skip env values resolve expected status strings
+      - invalid args return exit code `2` and expected usage text
+    - Added script to wrapper/doc coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_preflight_status_helper.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **327** (wire preflight-status helper regression check into aggregate gate preflight).
