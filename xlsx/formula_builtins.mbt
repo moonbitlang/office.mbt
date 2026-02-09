@@ -4255,9 +4255,10 @@ fn eval_function(
             return Error(formula_error_value)
           }
           if array_range.rows == 1 || array_range.cols == 1 {
-            let lookup_vec = match range_vector(array_range) {
-              Some(list) => list
-              None => return Error(formula_error_na)
+            let lookup_vec = if array_range.rows == 1 {
+              range_row_required(array_range, 0)
+            } else {
+              range_column_required(array_range, 0)
             }
             let idx = match lookup_best_index(lookup, lookup_vec) {
               Ok(value) => value
@@ -4269,35 +4270,22 @@ fn eval_function(
             }
           } else {
             let use_cols = array_range.rows >= array_range.cols
-            let lookup_vec = if use_cols {
-              range_column(array_range, 0)
+            let lookup_list = if use_cols {
+              range_column_required(array_range, 0)
             } else {
-              range_row(array_range, 0)
+              range_row_required(array_range, 0)
             }
-            let result_vec = if use_cols {
-              range_column(array_range, array_range.cols - 1)
+            let result_list = if use_cols {
+              range_column_required(array_range, array_range.cols - 1)
             } else {
-              range_row(array_range, array_range.rows - 1)
-            }
-            let lookup_list = match lookup_vec {
-              Some(list) => list
-              None => return Error(formula_error_na)
-            }
-            let result_list = match result_vec {
-              Some(list) => list
-              None => return Error(formula_error_na)
+              range_row_required(array_range, array_range.rows - 1)
             }
             let idx = match lookup_best_index(lookup, lookup_list) {
               Ok(value) => value
               Err(err) => return err
             }
             match idx {
-              Some(i) =>
-                if i >= result_list.length() {
-                  Error(formula_error_na)
-                } else {
-                  result_list[i]
-                }
+              Some(i) => result_list[i]
               None => Error(formula_error_na)
             }
           }
@@ -4400,14 +4388,10 @@ fn eval_function(
         if !is_row && !is_col {
           return Error(formula_error_value)
         }
-        let lookup_list = if is_row {
-          range_row(lookup_range, 0)
+        let lookup_values = if is_row {
+          range_row_required(lookup_range, 0)
         } else {
-          range_column(lookup_range, 0)
-        }
-        let lookup_values = match lookup_list {
-          Some(list) => list
-          None => return Error(formula_error_value)
+          range_column_required(lookup_range, 0)
         }
         let match_idx = match
           xlookup_find_index(lookup, lookup_values, match_mode, search_mode) {
@@ -4425,10 +4409,7 @@ fn eval_function(
           if return_range.rows == 1 {
             return_range.values[idx]
           } else {
-            match range_column(return_range, idx) {
-              Some(list) => List(list)
-              None => Error(formula_error_value)
-            }
+            List(range_column_required(return_range, idx))
           }
         } else {
           if return_range.rows != lookup_range.rows {
@@ -4437,10 +4418,7 @@ fn eval_function(
           if return_range.cols == 1 {
             return_range.values[idx * return_range.cols]
           } else {
-            match range_row(return_range, idx) {
-              Some(list) => List(list)
-              None => Error(formula_error_value)
-            }
+            List(range_row_required(return_range, idx))
           }
         }
       } else {
@@ -4990,6 +4968,19 @@ fn eval_function(
         Error(formula_error_name)
       }
   }
+}
+
+///|
+fn range_column_required(
+  range : RangeValues,
+  index : Int,
+) -> Array[FormulaValue] {
+  range_column(range, index).unwrap_or([])
+}
+
+///|
+fn range_row_required(range : RangeValues, index : Int) -> Array[FormulaValue] {
+  range_row(range, index).unwrap_or([])
 }
 
 ///|
