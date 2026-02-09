@@ -6,8 +6,12 @@ cd "$ROOT_DIR"
 
 PARITY_JSON_REPORT="${PARITY_JSON_REPORT:-_build/semantic_parity/report.json}"
 
-echo "==> parity wrapper preflight"
-scripts/check_parity_wrappers.sh
+if [[ "${SKIP_PARITY_WRAPPER_PREFLIGHT:-0}" == "1" ]]; then
+  echo "==> parity wrapper preflight (skipped)"
+else
+  echo "==> parity wrapper preflight"
+  scripts/check_parity_wrappers.sh
+fi
 
 echo "==> semantic parity"
 scripts/test_semantic_parity.sh --json-report "$PARITY_JSON_REPORT"

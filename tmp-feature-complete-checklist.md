@@ -5733,4 +5733,18 @@ Commands used:
 
 ## Active Item
 
-- Next item: **300** (add optional env toggle to skip wrapper preflight in aggregate gate when CI already guarantees script integrity).
+- [x] 300. Add env toggle to skip wrapper preflight in aggregate gate.
+  - DoD: allow aggregate parity gate to bypass wrapper preflight when desired.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - `SKIP_PARITY_WRAPPER_PREFLIGHT=1` skips `check_parity_wrappers.sh`
+      - default remains preflight enabled.
+    - Updated docs in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **301** (add parity gate env diagnostics line in aggregate script so active toggles are visible at start of run).
