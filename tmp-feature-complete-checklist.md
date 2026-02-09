@@ -3480,6 +3480,31 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3086/4748` to `3218/4748` (`+132` lines).
 
+- [x] 198. Close residuals in `xlsx/formula_builtins.mbt` (part 29).
+  - DoD: reduce uncovered dispatch branches in the rounding/division section (`TRUNC` through `QUOTIENT`).
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused wrapper tests for:
+      - `TRUNC`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`
+      - `SQRT`, `POWER`
+      - `EVEN`, `ODD`
+      - `MROUND`, `MOD`, `QUOTIENT`
+    - Added both happy-path numeric and guard/error paths to cover:
+      - arity validation (`#VALUE!`)
+      - conversion forwarding (`#N/A`)
+      - domain errors (`#NUM!`, `#DIV/0!`)
+      - sign-sensitive rounding branches in `EVEN`/`ODD`/`MROUND`.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3218/4748` to `3287/4748` (`+69` lines).
+
 ## Active Item
 
-- Next item: **198** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 29, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **199** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 30, using wbtest-targeted coverage summary as the comparable metric).

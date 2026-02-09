@@ -11549,3 +11549,569 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: rounding and division dispatch branches part 29" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "TRUNC", [Expr::Number(1.29)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRUNC",
+        [Expr::Number(1.29), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      1.2,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRUNC",
+        [Expr::Number(1.29), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRUNC",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRUNC",
+        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUND",
+        [Expr::Number(1.24), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      1.2,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUND",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUND",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ROUND", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDUP",
+        [Expr::Number(1.21), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      1.3,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDUP",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDUP",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ROUNDUP", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDDOWN",
+        [Expr::Number(1.29), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      1.2,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDDOWN",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDDOWN",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROUNDDOWN",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "SQRT", [Expr::Number(4.0)][:], ctx),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SQRT", [Expr::Number(-1.0)][:], ctx),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SQRT",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "SQRT", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "POWER",
+        [Expr::Number(2.0), Expr::Number(3.0)][:],
+        ctx,
+      ),
+      8.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "POWER",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "POWER",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "POWER", [Expr::Number(1.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "EVEN", [Expr::Number(1.2)][:], ctx),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "EVEN", [Expr::Number(-1.2)][:], ctx),
+      -2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EVEN",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "EVEN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "ODD", [Expr::Number(0.0)][:], ctx),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "ODD", [Expr::Number(2.2)][:], ctx),
+      3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "ODD", [Expr::Number(-2.2)][:], ctx),
+      -3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ODD",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ODD", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MROUND",
+        [Expr::Number(2.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MROUND",
+        [Expr::Number(-2.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MROUND",
+        [Expr::Number(3.2), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      4.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MROUND",
+        [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MROUND",
+        [Expr::Number(2.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MROUND", [Expr::Number(2.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MOD",
+        [Expr::Number(2.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MOD",
+        [Expr::Number(5.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      1.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MOD",
+        [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MOD",
+        [Expr::Number(2.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MOD", [Expr::Number(2.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUOTIENT",
+        [Expr::Number(2.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUOTIENT",
+        [Expr::Number(5.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUOTIENT",
+        [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "QUOTIENT",
+        [Expr::Number(2.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "QUOTIENT", [Expr::Number(2.0)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+}
