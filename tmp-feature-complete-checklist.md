@@ -3345,6 +3345,30 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `2354/4748` to `2383/4748` (`+29` lines).
 
+- [x] 192. Close residuals in `xlsx/formula_builtins.mbt` (part 23).
+  - DoD: reduce uncovered guard and error-forwarding branches in engineering/matrix/radix-conversion dispatch wrappers.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a focused dispatch-guard block covering:
+      - combinatorics/matrix guards: `COMBIN`, `COMBINA`, `COMPLEX`, `FACT`, `FACTDOUBLE`, `MDETERM`, `MINVERSE`, `MMULT`, `MUNIT`, `TRANSPOSE`
+      - permutation/number wrapper guards: `PERMUT`, `PERMUTATIONA`, `ABS`, `INT`, `LN`, `EXP`
+      - radix/text conversion guards: `DECIMAL`, `ROMAN`, `ARABIC`, `BIN2*`, `HEX2*`, `OCT2*`
+      - Bessel/error-function guard paths: `BESSELI`, `BESSELJ`, `BESSELK`, `BESSELY`, `DELTA`, `ERF`, `ERF.PRECISE`, `ERFC`, `ERFC.PRECISE`
+    - Added explicit matrix fixtures to hit:
+      - singular inverse error branch (`MINVERSE`)
+      - non-numeric matrix conversion error branch (`MDETERM`)
+      - scalar multiply branch (`MMULT`)
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `2383/4748` to `2502/4748` (`+119` lines).
+
 ## Active Item
 
-- Next item: **192** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 23, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **193** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 24, using wbtest-targeted coverage summary as the comparable metric).
