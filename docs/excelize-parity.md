@@ -124,6 +124,12 @@ To print a compact human summary from a JSON report:
 python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json
 ```
 
+For a one-command flow (generate report + print summary):
+
+```sh
+scripts/test_semantic_parity_report.sh
+```
+
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
 ```sh

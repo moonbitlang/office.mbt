@@ -5358,4 +5358,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **277** (add a convenience shell wrapper that generates a JSON report and immediately prints the compact summary in one command).
+- [x] 277. Add one-command semantic parity report + summary wrapper.
+  - DoD: provide a single command that runs semantic parity with JSON report output and then prints the compact summary.
+  - Delivered:
+    - Added executable wrapper:
+      - `scripts/test_semantic_parity_report.sh`
+    - Wrapper behavior:
+      - runs `scripts/test_semantic_parity.sh --json-report <path>`
+      - then runs `scripts/semantic_parity_report_summary.py <path>`
+      - supports `SEMANTIC_PARITY_REPORT` env override (default `_build/semantic_parity/report.json`)
+    - Added usage note to:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/test_semantic_parity_report.sh --scenario cf --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **278** (add summary-script support for top-N slow scenarios from JSON reports to aid performance triage).
