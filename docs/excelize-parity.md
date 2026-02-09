@@ -138,6 +138,7 @@ For a one-command flow (generate report + print summary):
 
 ```sh
 scripts/test_semantic_parity_report.sh
+scripts/test_semantic_parity_report_compact.sh
 ```
 
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):

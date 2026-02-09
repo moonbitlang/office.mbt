@@ -5556,4 +5556,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **289** (add semantic parity report-summary wrapper script for compact JSON output to simplify CI log ingestion).
+- [x] 289. Add compact JSON parity report wrapper command.
+  - DoD: provide one command that runs semantic parity and emits compact JSON summary output for CI ingestion.
+  - Delivered:
+    - Added executable wrapper:
+      - `scripts/test_semantic_parity_report_compact.sh`
+    - Wrapper behavior:
+      - runs `scripts/test_semantic_parity.sh --json-report <path>`
+      - emits compact JSON via:
+        - `python3 scripts/semantic_parity_report_summary.py <path> --as-json --compact`
+      - supports `SEMANTIC_PARITY_REPORT` env override.
+    - Added usage note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **290** (add semantic parity wrapper support for passing summary-helper flags through env vars to simplify CI job templates).
