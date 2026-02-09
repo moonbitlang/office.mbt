@@ -5978,4 +5978,16 @@ Commands used:
 
 ## Active Item
 
-- Next item: **316** (add parity env helper coverage for docs-wrapper-coverage skip toggle for complete env diagnostics parity).
+- [x] 316. Add docs-wrapper-coverage skip toggle to parity env helper.
+  - DoD: include `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT` in parity env diagnostics helper output.
+  - Delivered:
+    - Updated `scripts/show_parity_env.sh` with:
+      - `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT` line + default note
+  - Validation gates:
+    - `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1 scripts/show_parity_env.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **317** (add parity docs-reference checker coverage for new wrapper-coverage checker script in aggregate preflight docs notes).
