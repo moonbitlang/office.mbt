@@ -6236,4 +6236,34 @@ Commands used:
 
 ## Active Item
 
-- Next item: **329** (wire skip-toggle consistency checker into aggregate gate preflight).
+- [x] 329. Wire skip-toggle consistency checker into aggregate gate preflight.
+  - DoD: run skip-toggle consistency checks in aggregate preflight by default
+    with explicit skip control and synchronized helper visibility.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - runs `scripts/check_parity_gate_skip_toggles.sh` by default
+      - adds `SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1` skip toggle
+      - prints new toggle in startup env diagnostics
+    - Updated `scripts/show_parity_preflight_status.sh`:
+      - adds `gate_toggle_consistency_preflight` status to plain/JSON output
+      - includes `SKIP_PARITY_GATE_TOGGLE_PREFLIGHT` in JSON env payload
+    - Updated `scripts/show_parity_env.sh`:
+      - includes `SKIP_PARITY_GATE_TOGGLE_PREFLIGHT` in plain/JSON output
+    - Updated regression checkers:
+      - `scripts/check_parity_env_helper.sh` required keys
+      - `scripts/check_parity_preflight_status_helper.sh` required keys and skip-state assertion
+      - `scripts/check_parity_gate_skip_toggles.sh` expected toggle list
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 scripts/show_parity_env.sh --json`
+    - `SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 scripts/show_parity_preflight_status.sh --json`
+    - `SHOW_PARITY_PREFLIGHT_STATUS=json SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **330** (add JSON mode to skip-toggle consistency checker for CI parsing).
