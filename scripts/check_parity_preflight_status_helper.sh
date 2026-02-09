@@ -27,6 +27,7 @@ required_keys = [
     "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_preflight",
     "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_preflight",
     "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight",
+    "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight",
     "docs_preflight",
     "docs_wrapper_coverage_preflight",
     "env",
@@ -52,6 +53,7 @@ required_env = [
     "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT",
     "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT",
     "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT",
+    "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT",
     "SKIP_PARITY_DOCS_PREFLIGHT",
     "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
 ]
@@ -83,6 +85,7 @@ required_keys = [
     "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_preflight",
     "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_preflight",
     "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight",
+    "preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight",
     "docs_preflight",
     "docs_wrapper_coverage_preflight",
     "env",
@@ -109,6 +112,7 @@ overridden_output="$(
   SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 \
   SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 \
   SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 \
+  SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT=1 \
   SKIP_PARITY_DOCS_PREFLIGHT=1 \
   SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1 \
   scripts/show_parity_preflight_status.sh --json
@@ -150,6 +154,8 @@ if payload["preflight_matrix_smoke_contract_contract_contract_contract_contract_
     raise SystemExit("preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_preflight did not resolve to skipped")
 if payload["preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight"] != "skipped":
     raise SystemExit("preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight did not resolve to skipped")
+if payload["preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight"] != "skipped":
+    raise SystemExit("preflight_matrix_smoke_contract_contract_contract_contract_contract_contract_contract_contract_contract_contract_preflight did not resolve to skipped")
 if payload["docs_preflight"] != "skipped":
     raise SystemExit("docs_preflight did not resolve to skipped")
 if payload["docs_wrapper_coverage_preflight"] != "n/a (docs preflight skipped)":
