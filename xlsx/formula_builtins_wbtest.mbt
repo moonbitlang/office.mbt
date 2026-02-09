@@ -58,6 +58,7 @@ fn is_formula_list(value : FormulaValue) -> Bool {
 test "formula builtins wb: row column and formulatxt guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_defined_name(DefinedName::new("Answer", "1"))
   let ctx = CalcContext::new()
 
   inspect(
@@ -146,6 +147,13 @@ test "formula builtins wb: row column and formulatxt guards" {
     is_formula_error(
       eval_function(workbook, "Sheet1", "FORMULATEXT", [][:], ctx),
       formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "Answer", [][:], ctx),
+      1.0,
     ),
     content="true",
   )
@@ -1087,7 +1095,6 @@ test "formula builtins wb: text/search guard branches part 4" {
     },
     content="true",
   )
-
   inspect(
     is_formula_error(
       eval_function(
@@ -2947,7 +2954,6 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
     },
     content="true",
   )
-
   inspect(
     is_formula_error(
       eval_function(
@@ -5651,6 +5657,20 @@ test "formula builtins wb: residual reachable guards part 12" {
         "Sheet1",
         "MINVERSE",
         [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ) {
+      List(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MINVERSE",
+        [Expr::Range("", "G1", "H2")][:],
         ctx,
       ) {
       List(_) => true
