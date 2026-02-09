@@ -4774,4 +4774,31 @@ Commands used:
 
 ## Active Item
 
-- Next item: **248** (continue demo-level integration hardening on stream-writer packaging consistency and large-sheet relationship/content-type invariants).
+- [x] 248. Integration-focused parity hardening: stream-writer demo packaging consistency.
+  - DoD: add demo-level roundtrip coverage for large stream-writer output to lock worksheet/table rel and content-type invariants.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_stream_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_stream_archive`) that validates:
+      - required parts exist (`sheet1.xml`, `sheet1.xml.rels`, `table1.xml`, `sharedStrings.xml`).
+      - workbook/sheet relationship IDs remain unique.
+      - sheet relationship target includes `../tables/table1.xml`.
+      - worksheet dimension and table references match expected dynamic range (`A1:E{rows+1}`).
+      - worksheet table binding (`<tablePart r:id=\"rId1\"/>`) is present.
+      - content types include worksheet table MIME override.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_stream_big_bytes(rows=3000)`
+      - parsed workbook sanity (`Big!A1`, `Big!A3001` present)
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_stream_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **249** (continue demo-level hardening for sparkline-heavy output to guard x14 extension + relationship invariants across roundtrip).
