@@ -9081,6 +9081,19 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
     ),
     content="true",
   )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2HEX",
+        [Expr::String("bad")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
 
   inspect(
     is_formula_error(
@@ -9106,6 +9119,19 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
     is_formula_error(
       eval_function(workbook, "Sheet1", "BIN2OCT", [Expr::String("2")][:], ctx),
       formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2OCT",
+        [Expr::String("bad")][:],
+        ctx,
+      ),
+      formula_error_value,
     ),
     content="true",
   )
@@ -9179,6 +9205,19 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
     ),
     content="true",
   )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HEX2OCT",
+        [Expr::String("A"), Expr::Number(4.0)][:],
+        ctx,
+      ),
+      "0012",
+    ),
+    content="true",
+  )
 
   inspect(
     is_formula_error(
@@ -9197,6 +9236,19 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         ctx,
       ),
       formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "OCT2BIN",
+        [Expr::String("12"), Expr::Number(8.0)][:],
+        ctx,
+      ),
+      "00001010",
     ),
     content="true",
   )
