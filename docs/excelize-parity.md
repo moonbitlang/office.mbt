@@ -251,6 +251,8 @@ Use `scripts/check_parity_gate_skip_toggles_contract.sh` to validate skip-toggle
 checker CLI contract (`--json` schema + invalid-arg behavior).
 Use `scripts/check_parity_gate_show_toggles.sh` to validate aggregate gate
 show-toggle contract behavior for compact preflight status output.
+Use `scripts/check_parity_preflight_matrix_smoke.sh` to run a small matrix of
+skip/show-toggle combinations against aggregate preflight status resolution.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

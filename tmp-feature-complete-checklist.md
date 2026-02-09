@@ -6481,4 +6481,39 @@ Commands used:
 
 ## Active Item
 
-- Next item: **339** (add aggregate preflight matrix smoke checker for skip/show toggle combinations).
+- [x] 339. Add aggregate preflight matrix smoke checker for skip/show toggle combinations.
+  - DoD: provide a fast regression checker that validates representative
+    preflight skip-toggle resolution cases and show-toggle invalid-combo guards
+    without running heavy aggregate gates.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_preflight_matrix_smoke.sh`
+    - Matrix checker validates:
+      - `show_parity_preflight_status --json` status resolution for:
+        - default
+        - all-skipped
+        - docs-coverage-only skipped
+        - docs-skip precedence over docs-coverage skip
+      - required preflight env keys exist in JSON payload for all cases
+      - aggregate gate invalid show-toggle combinations exit with code `2` and
+        expected messages:
+        - compact-without-json
+        - invalid compact value
+        - invalid `SHOW_PARITY_PREFLIGHT_STATUS` value
+    - Added script to wrapper/docs coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_preflight_matrix_smoke.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `scripts/check_parity_docs_refs.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **340** (wire aggregate preflight matrix smoke checker into aggregate gate preflight flow).
