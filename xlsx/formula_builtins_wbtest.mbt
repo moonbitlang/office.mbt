@@ -15,6 +15,14 @@ fn is_formula_number(value : FormulaValue, expected : Double) -> Bool {
 }
 
 ///|
+fn is_formula_string(value : FormulaValue, expected : String) -> Bool {
+  match value {
+    String(text) => text == expected
+    _ => false
+  }
+}
+
+///|
 test "formula builtins wb: row column and formulatxt guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -548,4 +556,768 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     ctx,
   )
   inspect(is_formula_error(hex2oct_bad, formula_error_na), content="true")
+}
+
+///|
+test "formula builtins wb: text/search guard branches part 4" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Error(formula_error_ref))
+  let long_text = "a".repeat(40000)
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::FuncCall("NA", []), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::String("a"), Expr::String("abc"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::String("a"), Expr::String("abc"), Expr::Number(10.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::String(""), Expr::String("abc"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIND",
+        [Expr::String("z"), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "FIND", [Expr::String("a")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [Expr::FuncCall("NA", []), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [Expr::String("z"), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::FuncCall("NA", []), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::String("a"), Expr::String("abc"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::String("a"), Expr::String("abc"), Expr::Number(10.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::String(""), Expr::String("abc"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCH",
+        [Expr::String("z"), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCHB",
+        [Expr::FuncCall("NA", []), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCHB",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCHB",
+        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SEARCHB",
+        [Expr::String("z"), Expr::String("abc")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIXED",
+        [Expr::Number(1.23), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIXED",
+        [Expr::Number(1.23), Expr::Number(2.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FIXED",
+        [Expr::Number(12.34), Expr::Number(-2.0)][:],
+        ctx,
+      ),
+      "12",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VALUETOTEXT",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VALUETOTEXT",
+        [Expr::String("a"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "VALUETOTEXT",
+        [Expr::String("a"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      "\"a\"",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXT",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXT",
+        [Expr::String("abc"), Expr::String("0")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ARRAYTOTEXT",
+        [Expr::String("a"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ARRAYTOTEXT",
+        [Expr::String("a"), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ARRAYTOTEXT",
+        [Expr::Cell("", "A1"), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_ref,
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ARRAYTOTEXT",
+        [Expr::String("a"), Expr::Number(1.0)][:],
+        ctx,
+      ) {
+      String(text) => text.contains("\"a\"")
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [Expr::FuncCall("NA", []), Expr::String("-")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [Expr::String("a-b"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [Expr::String(""), Expr::String("-")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [Expr::String("a-b"), Expr::String("-"), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [Expr::String("a-b"), Expr::String("-"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [
+          Expr::String("a-b"),
+          Expr::String("-"),
+          Expr::Number(1.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [
+          Expr::String("a-b"),
+          Expr::String("-"),
+          Expr::Number(1.0),
+          Expr::Number(2.0),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [
+          Expr::String("a-b"),
+          Expr::String("-"),
+          Expr::Number(1.0),
+          Expr::Number(0.0),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [
+          Expr::String("a,b"),
+          Expr::String("|"),
+          Expr::Number(1.0),
+          Expr::Number(0.0),
+          Expr::Bool(false),
+          Expr::String("nf"),
+        ][:],
+        ctx,
+      ),
+      "nf",
+    ),
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [Expr::String("a-"), Expr::String("-")][:],
+        ctx,
+      ) {
+      Empty => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTBEFORE",
+        [Expr::String("-a"), Expr::String("-")][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTJOIN",
+        [Expr::FuncCall("NA", []), Expr::Bool(true), Expr::String("a")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTJOIN",
+        [Expr::String(","), Expr::FuncCall("NA", []), Expr::String("a")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTJOIN",
+        [Expr::String(","), Expr::Bool(true), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTJOIN",
+        [Expr::String(""), Expr::Bool(false), Expr::String(long_text)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTJOIN",
+        [Expr::String(","), Expr::Bool(true)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [Expr::List([Expr::Number(1.0)]), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [
+          Expr::List([Expr::Number(1.0)]),
+          Expr::Bool(false),
+          Expr::FuncCall("NA", []),
+        ][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  let empty_exprs : Array[Expr] = []
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "UNIQUE",
+        [Expr::List(empty_exprs)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
 }
