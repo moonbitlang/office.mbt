@@ -3838,6 +3838,38 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `3833/4748` to `3904/4748` (`+71` lines).
 
+- [x] 212. Close residuals in `xlsx/formula_builtins.mbt` (part 43).
+  - DoD: reduce uncovered aggregation/statistics helper branches around `multinomial*`, `product/average*`, `stdev/variance/trimmean`, and `beta_dist_values`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with direct helper coverage for:
+      - `multinomial_collect`, `multinomial_values`
+      - `product_values`
+      - `average_values`, `averagea_values`
+      - `stdev_values`
+      - `variance_values`
+      - `trimmean_values`
+      - `beta_dist_values`
+    - Added targeted branch cases to trigger:
+      - multinomial empty-string collection, success computation, and propagated error return
+      - product numeric-string multiplication, parse-failure error, and list-scalar ignore behavior
+      - `AVERAGE` parse-ignore and divide-by-zero outcomes
+      - `AVERAGEA` empty-string handling and divide-by-zero outcome
+      - `STDEV` propagated input error and single-sample divide-by-zero path
+      - `VAR` bool/empty/non-numeric-string/count-text-zero branches and sample-size guard
+      - `TRIMMEAN` arity/percent-parse/range guards plus trimmed success path
+      - `BETA.DIST` arity, scalar parse, parameter-domain, bool-parse, optional-bound parse guards, and numeric success paths.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `3904/4748` to `3957/4748` (`+53` lines).
+
 ## Active Item
 
-- Next item: **212** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 43, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **213** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 44, using wbtest-targeted coverage summary as the comparable metric).

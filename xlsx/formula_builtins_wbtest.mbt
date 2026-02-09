@@ -17304,3 +17304,306 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
   inspect(double_factorial_double(6.0) == 48.0, content="true")
   inspect(double_factorial_double(7.0) == 105.0, content="true")
 }
+
+///|
+test "formula builtins wb: stats/beta helper branches part 43" {
+  let multinomial_numbers_empty_text : Array[Double] = []
+  inspect(
+    match
+      multinomial_collect(
+        FormulaValue::String(""),
+        multinomial_numbers_empty_text,
+      ) {
+      Ok(_) => multinomial_numbers_empty_text.length() == 0
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      multinomial_values(
+        [FormulaValue::Number(2.0), FormulaValue::Number(1.0)][:],
+      ),
+      3.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      multinomial_values([FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      product_values([FormulaValue::String("2"), FormulaValue::Number(3.0)][:]),
+      6.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      product_values([FormulaValue::String("bad")][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      product_values(
+        [
+          FormulaValue::List([
+            FormulaValue::String("2"),
+            FormulaValue::Bool(true),
+          ]),
+          FormulaValue::Number(4.0),
+        ][:],
+      ),
+      4.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      average_values(
+        [FormulaValue::String("bad"), FormulaValue::Number(2.0)][:],
+      ),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      average_values([FormulaValue::String("bad"), FormulaValue::Bool(true)][:]),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      averagea_values([FormulaValue::String(""), FormulaValue::Number(2.0)][:]),
+      2.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      averagea_values([FormulaValue::String(""), FormulaValue::Empty][:]),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      stdev_values(true, [FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      stdev_values(false, [FormulaValue::Number(1.0)][:]),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number_any(
+      variance_values(
+        [
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+          FormulaValue::String(""),
+          FormulaValue::String("bad"),
+          FormulaValue::Empty,
+        ][:],
+        false,
+        true,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      variance_values([FormulaValue::Number(2.0)][:], true, false),
+      formula_error_div,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      trimmean_values([FormulaValue::Number(1.0)][:]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      trimmean_values(
+        [FormulaValue::Number(1.0), FormulaValue::String("bad")][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      trimmean_values(
+        [FormulaValue::Number(1.0), FormulaValue::Number(-0.1)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      trimmean_values(
+        [
+          FormulaValue::List([
+            FormulaValue::Number(1.0),
+            FormulaValue::Number(2.0),
+            FormulaValue::Number(100.0),
+            FormulaValue::Number(101.0),
+          ]),
+          FormulaValue::Number(0.5),
+        ][:],
+      ),
+      51.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+        ][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::String("bad"),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::String("bad"),
+        ][:],
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      beta_dist_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(false),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+}
