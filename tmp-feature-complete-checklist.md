@@ -4178,6 +4178,26 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `4590/4748` to `4597/4748` (`+7` lines).
 
+- [x] 225. Close residuals in `xlsx/formula_builtins.mbt` (part 56).
+  - DoD: reduce uncovered parse-error propagation branches in remaining trig-hyperbolic and complex-number dispatch handlers.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with dispatch-level error-path coverage for:
+      - `CSCH`, `SEC`, `SECH`
+      - `IMAGINARY`, `IMARGUMENT`, `IMCONJUGATE`, `IMCOS`, `IMCOSH`, `IMCOT`, `IMCSC`, `IMCSCH`
+      - `IMDIV` second-argument parse-error path
+    - Added targeted `NA()`-driven cases to explicitly exercise each `Err(err) => err` branch in these handlers.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4597/4748` to `4609/4748` (`+12` lines).
+
 ## Active Item
 
-- Next item: **225** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 56, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **226** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 57, using wbtest-targeted coverage summary as the comparable metric).
