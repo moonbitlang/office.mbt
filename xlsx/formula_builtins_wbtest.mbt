@@ -18534,6 +18534,16 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
     is_formula_error(
       dec2x_values(
         "DEC2BIN",
+        [FormulaValue::Number(5.0), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      dec2x_values(
+        "DEC2BIN",
         [FormulaValue::Number(5.0), FormulaValue::Number(-1.0)][:],
       ),
       formula_error_num,
@@ -18604,6 +18614,7 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
   inspect(factorial_double(0.0) == 1.0, content="true")
   inspect(factorial_double(5.0) == 120.0, content="true")
   inspect(binom_coeff_double(5.0, 2.0) == 10.0, content="true")
+  inspect(double_factorial_double(1.0) == 1.0, content="true")
   inspect(double_factorial_double(6.0) == 48.0, content="true")
   inspect(double_factorial_double(7.0) == 105.0, content="true")
 }
@@ -19242,6 +19253,19 @@ test "formula builtins wb: normal/confidence helper branches part 45" {
     content="true",
   )
   inspect(
+    is_formula_error(
+      norminv_values(
+        [
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(0.0),
+          FormulaValue::Number(1.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
     is_formula_number_any(
       norminv_values(
         [
@@ -19694,6 +19718,13 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
   inspect(
     is_formula_number_any(
       gammaln_precise_values([FormulaValue::Number(2.0)][:]),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      gammaln_precise_values([FormulaValue::Error(formula_error_na)][:]),
+      formula_error_na,
     ),
     content="true",
   )
