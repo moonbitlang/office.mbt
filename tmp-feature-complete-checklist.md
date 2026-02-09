@@ -5537,4 +5537,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **288** (add a compact mode to summary helper that emits only minimal fields for lightweight CI log parsing).
+- [x] 288. Add compact-output mode to parity report summary helper.
+  - DoD: provide minimal-field output for lightweight CI parsing.
+  - Delivered:
+    - Added `--compact` to `scripts/semantic_parity_report_summary.py`.
+    - Text compact mode prints:
+      - one-line overall result/mismatch/total_ms
+      - one line per scenario (`name`, `status`, `duration_ms`)
+    - JSON compact mode (`--as-json --compact`) emits minimal payload:
+      - overall status fields + compact scenario entries
+      - optional `top_slowest` compact entries
+    - Added docs example in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_args.json --compact`
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_args.json --as-json --compact --top-slowest 1`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **289** (add semantic parity report-summary wrapper script for compact JSON output to simplify CI log ingestion).

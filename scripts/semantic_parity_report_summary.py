@@ -42,6 +42,11 @@ def main() -> int:
         action="store_true",
         help="Emit summary as JSON instead of human-readable text.",
     )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Emit only minimal fields for lightweight parsing.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -69,20 +74,66 @@ def main() -> int:
     mismatches = data.get("mismatches", [])
 
     if args.as_json:
-        payload: dict[str, object] = {
-            "report": str(report_path),
-            "result": data.get("result"),
-            "mismatch_count": data.get("mismatch_count"),
-            "total_compare_ms": data.get("total_scenario_compare_ms"),
-            "selected_scenarios": selected,
-            "scenarios": scenarios,
-            "mismatches": mismatches,
-        }
-        if not args.no_metadata:
-            payload["metadata"] = metadata
-        if args.top_slowest > 0:
-            payload["top_slowest"] = ranked[: args.top_slowest]
+        compact_scenarios = [
+            {
+                "name": scenario.get("name"),
+                "status": scenario.get("status"),
+                "duration_ms": scenario.get("duration_ms"),
+            }
+            for scenario in scenarios
+        ]
+        payload: dict[str, object]
+        if args.compact:
+            payload = {
+                "result": data.get("result"),
+                "mismatch_count": data.get("mismatch_count"),
+                "total_compare_ms": data.get("total_scenario_compare_ms"),
+                "selected_scenarios": selected,
+                "scenarios": compact_scenarios,
+            }
+            if mismatches:
+                payload["mismatches"] = mismatches
+            if args.top_slowest > 0:
+                payload["top_slowest"] = [
+                    {
+                        "name": scenario.get("name"),
+                        "status": scenario.get("status"),
+                        "duration_ms": scenario.get("duration_ms"),
+                    }
+                    for scenario in ranked[: args.top_slowest]
+                ]
+        else:
+            payload = {
+                "report": str(report_path),
+                "result": data.get("result"),
+                "mismatch_count": data.get("mismatch_count"),
+                "total_compare_ms": data.get("total_scenario_compare_ms"),
+                "selected_scenarios": selected,
+                "scenarios": scenarios,
+                "mismatches": mismatches,
+            }
+            if not args.no_metadata:
+                payload["metadata"] = metadata
+            if args.top_slowest > 0:
+                payload["top_slowest"] = ranked[: args.top_slowest]
         print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.compact:
+        print(
+            f"result={data.get('result')} "
+            f"mismatch_count={data.get('mismatch_count')} "
+            f"total_compare_ms={data.get('total_scenario_compare_ms')}"
+        )
+        for scenario in scenarios:
+            print(
+                f"{scenario.get('name')} "
+                f"status={scenario.get('status')} "
+                f"duration_ms={scenario.get('duration_ms'):.1f}"
+            )
+        if mismatches:
+            for msg in mismatches:
+                print(f"mismatch={msg}")
         return 0
 
     print(f"Report: {report_path}")
