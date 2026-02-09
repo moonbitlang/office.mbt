@@ -12524,3 +12524,420 @@ test "formula builtins wb: trig and log success dispatch part 31" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: text wrapper edge dispatch part 32" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "LEN", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "LENB", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "LOWER", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "UPPER", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "PROPER", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DBCS", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "TRIM", [][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "LEFT", [Expr::String("abc")][:], ctx),
+      "a",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFT",
+        [Expr::String("abc"), Expr::Number(-1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFT",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "LEFTB", [Expr::String("abc")][:], ctx),
+      "a",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFTB",
+        [Expr::String("abc"), Expr::Number(-1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LEFTB",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "RIGHT", [Expr::String("abc")][:], ctx),
+      "c",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHT",
+        [Expr::String("abc"), Expr::Number(-1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHT",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "RIGHTB", [Expr::String("abc")][:], ctx),
+      "c",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHTB",
+        [Expr::String("abc"), Expr::Number(-1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RIGHTB",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::String("abc"), Expr::Number(0.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MID",
+        [Expr::String("abc"), Expr::Number(10.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MID", [Expr::String("abc")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::Number(0.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MIDB",
+        [Expr::String("abc"), Expr::Number(10.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "MIDB", [Expr::String("abc")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::String("x"), Expr::Number(-1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::String("x"), Expr::Number(0.0)][:],
+        ctx,
+      ),
+      "",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPT",
+        [Expr::String("a".repeat(100)), Expr::Number(400.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "REPT", [Expr::String("x")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [
+          Expr::String("abc"),
+          Expr::Number(0.0),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACE",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [
+          Expr::String("abc"),
+          Expr::Number(0.0),
+          Expr::Number(1.0),
+          Expr::String("x"),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "REPLACEB",
+        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [Expr::String("abc"), Expr::String(""), Expr::String("x")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SUBSTITUTE",
+        [
+          Expr::String("abc"),
+          Expr::String("a"),
+          Expr::String("x"),
+          Expr::Number(0.0),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+}
