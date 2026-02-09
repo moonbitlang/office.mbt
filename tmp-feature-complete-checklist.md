@@ -4050,6 +4050,33 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `4360/4748` to `4430/4748` (`+70` lines).
 
+- [x] 220. Close residuals in `xlsx/formula_builtins.mbt` (part 51).
+  - DoD: reduce uncovered chi-square and F-distribution helper branches (`CHI*`, `CHISQ*`, `CHITEST`, `FDIST*`) plus remaining `FINV*` parse-error branches.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused helper branch coverage for:
+      - `chidist_values`, `chiinv_values`
+      - `chisq_dist_values`, `chisq_inv_values`
+      - `fdist_values`, `fdist_rt_values`
+      - `finv_values`, `finv_rt_values` (deg parse-error paths)
+      - `CHITEST` through `eval_function(...)` with range-based inputs
+    - Added targeted branch cases to trigger:
+      - parse-error propagation and domain guards for all `CHI*`/`CHISQ*`/`FDIST*` helper arguments
+      - special-return paths (`CHIINV(probability=1) -> 0`, `CHISQ.INV(probability=0) -> 0`)
+      - cumulative/non-cumulative success paths for `CHISQ.DIST`, `F.DIST`, and `F.DIST.RT`
+      - `CHITEST` shape and data guards: mismatched range sizes, single-cell range, expected=0 divide error, expected<0 num error, numeric parse errors on actual/expected cells
+      - `CHITEST` success paths across row-vector, column-vector, and matrix range layouts (covering degrees-of-freedom branch variants).
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `4430/4748` to `4525/4748` (`+95` lines).
+
 ## Active Item
 
-- Next item: **220** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 51, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **221** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 52, using wbtest-targeted coverage summary as the comparable metric).

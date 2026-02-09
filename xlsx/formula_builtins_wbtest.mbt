@@ -19882,3 +19882,661 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: chi and f helper branches part 51" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(10.0))
+  sheet.set_cell_value("B1", Numeric(20.0))
+  sheet.set_cell_value("C1", Numeric(15.0))
+  sheet.set_cell_value("D1", Numeric(15.0))
+
+  sheet.set_cell_value("A2", Numeric(10.0))
+  sheet.set_cell_value("A3", Numeric(20.0))
+  sheet.set_cell_value("C2", Numeric(15.0))
+  sheet.set_cell_value("C3", Numeric(15.0))
+
+  sheet.set_cell_value("A4", Numeric(10.0))
+  sheet.set_cell_value("B4", Numeric(20.0))
+  sheet.set_cell_value("A5", Numeric(30.0))
+  sheet.set_cell_value("B5", Numeric(40.0))
+  sheet.set_cell_value("C4", Numeric(15.0))
+  sheet.set_cell_value("D4", Numeric(15.0))
+  sheet.set_cell_value("C5", Numeric(35.0))
+  sheet.set_cell_value("D5", Numeric(35.0))
+
+  sheet.set_cell_value("A6", Numeric(1.0))
+  sheet.set_cell_value("B6", Numeric(2.0))
+  sheet.set_cell_value("C6", Numeric(0.0))
+  sheet.set_cell_value("D6", Numeric(2.0))
+
+  sheet.set_cell_value("A7", Numeric(1.0))
+  sheet.set_cell_value("B7", Numeric(2.0))
+  sheet.set_cell_value("C7", Numeric(-1.0))
+  sheet.set_cell_value("D7", Numeric(2.0))
+
+  sheet.set_cell_value("A8", String("x"))
+  sheet.set_cell_value("B8", Numeric(2.0))
+  sheet.set_cell_value("C8", Numeric(1.0))
+  sheet.set_cell_value("D8", Numeric(2.0))
+
+  sheet.set_cell_value("A9", Numeric(1.0))
+  sheet.set_cell_value("B9", Numeric(2.0))
+  sheet.set_cell_value("C9", String("x"))
+  sheet.set_cell_value("D9", Numeric(2.0))
+
+  inspect(
+    is_formula_error(
+      chidist_values(
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chidist_values(
+        [FormulaValue::Number(1.0), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      chidist_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)][:]),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      chiinv_values(
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chiinv_values(
+        [FormulaValue::Number(0.5), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chiinv_values([FormulaValue::Number(0.0), FormulaValue::Number(2.0)][:]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chiinv_values([FormulaValue::Number(0.5), FormulaValue::Number(0.0)][:]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      chiinv_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)][:]),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      chiinv_values([FormulaValue::Number(0.5), FormulaValue::Number(2.0)][:]),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      chisq_dist_values(
+        [
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values(
+        [
+          FormulaValue::Number(-1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(10000000000.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      chisq_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      chisq_dist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Bool(false),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      chisq_inv_values(
+        [FormulaValue::Error(formula_error_na), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_inv_values(
+        [FormulaValue::Number(0.5), FormulaValue::Error(formula_error_na)][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_inv_values(
+        [FormulaValue::Number(-0.1), FormulaValue::Number(2.0)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_inv_values(
+        [FormulaValue::Number(0.5), FormulaValue::Number(0.0)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_inv_values(
+        [FormulaValue::Number(0.5), FormulaValue::Number(10000000001.0)][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      chisq_inv_values(
+        [FormulaValue::Number(0.0), FormulaValue::Number(2.0)][:],
+      ),
+      0.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      chisq_inv_values(
+        [FormulaValue::Number(0.5), FormulaValue::Number(2.0)][:],
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A1", "B1"), Expr::Range("", "C2", "C3")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A1", "A1"), Expr::Range("", "C1", "C1")][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A6", "B6"), Expr::Range("", "C6", "D6")][:],
+        ctx,
+      ),
+      formula_error_div,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A7", "B7"), Expr::Range("", "C7", "D7")][:],
+        ctx,
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A8", "B8"), Expr::Range("", "C8", "D8")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A9", "B9"), Expr::Range("", "C9", "D9")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A1", "B1"), Expr::Range("", "C1", "D1")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A2", "A3"), Expr::Range("", "C2", "C3")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "CHITEST",
+        [Expr::Range("", "A4", "B5"), Expr::Range("", "C4", "D5")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(3.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Number(-1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(10000000000.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(10000000000.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Bool(true),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      fdist_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+          FormulaValue::Bool(false),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      fdist_rt_values(
+        [
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_rt_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(3.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_rt_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_rt_values(
+        [
+          FormulaValue::Number(-1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_rt_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(10000000000.0),
+          FormulaValue::Number(3.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      fdist_rt_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(10000000000.0),
+        ][:],
+      ),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      fdist_rt_values(
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(3.0),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      finv_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(5.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_rt_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Error(formula_error_na),
+          FormulaValue::Number(6.0),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      finv_rt_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(5.0),
+          FormulaValue::Error(formula_error_na),
+        ][:],
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+}
