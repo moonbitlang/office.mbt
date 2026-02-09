@@ -6118,6 +6118,20 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
       eval_function(
         workbook,
         "Sheet1",
+        "PERCENTRANK",
+        [data, Expr::Number(2.0), Expr::Number(3.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
         "PERCENTRANK.INC",
         [data, Expr::Number(2.0)][:],
         ctx,
@@ -6132,8 +6146,36 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
       eval_function(
         workbook,
         "Sheet1",
+        "PERCENTRANK.INC",
+        [data, Expr::Number(2.0), Expr::Number(3.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
         "PERCENTRANK.EXC",
         [data, Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.EXC",
+        [data, Expr::Number(2.0), Expr::Number(3.0)][:],
         ctx,
       ) {
       Number(_) => true
@@ -7836,6 +7878,19 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "PERCENTRANK",
+        [Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "PERCENTRANK.INC",
         [Expr::Number(1.0)][:],
         ctx,
       ),
