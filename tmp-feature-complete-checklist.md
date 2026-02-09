@@ -6289,4 +6289,28 @@ Commands used:
 
 ## Active Item
 
-- Next item: **331** (add skip-toggle checker usage guard tests for invalid args).
+- [x] 331. Add skip-toggle checker usage guard tests for invalid args.
+  - DoD: enforce `check_parity_gate_skip_toggles.sh` CLI contract stability for
+    CI and local users.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_gate_skip_toggles_contract.sh`
+    - Contract checker validates:
+      - `scripts/check_parity_gate_skip_toggles.sh --json` has required schema
+      - invalid args return exit code `2` and expected usage message
+    - Added script to wrapper/doc coverage tracking:
+      - `scripts/check_parity_wrappers.sh`
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Added docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_gate_skip_toggles_contract.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **332** (wire skip-toggle checker contract check into aggregate gate preflight).

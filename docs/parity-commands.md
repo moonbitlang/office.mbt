@@ -37,6 +37,7 @@ scripts/check_parity_env_helper.sh
 scripts/check_parity_preflight_status_helper.sh
 scripts/check_parity_gate_skip_toggles.sh
 scripts/check_parity_gate_skip_toggles.sh --json
+scripts/check_parity_gate_skip_toggles_contract.sh
 scripts/show_parity_env.sh
 scripts/show_parity_env.sh --json
 scripts/show_parity_preflight_status.sh

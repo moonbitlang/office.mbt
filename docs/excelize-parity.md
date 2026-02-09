@@ -234,6 +234,8 @@ Use `scripts/check_parity_gate_skip_toggles.sh` to enforce skip-toggle key
 consistency across aggregate-gate scripts/helpers.
 Use `scripts/check_parity_gate_skip_toggles.sh --json` for machine-readable
 consistency output in CI pipelines.
+Use `scripts/check_parity_gate_skip_toggles_contract.sh` to validate skip-toggle
+checker CLI contract (`--json` schema + invalid-arg behavior).
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles
