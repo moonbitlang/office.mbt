@@ -439,6 +439,8 @@ Use `scripts/check_parity_preflight_matrix_smoke_contract_x28.sh`
 to validate matrix-smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker JSON schema and CLI usage behavior.
 Use `scripts/check_parity_preflight_matrix_smoke_contract_x28.sh --json`
 for machine-readable contract-check output in CI.
+Use `scripts/check_parity_preflight_matrix_smoke_contract_x29.sh`
+to validate matrix-smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker JSON schema and CLI usage behavior.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles
