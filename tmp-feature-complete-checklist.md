@@ -4947,4 +4947,31 @@ Commands used:
 
 ## Active Item
 
-- Next item: **254** (finish remaining demo-level hardening set on simpler packages like `invoice`/`secure_password`, then consolidate shared helper abstractions to reduce duplicated test plumbing).
+- [x] 254. Integration-focused parity hardening: `invoice` demo roundtrip invariants.
+  - DoD: cover a simpler calc/protection-focused demo with roundtrip assertions on calcChain, formula payload, sheet protection, and data validation consistency.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_invoice_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_invoice_archive`) that validates:
+      - required parts exist (`sheet1`, `sharedStrings`, `calcChain`) and sheet rels remain absent.
+      - workbook relationship IDs are unique with expected worksheet/sharedStrings/calcChain targets.
+      - worksheet XML keeps key invoice semantics:
+        - sheet protection present with `pivotTables="1"`
+        - one list data validation with expected option list formula
+        - six formula nodes in-line.
+      - calcChain XML keeps six entries and endpoint refs (`F9`, `F15`).
+      - content types include calcChain MIME override.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_invoice_bytes()`
+      - parsed workbook sanity (`Invoice` sheet, `F5=Draft`, `F15=0`)
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_invoice_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **255** (consolidate demo-roundtrip helper abstractions into a shared helper test module to reduce duplication and keep future demo hardening changes cheaper).
