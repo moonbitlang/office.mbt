@@ -16348,6 +16348,281 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
 }
 
 ///|
+test "formula builtins wb: matrix and combin dispatch branches part 52" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("C1", Numeric(5.0))
+  sheet.set_cell_value("D1", Numeric(6.0))
+  sheet.set_cell_value("C2", Numeric(7.0))
+  sheet.set_cell_value("D2", Numeric(8.0))
+  sheet.set_cell_value("A3", Numeric(1.0))
+  sheet.set_cell_value("B3", String("x"))
+  sheet.set_cell_value("C3", Numeric(1.0))
+  sheet.set_cell_value("D3", String("x"))
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMBIN",
+        [Expr::Number(5.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      10.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMBINA",
+        [Expr::Number(3.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMBINA",
+        [Expr::FuncCall("NA", []), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMBINA",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMPLEX",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      "1+2i",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMPLEX",
+        [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMPLEX",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(workbook, "Sheet1", "FACT", [Expr::Number(5.0)][:], ctx),
+      120.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FACT",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FACTDOUBLE",
+        [Expr::Number(6.0)][:],
+        ctx,
+      ),
+      48.0,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FACTDOUBLE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MULTINOMIAL",
+        [Expr::Number(2.0), Expr::Number(1.0)][:],
+        ctx,
+      ),
+      3.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_number(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MDETERM",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+      -2.0,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MINVERSE",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MINVERSE",
+        [Expr::Range("", "A3", "B3")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MMULT",
+        [Expr::Range("", "A1", "B2"), Expr::Range("", "C1", "D2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MMULT",
+        [Expr::Range("", "A1", "B1"), Expr::Range("", "C1", "D1")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MMULT",
+        [Expr::Range("", "A1", "B1"), Expr::Range("", "C3", "D3")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_list(
+      eval_function(workbook, "Sheet1", "MUNIT", [Expr::Number(2.0)][:], ctx),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_list(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRANSPOSE",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ),
+    ),
+    content="true",
+  )
+}
+
+///|
 test "formula builtins wb: info type and meta dispatch part 40" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
