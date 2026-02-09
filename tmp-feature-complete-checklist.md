@@ -5046,4 +5046,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **259** (expand semantic parity runner scenarios beyond `dashboard/controls/cf` and add one new parity fixture gate).
+- [x] 259. Expand semantic parity runner scenarios with one additional fixture gate.
+  - DoD: extend `scripts/semantic_parity.py` beyond `dashboard/controls/cf` by adding at least one extra scenario validated against committed Excelize fixtures.
+  - Delivered:
+    - Added new semantic-parity scenario:
+      - `controls_rerun` (`mbt_file=controls.xlsx`, `excelize_file=controls_rerun.xlsx`)
+    - Updated fixture-copy mapping in `copy_fixture_outputs(...)`:
+      - includes `controls_rerun.xlsx -> demos_out_go/excelize_controls_rerun.xlsx`
+    - Updated Go-generation path in `generate_excelize_outputs(...)`:
+      - emits `controls_rerun.xlsx` when `go` is available.
+  - Validation gates:
+    - `python3 scripts/semantic_parity.py`
+    - `moon check --deny-warn`
+
+## Active Item
+
+- Next item: **260** (strengthen semantic parity fingerprinting with relationship-target checks so chart/control scenarios compare structure, not only counts/types).

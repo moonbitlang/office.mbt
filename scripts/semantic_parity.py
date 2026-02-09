@@ -78,6 +78,25 @@ SCENARIOS: tuple[Scenario, ...] = (
             "chart_types",
         ),
     ),
+    Scenario(
+        name="controls_rerun",
+        mbt_file="controls.xlsx",
+        excelize_file="controls_rerun.xlsx",
+        keys=(
+            "sheet_names",
+            "worksheets",
+            "tables",
+            "charts",
+            "drawings",
+            "vml_drawings",
+            "form_controls",
+            "form_control_types",
+            "conditional_formatting",
+            "x14_conditional_formatting",
+            "data_validations",
+            "chart_types",
+        ),
+    ),
 )
 
 
@@ -162,6 +181,7 @@ def copy_fixture_outputs(repo_root: Path, excelize_out: Path) -> None:
     mapping = {
         "dashboard.xlsx": "dashboard.xlsx",
         "controls.xlsx": "excelize_controls.xlsx",
+        "controls_rerun.xlsx": "excelize_controls_rerun.xlsx",
         "cf.xlsx": "excelize_cf.xlsx",
     }
     excelize_out.mkdir(parents=True, exist_ok=True)
@@ -183,6 +203,15 @@ def generate_excelize_outputs(repo_root: Path, excelize_out: Path) -> str:
     if can_run_go():
         run(["go", "run", "./_mbtexcel_gen_dashboard/main.go", str(excelize_out / "dashboard.xlsx")], cwd=excelize_dir)
         run(["go", "run", "./_mbtexcel_gen_controls/main.go", str(excelize_out / "controls.xlsx")], cwd=excelize_dir)
+        run(
+            [
+                "go",
+                "run",
+                "./_mbtexcel_gen_controls/main.go",
+                str(excelize_out / "controls_rerun.xlsx"),
+            ],
+            cwd=excelize_dir,
+        )
         run(["go", "run", "./_mbtexcel_gen_cf/main.go", str(excelize_out / "cf.xlsx")], cwd=excelize_dir)
         return "go-generated"
     copy_fixture_outputs(repo_root, excelize_out)
