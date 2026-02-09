@@ -3096,6 +3096,34 @@ Commands used:
     - Total uncovered lines reduced from `2164` to `2130`
     - Uncovered file count remains `38`
 
+- [x] 181. Close residuals in `xlsx/formula_builtins.mbt` (part 12).
+  - DoD: add focused whitebox coverage for remaining reachable guard branches in function dispatch and helper collectors.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a new focused test block:
+      - `COMPLEX` third-arg error forwarding
+      - `MINVERSE` successful matrix inversion path
+      - `MMULT` left-matrix numeric-conversion error forwarding
+      - `IMPRODUCT` flattened-error forwarding
+      - `FLOOR`/`TRUNC`/`SQRT` first-arg conversion-error forwarding
+      - `DATE`/`TIME` third-arg conversion-error forwarding
+      - `INDIRECT("1")` A1 non-cell token branch (range-token fallback path)
+      - recursive error forwarding in `gcd_lcm_collect` and `multinomial_collect`
+      - `bitwise_number(Empty)` branch
+      - `betainv_values` success path (covers `get_beta_inv` execution)
+      - `norm_s_inv_values(0)` `norminv_double` error forwarding path
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze --package xlsx > /tmp/mbtexcel_uncovered_after192.log`
+  - Coverage note:
+    - After the compiler update, `moon coverage analyze --package xlsx` now reports a different global baseline and broader file set than earlier snapshots, so direct deltas against item 180 are not comparable.
+    - New baseline snapshot from `/tmp/mbtexcel_uncovered_after192.log`:
+      - `xlsx/formula_builtins.mbt`: `457` uncovered lines
+      - Total uncovered lines: `3520`
+      - Uncovered file count: `62`
+
 ## Active Item
 
-- Next item: **181** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 12).
+- Next item: **182** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 13, using the post-compiler-update coverage baseline).

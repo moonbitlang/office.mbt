@@ -5555,3 +5555,220 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: residual reachable guards part 12" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let sheet = match workbook.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("sheet missing")
+  }
+  let ctx = CalcContext::new()
+
+  sheet.set_cell_value("A1", Numeric(1.0))
+  sheet.set_cell_value("B1", Numeric(2.0))
+  sheet.set_cell_value("A2", Numeric(3.0))
+  sheet.set_cell_value("B2", Numeric(4.0))
+  sheet.set_cell_value("E1", String("bad"))
+  sheet.set_cell_value("F1", Numeric(2.0))
+  sheet.set_cell_value("E2", Numeric(3.0))
+  sheet.set_cell_value("F2", Numeric(4.0))
+  sheet.set_cell_value("G1", Numeric(1.0))
+  sheet.set_cell_value("H1", Numeric(0.0))
+  sheet.set_cell_value("G2", Numeric(0.0))
+  sheet.set_cell_value("H2", Numeric(1.0))
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "COMPLEX",
+        [Expr::Number(1.0), Expr::Number(2.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MINVERSE",
+        [Expr::Range("", "A1", "B2")][:],
+        ctx,
+      ) {
+      List(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "MMULT",
+        [Expr::Range("", "E1", "F2"), Expr::Range("", "G1", "H2")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "IMPRODUCT",
+        [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FLOOR",
+        [Expr::FuncCall("NA", []), Expr::Number(2.0)][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TRUNC",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "SQRT",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DATE",
+        [Expr::Number(2024.0), Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TIME",
+        [Expr::Number(1.0), Expr::Number(2.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    match
+      eval_function(workbook, "Sheet1", "INDIRECT", [Expr::String("1")][:], ctx) {
+      List(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  let gcd_numbers : Array[Double] = []
+  inspect(
+    match
+      gcd_lcm_collect(
+        FormulaValue::List([FormulaValue::String("bad")]),
+        gcd_numbers,
+        false,
+      ) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+
+  let multinomial_numbers : Array[Double] = []
+  inspect(
+    match
+      multinomial_collect(
+        FormulaValue::List([FormulaValue::String("bad")]),
+        multinomial_numbers,
+      ) {
+      Err(Error(err)) => err == formula_error_value
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match bitwise_number(FormulaValue::Empty) {
+      Ok(num) => num == 0.0
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    match
+      betainv_values(
+        [
+          FormulaValue::Number(0.5),
+          FormulaValue::Number(2.0),
+          FormulaValue::Number(2.0),
+        ][:],
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      norm_s_inv_values([FormulaValue::Number(0.0)][:]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+}
