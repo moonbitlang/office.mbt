@@ -5473,4 +5473,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **284** (add semantic parity JSON report metadata field for tool/version info to improve artifact provenance).
+- [x] 284. Add provenance metadata to semantic parity JSON reports.
+  - DoD: include tool/version/timestamp metadata in JSON report artifacts.
+  - Delivered:
+    - Extended `scripts/semantic_parity.py` JSON report payload with:
+      - `metadata.tool`
+      - `metadata.python_version`
+      - `metadata.generated_at_utc`
+    - Extended `scripts/semantic_parity_report_summary.py` to print metadata when present.
+    - Updated docs in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_semantic_parity_fast.sh --json-report _build/semantic_parity/report_meta.json`
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_meta.json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **285** (add semantic parity JSON report field for command-line args used, improving reproducibility of artifacts).

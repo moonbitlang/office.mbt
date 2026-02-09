@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import shutil
@@ -591,6 +592,13 @@ def main() -> int:
             report_path = (repo_root / report_path).resolve()
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report = {
+            "metadata": {
+                "tool": "scripts/semantic_parity.py",
+                "python_version": sys.version.split()[0],
+                "generated_at_utc": datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(),
+            },
             "result": "pass" if not all_mismatches else "fail",
             "excelize_output_source": excelize_source,
             "mbtexcel_output_dir": str(mbt_out),

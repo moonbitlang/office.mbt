@@ -119,6 +119,9 @@ To emit a machine-readable CI artifact:
 scripts/test_semantic_parity.sh --json-report _build/semantic_parity/report.json
 ```
 
+Report artifacts include provenance metadata (`tool`, `python_version`,
+`generated_at_utc`) for traceability.
+
 To print a compact human summary from a JSON report:
 
 ```sh

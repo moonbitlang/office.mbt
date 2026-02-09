@@ -39,8 +39,13 @@ def main() -> int:
         raise FileNotFoundError(f"report not found: {report_path}")
 
     data = json.loads(report_path.read_text())
+    metadata = data.get("metadata", {})
 
     print(f"Report: {report_path}")
+    if metadata:
+        print(f"Tool: {metadata.get('tool')}")
+        print(f"Python: {metadata.get('python_version')}")
+        print(f"Generated UTC: {metadata.get('generated_at_utc')}")
     print(f"Result: {data.get('result')}")
     print(f"Mismatch count: {data.get('mismatch_count')}")
     print(f"Total compare ms: {data.get('total_scenario_compare_ms')}")
