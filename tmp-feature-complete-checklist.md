@@ -5339,4 +5339,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **276** (add a helper script to summarize key metrics from the semantic parity JSON report for quick human scanning).
+- [x] 276. Add helper script for compact semantic parity JSON report summaries.
+  - DoD: provide a lightweight utility that prints key metrics from semantic parity JSON reports.
+  - Delivered:
+    - Added executable helper:
+      - `scripts/semantic_parity_report_summary.py`
+    - Script prints:
+      - overall result/mismatch count/total compare ms
+      - selected scenarios
+      - per-scenario compact line (status/duration + key summary counters)
+      - mismatch lines when present
+    - Added usage example to:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_fast.json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **277** (add a convenience shell wrapper that generates a JSON report and immediately prints the compact summary in one command).

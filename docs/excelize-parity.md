@@ -118,6 +118,12 @@ To emit a machine-readable CI artifact:
 scripts/test_semantic_parity.sh --json-report _build/semantic_parity/report.json
 ```
 
+To print a compact human summary from a JSON report:
+
+```sh
+python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json
+```
+
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
 ```sh
