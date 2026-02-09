@@ -257,6 +257,8 @@ Use `scripts/check_parity_gate_show_toggles.sh` to validate aggregate gate
 show-toggle contract behavior for compact preflight status output.
 Use `scripts/check_parity_preflight_matrix_smoke.sh` to run a small matrix of
 skip/show-toggle combinations against aggregate preflight status resolution.
+Use `scripts/check_parity_preflight_matrix_smoke.sh --json` for
+machine-readable matrix-smoke output in CI.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

@@ -4,26 +4,48 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-required_patterns=(
-  "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT"
-  "parity preflight matrix smoke preflight"
-  "scripts/check_parity_preflight_matrix_smoke.sh"
-)
+json_mode=0
+if [[ "${1:-}" == "--json" ]]; then
+  json_mode=1
+  shift
+fi
+if [[ $# -ne 0 ]]; then
+  echo "Usage: scripts/check_parity_preflight_matrix_smoke.sh [--json]"
+  exit 2
+fi
 
-for pattern in "${required_patterns[@]}"; do
-  if rg -Fq "$pattern" scripts/test_parity_gates.sh; then
-    echo "[OK] scripts/test_parity_gates.sh contains: $pattern"
-  else
-    echo "[MISSING] scripts/test_parity_gates.sh missing: $pattern"
-    exit 1
-  fi
-done
-
-python3 - <<'PY'
+CHECK_PARITY_JSON_MODE="$json_mode" python3 - <<'PY'
 import json
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+json_mode = os.environ["CHECK_PARITY_JSON_MODE"] == "1"
+results = []
+failed = False
+
+
+def add_result(name: str, ok: bool, detail: str) -> None:
+    global failed
+    results.append({"check": name, "ok": ok, "detail": detail})
+    if not ok:
+        failed = True
+    if not json_mode:
+        marker = "[PASS]" if ok else "[FAIL]"
+        print(f"{marker} {name}: {detail}")
+
+
+gate_source = Path("scripts/test_parity_gates.sh").read_text(encoding="utf-8")
+required_patterns = [
+    "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT",
+    "parity preflight matrix smoke preflight",
+    "scripts/check_parity_preflight_matrix_smoke.sh",
+]
+for pattern in required_patterns:
+    ok = pattern in gate_source
+    detail = "present" if ok else "missing"
+    add_result(f"required_pattern::{pattern}", ok, detail)
 
 cases = [
     {
@@ -113,7 +135,6 @@ required_env_keys = [
     "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
 ]
 
-failed = False
 for case in cases:
     env = os.environ.copy()
     env.update(case["env"])
@@ -125,23 +146,19 @@ for case in cases:
         check=False,
     )
     if proc.returncode != 0:
-        print(f"[FAIL] {case['name']} returned {proc.returncode}")
-        print(proc.stdout.strip())
-        print(proc.stderr.strip())
-        failed = True
+        add_result(case["name"], False, f"show_parity_preflight_status exit={proc.returncode}")
         continue
     try:
         payload = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
-        print(f"[FAIL] {case['name']} emitted invalid json: {exc}")
-        failed = True
+        add_result(case["name"], False, f"invalid json: {exc}")
         continue
 
     mismatches = []
     for key, expected in case["expected"].items():
         actual = payload.get(key)
         if actual != expected:
-            mismatches.append(f"{key}: expected {expected!r}, got {actual!r}")
+            mismatches.append(f"{key} expected {expected!r}, got {actual!r}")
 
     env_payload = payload.get("env", {})
     for key in required_env_keys:
@@ -149,54 +166,65 @@ for case in cases:
             mismatches.append(f"missing env key {key!r}")
 
     if mismatches:
-        print(f"[FAIL] {case['name']}")
-        for item in mismatches:
-            print(f"  - {item}")
-        failed = True
+        add_result(case["name"], False, "; ".join(mismatches))
     else:
-        print(f"[PASS] {case['name']}")
+        add_result(case["name"], True, "status/env resolution matched")
+
+invalid_cases = [
+    (
+        "gate_invalid_compact_without_json",
+        {
+            "SHOW_PARITY_PREFLIGHT_STATUS": "1",
+            "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT": "1",
+        },
+        "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 requires SHOW_PARITY_PREFLIGHT_STATUS=json",
+    ),
+    (
+        "gate_invalid_compact_value",
+        {
+            "SHOW_PARITY_PREFLIGHT_STATUS": "json",
+            "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT": "bad",
+        },
+        "Invalid SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=bad (expected 0 or 1)",
+    ),
+    (
+        "gate_invalid_show_toggle_value",
+        {
+            "SHOW_PARITY_PREFLIGHT_STATUS": "bad",
+        },
+        "Invalid SHOW_PARITY_PREFLIGHT_STATUS=bad (expected 0, 1, or json)",
+    ),
+]
+
+for name, overrides, expected_message in invalid_cases:
+    env = os.environ.copy()
+    env.update(overrides)
+    proc = subprocess.run(
+        ["scripts/test_parity_gates.sh"],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    combined_output = f"{proc.stdout}\n{proc.stderr}"
+    exit_ok = proc.returncode == 2
+    message_ok = expected_message in combined_output
+    ok = exit_ok and message_ok
+    detail = f"exit={proc.returncode}, message_present={message_ok}"
+    add_result(name, ok, detail)
+
+payload = {
+    "result": "fail" if failed else "pass",
+    "checks": results,
+}
+if json_mode:
+    print(json.dumps(payload, indent=2, sort_keys=False))
+else:
+    if failed:
+        print("Parity preflight matrix smoke check failed.")
+    else:
+        print("Parity preflight matrix smoke check passed.")
 
 if failed:
-    raise SystemExit(1)
+    sys.exit(1)
 PY
-
-set +e
-compact_without_json_output="$(SHOW_PARITY_PREFLIGHT_STATUS=1 SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 scripts/test_parity_gates.sh 2>&1)"
-compact_without_json_code=$?
-set -e
-if [[ $compact_without_json_code -ne 2 ]]; then
-  echo "Expected exit code 2 for compact-without-json combo, got ${compact_without_json_code}"
-  exit 1
-fi
-if ! rg -Fq "SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 requires SHOW_PARITY_PREFLIGHT_STATUS=json" <<<"$compact_without_json_output"; then
-  echo "Missing compact-without-json guard message in test_parity_gates output."
-  exit 1
-fi
-
-set +e
-invalid_compact_value_output="$(SHOW_PARITY_PREFLIGHT_STATUS=json SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=bad scripts/test_parity_gates.sh 2>&1)"
-invalid_compact_value_code=$?
-set -e
-if [[ $invalid_compact_value_code -ne 2 ]]; then
-  echo "Expected exit code 2 for invalid compact toggle value, got ${invalid_compact_value_code}"
-  exit 1
-fi
-if ! rg -Fq "Invalid SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=bad (expected 0 or 1)" <<<"$invalid_compact_value_output"; then
-  echo "Missing invalid compact toggle message in test_parity_gates output."
-  exit 1
-fi
-
-set +e
-invalid_show_toggle_output="$(SHOW_PARITY_PREFLIGHT_STATUS=bad scripts/test_parity_gates.sh 2>&1)"
-invalid_show_toggle_code=$?
-set -e
-if [[ $invalid_show_toggle_code -ne 2 ]]; then
-  echo "Expected exit code 2 for invalid SHOW_PARITY_PREFLIGHT_STATUS value, got ${invalid_show_toggle_code}"
-  exit 1
-fi
-if ! rg -Fq "Invalid SHOW_PARITY_PREFLIGHT_STATUS=bad (expected 0, 1, or json)" <<<"$invalid_show_toggle_output"; then
-  echo "Missing invalid SHOW_PARITY_PREFLIGHT_STATUS message in test_parity_gates output."
-  exit 1
-fi
-
-echo "Parity preflight matrix smoke check passed."
