@@ -150,6 +150,8 @@ Both wrappers also accept `SEMANTIC_PARITY_ARGS` to forward core parity flags
 to `scripts/test_semantic_parity.sh` (for example `--skip-validate`).
 Set `REDACT_PARITY_SUMMARY=1` to apply `--redact-sensitive` by default.
 Use `scripts/show_parity_env.sh` to print current override values in CI logs.
+The helper includes wrapper/docs/docs-coverage preflight toggles so aggregate
+gate env diagnostics stay aligned.
 Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
 overrides automatically before running.
 Set `SKIP_PARITY_FINGERPRINT_CHECK=1` to skip the fingerprint pre-check in

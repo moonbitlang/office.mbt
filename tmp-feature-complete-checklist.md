@@ -6002,4 +6002,16 @@ Commands used:
 
 ## Active Item
 
-- Next item: **318** (add aggregate gate preflight entry for docs-wrapper coverage checker skip toggle to parity env helper docs section).
+- [x] 318. Align parity env docs with docs-coverage preflight toggle.
+  - DoD: include `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT` in parity env docs/quick command index.
+  - Delivered:
+    - Updated `docs/parity-commands.md` env toggle list with:
+      - `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1`
+    - Updated `docs/excelize-parity.md` env-helper note to call out docs-coverage preflight toggle alignment.
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **319** (add a lightweight script to print effective aggregate preflight status resolution from env toggles only).
