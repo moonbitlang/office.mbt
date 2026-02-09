@@ -156,6 +156,8 @@ gate-toggle-contract/docs/docs-coverage preflight toggles and
 `SHOW_PARITY_PREFLIGHT_STATUS` so aggregate gate env diagnostics stay aligned.
 Use `scripts/show_parity_preflight_status.sh` to print the effective preflight
 resolution from current env toggles.
+Use `scripts/show_parity_preflight_status.sh --json --compact` for single-line
+machine-readable output in CI logs.
 Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
 overrides automatically before running.
 Set `SKIP_PARITY_FINGERPRINT_CHECK=1` to skip the fingerprint pre-check in

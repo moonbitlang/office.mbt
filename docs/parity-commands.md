@@ -42,6 +42,7 @@ scripts/show_parity_env.sh
 scripts/show_parity_env.sh --json
 scripts/show_parity_preflight_status.sh
 scripts/show_parity_preflight_status.sh --json
+scripts/show_parity_preflight_status.sh --json --compact
 python3 scripts/semantic_parity.py --list-scenarios
 python3 scripts/semantic_parity.py --dry-run-config
 ```

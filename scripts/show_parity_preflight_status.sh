@@ -2,12 +2,24 @@
 set -euo pipefail
 
 json_mode=0
-if [[ "${1:-}" == "--json" ]]; then
-  json_mode=1
+compact_mode=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json)
+      json_mode=1
+      ;;
+    --compact)
+      compact_mode=1
+      ;;
+    *)
+      echo "Usage: scripts/show_parity_preflight_status.sh [--json [--compact]]"
+      exit 2
+      ;;
+  esac
   shift
-fi
-if [[ $# -ne 0 ]]; then
-  echo "Usage: scripts/show_parity_preflight_status.sh [--json]"
+done
+if [[ $compact_mode -eq 1 && $json_mode -ne 1 ]]; then
+  echo "Usage: scripts/show_parity_preflight_status.sh [--json [--compact]]"
   exit 2
 fi
 
@@ -57,6 +69,25 @@ if [[ "$skip_gate_toggle_contract" == "1" ]]; then
 fi
 
 if [[ $json_mode -eq 1 ]]; then
+  if [[ $compact_mode -eq 1 ]]; then
+    printf '{"wrapper_preflight":"%s","env_helper_preflight":"%s","preflight_status_helper_preflight":"%s","gate_toggle_consistency_preflight":"%s","gate_toggle_contract_preflight":"%s","docs_preflight":"%s","docs_wrapper_coverage_preflight":"%s","env":{"SKIP_PARITY_WRAPPER_PREFLIGHT":"%s","SKIP_PARITY_ENV_HELPER_PREFLIGHT":"%s","SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT":"%s","SKIP_PARITY_GATE_TOGGLE_PREFLIGHT":"%s","SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT":"%s","SKIP_PARITY_DOCS_PREFLIGHT":"%s","SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT":"%s"}}\n' \
+      "$wrapper_status" \
+      "$env_helper_status" \
+      "$preflight_status_helper_status" \
+      "$gate_toggle_status" \
+      "$gate_toggle_contract_status" \
+      "$docs_status" \
+      "$docs_coverage_status" \
+      "$skip_wrapper" \
+      "$skip_env_helper" \
+      "$skip_preflight_status_helper" \
+      "$skip_gate_toggle" \
+      "$skip_gate_toggle_contract" \
+      "$skip_docs" \
+      "$skip_docs_coverage"
+    exit 0
+  fi
+
   printf '{\n'
   printf '  "wrapper_preflight": "%s",\n' "$wrapper_status"
   printf '  "env_helper_preflight": "%s",\n' "$env_helper_status"

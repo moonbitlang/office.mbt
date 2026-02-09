@@ -77,7 +77,7 @@ if [[ $invalid_code -ne 2 ]]; then
   echo "Expected exit code 2 for invalid args, got ${invalid_code}"
   exit 1
 fi
-if ! rg -Fq "Usage: scripts/show_parity_preflight_status.sh [--json]" <<<"$invalid_output"; then
+if ! rg -Fq "Usage: scripts/show_parity_preflight_status.sh [--json [--compact]]" <<<"$invalid_output"; then
   echo "show_parity_preflight_status invalid-arg usage message mismatch."
   exit 1
 fi

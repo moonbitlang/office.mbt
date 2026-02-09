@@ -6344,4 +6344,26 @@ Commands used:
 
 ## Active Item
 
-- Next item: **333** (add compact JSON mode to preflight status helper).
+- [x] 333. Add compact JSON mode to preflight status helper.
+  - DoD: support single-line JSON emission from preflight-status helper for
+    tighter CI log parsing.
+  - Delivered:
+    - Updated `scripts/show_parity_preflight_status.sh`:
+      - supports `--json --compact` mode
+      - validates usage for unsupported arg combos
+      - emits one-line JSON payload with existing fields and env map
+    - Updated contract checker usage expectation:
+      - `scripts/check_parity_preflight_status_helper.sh`
+    - Updated docs:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/show_parity_preflight_status.sh --json --compact`
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 scripts/show_parity_preflight_status.sh --json --compact`
+    - `scripts/check_parity_preflight_status_helper.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **334** (extend preflight-status helper contract checker for compact mode).
