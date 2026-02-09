@@ -4,6 +4,21 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+required_patterns=(
+  "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_PREFLIGHT"
+  "parity preflight matrix smoke contract-contract-contract-contract-contract-contract preflight"
+  "scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract_contract.sh"
+)
+
+for pattern in "${required_patterns[@]}"; do
+  if rg -Fq "$pattern" scripts/test_parity_gates.sh; then
+    echo "[OK] scripts/test_parity_gates.sh contains: $pattern"
+  else
+    echo "[MISSING] scripts/test_parity_gates.sh missing: $pattern"
+    exit 1
+  fi
+done
+
 json_output="$(scripts/check_parity_preflight_matrix_smoke_contract_contract_contract_contract_contract.sh --json)"
 PARITY_PREFLIGHT_MATRIX_SMOKE_CONTRACT_CONTRACT_CONTRACT_CONTRACT_CONTRACT_JSON="$json_output" python3 - <<'PY'
 import json
