@@ -635,6 +635,19 @@ test "formula builtins wb: text/search guard branches part 4" {
       eval_function(
         workbook,
         "Sheet1",
+        "SUBSTITUTE",
+        [Expr::String("abc"), Expr::String("a")][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
         "FIND",
         [Expr::String("a"), Expr::FuncCall("NA", [])][:],
         ctx,
@@ -6517,6 +6530,20 @@ test "formula builtins wb: text dispatch happy paths part 15" {
     is_formula_string(
       eval_function(workbook, "Sheet1", "DBCS", [Expr::String("abc")][:], ctx),
       "abc",
+    ),
+    content="true",
+  )
+  let zh_props = CoreProperties::with_values(language="zh-cn")
+  workbook.set_core_properties(zh_props)
+  let fullwidth_abc = String::from_array([
+    Int::unsafe_to_char(0xff41),
+    Int::unsafe_to_char(0xff42),
+    Int::unsafe_to_char(0xff43),
+  ])
+  inspect(
+    is_formula_string(
+      eval_function(workbook, "Sheet1", "DBCS", [Expr::String("abc")][:], ctx),
+      fullwidth_abc,
     ),
     content="true",
   )
@@ -13631,6 +13658,19 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
     content="true",
   )
 
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ARRAYTOTEXT",
+        [Expr::Range("", "A1", "B1")][:],
+        ctx,
+      ),
+      "1, x",
+    ),
+    content="true",
+  )
   inspect(
     is_formula_string(
       eval_function(
