@@ -168,6 +168,23 @@ For ultra-fast local loops that intentionally skip OOXML validator checks:
 scripts/test_semantic_parity_ultrafast.sh
 ```
 
+## Wrapper guide
+
+Use this quick map when choosing a parity command:
+
+- `scripts/test_semantic_parity.sh`:
+  - default semantic parity gate (validator + summaries + timings)
+- `scripts/test_semantic_parity_fast.sh`:
+  - fast pre-commit subset (`cf`, `controls`)
+- `scripts/test_semantic_parity_ultrafast.sh`:
+  - fastest local subset loop with `--skip-validate`
+- `scripts/test_semantic_parity_report.sh`:
+  - semantic parity + human-readable report summary
+- `scripts/test_semantic_parity_report_compact.sh`:
+  - semantic parity + compact JSON summary (CI parser friendly)
+- `scripts/test_parity_gates.sh`:
+  - full parity gate: semantic parity + demo roundtrip/openxml checks
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the

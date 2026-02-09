@@ -5612,4 +5612,18 @@ Commands used:
 
 ## Active Item
 
-- Next item: **292** (add a dedicated docs section that maps each parity wrapper script to its intended usage context: full gate, fast loop, compact CI ingest).
+- [x] 292. Add dedicated docs mapping for parity wrapper usage contexts.
+  - DoD: document which wrapper command to use for each parity workflow context.
+  - Delivered:
+    - Added `Wrapper guide` section to `docs/excelize-parity.md` mapping:
+      - full semantic parity gate
+      - fast/ultrafast local loops
+      - report wrappers (human vs compact JSON)
+      - full aggregate parity gate
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **293** (add a tiny helper script that prints currently configured parity env overrides for easier CI debugging).
