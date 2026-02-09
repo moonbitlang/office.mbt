@@ -2506,6 +2506,37 @@ Commands used:
     - Total uncovered lines reduced from `2912` to `2889`
     - Uncovered file count remains `43`
 
+- [x] 164. Close residuals in `xlsx/formula_eval.mbt` (part 2).
+  - DoD: add focused whitebox coverage for formula-eval dynamic-array helper guard paths and reduce residual uncovered lines in `xlsx/formula_eval.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_eval_wbtest.mbt` with focused whitebox coverage for:
+      - `sequence_values` conversion-error branches (`rows`/`cols`/`start`/`step`).
+      - `randarray_values`:
+        - default-argument path,
+        - non-whole-number output path,
+        - conversion-error guards across row/col/min/max/whole-number args.
+      - `slice_range_values` guard matrix (`non-positive size`, `negative start`, `out-of-bounds`).
+      - `take_values` / `drop_values` conversion-error guards and drop-to-empty slice error path.
+      - `expand_values` conversion-error guards and invalid pad-error propagation.
+      - `wrap_values` invalid-arity/count-error paths and default-pad branch.
+      - `flatten_range_values` error propagation / ignore-error / empty-result-calc-error branches.
+      - `choose_indices` conversion and empty-input guards.
+      - `sort_range_values` index/order/error-key guards.
+      - `sortby_vector` non-vector/error-key guards.
+      - `sortby_values` column-sort output branch (`sort_by_rows == false`).
+      - `sort_values` sort-index/order/by-col conversion-error guards.
+      - `filter_range_values` non-vector range/mask and include-bool coercion error guards.
+      - `tocol_torow_values` ignore/scan-flag conversion-error guards.
+  - Validation gates:
+    - `moon test xlsx/formula_eval_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after175.log`
+  - Coverage delta:
+    - `xlsx/formula_eval.mbt` uncovered lines reduced from `485` to `439`
+    - Total uncovered lines reduced from `2889` to `2843`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **164** (move to the next residual hotspot: `xlsx/formula_eval.mbt`, part 2).
+- Next item: **165** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 2).
