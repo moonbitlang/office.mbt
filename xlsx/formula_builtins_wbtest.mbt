@@ -10083,3 +10083,50 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: distribution and finance alias dispatch part 25" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  let names = [
+    "WEIBULL", "WEIBULL.DIST", "_XLFN.WEIBULL.DIST", "BETA.DIST", "_XLFN.BETA.DIST",
+    "BETADIST", "BETAINV", "BETA.INV", "_XLFN.BETA.INV", "CONFIDENCE", "CONFIDENCE.NORM",
+    "_XLFN.CONFIDENCE.NORM", "CONFIDENCE.T", "_XLFN.CONFIDENCE.T", "NORM.DIST", "_XLFN.NORM.DIST",
+    "NORMDIST", "NORM.INV", "_XLFN.NORM.INV", "NORMINV", "NORM.S.DIST", "_XLFN.NORM.S.DIST",
+    "NORMSDIST", "NORM.S.INV", "_XLFN.NORM.S.INV", "NORMSINV", "LOGNORM.DIST", "_XLFN.LOGNORM.DIST",
+    "LOGNORMDIST", "LOGINV", "LOGNORM.INV", "_XLFN.LOGNORM.INV", "GAMMA", "GAMMA.DIST",
+    "_XLFN.GAMMA.DIST", "GAMMADIST", "GAMMA.INV", "_XLFN.GAMMA.INV", "GAMMAINV",
+    "GAMMALN", "GAMMALN.PRECISE", "_XLFN.GAMMALN.PRECISE", "EXPON.DIST", "_XLFN.EXPON.DIST",
+    "EXPONDIST", "POISSON.DIST", "_XLFN.POISSON.DIST", "POISSON", "PROB", "BINOM.DIST",
+    "_XLFN.BINOM.DIST", "BINOMDIST", "BINOM.DIST.RANGE", "_XLFN.BINOM.DIST.RANGE",
+    "BINOM.INV", "_XLFN.BINOM.INV", "CRITBINOM", "HYPGEOM.DIST", "_XLFN.HYPGEOM.DIST",
+    "HYPGEOMDIST", "NEGBINOM.DIST", "_XLFN.NEGBINOM.DIST", "NEGBINOMDIST", "GAUSS",
+    "PHI", "CHIDIST", "CHIINV", "CHISQ.DIST", "_XLFN.CHISQ.DIST", "CHISQ.DIST.RT",
+    "_XLFN.CHISQ.DIST.RT", "CHISQ.INV", "_XLFN.CHISQ.INV", "CHISQ.INV.RT", "_XLFN.CHISQ.INV.RT",
+    "CHITEST", "CHISQ.TEST", "_XLFN.CHISQ.TEST", "F.DIST", "_XLFN.F.DIST", "FDIST",
+    "F.DIST.RT", "_XLFN.F.DIST.RT", "F.INV", "_XLFN.F.INV", "F.INV.RT", "_XLFN.F.INV.RT",
+    "FINV", "FTEST", "F.TEST", "_XLFN.F.TEST", "ACCRINT", "ACCRINTM", "AMORDEGRC",
+    "AMORLINC", "COUPDAYBS", "COUPDAYS", "COUPDAYSNC", "COUPNCD", "COUPNUM", "COUPPCD",
+    "CUMIPMT", "CUMPRINC", "DURATION", "DB", "DDB", "FV", "FVSCHEDULE", "DISC", "INTRATE",
+    "IRR", "MDURATION", "MIRR", "DOLLAR", "DOLLARDE", "DOLLARFR", "EFFECT", "CONVERT",
+    "EUROCONVERT", "IPMT", "ISPMT", "NOMINAL", "NPER", "NPV", "ODDFPRICE", "ODDFYIELD",
+    "ODDLPRICE", "ODDLYIELD", "PDURATION", "PMT", "PPMT", "PRICE", "PRICEDISC", "PRICEMAT",
+    "PV", "RATE", "RECEIVED", "RRI", "SLN", "SYD", "TBILLEQ", "TBILLPRICE", "TBILLYIELD",
+    "XIRR", "XNPV", "YIELD", "YIELDDISC", "YIELDMAT", "VDB", "T.DIST", "_XLFN.T.DIST",
+    "T.DIST.2T", "_XLFN.T.DIST.2T", "T.DIST.RT", "_XLFN.T.DIST.RT", "TDIST", "T.INV",
+    "_XLFN.T.INV", "T.INV.2T", "_XLFN.T.INV.2T", "TINV", "T.TEST", "_XLFN.T.TEST",
+    "TTEST", "Z.TEST", "_XLFN.Z.TEST", "ZTEST",
+  ]
+
+  for name in names {
+    inspect(
+      match eval_function(workbook, "Sheet1", name, [][:], ctx) {
+        Error(_) => true
+        _ => false
+      },
+      content="true",
+    )
+  }
+}

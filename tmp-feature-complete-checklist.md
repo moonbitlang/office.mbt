@@ -3391,6 +3391,24 @@ Commands used:
       - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
     - `xlsx/formula_builtins.mbt` covered lines increased from `2502/4748` to `2663/4748` (`+161` lines).
 
+- [x] 194. Close residuals in `xlsx/formula_builtins.mbt` (part 25).
+  - DoD: reduce uncovered alias-dispatch wrappers in the large distribution/financial section by systematically executing each entrypoint branch.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with a table-driven alias dispatch sweep over the line-1444..1592 region.
+    - Added a `names` list (distribution/statistics/financial/`T*`/`Z*` aliases, including `_XLFN.*` forms) and asserted each wrapper returns an `Error` on empty-args input.
+    - This specifically exercises many otherwise-unreached one-line dispatch branches without mutating core logic.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` covered lines increased from `2663/4748` to `2866/4748` (`+203` lines).
+
 ## Active Item
 
-- Next item: **194** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 25, using wbtest-targeted coverage summary as the comparable metric).
+- Next item: **195** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 26, using wbtest-targeted coverage summary as the comparable metric).
