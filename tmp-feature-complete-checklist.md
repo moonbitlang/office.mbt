@@ -4801,4 +4801,33 @@ Commands used:
 
 ## Active Item
 
-- Next item: **249** (continue demo-level hardening for sparkline-heavy output to guard x14 extension + relationship invariants across roundtrip).
+- [x] 249. Integration-focused parity hardening: sparkline-heavy demo x14 consistency.
+  - DoD: add demo-level roundtrip checks for x14 sparkline extension integrity (namespace/ext tags/counts) and parsed sparkline-group semantics.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_sparklines_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_sparklines_archive`) that validates:
+      - required worksheet/sharedStrings parts exist and sheet rels are intentionally absent.
+      - workbook relationship IDs remain unique with expected worksheet/sharedStrings targets.
+      - worksheet xml preserves x14 extension markers:
+        - `mc:Ignorable="x14"`
+        - `<x14:sparklineGroups ... xmlns:xm=...>`
+      - sparkline payload counts remain stable (`<x14:sparkline>`, `<xm:f>`, `<xm:sqref>` all equal `4`).
+      - content types include worksheet and shared strings MIME overrides.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_sparklines_bytes()`
+      - parsed workbook sparkline semantics (`KPI` sheet has 1 group with 4 sparklines)
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_sparklines_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_stream_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **250** (extend demo-level hardening to interactive controls/form-control output and verify control parts/relations stay consistent after roundtrip).
