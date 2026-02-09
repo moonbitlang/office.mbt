@@ -6034,4 +6034,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **320** (add parity preflight status helper JSON mode for CI parsers).
+- [x] 320. Add parity preflight status helper JSON mode for CI parsers.
+  - DoD: expose aggregate preflight status in machine-readable JSON for automation.
+  - Delivered:
+    - Updated `scripts/show_parity_preflight_status.sh`:
+      - supports optional `--json` mode
+      - validates usage and exits on unknown args
+      - emits stable JSON payload including:
+        - resolved preflight statuses
+        - raw env toggle values
+    - Updated `docs/parity-commands.md` diagnostics list with:
+      - `scripts/show_parity_preflight_status.sh --json`
+  - Validation gates:
+    - `scripts/show_parity_preflight_status.sh --json`
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1 scripts/show_parity_preflight_status.sh --json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **321** (add aggregate gate toggle to print preflight status helper output at startup).
