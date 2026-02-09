@@ -5258,4 +5258,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **271** (add a lightweight script to run semantic parity in “subset mode” for the fastest two scenarios, suitable for pre-commit checks).
+- [x] 271. Add lightweight semantic parity subset command for pre-commit checks.
+  - DoD: provide a fast semantic parity command targeting two quick scenarios.
+  - Delivered:
+    - Added executable helper:
+      - `scripts/test_semantic_parity_fast.sh`
+    - Script runs `scripts/test_semantic_parity.sh` with:
+      - `--scenario cf`
+      - `--scenario controls`
+      - `--sort-scenarios`
+    - Documented in:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/test_semantic_parity_fast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **272** (add a no-validator fast mode script variant for ultra-quick local iterations when OOXML validation is intentionally deferred).

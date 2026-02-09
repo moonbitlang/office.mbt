@@ -112,6 +112,12 @@ For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 scripts/test_parity_gates.sh
 ```
 
+For a fast pre-commit semantic subset (currently `cf` + `controls`):
+
+```sh
+scripts/test_semantic_parity_fast.sh
+```
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the
