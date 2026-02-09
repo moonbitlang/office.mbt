@@ -7506,9 +7506,6 @@ fn chitest_values(
   } else {
     (actual_range.cols - 1) * (actual_range.rows - 1)
   }
-  if degrees <= 0 {
-    return Error(formula_error_na)
-  }
   let value = round_chisq_result(get_chidist(result, Double::from_int(degrees)))
   number_or_num_error(value)
 }

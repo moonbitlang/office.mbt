@@ -643,6 +643,22 @@ test "formula builtins wb: text/search guard branches part 4" {
       eval_function(
         workbook,
         "Sheet1",
+        "CHITEST",
+        [
+          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
+          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
+        ][:],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
         "SUBSTITUTE",
         [Expr::String("abc"), Expr::String("a")][:],
         ctx,

@@ -4558,6 +4558,30 @@ Commands used:
     - `xlsx/formula_builtins.mbt` changed from `4655/4716` to `4658/4712`.
     - Uncovered lines reduced from `61` to `54` (`-7`) while keeping `calc_test` green.
 
+- [x] 240. Close residuals in `xlsx/formula_builtins.mbt` (part 71).
+  - DoD: reduce `CHITEST` residuals with explicit zero-dimension coverage and remove redundant dead fallback.
+  - Delivered:
+    - Added wbtest for `CHITEST(MUNIT(0), MUNIT(0))` via `eval_function` to directly cover zero-size range validation returning `#VALUE!`.
+    - Removed redundant `degrees <= 0` fallback in `chitest_values`:
+      - after preserving `rows/cols == 0` and `rows*cols == 1` guards, this branch is no longer reachable.
+    - Verified no regression against chi-square calc scenarios (`xlsx/calc_test.mbt`).
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` changed from `4658/4712` to `4659/4711`.
+    - Uncovered lines reduced from `54` to `52` (`-2`).
+
 ## Active Item
 
-- Next item: **240** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 71, prioritizing remaining reachable branches from caret output).
+- Next item: **241** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 72, prioritizing remaining reachable branches from caret output).
