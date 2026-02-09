@@ -5858,4 +5858,16 @@ Commands used:
 
 ## Active Item
 
-- Next item: **308** (add a minimal parity-docs link section in README pointing to both detailed and quick-index docs).
+- [x] 308. Add README links to detailed + quick parity docs.
+  - DoD: expose both parity documentation entrypoints from top-level README.
+  - Delivered:
+    - Updated `README.mbt.md` parity section to include:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **309** (add parity command index mention in docs wrapper-guide section for cross-navigation symmetry).

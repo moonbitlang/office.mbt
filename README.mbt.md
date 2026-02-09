@@ -222,6 +222,7 @@ scripts/test_parity_gates.sh
 For semantic parity and CI wrapper usage details, see:
 
 - `docs/excelize-parity.md`
+- `docs/parity-commands.md`
 
 Common commands:
 
