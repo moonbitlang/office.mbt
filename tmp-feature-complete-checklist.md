@@ -5817,4 +5817,17 @@ Commands used:
 
 ## Active Item
 
-- Next item: **305** (add docs/examples showing combined env toggles for common CI profiles: strict, fast, and redacted-report modes).
+- [x] 305. Add docs examples for common CI parity profiles.
+  - DoD: document practical command templates for strict, fast, and redacted parity CI modes.
+  - Delivered:
+    - Added `CI profiles` section in `docs/excelize-parity.md` with examples:
+      - strict full gate
+      - fast compact mode (skip preflight + skip validate)
+      - redacted report mode
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **306** (add a minimal parity CLI usage section to `README.mbt.md` linking to docs/excelize-parity.md and primary wrapper commands).

@@ -201,6 +201,32 @@ Use this quick map when choosing a parity command:
 Use `scripts/check_parity_wrappers.sh` to verify wrapper script presence and
 execute bits in local/CI environments (`--json` for machine-readable output).
 
+## CI profiles
+
+Common parity CI command profiles:
+
+- Strict (full gate + preflight + validator):
+
+```sh
+scripts/test_parity_gates.sh
+```
+
+- Fast (skip wrapper preflight + skip validator + compact JSON summary):
+
+```sh
+SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
+SEMANTIC_PARITY_ARGS='--skip-validate' \
+scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios
+```
+
+- Redacted reports (hide argv/env values in shared logs):
+
+```sh
+REDACT_PARITY_SUMMARY=1 \
+SEMANTIC_PARITY_ARGS='--skip-validate' \
+scripts/test_semantic_parity_report.sh --scenario cf --scenario controls --sort-scenarios
+```
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the
