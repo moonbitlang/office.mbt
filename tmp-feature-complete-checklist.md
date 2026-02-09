@@ -5764,4 +5764,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **302** (add parity gate env diagnostics to JSON report metadata so aggregate runs capture wrapper env context in artifacts).
+- [x] 302. Capture wrapper env context in parity JSON report metadata.
+  - DoD: include parity wrapper env context in JSON artifacts for better reproducibility.
+  - Delivered:
+    - Extended `scripts/semantic_parity.py` metadata with:
+      - `metadata.wrapper_env` (key parity env vars, nullable when unset)
+    - Extended `scripts/semantic_parity_report_summary.py`:
+      - prints active wrapper env entries when present.
+    - Updated metadata docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SEMANTIC_PARITY_ARGS='--skip-validate' SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' scripts/test_semantic_parity_report.sh --scenario cf --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **303** (add summary-helper redaction option to hide specific metadata/env fields in shared logs).

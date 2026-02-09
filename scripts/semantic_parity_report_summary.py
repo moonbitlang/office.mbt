@@ -144,6 +144,18 @@ def main() -> int:
         argv = metadata.get("argv")
         if isinstance(argv, list):
             print(f"Args: {' '.join(str(v) for v in argv)}")
+        wrapper_env = metadata.get("wrapper_env")
+        if isinstance(wrapper_env, dict):
+            active_env = {
+                key: value
+                for key, value in wrapper_env.items()
+                if value not in (None, "")
+            }
+            if active_env:
+                pretty_env = " ".join(
+                    f"{key}={value}" for key, value in sorted(active_env.items())
+                )
+                print(f"Wrapper env: {pretty_env}")
     print(f"Result: {data.get('result')}")
     print(f"Mismatch count: {data.get('mismatch_count')}")
     print(f"Total compare ms: {data.get('total_scenario_compare_ms')}")
