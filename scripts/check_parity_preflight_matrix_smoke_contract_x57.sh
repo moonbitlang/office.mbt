@@ -4,28 +4,36 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+json_mode=0
+if [[ "${1:-}" == "--json" ]]; then
+  json_mode=1
+  shift
+fi
 if [[ $# -ne 0 ]]; then
-  echo "Usage: scripts/check_parity_preflight_matrix_smoke_contract_x57.sh"
+  echo "Usage: scripts/check_parity_preflight_matrix_smoke_contract_x57.sh [--json]"
   exit 2
 fi
 
-python3 - <<'PY'
+CHECK_PARITY_JSON_MODE="$json_mode" python3 - <<'PY'
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
+json_mode = os.environ["CHECK_PARITY_JSON_MODE"] == "1"
 results = []
 failed = False
 
 
 def add_result(name: str, ok: bool, detail: str) -> None:
     global failed
-    results.append((name, ok, detail))
+    results.append({"check": name, "ok": ok, "detail": detail})
     if not ok:
         failed = True
-    marker = "[PASS]" if ok else "[FAIL]"
-    print(f"{marker} {name}: {detail}")
+    if not json_mode:
+        marker = "[PASS]" if ok else "[FAIL]"
+        print(f"{marker} {name}: {detail}")
 
 
 gate_source = Path("scripts/test_parity_gates.sh").read_text(encoding="utf-8")
@@ -132,10 +140,17 @@ add_result(
     f"exit={invalid_proc.returncode}",
 )
 
-if failed:
-    print("Parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker contract check failed.")
+payload = {
+    "result": "fail" if failed else "pass",
+    "checks": results,
+}
+if json_mode:
+    print(json.dumps(payload, indent=2, sort_keys=False))
 else:
-    print("Parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker contract check passed.")
+    if failed:
+        print("Parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker contract check failed.")
+    else:
+        print("Parity preflight matrix smoke contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract-contract checker contract check passed.")
 
 if failed:
     sys.exit(1)
