@@ -118,6 +118,12 @@ For a fast pre-commit semantic subset (currently `cf` + `controls`):
 scripts/test_semantic_parity_fast.sh
 ```
 
+For ultra-fast local loops that intentionally skip OOXML validator checks:
+
+```sh
+scripts/test_semantic_parity_ultrafast.sh
+```
+
 ## How to keep this doc up to date
 
 1. Identify Excelize features that are “option-struct driven” (usually the

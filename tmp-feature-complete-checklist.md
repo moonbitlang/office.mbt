@@ -5276,4 +5276,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **272** (add a no-validator fast mode script variant for ultra-quick local iterations when OOXML validation is intentionally deferred).
+- [x] 272. Add no-validator fast-mode semantic parity script.
+  - DoD: provide an ultra-quick local parity command that intentionally skips OOXML validation.
+  - Delivered:
+    - Added executable helper:
+      - `scripts/test_semantic_parity_ultrafast.sh`
+    - Script behavior:
+      - delegates to `scripts/test_semantic_parity_fast.sh --skip-validate`
+      - keeps sorted fast-scenario subset (`cf`, `controls`) with summary/timing output.
+    - Documented in:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/test_semantic_parity_ultrafast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **273** (add semantic parity “list scenarios” CLI output for discoverability and scriptability).
