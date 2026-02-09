@@ -6366,4 +6366,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **334** (extend preflight-status helper contract checker for compact mode).
+- [x] 334. Extend preflight-status helper contract checker for compact mode.
+  - DoD: cover compact JSON branch and guard behavior in preflight-status helper
+    contract tests.
+  - Delivered:
+    - Updated `scripts/check_parity_preflight_status_helper.sh`:
+      - validates `scripts/show_parity_preflight_status.sh --json --compact` parses
+      - checks required keys in compact JSON payload
+      - verifies `--compact` without `--json` exits `2` with expected usage text
+      - keeps existing invalid-arg and status-resolution checks
+  - Validation gates:
+    - `scripts/check_parity_preflight_status_helper.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **335** (add compact-mode coverage to aggregate preflight status docs section).

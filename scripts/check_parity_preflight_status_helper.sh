@@ -38,6 +38,27 @@ if missing_env:
     raise SystemExit(f"missing env keys in preflight status json output: {missing_env}")
 PY
 
+compact_output="$(scripts/show_parity_preflight_status.sh --json --compact)"
+PARITY_PREFLIGHT_COMPACT_JSON="$compact_output" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["PARITY_PREFLIGHT_COMPACT_JSON"])
+required_keys = [
+    "wrapper_preflight",
+    "env_helper_preflight",
+    "preflight_status_helper_preflight",
+    "gate_toggle_consistency_preflight",
+    "gate_toggle_contract_preflight",
+    "docs_preflight",
+    "docs_wrapper_coverage_preflight",
+    "env",
+]
+missing = [k for k in required_keys if k not in payload]
+if missing:
+    raise SystemExit(f"missing keys in compact preflight status json output: {missing}")
+PY
+
 overridden_output="$(
   SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
   SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 \
@@ -68,6 +89,19 @@ if payload["docs_preflight"] != "skipped":
 if payload["docs_wrapper_coverage_preflight"] != "n/a (docs preflight skipped)":
     raise SystemExit("docs_wrapper_coverage_preflight did not resolve to n/a (docs preflight skipped)")
 PY
+
+set +e
+compact_without_json_output="$(scripts/show_parity_preflight_status.sh --compact 2>&1)"
+compact_without_json_code=$?
+set -e
+if [[ $compact_without_json_code -ne 2 ]]; then
+  echo "Expected exit code 2 for --compact without --json, got ${compact_without_json_code}"
+  exit 1
+fi
+if ! rg -Fq "Usage: scripts/show_parity_preflight_status.sh [--json [--compact]]" <<<"$compact_without_json_output"; then
+  echo "show_parity_preflight_status compact-without-json usage message mismatch."
+  exit 1
+fi
 
 set +e
 invalid_output="$(scripts/show_parity_preflight_status.sh --nope 2>&1)"
