@@ -205,6 +205,12 @@ moon run cmd/demos -- dashboard demos_out
 moon run cmd/demos -- stream_big demos_out 50000
 ```
 
+Run the demo roundtrip regression gate (local/CI):
+
+```sh
+scripts/test_demo_roundtrip.sh
+```
+
 See `docs/demos.md` for what each demo generates and how the code is structured.
 
 ## API Reference

@@ -5033,4 +5033,17 @@ Commands used:
 
 ## Active Item
 
-- Next item: **258** (wire this demo-roundtrip script into project docs/CI notes and then continue any remaining feature-parity items from the checklist backlog).
+- [x] 258. Wire demo-roundtrip regression entrypoint into docs/CI notes.
+  - DoD: document `scripts/test_demo_roundtrip.sh` as a first-class quality gate path so contributors and CI can run the same demo regression command.
+  - Delivered:
+    - Updated `README.md` demos section with the demo roundtrip regression command:
+      - `scripts/test_demo_roundtrip.sh`
+    - Updated `docs/demos.md` with a dedicated `Regression Suite` section:
+      - command usage and intended local/CI quality-gate role.
+  - Validation gates:
+    - `scripts/test_demo_roundtrip.sh`
+    - `moon check --deny-warn`
+
+## Active Item
+
+- Next item: **259** (expand semantic parity runner scenarios beyond `dashboard/controls/cf` and add one new parity fixture gate).
