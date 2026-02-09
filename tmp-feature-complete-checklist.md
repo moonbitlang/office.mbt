@@ -4997,4 +4997,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **256** (continue demo-level hardening for remaining demos such as `secure_password`, including read-with-password roundtrip invariants where applicable).
+- [x] 256. Integration-focused parity hardening: `secure_password` encrypted demo roundtrip.
+  - DoD: cover encrypted demo workflow with password-aware read/write assertions, including wrong-password failure behavior.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_secure_password_roundtrip_test.mbt`
+    - Test validates encrypted workflow invariants:
+      - demo bytes generated with explicit password (`moonbit`).
+      - `read_with_password` fails for wrong password (`Result` is `Err`).
+      - `read_with_password` succeeds for correct password and preserves expected cell payload.
+      - re-encrypting via `write_with_password` and reading again preserves sheet/cell semantics.
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_secure_password_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **257** (add a single convenience regression entrypoint/filter for all demo-roundtrip hardening tests to make future validation runs cheaper).
