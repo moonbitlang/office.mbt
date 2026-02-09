@@ -64,6 +64,7 @@ wrappers=(
   "scripts/check_parity_preflight_matrix_smoke_contract_x34.sh"
   "scripts/check_parity_preflight_matrix_smoke_contract_x35.sh"
   "scripts/check_parity_preflight_matrix_smoke_contract_x36.sh"
+  "scripts/check_parity_preflight_matrix_smoke_contract_x37.sh"
   "scripts/show_parity_env.sh"
 )
 
