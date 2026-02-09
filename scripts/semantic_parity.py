@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import subprocess
@@ -350,7 +351,9 @@ def validate_xlsx_outputs(repo_root: Path, out_dir: Path) -> None:
         run(["bash", str(validator), str(path)], cwd=repo_root)
 
 
-def compare_scenario(mbt_path: Path, excelize_path: Path, scenario: Scenario) -> list[str]:
+def compare_scenario(
+    mbt_path: Path, excelize_path: Path, scenario: Scenario
+) -> tuple[list[str], dict[str, object], dict[str, object]]:
     mbt = fingerprint(mbt_path)
     excelize = fingerprint(excelize_path)
     mismatches: list[str] = []
@@ -359,7 +362,7 @@ def compare_scenario(mbt_path: Path, excelize_path: Path, scenario: Scenario) ->
             mismatches.append(
                 f"{scenario.name}: key `{key}` mismatch: mbtexcel={mbt.get(key)!r}, excelize={excelize.get(key)!r}"
             )
-    return mismatches
+    return mismatches, mbt, excelize
 
 
 def main() -> int:
@@ -377,6 +380,11 @@ def main() -> int:
         action="append",
         choices=[s.name for s in SCENARIOS],
         help="Only run selected scenario(s). Repeatable.",
+    )
+    parser.add_argument(
+        "--print-fingerprints-on-fail",
+        action="store_true",
+        help="Print selected fingerprint keys for failing scenarios.",
     )
     args = parser.parse_args()
 
@@ -408,10 +416,23 @@ def main() -> int:
         if not excelize_file.exists():
             all_mismatches.append(f"{scenario.name}: missing excelize file: {excelize_file}")
             continue
-        mismatches = compare_scenario(mbt_file, excelize_file, scenario)
+        mismatches, mbt_fingerprint, excelize_fingerprint = compare_scenario(
+            mbt_file, excelize_file, scenario
+        )
         if mismatches:
             all_mismatches.extend(mismatches)
             print(f"[FAIL] {scenario.name}")
+            if args.print_fingerprints_on_fail:
+                selected_mbt = {
+                    key: mbt_fingerprint.get(key) for key in scenario.keys
+                }
+                selected_excelize = {
+                    key: excelize_fingerprint.get(key) for key in scenario.keys
+                }
+                print("  mbtexcel fingerprint:")
+                print(json.dumps(selected_mbt, indent=2, sort_keys=True))
+                print("  excelize fingerprint:")
+                print(json.dumps(selected_excelize, indent=2, sort_keys=True))
         else:
             print(f"[PASS] {scenario.name}")
 

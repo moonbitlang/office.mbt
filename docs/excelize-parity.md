@@ -102,7 +102,7 @@ scripts/test_semantic_parity.sh
 It runs `scripts/semantic_parity.py` with stable output directories under
 `_build/semantic_parity/` and fails fast on any scenario mismatch. Extra
 arguments are forwarded to the Python runner (for example,
-`--scenario controls`).
+`--scenario controls` or `--print-fingerprints-on-fail`).
 
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 

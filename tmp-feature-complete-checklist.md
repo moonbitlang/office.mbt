@@ -5177,4 +5177,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **266** (add semantic parity CLI output mode that prints per-scenario fingerprints when mismatches occur to accelerate debugging).
+- [x] 266. Add semantic parity debug-output mode for failing scenarios.
+  - DoD: provide a CLI mode that prints per-scenario fingerprints when mismatches occur.
+  - Delivered:
+    - Extended `scripts/semantic_parity.py` with:
+      - `--print-fingerprints-on-fail` flag
+    - On scenario failure, the runner now prints JSON fingerprints (selected scenario keys) for both:
+      - `mbtexcel`
+      - `excelize`
+    - Updated parity docs:
+      - `docs/excelize-parity.md` now documents forwarding `--print-fingerprints-on-fail` through `scripts/test_semantic_parity.sh`.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh --print-fingerprints-on-fail`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **267** (add a compact semantic-parity summary mode that prints key counts per scenario on success for trend tracking in CI logs).
