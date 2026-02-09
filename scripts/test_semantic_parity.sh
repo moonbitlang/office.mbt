@@ -7,6 +7,9 @@ cd "$ROOT_DIR"
 MBT_DIR="_build/semantic_parity/mbt"
 EXCELIZE_DIR="_build/semantic_parity/excelize"
 
+echo "Running semantic parity fingerprint regression checks..."
+python3 scripts/semantic_parity_fingerprint_test.py
+
 echo "Cleaning semantic parity output directories..."
 rm -rf "$MBT_DIR" "$EXCELIZE_DIR"
 

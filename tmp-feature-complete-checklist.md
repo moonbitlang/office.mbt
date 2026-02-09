@@ -5134,4 +5134,26 @@ Commands used:
 
 ## Active Item
 
-- Next item: **264** (add focused regression coverage for semantic parity fingerprint internals to prevent silent regex/parser regressions).
+- [x] 264. Add focused regression coverage for semantic parity fingerprint internals.
+  - DoD: add deterministic checks that fail if semantic-parity fingerprint extraction silently regresses (e.g. regex/parser drift).
+  - Delivered:
+    - Added executable regression script:
+      - `scripts/semantic_parity_fingerprint_test.py`
+    - Script verifies fingerprint invariants on committed fixtures:
+      - `demos_out_go/dashboard.xlsx` (sheet/chart/table/drawing counts and chart type)
+      - `demos_out_go/excelize_controls.xlsx` (form-control counts/types and VML relation target)
+      - `excelize/test/SharedStrings.xlsx` (sheet names + shared-string item count)
+    - Script verifies relation-target normalization behavior:
+      - `/xl/sharedStrings.xml` normalization
+      - numbered drawing target normalization
+      - `calcChain.xml` filtering
+    - Wired into the semantic parity gate entrypoint:
+      - `scripts/test_semantic_parity.sh` now runs fingerprint regression checks before end-to-end parity generation/compare.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **265** (extend semantic parity fingerprints to include presence of key package parts like `sharedStrings`, `calcChain`, and verify them scenario-by-scenario).
