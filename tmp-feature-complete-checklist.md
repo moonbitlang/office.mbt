@@ -5747,4 +5747,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **301** (add parity gate env diagnostics line in aggregate script so active toggles are visible at start of run).
+- [x] 301. Add parity env diagnostics banner to aggregate gate.
+  - DoD: print active parity-related env toggles at aggregate gate startup.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh` to print:
+      - `PARITY_JSON_REPORT`
+      - `SKIP_PARITY_WRAPPER_PREFLIGHT`
+      - `SHOW_PARITY_ENV`
+      - `SEMANTIC_PARITY_ARGS`
+      - `SEMANTIC_PARITY_SUMMARY_ARGS`
+    - Updated docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **302** (add parity gate env diagnostics to JSON report metadata so aggregate runs capture wrapper env context in artifacts).

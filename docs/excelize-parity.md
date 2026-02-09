@@ -162,6 +162,7 @@ By default this also emits a semantic parity JSON artifact at
 path via `PARITY_JSON_REPORT=/path/to/report.json`.
 It also runs `scripts/check_parity_wrappers.sh` as a preflight step.
 Set `SKIP_PARITY_WRAPPER_PREFLIGHT=1` to bypass this preflight when needed.
+The script prints active parity-related env toggles at startup.
 
 For a fast pre-commit semantic subset (currently `cf` + `controls`):
 
