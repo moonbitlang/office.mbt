@@ -6088,4 +6088,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **323** (add JSON mode to parity env helper for CI parsing).
+- [x] 323. Add JSON mode to parity env helper for CI parsing.
+  - DoD: provide machine-readable parity env diagnostics output.
+  - Delivered:
+    - Updated `scripts/show_parity_env.sh`:
+      - supports optional `--json` mode
+      - validates usage and exits on unsupported args
+      - emits structured JSON with values/defaults for key parity env toggles
+    - Updated docs references:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/show_parity_env.sh --json`
+    - `PARITY_JSON_REPORT=/tmp/r.json SHOW_PARITY_PREFLIGHT_STATUS=json scripts/show_parity_env.sh --json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **324** (add parity env helper invalid-args regression check script).

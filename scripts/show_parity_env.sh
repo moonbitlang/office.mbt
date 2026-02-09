@@ -1,6 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+json_mode=0
+if [[ "${1:-}" == "--json" ]]; then
+  json_mode=1
+  shift
+fi
+if [[ $# -ne 0 ]]; then
+  echo "Usage: scripts/show_parity_env.sh [--json]"
+  exit 2
+fi
+
+if [[ $json_mode -eq 1 ]]; then
+  python3 - <<'PY'
+import json
+import os
+
+report_default = "_build/semantic_parity/report.json"
+
+payload = {
+    "PARITY_JSON_REPORT": {"value": os.getenv("PARITY_JSON_REPORT"), "default": report_default},
+    "SEMANTIC_PARITY_REPORT": {"value": os.getenv("SEMANTIC_PARITY_REPORT"), "default": report_default},
+    "SEMANTIC_PARITY_ARGS": {"value": os.getenv("SEMANTIC_PARITY_ARGS"), "default": "none"},
+    "SEMANTIC_PARITY_SUMMARY_ARGS": {"value": os.getenv("SEMANTIC_PARITY_SUMMARY_ARGS"), "default": "none"},
+    "SKIP_PARITY_WRAPPER_PREFLIGHT": {"value": os.getenv("SKIP_PARITY_WRAPPER_PREFLIGHT"), "default": "0"},
+    "SKIP_PARITY_DOCS_PREFLIGHT": {"value": os.getenv("SKIP_PARITY_DOCS_PREFLIGHT"), "default": "0"},
+    "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT": {
+        "value": os.getenv("SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT"),
+        "default": "0",
+    },
+    "SHOW_PARITY_PREFLIGHT_STATUS": {
+        "value": os.getenv("SHOW_PARITY_PREFLIGHT_STATUS"),
+        "default": "0",
+        "options": "0|1|json",
+    },
+}
+
+print(json.dumps(payload, indent=2, sort_keys=False))
+PY
+  exit 0
+fi
+
 echo "Parity environment overrides:"
 echo "- PARITY_JSON_REPORT=${PARITY_JSON_REPORT:-<unset>} (default: _build/semantic_parity/report.json)"
 echo "- SEMANTIC_PARITY_REPORT=${SEMANTIC_PARITY_REPORT:-<unset>} (default: _build/semantic_parity/report.json)"
