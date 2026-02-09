@@ -4918,4 +4918,33 @@ Commands used:
 
 ## Active Item
 
-- Next item: **253** (expand demo-level hardening to remaining medium-complexity demos such as `invoice` or `tracker_heatmap`, prioritizing relationship/content-type closure + roundtrip stability).
+- [x] 253. Integration-focused parity hardening: `tracker_heatmap` x14 + conditional formatting roundtrip.
+  - DoD: extend demo-level roundtrip checks to a medium-complexity x14 workbook and lock combined conditional-format + sparkline extension invariants.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_tracker_heatmap_roundtrip_test.mbt`
+    - Implemented archive assertion helper (`assert_demo_tracker_heatmap_archive`) that validates:
+      - required worksheet/sharedStrings parts exist and sheet rels remain absent.
+      - workbook relationship IDs are unique with expected worksheet/sharedStrings targets.
+      - worksheet XML preserves key mixed-format invariants:
+        - `mc:Ignorable="x14"`
+        - color scale rule on `B2:AF13`
+        - sparkline ext URI block
+        - stable sparkline payload counts (`x14:sparkline`, `xm:f`, `xm:sqref` all `12`).
+      - content types include worksheet/sharedStrings MIME overrides.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_tracker_heatmap_bytes()`
+      - parsed workbook semantics:
+        - sheet `Tracker` exists with one sparkline group of 12 sparklines
+        - conditional format entry exists for `B2:AF13`
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_tracker_heatmap_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **254** (finish remaining demo-level hardening set on simpler packages like `invoice`/`secure_password`, then consolidate shared helper abstractions to reduce duplicated test plumbing).
