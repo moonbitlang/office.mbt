@@ -5242,4 +5242,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **270** (add parity-run metadata banner with selected scenarios and output dirs for clearer CI diagnostics).
+- [x] 270. Add parity-run metadata banner for CI diagnostics.
+  - DoD: print run metadata (selected scenarios, output dirs, key flags) before scenario comparisons.
+  - Delivered:
+    - `scripts/semantic_parity.py` now prints:
+      - mbtexcel output dir
+      - excelize output dir
+      - selected scenarios
+      - validator flags (`skip_validate`, `validate_excelize`)
+    - Metadata appears before scenario pass/fail output to improve CI triage.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **271** (add a lightweight script to run semantic parity in “subset mode” for the fastest two scenarios, suitable for pre-commit checks).

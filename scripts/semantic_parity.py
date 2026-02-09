@@ -443,6 +443,14 @@ def main() -> int:
     if args.sort_scenarios:
         selected = tuple(sorted(selected, key=lambda scenario: scenario.name))
 
+    selected_names = ", ".join(s.name for s in selected)
+    print("Semantic parity run configuration:")
+    print(f"- mbtexcel output dir: {mbt_out}")
+    print(f"- excelize output dir: {excelize_out}")
+    print(f"- selected scenarios: {selected_names}")
+    print(f"- skip validator: {args.skip_validate}")
+    print(f"- validate excelize outputs: {args.validate_excelize}")
+
     print(f"Excelize output source: {excelize_source}")
     all_mismatches: list[str] = []
     compare_start = time.perf_counter()
