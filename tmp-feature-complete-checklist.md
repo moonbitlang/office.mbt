@@ -5798,4 +5798,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **304** (add parity-report summary wrapper env toggle for default redaction in shared CI logs).
+- [x] 304. Add wrapper env toggle for default summary redaction.
+  - DoD: allow report wrappers to enable redacted summary output by default via env.
+  - Delivered:
+    - Updated wrappers:
+      - `scripts/test_semantic_parity_report.sh`
+      - `scripts/test_semantic_parity_report_compact.sh`
+    - Added env toggle:
+      - `REDACT_PARITY_SUMMARY=1`
+    - Behavior:
+      - wrappers append `--redact-sensitive` to summary helper invocation.
+      - still compatible with `SEMANTIC_PARITY_SUMMARY_ARGS`.
+    - Updated docs in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `REDACT_PARITY_SUMMARY=1 SEMANTIC_PARITY_ARGS='--skip-validate' scripts/test_semantic_parity_report.sh --scenario cf --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **305** (add docs/examples showing combined env toggles for common CI profiles: strict, fast, and redacted-report modes).

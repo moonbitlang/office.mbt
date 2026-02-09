@@ -146,6 +146,7 @@ Both wrappers accept `SEMANTIC_PARITY_SUMMARY_ARGS` to forward extra flags to
 `semantic_parity_report_summary.py` (for example `--top-slowest 3`).
 Both wrappers also accept `SEMANTIC_PARITY_ARGS` to forward core parity flags
 to `scripts/test_semantic_parity.sh` (for example `--skip-validate`).
+Set `REDACT_PARITY_SUMMARY=1` to apply `--redact-sensitive` by default.
 Use `scripts/show_parity_env.sh` to print current override values in CI logs.
 Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
 overrides automatically before running.
