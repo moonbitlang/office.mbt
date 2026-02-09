@@ -4749,4 +4749,29 @@ Commands used:
 
 ## Active Item
 
-- Next item: **247** (apply the same demo-level roundtrip consistency hardening pattern to another high-risk writer subsystem, e.g. chart+drawing relations or stream-writer package consistency).
+- [x] 247. Integration-focused parity hardening: combo-chart writer demo roundtrip.
+  - DoD: apply the same demo-level writer/roundtrip consistency checks to chart+drawing relations to guard against chart packaging regressions.
+  - Delivered:
+    - Added new root-level integration test file:
+      - `mbtexcel_demo_combo_chart_roundtrip_test.mbt`
+    - Implemented reusable archive assertion helper (`assert_demo_combo_chart_archive`) that validates:
+      - required parts exist (`chart1.xml`, `drawing1.xml`, worksheet and drawing rels).
+      - workbook/sheet/drawing relationship IDs are unique.
+      - relationship targets correctly chain `sheet -> drawing -> chart`.
+      - worksheet contains drawing binding (`<drawing r:id=\"rId1\"/>`).
+      - drawing xml contains chart graphic data URI and chart relationship id.
+      - content types include chart and drawing MIME overrides.
+    - Test executes assertions on:
+      - direct demo output: `@demos.demo_combo_chart_bytes()`
+      - roundtrip output: `write(read(bytes))`
+  - Validation gates:
+    - `moon clean`
+    - `moon test mbtexcel_demo_combo_chart_roundtrip_test.mbt`
+    - `moon test mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **248** (continue demo-level integration hardening on stream-writer packaging consistency and large-sheet relationship/content-type invariants).
