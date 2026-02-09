@@ -17057,6 +17057,67 @@ test "formula builtins wb: trig parse-error dispatch branches part 54" {
 }
 
 ///|
+test "formula builtins wb: radix dispatch forwarding branches part 55" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ROMAN",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2HEX",
+        [Expr::String("1010"), Expr::Number(4.0)][:],
+        ctx,
+      ),
+      "000A",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "BIN2OCT",
+        [Expr::String("1010"), Expr::Number(4.0)][:],
+        ctx,
+      ),
+      "0012",
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_string(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "HEX2BIN",
+        [Expr::String("A"), Expr::Number(8.0)][:],
+        ctx,
+      ),
+      "00001010",
+    ),
+    content="true",
+  )
+}
+
+///|
 test "formula builtins wb: info type and meta dispatch part 40" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
