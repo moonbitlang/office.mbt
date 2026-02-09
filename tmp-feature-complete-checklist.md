@@ -5593,4 +5593,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **291** (add semantic parity wrapper support for env-driven core parity flags, e.g. `--skip-validate`, to reduce duplication in CI templates).
+- [x] 291. Add env-driven core parity flag passthrough in wrappers.
+  - DoD: allow wrapper commands to receive core parity flags via environment variables.
+  - Delivered:
+    - Updated wrappers:
+      - `scripts/test_semantic_parity_report.sh`
+      - `scripts/test_semantic_parity_report_compact.sh`
+    - Added env passthrough:
+      - `SEMANTIC_PARITY_ARGS`
+    - Wrapper behavior:
+      - forwards env-provided args to `scripts/test_semantic_parity.sh`
+      - preserves direct CLI args and default behavior
+    - Updated docs in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SEMANTIC_PARITY_ARGS='--skip-validate' SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls --sort-scenarios`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **292** (add a dedicated docs section that maps each parity wrapper script to its intended usage context: full gate, fast loop, compact CI ingest).

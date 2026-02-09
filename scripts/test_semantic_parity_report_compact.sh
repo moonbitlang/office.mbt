@@ -6,8 +6,16 @@ cd "$ROOT_DIR"
 
 REPORT_PATH="${SEMANTIC_PARITY_REPORT:-_build/semantic_parity/report.json}"
 SUMMARY_ARGS="${SEMANTIC_PARITY_SUMMARY_ARGS:-}"
+PARITY_ARGS="${SEMANTIC_PARITY_ARGS:-}"
 
-scripts/test_semantic_parity.sh --json-report "$REPORT_PATH" "$@"
+if [[ -n "$PARITY_ARGS" ]]; then
+  # Intentionally split env-provided args for flexible CI templating.
+  # shellcheck disable=SC2206
+  EXTRA_PARITY_ARGS=($PARITY_ARGS)
+  scripts/test_semantic_parity.sh --json-report "$REPORT_PATH" "${EXTRA_PARITY_ARGS[@]}" "$@"
+else
+  scripts/test_semantic_parity.sh --json-report "$REPORT_PATH" "$@"
+fi
 if [[ -n "$SUMMARY_ARGS" ]]; then
   # Intentionally split env-provided args for flexible CI templating.
   # shellcheck disable=SC2206
