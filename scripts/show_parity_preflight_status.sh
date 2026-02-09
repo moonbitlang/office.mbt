@@ -31,6 +31,7 @@ skip_preflight_status_helper="${SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT:-0
 skip_gate_toggle="${SKIP_PARITY_GATE_TOGGLE_PREFLIGHT:-0}"
 skip_gate_toggle_contract="${SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT:-0}"
 skip_gate_show_toggle="${SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT:-0}"
+skip_preflight_matrix_smoke="${SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT:-0}"
 
 wrapper_status="enabled"
 if [[ "$skip_wrapper" == "1" ]]; then
@@ -74,15 +75,21 @@ if [[ "$skip_gate_show_toggle" == "1" ]]; then
   gate_show_toggle_status="skipped"
 fi
 
+preflight_matrix_smoke_status="enabled"
+if [[ "$skip_preflight_matrix_smoke" == "1" ]]; then
+  preflight_matrix_smoke_status="skipped"
+fi
+
 if [[ $json_mode -eq 1 ]]; then
   if [[ $compact_mode -eq 1 ]]; then
-    printf '{"wrapper_preflight":"%s","env_helper_preflight":"%s","preflight_status_helper_preflight":"%s","gate_toggle_consistency_preflight":"%s","gate_toggle_contract_preflight":"%s","gate_show_toggle_contract_preflight":"%s","docs_preflight":"%s","docs_wrapper_coverage_preflight":"%s","env":{"SKIP_PARITY_WRAPPER_PREFLIGHT":"%s","SKIP_PARITY_ENV_HELPER_PREFLIGHT":"%s","SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT":"%s","SKIP_PARITY_GATE_TOGGLE_PREFLIGHT":"%s","SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT":"%s","SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT":"%s","SKIP_PARITY_DOCS_PREFLIGHT":"%s","SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT":"%s"}}\n' \
+    printf '{"wrapper_preflight":"%s","env_helper_preflight":"%s","preflight_status_helper_preflight":"%s","gate_toggle_consistency_preflight":"%s","gate_toggle_contract_preflight":"%s","gate_show_toggle_contract_preflight":"%s","preflight_matrix_smoke_preflight":"%s","docs_preflight":"%s","docs_wrapper_coverage_preflight":"%s","env":{"SKIP_PARITY_WRAPPER_PREFLIGHT":"%s","SKIP_PARITY_ENV_HELPER_PREFLIGHT":"%s","SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT":"%s","SKIP_PARITY_GATE_TOGGLE_PREFLIGHT":"%s","SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT":"%s","SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT":"%s","SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT":"%s","SKIP_PARITY_DOCS_PREFLIGHT":"%s","SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT":"%s"}}\n' \
       "$wrapper_status" \
       "$env_helper_status" \
       "$preflight_status_helper_status" \
       "$gate_toggle_status" \
       "$gate_toggle_contract_status" \
       "$gate_show_toggle_status" \
+      "$preflight_matrix_smoke_status" \
       "$docs_status" \
       "$docs_coverage_status" \
       "$skip_wrapper" \
@@ -91,6 +98,7 @@ if [[ $json_mode -eq 1 ]]; then
       "$skip_gate_toggle" \
       "$skip_gate_toggle_contract" \
       "$skip_gate_show_toggle" \
+      "$skip_preflight_matrix_smoke" \
       "$skip_docs" \
       "$skip_docs_coverage"
     exit 0
@@ -103,6 +111,7 @@ if [[ $json_mode -eq 1 ]]; then
   printf '  "gate_toggle_consistency_preflight": "%s",\n' "$gate_toggle_status"
   printf '  "gate_toggle_contract_preflight": "%s",\n' "$gate_toggle_contract_status"
   printf '  "gate_show_toggle_contract_preflight": "%s",\n' "$gate_show_toggle_status"
+  printf '  "preflight_matrix_smoke_preflight": "%s",\n' "$preflight_matrix_smoke_status"
   printf '  "docs_preflight": "%s",\n' "$docs_status"
   printf '  "docs_wrapper_coverage_preflight": "%s",\n' "$docs_coverage_status"
   printf '  "env": {\n'
@@ -112,6 +121,7 @@ if [[ $json_mode -eq 1 ]]; then
   printf '    "SKIP_PARITY_GATE_TOGGLE_PREFLIGHT": "%s",\n' "$skip_gate_toggle"
   printf '    "SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT": "%s",\n' "$skip_gate_toggle_contract"
   printf '    "SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT": "%s",\n' "$skip_gate_show_toggle"
+  printf '    "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT": "%s",\n' "$skip_preflight_matrix_smoke"
   printf '    "SKIP_PARITY_DOCS_PREFLIGHT": "%s",\n' "$skip_docs"
   printf '    "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT": "%s"\n' "$skip_docs_coverage"
   printf '  }\n'
@@ -126,5 +136,6 @@ echo "- preflight-status helper preflight: ${preflight_status_helper_status}"
 echo "- gate-toggle consistency preflight: ${gate_toggle_status}"
 echo "- gate-toggle contract preflight: ${gate_toggle_contract_status}"
 echo "- gate show-toggle contract preflight: ${gate_show_toggle_status}"
+echo "- preflight matrix smoke preflight: ${preflight_matrix_smoke_status}"
 echo "- docs preflight: ${docs_status}"
 echo "- docs wrapper coverage preflight: ${docs_coverage_status}"

@@ -4,6 +4,21 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+required_patterns=(
+  "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT"
+  "parity preflight matrix smoke preflight"
+  "scripts/check_parity_preflight_matrix_smoke.sh"
+)
+
+for pattern in "${required_patterns[@]}"; do
+  if rg -Fq "$pattern" scripts/test_parity_gates.sh; then
+    echo "[OK] scripts/test_parity_gates.sh contains: $pattern"
+  else
+    echo "[MISSING] scripts/test_parity_gates.sh missing: $pattern"
+    exit 1
+  fi
+done
+
 python3 - <<'PY'
 import json
 import os
@@ -21,6 +36,7 @@ cases = [
             "gate_toggle_consistency_preflight": "enabled",
             "gate_toggle_contract_preflight": "enabled",
             "gate_show_toggle_contract_preflight": "enabled",
+            "preflight_matrix_smoke_preflight": "enabled",
             "docs_preflight": "enabled",
             "docs_wrapper_coverage_preflight": "enabled",
         },
@@ -34,6 +50,7 @@ cases = [
             "SKIP_PARITY_GATE_TOGGLE_PREFLIGHT": "1",
             "SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT": "1",
             "SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT": "1",
+            "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT": "1",
             "SKIP_PARITY_DOCS_PREFLIGHT": "1",
             "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT": "1",
         },
@@ -44,6 +61,7 @@ cases = [
             "gate_toggle_consistency_preflight": "skipped",
             "gate_toggle_contract_preflight": "skipped",
             "gate_show_toggle_contract_preflight": "skipped",
+            "preflight_matrix_smoke_preflight": "skipped",
             "docs_preflight": "skipped",
             "docs_wrapper_coverage_preflight": "n/a (docs preflight skipped)",
         },
@@ -58,6 +76,7 @@ cases = [
             "gate_toggle_consistency_preflight": "enabled",
             "gate_toggle_contract_preflight": "enabled",
             "gate_show_toggle_contract_preflight": "enabled",
+            "preflight_matrix_smoke_preflight": "enabled",
             "docs_preflight": "enabled",
             "docs_wrapper_coverage_preflight": "skipped",
         },
@@ -75,6 +94,7 @@ cases = [
             "gate_toggle_consistency_preflight": "enabled",
             "gate_toggle_contract_preflight": "enabled",
             "gate_show_toggle_contract_preflight": "enabled",
+            "preflight_matrix_smoke_preflight": "enabled",
             "docs_preflight": "skipped",
             "docs_wrapper_coverage_preflight": "n/a (docs preflight skipped)",
         },
@@ -88,6 +108,7 @@ required_env_keys = [
     "SKIP_PARITY_GATE_TOGGLE_PREFLIGHT",
     "SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT",
     "SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT",
+    "SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT",
     "SKIP_PARITY_DOCS_PREFLIGHT",
     "SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT",
 ]

@@ -6516,4 +6516,41 @@ Commands used:
 
 ## Active Item
 
-- Next item: **340** (wire aggregate preflight matrix smoke checker into aggregate gate preflight flow).
+- [x] 340. Wire aggregate preflight matrix smoke checker into aggregate gate preflight flow.
+  - DoD: run matrix-smoke checker from aggregate preflight with a dedicated skip
+    toggle and keep gate/helper/env/status surfaces aligned.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - adds `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=0|1` handling
+      - runs `scripts/check_parity_preflight_matrix_smoke.sh` in preflight flow
+    - Updated helper/status/env consistency:
+      - `scripts/show_parity_preflight_status.sh` includes
+        `preflight_matrix_smoke_preflight` status and
+        `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT` env key (json + compact + plain)
+      - `scripts/show_parity_env.sh` includes
+        `SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT` in plain/JSON output
+      - `scripts/check_parity_env_helper.sh` requires the new skip key
+      - `scripts/check_parity_preflight_status_helper.sh` requires new
+        status/env keys and verifies skipped-resolution behavior
+      - `scripts/check_parity_gate_skip_toggles.sh` expects the new skip key
+    - Hardened `scripts/check_parity_preflight_matrix_smoke.sh` to assert
+      aggregate-gate wiring patterns for matrix-smoke preflight are present.
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `scripts/check_parity_preflight_matrix_smoke.sh`
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `scripts/check_parity_gate_skip_toggles_contract.sh`
+    - `scripts/check_parity_preflight_status_helper.sh`
+    - `scripts/check_parity_env_helper.sh`
+    - `scripts/check_parity_wrappers.sh`
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `scripts/check_parity_docs_refs.sh`
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_STATUS_HELPER_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_PREFLIGHT=1 SKIP_PARITY_GATE_TOGGLE_CONTRACT_PREFLIGHT=1 SKIP_PARITY_GATE_SHOW_TOGGLE_PREFLIGHT=1 SKIP_PARITY_PREFLIGHT_MATRIX_SMOKE_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 SHOW_PARITY_PREFLIGHT_STATUS=json SHOW_PARITY_PREFLIGHT_STATUS_COMPACT=1 SEMANTIC_PARITY_ARGS='--scenario cf --skip-validate' SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 1' scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **341** (add `--json` output mode for preflight matrix smoke checker).
