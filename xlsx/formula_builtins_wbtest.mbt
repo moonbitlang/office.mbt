@@ -12396,3 +12396,131 @@ test "formula builtins wb: logical dispatch branches part 30" {
     content="true",
   )
 }
+
+///|
+test "formula builtins wb: trig and log success dispatch part 31" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let ctx = CalcContext::new()
+
+  let unary_number_names = [
+    "ACOS", "ACOSH", "ACOT", "_XLFN.ACOT", "ACOTH", "_XLFN.ACOTH", "ASIN", "ASINH",
+    "ATAN", "ATANH", "COS", "COSH", "SIN", "SINH", "TAN", "TANH", "COT", "_XLFN.COT",
+    "COTH", "_XLFN.COTH", "CSC", "_XLFN.CSC", "CSCH", "_XLFN.CSCH", "SEC", "_XLFN.SEC",
+    "SECH", "_XLFN.SECH", "DEGREES", "RADIANS", "SQRTPI", "LOG10",
+  ]
+  for name in unary_number_names {
+    let arg = if name == "ACOTH" || name == "_XLFN.ACOTH" {
+      2.0
+    } else if name == "ATANH" {
+      0.5
+    } else {
+      1.0
+    }
+    inspect(
+      match
+        eval_function(workbook, "Sheet1", name, [Expr::Number(arg)][:], ctx) {
+        Number(_) => true
+        _ => false
+      },
+      content="true",
+    )
+  }
+
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ATAN2",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "RAND", [][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RANDBETWEEN",
+        [Expr::Number(1.0), Expr::Number(2.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "PI", [][:], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LOG",
+        [Expr::Number(100.0), Expr::Number(10.0)][:],
+        ctx,
+      ) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "DEGREES",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RADIANS",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "RANDBETWEEN",
+        [Expr::Number(1.0), Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+}
