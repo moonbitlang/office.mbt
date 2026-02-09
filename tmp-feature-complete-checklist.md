@@ -3029,6 +3029,41 @@ Commands used:
     - Total uncovered lines reduced from `2236` to `2205`
     - Uncovered file count remains `38`
 
+- [x] 179. Close residuals in `xlsx/formula_builtins.mbt` (part 10).
+  - DoD: add focused whitebox coverage for statistical-distribution helper conversion/error guards in `formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with direct helper coverage for:
+      - `normdist_values`:
+        - first/second/third arg conversion-error forwarding
+        - fourth-arg bool conversion-error forwarding
+        - negative `std_dev` guard
+      - `norminv_values`:
+        - first/second/third arg conversion-error forwarding
+        - negative `std_dev` guard
+      - `norm_s_dist_values`/`norms_dist_values`/`norm_s_inv_values`:
+        - numeric/bool conversion-error forwarding
+        - out-of-range probability guard in `norm_s_inv_values`
+      - `loginv_values`/`gamma_value`/`gammaln_values`:
+        - arg conversion-error forwarding
+      - `lognorm_dist_values`/`lognormdist_values`:
+        - all arg conversion-error forwarding paths
+      - `expon_dist_values`/`poisson_values`:
+        - all arg conversion-error forwarding paths
+      - `negbinom_dist_values`/`negbinomdist_values`:
+        - all arg conversion-error forwarding paths
+      - `gauss_value`/`phi_value`:
+        - arg conversion-error forwarding paths
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+    - `moon coverage clean && moon coverage analyze --package xlsx > /tmp/mbtexcel_uncovered_after190.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `142` to `101`
+    - Total uncovered lines reduced from `2205` to `2164`
+    - Uncovered file count remains `38`
+
 ## Active Item
 
-- Next item: **179** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 10).
+- Next item: **180** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 11).
