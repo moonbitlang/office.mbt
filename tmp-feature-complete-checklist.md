@@ -5779,4 +5779,23 @@ Commands used:
 
 ## Active Item
 
-- Next item: **303** (add summary-helper redaction option to hide specific metadata/env fields in shared logs).
+- [x] 303. Add summary-helper redaction mode for sensitive metadata fields.
+  - DoD: allow shared logs to hide `argv` and wrapper env values while preserving report structure.
+  - Delivered:
+    - Added `--redact-sensitive` to `scripts/semantic_parity_report_summary.py`.
+    - Text mode behavior:
+      - `Args: <redacted>`
+      - wrapper env values redacted while keys remain visible.
+    - JSON mode behavior:
+      - `metadata.argv` set to `<redacted>`
+      - non-empty `metadata.wrapper_env` values redacted.
+    - Added usage example in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --redact-sensitive`
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --as-json --redact-sensitive`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **304** (add parity-report summary wrapper env toggle for default redaction in shared CI logs).

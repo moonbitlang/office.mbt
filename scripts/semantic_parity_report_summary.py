@@ -47,6 +47,11 @@ def main() -> int:
         action="store_true",
         help="Emit only minimal fields for lightweight parsing.",
     )
+    parser.add_argument(
+        "--redact-sensitive",
+        action="store_true",
+        help="Redact argv and wrapper_env values in metadata output.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -74,6 +79,17 @@ def main() -> int:
     mismatches = data.get("mismatches", [])
 
     if args.as_json:
+        metadata_out = metadata
+        if args.redact_sensitive and isinstance(metadata, dict):
+            metadata_out = dict(metadata)
+            if "argv" in metadata_out:
+                metadata_out["argv"] = "<redacted>"
+            wrapper_env = metadata_out.get("wrapper_env")
+            if isinstance(wrapper_env, dict):
+                metadata_out["wrapper_env"] = {
+                    key: ("<redacted>" if value not in (None, "") else value)
+                    for key, value in wrapper_env.items()
+                }
         compact_scenarios = [
             {
                 "name": scenario.get("name"),
@@ -113,7 +129,7 @@ def main() -> int:
                 "mismatches": mismatches,
             }
             if not args.no_metadata:
-                payload["metadata"] = metadata
+                payload["metadata"] = metadata_out
             if args.top_slowest > 0:
                 payload["top_slowest"] = ranked[: args.top_slowest]
         print(json.dumps(payload, sort_keys=True))
@@ -143,7 +159,10 @@ def main() -> int:
         print(f"Generated UTC: {metadata.get('generated_at_utc')}")
         argv = metadata.get("argv")
         if isinstance(argv, list):
-            print(f"Args: {' '.join(str(v) for v in argv)}")
+            if args.redact_sensitive:
+                print("Args: <redacted>")
+            else:
+                print(f"Args: {' '.join(str(v) for v in argv)}")
         wrapper_env = metadata.get("wrapper_env")
         if isinstance(wrapper_env, dict):
             active_env = {
@@ -152,9 +171,14 @@ def main() -> int:
                 if value not in (None, "")
             }
             if active_env:
-                pretty_env = " ".join(
-                    f"{key}={value}" for key, value in sorted(active_env.items())
-                )
+                if args.redact_sensitive:
+                    pretty_env = " ".join(
+                        f"{key}=<redacted>" for key in sorted(active_env)
+                    )
+                else:
+                    pretty_env = " ".join(
+                        f"{key}={value}" for key, value in sorted(active_env.items())
+                    )
                 print(f"Wrapper env: {pretty_env}")
     print(f"Result: {data.get('result')}")
     print(f"Mismatch count: {data.get('mismatch_count')}")
