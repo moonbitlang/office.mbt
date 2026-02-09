@@ -18726,6 +18726,19 @@ test "formula builtins wb: stats/beta helper branches part 43" {
     ),
     content="true",
   )
+  inspect(
+    is_formula_number_any(
+      stdev_values(
+        false,
+        [
+          FormulaValue::Number(1.0),
+          FormulaValue::Empty,
+          FormulaValue::Number(2.0),
+        ][:],
+      ),
+    ),
+    content="true",
+  )
 
   inspect(
     is_formula_number_any(

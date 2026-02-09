@@ -4988,11 +4988,9 @@ fn eval_function(
       if values.length() == 1 {
         match normalize_scalar(values[0]) {
           Error(err) => Error(err)
-          Number(_) => String("")
+          Number(_) | Empty | List(_) => String("")
           String(text) => String(text)
           Bool(flag) => String(if flag { "TRUE" } else { "FALSE" })
-          Empty => String("")
-          List(_) => String("")
         }
       } else {
         Error(formula_error_value)
@@ -5014,8 +5012,7 @@ fn eval_function(
               Some(num) => Number(num)
               None => if text == "TRUE" { Number(1.0) } else { Number(0.0) }
             }
-          Empty => Number(0.0)
-          List(_) => Number(0.0)
+          Empty | List(_) => Number(0.0)
         }
       } else {
         Error(formula_error_value)
@@ -5048,8 +5045,7 @@ fn sum_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           Some(num) => sum = sum + num
           None => ()
         }
-      Empty => ()
-      List(_) => ()
+      Empty | List(_) => ()
     }
   }
   Number(sum)
@@ -5095,9 +5091,7 @@ fn sumsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
                 None => return Error(formula_error_value)
               }
             }
-          Error(_) => ()
-          Empty => ()
-          List(_) => ()
+          Error(_) | Empty | List(_) => ()
         }
     }
   }
@@ -5759,10 +5753,7 @@ fn product_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           match normalize_scalar(cell) {
             Error(err) => return Error(err)
             Number(num) => product = product * num
-            Bool(_) => ()
-            String(_) => ()
-            Empty => ()
-            List(_) => ()
+            Bool(_) | String(_) | Empty | List(_) => ()
           }
         }
       _ =>
@@ -5778,8 +5769,7 @@ fn product_values(values : ArrayView[FormulaValue]) -> FormulaValue {
               Some(num) => product = product * num
               None => return Error(formula_error_value)
             }
-          Empty => ()
-          List(_) => ()
+          Empty | List(_) => ()
         }
     }
   }
@@ -5805,9 +5795,7 @@ fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
           }
           None => ()
         }
-      Bool(_) => ()
-      Empty => ()
-      List(_) => ()
+      Bool(_) | Empty | List(_) => ()
     }
   }
   if count == 0 {
@@ -5849,8 +5837,7 @@ fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
             None => count = count + 1
           }
         }
-      Empty => ()
-      List(_) => ()
+      Empty | List(_) => ()
     }
   }
   if count == 0 {
@@ -5922,8 +5909,7 @@ fn stdev_values(
             None => ()
           }
         }
-      Empty => ()
-      List(_) => ()
+      Empty | List(_) => ()
     }
   }
   if count > 0 && sum >= 0.0 {
@@ -5947,7 +5933,6 @@ fn variance_values(
   for value in flatten_values(values) {
     match normalize_scalar(value) {
       Error(err) => return Error(err)
-      Empty => ()
       Number(num) => {
         sum = sum + num
         sum_sq = sum_sq + num * num
@@ -5977,7 +5962,7 @@ fn variance_values(
             None => if count_text_zero { count = count + 1 } else { () }
           }
         }
-      List(_) => ()
+      List(_) | Empty => ()
     }
   }
   if count > minimum {
