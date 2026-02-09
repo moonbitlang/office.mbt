@@ -16,6 +16,12 @@ def main() -> int:
         default="_build/semantic_parity/report_fast.json",
         help="Path to semantic parity JSON report.",
     )
+    parser.add_argument(
+        "--top-slowest",
+        type=int,
+        default=0,
+        help="Print top N slowest scenarios by duration_ms.",
+    )
     args = parser.parse_args()
 
     report_path = Path(args.report)
@@ -31,7 +37,8 @@ def main() -> int:
     print(f"Selected scenarios: {', '.join(data.get('selected_scenarios', []))}")
     print("Scenario summary:")
 
-    for scenario in data.get("scenarios", []):
+    scenarios = data.get("scenarios", [])
+    for scenario in scenarios:
         summary = scenario.get("summary", {})
         print(
             "- "
@@ -43,6 +50,21 @@ def main() -> int:
             f"controls={summary.get('form_controls')} "
             f"cf={summary.get('conditional_formatting')}"
         )
+
+    if args.top_slowest > 0:
+        print(f"Top {args.top_slowest} slowest scenarios:")
+        ranked = sorted(
+            scenarios,
+            key=lambda scenario: float(scenario.get("duration_ms", 0.0)),
+            reverse=True,
+        )
+        for scenario in ranked[: args.top_slowest]:
+            print(
+                "- "
+                f"{scenario.get('name')} "
+                f"duration_ms={float(scenario.get('duration_ms', 0.0)):.1f} "
+                f"status={scenario.get('status')}"
+            )
 
     mismatches = data.get("mismatches", [])
     if mismatches:

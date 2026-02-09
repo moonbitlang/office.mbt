@@ -5376,4 +5376,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **278** (add summary-script support for top-N slow scenarios from JSON reports to aid performance triage).
+- [x] 278. Add top-N slow scenario reporting to JSON summary helper.
+  - DoD: allow quick extraction of the slowest parity scenarios from a JSON report.
+  - Delivered:
+    - Extended `scripts/semantic_parity_report_summary.py` with:
+      - `--top-slowest <N>`
+    - When enabled, script prints top N scenarios sorted by `duration_ms`.
+    - Added example usage to:
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.json --top-slowest 1`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **279** (add aggregate gate support for emitting a parity JSON report artifact by default).
