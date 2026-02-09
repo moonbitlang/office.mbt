@@ -1,18 +1,4 @@
 ///|
-fn demo_count_tag(xml : String, tag : String) -> Int {
-  let mut count = 0
-  let mut first = true
-  for _ in xml.split(tag) {
-    if first {
-      first = false
-      continue
-    }
-    count = count + 1
-  }
-  count
-}
-
-///|
 fn assert_demo_sparklines_archive(bytes : Bytes) -> Unit raise {
   let archive = @zip.read(bytes)
   inspect(archive.get("xl/worksheets/sheet1.xml") is Some(_), content="true")

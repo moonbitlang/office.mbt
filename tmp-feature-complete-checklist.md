@@ -4974,4 +4974,27 @@ Commands used:
 
 ## Active Item
 
-- Next item: **255** (consolidate demo-roundtrip helper abstractions into a shared helper test module to reduce duplication and keep future demo hardening changes cheaper).
+- [x] 255. Consolidate demo-roundtrip helper abstractions.
+  - DoD: centralize repeated relationship/tag helper utilities used by demo roundtrip tests into a shared test helper module and remove duplicated definitions.
+  - Delivered:
+    - Added shared helper test module:
+      - `mbtexcel_demo_roundtrip_helpers_test.mbt`
+      - helpers moved/centralized:
+        - `demo_rel_attr_values`
+        - `demo_has_value`
+        - `demo_unique`
+        - `demo_count_tag`
+    - Removed duplicated helper definitions from:
+      - `mbtexcel_demo_pivot_slicer_roundtrip_test.mbt`
+      - `mbtexcel_demo_sparklines_roundtrip_test.mbt`
+    - All existing demo roundtrip tests now consume the shared helpers.
+  - Validation gates:
+    - `moon clean`
+    - `for f in mbtexcel_demo_*_roundtrip_test.mbt; do moon test \"$f\"; done`
+    - `moon test demos_openxml_validity_test.mbt`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **256** (continue demo-level hardening for remaining demos such as `secure_password`, including read-with-password roundtrip invariants where applicable).
