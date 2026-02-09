@@ -109,8 +109,7 @@ fn eval_function(
             let result = @math.pow(variance, 0.5)
             Number(round_significant_digits(result, 15))
           }
-          Error(err) => Error(err)
-          _ => Error(formula_error_value)
+          value => value
         }
       } else {
         Error(formula_error_value)
@@ -122,8 +121,7 @@ fn eval_function(
             let result = @math.pow(variance, 0.5)
             Number(round_significant_digits(result, 15))
           }
-          Error(err) => Error(err)
-          _ => Error(formula_error_value)
+          value => value
         }
       } else {
         Error(formula_error_value)
@@ -2668,7 +2666,6 @@ fn eval_function(
       } else {
         for value in flatten_values(values) {
           match normalize_scalar(value) {
-            Empty => ()
             Error(err) => return Error(err)
             Number(num) => if num != 0.0 { return Bool(true) }
             Bool(flag) => if flag { return Bool(true) }
@@ -2680,7 +2677,7 @@ fn eval_function(
               } else {
                 return Error(formula_error_value)
               }
-            List(_) => ()
+            Empty | List(_) => ()
           }
         }
         Bool(false)
@@ -2726,8 +2723,7 @@ fn eval_function(
               }
             }
             String(_) => ()
-            Empty => ()
-            List(_) => ()
+            Empty | List(_) => ()
           }
         }
         if !ok {
@@ -3505,9 +3501,6 @@ fn eval_function(
         let idx = match idx_opt {
           Some(value) => value
           None => return if_not_found
-        }
-        if idx < 0 {
-          return if_not_found
         }
         if name == "TEXTAFTER" || name == "_XLFN.TEXTAFTER" {
           let start = idx + delimiter.length()
@@ -5310,7 +5303,13 @@ let bitwise_max_value : Double = @math.pow(2.0, 48.0) - 1.0
 
 ///|
 fn bitwise_number(value : FormulaValue) -> Result[Double, FormulaValue] {
-  match normalize_scalar(value) {
+  match value {
+    List(list) =>
+      if list.length() == 0 {
+        Ok(0.0)
+      } else {
+        bitwise_number(list[0])
+      }
     Number(num) => Ok(num)
     Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
     Empty => Ok(0.0)
@@ -5320,7 +5319,6 @@ fn bitwise_number(value : FormulaValue) -> Result[Double, FormulaValue] {
         None => Err(Error(formula_error_num))
       }
     Error(err) => Err(Error(err))
-    List(_) => Err(Error(formula_error_num))
   }
 }
 
@@ -5847,8 +5845,7 @@ fn stdev_values(
   }
   let mean = match mean_value {
     Number(num) => num
-    Error(err) => return Error(err)
-    _ => return Error(formula_error_value)
+    value => return value
   }
   let mut sum = -1.0
   let mut count = -1

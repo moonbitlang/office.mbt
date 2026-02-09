@@ -4529,6 +4529,35 @@ Commands used:
     - `xlsx/formula_builtins.mbt` changed from `4662/4733` to `4655/4716`.
     - Uncovered lines reduced from `71` to `61` (`-10`) via dead-branch cleanup.
 
+- [x] 239. Close residuals in `xlsx/formula_builtins.mbt` (part 70).
+  - DoD: continue pruning dead scalar branches and redundant control-flow guards while preserving calc behavior.
+  - Delivered:
+    - Simplified STDEVP/STDEVPA dispatch by returning non-number results directly from `variance_values`:
+      - replaced split `Error` + fallback branches with a single `value => value`.
+    - Removed unreachable post-index negative check in `TEXTAFTER/TEXTBEFORE` flow (`idx < 0` after `text_after_before_index` success).
+    - Refactored `bitwise_number` to explicit recursive list unwrapping instead of `normalize_scalar` + unreachable `List(_)` fallback:
+      - empty list -> `0`, non-empty list -> recurse into first element.
+    - Merged equivalent no-op branches in boolean aggregators:
+      - `OR`: `Empty | List(_) => ()`
+      - `XOR`: `Empty | List(_) => ()`
+    - While exploring `CHITEST` cleanup, `calc_test` exposed reachable guards; retained required checks to preserve behavior.
+  - Validation gates:
+    - `moon clean`
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon coverage clean`
+    - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+    - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+  - Coverage delta (wbtest-targeted summary metric):
+    - Method:
+      - `moon coverage clean`
+      - `moon test --package xlsx --file formula_builtins_wbtest.mbt --enable-coverage`
+      - `moon coverage report -p xlsx -F xlsx/formula_builtins.mbt -f summary`
+    - `xlsx/formula_builtins.mbt` changed from `4655/4716` to `4658/4712`.
+    - Uncovered lines reduced from `61` to `54` (`-7`) while keeping `calc_test` green.
+
 ## Active Item
 
-- Next item: **239** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 70, prioritizing remaining reachable branches from caret output).
+- Next item: **240** (continue residual hotspot reduction in `xlsx/formula_builtins.mbt`, part 71, prioritizing remaining reachable branches from caret output).
