@@ -6266,4 +6266,27 @@ Commands used:
 
 ## Active Item
 
-- Next item: **330** (add JSON mode to skip-toggle consistency checker for CI parsing).
+- [x] 330. Add JSON mode to skip-toggle consistency checker for CI parsing.
+  - DoD: make skip-toggle consistency checks consumable by CI parsers while
+    preserving human-readable local output.
+  - Delivered:
+    - Updated `scripts/check_parity_gate_skip_toggles.sh`:
+      - supports optional `--json` mode
+      - validates usage and exits on unsupported args
+      - emits per-toggle structured status for:
+        - `scripts/test_parity_gates.sh`
+        - `scripts/show_parity_env.sh --json`
+        - `scripts/show_parity_preflight_status.sh --json` env payload
+      - keeps plain-text `[OK]/[MISSING]` output for local runs
+    - Updated docs:
+      - `docs/parity-commands.md`
+      - `docs/excelize-parity.md`
+  - Validation gates:
+    - `scripts/check_parity_gate_skip_toggles.sh`
+    - `scripts/check_parity_gate_skip_toggles.sh --json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **331** (add skip-toggle checker usage guard tests for invalid args).
