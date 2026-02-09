@@ -7,6 +7,10 @@ cd "$ROOT_DIR"
 MBT_DIR="_build/semantic_parity/mbt"
 EXCELIZE_DIR="_build/semantic_parity/excelize"
 
+if [[ "${SHOW_PARITY_ENV:-0}" == "1" ]]; then
+  scripts/show_parity_env.sh
+fi
+
 echo "Running semantic parity fingerprint regression checks..."
 python3 scripts/semantic_parity_fingerprint_test.py
 

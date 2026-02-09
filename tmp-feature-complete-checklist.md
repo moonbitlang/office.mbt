@@ -5644,4 +5644,17 @@ Commands used:
 
 ## Active Item
 
-- Next item: **294** (add wrapper preflight print option that logs parity env overrides before execution, toggled by env var).
+- [x] 294. Add env-toggled preflight parity env logging in wrappers.
+  - DoD: enable optional preflight print of parity env overrides before execution.
+  - Delivered:
+    - Updated `scripts/test_semantic_parity.sh`:
+      - when `SHOW_PARITY_ENV=1`, runs `scripts/show_parity_env.sh` before parity work.
+    - Added docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SHOW_PARITY_ENV=1 scripts/test_semantic_parity_fast.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **295** (add wrapper option/env to skip fingerprint regression pre-check when intentionally running minimal smoke loops).

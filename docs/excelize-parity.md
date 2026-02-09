@@ -146,6 +146,8 @@ Both wrappers accept `SEMANTIC_PARITY_SUMMARY_ARGS` to forward extra flags to
 Both wrappers also accept `SEMANTIC_PARITY_ARGS` to forward core parity flags
 to `scripts/test_semantic_parity.sh` (for example `--skip-validate`).
 Use `scripts/show_parity_env.sh` to print current override values in CI logs.
+Set `SHOW_PARITY_ENV=1` to make `scripts/test_semantic_parity.sh` print env
+overrides automatically before running.
 
 For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 
