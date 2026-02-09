@@ -82,6 +82,13 @@ test "formula builtins wb: row column and formulatxt guards" {
   )
   inspect(
     is_formula_error(
+      eval_function(workbook, "Sheet1", "ROW", [Expr::String("x")][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
       eval_function(workbook, "Sheet1", "COLUMN", [][:], ctx),
       formula_error_value,
     ),
@@ -110,6 +117,13 @@ test "formula builtins wb: row column and formulatxt guards" {
   inspect(
     is_formula_error(
       eval_function(workbook, "Sheet1", "ROWS", [Expr::Bool(true)][:], ctx),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "ROWS", [][:], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8936,8 +8950,34 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "LN",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
       eval_function(workbook, "Sheet1", "EXP", [][:], ctx),
       formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "EXP",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
     ),
     content="true",
   )
@@ -9501,6 +9541,32 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
     is_formula_error(
       eval_function(workbook, "Sheet1", "ERFC.PRECISE", [][:], ctx),
       formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERFC",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "ERFC.PRECISE",
+        [Expr::FuncCall("NA", [])][:],
+        ctx,
+      ),
+      formula_error_na,
     ),
     content="true",
   )
