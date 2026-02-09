@@ -5490,4 +5490,20 @@ Commands used:
 
 ## Active Item
 
-- Next item: **285** (add semantic parity JSON report field for command-line args used, improving reproducibility of artifacts).
+- [x] 285. Record command-line args in parity JSON metadata.
+  - DoD: include CLI argv in report metadata to improve artifact reproducibility.
+  - Delivered:
+    - Extended JSON report metadata in `scripts/semantic_parity.py`:
+      - `metadata.argv` (`sys.argv[1:]`)
+    - Extended summary helper display in `scripts/semantic_parity_report_summary.py`:
+      - prints `Args: ...` when metadata argv is present.
+    - Updated docs metadata note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `scripts/test_semantic_parity_fast.sh --json-report _build/semantic_parity/report_args.json --sort-scenarios`
+    - `python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report_args.json`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **286** (add summary-helper option to hide verbose metadata lines when only scenario metrics are desired).

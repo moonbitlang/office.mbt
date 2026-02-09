@@ -120,7 +120,7 @@ scripts/test_semantic_parity.sh --json-report _build/semantic_parity/report.json
 ```
 
 Report artifacts include provenance metadata (`tool`, `python_version`,
-`generated_at_utc`) for traceability.
+`generated_at_utc`, `argv`) for traceability.
 
 To print a compact human summary from a JSON report:
 

@@ -46,6 +46,9 @@ def main() -> int:
         print(f"Tool: {metadata.get('tool')}")
         print(f"Python: {metadata.get('python_version')}")
         print(f"Generated UTC: {metadata.get('generated_at_utc')}")
+        argv = metadata.get("argv")
+        if isinstance(argv, list):
+            print(f"Args: {' '.join(str(v) for v in argv)}")
     print(f"Result: {data.get('result')}")
     print(f"Mismatch count: {data.get('mismatch_count')}")
     print(f"Total compare ms: {data.get('total_scenario_compare_ms')}")

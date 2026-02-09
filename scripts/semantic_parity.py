@@ -598,6 +598,7 @@ def main() -> int:
                 "generated_at_utc": datetime.datetime.now(
                     datetime.timezone.utc
                 ).isoformat(),
+                "argv": sys.argv[1:],
             },
             "result": "pass" if not all_mismatches else "fail",
             "excelize_output_source": excelize_source,
