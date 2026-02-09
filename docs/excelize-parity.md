@@ -137,6 +137,10 @@ For the full parity gate (semantic parity + demo roundtrip/openxml suites):
 scripts/test_parity_gates.sh
 ```
 
+By default this also emits a semantic parity JSON artifact at
+`_build/semantic_parity/report.json` and prints its compact summary. Override
+path via `PARITY_JSON_REPORT=/path/to/report.json`.
+
 For a fast pre-commit semantic subset (currently `cf` + `controls`):
 
 ```sh

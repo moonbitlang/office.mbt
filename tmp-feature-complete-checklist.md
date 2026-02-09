@@ -5391,4 +5391,21 @@ Commands used:
 
 ## Active Item
 
-- Next item: **279** (add aggregate gate support for emitting a parity JSON report artifact by default).
+- [x] 279. Emit parity JSON artifact by default in aggregate gate.
+  - DoD: ensure `scripts/test_parity_gates.sh` produces a semantic parity JSON artifact without extra flags.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - runs `scripts/test_semantic_parity.sh --json-report <path>`
+      - default path: `_build/semantic_parity/report.json`
+      - supports `PARITY_JSON_REPORT` env override
+      - prints compact summary via `scripts/semantic_parity_report_summary.py`
+    - Updated docs:
+      - `docs/excelize-parity.md` now documents default artifact behavior and override env var.
+  - Validation gates:
+    - `scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **280** (add summary-helper option to show only failing scenarios from JSON reports for quick breakage triage).
