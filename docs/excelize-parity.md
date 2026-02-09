@@ -206,6 +206,8 @@ Use `scripts/check_parity_wrappers.sh` to verify wrapper script presence and
 execute bits in local/CI environments (`--json` for machine-readable output).
 Use `scripts/check_parity_docs_refs.sh` to verify parity-doc script references
 resolve to existing files.
+Use `scripts/check_parity_docs_wrapper_coverage.sh` to verify wrapper scripts
+remain covered by parity docs.
 For the full flat command list, see `docs/parity-commands.md`.
 
 ## CI profiles

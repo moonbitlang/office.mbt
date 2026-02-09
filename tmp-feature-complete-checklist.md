@@ -5945,4 +5945,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **314** (add a tiny regression check script that verifies parity command docs mention all current wrapper scripts).
+- [x] 314. Add parity-doc wrapper coverage regression check.
+  - DoD: detect when wrapper scripts fall out of parity docs coverage.
+  - Delivered:
+    - Added executable script:
+      - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - Script verifies each tracked wrapper/helper script is referenced in:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+    - Added docs references in:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `scripts/check_parity_docs_wrapper_coverage.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **315** (wire parity-doc wrapper coverage check into aggregate preflight with optional env skip toggle).

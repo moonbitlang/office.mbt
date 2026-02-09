@@ -32,6 +32,7 @@ python3 scripts/semantic_parity_report_summary.py _build/semantic_parity/report.
 scripts/check_parity_wrappers.sh
 scripts/check_parity_wrappers.sh --json
 scripts/check_parity_docs_refs.sh
+scripts/check_parity_docs_wrapper_coverage.sh
 scripts/show_parity_env.sh
 python3 scripts/semantic_parity.py --list-scenarios
 python3 scripts/semantic_parity.py --dry-run-config
