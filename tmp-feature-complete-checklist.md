@@ -2537,6 +2537,35 @@ Commands used:
     - Total uncovered lines reduced from `2889` to `2843`
     - Uncovered file count remains `43`
 
+- [x] 165. Close residuals in `xlsx/formula_builtins.mbt` (part 2).
+  - DoD: add focused whitebox coverage for formula-builtin dispatch guard paths and reduce residual uncovered lines in `xlsx/formula_builtins.mbt`.
+  - Delivered:
+    - Extended `xlsx/formula_builtins_wbtest.mbt` with focused whitebox coverage for:
+      - statistical/numeric coercion guard paths:
+        - `QUARTILE.INC` invalid quartile argument.
+        - `RANK` invalid optional order argument.
+        - `TRUNC` invalid digits argument and default-digits path.
+        - `ROUND`/`ROUNDUP`/`ROUNDDOWN` left/right coercion error branches.
+        - `SQRT` negative-input `#NUM!` branch.
+        - `POWER` left/right coercion error branches.
+      - database/criteria and aggregation guard paths:
+        - `DCOUNT` two-arg branch (implicit empty field path).
+        - `SUMPRODUCT` mixed range+scalar rejection path.
+        - `SUMIFS` even-arity `#N/A` guard.
+        - `SUMIFS` non-numeric sum-cell ignore path and out-of-bounds sum-cell error path.
+      - complex aggregation mixed-input paths:
+        - `IMPRODUCT` loop branches for `Empty`, `Number`, `Bool`, and nested `List` values.
+        - `IMSUM` early `Error` propagation branch.
+  - Validation gates:
+    - `moon test xlsx/formula_builtins_wbtest.mbt`
+    - `moon test xlsx/calc_test.mbt`
+    - `moon check --deny-warn`
+    - `moon coverage clean && moon coverage analyze > /tmp/mbtexcel_uncovered_after176.log`
+  - Coverage delta:
+    - `xlsx/formula_builtins.mbt` uncovered lines reduced from `446` to `429`
+    - Total uncovered lines reduced from `2843` to `2825`
+    - Uncovered file count remains `43`
+
 ## Active Item
 
-- Next item: **165** (move to the next residual hotspot: `xlsx/formula_builtins.mbt`, part 2).
+- Next item: **166** (move to the next residual hotspot: `xlsx/formula_eval.mbt`, part 3).
