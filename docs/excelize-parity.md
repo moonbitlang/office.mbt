@@ -168,6 +168,8 @@ It also runs `scripts/check_parity_wrappers.sh` as a preflight step.
 Set `SKIP_PARITY_WRAPPER_PREFLIGHT=1` to bypass this preflight when needed.
 It runs `scripts/check_parity_docs_refs.sh` as an additional docs preflight.
 Set `SKIP_PARITY_DOCS_PREFLIGHT=1` to bypass docs preflight when needed.
+It also runs `scripts/check_parity_docs_wrapper_coverage.sh` by default.
+Set `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1` to bypass wrapper-coverage preflight.
 The script prints active parity-related env toggles at startup.
 
 For a fast pre-commit semantic subset (currently `cf` + `controls`):

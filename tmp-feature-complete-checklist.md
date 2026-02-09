@@ -5963,4 +5963,19 @@ Commands used:
 
 ## Active Item
 
-- Next item: **315** (wire parity-doc wrapper coverage check into aggregate preflight with optional env skip toggle).
+- [x] 315. Wire docs-wrapper coverage check into aggregate preflight.
+  - DoD: run docs-wrapper coverage preflight in aggregate gate with optional skip toggle.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - runs `scripts/check_parity_docs_wrapper_coverage.sh` by default
+      - supports `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1`
+      - prints toggle value in startup env diagnostics.
+    - Updated docs note in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `SKIP_PARITY_WRAPPER_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **316** (add parity env helper coverage for docs-wrapper-coverage skip toggle for complete env diagnostics parity).
