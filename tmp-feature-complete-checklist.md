@@ -5626,4 +5626,22 @@ Commands used:
 
 ## Active Item
 
-- Next item: **293** (add a tiny helper script that prints currently configured parity env overrides for easier CI debugging).
+- [x] 293. Add helper script to print parity env overrides.
+  - DoD: provide a tiny command that prints parity-related env overrides + defaults for CI debugging.
+  - Delivered:
+    - Added executable script:
+      - `scripts/show_parity_env.sh`
+    - Script prints effective values/defaults for:
+      - `PARITY_JSON_REPORT`
+      - `SEMANTIC_PARITY_REPORT`
+      - `SEMANTIC_PARITY_ARGS`
+      - `SEMANTIC_PARITY_SUMMARY_ARGS`
+    - Added docs reference in `docs/excelize-parity.md`.
+  - Validation gates:
+    - `PARITY_JSON_REPORT=/tmp/parity.json SEMANTIC_PARITY_ARGS='--skip-validate' SEMANTIC_PARITY_SUMMARY_ARGS='--top-slowest 2' scripts/show_parity_env.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **294** (add wrapper preflight print option that logs parity env overrides before execution, toggled by env var).
