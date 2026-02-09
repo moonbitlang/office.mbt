@@ -6382,4 +6382,18 @@ Commands used:
 
 ## Active Item
 
-- Next item: **335** (add compact-mode coverage to aggregate preflight status docs section).
+- [x] 335. Add compact-mode coverage to aggregate preflight status docs section.
+  - DoD: explicitly document compact preflight-status usage in aggregate/CI
+    command flows.
+  - Delivered:
+    - Updated `docs/excelize-parity.md` aggregate-gate section with compact
+      preflight-status command note.
+    - Updated `docs/parity-commands.md` combined env patterns with a compact
+      preflight-status snapshot command.
+  - Validation gates:
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **336** (add aggregate gate toggle to print compact preflight status JSON).

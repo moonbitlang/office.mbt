@@ -192,6 +192,8 @@ Set `SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1` to bypass wrapper-coverage preflight
 The script prints active parity-related env toggles at startup.
 Set `SHOW_PARITY_PREFLIGHT_STATUS=1` (or `json`) to print effective preflight
 resolution via `scripts/show_parity_preflight_status.sh` during gate startup.
+For compact, single-line status logs, run
+`scripts/show_parity_preflight_status.sh --json --compact`.
 
 For a fast pre-commit semantic subset (currently `cf` + `controls`):
 
