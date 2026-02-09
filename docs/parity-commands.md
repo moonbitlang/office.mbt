@@ -116,6 +116,7 @@ scripts/check_parity_preflight_matrix_smoke_contract_x36.sh --json
 scripts/check_parity_preflight_matrix_smoke_contract_x37.sh
 scripts/check_parity_preflight_matrix_smoke_contract_x37.sh --json
 scripts/check_parity_preflight_matrix_smoke_contract_x38.sh
+scripts/check_parity_preflight_matrix_smoke_contract_x38.sh --json
 scripts/show_parity_env.sh
 scripts/show_parity_env.sh --json
 scripts/show_parity_preflight_status.sh
