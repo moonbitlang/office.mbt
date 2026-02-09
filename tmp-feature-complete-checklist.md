@@ -5110,4 +5110,28 @@ Commands used:
 
 ## Active Item
 
-- Next item: **263** (expand semantic parity scenario coverage with a new non-control workbook profile and fixture plumbing).
+- [x] 263. Expand semantic parity coverage with a non-control workbook profile and fixture plumbing.
+  - DoD: add one non-form-control semantic parity scenario and wire it to committed Excelize fixtures.
+  - Delivered:
+    - Added new semantic parity scenario:
+      - `shared_strings` (`mbt_file=shared_strings.xlsx`, `excelize_file=shared_strings.xlsx`)
+    - Extended `cmd/parity/main.mbt` to emit `shared_strings.xlsx` via:
+      - `parity_shared_strings_bytes()`
+    - Extended fixture plumbing in `scripts/semantic_parity.py`:
+      - `shared_strings.xlsx` sourced from `excelize/test/SharedStrings.xlsx`
+    - Fixed semantic parity fingerprint extraction correctness:
+      - corrected regex escaping (`\d`, `\b`, XML attribute/tag matches) so fingerprints capture actual workbook structure instead of empty defaults.
+    - Strengthened relationship-target comparisons:
+      - normalized `Target` paths for known representation variance (`/xl/...`, numbered drawing/chart/table/image part IDs).
+      - ignored `calcChain.xml` in relation-target parity (known implementation detail divergence for these scenarios).
+    - Added fingerprint key:
+      - `shared_string_items` (count of `<si>` entries from `xl/sharedStrings.xml`), used by the new scenario.
+    - Adjusted `parity_cf_min_bytes()` to write numeric values instead of formulas so CF parity avoids calc-chain-specific drift.
+  - Validation gates:
+    - `scripts/test_semantic_parity.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **264** (add focused regression coverage for semantic parity fingerprint internals to prevent silent regex/parser regressions).

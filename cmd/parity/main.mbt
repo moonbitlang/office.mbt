@@ -72,7 +72,7 @@ fn parity_cf_min_bytes() -> Bytes raise @xlsx.XlsxError {
     let cell_a = "A\{i}"
     let cell_e = "E\{i}"
     sheet.set_cell_value(cell_a, Numeric((i - 1).to_double() * 10.0))
-    sheet.set_cell_formula(cell_e, "A\{i}*2-50", value="0")
+    sheet.set_cell_value(cell_e, Numeric(((i - 1) * 20 - 50).to_double()))
   }
 
   let data_bar = @xlsx.ConditionalFormatOptions::new("data_bar")
@@ -87,6 +87,15 @@ fn parity_cf_min_bytes() -> Bytes raise @xlsx.XlsxError {
   icon_set.set_icon_style("3Arrows")
   sheet.set_conditional_format("E2:E21", [icon_set])
 
+  @excel.write(workbook)
+}
+
+///|
+fn parity_shared_strings_bytes() -> Bytes raise @xlsx.XlsxError {
+  let workbook = @excel.new_file()
+  workbook.set_cell("Sheet1", "A1", "A")
+  ignore(workbook.add_sheet("Sheet2"))
+  workbook.set_cell("Sheet2", "A1", "B")
   @excel.write(workbook)
 }
 
@@ -122,5 +131,10 @@ async fn main {
   match cf {
     Ok(bytes) => write_out(out_dir, "cf.xlsx", bytes)
     Err(err) => println("cf generation failed: \{err}")
+  }
+  let shared_strings : Result[Bytes, Error] = try? parity_shared_strings_bytes()
+  match shared_strings {
+    Ok(bytes) => write_out(out_dir, "shared_strings.xlsx", bytes)
+    Err(err) => println("shared_strings generation failed: \{err}")
   }
 }

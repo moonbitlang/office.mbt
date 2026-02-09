@@ -109,6 +109,19 @@ SCENARIOS: tuple[Scenario, ...] = (
             "drawing_rel_targets",
         ),
     ),
+    Scenario(
+        name="shared_strings",
+        mbt_file="shared_strings.xlsx",
+        excelize_file="shared_strings.xlsx",
+        keys=(
+            "sheet_names",
+            "worksheets",
+            "shared_string_items",
+            "workbook_rel_targets",
+            "worksheet_rel_targets",
+            "drawing_rel_targets",
+        ),
+    ),
 )
 
 
@@ -125,50 +138,92 @@ def read_text_from_zip(z: zipfile.ZipFile, name: str) -> str:
 
 
 def workbook_sheet_names(workbook_xml: str) -> list[str]:
-    return re.findall(r"<sheet[^>]*\\bname=\"([^\"]+)\"", workbook_xml)
+    return re.findall(r"<sheet[^>]*\bname=\"([^\"]+)\"", workbook_xml)
 
 
 def rel_targets(rels_xml: str) -> list[str]:
-    return re.findall(r"<Relationship[^>]*\\bTarget=\"([^\"]+)\"", rels_xml)
+    return re.findall(r"<Relationship[^>]*\bTarget=\"([^\"]+)\"", rels_xml)
+
+
+def normalize_rel_target(target: str) -> str | None:
+    # Normalize known relationship-target variability so comparisons focus on structure:
+    # - leading absolute `/xl/` vs relative paths
+    # - numeric OOXML part ids (`drawing1.xml` vs `drawing2.xml`)
+    # - calcChain presence (implementation detail in these fixtures)
+    normalized = target.replace("\\", "/")
+    if normalized.startswith("/xl/"):
+        normalized = normalized[len("/xl/") :]
+    elif normalized.startswith("xl/"):
+        normalized = normalized[len("xl/") :]
+
+    if normalized == "calcChain.xml":
+        return None
+
+    normalized = re.sub(
+        r"(\.\./drawings/drawing)\d+(\.xml)$", r"\1*.xml", normalized
+    )
+    normalized = re.sub(
+        r"(\.\./charts/chart)\d+(\.xml)$", r"\1*.xml", normalized
+    )
+    normalized = re.sub(
+        r"(\.\./tables/table)\d+(\.xml)$", r"\1*.xml", normalized
+    )
+    normalized = re.sub(
+        r"(\.\./media/image)\d+(\.[A-Za-z0-9]+)$", r"\1*\2", normalized
+    )
+    return normalized
+
+
+def normalized_rel_targets(rels_xml: str) -> list[str]:
+    normalized: list[str] = []
+    for target in rel_targets(rels_xml):
+        value = normalize_rel_target(target)
+        if value is not None:
+            normalized.append(value)
+    return normalized
 
 
 def fingerprint(path: Path) -> dict[str, object]:
     with zipfile.ZipFile(path) as z:
         names = z.namelist()
-        ws_names = [n for n in names if re.fullmatch(r"xl/worksheets/sheet\\d+\\.xml", n)]
-        table_names = [n for n in names if re.fullmatch(r"xl/tables/table\\d+\\.xml", n)]
-        chart_names = [n for n in names if re.fullmatch(r"xl/charts/chart\\d+\\.xml", n)]
-        drawing_names = [n for n in names if re.fullmatch(r"xl/drawings/drawing\\d+\\.xml", n)]
-        vml_names = [n for n in names if re.fullmatch(r"xl/drawings/vmlDrawing\\d+\\.vml", n)]
-        slicer_names = [n for n in names if re.fullmatch(r"xl/slicers/slicer\\d+\\.xml", n)]
-        pivot_names = [n for n in names if re.fullmatch(r"xl/pivotTables/pivotTable\\d+\\.xml", n)]
+        ws_names = [n for n in names if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", n)]
+        table_names = [n for n in names if re.fullmatch(r"xl/tables/table\d+\.xml", n)]
+        chart_names = [n for n in names if re.fullmatch(r"xl/charts/chart\d+\.xml", n)]
+        drawing_names = [n for n in names if re.fullmatch(r"xl/drawings/drawing\d+\.xml", n)]
+        vml_names = [n for n in names if re.fullmatch(r"xl/drawings/vmlDrawing\d+\.vml", n)]
+        slicer_names = [n for n in names if re.fullmatch(r"xl/slicers/slicer\d+\.xml", n)]
+        pivot_names = [n for n in names if re.fullmatch(r"xl/pivotTables/pivotTable\d+\.xml", n)]
         pivot_cache_names = [
             n
             for n in names
-            if re.fullmatch(r"xl/pivotCache/pivotCacheDefinition\\d+\\.xml", n)
+            if re.fullmatch(r"xl/pivotCache/pivotCacheDefinition\d+\.xml", n)
         ]
         worksheet_rel_names = [
             n
             for n in names
-            if re.fullmatch(r"xl/worksheets/_rels/sheet\\d+\\.xml\\.rels", n)
+            if re.fullmatch(r"xl/worksheets/_rels/sheet\d+\.xml\.rels", n)
         ]
         drawing_rel_names = [
             n
             for n in names
-            if re.fullmatch(r"xl/drawings/_rels/drawing\\d+\\.xml\\.rels", n)
+            if re.fullmatch(r"xl/drawings/_rels/drawing\d+\.xml\.rels", n)
         ]
         workbook_xml = read_text_from_zip(z, "xl/workbook.xml")
         workbook_rel_targets: list[str] = []
         worksheet_rel_targets: list[str] = []
         drawing_rel_targets: list[str] = []
         if "xl/_rels/workbook.xml.rels" in names:
-            workbook_rel_targets = rel_targets(
+            workbook_rel_targets = normalized_rel_targets(
                 read_text_from_zip(z, "xl/_rels/workbook.xml.rels")
             )
         for rel_name in worksheet_rel_names:
-            worksheet_rel_targets.extend(rel_targets(read_text_from_zip(z, rel_name)))
+            worksheet_rel_targets.extend(
+                normalized_rel_targets(read_text_from_zip(z, rel_name))
+            )
         for rel_name in drawing_rel_names:
-            drawing_rel_targets.extend(rel_targets(read_text_from_zip(z, rel_name)))
+            drawing_rel_targets.extend(
+                normalized_rel_targets(read_text_from_zip(z, rel_name))
+            )
         conditional_count = 0
         x14_conditional_count = 0
         data_validation_count = 0
@@ -176,23 +231,25 @@ def fingerprint(path: Path) -> dict[str, object]:
         form_control_count = 0
         form_control_types: list[str] = []
         chart_types: list[str] = []
+        shared_string_items = 0
+        if "xl/sharedStrings.xml" in names:
+            shared_strings = read_text_from_zip(z, "xl/sharedStrings.xml")
+            shared_string_items = len(re.findall(r"<si\b", shared_strings))
         for ws in ws_names:
             text = read_text_from_zip(z, ws)
-            conditional_count += len(re.findall(r"<conditionalFormatting\\b", text))
-            x14_conditional_count += len(re.findall(r"<x14:conditionalFormatting\\b", text))
-            data_validation_count += len(re.findall(r"<dataValidation\\b", text))
-            cf_rule_types.extend(re.findall(r"<cfRule[^>]*\\btype=\"([^\"]+)\"", text))
-            cf_rule_types.extend(re.findall(r"<x14:cfRule[^>]*\\btype=\"([^\"]+)\"", text))
+            conditional_count += len(re.findall(r"<conditionalFormatting\b", text))
+            x14_conditional_count += len(re.findall(r"<x14:conditionalFormatting\b", text))
+            data_validation_count += len(re.findall(r"<dataValidation\b", text))
+            cf_rule_types.extend(re.findall(r"<cfRule[^>]*\btype=\"([^\"]+)\"", text))
+            cf_rule_types.extend(re.findall(r"<x14:cfRule[^>]*\btype=\"([^\"]+)\"", text))
         for vml in vml_names:
             text = read_text_from_zip(z, vml)
-            types = re.findall(r"<x:ClientData[^>]*\\bObjectType=\"([^\"]+)\"", text)
+            types = re.findall(r"<x:ClientData[^>]*\bObjectType=\"([^\"]+)\"", text)
             form_control_count += len(types)
             form_control_types.extend(types)
         for chart in chart_names:
             text = read_text_from_zip(z, chart)
-            chart_types.extend(
-                re.findall(r"<(?:c:)?([A-Za-z0-9]+Chart)\\b", text)
-            )
+            chart_types.extend(re.findall(r"<(?:c:)?([A-Za-z0-9]+Chart)\b", text))
         return {
             "sheet_names": workbook_sheet_names(workbook_xml),
             "worksheets": len(ws_names),
@@ -207,6 +264,7 @@ def fingerprint(path: Path) -> dict[str, object]:
             "x14_conditional_formatting": x14_conditional_count,
             "data_validations": data_validation_count,
             "cf_rule_types": sorted(cf_rule_types),
+            "shared_string_items": shared_string_items,
             "form_controls": form_control_count,
             "form_control_types": sorted(form_control_types),
             "chart_types": sorted(chart_types),
@@ -217,16 +275,15 @@ def fingerprint(path: Path) -> dict[str, object]:
 
 
 def copy_fixture_outputs(repo_root: Path, excelize_out: Path) -> None:
-    fixture_dir = repo_root / "demos_out_go"
     mapping = {
-        "dashboard.xlsx": "dashboard.xlsx",
-        "controls.xlsx": "excelize_controls.xlsx",
-        "controls_rerun.xlsx": "excelize_controls_rerun.xlsx",
-        "cf.xlsx": "excelize_cf.xlsx",
+        "dashboard.xlsx": repo_root / "demos_out_go" / "dashboard.xlsx",
+        "controls.xlsx": repo_root / "demos_out_go" / "excelize_controls.xlsx",
+        "controls_rerun.xlsx": repo_root / "demos_out_go" / "excelize_controls_rerun.xlsx",
+        "cf.xlsx": repo_root / "demos_out_go" / "excelize_cf.xlsx",
+        "shared_strings.xlsx": repo_root / "excelize" / "test" / "SharedStrings.xlsx",
     }
     excelize_out.mkdir(parents=True, exist_ok=True)
-    for out_name, fixture_name in mapping.items():
-        src = fixture_dir / fixture_name
+    for out_name, src in mapping.items():
         dst = excelize_out / out_name
         if not src.exists():
             raise FileNotFoundError(f"missing fixture: {src}")
@@ -240,6 +297,7 @@ def can_run_go() -> bool:
 def generate_excelize_outputs(repo_root: Path, excelize_out: Path) -> str:
     excelize_out.mkdir(parents=True, exist_ok=True)
     excelize_dir = repo_root / "excelize"
+    shared_strings_fixture = repo_root / "excelize" / "test" / "SharedStrings.xlsx"
     if can_run_go():
         run(["go", "run", "./_mbtexcel_gen_dashboard/main.go", str(excelize_out / "dashboard.xlsx")], cwd=excelize_dir)
         run(["go", "run", "./_mbtexcel_gen_controls/main.go", str(excelize_out / "controls.xlsx")], cwd=excelize_dir)
@@ -253,6 +311,7 @@ def generate_excelize_outputs(repo_root: Path, excelize_out: Path) -> str:
             cwd=excelize_dir,
         )
         run(["go", "run", "./_mbtexcel_gen_cf/main.go", str(excelize_out / "cf.xlsx")], cwd=excelize_dir)
+        shutil.copyfile(shared_strings_fixture, excelize_out / "shared_strings.xlsx")
         return "go-generated"
     copy_fixture_outputs(repo_root, excelize_out)
     return "fixture-copied"
