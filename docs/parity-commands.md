@@ -47,6 +47,7 @@ python3 scripts/semantic_parity.py --dry-run-config
 ```sh
 PARITY_JSON_REPORT=/path/to/report.json
 SKIP_PARITY_WRAPPER_PREFLIGHT=1
+SKIP_PARITY_ENV_HELPER_PREFLIGHT=1
 SKIP_PARITY_DOCS_PREFLIGHT=1
 SKIP_PARITY_DOCS_COVERAGE_PREFLIGHT=1
 SEMANTIC_PARITY_ARGS='--skip-validate'
@@ -71,6 +72,7 @@ scripts/test_semantic_parity_report_compact.sh --scenario cf --scenario controls
 
 # Aggregate gate with preflights skipped (when externally guaranteed).
 SKIP_PARITY_WRAPPER_PREFLIGHT=1 \
+SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 \
 SKIP_PARITY_DOCS_PREFLIGHT=1 \
 scripts/test_parity_gates.sh
 ```

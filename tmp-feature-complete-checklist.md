@@ -6130,4 +6130,31 @@ Commands used:
 
 ## Active Item
 
-- Next item: **325** (wire parity env helper regression check into aggregate gate preflight).
+- [x] 325. Wire parity env helper regression check into aggregate gate preflight.
+  - DoD: ensure aggregate parity gate enforces `show_parity_env` contract checks
+    by default with an explicit opt-out toggle.
+  - Delivered:
+    - Updated `scripts/test_parity_gates.sh`:
+      - runs `scripts/check_parity_env_helper.sh` as a default preflight
+      - adds `SKIP_PARITY_ENV_HELPER_PREFLIGHT=1` skip toggle
+      - prints toggle value in startup env diagnostics
+    - Updated `scripts/show_parity_preflight_status.sh`:
+      - includes env-helper preflight status in plain and JSON output
+      - includes `SKIP_PARITY_ENV_HELPER_PREFLIGHT` in JSON env payload
+    - Updated `scripts/show_parity_env.sh`:
+      - includes `SKIP_PARITY_ENV_HELPER_PREFLIGHT` in plain and JSON output
+    - Updated env helper regression checker required-key list:
+      - `scripts/check_parity_env_helper.sh`
+    - Updated docs:
+      - `docs/excelize-parity.md`
+      - `docs/parity-commands.md`
+  - Validation gates:
+    - `SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 scripts/show_parity_env.sh --json`
+    - `SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 scripts/show_parity_preflight_status.sh --json`
+    - `SHOW_PARITY_PREFLIGHT_STATUS=json SKIP_PARITY_WRAPPER_PREFLIGHT=1 SKIP_PARITY_DOCS_PREFLIGHT=1 SKIP_PARITY_ENV_HELPER_PREFLIGHT=1 scripts/test_parity_gates.sh`
+    - `moon check --deny-warn`
+    - `moon info && moon fmt`
+
+## Active Item
+
+- Next item: **326** (add regression checker for preflight status helper contract).
