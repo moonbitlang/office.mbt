@@ -10,7 +10,6 @@ pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String]
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
 }
-pub impl Eq for ParseXmlError
 pub impl Show for ParseXmlError
 
 // Types and methods
