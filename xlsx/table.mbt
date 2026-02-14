@@ -15,7 +15,7 @@ pub struct Table {
 }
 
 ///|
-pub(all) struct TableOptions {
+struct TableOptions {
   range_ref : String
   mut name : String
   mut style_name : String

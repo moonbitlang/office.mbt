@@ -1533,16 +1533,7 @@ pub struct Table {
   show_header_row : Bool
 }
 
-pub(all) struct TableOptions {
-  range_ref : String
-  mut name : String
-  mut style_name : String
-  mut show_first_column : Bool
-  mut show_last_column : Bool
-  mut show_row_stripes : Bool?
-  mut show_column_stripes : Bool
-  mut show_header_row : Bool?
-}
+type TableOptions
 pub fn TableOptions::new(String) -> Self raise XlsxError
 pub fn TableOptions::set_name(Self, String) -> Unit
 pub fn TableOptions::set_show_column_stripes(Self, Bool) -> Unit
