@@ -42,13 +42,9 @@ pub fn read_with_password(BytesView, String, options? : Options, transcoder? : (
 
 pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : Options, transcoder? : (String, Bytes) -> String raise XlsxError) -> Workbook raise XlsxError
 
-pub fn rgb(StringView) -> SparklineColor raise XlsxError
-
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 
 pub fn split_cell_name(StringView) -> (String, Int) raise XlsxError
-
-pub fn theme(Int, tint? : Double) -> SparklineColor
 
 pub fn theme_color(String, Double) -> String
 

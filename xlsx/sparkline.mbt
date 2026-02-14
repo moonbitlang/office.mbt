@@ -13,7 +13,7 @@ pub struct SparklineColor {
 } derive(Eq, Show)
 
 ///|
-pub fn rgb(value : StringView) -> SparklineColor raise XlsxError {
+fn rgb(value : StringView) -> SparklineColor raise XlsxError {
   let raw = value.to_string().to_upper()
   let hex = if raw.has_prefix("#") {
     let rest = raw[1:] catch {
@@ -39,7 +39,7 @@ pub fn rgb(value : StringView) -> SparklineColor raise XlsxError {
 }
 
 ///|
-pub fn theme(theme : Int, tint? : Double = 0.0) -> SparklineColor {
+fn theme(theme : Int, tint? : Double = 0.0) -> SparklineColor {
   let tint_opt = if tint == 0.0 { None } else { Some(tint) }
   { rgb: None, theme: Some(theme), tint: tint_opt }
 }
