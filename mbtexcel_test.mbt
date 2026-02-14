@@ -53,16 +53,9 @@ test "mbtexcel new_file and helpers" {
 }
 
 ///|
-test "mbtexcel data_validation and stack" {
+test "mbtexcel data_validation" {
   let dv = new_data_validation(true)
   inspect(dv.allow_blank, content="true")
-  let stack : Stack[Int] = new_stack()
-  inspect(stack.empty(), content="true")
-  stack.push(10)
-  stack.push(20)
-  inspect(stack.peek(), content="Some(20)")
-  inspect(stack.pop(), content="Some(20)")
-  inspect(stack.len(), content="1")
 }
 
 ///|
@@ -92,16 +85,10 @@ test "mbtexcel column name conversions" {
 
 ///|
 test "mbtexcel acronym color helpers" {
-  let (r, g, b) = hslto_rgb(0.0, 1.0, 0.4)
-  assert_eq(r, (204).to_byte())
-  assert_eq(g, (0).to_byte())
-  assert_eq(b, (0).to_byte())
   let (r2, g2, b2) = hsl_to_rgb(0.0, 1.0, 0.4)
   assert_eq(r2, (204).to_byte())
   assert_eq(g2, (0).to_byte())
   assert_eq(b2, (0).to_byte())
-  let (h, s, l) = rgbto_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
-  inspect((h, s, l), content="(0.16666666666666666, 1, 0.5)")
   let (h2, s2, l2) = rgb_to_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
   inspect((h2, s2, l2), content="(0.16666666666666666, 1, 0.5)")
 }

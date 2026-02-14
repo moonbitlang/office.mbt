@@ -24,15 +24,11 @@ pub fn excel_date_to_time(Double, use_1904_format? : Bool) -> @time.ZonedDateTim
 
 pub fn hsl_to_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
 
-pub fn hslto_rgb(Double, Double, Double) -> (Byte, Byte, Byte)
-
 pub fn join_cell_name(StringView, Int) -> String raise @xlsx.XlsxError
 
 pub fn new_data_validation(Bool) -> @xlsx.DataValidation
 
 pub fn new_file(options? : @xlsx.Options) -> @xlsx.Workbook
-
-pub fn[T] new_stack() -> Stack[T]
 
 pub fn new_workbook(options? : @xlsx.Options) -> @xlsx.Workbook
 
@@ -47,8 +43,6 @@ pub fn read_with_password(BytesView, String, options? : @xlsx.Options, transcode
 pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : @xlsx.Options, transcoder? : (String, Bytes) -> String raise @xlsx.XlsxError) -> @xlsx.Workbook raise @xlsx.XlsxError
 
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
-
-pub fn rgbto_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 
 pub fn split_cell_name(StringView) -> (String, Int) raise @xlsx.XlsxError
 
@@ -76,15 +70,6 @@ pub impl Eq for UtfIndexError
 pub impl Show for UtfIndexError
 
 // Types and methods
-pub struct Stack[T] {
-  items : Array[T]
-}
-pub fn[T] Stack::empty(Self[T]) -> Bool
-pub fn[T] Stack::len(Self[T]) -> Int
-pub fn[T] Stack::new() -> Self[T]
-pub fn[T] Stack::peek(Self[T]) -> T?
-pub fn[T] Stack::pop(Self[T]) -> T?
-pub fn[T] Stack::push(Self[T], T) -> Unit
 
 // Type aliases
 

@@ -344,13 +344,6 @@ pub fn rgb_to_hsl(r : Byte, g : Byte, b : Byte) -> (Double, Double, Double) {
 }
 
 ///|
-/// Converts RGB to HSL. Alias for `rgb_to_hsl`.
-/// @deprecated Use `rgb_to_hsl` instead
-pub fn rgbto_hsl(r : Byte, g : Byte, b : Byte) -> (Double, Double, Double) {
-  @xlsx.rgb_to_hsl(r, g, b)
-}
-
-///|
 /// Converts HSL (Hue, Saturation, Lightness) color values to RGB.
 ///
 /// # Parameters
@@ -367,13 +360,6 @@ pub fn rgbto_hsl(r : Byte, g : Byte, b : Byte) -> (Double, Double, Double) {
 /// // r = 255, g = 0, b = 0
 /// ```
 pub fn hsl_to_rgb(h : Double, s : Double, l : Double) -> (Byte, Byte, Byte) {
-  @xlsx.hsl_to_rgb(h, s, l)
-}
-
-///|
-/// Converts HSL to RGB. Alias for `hsl_to_rgb`.
-/// @deprecated Use `hsl_to_rgb` instead
-pub fn hslto_rgb(h : Double, s : Double, l : Double) -> (Byte, Byte, Byte) {
   @xlsx.hsl_to_rgb(h, s, l)
 }
 
