@@ -4,25 +4,15 @@ package "bobzhang/mbtexcel/crypto"
 // Values
 pub fn aes_cbc_decrypt(BytesView, BytesView, BytesView) -> Bytes raise CryptoError
 
-pub fn aes_cbc_encrypt(BytesView, BytesView, BytesView) -> Bytes raise CryptoError
-
 pub fn aes_ecb_decrypt(BytesView, BytesView) -> Bytes raise CryptoError
 
 pub fn aes_ecb_encrypt(BytesView, BytesView) -> Bytes raise CryptoError
 
-pub fn hash_bytes(String, BytesView) -> Bytes
-
 pub fn hash_concat(String, ArrayView[BytesView]) -> Bytes
-
-pub fn push_u32_be(Array[Byte], UInt) -> Unit
 
 pub fn push_u32_le(Array[Byte], UInt) -> Unit
 
-pub fn u32_from_be(BytesView, Int) -> UInt
-
 pub fn u32_from_le(BytesView, Int) -> UInt
-
-pub fn u64_from_be(BytesView, Int) -> UInt64
 
 pub fn u64_from_le(BytesView, Int) -> UInt64
 

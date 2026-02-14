@@ -377,7 +377,7 @@ pub fn aes_cbc_decrypt(
 }
 
 ///|
-pub fn aes_cbc_encrypt(
+fn aes_cbc_encrypt(
   key : BytesView,
   iv : BytesView,
   data : BytesView,

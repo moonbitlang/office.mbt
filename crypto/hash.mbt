@@ -18,6 +18,6 @@ pub fn hash_concat(algorithm : String, parts : ArrayView[BytesView]) -> Bytes {
 }
 
 ///|
-pub fn hash_bytes(algorithm : String, input : BytesView) -> Bytes {
+fn hash_bytes(algorithm : String, input : BytesView) -> Bytes {
   hash_concat(algorithm, [input])
 }

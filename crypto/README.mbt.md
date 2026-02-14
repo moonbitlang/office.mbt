@@ -6,11 +6,11 @@ A pure MoonBit implementation of cryptographic primitives used for XLSX file enc
 
 - **Hash algorithms**: MD4, MD5, RIPEMD-160, SHA-1, SHA-256, SHA-512
 - **Encryption**: AES-128/192/256 in ECB and CBC modes
-- **Byte utilities**: Big-endian and little-endian integer conversion
+- **Byte utilities**: little-endian integer conversion
 
 ## Hash Functions
 
-The `hash_bytes` and `hash_concat` functions support the following algorithms:
+The `hash_concat` function supports the following algorithms:
 
 | Algorithm | Name String |
 |-----------|-------------|
@@ -27,9 +27,9 @@ The `hash_bytes` and `hash_concat` functions support the following algorithms:
 ///|
 test "hash functions" {
   // Hash single input
-  let md5_hash = @crypto.hash_bytes("md5", b"Hello, World!")
+  let md5_hash = @crypto.hash_concat("md5", [b"Hello, World!"])
   inspect(md5_hash.length(), content="16") // MD5 produces 16 bytes
-  let sha256_hash = @crypto.hash_bytes("sha256", b"Hello, World!")
+  let sha256_hash = @crypto.hash_concat("sha256", [b"Hello, World!"])
   inspect(sha256_hash.length(), content="32") // SHA-256 produces 32 bytes
 
   // Hash concatenated inputs
@@ -67,27 +67,23 @@ test "aes ecb" {
 }
 ```
 
-### CBC Mode
+### CBC Mode (Decryption)
 
 CBC (Cipher Block Chaining) mode uses an initialization vector (IV) for added security.
 
 ```mbt check
 ///|
-test "aes cbc" {
+test "aes cbc decrypt" {
   let key : Bytes = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
-  let iv : Bytes = b"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
-  let plaintext : Bytes = b"16 bytes block!!"
-
-  // Encrypt
-  let ciphertext = @crypto.aes_cbc_encrypt(plaintext, key, iv)
-  inspect(ciphertext.length(), content="16")
+  let iv : Bytes = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+  let ciphertext : Bytes = b"\x76\x49\xab\xac\x81\x19\xb2\x46\xce\xe9\x8e\x9b\x12\xe9\x19\x7d"
 
   // Decrypt
   let decrypted = @crypto.aes_cbc_decrypt(ciphertext, key, iv)
   inspect(
     decrypted,
     content=(
-      #|b"cE\xd9\x9f\xaa\x93\x01\xd4Hq\x09\xcf\x06o \xa5"
+      #|b"\x17\x97i\x86z\x9e7e\xbbX0Z\xc02\x05\xed"
     ),
   )
 }
@@ -95,7 +91,7 @@ test "aes cbc" {
 
 ## Byte Utilities
 
-Functions for converting between integers and byte arrays:
+Functions for converting between integers and byte arrays.
 
 ### Little-Endian
 
@@ -114,35 +110,12 @@ test "little endian" {
 }
 ```
 
-### Big-Endian
-
-```mbt check
-///|
-test "big endian" {
-  // Read UInt32 from bytes
-  let bytes : Bytes = b"\x01\x02\x03\x04"
-  let value = @crypto.u32_from_be(bytes, 0)
-  inspect(value, content="16909060") // 0x01020304
-
-  // Read UInt64 from bytes
-  let bytes64 : Bytes = b"\x01\x02\x03\x04\x05\x06\x07\x08"
-  let value64 = @crypto.u64_from_be(bytes64, 0)
-  inspect(value64, content="72623859790382856")
-
-  // Write UInt32 to bytes
-  let buf : Array[Byte] = []
-  @crypto.push_u32_be(buf, 0x01020304U)
-  inspect(Bytes::from_array(buf), content="b\"\\x01\\x02\\x03\\x04\"")
-}
-```
-
 ## API Reference
 
 ### Hash Functions
 
 | Function | Description |
 |----------|-------------|
-| `hash_bytes(algo, data)` | Hash a single byte array |
 | `hash_concat(algo, parts)` | Hash concatenated byte arrays |
 
 ### AES Functions
@@ -151,7 +124,6 @@ test "big endian" {
 |----------|-------------|
 | `aes_ecb_encrypt(plaintext, key)` | Encrypt using AES-ECB |
 | `aes_ecb_decrypt(ciphertext, key)` | Decrypt using AES-ECB |
-| `aes_cbc_encrypt(plaintext, key, iv)` | Encrypt using AES-CBC |
 | `aes_cbc_decrypt(ciphertext, key, iv)` | Decrypt using AES-CBC |
 
 ### Byte Utilities
@@ -159,11 +131,8 @@ test "big endian" {
 | Function | Description |
 |----------|-------------|
 | `u32_from_le(bytes, offset)` | Read little-endian UInt32 |
-| `u32_from_be(bytes, offset)` | Read big-endian UInt32 |
 | `u64_from_le(bytes, offset)` | Read little-endian UInt64 |
-| `u64_from_be(bytes, offset)` | Read big-endian UInt64 |
 | `push_u32_le(buf, value)` | Write little-endian UInt32 |
-| `push_u32_be(buf, value)` | Write big-endian UInt32 |
 
 ## Error Handling
 
