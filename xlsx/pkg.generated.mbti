@@ -10,12 +10,6 @@ import {
 // Values
 pub fn cell_name_to_coordinates(StringView) -> (Int, Int) raise XlsxError
 
-pub fn cell_ref_from(Int, Int) -> String raise XlsxError
-
-pub fn cell_ref_to_rc(StringView) -> (Int, Int) raise XlsxError
-
-pub fn chart_options_to_xml(ChartOptions) -> String raise XlsxError
-
 pub fn column_name_to_number(StringView) -> Int raise XlsxError
 
 pub fn column_number_to_name(Int) -> String raise XlsxError

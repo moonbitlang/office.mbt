@@ -1,5 +1,5 @@
 ///|
-pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
+fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
   let len = reference.length()
   let mut idx = 0
   if idx < len && reference[idx] == '$' {
@@ -46,7 +46,7 @@ pub fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
 }
 
 ///|
-pub fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
+fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
   if row <= 0 || col <= 0 {
     raise InvalidCellRef(value="\{col}:\{row}")
   }

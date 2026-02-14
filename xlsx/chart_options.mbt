@@ -1937,7 +1937,7 @@ fn write_chart_sppr_root(sb : StringBuilder, opts : ChartOptions) -> Unit {
 }
 
 ///|
-pub fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
+fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
   if opts.series.length() == 0 {
     raise InvalidSheetOperation(msg="chart series empty")
   }
