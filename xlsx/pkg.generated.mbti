@@ -1489,11 +1489,7 @@ pub fn StreamCell::new(String, formula? : String, style_id? : Int) -> Self
 pub fn StreamCell::new_rich_text(ArrayView[RichTextRun], formula? : String, style_id? : Int) -> Self raise XlsxError
 pub fn StreamCell::new_value(CellValue, formula? : String, style_id? : Int) -> Self
 
-pub(all) enum StreamState {
-  Idle
-  Writing
-  Flushed
-}
+type StreamState
 pub impl Eq for StreamState
 
 pub struct StreamWriter {
@@ -2016,12 +2012,7 @@ pub fn Worksheet::unset_conditional_format(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
 
-pub(all) struct X14DataBarProps {
-  sqref : String
-  bar_direction : String
-  bar_solid : Bool
-  bar_border_color : String
-}
+type X14DataBarProps
 pub impl Show for X14DataBarProps
 
 // Type aliases

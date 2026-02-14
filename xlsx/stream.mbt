@@ -1,5 +1,5 @@
 ///|
-pub(all) enum StreamState {
+enum StreamState {
   Idle
   Writing
   Flushed

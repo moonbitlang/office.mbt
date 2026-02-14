@@ -27,7 +27,7 @@ pub(all) struct ConditionalFormatOptions {
 } derive(Show)
 
 ///|
-pub(all) struct X14DataBarProps {
+struct X14DataBarProps {
   sqref : String
   bar_direction : String
   bar_solid : Bool
