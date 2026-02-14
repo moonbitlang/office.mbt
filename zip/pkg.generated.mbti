@@ -22,9 +22,7 @@ pub suberror ZipError {
 pub impl Show for ZipError
 
 // Types and methods
-pub(all) struct Archive {
-  entries : Array[Entry]
-}
+type Archive
 pub fn Archive::add(Self, String, Bytes, compression? : Compression, data_descriptor? : Bool) -> Unit
 pub fn Archive::entries(Self) -> ArrayView[Entry]
 pub fn Archive::get(Self, StringView) -> Bytes?

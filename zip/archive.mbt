@@ -7,7 +7,7 @@ pub(all) struct Entry {
 }
 
 ///|
-pub(all) struct Archive {
+struct Archive {
   entries : Array[Entry]
 }
 
