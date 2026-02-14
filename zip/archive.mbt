@@ -28,11 +28,6 @@ pub fn Archive::add(
 }
 
 ///|
-pub fn Archive::names(self : Archive) -> Array[String] {
-  self.entries.map(entry => entry.name)
-}
-
-///|
 pub fn Archive::get(self : Archive, name : StringView) -> Bytes? {
   for entry in self.entries {
     if entry.name[:] == name {

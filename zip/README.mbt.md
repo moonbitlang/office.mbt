@@ -64,7 +64,10 @@ test "create archive" {
   archive.add("data.txt", b"Large content here...", compression=Deflate)
 
   // List entries
-  inspect(archive.names(), content="[\"hello.txt\", \"data.txt\"]")
+  inspect(
+    archive.entries().map(entry => entry.name),
+    content="[\"hello.txt\", \"data.txt\"]",
+  )
 
   // Get file content
   inspect(archive.get("hello.txt"), content="Some(b\"Hello, World!\")")
@@ -86,7 +89,10 @@ test "read archive" {
 
   // Read back
   let loaded = @zip.read(bytes)
-  inspect(loaded.names(), content="[\"file1.txt\", \"file2.txt\"]")
+  inspect(
+    loaded.entries().map(entry => entry.name),
+    content="[\"file1.txt\", \"file2.txt\"]",
+  )
   inspect(loaded.get("file1.txt"), content="Some(b\"Content 1\")")
 }
 ```
@@ -136,7 +142,6 @@ test "iterate entries" {
 | `Archive::new()` | Create an empty archive |
 | `add(name, data, compression?, data_descriptor?)` | Add a file to the archive |
 | `get(name)` | Get file content by name, returns `Bytes?` |
-| `names()` | Get list of all file names |
 | `entries()` | Get view of all entries |
 
 ### Functions
