@@ -102,7 +102,6 @@ pub suberror XlsxError {
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
 }
-pub impl Eq for XlsxError
 pub impl Show for XlsxError
 
 // Types and methods
