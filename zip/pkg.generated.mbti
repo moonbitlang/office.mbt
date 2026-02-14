@@ -19,7 +19,6 @@ pub suberror ZipError {
   UnsupportedCompression(method_id~ : Int)
   InvalidUtf8(offset~ : Int)
 }
-pub impl Eq for ZipError
 pub impl Show for ZipError
 
 // Types and methods
@@ -35,7 +34,6 @@ pub(all) enum Compression {
   Store
   Deflate
 }
-pub impl Eq for Compression
 pub impl Show for Compression
 
 pub struct Entry {

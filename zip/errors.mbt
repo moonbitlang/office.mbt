@@ -2,7 +2,7 @@
 pub(all) enum Compression {
   Store
   Deflate
-} derive(Show, Eq)
+} derive(Show)
 
 ///|
 pub suberror ZipError {
@@ -12,4 +12,4 @@ pub suberror ZipError {
   UnsupportedFeature(msg~ : String)
   UnsupportedCompression(method_id~ : Int)
   InvalidUtf8(offset~ : Int)
-} derive(Show, Eq)
+} derive(Show)
