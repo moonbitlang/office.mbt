@@ -1,5 +1,5 @@
 ///|
-pub(all) struct SlicerOptions {
+struct SlicerOptions {
   name : String
   cell : String
   table_sheet : String

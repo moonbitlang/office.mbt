@@ -338,10 +338,7 @@ pub(all) struct ChartMarker {
 }
 pub impl Show for ChartMarker
 
-pub(all) struct ChartNumFmt {
-  custom_num_fmt : String
-  source_linked : Bool
-}
+type ChartNumFmt
 pub fn ChartNumFmt::new(custom_num_fmt? : String, source_linked? : Bool) -> Self
 pub impl Show for ChartNumFmt
 
@@ -1027,17 +1024,7 @@ pub struct PivotTable {
   cache_records_xml : String?
 }
 
-pub(all) struct PivotTableField {
-  data : String
-  mut name : String
-  mut subtotal : String
-  mut num_fmt : Int
-  mut compact : Bool
-  mut outline : Bool
-  mut show_all : Bool
-  mut insert_blank_row : Bool
-  mut default_subtotal : Bool
-}
+type PivotTableField
 pub fn PivotTableField::new(String) -> Self raise XlsxError
 pub impl Show for PivotTableField
 
@@ -1324,19 +1311,7 @@ pub struct Slicer {
 pub fn Slicer::new(String) -> Self raise XlsxError
 pub impl Show for Slicer
 
-pub(all) struct SlicerOptions {
-  name : String
-  cell : String
-  table_sheet : String
-  table_name : String
-  mut caption : String
-  mut macro_name : String
-  mut width : Int
-  mut height : Int
-  mut display_header : Bool?
-  mut item_desc : Bool
-  mut format : GraphicOptions
-}
+type SlicerOptions
 pub fn SlicerOptions::new(String, String, String, String) -> Self raise XlsxError
 pub fn SlicerOptions::set_caption(Self, String) -> Unit
 pub fn SlicerOptions::set_display_header(Self, Bool?) -> Unit

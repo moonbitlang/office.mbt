@@ -104,7 +104,7 @@ pub(all) enum ChartDataLabelPositionType {
 } derive(Eq, Show)
 
 ///|
-pub(all) struct ChartNumFmt {
+struct ChartNumFmt {
   custom_num_fmt : String
   source_linked : Bool
 } derive(Show)

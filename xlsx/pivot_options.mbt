@@ -1,14 +1,14 @@
 ///|
-pub(all) struct PivotTableField {
+struct PivotTableField {
   data : String
-  mut name : String
-  mut subtotal : String
-  mut num_fmt : Int
-  mut compact : Bool
-  mut outline : Bool
-  mut show_all : Bool
-  mut insert_blank_row : Bool
-  mut default_subtotal : Bool
+  name : String
+  subtotal : String
+  num_fmt : Int
+  compact : Bool
+  outline : Bool
+  show_all : Bool
+  insert_blank_row : Bool
+  default_subtotal : Bool
 } derive(Show)
 
 ///|
