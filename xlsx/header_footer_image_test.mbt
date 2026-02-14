@@ -448,12 +448,12 @@ test "header footer image read: missing vml relationship errors" {
     #|</Relationships>
   let updated_archive = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != "xl/drawings/_rels/vmlDrawing1.vml.rels" {
+    if entry.name() != "xl/drawings/_rels/vmlDrawing1.vml.rels" {
       updated_archive.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }

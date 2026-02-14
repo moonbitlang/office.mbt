@@ -74,12 +74,12 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
 
   let updated_archive = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != "xl/worksheets/sheet2.xml" {
+    if entry.name() != "xl/worksheets/sheet2.xml" {
       updated_archive.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }

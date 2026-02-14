@@ -86,8 +86,8 @@ test "data validation read x14 extLst" {
   let archive = @zip.read(bytes)
   let out = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name == "xl/worksheets/sheet1.xml" {
-      let xml = @encoding/utf8.decode(entry.data)
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
       let ext =
         #|<extLst>
         #|  <ext uri="{2F02F2B1-0A8B-4F0A-8C2A-25A9A1B30E6B}" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">
@@ -104,17 +104,17 @@ test "data validation read x14 extLst" {
         new="\{ext}\n</worksheet>",
       )
       out.add(
-        entry.name,
+        entry.name(),
         @encoding/utf8.encode(modified),
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     } else {
       out.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }

@@ -6,12 +6,12 @@ fn rewrite_zip_entry(
 ) -> Bytes raise Error {
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != path {
+    if entry.name() != path {
       updated.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }
@@ -51,9 +51,9 @@ fn prepend_relationship(
 ///|
 fn first_drawing_rels_path(archive : @zip.Archive) -> String raise Error {
   for entry in archive.entries() {
-    if entry.name.has_prefix("xl/drawings/_rels/drawing") &&
-      entry.name.has_suffix(".xml.rels") {
-      return entry.name
+    if entry.name().has_prefix("xl/drawings/_rels/drawing") &&
+      entry.name().has_suffix(".xml.rels") {
+      return entry.name()
     }
   }
   fail("missing drawing rels path")
@@ -237,16 +237,16 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
   )
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name == "xl/workbook.xml" ||
-      entry.name == "xl/_rels/workbook.xml.rels" ||
-      entry.name == "[Content_Types].xml" {
+    if entry.name() == "xl/workbook.xml" ||
+      entry.name() == "xl/_rels/workbook.xml.rels" ||
+      entry.name() == "[Content_Types].xml" {
       continue
     }
     updated.add(
-      entry.name,
-      entry.data,
-      compression=entry.compression,
-      data_descriptor=entry.data_descriptor,
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
     )
   }
   updated.add("xl/workbook2.xml", workbook_xml)

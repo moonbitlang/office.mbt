@@ -2931,13 +2931,13 @@ fn enforce_unzip_limits(
 ) -> Unit raise XlsxError {
   let mut total_size = 0
   for entry in archive.entries() {
-    let size = entry.data.length()
+    let size = entry.data().length()
     total_size = total_size + size
     if options.unzip_size_limit > 0 && total_size > options.unzip_size_limit {
       raise InvalidOptions(msg="unzip size limit exceeded")
     }
     if options.unzip_xml_size_limit > 0 {
-      let name = entry.name.to_lower()
+      let name = entry.name().to_lower()
       if name.has_suffix(".xml") && size > options.unzip_xml_size_limit {
         raise InvalidOptions(msg="unzip xml size limit exceeded")
       }

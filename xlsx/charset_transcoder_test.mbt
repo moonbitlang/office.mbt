@@ -7,8 +7,8 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
   let archive = @zip.read(raw) catch { err => fail("zip read failed: \{err}") }
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
-    let data = if entry.name == "xl/workbook.xml" {
-      let xml = @encoding/utf8.decode(entry.data) catch {
+    let data = if entry.name() == "xl/workbook.xml" {
+      let xml = @encoding/utf8.decode(entry.data()) catch {
         _ => fail("workbook.xml decode failed")
       }
       let updated_xml = xml.replace(
@@ -17,13 +17,13 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
       )
       @encoding/utf8.encode(updated_xml)
     } else {
-      entry.data
+      entry.data()
     }
     updated.add(
-      entry.name,
+      entry.name(),
       data,
-      compression=entry.compression,
-      data_descriptor=entry.data_descriptor,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
     )
   }
   @zip.write(updated) catch {

@@ -14,12 +14,12 @@ test "read: missing legacyDrawing vml relationship errors" {
     #|</Relationships>
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != "xl/worksheets/_rels/sheet1.xml.rels" {
+    if entry.name() != "xl/worksheets/_rels/sheet1.xml.rels" {
       updated.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }
@@ -66,12 +66,12 @@ test "read: missing legacyDrawingHF vml relationship errors" {
     #|</Relationships>
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != "xl/worksheets/_rels/sheet1.xml.rels" {
+    if entry.name() != "xl/worksheets/_rels/sheet1.xml.rels" {
       updated.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }

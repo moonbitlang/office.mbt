@@ -65,7 +65,7 @@ test "create archive" {
 
   // List entries
   inspect(
-    archive.entries().map(entry => entry.name),
+    archive.entries().map(entry => entry.name()),
     content="[\"hello.txt\", \"data.txt\"]",
   )
 
@@ -90,7 +90,7 @@ test "read archive" {
   // Read back
   let loaded = @zip.read(bytes)
   inspect(
-    loaded.entries().map(entry => entry.name),
+    loaded.entries().map(entry => entry.name()),
     content="[\"file1.txt\", \"file2.txt\"]",
   )
   inspect(loaded.get("file1.txt"), content="Some(b\"Content 1\")")
@@ -128,7 +128,7 @@ test "iterate entries" {
 
   // Iterate over entries
   for entry in archive.entries() {
-    println("File: \{entry.name}, Size: \{entry.data.length()}")
+    println("File: \{entry.name()}, Size: \{entry.data().length()}")
   }
 }
 ```

@@ -34,12 +34,11 @@ pub(all) enum Compression {
 }
 pub impl Show for Compression
 
-pub(all) struct Entry {
-  name : String
-  data : Bytes
-  compression : Compression
-  data_descriptor : Bool
-}
+type Entry
+pub fn Entry::compression(Self) -> Compression
+pub fn Entry::data(Self) -> Bytes
+pub fn Entry::data_descriptor(Self) -> Bool
+pub fn Entry::name(Self) -> String
 
 // Type aliases
 

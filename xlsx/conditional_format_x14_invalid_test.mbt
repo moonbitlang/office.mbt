@@ -17,12 +17,12 @@ test "x14 conditional formatting invalid extLst rejects read" {
   )
   let updated_archive = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != "xl/worksheets/sheet1.xml" {
+    if entry.name() != "xl/worksheets/sheet1.xml" {
       updated_archive.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }

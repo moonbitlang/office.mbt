@@ -6,7 +6,7 @@ test "zip store roundtrip" {
   let bytes = write(archive)
   let parsed = read(bytes)
   inspect(
-    parsed.entries().map(entry => entry.name),
+    parsed.entries().map(entry => entry.name()),
     content=(
       #|["a.txt", "dir/b.txt"]
     ),

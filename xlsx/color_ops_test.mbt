@@ -49,12 +49,12 @@ test "get base color from theme and indexed colors" {
   )
   let updated_archive = @zip.Archive::new()
   for entry in archive.entries() {
-    if entry.name != "xl/theme/theme1.xml" && entry.name != "xl/styles.xml" {
+    if entry.name() != "xl/theme/theme1.xml" && entry.name() != "xl/styles.xml" {
       updated_archive.add(
-        entry.name,
-        entry.data,
-        compression=entry.compression,
-        data_descriptor=entry.data_descriptor,
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
       )
     }
   }

@@ -115,20 +115,20 @@ fn write_with_options(
   let mut needs_zip64 = force_zip64
   let max_u32 : UInt = 0xFFFFFFFF
   for entry in archive.entries() {
-    let (method_id, payload) = match entry.compression {
-      Store => (0, entry.data)
-      Deflate => (8, deflate_encode(entry.data))
+    let (method_id, payload) = match entry.compression() {
+      Store => (0, entry.data())
+      Deflate => (8, deflate_encode(entry.data()))
     }
-    let name_bytes = @encoding/utf8.encode(entry.name)
+    let name_bytes = @encoding/utf8.encode(entry.name())
     let name_len = name_bytes.length()
-    let data_len = entry.data.length()
+    let data_len = entry.data().length()
     let payload_len = payload.length()
     if name_len > 0xFFFF {
       raise UnsupportedFeature(msg="file name too long")
     }
     let local_offset = out.length()
-    let crc = crc32(entry.data)
-    let use_descriptor = entry.data_descriptor
+    let crc = crc32(entry.data())
+    let use_descriptor = entry.data_descriptor()
     let needs_zip64_sizes = force_zip64 ||
       data_len.reinterpret_as_uint() > max_u32 ||
       payload_len.reinterpret_as_uint() > max_u32
