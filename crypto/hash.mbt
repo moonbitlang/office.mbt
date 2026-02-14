@@ -16,8 +16,3 @@ pub fn hash_concat(algorithm : String, parts : ArrayView[BytesView]) -> Bytes {
     _ => Bytes::default()
   }
 }
-
-///|
-fn hash_bytes(algorithm : String, input : BytesView) -> Bytes {
-  hash_concat(algorithm, [input])
-}

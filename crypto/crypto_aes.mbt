@@ -375,33 +375,3 @@ pub fn aes_cbc_decrypt(
   }
   Bytes::from_array(out)
 }
-
-///|
-fn aes_cbc_encrypt(
-  key : BytesView,
-  iv : BytesView,
-  data : BytesView,
-) -> Bytes raise CryptoError {
-  if iv.length() != 16 {
-    raise InvalidCrypto(msg="invalid AES IV length")
-  }
-  if data.length() % 16 != 0 {
-    raise InvalidCrypto(msg="invalid AES data length")
-  }
-  let schedule = aes_schedule(key)
-  let out : Array[Byte] = Array::new(capacity=data.length())
-  let mut prev = iv.to_array()
-  let mut offset = 0
-  while offset < data.length() {
-    let block = data[offset:offset + 16]
-    let mixed : Array[Byte] = Array::make(16, (0).to_byte())
-    for i in 0..<=15 {
-      mixed[i] = byte_xor(block[i], prev[i])
-    }
-    aes_encrypt_state(schedule, mixed)
-    out.append(mixed[:])
-    prev = mixed
-    offset = offset + 16
-  }
-  Bytes::from_array(out)
-}
