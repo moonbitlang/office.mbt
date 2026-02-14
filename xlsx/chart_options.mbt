@@ -78,7 +78,6 @@ pub(all) enum ChartDashType {
 ///|
 enum ChartLineType {
   Unset
-  Solid
   NoLine
   Automatic
 } derive(Eq, Show)
@@ -139,7 +138,7 @@ pub(all) struct ChartAxis {
 } derive(Show)
 
 ///|
-pub fn ChartAxis::new() -> ChartAxis {
+fn ChartAxis::new() -> ChartAxis {
   {
     none: false,
     major_grid_lines: false,
@@ -206,26 +205,6 @@ fn ChartLine::new() -> ChartLine {
 }
 
 ///|
-pub fn ChartLine::set_solid(self : ChartLine) -> Unit {
-  self.typ = Solid
-}
-
-///|
-pub fn ChartLine::set_no_line(self : ChartLine) -> Unit {
-  self.typ = NoLine
-}
-
-///|
-pub fn ChartLine::set_automatic(self : ChartLine) -> Unit {
-  self.typ = Automatic
-}
-
-///|
-pub fn ChartLine::set_unset(self : ChartLine) -> Unit {
-  self.typ = Unset
-}
-
-///|
 pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
@@ -255,7 +234,7 @@ pub(all) struct ChartPlotArea {
 } derive(Show)
 
 ///|
-pub fn ChartPlotArea::new() -> ChartPlotArea {
+fn ChartPlotArea::new() -> ChartPlotArea {
   {
     show_val: false,
     show_cat_name: false,
@@ -282,7 +261,7 @@ pub(all) struct ChartLegend {
 } derive(Show)
 
 ///|
-pub fn ChartLegend::new(
+fn ChartLegend::new(
   position? : String = "bottom",
   show_legend_key? : Bool = false,
 ) -> ChartLegend {
@@ -497,14 +476,6 @@ pub fn ChartOptions::add_combo_chart(
 }
 
 ///|
-pub fn ChartOptions::set_format(
-  self : ChartOptions,
-  format : GraphicOptions,
-) -> Unit {
-  self.format = format
-}
-
-///|
 pub fn ChartOptions::set_dimension(
   self : ChartOptions,
   dimension : ChartDimension,
@@ -513,63 +484,8 @@ pub fn ChartOptions::set_dimension(
 }
 
 ///|
-pub fn ChartOptions::set_legend(
-  self : ChartOptions,
-  legend : ChartLegend,
-) -> Unit {
-  self.legend = legend
-}
-
-///|
 pub fn ChartOptions::set_title(self : ChartOptions, title : String) -> Unit {
   self.title = title
-}
-
-///|
-pub fn ChartOptions::set_vary_colors(
-  self : ChartOptions,
-  vary_colors : Bool,
-) -> Unit {
-  self.vary_colors = vary_colors
-}
-
-///|
-pub fn ChartOptions::set_x_axis(self : ChartOptions, axis : ChartAxis) -> Unit {
-  self.x_axis = axis
-}
-
-///|
-pub fn ChartOptions::set_y_axis(self : ChartOptions, axis : ChartAxis) -> Unit {
-  self.y_axis = axis
-}
-
-///|
-pub fn ChartOptions::set_plot_area(
-  self : ChartOptions,
-  plot_area : ChartPlotArea,
-) -> Unit {
-  self.plot_area = plot_area
-}
-
-///|
-pub fn ChartOptions::set_show_blanks_as(
-  self : ChartOptions,
-  show_blanks_as : String,
-) -> Unit {
-  self.show_blanks_as = show_blanks_as
-}
-
-///|
-pub fn ChartOptions::set_gap_width(
-  self : ChartOptions,
-  gap_width : Int?,
-) -> Unit {
-  self.gap_width = gap_width
-}
-
-///|
-pub fn ChartOptions::set_overlap(self : ChartOptions, overlap : Int?) -> Unit {
-  self.overlap = overlap
 }
 
 ///|

@@ -257,7 +257,7 @@ test "chart options wb: series shape and data label writers" {
   inspect(marker_no_line_sb.to_string().contains("<a:alpha"), content="false")
 
   let marker_open_ln = ChartMarker::new(symbol="triangle", size=5)
-  marker_open_ln.border.typ = Solid
+  marker_open_ln.border.typ = Unset
   marker_open_ln.border.width = 1.0
   let marker_open_ln_sb = StringBuilder::new()
   write_chart_series_marker(marker_open_ln_sb, marker_open_ln)
@@ -267,7 +267,7 @@ test "chart options wb: series shape and data label writers" {
   )
 
   let marker_color_ln = ChartMarker::new(symbol="diamond", size=4)
-  marker_color_ln.border.typ = Solid
+  marker_color_ln.border.typ = Unset
   marker_color_ln.border.color = "#778899"
   marker_color_ln.border.transparency = 200
   let marker_color_ln_sb = StringBuilder::new()
@@ -414,7 +414,7 @@ test "chart options wb: axis and plot area writer branches" {
   inspect(root_no_line_sb.to_string().contains("<a:alpha"), content="false")
 
   let root_open_ln = ChartOptions::new(Col)
-  root_open_ln.border.typ = Solid
+  root_open_ln.border.typ = Unset
   root_open_ln.border.width = 1.0
   let root_open_ln_sb = StringBuilder::new()
   write_chart_sppr_root(root_open_ln_sb, root_open_ln)
@@ -424,7 +424,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let root_color_ln = ChartOptions::new(Col)
-  root_color_ln.border.typ = Solid
+  root_color_ln.border.typ = Unset
   root_color_ln.border.color = "#334455"
   root_color_ln.border.transparency = 200
   let root_color_ln_sb = StringBuilder::new()
@@ -435,7 +435,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let root_color_ln_zero = ChartOptions::new(Col)
-  root_color_ln_zero.border.typ = Solid
+  root_color_ln_zero.border.typ = Unset
   root_color_ln_zero.border.color = "#556677"
   root_color_ln_zero.border.transparency = 0
   let root_color_ln_zero_sb = StringBuilder::new()
@@ -458,7 +458,7 @@ test "chart options wb: axis and plot area writer branches" {
   inspect(sppr_no_line_sb.to_string().contains("<a:noFill/>"), content="true")
 
   let sppr_open_border = ChartLine::new()
-  sppr_open_border.typ = Solid
+  sppr_open_border.typ = Unset
   sppr_open_border.width = 1.0
   let sppr_open_sb = StringBuilder::new()
   write_chart_sppr(sppr_open_sb, "", sppr_open_border)
@@ -468,7 +468,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let sppr_color_alpha = ChartLine::new()
-  sppr_color_alpha.typ = Solid
+  sppr_color_alpha.typ = Unset
   sppr_color_alpha.color = "#99AABB"
   sppr_color_alpha.transparency = 50
   let sppr_color_alpha_sb = StringBuilder::new()
@@ -479,7 +479,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let sppr_color_zero = ChartLine::new()
-  sppr_color_zero.typ = Solid
+  sppr_color_zero.typ = Unset
   sppr_color_zero.color = "#112244"
   sppr_color_zero.transparency = 0
   let sppr_color_zero_sb = StringBuilder::new()
@@ -492,7 +492,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let sppr_dash = ChartLine::new()
-  sppr_dash.typ = Solid
+  sppr_dash.typ = Unset
   sppr_dash.color = "#CC8844"
   sppr_dash.transparency = 10
   sppr_dash.dash = Dash
@@ -508,7 +508,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let sppr_neg = ChartLine::new()
-  sppr_neg.typ = Solid
+  sppr_neg.typ = Unset
   sppr_neg.color = "#114488"
   sppr_neg.transparency = -1
   let sppr_neg_sb = StringBuilder::new()
@@ -519,7 +519,7 @@ test "chart options wb: axis and plot area writer branches" {
   )
 
   let sppr_gt = ChartLine::new()
-  sppr_gt.typ = Solid
+  sppr_gt.typ = Unset
   sppr_gt.color = "#228844"
   sppr_gt.transparency = 200
   sppr_gt.dash = Dot

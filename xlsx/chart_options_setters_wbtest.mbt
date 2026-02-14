@@ -26,29 +26,29 @@ test "chart options: setter coverage and basic validation" {
   inspect(series.legend.position, content="bottom")
   let opts = ChartOptions::new(Scatter)
   opts.series.push(series)
-  opts.set_format(GraphicOptions::new())
+  opts.format = GraphicOptions::new()
   opts.set_dimension(ChartDimension::with_values(320, 240))
-  opts.set_legend(ChartLegend::new(position="top", show_legend_key=true))
+  opts.legend = ChartLegend::new(position="top", show_legend_key=true)
   opts.set_title("T")
-  opts.set_vary_colors(false)
+  opts.vary_colors = false
   let x_axis = ChartAxis::new()
   x_axis.major_grid_lines = true
   x_axis.tick_label_position = Low
   x_axis.title = "X"
-  opts.set_x_axis(x_axis)
+  opts.x_axis = x_axis
   let y_axis = ChartAxis::new()
   y_axis.minor_grid_lines = true
   y_axis.reverse_order = true
   y_axis.title = "Y"
-  opts.set_y_axis(y_axis)
+  opts.y_axis = y_axis
   let plot = ChartPlotArea::new()
   plot.show_val = true
   plot.show_cat_name = true
   plot.show_percent = true
-  opts.set_plot_area(plot)
-  opts.set_show_blanks_as("span")
-  opts.set_gap_width(Some(150))
-  opts.set_overlap(Some(25))
+  opts.plot_area = plot
+  opts.show_blanks_as = "span"
+  opts.gap_width = Some(150)
+  opts.overlap = Some(25)
   let xml = chart_options_to_xml(opts)
   inspect(xml.contains("scatterChart"), content="true")
   inspect(xml.contains("<c:title>"), content="true")

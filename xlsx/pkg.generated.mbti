@@ -244,7 +244,6 @@ pub(all) struct ChartAxis {
   mut title_rich : Array[RichTextRun]?
   mut ax_id : Int
 }
-pub fn ChartAxis::new() -> Self
 pub impl Show for ChartAxis
 
 type ChartComboOptions
@@ -301,7 +300,6 @@ pub(all) struct ChartLegend {
   mut show_legend_key : Bool
   mut font : Font?
 }
-pub fn ChartLegend::new(position? : String, show_legend_key? : Bool) -> Self
 pub impl Show for ChartLegend
 
 pub(all) struct ChartLine {
@@ -312,10 +310,6 @@ pub(all) struct ChartLine {
   mut smooth : Bool
   mut width : Double
 }
-pub fn ChartLine::set_automatic(Self) -> Unit
-pub fn ChartLine::set_no_line(Self) -> Unit
-pub fn ChartLine::set_solid(Self) -> Unit
-pub fn ChartLine::set_unset(Self) -> Unit
 pub impl Show for ChartLine
 
 type ChartLineType
@@ -360,16 +354,7 @@ pub(all) struct ChartOptions {
 pub fn ChartOptions::add_combo_chart(Self, Self) -> Unit
 pub fn ChartOptions::new(ChartType) -> Self
 pub fn ChartOptions::set_dimension(Self, ChartDimension) -> Unit
-pub fn ChartOptions::set_format(Self, GraphicOptions) -> Unit
-pub fn ChartOptions::set_gap_width(Self, Int?) -> Unit
-pub fn ChartOptions::set_legend(Self, ChartLegend) -> Unit
-pub fn ChartOptions::set_overlap(Self, Int?) -> Unit
-pub fn ChartOptions::set_plot_area(Self, ChartPlotArea) -> Unit
-pub fn ChartOptions::set_show_blanks_as(Self, String) -> Unit
 pub fn ChartOptions::set_title(Self, String) -> Unit
-pub fn ChartOptions::set_vary_colors(Self, Bool) -> Unit
-pub fn ChartOptions::set_x_axis(Self, ChartAxis) -> Unit
-pub fn ChartOptions::set_y_axis(Self, ChartAxis) -> Unit
 pub impl Show for ChartOptions
 
 pub(all) struct ChartPlotArea {
@@ -388,7 +373,6 @@ pub(all) struct ChartPlotArea {
   mut fill_color : String
   mut fill_transparency : Int
 }
-pub fn ChartPlotArea::new() -> Self
 pub impl Show for ChartPlotArea
 
 pub(all) struct ChartSeries {
