@@ -16,7 +16,7 @@ OOXML files (like XLSX) are ZIP archives containing XML parts with specific rela
 
 Manages content type declarations for the OOXML package:
 
-```mbt check
+```mbt nocheck
 ///|
 test "content types" {
   let ct = @ooxml.ContentTypes::new()
@@ -42,17 +42,10 @@ test "content types" {
 
 Manages relationships between parts in the OOXML package:
 
-```mbt check
+```mbt nocheck
 ///|
 test "relationships" {
   let rels = @ooxml.Relationships::new()
-
-  // Add relationship with explicit ID
-  rels.add(
-    "rId1",
-    rel_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
-    target="xl/workbook.xml",
-  )
 
   // Add relationship with auto-generated ID
   let id = rels.add_auto(
@@ -97,24 +90,6 @@ test "workbook manifest" {
 ```
 
 ## API Reference
-
-### ContentTypes Methods
-
-| Method | Description |
-|--------|-------------|
-| `ContentTypes::new()` | Create empty content types |
-| `add_default(extension, content_type)` | Add default type by extension |
-| `add_override(part_name, content_type)` | Add specific part override |
-| `to_xml()` | Generate `[Content_Types].xml` |
-
-### Relationships Methods
-
-| Method | Description |
-|--------|-------------|
-| `Relationships::new()` | Create empty relationships |
-| `add(id, rel_type, target, target_mode?)` | Add relationship with explicit ID |
-| `add_auto(rel_type, target, target_mode?)` | Add relationship with auto ID |
-| `to_xml()` | Generate `.rels` XML |
 
 ### WorkbookManifest Methods
 

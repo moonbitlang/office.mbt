@@ -17,12 +17,12 @@ pub struct ContentTypes {
 }
 
 ///|
-pub fn ContentTypes::new() -> ContentTypes {
+fn ContentTypes::new() -> ContentTypes {
   { defaults: [], overrides: [] }
 }
 
 ///|
-pub fn ContentTypes::add_default(
+fn ContentTypes::add_default(
   self : ContentTypes,
   extension : String,
   content_type : String,
@@ -31,7 +31,7 @@ pub fn ContentTypes::add_default(
 }
 
 ///|
-pub fn ContentTypes::add_override(
+fn ContentTypes::add_override(
   self : ContentTypes,
   part_name : String,
   content_type : String,
@@ -40,7 +40,7 @@ pub fn ContentTypes::add_override(
 }
 
 ///|
-pub fn ContentTypes::to_xml(self : ContentTypes) -> String {
+fn ContentTypes::to_xml(self : ContentTypes) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(

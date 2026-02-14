@@ -28,10 +28,6 @@ pub struct ContentTypes {
   defaults : Array[ContentTypeDefault]
   overrides : Array[ContentTypeOverride]
 }
-pub fn ContentTypes::add_default(Self, String, String) -> Unit
-pub fn ContentTypes::add_override(Self, String, String) -> Unit
-pub fn ContentTypes::new() -> Self
-pub fn ContentTypes::to_xml(Self) -> String
 
 pub struct Relationship {
   id : String
@@ -44,10 +40,6 @@ pub struct Relationships {
   items : Array[Relationship]
   mut next_id : Int
 }
-pub fn Relationships::add(Self, String, rel_type~ : String, target~ : String, target_mode? : String) -> Unit
-pub fn Relationships::add_auto(Self, rel_type~ : String, target~ : String, target_mode? : String) -> String
-pub fn Relationships::new() -> Self
-pub fn Relationships::to_xml(Self) -> String
 
 pub struct WorkbookManifest {
   content_types : ContentTypes

@@ -13,23 +13,12 @@ pub struct Relationships {
 }
 
 ///|
-pub fn Relationships::new() -> Relationships {
+fn Relationships::new() -> Relationships {
   { items: [], next_id: 1 }
 }
 
 ///|
-pub fn Relationships::add(
-  self : Relationships,
-  id : String,
-  rel_type~ : String,
-  target~ : String,
-  target_mode? : String,
-) -> Unit {
-  self.items.push({ id, rel_type, target, target_mode })
-}
-
-///|
-pub fn Relationships::add_auto(
+fn Relationships::add_auto(
   self : Relationships,
   rel_type~ : String,
   target~ : String,
@@ -42,7 +31,7 @@ pub fn Relationships::add_auto(
 }
 
 ///|
-pub fn Relationships::to_xml(self : Relationships) -> String {
+fn Relationships::to_xml(self : Relationships) -> String {
   let sb = StringBuilder::new()
   sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
   sb.write_view(
