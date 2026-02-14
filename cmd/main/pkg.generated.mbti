@@ -2,9 +2,6 @@
 package "bobzhang/mbtexcel/cmd/main"
 
 // Values
-pub fn demo_xlsx_bytes(sheet_name? : String) -> Result[Bytes, Error]
-
-pub fn main_with_sheet(String) -> Result[Bytes, Error]
 
 // Errors
 

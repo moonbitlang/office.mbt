@@ -1,5 +1,5 @@
 ///|
-pub fn demo_xlsx_bytes(sheet_name? : String = "Sheet1") -> Result[Bytes, Error] {
+fn demo_xlsx_bytes(sheet_name? : String = "Sheet1") -> Result[Bytes, Error] {
   try? ({
     let workbook = @lib.new_workbook()
     let sheet = workbook.add_sheet(sheet_name)
@@ -11,7 +11,7 @@ pub fn demo_xlsx_bytes(sheet_name? : String = "Sheet1") -> Result[Bytes, Error] 
 }
 
 ///|
-pub fn main_with_sheet(sheet_name : String) -> Result[Bytes, Error] {
+fn main_with_sheet(sheet_name : String) -> Result[Bytes, Error] {
   let result = demo_xlsx_bytes(sheet_name~)
   match result {
     Ok(bytes) => println("xlsx bytes: \{bytes.length()}")
