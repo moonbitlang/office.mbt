@@ -22,7 +22,7 @@ pub suberror ZipError {
 pub impl Show for ZipError
 
 // Types and methods
-pub struct Archive {
+pub(all) struct Archive {
   entries : Array[Entry]
 }
 pub fn Archive::add(Self, String, Bytes, compression? : Compression, data_descriptor? : Bool) -> Unit
@@ -36,7 +36,7 @@ pub(all) enum Compression {
 }
 pub impl Show for Compression
 
-pub struct Entry {
+pub(all) struct Entry {
   name : String
   data : Bytes
   compression : Compression

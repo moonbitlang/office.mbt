@@ -1,5 +1,5 @@
 ///|
-pub struct Entry {
+pub(all) struct Entry {
   name : String
   data : Bytes
   compression : Compression
@@ -7,7 +7,7 @@ pub struct Entry {
 }
 
 ///|
-pub struct Archive {
+pub(all) struct Archive {
   entries : Array[Entry]
 }
 
