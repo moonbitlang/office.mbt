@@ -9,5 +9,6 @@ test "formula opts wb: ooxml mapping covers normal and dataTable" {
 ///|
 test "formula opts wb: with_values none formula_type branch" {
   let opts = FormulaOpts::with_values()
-  inspect(opts == FormulaOpts::new(), content="true")
+  inspect(opts.formula_type, content="None")
+  inspect(opts.range_ref, content="None")
 }

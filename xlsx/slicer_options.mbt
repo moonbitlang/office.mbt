@@ -11,7 +11,7 @@ pub(all) struct SlicerOptions {
   mut display_header : Bool?
   mut item_desc : Bool
   mut format : GraphicOptions
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn SlicerOptions::new(

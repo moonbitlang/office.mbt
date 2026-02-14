@@ -12,13 +12,13 @@ pub struct Hyperlink {
   link_type : HyperlinkType
   display : String?
   tooltip : String?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub struct HyperlinkOpts {
   mut display : String?
   mut tooltip : String?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn HyperlinkOpts::new() -> HyperlinkOpts {

@@ -17,7 +17,7 @@ pub struct RowOpts {
   hidden : Bool
   style_id : Int
   outline_level : Int
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn RowOpts::with_values(

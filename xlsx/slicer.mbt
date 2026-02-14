@@ -13,7 +13,7 @@ pub struct Slicer {
   display_header : Bool?
   item_desc : Bool
   format : GraphicOptions
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn Slicer::new(name : String) -> Slicer raise XlsxError {

@@ -3,7 +3,7 @@ pub(all) enum PicturePositioning {
   OneCell
   TwoCell
   Absolute
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub struct GraphicOptions {
@@ -21,7 +21,7 @@ pub struct GraphicOptions {
   mut print_object : Bool?
   mut locked : Bool?
   mut positioning : PicturePositioning?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn GraphicOptions::new() -> GraphicOptions {

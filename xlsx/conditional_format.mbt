@@ -24,7 +24,7 @@ pub(all) struct ConditionalFormatOptions {
   mut reverse_icons : Bool
   mut icons_only : Bool
   mut stop_if_true : Bool
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub(all) struct X14DataBarProps {
@@ -32,7 +32,7 @@ pub(all) struct X14DataBarProps {
   bar_direction : String
   bar_solid : Bool
   bar_border_color : String
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn ConditionalFormatOptions::new(

@@ -15,7 +15,7 @@ pub(all) enum CellValue {
   Numeric(Double)
   Bool(Bool)
   Error(String)
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 fn cell_value_type(value : CellValue) -> CellValueType {

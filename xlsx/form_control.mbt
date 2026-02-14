@@ -16,7 +16,7 @@ pub struct FormControl {
   mut horizontally : Bool?
   mut format : GraphicOptions
   mut paragraph : Array[RichTextRun]
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 let max_form_control_value = 30000
@@ -214,7 +214,7 @@ struct FormControlVmlPreset {
   text_v_align : String?
   no_three_d : Bool
   first_button : Bool
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 fn form_control_vml_preset(control_type : StringView) -> FormControlVmlPreset? {

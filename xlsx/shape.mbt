@@ -2,7 +2,7 @@
 pub struct ShapeLine {
   mut color : String?
   mut width : Double?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 fn ShapeLine::new() -> ShapeLine {
@@ -27,7 +27,7 @@ pub fn ShapeLine::with_values(color? : String, width? : Double) -> ShapeLine {
 pub struct ShapeFill {
   mut color : String?
   mut transparency : Int?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 fn ShapeFill::new() -> ShapeFill {
@@ -81,7 +81,7 @@ pub struct Shape {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 let default_shape_size = 160

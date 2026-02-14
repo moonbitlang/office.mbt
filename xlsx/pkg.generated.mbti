@@ -135,7 +135,6 @@ pub struct AutoFilter {
   range_ref : String
   columns : Array[AutoFilterColumn]
 }
-pub impl Eq for AutoFilter
 pub impl Show for AutoFilter
 
 pub struct AutoFilterColumn {
@@ -143,21 +142,18 @@ pub struct AutoFilterColumn {
   filters : Array[String]?
   custom_filters : AutoFilterCustomFilters?
 }
-pub impl Eq for AutoFilterColumn
 pub impl Show for AutoFilterColumn
 
 pub struct AutoFilterCustomFilter {
   operator : String
   value : String
 }
-pub impl Eq for AutoFilterCustomFilter
 pub impl Show for AutoFilterCustomFilter
 
 pub struct AutoFilterCustomFilters {
   and_filter : Bool
   filters : Array[AutoFilterCustomFilter]
 }
-pub impl Eq for AutoFilterCustomFilters
 pub impl Show for AutoFilterCustomFilters
 
 #alias(AutoFilterOptions)
@@ -165,7 +161,6 @@ pub(all) struct AutoFilterOption {
   column : String
   expression : String
 }
-pub impl Eq for AutoFilterOption
 pub impl Show for AutoFilterOption
 
 pub struct Border {
@@ -217,7 +212,6 @@ pub(all) enum CellValue {
   Bool(Bool)
   Error(String)
 }
-pub impl Eq for CellValue
 pub impl Show for CellValue
 
 #alias(CellType)
@@ -262,7 +256,6 @@ pub(all) struct ChartAxis {
   mut ax_id : Int
 }
 pub fn ChartAxis::new() -> Self
-pub impl Eq for ChartAxis
 pub impl Show for ChartAxis
 
 pub(all) struct ChartComboOptions {
@@ -277,7 +270,6 @@ pub(all) struct ChartComboOptions {
   mut hole_size : Int?
   mut bubble_scale : Int?
 }
-pub impl Eq for ChartComboOptions
 pub impl Show for ChartComboOptions
 
 pub(all) enum ChartDashType {
@@ -303,7 +295,6 @@ pub(all) struct ChartDataLabel {
   mut fill_color : String
   mut fill_transparency : Int
 }
-pub impl Eq for ChartDataLabel
 pub impl Show for ChartDataLabel
 
 pub(all) enum ChartDataLabelPositionType {
@@ -324,7 +315,6 @@ pub(all) struct ChartDataPoint {
   fill_color : String
 }
 pub fn ChartDataPoint::new(Int, fill_color? : String) -> Self
-pub impl Eq for ChartDataPoint
 pub impl Show for ChartDataPoint
 
 pub(all) struct ChartDimension {
@@ -332,7 +322,6 @@ pub(all) struct ChartDimension {
   height : Int
 }
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
-pub impl Eq for ChartDimension
 pub impl Show for ChartDimension
 
 pub(all) struct ChartLegend {
@@ -341,7 +330,6 @@ pub(all) struct ChartLegend {
   mut font : Font?
 }
 pub fn ChartLegend::new(position? : String, show_legend_key? : Bool) -> Self
-pub impl Eq for ChartLegend
 pub impl Show for ChartLegend
 
 pub(all) struct ChartLine {
@@ -352,7 +340,6 @@ pub(all) struct ChartLine {
   mut smooth : Bool
   mut width : Double
 }
-pub impl Eq for ChartLine
 pub impl Show for ChartLine
 
 pub(all) enum ChartLineType {
@@ -371,7 +358,6 @@ pub(all) struct ChartMarker {
   mut fill_transparency : Int
   mut border : ChartLine
 }
-pub impl Eq for ChartMarker
 pub impl Show for ChartMarker
 
 pub(all) struct ChartNumFmt {
@@ -379,7 +365,6 @@ pub(all) struct ChartNumFmt {
   source_linked : Bool
 }
 pub fn ChartNumFmt::new(custom_num_fmt? : String, source_linked? : Bool) -> Self
-pub impl Eq for ChartNumFmt
 pub impl Show for ChartNumFmt
 
 pub(all) struct ChartOptions {
@@ -417,7 +402,6 @@ pub fn ChartOptions::set_title(Self, String) -> Unit
 pub fn ChartOptions::set_vary_colors(Self, Bool) -> Unit
 pub fn ChartOptions::set_x_axis(Self, ChartAxis) -> Unit
 pub fn ChartOptions::set_y_axis(Self, ChartAxis) -> Unit
-pub impl Eq for ChartOptions
 pub impl Show for ChartOptions
 
 pub(all) struct ChartPlotArea {
@@ -437,7 +421,6 @@ pub(all) struct ChartPlotArea {
   mut fill_transparency : Int
 }
 pub fn ChartPlotArea::new() -> Self
-pub impl Eq for ChartPlotArea
 pub impl Show for ChartPlotArea
 
 pub(all) struct ChartSeries {
@@ -457,7 +440,6 @@ pub(all) struct ChartSeries {
 }
 pub fn ChartSeries::new(String, String, name? : String) -> Self raise XlsxError
 pub fn ChartSeries::set_bubble_size(Self, String) -> Unit raise XlsxError
-pub impl Eq for ChartSeries
 pub impl Show for ChartSeries
 
 pub struct ChartSheet {
@@ -476,7 +458,6 @@ pub(all) enum ChartTickLabelPositionType {
   Low
   NoTickLabels
 }
-pub impl Eq for ChartTickLabelPositionType
 pub impl Show for ChartTickLabelPositionType
 
 pub(all) enum ChartType {
@@ -545,7 +526,6 @@ pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
 }
-pub impl Eq for ChartUpDownBar
 pub impl Show for ChartUpDownBar
 
 pub struct ColDimension {
@@ -578,7 +558,6 @@ pub(all) struct Comment {
   width : Int?
   height : Int?
 }
-pub impl Eq for Comment
 pub impl Show for Comment
 
 pub(all) struct ConditionalFormatOptions {
@@ -631,7 +610,6 @@ pub fn ConditionalFormatOptions::set_percent(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_reverse_icons(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_stop_if_true(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_value(Self, String) -> Unit
-pub impl Eq for ConditionalFormatOptions
 pub impl Show for ConditionalFormatOptions
 
 pub struct CoreProperties {
@@ -657,7 +635,6 @@ pub struct CustomProperty {
   value : CustomPropertyValue?
 }
 pub fn CustomProperty::new(String, CustomPropertyValue?) -> Self
-pub impl Eq for CustomProperty
 pub impl Show for CustomProperty
 
 pub(all) enum CustomPropertyValue {
@@ -667,7 +644,6 @@ pub(all) enum CustomPropertyValue {
   Text(String)
   DateTime(String)
 }
-pub impl Eq for CustomPropertyValue
 pub impl Show for CustomPropertyValue
 
 pub struct DataValidation {
@@ -693,7 +669,6 @@ pub fn DataValidation::set_input(Self, String, String) -> Unit
 pub fn DataValidation::set_range(Self, DataValidationFormula, DataValidationFormula, DataValidationType, DataValidationOperator) -> Unit raise XlsxError
 pub fn DataValidation::set_sqref(Self, String) -> Unit
 pub fn DataValidation::set_sqref_drop_list(Self, String) -> Unit
-pub impl Eq for DataValidation
 pub impl Show for DataValidation
 
 pub(all) enum DataValidationErrorStyle {
@@ -701,7 +676,6 @@ pub(all) enum DataValidationErrorStyle {
   Warning
   Information
 }
-pub impl Eq for DataValidationErrorStyle
 pub impl Show for DataValidationErrorStyle
 
 pub(all) enum DataValidationFormula {
@@ -709,7 +683,6 @@ pub(all) enum DataValidationFormula {
   DoubleValue(Double)
   TextValue(String)
 }
-pub impl Eq for DataValidationFormula
 pub impl Show for DataValidationFormula
 
 pub(all) enum DataValidationOperator {
@@ -722,7 +695,6 @@ pub(all) enum DataValidationOperator {
   NotBetween
   NotEqual
 }
-pub impl Eq for DataValidationOperator
 pub impl Show for DataValidationOperator
 
 pub(all) enum DataValidationType {
@@ -735,7 +707,6 @@ pub(all) enum DataValidationType {
   Time
   Whole
 }
-pub impl Eq for DataValidationType
 pub impl Show for DataValidationType
 
 pub struct DefinedName {
@@ -745,7 +716,6 @@ pub struct DefinedName {
   comment : String
 }
 pub fn DefinedName::new(String, String, scope? : String, comment? : String) -> Self
-pub impl Eq for DefinedName
 pub impl Show for DefinedName
 
 pub struct Fill {
@@ -827,11 +797,9 @@ pub fn FormControl::set_min_val(Self, Int) -> Unit raise XlsxError
 pub fn FormControl::set_page_change(Self, Int) -> Unit raise XlsxError
 pub fn FormControl::set_paragraph(Self, Array[RichTextRun]) -> Unit
 pub fn FormControl::set_width(Self, Int) -> Unit raise XlsxError
-pub impl Eq for FormControl
 pub impl Show for FormControl
 
 type FormControlVmlPreset
-pub impl Eq for FormControlVmlPreset
 pub impl Show for FormControlVmlPreset
 
 pub struct FormulaOpts {
@@ -841,7 +809,6 @@ pub struct FormulaOpts {
 pub fn FormulaOpts::array(String) -> Self
 pub fn FormulaOpts::shared(String) -> Self
 pub fn FormulaOpts::with_values(formula_type? : FormulaType, range_ref? : String) -> Self
-pub impl Eq for FormulaOpts
 pub impl Show for FormulaOpts
 
 pub(all) enum FormulaType {
@@ -850,7 +817,6 @@ pub(all) enum FormulaType {
   Shared
   DataTable
 }
-pub impl Eq for FormulaType
 pub impl Show for FormulaType
 
 pub struct GraphicOptions {
@@ -871,7 +837,6 @@ pub struct GraphicOptions {
 }
 pub fn GraphicOptions::new() -> Self
 pub fn GraphicOptions::with_values(offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self
-pub impl Eq for GraphicOptions
 pub impl Show for GraphicOptions
 
 type HeaderFooterImage
@@ -888,7 +853,6 @@ pub struct HeaderFooterImageOptions {
 }
 pub fn HeaderFooterImageOptions::from_file(HeaderFooterImagePosition, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self raise XlsxError
 pub fn HeaderFooterImageOptions::new(HeaderFooterImagePosition, Bytes, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self
-pub impl Eq for HeaderFooterImageOptions
 pub impl Show for HeaderFooterImageOptions
 
 pub(all) enum HeaderFooterImagePosition {
@@ -912,7 +876,6 @@ pub struct HeaderFooterOptions {
   mut first_footer : String
 }
 pub fn HeaderFooterOptions::with_values(align_with_margins? : Bool, different_first? : Bool, different_odd_even? : Bool, scale_with_doc? : Bool, odd_header? : String, odd_footer? : String, even_header? : String, even_footer? : String, first_header? : String, first_footer? : String) -> Self
-pub impl Eq for HeaderFooterOptions
 pub impl Show for HeaderFooterOptions
 
 pub struct Hyperlink {
@@ -922,7 +885,6 @@ pub struct Hyperlink {
   display : String?
   tooltip : String?
 }
-pub impl Eq for Hyperlink
 pub impl Show for Hyperlink
 
 pub struct HyperlinkOpts {
@@ -931,7 +893,6 @@ pub struct HyperlinkOpts {
 }
 pub fn HyperlinkOpts::new() -> Self
 pub fn HyperlinkOpts::with_values(display? : String, tooltip? : String) -> Self
-pub impl Eq for HyperlinkOpts
 pub impl Show for HyperlinkOpts
 
 pub(all) enum HyperlinkType {
@@ -1000,7 +961,6 @@ pub struct MergeCell {
 pub fn MergeCell::get_cell_value(Self) -> String
 pub fn MergeCell::get_end_axis(Self) -> String
 pub fn MergeCell::get_start_axis(Self) -> String
-pub impl Eq for MergeCell
 pub impl Show for MergeCell
 
 pub enum NumberFormat {
@@ -1024,7 +984,6 @@ pub struct Options {
 }
 pub fn Options::new() -> Self
 pub fn Options::with_values(max_calc_iterations? : UInt, password? : String, raw_cell_value? : Bool, unzip_size_limit? : Int, unzip_xml_size_limit? : Int, tmp_dir? : String, short_date_pattern? : String, long_date_pattern? : String, long_time_pattern? : String, culture_info? : String) -> Self
-pub impl Eq for Options
 pub impl Show for Options
 
 pub struct PageBreak {
@@ -1033,7 +992,6 @@ pub struct PageBreak {
   max : Int
   manual : Bool
 }
-pub impl Eq for PageBreak
 pub impl Show for PageBreak
 
 pub struct PageLayoutMarginsOptions {
@@ -1047,7 +1005,6 @@ pub struct PageLayoutMarginsOptions {
   mut vertically : Bool?
 }
 pub fn PageLayoutMarginsOptions::with_values(top? : Double, bottom? : Double, left? : Double, right? : Double, header? : Double, footer? : Double, horizontally? : Bool, vertically? : Bool) -> Self
-pub impl Eq for PageLayoutMarginsOptions
 pub impl Show for PageLayoutMarginsOptions
 
 pub struct PageLayoutOptions {
@@ -1061,7 +1018,6 @@ pub struct PageLayoutOptions {
   mut page_order : String?
 }
 pub fn PageLayoutOptions::with_values(size? : Int, orientation? : String, first_page_number? : Int, adjust_to? : Int, fit_to_height? : Int, fit_to_width? : Int, black_and_white? : Bool, page_order? : String) -> Self
-pub impl Eq for PageLayoutOptions
 pub impl Show for PageLayoutOptions
 
 pub struct Panes {
@@ -1075,7 +1031,6 @@ pub struct Panes {
 }
 pub fn Panes::new() -> Self
 pub fn Panes::with_values(freeze? : Bool, split? : Bool, x_split? : Int, y_split? : Int, top_left_cell? : String, active_pane? : String, selection? : Array[Selection]) -> Self
-pub impl Eq for Panes
 pub impl Show for Panes
 
 pub(all) enum PicturePositioning {
@@ -1083,7 +1038,6 @@ pub(all) enum PicturePositioning {
   TwoCell
   Absolute
 }
-pub impl Eq for PicturePositioning
 pub impl Show for PicturePositioning
 
 pub struct PivotTable {
@@ -1107,7 +1061,6 @@ pub(all) struct PivotTableField {
   mut default_subtotal : Bool
 }
 pub fn PivotTableField::new(String) -> Self raise XlsxError
-pub impl Eq for PivotTableField
 pub impl Show for PivotTableField
 
 pub(all) struct PivotTableOptions {
@@ -1137,7 +1090,6 @@ pub(all) struct PivotTableOptions {
   mut pivot_table_style_name : String
 }
 pub fn PivotTableOptions::new(String, String) -> Self raise XlsxError
-pub impl Eq for PivotTableOptions
 pub impl Show for PivotTableOptions
 
 pub struct Protection {
@@ -1168,14 +1120,12 @@ pub(all) struct RichTextFont {
   vert_align : String?
   family : String?
 }
-pub impl Eq for RichTextFont
 pub impl Show for RichTextFont
 
 pub(all) struct RichTextRun {
   text : String
   font : RichTextFont?
 }
-pub impl Eq for RichTextRun
 pub impl Show for RichTextRun
 
 type RowCells
@@ -1194,7 +1144,6 @@ pub struct RowOpts {
   outline_level : Int
 }
 pub fn RowOpts::with_values(height? : Double, hidden? : Bool, style_id? : Int, outline_level? : Int) -> Self
-pub impl Eq for RowOpts
 pub impl Show for RowOpts
 
 pub struct RowStream {
@@ -1223,7 +1172,6 @@ pub struct Selection {
   mut pane : String
 }
 pub fn Selection::with_values(sqref? : String, active_cell? : String, pane? : String) -> Self
-pub impl Eq for Selection
 pub impl Show for Selection
 
 pub struct Shape {
@@ -1252,7 +1200,6 @@ pub struct Shape {
   positioning : PicturePositioning
 }
 pub fn Shape::new(String, String, macro_name? : String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
-pub impl Eq for Shape
 pub impl Show for Shape
 
 pub struct ShapeFill {
@@ -1260,7 +1207,6 @@ pub struct ShapeFill {
   mut transparency : Int?
 }
 pub fn ShapeFill::with_values(color? : String, transparency? : Int) -> Self raise XlsxError
-pub impl Eq for ShapeFill
 pub impl Show for ShapeFill
 
 pub struct ShapeLine {
@@ -1268,7 +1214,6 @@ pub struct ShapeLine {
   mut width : Double?
 }
 pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
-pub impl Eq for ShapeLine
 pub impl Show for ShapeLine
 
 pub struct SheetBackground {
@@ -1276,15 +1221,12 @@ pub struct SheetBackground {
   extension : String
   content_type : String
 }
-pub impl Eq for SheetBackground
 pub impl Show for SheetBackground
 
 type SheetEntry
-pub impl Eq for SheetEntry
 pub impl Show for SheetEntry
 
 type SheetPane
-pub impl Eq for SheetPane
 pub impl Show for SheetPane
 
 pub struct SheetPropsOptions {
@@ -1308,7 +1250,6 @@ pub struct SheetPropsOptions {
   mut thick_bottom : Bool?
 }
 pub fn SheetPropsOptions::with_values(code_name? : String, enable_format_conditions_calculation? : Bool, published? : Bool, auto_page_breaks? : Bool, fit_to_page? : Bool, tab_color_indexed? : Int, tab_color_rgb? : String, tab_color_theme? : Int, tab_color_tint? : Double, outline_summary_below? : Bool, outline_summary_right? : Bool, base_col_width? : Int, default_col_width? : Double, default_row_height? : Double, custom_height? : Bool, zero_height? : Bool, thick_top? : Bool, thick_bottom? : Bool) -> Self
-pub impl Eq for SheetPropsOptions
 pub impl Show for SheetPropsOptions
 
 pub struct SheetProtection {
@@ -1334,7 +1275,6 @@ pub struct SheetProtection {
   pivot_tables : Bool
   select_unlocked_cells : Bool
 }
-pub impl Eq for SheetProtection
 pub impl Show for SheetProtection
 
 pub struct SheetProtectionOptions {
@@ -1358,7 +1298,6 @@ pub struct SheetProtectionOptions {
 }
 pub fn SheetProtectionOptions::new() -> Self
 pub fn SheetProtectionOptions::with_values(algorithm_name? : String, password? : String, auto_filter? : Bool, delete_columns? : Bool, delete_rows? : Bool, edit_objects? : Bool, edit_scenarios? : Bool, format_cells? : Bool, format_columns? : Bool, format_rows? : Bool, insert_columns? : Bool, insert_hyperlinks? : Bool, insert_rows? : Bool, pivot_tables? : Bool, select_locked_cells? : Bool, select_unlocked_cells? : Bool, sort? : Bool) -> Self
-pub impl Eq for SheetProtectionOptions
 pub impl Show for SheetProtectionOptions
 
 pub enum SheetState {
@@ -1370,7 +1309,6 @@ pub impl Eq for SheetState
 pub impl Show for SheetState
 
 type SheetView
-pub impl Eq for SheetView
 pub impl Show for SheetView
 
 #alias(ViewOptions)
@@ -1388,7 +1326,6 @@ pub struct SheetViewOptions {
 }
 pub fn SheetViewOptions::new() -> Self
 pub fn SheetViewOptions::with_values(default_grid_color? : Bool, right_to_left? : Bool, show_formulas? : Bool, show_grid_lines? : Bool, show_row_col_headers? : Bool, show_ruler? : Bool, show_zeros? : Bool, top_left_cell? : String, view? : String, zoom_scale? : Double) -> Self
-pub impl Eq for SheetViewOptions
 pub impl Show for SheetViewOptions
 
 pub struct Slicer {
@@ -1407,7 +1344,6 @@ pub struct Slicer {
   format : GraphicOptions
 }
 pub fn Slicer::new(String) -> Self raise XlsxError
-pub impl Eq for Slicer
 pub impl Show for Slicer
 
 pub(all) struct SlicerOptions {
@@ -1430,7 +1366,6 @@ pub fn SlicerOptions::set_format(Self, GraphicOptions) -> Unit
 pub fn SlicerOptions::set_item_desc(Self, Bool) -> Unit
 pub fn SlicerOptions::set_macro_name(Self, String) -> Unit
 pub fn SlicerOptions::set_size(Self, Int, Int) -> Unit raise XlsxError
-pub impl Eq for SlicerOptions
 pub impl Show for SlicerOptions
 
 pub struct Sparkline {
@@ -1443,7 +1378,6 @@ pub struct SparklineColor {
   theme : Int?
   tint : Double?
 }
-pub impl Eq for SparklineColor
 pub impl Show for SparklineColor
 
 pub struct SparklineGroup {
@@ -1476,7 +1410,6 @@ pub struct SparklineGroupOptions {
   mut color_high : SparklineColor?
   mut color_low : SparklineColor?
 }
-pub impl Eq for SparklineGroupOptions
 pub impl Show for SparklineGroupOptions
 
 pub struct SparklineOptions {
@@ -1535,7 +1468,6 @@ pub fn SparklineOptions::set_series_color(Self, String) -> Unit
 pub fn SparklineOptions::set_style(Self, Int) -> Unit
 pub fn SparklineOptions::set_type(Self, SparklineType) -> Unit
 pub fn SparklineOptions::set_weight(Self, Double) -> Unit raise XlsxError
-pub impl Eq for SparklineOptions
 pub impl Show for SparklineOptions
 
 pub(all) enum SparklineType {
@@ -1645,7 +1577,6 @@ pub fn TableOptions::set_show_header_row(Self, Bool?) -> Unit
 pub fn TableOptions::set_show_last_column(Self, Bool) -> Unit
 pub fn TableOptions::set_show_row_stripes(Self, Bool?) -> Unit
 pub fn TableOptions::set_style_name(Self, String) -> Unit
-pub impl Eq for TableOptions
 pub impl Show for TableOptions
 
 pub struct Workbook {
@@ -1923,11 +1854,9 @@ pub struct WorkbookPropsOptions {
   mut code_name : String?
 }
 pub fn WorkbookPropsOptions::with_values(date_1904? : Bool, filter_privacy? : Bool, code_name? : String) -> Self
-pub impl Eq for WorkbookPropsOptions
 pub impl Show for WorkbookPropsOptions
 
 type WorkbookProtection
-pub impl Eq for WorkbookProtection
 pub impl Show for WorkbookProtection
 
 pub struct WorkbookProtectionOptions {
@@ -1937,7 +1866,6 @@ pub struct WorkbookProtectionOptions {
   lock_windows : Bool
 }
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
-pub impl Eq for WorkbookProtectionOptions
 pub impl Show for WorkbookProtectionOptions
 
 pub struct Worksheet {
@@ -2094,7 +2022,6 @@ pub(all) struct X14DataBarProps {
   bar_solid : Bool
   bar_border_color : String
 }
-pub impl Eq for X14DataBarProps
 pub impl Show for X14DataBarProps
 
 // Type aliases

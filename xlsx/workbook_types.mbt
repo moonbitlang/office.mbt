@@ -30,7 +30,7 @@ pub struct Workbook {
 enum SheetEntry {
   Worksheet(Int)
   ChartSheet(Int)
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 let max_sheet_name_length = 31

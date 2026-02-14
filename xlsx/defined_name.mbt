@@ -4,7 +4,7 @@ pub struct DefinedName {
   refers_to : String
   scope : String
   comment : String
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn DefinedName::new(

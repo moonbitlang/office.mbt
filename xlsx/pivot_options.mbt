@@ -9,7 +9,7 @@ pub(all) struct PivotTableField {
   mut show_all : Bool
   mut insert_blank_row : Bool
   mut default_subtotal : Bool
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn PivotTableField::new(data : String) -> PivotTableField raise XlsxError {
@@ -55,7 +55,7 @@ pub(all) struct PivotTableOptions {
   mut field_print_titles : Bool
   mut item_print_titles : Bool
   mut pivot_table_style_name : String
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn PivotTableOptions::new(

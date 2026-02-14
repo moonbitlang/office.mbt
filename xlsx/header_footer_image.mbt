@@ -15,7 +15,7 @@ pub struct HeaderFooterImageOptions {
   first_page : Bool
   width : String
   height : String
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn HeaderFooterImageOptions::new(

@@ -72,7 +72,7 @@ pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
   mut filter_privacy : Bool?
   mut code_name : String?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 fn WorkbookPropsOptions::new() -> WorkbookPropsOptions {
@@ -95,13 +95,13 @@ pub(all) enum CustomPropertyValue {
   Boolean(Bool)
   Text(String)
   DateTime(String)
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub struct CustomProperty {
   name : String
   value : CustomPropertyValue?
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 pub fn CustomProperty::new(
@@ -117,7 +117,7 @@ pub struct WorkbookProtectionOptions {
   password : String
   lock_structure : Bool
   lock_windows : Bool
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 fn WorkbookProtectionOptions::new() -> WorkbookProtectionOptions {
@@ -147,7 +147,7 @@ struct WorkbookProtection {
   mut hash_value : String
   mut salt_value : String
   mut spin_count : Int
-} derive(Eq, Show)
+} derive(Show)
 
 ///|
 let workbook_protection_spin_count = 100000
