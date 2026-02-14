@@ -2183,16 +2183,9 @@ pub fn Worksheet::set_row_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_style_range(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxError
-pub fn Worksheet::set_sheet_dimension(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::set_sheet_props(Self, SheetPropsOptions?) -> Unit raise XlsxError
-pub fn Worksheet::set_sheet_view(Self, Int, SheetViewOptions) -> Unit raise XlsxError
-pub fn Worksheet::set_state(Self, SheetState) -> Unit
 pub fn Worksheet::shapes(Self) -> ArrayView[Shape]
 pub fn Worksheet::sheet_background(Self) -> SheetBackground?
-pub fn Worksheet::sheet_dimension(Self) -> String? raise XlsxError
-pub fn Worksheet::sheet_props(Self) -> SheetPropsOptions
 pub fn Worksheet::sheet_protection(Self) -> SheetProtection?
-pub fn Worksheet::slicers(Self) -> ArrayView[Slicer]
 pub fn Worksheet::sparkline_groups(Self) -> ArrayView[SparklineGroup]
 pub fn Worksheet::state(Self) -> SheetState
 pub fn Worksheet::tables(Self) -> ArrayView[Table]

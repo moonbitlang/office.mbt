@@ -11,9 +11,9 @@ test "worksheet wb: missing-cell getters return None" {
 test "worksheet wb: set_state updates worksheet visibility state" {
   let sheet = Worksheet::new("Sheet1")
   inspect(sheet.state(), content="Visible")
-  sheet.set_state(Hidden)
+  sheet.state = Hidden
   inspect(sheet.state(), content="Hidden")
-  sheet.set_state(VeryHidden)
+  sheet.state = VeryHidden
   inspect(sheet.state(), content="VeryHidden")
 }
 

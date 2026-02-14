@@ -11,7 +11,7 @@ fn Worksheet::ensure_sheet_view(
 }
 
 ///|
-pub fn Worksheet::set_sheet_view(
+fn Worksheet::set_sheet_view(
   self : Worksheet,
   view_index : Int,
   options : SheetViewOptions,
@@ -90,7 +90,7 @@ pub fn Worksheet::get_panes(self : Worksheet) -> Panes {
 }
 
 ///|
-pub fn Worksheet::set_sheet_dimension(
+fn Worksheet::set_sheet_dimension(
   self : Worksheet,
   range_ref : StringView,
 ) -> Unit raise XlsxError {
@@ -103,7 +103,7 @@ pub fn Worksheet::set_sheet_dimension(
 }
 
 ///|
-pub fn Worksheet::sheet_dimension(self : Worksheet) -> String? raise XlsxError {
+fn Worksheet::sheet_dimension(self : Worksheet) -> String? raise XlsxError {
   match self.dimension_ref {
     Some(value) => Some(value)
     None => worksheet_dimension(self)

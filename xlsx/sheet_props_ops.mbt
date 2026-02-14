@@ -128,7 +128,7 @@ pub fn Worksheet::set_header_footer(
 }
 
 ///|
-pub fn Worksheet::set_sheet_props(
+fn Worksheet::set_sheet_props(
   self : Worksheet,
   options : SheetPropsOptions?,
 ) -> Unit raise XlsxError {

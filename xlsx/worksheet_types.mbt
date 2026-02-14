@@ -170,11 +170,6 @@ pub fn Worksheet::state(self : Worksheet) -> SheetState {
 }
 
 ///|
-pub fn Worksheet::set_state(self : Worksheet, state : SheetState) -> Unit {
-  self.state = state
-}
-
-///|
 pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
   self.cells[:]
 }
@@ -227,7 +222,7 @@ pub fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
 }
 
 ///|
-pub fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
+fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
   self.slicers[:]
 }
 
@@ -301,7 +296,7 @@ pub fn Worksheet::sheet_protection(self : Worksheet) -> SheetProtection? {
 }
 
 ///|
-pub fn Worksheet::sheet_props(self : Worksheet) -> SheetPropsOptions {
+fn Worksheet::sheet_props(self : Worksheet) -> SheetPropsOptions {
   sheet_props_with_defaults(self.sheet_props)
 }
 
