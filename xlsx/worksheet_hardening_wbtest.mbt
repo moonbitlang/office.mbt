@@ -123,7 +123,7 @@ test "worksheet wb: data validation append/clear/error branches" {
 test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
   let sheet = Worksheet::new("Sheet1")
   ignore(
-    sheet.add_pivot_table(
+    sheet.add_pivot_table_xml(
       "<pivotTableDefinition/>",
       "<pivotCacheDefinition/>",
       name="Pivot1",
@@ -720,7 +720,7 @@ test "worksheet wb: row insert/remove structural guard and adjustment branches" 
   inspect(drop.tables().length(), content="0")
 
   sheet.set_cell("A5", "tail")
-  sheet.remove_row(5)
+  sheet.remove_rows(5, 1)
   inspect(sheet.get_cell("A5"), content="None")
 }
 
@@ -780,7 +780,7 @@ test "worksheet wb: duplicate-row helper edge branches" {
 
   let duplicate = Worksheet::new("Duplicate")
   duplicate.set_row(1, ["A"][:])
-  duplicate.duplicate_row(1)
+  duplicate.duplicate_row_to(1, 2)
   inspect(duplicate.get_row(2), content="[\"A\"]")
   let bad_target : Result[Unit, Error] = try? duplicate.duplicate_row_to(1, 1)
   inspect(
@@ -930,7 +930,7 @@ test "worksheet wb: col insert/remove structural edge branches" {
   alias_sheet.set_cell("A1", "a")
   alias_sheet.set_cell("B1", "b")
   alias_sheet.set_cell("C1", "c")
-  alias_sheet.remove_col(2)
+  alias_sheet.remove_cols(2, 1)
   inspect(alias_sheet.get_cell("A1"), content="Some(\"a\")")
   inspect(alias_sheet.get_cell("B1"), content="Some(\"c\")")
   inspect(alias_sheet.get_cell("C1"), content="None")

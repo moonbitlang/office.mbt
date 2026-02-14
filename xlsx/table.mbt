@@ -98,7 +98,7 @@ pub fn TableOptions::set_show_header_row(
 }
 
 ///|
-pub fn Table::new(
+fn Table::new(
   name : String,
   range_ref : String,
   columns : ArrayView[String],

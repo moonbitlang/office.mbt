@@ -262,8 +262,3 @@ pub async fn[W : @async/io.Writer] Workbook::write_to(
   }
   bytes.length()
 }
-
-///|
-pub fn Workbook::close(_self : Workbook) -> Unit {
-  ()
-}

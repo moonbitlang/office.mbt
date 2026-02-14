@@ -5,7 +5,7 @@ pub struct MergeCell {
 } derive(Eq, Show)
 
 ///|
-pub fn MergeCell::new(range_ref : String, value : String) -> MergeCell {
+fn MergeCell::new(range_ref : String, value : String) -> MergeCell {
   { range_ref, value }
 }
 

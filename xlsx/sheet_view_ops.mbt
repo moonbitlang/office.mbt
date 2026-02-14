@@ -22,7 +22,7 @@ fn Worksheet::set_sheet_view(
 }
 
 ///|
-pub fn Worksheet::get_sheet_view(
+fn Worksheet::get_sheet_view(
   self : Worksheet,
   view_index : Int,
 ) -> SheetViewOptions raise XlsxError {

@@ -85,18 +85,8 @@ pub fn FormControl::set_macro_name(
 }
 
 ///|
-pub fn FormControl::clear_macro_name(self : FormControl) -> Unit {
-  self.macro_name = None
-}
-
-///|
 pub fn FormControl::set_checked(self : FormControl, checked : Bool) -> Unit {
   self.checked = Some(checked)
-}
-
-///|
-pub fn FormControl::clear_checked(self : FormControl) -> Unit {
-  self.checked = None
 }
 
 ///|
@@ -114,11 +104,6 @@ pub fn FormControl::set_cell_link(
 }
 
 ///|
-pub fn FormControl::clear_cell_link(self : FormControl) -> Unit {
-  self.cell_link = None
-}
-
-///|
 pub fn FormControl::set_width(
   self : FormControl,
   width : Int,
@@ -127,11 +112,6 @@ pub fn FormControl::set_width(
     raise InvalidSheetOperation(msg="form control width invalid")
   }
   self.width = Some(width)
-}
-
-///|
-pub fn FormControl::clear_width(self : FormControl) -> Unit {
-  self.width = None
 }
 
 ///|
@@ -146,11 +126,6 @@ pub fn FormControl::set_height(
 }
 
 ///|
-pub fn FormControl::clear_height(self : FormControl) -> Unit {
-  self.height = None
-}
-
-///|
 pub fn FormControl::set_current_val(
   self : FormControl,
   value : Int,
@@ -159,11 +134,6 @@ pub fn FormControl::set_current_val(
     raise InvalidSheetOperation(msg="form control current value invalid")
   }
   self.current_val = Some(value)
-}
-
-///|
-pub fn FormControl::clear_current_val(self : FormControl) -> Unit {
-  self.current_val = None
 }
 
 ///|
@@ -178,11 +148,6 @@ pub fn FormControl::set_min_val(
 }
 
 ///|
-pub fn FormControl::clear_min_val(self : FormControl) -> Unit {
-  self.min_val = None
-}
-
-///|
 pub fn FormControl::set_max_val(
   self : FormControl,
   value : Int,
@@ -191,11 +156,6 @@ pub fn FormControl::set_max_val(
     raise InvalidSheetOperation(msg="form control max value invalid")
   }
   self.max_val = Some(value)
-}
-
-///|
-pub fn FormControl::clear_max_val(self : FormControl) -> Unit {
-  self.max_val = None
 }
 
 ///|
@@ -210,11 +170,6 @@ pub fn FormControl::set_inc_change(
 }
 
 ///|
-pub fn FormControl::clear_inc_change(self : FormControl) -> Unit {
-  self.inc_change = None
-}
-
-///|
 pub fn FormControl::set_page_change(
   self : FormControl,
   value : Int,
@@ -226,18 +181,8 @@ pub fn FormControl::set_page_change(
 }
 
 ///|
-pub fn FormControl::clear_page_change(self : FormControl) -> Unit {
-  self.page_change = None
-}
-
-///|
 pub fn FormControl::set_horizontally(self : FormControl, value : Bool) -> Unit {
   self.horizontally = Some(value)
-}
-
-///|
-pub fn FormControl::clear_horizontally(self : FormControl) -> Unit {
-  self.horizontally = None
 }
 
 ///|
@@ -254,11 +199,6 @@ pub fn FormControl::set_paragraph(
   paragraph : Array[RichTextRun],
 ) -> Unit {
   self.paragraph = paragraph
-}
-
-///|
-pub fn FormControl::clear_paragraph(self : FormControl) -> Unit {
-  self.paragraph.clear()
 }
 
 ///|

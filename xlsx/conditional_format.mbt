@@ -91,14 +91,6 @@ pub fn ConditionalFormatOptions::set_bar_solid(
 }
 
 ///|
-pub fn ConditionalFormatOptions::set_type(
-  self : ConditionalFormatOptions,
-  typ : String,
-) -> Unit {
-  self.format_type = typ
-}
-
-///|
 pub fn ConditionalFormatOptions::set_above_average(
   self : ConditionalFormatOptions,
   value : Bool,

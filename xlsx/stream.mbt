@@ -445,7 +445,7 @@ pub struct RowStream {
 }
 
 ///|
-pub fn RowStream::new(sheet : Worksheet) -> RowStream {
+fn RowStream::new(sheet : Worksheet) -> RowStream {
   { cells: sheet.sorted_cells(), index: 0 }
 }
 

@@ -6,7 +6,7 @@ pub struct ChartSheet {
 }
 
 ///|
-pub fn ChartSheet::new(name : String, chart_xml : String) -> ChartSheet {
+fn ChartSheet::new(name : String, chart_xml : String) -> ChartSheet {
   { name, state: Visible, chart_xml }
 }
 

@@ -217,7 +217,7 @@ pub fn Worksheet::get_cell_value_raw(
 }
 
 ///|
-pub fn Worksheet::get_cell_type(
+fn Worksheet::get_cell_type(
   self : Worksheet,
   reference : StringView,
 ) -> CellValueType? raise XlsxError {
@@ -466,7 +466,6 @@ pub fn Worksheet::set_cell_formula_opts(
           }
         }
       }
-
       for row in min_row..<=max_row {
         for col in min_col..<=max_col {
           if row == min_row && col == min_col {
@@ -544,7 +543,6 @@ pub fn Worksheet::set_cell_formula_opts(
           }
         }
       }
-
       for row in min_row..<=max_row {
         for col in min_col..<=max_col {
           if row == min_row && col == min_col {
@@ -986,22 +984,6 @@ pub fn Worksheet::add_pivot_table_xml(
 }
 
 ///|
-pub fn Worksheet::add_pivot_table(
-  self : Worksheet,
-  table_xml : String,
-  cache_definition_xml : String,
-  cache_records_xml? : String = "",
-  name? : String = "",
-) -> PivotTable raise XlsxError {
-  self.add_pivot_table_xml(
-    table_xml,
-    cache_definition_xml,
-    cache_records_xml~,
-    name~,
-  )
-}
-
-///|
 pub fn Worksheet::delete_pivot_table(
   self : Worksheet,
   name : StringView,
@@ -1041,7 +1023,6 @@ fn normalize_extension(extension : StringView) -> String raise XlsxError {
     }
     rest.join(".")
   }
-
   let value = extension.to_string()
   let trimmed = if value.has_prefix(".") {
     if value.length() <= 1 {
@@ -1072,7 +1053,6 @@ fn normalize_extension_lower_requires_dot(
     }
     rest.join(".")
   }
-
   let raw = extension.to_string()
   if !raw.has_prefix(".") || raw.length() <= 1 {
     raise UnsupportedFeature(msg=unsupported_msg.to_string())
@@ -1161,7 +1141,6 @@ fn Worksheet::col_width_pixels(self : Worksheet, col : Int) -> Int {
       }
     }
   }
-
   match self.col_dimensions.get(col) {
     Some(dim) =>
       if dim.hidden {
@@ -1296,7 +1275,7 @@ pub fn Worksheet::add_header_footer_image(
 }
 
 ///|
-pub async fn Worksheet::add_header_footer_image_from_file(
+async fn Worksheet::add_header_footer_image_from_file(
   self : Worksheet,
   options : HeaderFooterImageOptions,
 ) -> Unit raise XlsxError {
@@ -1324,7 +1303,7 @@ pub async fn Worksheet::add_header_footer_image_from_file(
 }
 
 ///|
-pub fn Worksheet::add_picture_from_bytes(
+fn Worksheet::add_picture_from_bytes(
   self : Worksheet,
   reference : String,
   data : Bytes,
@@ -1374,7 +1353,7 @@ pub fn Worksheet::add_picture_from_bytes(
 }
 
 ///|
-pub fn Worksheet::add_picture_from_bytes_with_options(
+fn Worksheet::add_picture_from_bytes_with_options(
   self : Worksheet,
   reference : String,
   data : Bytes,
@@ -1459,7 +1438,7 @@ pub fn Worksheet::add_picture_from_bytes_with_options(
 }
 
 ///|
-pub async fn Worksheet::add_picture(
+async fn Worksheet::add_picture(
   self : Worksheet,
   reference : String,
   path : String,
@@ -1508,7 +1487,7 @@ pub async fn Worksheet::add_picture(
 }
 
 ///|
-pub async fn Worksheet::add_picture_with_options(
+async fn Worksheet::add_picture_with_options(
   self : Worksheet,
   reference : String,
   path : String,
@@ -1736,7 +1715,7 @@ fn chart_with_reference(chart : Chart, reference : String) -> Chart {
 }
 
 ///|
-pub fn Worksheet::get_pictures(
+fn Worksheet::get_pictures(
   self : Worksheet,
   cell : StringView,
 ) -> Array[Image] raise XlsxError {
@@ -1752,7 +1731,7 @@ pub fn Worksheet::get_pictures(
 }
 
 ///|
-pub fn Worksheet::get_picture_cells(
+fn Worksheet::get_picture_cells(
   self : Worksheet,
 ) -> Array[String] raise XlsxError {
   let cells : Array[String] = []
@@ -1769,7 +1748,7 @@ pub fn Worksheet::get_picture_cells(
 }
 
 ///|
-pub fn Worksheet::delete_picture(
+fn Worksheet::delete_picture(
   self : Worksheet,
   cell : StringView,
 ) -> Unit raise XlsxError {
@@ -1934,12 +1913,12 @@ pub fn Worksheet::add_form_control(
 }
 
 ///|
-pub fn Worksheet::get_form_controls(self : Worksheet) -> ArrayView[FormControl] {
+fn Worksheet::get_form_controls(self : Worksheet) -> ArrayView[FormControl] {
   self.form_controls[:]
 }
 
 ///|
-pub fn Worksheet::delete_form_control(
+fn Worksheet::delete_form_control(
   self : Worksheet,
   cell : StringView,
 ) -> Unit raise XlsxError {
@@ -1974,12 +1953,12 @@ pub fn Worksheet::add_slicer(
 }
 
 ///|
-pub fn Worksheet::get_slicers(self : Worksheet) -> ArrayView[Slicer] {
+fn Worksheet::get_slicers(self : Worksheet) -> ArrayView[Slicer] {
   self.slicers[:]
 }
 
 ///|
-pub fn Worksheet::delete_slicer(
+fn Worksheet::delete_slicer(
   self : Worksheet,
   name : StringView,
 ) -> Unit raise XlsxError {
@@ -2007,10 +1986,7 @@ pub fn Worksheet::delete_slicer(
 }
 
 ///|
-pub fn Worksheet::add_data_validation_xml(
-  self : Worksheet,
-  xml : String,
-) -> Unit {
+fn Worksheet::add_data_validation_xml(self : Worksheet, xml : String) -> Unit {
   self.data_validations.push(xml)
 }
 
@@ -2472,7 +2448,7 @@ pub fn Worksheet::get_cell_rc(
 }
 
 ///|
-pub fn Worksheet::get_cell_value_raw_rc(
+fn Worksheet::get_cell_value_raw_rc(
   self : Worksheet,
   row : Int,
   col : Int,
@@ -2752,7 +2728,7 @@ pub fn Worksheet::set_row_outline_level(
 }
 
 ///|
-pub fn Worksheet::row_outline_level(
+fn Worksheet::row_outline_level(
   self : Worksheet,
   row : Int,
 ) -> Int raise XlsxError {
@@ -2766,7 +2742,7 @@ pub fn Worksheet::row_outline_level(
 }
 
 ///|
-pub fn Worksheet::set_row_style_range(
+fn Worksheet::set_row_style_range(
   self : Worksheet,
   start : Int,
   end : Int,
@@ -2802,7 +2778,7 @@ pub fn Worksheet::set_row_style(
 }
 
 ///|
-pub fn Worksheet::get_row_style(
+fn Worksheet::get_row_style(
   self : Worksheet,
   row : Int,
 ) -> Int? raise XlsxError {
@@ -2887,7 +2863,7 @@ pub fn Worksheet::col_visible(
 }
 
 ///|
-pub fn Worksheet::set_col_outline_level(
+fn Worksheet::set_col_outline_level(
   self : Worksheet,
   col : Int,
   level : Int,
@@ -2924,7 +2900,7 @@ pub fn Worksheet::col_outline_level(
 }
 
 ///|
-pub fn Worksheet::set_col_style(
+fn Worksheet::set_col_style(
   self : Worksheet,
   col : Int,
   style_id : Int,
@@ -2959,7 +2935,7 @@ pub fn Worksheet::get_col_style(
 }
 
 ///|
-pub fn Worksheet::insert_rows(
+fn Worksheet::insert_rows(
   self : Worksheet,
   row : Int,
   count : Int,
@@ -3070,7 +3046,7 @@ pub fn Worksheet::insert_rows(
 }
 
 ///|
-pub fn Worksheet::remove_rows(
+fn Worksheet::remove_rows(
   self : Worksheet,
   row : Int,
   count : Int,
@@ -3205,15 +3181,6 @@ pub fn Worksheet::remove_rows(
 }
 
 ///|
-/// Remove a single row (1-based) and shift rows upward.
-pub fn Worksheet::remove_row(
-  self : Worksheet,
-  row : Int,
-) -> Unit raise XlsxError {
-  self.remove_rows(row, 1)
-}
-
-///|
 fn parse_cell_ref_with_abs(
   reference : StringView,
 ) -> (Int, Int, Bool, Bool) raise XlsxError {
@@ -3316,7 +3283,6 @@ fn duplicate_sqref_for_row(
       (cell, cell)
     }
   }
-
   let refs : Array[String] = []
   for part in sqref.split(" ") {
     let text = part.trim()
@@ -3430,15 +3396,7 @@ fn Worksheet::duplicate_merge_cells(
 }
 
 ///|
-pub fn Worksheet::duplicate_row(
-  self : Worksheet,
-  row : Int,
-) -> Unit raise XlsxError {
-  self.duplicate_row_to(row, row + 1)
-}
-
-///|
-pub fn Worksheet::duplicate_row_to(
+fn Worksheet::duplicate_row_to(
   self : Worksheet,
   row : Int,
   target_row : Int,
@@ -3485,7 +3443,7 @@ pub fn Worksheet::duplicate_row_to(
 }
 
 ///|
-pub fn Worksheet::insert_cols(
+fn Worksheet::insert_cols(
   self : Worksheet,
   col : Int,
   count : Int,
@@ -3596,7 +3554,7 @@ pub fn Worksheet::insert_cols(
 }
 
 ///|
-pub fn Worksheet::remove_cols(
+fn Worksheet::remove_cols(
   self : Worksheet,
   col : Int,
   count : Int,
@@ -3728,15 +3686,6 @@ pub fn Worksheet::remove_cols(
   )
   self.col_breaks.clear()
   self.col_breaks.append(updated_breaks[:])
-}
-
-///|
-/// Remove a single column (1-based) and shift columns left.
-pub fn Worksheet::remove_col(
-  self : Worksheet,
-  col : Int,
-) -> Unit raise XlsxError {
-  self.remove_cols(col, 1)
 }
 
 ///|

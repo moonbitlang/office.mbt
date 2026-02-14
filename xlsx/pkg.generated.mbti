@@ -117,7 +117,6 @@ pub struct Alignment {
   mut reading_order : Int?
   mut relative_indent : Int?
 }
-pub fn Alignment::new() -> Self
 pub fn Alignment::with_values(horizontal? : String, vertical? : String, wrap_text? : Bool, text_rotation? : Int, indent? : Int, shrink_to_fit? : Bool, justify_last_line? : Bool, reading_order? : Int, relative_indent? : Int) -> Self
 pub impl Eq for Alignment
 pub impl Show for Alignment
@@ -131,7 +130,6 @@ pub struct AppProperties {
   mut hyperlinks_changed : Bool?
   mut app_version : String
 }
-pub fn AppProperties::new() -> Self
 pub fn AppProperties::with_values(application? : String, doc_security? : Int, scale_crop? : Bool, company? : String, links_up_to_date? : Bool, hyperlinks_changed? : Bool, app_version? : String) -> Self
 
 pub struct AutoFilter {
@@ -176,7 +174,6 @@ pub struct Border {
   mut color : String?
   mut style : Int?
 }
-pub fn Border::new(String) -> Self
 pub fn Border::with_values(String, color? : String, style? : Int) -> Self
 pub impl Eq for Border
 pub impl Show for Border
@@ -307,7 +304,6 @@ pub(all) struct ChartDataLabel {
   mut fill_color : String
   mut fill_transparency : Int
 }
-pub fn ChartDataLabel::new() -> Self
 pub impl Eq for ChartDataLabel
 pub impl Show for ChartDataLabel
 
@@ -336,7 +332,6 @@ pub(all) struct ChartDimension {
   width : Int
   height : Int
 }
-pub fn ChartDimension::new() -> Self
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
 pub impl Eq for ChartDimension
 pub impl Show for ChartDimension
@@ -358,7 +353,6 @@ pub(all) struct ChartLine {
   mut smooth : Bool
   mut width : Double
 }
-pub fn ChartLine::new() -> Self
 pub impl Eq for ChartLine
 pub impl Show for ChartLine
 
@@ -378,7 +372,6 @@ pub(all) struct ChartMarker {
   mut fill_transparency : Int
   mut border : ChartLine
 }
-pub fn ChartMarker::new(symbol? : String, size? : Int) -> Self
 pub impl Eq for ChartMarker
 pub impl Show for ChartMarker
 
@@ -475,7 +468,6 @@ pub struct ChartSheet {
 }
 pub fn ChartSheet::chart_xml(Self) -> String
 pub fn ChartSheet::name(Self) -> String
-pub fn ChartSheet::new(String, String) -> Self
 pub fn ChartSheet::set_state(Self, SheetState) -> Unit
 pub fn ChartSheet::state(Self) -> SheetState
 
@@ -554,7 +546,6 @@ pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
 }
-pub fn ChartUpDownBar::new() -> Self
 pub impl Eq for ChartUpDownBar
 pub impl Show for ChartUpDownBar
 
@@ -574,10 +565,8 @@ pub struct Cols {
   options : Options
   mut err : XlsxError?
 }
-pub fn Cols::close(Self) -> Unit
 pub fn Cols::col_index(Self) -> Int?
 pub fn Cols::error(Self) -> XlsxError?
-pub fn Cols::new(Worksheet) -> Self
 pub fn Cols::next(Self) -> Bool
 pub fn Cols::rows(Self, options? : Options) -> Array[String]
 
@@ -642,7 +631,6 @@ pub fn ConditionalFormatOptions::set_min_value(Self, String) -> Unit
 pub fn ConditionalFormatOptions::set_percent(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_reverse_icons(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_stop_if_true(Self, Bool) -> Unit
-pub fn ConditionalFormatOptions::set_type(Self, String) -> Unit
 pub fn ConditionalFormatOptions::set_value(Self, String) -> Unit
 pub impl Eq for ConditionalFormatOptions
 pub impl Show for ConditionalFormatOptions
@@ -663,7 +651,6 @@ pub struct CoreProperties {
   mut created : String
   mut modified : String
 }
-pub fn CoreProperties::new() -> Self
 pub fn CoreProperties::with_values(title? : String, subject? : String, creator? : String, keywords? : String, description? : String, last_modified_by? : String, language? : String, identifier? : String, revision? : String, content_status? : String, category? : String, version? : String, created? : String, modified? : String) -> Self
 
 pub struct CustomProperty {
@@ -776,7 +763,6 @@ pub struct Fill {
   mut bg_tint : Double?
 }
 pub fn Fill::gradient(String, String, shading? : Int, transparency? : Int) -> Self
-pub fn Fill::new() -> Self
 pub fn Fill::pattern(pattern? : Int, color? : String, transparency? : Int) -> Self
 pub fn Fill::solid(String, transparency? : Int) -> Self
 pub fn Fill::solid_bg_indexed(Int, tint? : Double) -> Self
@@ -806,7 +792,6 @@ pub struct Font {
   mut vert_align : String?
   mut family : String?
 }
-pub fn Font::new() -> Self
 pub fn Font::with_values(bold? : Bool, italic? : Bool, strike? : Bool, outline? : Bool, shadow? : Bool, condense? : Bool, extend? : Bool, underline? : String, size? : Double, color? : String, color_theme? : Int, color_indexed? : Int, color_tint? : Double, charset? : Int, family_number? : Int, scheme? : String, vert_align? : String, family? : String) -> Self
 pub impl Eq for Font
 pub impl Show for Font
@@ -829,18 +814,6 @@ pub struct FormControl {
   mut format : GraphicOptions
   mut paragraph : Array[RichTextRun]
 }
-pub fn FormControl::clear_cell_link(Self) -> Unit
-pub fn FormControl::clear_checked(Self) -> Unit
-pub fn FormControl::clear_current_val(Self) -> Unit
-pub fn FormControl::clear_height(Self) -> Unit
-pub fn FormControl::clear_horizontally(Self) -> Unit
-pub fn FormControl::clear_inc_change(Self) -> Unit
-pub fn FormControl::clear_macro_name(Self) -> Unit
-pub fn FormControl::clear_max_val(Self) -> Unit
-pub fn FormControl::clear_min_val(Self) -> Unit
-pub fn FormControl::clear_page_change(Self) -> Unit
-pub fn FormControl::clear_paragraph(Self) -> Unit
-pub fn FormControl::clear_width(Self) -> Unit
 pub fn FormControl::new(String, String, text? : String) -> Self raise XlsxError
 pub fn FormControl::set_cell_link(Self, StringView) -> Unit raise XlsxError
 pub fn FormControl::set_checked(Self, Bool) -> Unit
@@ -867,7 +840,6 @@ pub struct FormulaOpts {
   mut range_ref : String?
 }
 pub fn FormulaOpts::array(String) -> Self
-pub fn FormulaOpts::new() -> Self
 pub fn FormulaOpts::shared(String) -> Self
 pub fn FormulaOpts::with_values(formula_type? : FormulaType, range_ref? : String) -> Self
 pub impl Eq for FormulaOpts
@@ -940,7 +912,6 @@ pub struct HeaderFooterOptions {
   mut first_header : String
   mut first_footer : String
 }
-pub fn HeaderFooterOptions::new() -> Self
 pub fn HeaderFooterOptions::with_values(align_with_margins? : Bool, different_first? : Bool, different_odd_even? : Bool, scale_with_doc? : Bool, odd_header? : String, odd_footer? : String, even_header? : String, even_footer? : String, first_header? : String, first_footer? : String) -> Self
 pub impl Eq for HeaderFooterOptions
 pub impl Show for HeaderFooterOptions
@@ -1030,7 +1001,6 @@ pub struct MergeCell {
 pub fn MergeCell::get_cell_value(Self) -> String
 pub fn MergeCell::get_end_axis(Self) -> String
 pub fn MergeCell::get_start_axis(Self) -> String
-pub fn MergeCell::new(String, String) -> Self
 pub impl Eq for MergeCell
 pub impl Show for MergeCell
 
@@ -1077,7 +1047,6 @@ pub struct PageLayoutMarginsOptions {
   mut horizontally : Bool?
   mut vertically : Bool?
 }
-pub fn PageLayoutMarginsOptions::new() -> Self
 pub fn PageLayoutMarginsOptions::with_values(top? : Double, bottom? : Double, left? : Double, right? : Double, header? : Double, footer? : Double, horizontally? : Bool, vertically? : Bool) -> Self
 pub impl Eq for PageLayoutMarginsOptions
 pub impl Show for PageLayoutMarginsOptions
@@ -1092,7 +1061,6 @@ pub struct PageLayoutOptions {
   mut black_and_white : Bool?
   mut page_order : String?
 }
-pub fn PageLayoutOptions::new() -> Self
 pub fn PageLayoutOptions::with_values(size? : Int, orientation? : String, first_page_number? : Int, adjust_to? : Int, fit_to_height? : Int, fit_to_width? : Int, black_and_white? : Bool, page_order? : String) -> Self
 pub impl Eq for PageLayoutOptions
 pub impl Show for PageLayoutOptions
@@ -1127,7 +1095,6 @@ pub struct PivotTable {
   cache_definition_xml : String
   cache_records_xml : String?
 }
-pub fn PivotTable::new(String, String, cache_records_xml? : String, name? : String) -> Self raise XlsxError
 
 pub(all) struct PivotTableField {
   data : String
@@ -1178,7 +1145,6 @@ pub struct Protection {
   mut hidden : Bool?
   mut locked : Bool?
 }
-pub fn Protection::new() -> Self
 pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Self
 pub impl Eq for Protection
 pub impl Show for Protection
@@ -1228,7 +1194,6 @@ pub struct RowOpts {
   style_id : Int
   outline_level : Int
 }
-pub fn RowOpts::new() -> Self
 pub fn RowOpts::with_values(height? : Double, hidden? : Bool, style_id? : Int, outline_level? : Int) -> Self
 pub impl Eq for RowOpts
 pub impl Show for RowOpts
@@ -1237,7 +1202,6 @@ pub struct RowStream {
   cells : Array[Cell]
   mut index : Int
 }
-pub fn RowStream::new(Worksheet) -> Self
 pub fn RowStream::next(Self) -> Array[String]?
 
 pub struct Rows {
@@ -1251,7 +1215,6 @@ pub fn Rows::close(Self) -> Unit
 pub fn Rows::columns(Self, options? : Options) -> Array[String] raise XlsxError
 pub fn Rows::error(Self) -> XlsxError?
 pub fn Rows::get_row_opts(Self) -> RowOpts
-pub fn Rows::new(Worksheet) -> Self
 pub fn Rows::next(Self) -> Bool
 pub fn Rows::row_index(Self) -> Int?
 
@@ -1260,7 +1223,6 @@ pub struct Selection {
   mut active_cell : String
   mut pane : String
 }
-pub fn Selection::new() -> Self
 pub fn Selection::with_values(sqref? : String, active_cell? : String, pane? : String) -> Self
 pub impl Eq for Selection
 pub impl Show for Selection
@@ -1298,7 +1260,6 @@ pub struct ShapeFill {
   mut color : String?
   mut transparency : Int?
 }
-pub fn ShapeFill::new() -> Self
 pub fn ShapeFill::with_values(color? : String, transparency? : Int) -> Self raise XlsxError
 pub impl Eq for ShapeFill
 pub impl Show for ShapeFill
@@ -1307,7 +1268,6 @@ pub struct ShapeLine {
   mut color : String?
   mut width : Double?
 }
-pub fn ShapeLine::new() -> Self
 pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
 pub impl Eq for ShapeLine
 pub impl Show for ShapeLine
@@ -1348,7 +1308,6 @@ pub struct SheetPropsOptions {
   mut thick_top : Bool?
   mut thick_bottom : Bool?
 }
-pub fn SheetPropsOptions::new() -> Self
 pub fn SheetPropsOptions::with_values(code_name? : String, enable_format_conditions_calculation? : Bool, published? : Bool, auto_page_breaks? : Bool, fit_to_page? : Bool, tab_color_indexed? : Int, tab_color_rgb? : String, tab_color_theme? : Int, tab_color_tint? : Double, outline_summary_below? : Bool, outline_summary_right? : Bool, base_col_width? : Int, default_col_width? : Double, default_row_height? : Double, custom_height? : Bool, zero_height? : Bool, thick_top? : Bool, thick_bottom? : Bool) -> Self
 pub impl Eq for SheetPropsOptions
 pub impl Show for SheetPropsOptions
@@ -1518,7 +1477,6 @@ pub struct SparklineGroupOptions {
   mut color_high : SparklineColor?
   mut color_low : SparklineColor?
 }
-pub fn SparklineGroupOptions::new() -> Self
 pub impl Eq for SparklineGroupOptions
 pub impl Show for SparklineGroupOptions
 
@@ -1534,9 +1492,9 @@ pub struct SparklineOptions {
   mut markers : Bool
   mut high : Bool
   mut low : Bool
-  mut first : Bool
-  mut last : Bool
-  mut negative : Bool
+  first : Bool
+  last : Bool
+  negative : Bool
   mut axis : Bool
   mut hidden : Bool
   mut reverse : Bool
@@ -1555,29 +1513,16 @@ pub struct SparklineOptions {
   mut manual_min : Int?
   mut empty_cells : String?
 }
-pub fn SparklineOptions::clear_empty_cells(Self) -> Unit
-pub fn SparklineOptions::clear_first_color(Self) -> Unit
-pub fn SparklineOptions::clear_high_color(Self) -> Unit
-pub fn SparklineOptions::clear_hight_color(Self) -> Unit
-pub fn SparklineOptions::clear_last_color(Self) -> Unit
-pub fn SparklineOptions::clear_low_color(Self) -> Unit
 pub fn SparklineOptions::clear_manual_max(Self) -> Unit
 pub fn SparklineOptions::clear_manual_min(Self) -> Unit
-pub fn SparklineOptions::clear_markers_color(Self) -> Unit
-pub fn SparklineOptions::clear_negative_color(Self) -> Unit
-pub fn SparklineOptions::clear_series_color(Self) -> Unit
-pub fn SparklineOptions::clear_weight(Self) -> Unit
 pub fn SparklineOptions::new(ArrayView[String], ArrayView[String]) -> Self raise XlsxError
 pub fn SparklineOptions::set_axis(Self, Bool) -> Unit
 pub fn SparklineOptions::set_date_axis(Self, Bool) -> Unit
 pub fn SparklineOptions::set_empty_cells(Self, StringView) -> Unit raise XlsxError
-pub fn SparklineOptions::set_first(Self, Bool) -> Unit
 pub fn SparklineOptions::set_first_color(Self, String) -> Unit
 pub fn SparklineOptions::set_hidden(Self, Bool) -> Unit
 pub fn SparklineOptions::set_high(Self, Bool) -> Unit
 pub fn SparklineOptions::set_high_color(Self, String) -> Unit
-pub fn SparklineOptions::set_hight_color(Self, String) -> Unit
-pub fn SparklineOptions::set_last(Self, Bool) -> Unit
 pub fn SparklineOptions::set_last_color(Self, String) -> Unit
 pub fn SparklineOptions::set_low(Self, Bool) -> Unit
 pub fn SparklineOptions::set_low_color(Self, String) -> Unit
@@ -1585,7 +1530,6 @@ pub fn SparklineOptions::set_manual_max(Self, Int) -> Unit
 pub fn SparklineOptions::set_manual_min(Self, Int) -> Unit
 pub fn SparklineOptions::set_markers(Self, Bool) -> Unit
 pub fn SparklineOptions::set_markers_color(Self, String) -> Unit
-pub fn SparklineOptions::set_negative(Self, Bool) -> Unit
 pub fn SparklineOptions::set_negative_color(Self, String) -> Unit
 pub fn SparklineOptions::set_reverse(Self, Bool) -> Unit
 pub fn SparklineOptions::set_series_color(Self, String) -> Unit
@@ -1664,10 +1608,8 @@ pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
 pub fn Style::protection(Protection) -> Self
 pub fn Style::with_alignment(Self, Alignment) -> Self
-pub fn Style::with_border(Self, Array[Border]) -> Self
 pub fn Style::with_fill(Self, Fill) -> Self
 pub fn Style::with_font(Self, Font) -> Self
-pub fn Style::with_protection(Self, Protection) -> Self
 pub impl Eq for Style
 pub impl Show for Style
 
@@ -1685,7 +1627,6 @@ pub struct Table {
   show_column_stripes : Bool
   show_header_row : Bool
 }
-pub fn Table::new(String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Self raise XlsxError
 
 pub(all) struct TableOptions {
   range_ref : String
@@ -1755,7 +1696,6 @@ pub fn Workbook::add_picture_from_bytes(Self, StringView, String, Bytes, String,
 pub fn Workbook::add_picture_from_bytes_with_options(Self, StringView, String, Bytes, String, GraphicOptions) -> Unit raise XlsxError
 pub async fn Workbook::add_picture_with_options(Self, StringView, String, String, GraphicOptions) -> Unit raise XlsxError
 pub fn Workbook::add_pivot_table(Self, PivotTableOptions) -> PivotTable raise XlsxError
-pub fn Workbook::add_pivot_table_with_options(Self, PivotTableOptions) -> PivotTable raise XlsxError
 pub fn Workbook::add_pivot_table_xml(Self, StringView, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Workbook::add_shape(Self, StringView, Shape) -> Unit raise XlsxError
 pub fn Workbook::add_sheet(Self, String) -> Worksheet raise XlsxError
@@ -1778,21 +1718,17 @@ pub fn Workbook::app_props(Self) -> AppProperties
 pub fn Workbook::auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
 pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String raise XlsxError
 pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String raise XlsxError
-pub fn Workbook::calc_props(Self) -> CalcPropsOptions
 pub fn Workbook::charset_transcoder(Self, (String, Bytes) -> String raise XlsxError) -> Self
 pub fn Workbook::chart_sheet(Self, StringView) -> ChartSheet?
 pub fn Workbook::chart_sheets(Self) -> ArrayView[ChartSheet]
 pub fn Workbook::clear_auto_filter(Self, StringView) -> Unit raise XlsxError
 pub fn Workbook::clear_sheet_background(Self, StringView) -> Unit raise XlsxError
-pub fn Workbook::close(Self) -> Unit
 pub fn Workbook::col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::col_visible(Self, StringView, Int) -> Bool raise XlsxError
 pub fn Workbook::cols(Self, StringView) -> Cols raise XlsxError
-pub fn Workbook::conditional_styles(Self) -> ArrayView[Style]
 pub fn Workbook::copy_sheet(Self, Int, Int) -> Unit raise XlsxError
 pub fn Workbook::core_properties(Self) -> CoreProperties
 pub fn Workbook::custom_properties(Self) -> Array[CustomProperty]
-pub fn Workbook::default_font(Self) -> String
 pub fn Workbook::defined_names(Self) -> ArrayView[DefinedName]
 pub fn Workbook::delete_chart(Self, StringView, StringView) -> Unit raise XlsxError
 pub fn Workbook::delete_comment(Self, StringView, StringView) -> Unit raise XlsxError
@@ -1972,7 +1908,6 @@ pub fn Workbook::unprotect_sheet(Self, StringView, password? : String) -> Unit r
 pub fn Workbook::unprotect_workbook(Self, password? : String) -> Unit raise XlsxError
 pub fn Workbook::unset_conditional_format(Self, StringView, String) -> Unit raise XlsxError
 pub fn Workbook::update_linked_value(Self) -> Unit raise XlsxError
-pub fn Workbook::workbook_props(Self) -> WorkbookPropsOptions
 pub async fn[W : @io.Writer] Workbook::write(Self, W, options? : Options) -> Unit raise XlsxError
 pub async fn[W : @io.Writer] Workbook::write_to(Self, W, options? : Options) -> Int raise XlsxError
 pub fn Workbook::write_to_buffer(Self, options? : Options) -> Bytes raise XlsxError
@@ -1988,7 +1923,6 @@ pub struct WorkbookPropsOptions {
   mut filter_privacy : Bool?
   mut code_name : String?
 }
-pub fn WorkbookPropsOptions::new() -> Self
 pub fn WorkbookPropsOptions::with_values(date_1904? : Bool, filter_privacy? : Bool, code_name? : String) -> Self
 pub impl Eq for WorkbookPropsOptions
 pub impl Show for WorkbookPropsOptions
@@ -2003,7 +1937,6 @@ pub struct WorkbookProtectionOptions {
   lock_structure : Bool
   lock_windows : Bool
 }
-pub fn WorkbookProtectionOptions::new() -> Self
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
 pub impl Eq for WorkbookProtectionOptions
 pub impl Show for WorkbookProtectionOptions
@@ -2055,17 +1988,10 @@ pub fn Worksheet::add_comment(Self, Comment) -> Unit raise XlsxError
 pub fn Worksheet::add_conditional_format_xml(Self, String) -> Unit
 pub fn Worksheet::add_data_validation(Self, DataValidation) -> Unit raise XlsxError
 pub fn Worksheet::add_data_validation_list(Self, String, ArrayView[String], allow_blank? : Bool) -> Unit raise XlsxError
-pub fn Worksheet::add_data_validation_xml(Self, String) -> Unit
 pub fn Worksheet::add_form_control(Self, FormControl) -> Unit raise XlsxError
 pub fn Worksheet::add_header_footer_image(Self, HeaderFooterImageOptions) -> Unit raise XlsxError
-pub async fn Worksheet::add_header_footer_image_from_file(Self, HeaderFooterImageOptions) -> Unit raise XlsxError
 pub fn Worksheet::add_ignored_errors(Self, String, IgnoredErrorType) -> Unit raise XlsxError
 pub fn Worksheet::add_image(Self, String, Bytes, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
-pub async fn Worksheet::add_picture(Self, String, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
-pub fn Worksheet::add_picture_from_bytes(Self, String, Bytes, String, offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Unit raise XlsxError
-pub fn Worksheet::add_picture_from_bytes_with_options(Self, String, Bytes, String, GraphicOptions) -> Unit raise XlsxError
-pub async fn Worksheet::add_picture_with_options(Self, String, String, GraphicOptions) -> Unit raise XlsxError
-pub fn Worksheet::add_pivot_table(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_pivot_table_xml(Self, String, String, cache_records_xml? : String, name? : String) -> PivotTable raise XlsxError
 pub fn Worksheet::add_shape(Self, Shape) -> Unit raise XlsxError
 pub fn Worksheet::add_slicer(Self, Slicer) -> Unit raise XlsxError
@@ -2076,10 +2002,8 @@ pub fn Worksheet::add_table(Self, String, String, ArrayView[String], display_nam
 pub fn Worksheet::add_vml_drawing_hf_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::add_vml_drawing_xml(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::auto_filter(Self) -> AutoFilter?
-pub fn Worksheet::cells(Self) -> ArrayView[Cell]
 pub fn Worksheet::charts(Self) -> ArrayView[Chart]
 pub fn Worksheet::clear_auto_filter(Self) -> Unit raise XlsxError
-pub fn Worksheet::clear_sheet_background(Self) -> Unit raise XlsxError
 pub fn Worksheet::col_breaks(Self) -> ArrayView[PageBreak]
 pub fn Worksheet::col_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::col_visible(Self, Int) -> Bool raise XlsxError
@@ -2090,14 +2014,8 @@ pub fn Worksheet::data_validations(Self) -> ArrayView[String]
 pub fn Worksheet::delete_chart(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_comment(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_data_validation(Self, sqrefs? : Array[String]) -> Unit raise XlsxError
-pub fn Worksheet::delete_form_control(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::delete_picture(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_pivot_table(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::delete_slicer(Self, StringView) -> Unit raise XlsxError
 pub fn Worksheet::delete_table(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::duplicate_row(Self, Int) -> Unit raise XlsxError
-pub fn Worksheet::duplicate_row_to(Self, Int, Int) -> Unit raise XlsxError
-pub fn Worksheet::form_controls(Self) -> ArrayView[FormControl]
 pub fn Worksheet::get_cell(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_formula(Self, StringView) -> String? raise XlsxError
 pub fn Worksheet::get_cell_hyperlink(Self, StringView) -> Hyperlink? raise XlsxError
@@ -2105,51 +2023,30 @@ pub fn Worksheet::get_cell_rc(Self, Int, Int) -> String? raise XlsxError
 pub fn Worksheet::get_cell_rich_text(Self, StringView) -> Array[RichTextRun]? raise XlsxError
 pub fn Worksheet::get_cell_style(Self, StringView) -> Int? raise XlsxError
 pub fn Worksheet::get_cell_style_rc(Self, Int, Int) -> Int? raise XlsxError
-pub fn Worksheet::get_cell_type(Self, StringView) -> CellValueType? raise XlsxError
 pub fn Worksheet::get_cell_value_raw(Self, StringView) -> CellValue? raise XlsxError
-pub fn Worksheet::get_cell_value_raw_rc(Self, Int, Int) -> CellValue? raise XlsxError
 pub fn Worksheet::get_col(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_col_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_col_width(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
 pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
-pub fn Worksheet::get_form_controls(Self) -> ArrayView[FormControl]
 pub fn Worksheet::get_header_footer_images(Self) -> Array[HeaderFooterImageOptions]
 pub fn Worksheet::get_panes(Self) -> Panes
-pub fn Worksheet::get_picture_cells(Self) -> Array[String] raise XlsxError
-pub fn Worksheet::get_pictures(Self, StringView) -> Array[Image] raise XlsxError
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
-pub fn Worksheet::get_row_style(Self, Int) -> Int? raise XlsxError
 pub fn Worksheet::get_rows(Self) -> Array[Array[String]]
-pub fn Worksheet::get_sheet_view(Self, Int) -> SheetViewOptions raise XlsxError
-pub fn Worksheet::get_slicers(Self) -> ArrayView[Slicer]
-pub fn Worksheet::header_footer(Self) -> HeaderFooterOptions?
-pub fn Worksheet::hyperlinks(Self) -> ArrayView[Hyperlink]
 pub fn Worksheet::ignored_errors(Self) -> ArrayView[IgnoredError]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
-pub fn Worksheet::insert_cols(Self, Int, Int) -> Unit raise XlsxError
-pub fn Worksheet::insert_page_break(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::insert_rows(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::max_col(Self) -> Int
 pub fn Worksheet::max_row(Self) -> Int
 pub fn Worksheet::merge_cells(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::merged_cells(Self) -> ArrayView[String]
 pub fn Worksheet::name(Self) -> String
 pub fn Worksheet::new(String) -> Self
-pub fn Worksheet::page_layout(Self) -> PageLayoutOptions
-pub fn Worksheet::page_margins(Self) -> PageLayoutMarginsOptions
 pub fn Worksheet::pivot_tables(Self) -> ArrayView[PivotTable]
 pub fn Worksheet::protect_sheet(Self, SheetProtectionOptions) -> Unit raise XlsxError
 pub fn Worksheet::remove_cell_hyperlink(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::remove_col(Self, Int) -> Unit raise XlsxError
-pub fn Worksheet::remove_cols(Self, Int, Int) -> Unit raise XlsxError
-pub fn Worksheet::remove_page_break(Self, StringView) -> Unit raise XlsxError
-pub fn Worksheet::remove_row(Self, Int) -> Unit raise XlsxError
-pub fn Worksheet::remove_rows(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::row_breaks(Self) -> ArrayView[PageBreak]
-pub fn Worksheet::row_outline_level(Self, Int) -> Int raise XlsxError
 pub fn Worksheet::row_stream(Self) -> RowStream
 pub fn Worksheet::row_visible(Self, Int) -> Bool raise XlsxError
 pub fn Worksheet::rows(Self) -> Rows
@@ -2167,8 +2064,6 @@ pub fn Worksheet::set_cell_style_rc(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_value(Self, String, CellValue) -> Unit raise XlsxError
 pub fn Worksheet::set_cell_value_rc(Self, Int, Int, CellValue) -> Unit raise XlsxError
 pub fn Worksheet::set_col(Self, Int, ArrayView[String]) -> Unit raise XlsxError
-pub fn Worksheet::set_col_outline_level(Self, Int, Int) -> Unit raise XlsxError
-pub fn Worksheet::set_col_style(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_col_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_col_width(Self, Int, Double) -> Unit raise XlsxError
 pub fn Worksheet::set_conditional_format(Self, String, ArrayView[ConditionalFormatOptions]) -> Unit raise XlsxError
@@ -2180,7 +2075,6 @@ pub fn Worksheet::set_row(Self, Int, ArrayView[String]) -> Unit raise XlsxError
 pub fn Worksheet::set_row_height(Self, Int, Double) -> Unit raise XlsxError
 pub fn Worksheet::set_row_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_style(Self, Int, Int) -> Unit raise XlsxError
-pub fn Worksheet::set_row_style_range(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn Worksheet::set_row_visible(Self, Int, Bool) -> Unit raise XlsxError
 pub fn Worksheet::set_sheet_background(Self, Bytes, String) -> Unit raise XlsxError
 pub fn Worksheet::shapes(Self) -> ArrayView[Shape]

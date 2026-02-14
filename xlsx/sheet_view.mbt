@@ -6,7 +6,7 @@ pub struct Selection {
 } derive(Eq, Show)
 
 ///|
-pub fn Selection::new() -> Selection {
+fn Selection::new() -> Selection {
   { sqref: "", active_cell: "", pane: "" }
 }
 

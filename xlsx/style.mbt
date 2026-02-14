@@ -65,7 +65,7 @@ pub struct Font {
 
 ///|
 /// Creates a new Font with all fields set to None (default styling).
-pub fn Font::new() -> Font {
+fn Font::new() -> Font {
   {
     bold: None,
     italic: None,
@@ -227,7 +227,7 @@ pub struct Fill {
 } derive(Eq, Show)
 
 ///|
-pub fn Fill::new() -> Fill {
+fn Fill::new() -> Fill {
   {
     typ: None,
     pattern: None,
@@ -569,7 +569,7 @@ priv struct BorderXmlEntry {
 }
 
 ///|
-pub fn Border::new(typ : String) -> Border {
+fn Border::new(typ : String) -> Border {
   { typ, color: None, style: None }
 }
 
@@ -611,7 +611,7 @@ pub struct Protection {
 } derive(Eq, Show)
 
 ///|
-pub fn Protection::new() -> Protection {
+fn Protection::new() -> Protection {
   { hidden: None, locked: None }
 }
 
@@ -650,7 +650,7 @@ pub struct Alignment {
 } derive(Eq, Show)
 
 ///|
-pub fn Alignment::new() -> Alignment {
+fn Alignment::new() -> Alignment {
   {
     horizontal: None,
     vertical: None,
@@ -967,7 +967,7 @@ pub fn Style::border(border : Array[Border]) -> Style {
 
 ///|
 /// Returns a new Style with border settings added/replaced.
-pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
+fn Style::with_border(self : Style, border : Array[Border]) -> Style {
   {
     number_format: self.number_format,
     num_fmt: self.num_fmt,
@@ -1000,7 +1000,7 @@ pub fn Style::protection(protection : Protection) -> Style {
 }
 
 ///|
-pub fn Style::with_protection(self : Style, protection : Protection) -> Style {
+fn Style::with_protection(self : Style, protection : Protection) -> Style {
   {
     number_format: self.number_format,
     num_fmt: self.num_fmt,

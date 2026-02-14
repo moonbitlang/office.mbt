@@ -77,7 +77,7 @@ pub struct SparklineGroupOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn SparklineGroupOptions::new() -> SparklineGroupOptions {
+fn SparklineGroupOptions::new() -> SparklineGroupOptions {
   {
     display_empty_cells_as: "",
     date_axis: false,
@@ -124,9 +124,9 @@ pub struct SparklineOptions {
   mut markers : Bool
   mut high : Bool
   mut low : Bool
-  mut first : Bool
-  mut last : Bool
-  mut negative : Bool
+  first : Bool
+  last : Bool
+  negative : Bool
   mut axis : Bool
   mut hidden : Bool
   mut reverse : Bool
@@ -228,11 +228,6 @@ pub fn SparklineOptions::set_weight(
 }
 
 ///|
-pub fn SparklineOptions::clear_weight(self : SparklineOptions) -> Unit {
-  self.weight = None
-}
-
-///|
 pub fn SparklineOptions::set_date_axis(
   self : SparklineOptions,
   date_axis : Bool,
@@ -256,27 +251,6 @@ pub fn SparklineOptions::set_high(self : SparklineOptions, high : Bool) -> Unit 
 ///|
 pub fn SparklineOptions::set_low(self : SparklineOptions, low : Bool) -> Unit {
   self.low = low
-}
-
-///|
-pub fn SparklineOptions::set_first(
-  self : SparklineOptions,
-  first : Bool,
-) -> Unit {
-  self.first = first
-}
-
-///|
-pub fn SparklineOptions::set_last(self : SparklineOptions, last : Bool) -> Unit {
-  self.last = last
-}
-
-///|
-pub fn SparklineOptions::set_negative(
-  self : SparklineOptions,
-  negative : Bool,
-) -> Unit {
-  self.negative = negative
 }
 
 ///|
@@ -309,21 +283,11 @@ pub fn SparklineOptions::set_series_color(
 }
 
 ///|
-pub fn SparklineOptions::clear_series_color(self : SparklineOptions) -> Unit {
-  self.series_color = None
-}
-
-///|
 pub fn SparklineOptions::set_negative_color(
   self : SparklineOptions,
   value : String,
 ) -> Unit {
   self.negative_color = Some(value)
-}
-
-///|
-pub fn SparklineOptions::clear_negative_color(self : SparklineOptions) -> Unit {
-  self.negative_color = None
 }
 
 ///|
@@ -335,21 +299,11 @@ pub fn SparklineOptions::set_markers_color(
 }
 
 ///|
-pub fn SparklineOptions::clear_markers_color(self : SparklineOptions) -> Unit {
-  self.markers_color = None
-}
-
-///|
 pub fn SparklineOptions::set_first_color(
   self : SparklineOptions,
   value : String,
 ) -> Unit {
   self.first_color = Some(value)
-}
-
-///|
-pub fn SparklineOptions::clear_first_color(self : SparklineOptions) -> Unit {
-  self.first_color = None
 }
 
 ///|
@@ -361,11 +315,6 @@ pub fn SparklineOptions::set_last_color(
 }
 
 ///|
-pub fn SparklineOptions::clear_last_color(self : SparklineOptions) -> Unit {
-  self.last_color = None
-}
-
-///|
 pub fn SparklineOptions::set_high_color(
   self : SparklineOptions,
   value : String,
@@ -374,34 +323,11 @@ pub fn SparklineOptions::set_high_color(
 }
 
 ///|
-pub fn SparklineOptions::clear_high_color(self : SparklineOptions) -> Unit {
-  self.high_color = None
-}
-
-///|
-pub fn SparklineOptions::set_hight_color(
-  self : SparklineOptions,
-  value : String,
-) -> Unit {
-  self.high_color = Some(value)
-}
-
-///|
-pub fn SparklineOptions::clear_hight_color(self : SparklineOptions) -> Unit {
-  self.high_color = None
-}
-
-///|
 pub fn SparklineOptions::set_low_color(
   self : SparklineOptions,
   value : String,
 ) -> Unit {
   self.low_color = Some(value)
-}
-
-///|
-pub fn SparklineOptions::clear_low_color(self : SparklineOptions) -> Unit {
-  self.low_color = None
 }
 
 ///|
@@ -447,11 +373,6 @@ pub fn SparklineOptions::set_empty_cells(
     "gap" | "zero" | "span" => self.empty_cells = Some(mode.to_string())
     _ => raise InvalidSparkline(msg="sparkline empty cells invalid")
   }
-}
-
-///|
-pub fn SparklineOptions::clear_empty_cells(self : SparklineOptions) -> Unit {
-  self.empty_cells = None
 }
 
 ///|

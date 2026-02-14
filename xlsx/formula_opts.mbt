@@ -34,7 +34,7 @@ pub struct FormulaOpts {
 } derive(Eq, Show)
 
 ///|
-pub fn FormulaOpts::new() -> FormulaOpts {
+fn FormulaOpts::new() -> FormulaOpts {
   { formula_type: None, range_ref: None }
 }
 

@@ -168,7 +168,7 @@ pub(all) struct ChartDimension {
 } derive(Eq, Show)
 
 ///|
-pub fn ChartDimension::new() -> ChartDimension {
+fn ChartDimension::new() -> ChartDimension {
   { width: 480, height: 260 }
 }
 
@@ -194,7 +194,7 @@ pub(all) struct ChartLine {
 } derive(Eq, Show)
 
 ///|
-pub fn ChartLine::new() -> ChartLine {
+fn ChartLine::new() -> ChartLine {
   {
     typ: Unset,
     dash: Unset,
@@ -212,7 +212,7 @@ pub(all) struct ChartUpDownBar {
 } derive(Eq, Show)
 
 ///|
-pub fn ChartUpDownBar::new() -> ChartUpDownBar {
+fn ChartUpDownBar::new() -> ChartUpDownBar {
   { fill_color: "", border: ChartLine::new() }
 }
 
@@ -279,7 +279,7 @@ pub(all) struct ChartMarker {
 } derive(Eq, Show)
 
 ///|
-pub fn ChartMarker::new(symbol? : String = "", size? : Int = 0) -> ChartMarker {
+fn ChartMarker::new(symbol? : String = "", size? : Int = 0) -> ChartMarker {
   {
     symbol,
     size,
@@ -298,7 +298,7 @@ pub(all) struct ChartDataLabel {
 } derive(Eq, Show)
 
 ///|
-pub fn ChartDataLabel::new() -> ChartDataLabel {
+fn ChartDataLabel::new() -> ChartDataLabel {
   {
     font: Font::new(),
     alignment: Alignment::new(),

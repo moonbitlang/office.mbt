@@ -265,15 +265,13 @@ pub fn Worksheet::set_sheet_background(
 }
 
 ///|
-pub fn Worksheet::clear_sheet_background(
-  self : Worksheet,
-) -> Unit raise XlsxError {
+fn Worksheet::clear_sheet_background(self : Worksheet) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   self.sheet_background = None
 }
 
 ///|
-pub fn Worksheet::insert_page_break(
+fn Worksheet::insert_page_break(
   self : Worksheet,
   cell : StringView,
 ) -> Unit raise XlsxError {
@@ -320,7 +318,7 @@ pub fn Worksheet::insert_page_break(
 }
 
 ///|
-pub fn Worksheet::remove_page_break(
+fn Worksheet::remove_page_break(
   self : Worksheet,
   cell : StringView,
 ) -> Unit raise XlsxError {

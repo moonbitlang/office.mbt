@@ -170,7 +170,7 @@ pub fn Worksheet::state(self : Worksheet) -> SheetState {
 }
 
 ///|
-pub fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
+fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
   self.cells[:]
 }
 
@@ -180,7 +180,7 @@ pub fn Worksheet::merged_cells(self : Worksheet) -> ArrayView[String] {
 }
 
 ///|
-pub fn Worksheet::hyperlinks(self : Worksheet) -> ArrayView[Hyperlink] {
+fn Worksheet::hyperlinks(self : Worksheet) -> ArrayView[Hyperlink] {
   self.hyperlinks[:]
 }
 
@@ -217,7 +217,7 @@ pub fn Worksheet::shapes(self : Worksheet) -> ArrayView[Shape] {
 }
 
 ///|
-pub fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
+fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
   self.form_controls[:]
 }
 
@@ -255,17 +255,17 @@ pub fn Worksheet::auto_filter(self : Worksheet) -> AutoFilter? {
 }
 
 ///|
-pub fn Worksheet::page_margins(self : Worksheet) -> PageLayoutMarginsOptions {
+fn Worksheet::page_margins(self : Worksheet) -> PageLayoutMarginsOptions {
   page_margins_with_defaults(self.page_margins)
 }
 
 ///|
-pub fn Worksheet::page_layout(self : Worksheet) -> PageLayoutOptions {
+fn Worksheet::page_layout(self : Worksheet) -> PageLayoutOptions {
   page_layout_with_defaults(self.page_layout)
 }
 
 ///|
-pub fn Worksheet::header_footer(self : Worksheet) -> HeaderFooterOptions? {
+fn Worksheet::header_footer(self : Worksheet) -> HeaderFooterOptions? {
   self.header_footer
 }
 

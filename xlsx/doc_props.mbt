@@ -17,7 +17,7 @@ pub struct CoreProperties {
 }
 
 ///|
-pub fn CoreProperties::new() -> CoreProperties {
+fn CoreProperties::new() -> CoreProperties {
   {
     title: "",
     subject: "",
@@ -125,7 +125,7 @@ pub struct AppProperties {
 }
 
 ///|
-pub fn AppProperties::new() -> AppProperties {
+fn AppProperties::new() -> AppProperties {
   {
     application: "mbtexcel",
     doc_security: None,

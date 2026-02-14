@@ -20,11 +20,6 @@ pub struct RowOpts {
 } derive(Eq, Show)
 
 ///|
-pub fn RowOpts::new() -> RowOpts {
-  { height: 0.0, hidden: false, style_id: 0, outline_level: 0 }
-}
-
-///|
 pub fn RowOpts::with_values(
   height? : Double = 0.0,
   hidden? : Bool = false,
@@ -83,7 +78,7 @@ fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
 }
 
 ///|
-pub fn Rows::new(sheet : Worksheet) -> Rows {
+fn Rows::new(sheet : Worksheet) -> Rows {
   Rows::new_with_options(sheet, None, Options::new())
 }
 
@@ -307,7 +302,7 @@ fn collect_columns_with_options(
 }
 
 ///|
-pub fn Cols::new(sheet : Worksheet) -> Cols {
+fn Cols::new(sheet : Worksheet) -> Cols {
   Cols::new_with_options(sheet, None, Options::new())
 }
 
@@ -394,11 +389,6 @@ pub fn Cols::col_index(self : Cols) -> Int? {
 ///|
 pub fn Cols::error(self : Cols) -> XlsxError? {
   self.err
-}
-
-///|
-pub fn Cols::close(_self : Cols) -> Unit {
-  ()
 }
 
 ///|

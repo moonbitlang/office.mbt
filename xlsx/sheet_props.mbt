@@ -11,7 +11,7 @@ pub struct PageLayoutMarginsOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn PageLayoutMarginsOptions::new() -> PageLayoutMarginsOptions {
+fn PageLayoutMarginsOptions::new() -> PageLayoutMarginsOptions {
   {
     top: None,
     bottom: None,
@@ -84,7 +84,7 @@ pub struct PageLayoutOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn PageLayoutOptions::new() -> PageLayoutOptions {
+fn PageLayoutOptions::new() -> PageLayoutOptions {
   {
     size: None,
     orientation: None,
@@ -167,7 +167,7 @@ pub struct SheetPropsOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn SheetPropsOptions::new() -> SheetPropsOptions {
+fn SheetPropsOptions::new() -> SheetPropsOptions {
   {
     code_name: None,
     enable_format_conditions_calculation: None,
@@ -302,7 +302,7 @@ pub struct HeaderFooterOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn HeaderFooterOptions::new() -> HeaderFooterOptions {
+fn HeaderFooterOptions::new() -> HeaderFooterOptions {
   {
     align_with_margins: None,
     different_first: false,

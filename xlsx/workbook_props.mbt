@@ -75,7 +75,7 @@ pub struct WorkbookPropsOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn WorkbookPropsOptions::new() -> WorkbookPropsOptions {
+fn WorkbookPropsOptions::new() -> WorkbookPropsOptions {
   { date_1904: None, filter_privacy: None, code_name: None }
 }
 
@@ -120,7 +120,7 @@ pub struct WorkbookProtectionOptions {
 } derive(Eq, Show)
 
 ///|
-pub fn WorkbookProtectionOptions::new() -> WorkbookProtectionOptions {
+fn WorkbookProtectionOptions::new() -> WorkbookProtectionOptions {
   {
     algorithm_name: "",
     password: "",

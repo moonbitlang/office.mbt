@@ -5,7 +5,7 @@ pub struct ShapeLine {
 } derive(Eq, Show)
 
 ///|
-pub fn ShapeLine::new() -> ShapeLine {
+fn ShapeLine::new() -> ShapeLine {
   { color: None, width: None }
 }
 
@@ -30,7 +30,7 @@ pub struct ShapeFill {
 } derive(Eq, Show)
 
 ///|
-pub fn ShapeFill::new() -> ShapeFill {
+fn ShapeFill::new() -> ShapeFill {
   { color: None, transparency: None }
 }
 

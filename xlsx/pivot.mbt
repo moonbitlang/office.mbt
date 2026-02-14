@@ -9,7 +9,7 @@ pub struct PivotTable {
 }
 
 ///|
-pub fn PivotTable::new(
+fn PivotTable::new(
   table_xml : String,
   cache_definition_xml : String,
   cache_records_xml? : String = "",

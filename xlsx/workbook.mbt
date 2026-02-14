@@ -155,7 +155,7 @@ pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
 }
 
 ///|
-pub fn Workbook::conditional_styles(self : Workbook) -> ArrayView[Style] {
+fn Workbook::conditional_styles(self : Workbook) -> ArrayView[Style] {
   self.conditional_styles[:]
 }
 
@@ -286,7 +286,7 @@ pub fn Workbook::add_vba_project(
 }
 
 ///|
-pub fn Workbook::workbook_props(self : Workbook) -> WorkbookPropsOptions {
+fn Workbook::workbook_props(self : Workbook) -> WorkbookPropsOptions {
   self.workbook_props
 }
 
@@ -307,7 +307,7 @@ pub fn Workbook::set_workbook_props(
 }
 
 ///|
-pub fn Workbook::calc_props(self : Workbook) -> CalcPropsOptions {
+fn Workbook::calc_props(self : Workbook) -> CalcPropsOptions {
   self.calc_props
 }
 
@@ -329,7 +329,7 @@ pub fn Workbook::set_calc_props(
 }
 
 ///|
-pub fn Workbook::default_font(self : Workbook) -> String {
+fn Workbook::default_font(self : Workbook) -> String {
   self.default_font
 }
 
@@ -3050,7 +3050,7 @@ fn Workbook::next_pivot_table_name(self : Workbook) -> String {
 }
 
 ///|
-pub fn Workbook::add_pivot_table_with_options(
+fn Workbook::add_pivot_table_with_options(
   self : Workbook,
   opts : PivotTableOptions,
 ) -> PivotTable raise XlsxError {
