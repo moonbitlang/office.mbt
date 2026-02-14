@@ -76,7 +76,7 @@ pub(all) enum ChartDashType {
 } derive(Eq, Show)
 
 ///|
-pub(all) enum ChartLineType {
+enum ChartLineType {
   Unset
   Solid
   NoLine
@@ -203,6 +203,26 @@ fn ChartLine::new() -> ChartLine {
     smooth: false,
     width: 0.0,
   }
+}
+
+///|
+pub fn ChartLine::set_solid(self : ChartLine) -> Unit {
+  self.typ = Solid
+}
+
+///|
+pub fn ChartLine::set_no_line(self : ChartLine) -> Unit {
+  self.typ = NoLine
+}
+
+///|
+pub fn ChartLine::set_automatic(self : ChartLine) -> Unit {
+  self.typ = Automatic
+}
+
+///|
+pub fn ChartLine::set_unset(self : ChartLine) -> Unit {
+  self.typ = Unset
 }
 
 ///|

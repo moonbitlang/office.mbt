@@ -318,14 +318,13 @@ pub(all) struct ChartLine {
   mut smooth : Bool
   mut width : Double
 }
+pub fn ChartLine::set_automatic(Self) -> Unit
+pub fn ChartLine::set_no_line(Self) -> Unit
+pub fn ChartLine::set_solid(Self) -> Unit
+pub fn ChartLine::set_unset(Self) -> Unit
 pub impl Show for ChartLine
 
-pub(all) enum ChartLineType {
-  Unset
-  Solid
-  NoLine
-  Automatic
-}
+type ChartLineType
 pub impl Eq for ChartLineType
 pub impl Show for ChartLineType
 
