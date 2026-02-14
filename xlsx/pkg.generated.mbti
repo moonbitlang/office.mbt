@@ -353,8 +353,6 @@ pub(all) struct ChartOptions {
 }
 pub fn ChartOptions::add_combo_chart(Self, Self) -> Unit
 pub fn ChartOptions::new(ChartType) -> Self
-pub fn ChartOptions::set_dimension(Self, ChartDimension) -> Unit
-pub fn ChartOptions::set_title(Self, String) -> Unit
 pub impl Show for ChartOptions
 
 pub(all) struct ChartPlotArea {

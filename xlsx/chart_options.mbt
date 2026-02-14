@@ -476,19 +476,6 @@ pub fn ChartOptions::add_combo_chart(
 }
 
 ///|
-pub fn ChartOptions::set_dimension(
-  self : ChartOptions,
-  dimension : ChartDimension,
-) -> Unit {
-  self.dimension = dimension
-}
-
-///|
-pub fn ChartOptions::set_title(self : ChartOptions, title : String) -> Unit {
-  self.title = title
-}
-
-///|
 fn chart_type_to_plot(kind : ChartType) -> (String, String?) {
   match kind {
     Col => ("barChart", Some("col"))

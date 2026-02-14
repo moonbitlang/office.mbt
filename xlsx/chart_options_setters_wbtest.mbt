@@ -27,9 +27,9 @@ test "chart options: setter coverage and basic validation" {
   let opts = ChartOptions::new(Scatter)
   opts.series.push(series)
   opts.format = GraphicOptions::new()
-  opts.set_dimension(ChartDimension::with_values(320, 240))
+  opts.dimension = ChartDimension::with_values(320, 240)
   opts.legend = ChartLegend::new(position="top", show_legend_key=true)
-  opts.set_title("T")
+  opts.title = "T"
   opts.vary_colors = false
   let x_axis = ChartAxis::new()
   x_axis.major_grid_lines = true

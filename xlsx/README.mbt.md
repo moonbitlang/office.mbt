@@ -306,8 +306,8 @@ test "charts" {
   // Create chart options
   let chart = ChartOptions::new(Bar)
   chart.series.push(series)
-  chart.set_title("Sales by Category")
-  chart.set_dimension(ChartDimension::with_values(480, 300))
+  chart.title = "Sales by Category"
+  chart.dimension = ChartDimension::with_values(480, 300)
 
   // Add chart to sheet
   sheet.add_chart_with_options("E1", chart)
