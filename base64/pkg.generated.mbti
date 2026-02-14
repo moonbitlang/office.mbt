@@ -10,7 +10,6 @@ pub fn encode(BytesView) -> String
 pub suberror Base64Error {
   InvalidBase64(msg~ : String)
 }
-pub impl Eq for Base64Error
 pub impl Show for Base64Error
 
 // Types and methods

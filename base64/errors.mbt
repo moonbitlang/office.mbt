@@ -1,4 +1,4 @@
 ///|
 pub suberror Base64Error {
   InvalidBase64(msg~ : String)
-} derive(Eq, Show)
+} derive(Show)
