@@ -200,15 +200,6 @@ pub fn WorkbookManifest::add_workbook_relationship_with_id(
 }
 
 ///|
-pub fn WorkbookManifest::add_root_relationship(
-  self : WorkbookManifest,
-  rel_type : String,
-  target : String,
-) -> Unit {
-  ignore(self.root_rels.add_auto(rel_type~, target~))
-}
-
-///|
 pub fn WorkbookManifest::add_custom_properties(self : WorkbookManifest) -> Unit {
   self.content_types.add_override("/docProps/custom.xml", ct_custom_props)
   ignore(

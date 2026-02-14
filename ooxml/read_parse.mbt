@@ -135,7 +135,7 @@ pub fn parse_relationship_targets(
 }
 
 ///|
-pub fn parse_content_type_overrides(
+fn parse_content_type_overrides(
   xml : StringView,
 ) -> Map[String, String] raise ParseXmlError {
   let overrides : Map[String, String] = {}

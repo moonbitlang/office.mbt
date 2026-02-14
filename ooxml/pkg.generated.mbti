@@ -4,8 +4,6 @@ package "bobzhang/mbtexcel/ooxml"
 // Values
 pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
 
-pub fn parse_content_type_overrides(StringView) -> Map[String, String] raise ParseXmlError
-
 pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
 
 // Errors
@@ -59,7 +57,6 @@ pub struct WorkbookManifest {
 pub fn WorkbookManifest::add_content_default(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_content_override(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_custom_properties(Self) -> Unit
-pub fn WorkbookManifest::add_root_relationship(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_workbook_relationship(Self, String, String) -> Unit
 pub fn WorkbookManifest::add_workbook_relationship_with_id(Self, String, String) -> String
 pub fn WorkbookManifest::content_types_xml(Self) -> String

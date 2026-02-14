@@ -123,7 +123,6 @@ test "workbook manifest" {
 | `WorkbookManifest::new(sheet_count, ...)` | Create manifest with defaults |
 | `add_content_default(extension, type)` | Add default content type |
 | `add_content_override(part, type)` | Add content type override |
-| `add_root_relationship(type, target)` | Add root-level relationship |
 | `add_workbook_relationship(type, target)` | Add workbook relationship |
 | `add_workbook_relationship_with_id(...)` | Add with auto ID, return ID |
 | `set_workbook_content_type(type)` | Set main workbook type |

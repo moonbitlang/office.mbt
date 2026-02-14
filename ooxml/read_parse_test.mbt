@@ -68,13 +68,6 @@ test "ooxml read_parse: parse_content_type_overrides and find workbook part" {
     #|  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
     #|</Types>
     #|
-  let overrides = parse_content_type_overrides(xml[:])
-  inspect(
-    overrides,
-    content=(
-      #|{"/xl/workbook.xml": "application/vnd.ms-excel.sheet.macroEnabled.main+xml", "/xl/styles.xml": "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"}
-    ),
-  )
   inspect(
     find_override_part_by_content_types(xml[:], [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
@@ -92,7 +85,9 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
     #|  <Override PartName="/xl/workbook.xml" 
     #|</Types>
     #|
-  let result = try? parse_content_type_overrides(malformed[:])
+  let result = try? find_override_part_by_content_types(malformed[:], [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+  ])
   match result {
     Err(ParseXmlError::InvalidXml(msg~)) =>
       inspect(msg, content="content type override tag not closed")

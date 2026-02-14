@@ -55,8 +55,6 @@ test "workbook manifest options and customization" {
   )
   inspect(id, content="rId4")
   inspect(manifest.workbook_rels_xml().contains("example.xml"), content="true")
-  manifest.add_root_relationship("http://example.com/root", "root.xml")
-  inspect(manifest.root_rels_xml().contains("root.xml"), content="true")
 }
 
 ///|
