@@ -1,17 +1,17 @@
 ///|
-pub struct ContentTypeDefault {
+pub(all) struct ContentTypeDefault {
   extension : String
   content_type : String
 }
 
 ///|
-pub struct ContentTypeOverride {
+pub(all) struct ContentTypeOverride {
   part_name : String
   content_type : String
 }
 
 ///|
-pub struct ContentTypes {
+pub(all) struct ContentTypes {
   defaults : Array[ContentTypeDefault]
   overrides : Array[ContentTypeOverride]
 }

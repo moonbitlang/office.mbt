@@ -59,7 +59,7 @@ let ct_app_props = "application/vnd.openxmlformats-officedocument.extended-prope
 let ct_custom_props = "application/vnd.openxmlformats-officedocument.custom-properties+xml"
 
 ///|
-pub struct WorkbookManifest {
+pub(all) struct WorkbookManifest {
   content_types : ContentTypes
   root_rels : Relationships
   workbook_rels : Relationships

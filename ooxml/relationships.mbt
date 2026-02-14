@@ -1,5 +1,5 @@
 ///|
-pub struct Relationship {
+pub(all) struct Relationship {
   id : String
   rel_type : String
   target : String
@@ -7,7 +7,7 @@ pub struct Relationship {
 }
 
 ///|
-pub struct Relationships {
+pub(all) struct Relationships {
   items : Array[Relationship]
   mut next_id : Int
 }

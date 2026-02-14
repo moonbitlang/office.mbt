@@ -13,34 +13,34 @@ pub suberror ParseXmlError {
 pub impl Show for ParseXmlError
 
 // Types and methods
-pub struct ContentTypeDefault {
+pub(all) struct ContentTypeDefault {
   extension : String
   content_type : String
 }
 
-pub struct ContentTypeOverride {
+pub(all) struct ContentTypeOverride {
   part_name : String
   content_type : String
 }
 
-pub struct ContentTypes {
+pub(all) struct ContentTypes {
   defaults : Array[ContentTypeDefault]
   overrides : Array[ContentTypeOverride]
 }
 
-pub struct Relationship {
+pub(all) struct Relationship {
   id : String
   rel_type : String
   target : String
   target_mode : String?
 }
 
-pub struct Relationships {
+pub(all) struct Relationships {
   items : Array[Relationship]
   mut next_id : Int
 }
 
-pub struct WorkbookManifest {
+pub(all) struct WorkbookManifest {
   content_types : ContentTypes
   root_rels : Relationships
   workbook_rels : Relationships
