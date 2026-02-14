@@ -162,7 +162,7 @@ pub fn ChartAxis::new() -> ChartAxis {
 }
 
 ///|
-pub(all) struct ChartDimension {
+struct ChartDimension {
   width : Int
   height : Int
 } derive(Show)
@@ -308,7 +308,7 @@ fn ChartDataLabel::new() -> ChartDataLabel {
 }
 
 ///|
-pub(all) struct ChartDataPoint {
+struct ChartDataPoint {
   index : Int
   fill_color : String
 } derive(Show)
@@ -411,17 +411,17 @@ pub(all) struct ChartOptions {
 } derive(Show)
 
 ///|
-pub(all) struct ChartComboOptions {
+struct ChartComboOptions {
   typ : ChartType
   series : Array[ChartSeries]
-  mut x_axis : ChartAxis
-  mut y_axis : ChartAxis
-  mut plot_area : ChartPlotArea
-  mut vary_colors : Bool
-  mut gap_width : Int?
-  mut overlap : Int?
-  mut hole_size : Int?
-  mut bubble_scale : Int?
+  x_axis : ChartAxis
+  y_axis : ChartAxis
+  plot_area : ChartPlotArea
+  vary_colors : Bool
+  gap_width : Int?
+  overlap : Int?
+  hole_size : Int?
+  bubble_scale : Int?
 } derive(Show)
 
 ///|

@@ -215,12 +215,7 @@ pub(all) enum CellValue {
 pub impl Show for CellValue
 
 #alias(CellType)
-pub(all) enum CellValueType {
-  String
-  Number
-  Bool
-  Error
-}
+type CellValueType
 pub impl Eq for CellValueType
 pub impl Show for CellValueType
 
@@ -258,18 +253,7 @@ pub(all) struct ChartAxis {
 pub fn ChartAxis::new() -> Self
 pub impl Show for ChartAxis
 
-pub(all) struct ChartComboOptions {
-  typ : ChartType
-  series : Array[ChartSeries]
-  mut x_axis : ChartAxis
-  mut y_axis : ChartAxis
-  mut plot_area : ChartPlotArea
-  mut vary_colors : Bool
-  mut gap_width : Int?
-  mut overlap : Int?
-  mut hole_size : Int?
-  mut bubble_scale : Int?
-}
+type ChartComboOptions
 pub impl Show for ChartComboOptions
 
 pub(all) enum ChartDashType {
@@ -310,17 +294,11 @@ pub(all) enum ChartDataLabelPositionType {
 pub impl Eq for ChartDataLabelPositionType
 pub impl Show for ChartDataLabelPositionType
 
-pub(all) struct ChartDataPoint {
-  index : Int
-  fill_color : String
-}
+type ChartDataPoint
 pub fn ChartDataPoint::new(Int, fill_color? : String) -> Self
 pub impl Show for ChartDataPoint
 
-pub(all) struct ChartDimension {
-  width : Int
-  height : Int
-}
+type ChartDimension
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
 pub impl Show for ChartDimension
 

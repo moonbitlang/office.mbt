@@ -1,5 +1,5 @@
 ///|
-pub(all) enum CellValueType {
+enum CellValueType {
   String
   Number
   Bool
