@@ -4,7 +4,7 @@ pub suberror UtfIndexError {
   OutOfRange(index~ : Int, len~ : Int)
   InvalidBoundary(index~ : Int)
   InvalidUtf8(offset~ : Int)
-} derive(Show, Eq)
+} derive(Show)
 
 ///|
 /// Return UTF-16 code unit length for a string.
