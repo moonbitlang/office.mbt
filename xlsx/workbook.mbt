@@ -1929,6 +1929,7 @@ pub fn Workbook::add_image_with_options(
 }
 
 ///|
+#cfg(target="native")
 pub async fn Workbook::add_picture(
   self : Workbook,
   sheet_name : StringView,
@@ -1971,6 +1972,7 @@ pub async fn Workbook::add_picture(
 }
 
 ///|
+#cfg(target="native")
 pub async fn Workbook::add_picture_with_options(
   self : Workbook,
   sheet_name : StringView,
@@ -2050,6 +2052,7 @@ pub fn Workbook::add_header_footer_image(
 }
 
 ///|
+#cfg(target="native")
 pub async fn Workbook::add_header_footer_image_from_file(
   self : Workbook,
   sheet_name : StringView,

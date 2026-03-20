@@ -429,6 +429,7 @@ pub fn excel_date_to_time(
 ///
 /// let wb_protected = open_file("secret.xlsx", password="pass123")
 /// ```
+#cfg(target="native")
 pub async fn open_file(
   path : String,
   password? : String = "",

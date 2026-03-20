@@ -9,6 +9,7 @@ async fn[R : @async/io.Reader] read_all_bytes(
 }
 
 ///|
+#cfg(target="native")
 async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
   let data = @async/fs.read_file(path) catch {
     err => raise InvalidSheetOperation(msg="read file failed: \{err}")
@@ -159,6 +160,7 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
 }
 
 ///|
+#cfg(target="native")
 pub async fn open_file(
   path : String,
   password? : String = "",
@@ -176,6 +178,7 @@ pub async fn open_file(
 }
 
 ///|
+#cfg(target="native")
 pub async fn Workbook::set_sheet_background_from_file(
   self : Workbook,
   sheet_name : StringView,
@@ -190,6 +193,7 @@ pub async fn Workbook::set_sheet_background_from_file(
 }
 
 ///|
+#cfg(target="native")
 pub async fn Workbook::save(
   self : Workbook,
   options? : Options,
@@ -205,6 +209,7 @@ pub async fn Workbook::save(
 }
 
 ///|
+#cfg(target="native")
 pub async fn Workbook::save_as(
   self : Workbook,
   path : String,

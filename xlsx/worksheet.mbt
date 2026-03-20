@@ -1275,6 +1275,7 @@ pub fn Worksheet::add_header_footer_image(
 }
 
 ///|
+#cfg(target="native")
 async fn Worksheet::add_header_footer_image_from_file(
   self : Worksheet,
   options : HeaderFooterImageOptions,
@@ -1438,6 +1439,7 @@ fn Worksheet::add_picture_from_bytes_with_options(
 }
 
 ///|
+#cfg(target="native")
 async fn Worksheet::add_picture(
   self : Worksheet,
   reference : String,
@@ -1487,6 +1489,7 @@ async fn Worksheet::add_picture(
 }
 
 ///|
+#cfg(target="native")
 async fn Worksheet::add_picture_with_options(
   self : Worksheet,
   reference : String,
