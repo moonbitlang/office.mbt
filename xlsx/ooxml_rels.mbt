@@ -53,14 +53,10 @@ fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
 
 ///|
 fn drop_first_path_segment(path : StringView) -> String {
-  let parts = Array::from_iter(path.split("/"))
-  let rest : Array[String] = []
-  for i, part in parts {
-    if i > 0 {
-      rest.push(part.to_string())
-    }
+  match path.to_string().after("/") {
+    Some(rest) => rest.to_string()
+    None => path.to_string()
   }
-  rest.join("/")
 }
 
 ///|

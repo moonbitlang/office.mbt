@@ -142,21 +142,15 @@ fn archive_path_from_part_name(
   if part == "" {
     raise InvalidXml(msg="content type part name empty")
   }
-  if part.has_prefix("/") {
-    let segments = Array::from_iter(part.split("/"))
-    let path_parts : Array[String] = []
-    for i, segment in segments {
-      if i > 0 {
-        path_parts.push(segment.to_string())
+  match part.strip_prefix("/") {
+    Some(rest) => {
+      let path = rest.to_string()
+      if path == "" {
+        raise InvalidXml(msg="content type part name empty")
       }
+      path
     }
-    let path = path_parts.join("/")
-    if path == "" {
-      raise InvalidXml(msg="content type part name empty")
-    }
-    path
-  } else {
-    part
+    None => part
   }
 }
 
