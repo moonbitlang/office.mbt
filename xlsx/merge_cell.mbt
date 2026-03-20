@@ -16,36 +16,17 @@ pub fn MergeCell::get_cell_value(self : MergeCell) -> String {
 
 ///|
 pub fn MergeCell::get_start_axis(self : MergeCell) -> String {
-  let mut start = ""
-  let mut idx = 0
-  for part in self.range_ref.split(":") {
-    if idx == 0 {
-      start = part.to_string()
-      break
-    }
-    idx = idx + 1
+  match self.range_ref.split_once(":") {
+    Some((start, _)) => start.to_string()
+    None => self.range_ref
   }
-  start
 }
 
 ///|
 pub fn MergeCell::get_end_axis(self : MergeCell) -> String {
-  let mut start = ""
-  let mut end = ""
-  let mut idx = 0
-  for part in self.range_ref.split(":") {
-    if idx == 0 {
-      start = part.to_string()
-    } else if idx == 1 {
-      end = part.to_string()
-      break
-    }
-    idx = idx + 1
-  }
-  if end == "" {
-    start
-  } else {
-    end
+  match self.range_ref.split_once(":") {
+    Some((_, end)) => end.to_string()
+    None => self.range_ref
   }
 }
 
