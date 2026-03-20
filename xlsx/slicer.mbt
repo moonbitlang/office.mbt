@@ -205,18 +205,12 @@ fn ensure_pivot_cache_slicer_id(
     let needle = "<pivotCacheDefinition"
     match xml.find(needle) {
       Some(start) => {
-        let rest = xml[start:] catch {
-            _ => raise InvalidXml(msg="pivot cache xml slice invalid")
-          }
+        let rest = xml[start:]
         match rest.find(">") {
           Some(end_rel) => {
             let end = start + end_rel
-            let before = xml[:end] catch {
-                _ => raise InvalidXml(msg="pivot cache open tag invalid")
-              }
-            let after = xml[end:] catch {
-                _ => raise InvalidXml(msg="pivot cache open tag invalid")
-              }
+            let before = xml[:end]
+            let after = xml[end:]
             xml = "\{before} xmlns:x14=\"\{slicer_ns_x14}\"\{after}"
           }
           None => ()
@@ -231,24 +225,16 @@ fn ensure_pivot_cache_slicer_id(
   let ext_entry = "    <ext uri=\"\{slicer_ext_uri_pivot_cache_definition}\">\n      <x14:pivotCacheDefinition pivotCacheId=\"\{pivot_cache_id}\"/>\n    </ext>\n"
   match xml.find("</extLst>") {
     Some(pos) => {
-      let head = xml[:pos] catch {
-          _ => raise InvalidXml(msg="pivot cache extLst invalid")
-        }
-      let tail = xml[pos:] catch {
-          _ => raise InvalidXml(msg="pivot cache extLst invalid")
-        }
+      let head = xml[:pos]
+      let tail = xml[pos:]
       return "\{head}\{ext_entry}\{tail}"
     }
     None => ()
   }
   match xml.find("</pivotCacheDefinition>") {
     Some(pos) => {
-      let head = xml[:pos] catch {
-          _ => raise InvalidXml(msg="pivot cache close tag invalid")
-        }
-      let tail = xml[pos:] catch {
-          _ => raise InvalidXml(msg="pivot cache close tag invalid")
-        }
+      let head = xml[:pos]
+      let tail = xml[pos:]
       "\{head}  <extLst>\n\{ext_entry}  </extLst>\n\{tail}"
     }
     None => xml

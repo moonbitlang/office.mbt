@@ -4819,12 +4819,12 @@ fn parse_value_number(text : String) -> Double? {
   let mut body = trimmed
   if body.has_prefix("(") && body.has_suffix(")") && body.length() >= 2 {
     negative = true
-    body = (body[1:body.length() - 1] catch { _ => body }).to_string()
+    body = body[1:body.length() - 1].to_string()
   }
   let mut percent = false
   if body.has_suffix("%") && body.length() >= 1 {
     percent = true
-    body = (body[:body.length() - 1] catch { _ => body }).to_string()
+    body = body[:body.length() - 1].to_string()
   }
   let sb = StringBuilder::new()
   for ch in body {
@@ -5152,10 +5152,10 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
   let mut core = trimmed
   if core.has_suffix("AM") {
     is_am = true
-    core = (core[:core.length() - 2] catch { _ => core }).trim().to_string()
+    core = core[:core.length() - 2].trim().to_string()
   } else if core.has_suffix("PM") {
     is_pm = true
-    core = (core[:core.length() - 2] catch { _ => core }).trim().to_string()
+    core = core[:core.length() - 2].trim().to_string()
   }
   let parts : Array[String] = []
   let mut current = StringBuilder::new()
@@ -5325,22 +5325,22 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
   }
   let mut condition_text = text
   let kind = if text.has_prefix("<>") {
-    condition_text = (text[2:] catch { _ => "" }).to_string()
+    condition_text = text[2:].to_string()
     FormulaCriteriaType::Ne
   } else if text.has_prefix("<=") {
-    condition_text = (text[2:] catch { _ => "" }).to_string()
+    condition_text = text[2:].to_string()
     Le
   } else if text.has_prefix(">=") {
-    condition_text = (text[2:] catch { _ => "" }).to_string()
+    condition_text = text[2:].to_string()
     Ge
   } else if text.has_prefix("<") {
-    condition_text = (text[1:] catch { _ => "" }).to_string()
+    condition_text = text[1:].to_string()
     Lt
   } else if text.has_prefix(">") {
-    condition_text = (text[1:] catch { _ => "" }).to_string()
+    condition_text = text[1:].to_string()
     Gt
   } else if text.has_prefix("=") {
-    condition_text = (text[1:] catch { _ => "" }).to_string()
+    condition_text = text[1:].to_string()
     Eq
   } else {
     Regexp

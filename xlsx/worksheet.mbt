@@ -2274,7 +2274,7 @@ pub fn Worksheet::unset_conditional_format(
           Some(pos) => pos
           None => continue
         }
-        let id = unescape_xml_text(text[:end] catch { _ => "" })
+        let id = unescape_xml_text(text[:end])
         match prior.get(id) {
           Some(props) =>
             referenced[id] = {

@@ -192,7 +192,7 @@ fn cfb_compare(left : String, right : String) -> Int {
 ///|
 fn parent_path(path : String) -> String {
   match path.rev_find("/") {
-    Some(pos) => (try! path[:pos]).to_string()
+    Some(pos) => path[:pos].to_string()
     None => ""
   }
 }
@@ -200,7 +200,7 @@ fn parent_path(path : String) -> String {
 ///|
 fn base_name(path : String) -> String {
   match path.rev_find("/") {
-    Some(pos) => (try! path[pos + 1:]).to_string()
+    Some(pos) => path[pos + 1:].to_string()
     None => path
   }
 }

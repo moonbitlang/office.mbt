@@ -458,10 +458,10 @@ fn extract_tag_value(xml : StringView, tag_name : StringView) -> String? {
   match text.find(open) {
     None => None
     Some(start) => {
-      let rest = text[start + open.length():] catch { _ => return None }
+      let rest = text[start + open.length():]
       match rest.find(close) {
         Some(end) => {
-          let slice = rest[:end] catch { _ => return None }
+          let slice = rest[:end]
           Some(slice.to_string())
         }
         None => None
@@ -603,16 +603,14 @@ fn parse_custom_properties(
       Some(pos) => pos
       None => raise InvalidXml(msg="property tag not closed")
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="property tag invalid")
-      }
+    let tag = text[:end]
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="property name missing")
     }
     let close_tag = "</property>"
     let body = match text.find(close_tag) {
-      Some(pos) => text[end + 1:pos] catch { _ => "" }
+      Some(pos) => text[end + 1:pos]
       None => ""
     }
     let value = parse_custom_property_value(body)

@@ -377,13 +377,7 @@ fn palette_color(color : StringView) -> String {
     return "FF000000"
   }
   let text = color.to_string()
-  let trimmed = if text.has_prefix("#") {
-    text[1:] catch {
-      _ => text
-    }
-  } else {
-    text
-  }
+  let trimmed = if text.has_prefix("#") { text[1:] } else { text }
   "FF\{trimmed.to_upper()}"
 }
 
@@ -917,9 +911,7 @@ fn extract_tag_blocks(
           None => raise InvalidXml(msg="tag close missing")
         }
     }
-    let slice = fragment[:end] catch {
-        _ => raise InvalidXml(msg="tag slice invalid")
-      }
+    let slice = fragment[:end]
     blocks.push(slice.to_string())
   }
   blocks
@@ -942,9 +934,7 @@ fn extract_tag_bodies(
       Some(pos) => pos
       None => raise InvalidXml(msg="tag body end missing")
     }
-    let body = block[start:end] catch {
-        _ => raise InvalidXml(msg="tag body invalid")
-      }
+    let body = block[start:end]
     bodies.push(body.to_string())
   }
   bodies
@@ -954,7 +944,7 @@ fn extract_tag_bodies(
 fn color_text_from_rgb(rgb : StringView) -> String {
   let text = rgb.to_string()
   if text.has_prefix("FF") && text.length() == 8 {
-    let rest = text[2:] catch { _ => text }
+    let rest = text[2:]
     "#\{rest}"
   } else {
     "#\{text}"
@@ -1326,9 +1316,7 @@ fn parse_conditional_format_xml(
       match text.find(close_tag) {
         Some(pos) => {
           let end = pos + close_tag.length()
-          let slice = text[:end] catch {
-              _ => raise InvalidXml(msg="cfRule tag invalid")
-            }
+          let slice = text[:end]
           rules.push("<cfRule\{slice.to_string()}")
         }
         None => {
@@ -1336,9 +1324,7 @@ fn parse_conditional_format_xml(
             Some(pos) => pos + 2
             None => raise InvalidXml(msg="cfRule tag not closed")
           }
-          let slice = text[:end] catch {
-              _ => raise InvalidXml(msg="cfRule tag invalid")
-            }
+          let slice = text[:end]
           rules.push("<cfRule\{slice.to_string()}")
         }
       }

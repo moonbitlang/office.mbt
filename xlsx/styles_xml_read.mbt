@@ -8,7 +8,7 @@ fn find_last_substring(text : StringView, needle : StringView) -> Int? {
   let mut i = 0
   let mut last : Int? = None
   while i < text_str.length() {
-    let rest = text_str[i:] catch { _ => break }
+    let rest = text_str[i:]
     match rest.find(needle_str) {
       Some(pos) => {
         let abs = i + pos
@@ -30,7 +30,7 @@ fn end_after_last_tag(xml : StringView, tag : StringView) -> Int? {
       let open_tag = "<\{tag.to_string()}"
       match find_last_substring(xml, open_tag) {
         Some(pos) => {
-          let rest = xml.to_string()[pos:] catch { _ => return None }
+          let rest = xml.to_string()[pos:]
           match rest.find(">") {
             Some(rel) => Some(pos + rel + 1)
             None => None
@@ -50,9 +50,7 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
     Some(pos) => pos
     None => return None
   }
-  let prefix = xml_str[:style_end] catch {
-      _ => raise InvalidXml(msg="styles.xml styleSheet slice invalid")
-    }
+  let prefix = xml_str[:style_end]
   let mut search_start = 0
   for tag in ["colors", "tableStyles", "dxfs", "cellStyles", "cellXfs"] {
     match end_after_last_tag(prefix, tag) {
@@ -60,17 +58,13 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
       None => ()
     }
   }
-  let tail = prefix[search_start:] catch {
-      _ => raise InvalidXml(msg="styles.xml extLst tail invalid")
-    }
+  let tail = prefix[search_start:]
   let ext_rel = match tail.find("<extLst") {
     Some(pos) => pos
     None => return None
   }
   let ext_start = search_start + ext_rel
-  let ext_rest = prefix[ext_start:] catch {
-      _ => raise InvalidXml(msg="styles.xml extLst slice invalid")
-    }
+  let ext_rest = prefix[ext_start:]
   let open_end_rel = match ext_rest.find(">") {
     Some(pos) => pos
     None => raise InvalidXml(msg="styles.xml extLst tag not closed")
@@ -79,19 +73,13 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
     return Some("")
   }
   let body_start = ext_start + open_end_rel + 1
-  let body_rest = prefix[body_start:] catch {
-      _ => raise InvalidXml(msg="styles.xml extLst body invalid")
-    }
+  let body_rest = prefix[body_start:]
   let close_rel = match body_rest.find("</extLst>") {
     Some(pos) => pos
     None => raise InvalidXml(msg="styles.xml extLst close missing")
   }
   let body_end = body_start + close_rel
-  Some(
-    (prefix[body_start:body_end] catch {
-      _ => raise InvalidXml(msg="styles.xml extLst body slice invalid")
-    }).to_string(),
-  )
+  Some(prefix[body_start:body_end].to_string())
 }
 
 ///|

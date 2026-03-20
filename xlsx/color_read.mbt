@@ -68,9 +68,7 @@ fn parse_indexed_colors(xml : StringView) -> Array[String]? raise XlsxError {
           None => raise InvalidXml(msg="indexedColors tag invalid")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="indexedColors tag invalid")
-      }
+    let tag = text[:end]
     match attr_value(tag, "rgb") {
       Some(value) => colors.push(normalize_rgb_hex(value))
       None => ()
@@ -84,7 +82,7 @@ fn parse_indexed_colors(xml : StringView) -> Array[String]? raise XlsxError {
 }
 
 ///|
-fn parse_mru_colors_xml(xml : StringView) -> String? raise XlsxError {
+fn parse_mru_colors_xml(xml : StringView) -> String? {
   let body = match extract_tag_body_from(xml, "mruColors") {
     Some(value) => value
     None => return None

@@ -2259,7 +2259,7 @@ pub fn Workbook::add_slicer(
     let needle = "<cacheField name=\""
     let mut pos = 0
     while pos < xml.length() {
-      let tail = xml[pos:] catch { _ => break }
+      let tail = xml[pos:]
       let rel = match tail.find(needle) {
         Some(v) => v
         None => break
@@ -2789,7 +2789,7 @@ pub fn Workbook::add_table(
         if !name.has_prefix("Table") {
           continue
         }
-        let suffix = name["Table".length():] catch { _ => "" }
+        let suffix = name["Table".length():]
         if suffix == "" {
           continue
         }
@@ -3039,7 +3039,7 @@ fn Workbook::next_pivot_table_name(self : Workbook) -> String {
       if !name.has_prefix("PivotTable") {
         continue
       }
-      let suffix = name["PivotTable".length():] catch { _ => "" }
+      let suffix = name["PivotTable".length():]
       if suffix == "" {
         continue
       }

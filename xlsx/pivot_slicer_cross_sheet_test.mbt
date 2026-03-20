@@ -6,7 +6,7 @@ fn count_substr(text : StringView, needle : StringView) -> Int {
     match rest.find(needle) {
       Some(idx) => {
         count = count + 1
-        rest = (rest[idx + needle.length():] catch { _ => "" }).to_string()
+        rest = rest[idx + needle.length():].to_string()
       }
       None => break
     }

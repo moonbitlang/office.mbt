@@ -11,7 +11,7 @@ fn wb_count_substr(text : StringView, needle : StringView) -> Int {
       Some(pos) => {
         count = count + 1
         let next = pos + target.length()
-        rest = (rest[next:] catch { _ => "" }).to_string()
+        rest = rest[next:].to_string()
       }
       None => break
     }

@@ -3,35 +3,25 @@
 /// tag text without the leading `<` and without the closing `>`.
 ///
 /// Example: `<a b="c">` -> `a b="c"`.
-fn tag_attributes_in(
-  xml : StringView,
-  tag_name : StringView,
-) -> String? raise XlsxError {
+fn tag_attributes_in(xml : StringView, tag_name : StringView) -> String? {
   let xml_str = xml.to_string()
   let needle = "<\{tag_name.to_string()}"
   let start = match xml_str.find(needle) {
     Some(pos) => pos
     None => return None
   }
-  let rest = xml_str[start + 1:] catch {
-      _ => raise InvalidXml(msg="tag attributes out of range")
-    }
+  let rest = xml_str[start + 1:]
   let end = match rest.find(">") {
     Some(pos) => pos
     None => return None
   }
-  let slice = rest[:end] catch {
-      _ => raise InvalidXml(msg="tag attributes invalid")
-    }
+  let slice = rest[:end]
   Some(slice.to_string())
 }
 
 ///|
 /// Extract the body text from the first `<tag_name ...>...</tag_name>` pair.
-fn extract_tag_body_from(
-  xml : StringView,
-  tag_name : StringView,
-) -> String? raise XlsxError {
+fn extract_tag_body_from(xml : StringView, tag_name : StringView) -> String? {
   let xml_str = xml.to_string()
   let open_tag = "<\{tag_name.to_string()}"
   let close_tag = "</\{tag_name.to_string()}>"
@@ -39,9 +29,7 @@ fn extract_tag_body_from(
     Some(pos) => pos
     None => return None
   }
-  let after_start = xml_str[start:] catch {
-      _ => raise InvalidXml(msg="tag slice invalid")
-    }
+  let after_start = xml_str[start:]
   let open_end_rel = match after_start.find(">") {
     Some(pos) => pos
     None => return None
@@ -51,9 +39,7 @@ fn extract_tag_body_from(
     Some(pos) => pos
     None => return None
   }
-  let body = xml_str[body_start:end] catch {
-      _ => raise InvalidXml(msg="tag body invalid")
-    }
+  let body = xml_str[body_start:end]
   Some(body.to_string())
 }
 
@@ -74,9 +60,7 @@ fn extract_tag_body(
     Some(pos) => pos
     None => return None
   }
-  let after_start = xml_str[start:] catch {
-      _ => raise InvalidXml(msg="tag slice invalid")
-    }
+  let after_start = xml_str[start:]
   let open_end_rel = match after_start.find(">") {
     Some(pos) => pos
     None => raise InvalidXml(msg="tag open not closed")
@@ -86,9 +70,7 @@ fn extract_tag_body(
     Some(pos) => pos
     None => raise InvalidXml(msg="tag close missing")
   }
-  let body = xml_str[body_start:end] catch {
-      _ => raise InvalidXml(msg="tag body invalid")
-    }
+  let body = xml_str[body_start:end]
   Some(body.to_string())
 }
 
@@ -98,7 +80,7 @@ fn replace_attr_value_in_open_tag(
   xml : StringView,
   attr_name : StringView,
   value : String,
-) -> String? raise XlsxError {
+) -> String? {
   let text = xml.to_string()
   let tag_start = match text.find("<") {
     Some(pos) => pos
@@ -108,34 +90,22 @@ fn replace_attr_value_in_open_tag(
     Some(pos) => pos
     None => return None
   }
-  let open_tag = text[tag_start:tag_end] catch {
-      _ => raise InvalidXml(msg="tag slice invalid")
-    }
+  let open_tag = text[tag_start:tag_end]
   let needle = "\{attr_name.to_string()}=\""
   let attr_pos = match open_tag.find(needle) {
     Some(pos) => pos
     None => return None
   }
   let value_start = tag_start + attr_pos + needle.length()
-  let rest = text[value_start:] catch {
-      _ => raise InvalidXml(msg="attribute slice invalid")
-    }
+  let rest = text[value_start:]
   let value_end_rel = match rest.find("\"") {
     Some(pos) => pos
     None => return None
   }
   let value_end = value_start + value_end_rel
   let sb = StringBuilder::new()
-  sb.write_view(
-    text[:value_start] catch {
-      _ => raise InvalidXml(msg="attribute start invalid")
-    },
-  )
+  sb.write_view(text[:value_start])
   sb.write_view(escape_xml_attr(value))
-  sb.write_view(
-    text[value_end:] catch {
-      _ => raise InvalidXml(msg="attribute end invalid")
-    },
-  )
+  sb.write_view(text[value_end:])
   Some(sb.to_string())
 }

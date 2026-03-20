@@ -104,12 +104,8 @@ fn split_sheet_range(value : StringView) -> (String, String) raise XlsxError {
       if pos <= 0 || pos + 1 >= text.length() {
         raise InvalidPivotTable(msg="range must be Sheet!A1:B2")
       }
-      let sheet = text[:pos] catch {
-          _ => raise InvalidPivotTable(msg="range sheet invalid")
-        }
-      let range_ref = text[pos + 1:] catch {
-          _ => raise InvalidPivotTable(msg="range ref invalid")
-        }
+      let sheet = text[:pos]
+      let range_ref = text[pos + 1:]
       (sheet.to_string(), range_ref.to_string())
     }
     None => raise InvalidPivotTable(msg="range must be Sheet!A1:B2")

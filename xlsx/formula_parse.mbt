@@ -63,7 +63,7 @@ fn FormulaParser::skip_spaces(self : FormulaParser) -> Unit {
 fn parse_formula_expr(formula : StringView) -> Expr raise XlsxError {
   let text = formula.to_string()
   let normalized = if text.has_prefix("=") {
-    (text[1:] catch { _ => "" }).to_string()
+    text[1:].to_string()
   } else {
     text
   }

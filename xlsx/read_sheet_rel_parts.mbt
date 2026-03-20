@@ -16,7 +16,7 @@ fn parse_comment_authors(xml : StringView) -> Array[String] raise XlsxError {
       Some(pos) => pos
       None => continue
     }
-    let name = unescape_xml_text(try! text[:end])
+    let name = unescape_xml_text(text[:end])
     authors.push(name)
   }
   authors
@@ -41,7 +41,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
       Some(pos) => pos
       None => raise InvalidXml(msg="comment tag not closed")
     }
-    let tag = try! text[:end]
+    let tag = text[:end]
     let ref_value = match attr_value(tag, "ref") {
       Some(value) => value
       None => raise InvalidXml(msg="comment ref missing")
@@ -57,7 +57,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
     } else {
       ""
     }
-    let rest = try! text[end + 1:]
+    let rest = text[end + 1:]
     let text_body = match extract_tag_body_from(rest, "text") {
       Some(value) => value
       None => ""
@@ -105,9 +105,7 @@ fn parse_table_part_ids(xml : StringView) -> Array[String] raise XlsxError {
           None => raise InvalidXml(msg="tablePart tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="tablePart tag invalid")
-      }
+    let tag = text[:end]
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
       None => raise InvalidXml(msg="tablePart id missing")
@@ -141,9 +139,7 @@ fn parse_pivot_table_part_ids(
           None => raise InvalidXml(msg="pivotTablePart tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="pivotTablePart tag invalid")
-      }
+    let tag = text[:end]
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
       None => raise InvalidXml(msg="pivotTablePart id missing")
@@ -174,9 +170,7 @@ fn parse_sheet_slicer_rel_ids(
           None => raise InvalidXml(msg="x14:slicer tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="x14:slicer tag invalid")
-      }
+    let tag = text[:end]
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
       None => raise InvalidXml(msg="x14:slicer id missing")
@@ -215,9 +209,7 @@ fn parse_slicer_part_entries(
           None => raise InvalidXml(msg="slicer tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="slicer tag invalid")
-      }
+    let tag = text[:end]
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="slicer name missing")

@@ -625,12 +625,12 @@ fn extract_xml_text_tag(body : StringView, tag : StringView) -> String? {
   let close = "</\{tag.to_string()}>"
   match body.find(open) {
     Some(start) => {
-      let rest = body[start + open.length():] catch { _ => return None }
+      let rest = body[start + open.length():]
       let end = match rest.find(close) {
         Some(v) => v
         None => return None
       }
-      let value = rest[:end] catch { _ => return None }
+      let value = rest[:end]
       Some(unescape_xml_text(value))
     }
     None => None
@@ -695,22 +695,22 @@ fn parse_vml_textbox(
     Some(v) => v
     None => return ("", empty)
   }
-  let after_textbox = shape[start:] catch { _ => return ("", empty) }
+  let after_textbox = shape[start:]
   let div_start = match after_textbox.find("<div") {
     Some(v) => v
     None => return ("", empty)
   }
-  let div_after = after_textbox[div_start:] catch { _ => return ("", empty) }
+  let div_after = after_textbox[div_start:]
   let div_open_end = match div_after.find(">") {
     Some(v) => v
     None => return ("", empty)
   }
-  let div_body = div_after[div_open_end + 1:] catch { _ => return ("", empty) }
+  let div_body = div_after[div_open_end + 1:]
   let div_close = match div_body.find("</div>") {
     Some(v) => v
     None => return ("", empty)
   }
-  let inner = div_body[:div_close] catch { _ => return ("", empty) }
+  let inner = div_body[:div_close]
   if !inner.contains("<font") {
     return (unescape_xml_text(inner), empty)
   }
@@ -718,25 +718,25 @@ fn parse_vml_textbox(
   let mut i = 0
   let runs : Array[RichTextRun] = []
   while true {
-    let rest = inner_s[i:] catch { _ => break }
+    let rest = inner_s[i:]
     let font_rel = match rest.find("<font") {
       Some(v) => v
       None => break
     }
     let font_start = i + font_rel
-    let font_open = inner_s[font_start:] catch { _ => break }
+    let font_open = inner_s[font_start:]
     let open_end_rel = match font_open.find(">") {
       Some(v) => v
       None => break
     }
-    let attrs = font_open[5:open_end_rel] catch { _ => "" }
+    let attrs = font_open[5:open_end_rel]
     let content_start = font_start + open_end_rel + 1
-    let after_open = inner_s[content_start:] catch { _ => break }
+    let after_open = inner_s[content_start:]
     let close_rel = match after_open.find("</font>") {
       Some(v) => v
       None => break
     }
-    let raw_inner = after_open[:close_rel] catch { _ => "" }
+    let raw_inner = after_open[:close_rel]
     let bold = raw_inner.contains("<b>")
     let italic = raw_inner.contains("<i>")
     let underline = if raw_inner.contains("<u class=\"font1\">") {
@@ -807,12 +807,12 @@ fn parse_form_controls_vml(
       Some(v) => v
       None => continue
     }
-    let cd = chunk[cd_start + "<x:ClientData".length():] catch { _ => continue }
+    let cd = chunk[cd_start + "<x:ClientData".length():]
     let end_tag = match cd.find(">") {
       Some(v) => v
       None => continue
     }
-    let tag = cd[:end_tag] catch { _ => continue }
+    let tag = cd[:end_tag]
     let object_type = match attr_value(tag, "ObjectType") {
       Some(v) => v
       None => continue
@@ -820,7 +820,7 @@ fn parse_form_controls_vml(
     if object_type == "Note" {
       continue
     }
-    let body = cd[end_tag + 1:] catch { _ => continue }
+    let body = cd[end_tag + 1:]
     let mut row0_opt : Int? = None
     let mut col0_opt : Int? = None
     match extract_xml_text_tag(body, "x:Row") {

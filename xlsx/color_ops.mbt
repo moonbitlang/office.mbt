@@ -21,7 +21,7 @@ let default_theme_colors : Array[String] = [
 fn normalize_rgb_hex(value : StringView) -> String {
   let text = value.to_string()
   if text.length() == 8 && text.has_prefix("FF") {
-    let view = text[2:] catch { _ => return text }
+    let view = text[2:]
     view.to_string()
   } else {
     text

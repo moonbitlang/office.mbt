@@ -225,9 +225,7 @@ fn parse_table_columns(xml : StringView) -> Array[String] raise XlsxError {
           None => raise InvalidXml(msg="tableColumn tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="tableColumn tag invalid")
-      }
+    let tag = text[:end]
     let name = match attr_value(tag, "name") {
       Some(value) => value
       None => raise InvalidTable(msg="table column name missing")
@@ -255,9 +253,7 @@ fn parse_table_style(
     Some(pos) => pos
     None => return ("TableStyleMedium9", false, false, true, false)
   }
-  let rest = text[start:] catch {
-      _ => return ("TableStyleMedium9", false, false, true, false)
-    }
+  let rest = text[start:]
   let end = match rest.find("/>") {
     Some(pos) => pos
     None =>
@@ -266,9 +262,7 @@ fn parse_table_style(
         None => return ("TableStyleMedium9", false, false, true, false)
       }
   }
-  let tag = rest[:end] catch {
-      _ => return ("TableStyleMedium9", false, false, true, false)
-    }
+  let tag = rest[:end]
   let style_name = match attr_value(tag, "name") {
     Some(value) => unescape_xml_text(value)
     None => "TableStyleMedium9"
@@ -301,14 +295,12 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
     Some(pos) => pos
     None => raise InvalidXml(msg="table tag missing")
   }
-  let rest = text[start:] catch {
-      _ => raise InvalidXml(msg="table tag invalid")
-    }
+  let rest = text[start:]
   let end = match rest.find(">") {
     Some(pos) => pos
     None => raise InvalidXml(msg="table tag not closed")
   }
-  let tag = rest[:end] catch { _ => raise InvalidXml(msg="table tag invalid") }
+  let tag = rest[:end]
   let id = match attr_value(tag, "id") {
     Some(value) =>
       @strconv.parse_int(value, base=10) catch {

@@ -337,9 +337,9 @@ fn svg_parse_length_px(text : StringView) -> Double? {
   if end == 0 {
     return None
   }
-  let number_text = raw[:end] catch { _ => return None }
+  let number_text = raw[:end]
   let value = @strconv.parse_double(number_text) catch { _ => return None }
-  let unit_raw = raw[end:] catch { _ => "" }
+  let unit_raw = raw[end:]
   let unit = unit_raw.trim()
   match unit {
     "" | "px" => Some(value)
@@ -357,24 +357,24 @@ fn svg_attr_value(tag : StringView, name : StringView) -> String? {
   let dq = key + "=\""
   match tag.find(dq) {
     Some(pos) => {
-      let rest = tag[pos + dq.length():] catch { _ => return None }
+      let rest = tag[pos + dq.length():]
       let end = match rest.find("\"") {
         Some(v) => v
         None => return None
       }
-      let value = rest[:end] catch { _ => return None }
+      let value = rest[:end]
       Some(value.to_string())
     }
     None => {
       let sq = key + "='"
       match tag.find(sq) {
         Some(pos) => {
-          let rest = tag[pos + sq.length():] catch { _ => return None }
+          let rest = tag[pos + sq.length():]
           let end = match rest.find("'") {
             Some(v) => v
             None => return None
           }
-          let value = rest[:end] catch { _ => return None }
+          let value = rest[:end]
           Some(value.to_string())
         }
         None => None
@@ -390,12 +390,12 @@ fn svg_dimensions(bytes : BytesView) -> (Int, Int)? {
     Some(v) => v
     None => return None
   }
-  let rest = text[start:] catch { _ => return None }
+  let rest = text[start:]
   let end = match rest.find(">") {
     Some(v) => v
     None => return None
   }
-  let tag = rest[:end] catch { _ => return None }
+  let tag = rest[:end]
   let width_attr = svg_attr_value(tag, "width")
   let height_attr = svg_attr_value(tag, "height")
   match (width_attr, height_attr) {

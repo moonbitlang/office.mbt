@@ -5,9 +5,7 @@ fn normalize_image_extension(extension : StringView) -> String raise XlsxError {
     if value.length() <= 1 {
       raise InvalidSheetBackground(msg="image extension missing")
     }
-    let view = value[1:] catch {
-        _ => raise InvalidSheetBackground(msg="invalid image extension")
-      }
+    let view = value[1:]
     view.to_string()
   } else {
     value

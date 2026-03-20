@@ -28,10 +28,10 @@ fn rel_attr_values_sparkline_slicer(
     let part = chunk.to_string()
     match part.find(marker) {
       Some(start) => {
-        let rest = part[start + marker.length():] catch { _ => "" }
+        let rest = part[start + marker.length():]
         match rest.find("\"") {
           Some(end) => {
-            let value = (rest[:end] catch { _ => "" }).to_string()
+            let value = rest[:end].to_string()
             values.push(value)
           }
           None => ()

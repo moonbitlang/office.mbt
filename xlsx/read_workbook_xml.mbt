@@ -21,7 +21,7 @@ fn parse_workbook_sheets(
       Some(pos) => pos
       None => raise InvalidXml(msg="sheet tag not closed")
     }
-    let tag = try! text[:end]
+    let tag = text[:end]
     let name = match attr_value(tag, "name") {
       Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="sheet name missing")
@@ -51,16 +51,12 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
   match xml_str.find(marker) {
     None => None
     Some(start) => {
-      let rest = xml_str[start + marker.length():] catch {
-          _ => raise InvalidXml(msg="workbookView slice invalid")
-        }
+      let rest = xml_str[start + marker.length():]
       let end = match rest.find(">") {
         Some(pos) => pos
         None => raise InvalidXml(msg="workbookView tag not closed")
       }
-      let tag = rest[:end] catch {
-          _ => raise InvalidXml(msg="workbookView tag invalid")
-        }
+      let tag = rest[:end]
       match attr_value(tag, "activeTab") {
         Some(value) =>
           Some(
@@ -83,16 +79,12 @@ fn parse_workbook_props(
   match xml_str.find(marker) {
     None => WorkbookPropsOptions::new()
     Some(start) => {
-      let rest = xml_str[start + marker.length():] catch {
-          _ => raise InvalidXml(msg="workbookPr slice invalid")
-        }
+      let rest = xml_str[start + marker.length():]
       let end = match rest.find(">") {
         Some(pos) => pos
         None => raise InvalidXml(msg="workbookPr tag not closed")
       }
-      let tag = rest[:end] catch {
-          _ => raise InvalidXml(msg="workbookPr tag invalid")
-        }
+      let tag = rest[:end]
       let props = WorkbookPropsOptions::new()
       match attr_value(tag, "date1904") {
         Some(value) => props.date_1904 = Some(parse_cell_bool(value))
@@ -118,16 +110,12 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
   match xml_str.find(marker) {
     None => CalcPropsOptions::new()
     Some(start) => {
-      let rest = xml_str[start + marker.length():] catch {
-          _ => raise InvalidXml(msg="calcPr slice invalid")
-        }
+      let rest = xml_str[start + marker.length():]
       let end = match rest.find(">") {
         Some(pos) => pos
         None => raise InvalidXml(msg="calcPr tag not closed")
       }
-      let tag = rest[:end] catch {
-          _ => raise InvalidXml(msg="calcPr tag invalid")
-        }
+      let tag = rest[:end]
       let props = CalcPropsOptions::new()
       match attr_value(tag, "calcId") {
         Some(value) =>
@@ -223,16 +211,12 @@ fn parse_workbook_protection(
   match xml_str.find(marker) {
     None => None
     Some(start) => {
-      let rest = xml_str[start + marker.length():] catch {
-          _ => raise InvalidXml(msg="workbookProtection slice invalid")
-        }
+      let rest = xml_str[start + marker.length():]
       let end = match rest.find(">") {
         Some(pos) => pos
         None => raise InvalidXml(msg="workbookProtection tag not closed")
       }
-      let tag = rest[:end] catch {
-          _ => raise InvalidXml(msg="workbookProtection tag invalid")
-        }
+      let tag = rest[:end]
       let protection : WorkbookProtection = {
         lock_structure: false,
         lock_windows: false,

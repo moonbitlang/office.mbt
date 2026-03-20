@@ -75,9 +75,7 @@ fn parse_drawing_anchors(
       Some(pos) => pos + close_tag.length()
       None => raise InvalidXml(msg="oneCellAnchor close missing")
     }
-    let slice = text[:end] catch {
-        _ => raise InvalidXml(msg="oneCellAnchor body invalid")
-      }
+    let slice = text[:end]
     anchors.push(("<xdr:oneCellAnchor\{slice.to_string()}", OneCell))
   }
   let mut first_two = true
@@ -92,9 +90,7 @@ fn parse_drawing_anchors(
       Some(pos) => pos + close_tag.length()
       None => raise InvalidXml(msg="twoCellAnchor close missing")
     }
-    let slice = text[:end] catch {
-        _ => raise InvalidXml(msg="twoCellAnchor body invalid")
-      }
+    let slice = text[:end]
     let full = "<xdr:twoCellAnchor\{slice.to_string()}"
     let positioning = match tag_attributes_in(full[:], "xdr:twoCellAnchor") {
       Some(tag) =>
@@ -267,9 +263,7 @@ fn parse_drawing_images(
     let ext = match media_path.to_string().rev_find(".") {
       Some(pos) =>
         if pos + 1 < media_path.length() {
-          media_path[pos + 1:] catch {
-            _ => ""
-          }
+          media_path[pos + 1:]
         } else {
           ""
         }
@@ -650,7 +644,7 @@ fn parse_drawing_shapes(
             Some(pos) => pos
             None => continue
           }
-          let text = part[:end] catch { _ => "" }
+          let text = part[:end]
           paragraph.push({ text: unescape_xml_text(text), font: None })
         }
       }

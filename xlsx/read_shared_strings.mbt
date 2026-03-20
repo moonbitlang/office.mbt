@@ -24,9 +24,9 @@ fn parse_text_nodes(xml : StringView) -> String {
       Some(pos) => pos + 1
       None => continue
     }
-    let rest = try! text[start:]
+    let rest = text[start:]
     match rest.find("</t>") {
-      Some(end) => sb.write_view(unescape_xml_text(try! rest[:end]))
+      Some(end) => sb.write_view(unescape_xml_text(rest[:end]))
       None => ()
     }
   }
@@ -323,7 +323,7 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
   let xml_str = xml.to_string()
   let mut index = 0
   while index < xml_str.length() {
-    let rest = xml_str[index:] catch { _ => break }
+    let rest = xml_str[index:]
     let rel = match rest.find("<r") {
       Some(pos) => pos
       None => break
@@ -342,25 +342,19 @@ fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError 
       index = after
       continue
     }
-    let tail = xml_str[after:] catch {
-        _ => raise InvalidXml(msg="rich text tag invalid")
-      }
+    let tail = xml_str[after:]
     let open_end_rel = match tail.find(">") {
       Some(pos) => pos
       None => break
     }
     let body_start = after + open_end_rel + 1
-    let body_rest = xml_str[body_start:] catch {
-        _ => raise InvalidXml(msg="rich text body invalid")
-      }
+    let body_rest = xml_str[body_start:]
     let close_rel = match body_rest.find("</r>") {
       Some(pos) => pos
       None => break
     }
     let body_end = body_start + close_rel
-    let body = xml_str[body_start:body_end] catch {
-        _ => raise InvalidXml(msg="rich text body invalid")
-      }
+    let body = xml_str[body_start:body_end]
     let run_text = parse_text_nodes(body)
     let font = parse_rich_text_font(body)
     runs.push({ text: run_text, font })
@@ -383,12 +377,12 @@ fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
       Some(pos) => pos + 1
       None => continue
     }
-    let rest = try! text[start:]
+    let rest = text[start:]
     let end = match rest.find("</si>") {
       Some(pos) => pos
       None => continue
     }
-    let body = try! rest[:end]
+    let body = rest[:end]
     let runs = if body.contains("<r") {
       let parsed = parse_rich_text_runs(body) catch { _ => [] }
       if parsed.length() > 0 {

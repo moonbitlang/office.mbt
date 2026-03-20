@@ -32,7 +32,7 @@ fn parse_worksheet(
       Some(pos) => pos
       None => raise InvalidXml(msg="cell tag not closed")
     }
-    let tag = try! text[:end]
+    let tag = text[:end]
     let ref_value = match attr_value(tag, "r") {
       Some(value) => value
       None => raise InvalidXml(msg="cell reference missing")
@@ -48,7 +48,7 @@ fn parse_worksheet(
       raise InvalidStyleId(index=style_id)
     }
     let cell_type = attr_value(tag, "t")
-    let rest = try! text[end + 1:]
+    let rest = text[end + 1:]
     let formula_start = match rest.find("<f>") {
       Some(pos) => Some(pos)
       None =>
@@ -64,12 +64,12 @@ fn parse_worksheet(
     let (formula, formula_type, formula_ref, formula_shared_index) = match
       formula_start {
       Some(pos) => {
-        let f_rest = try! rest[pos:]
+        let f_rest = rest[pos:]
         let open_end = match f_rest.find(">") {
           Some(value) => value
           None => raise InvalidXml(msg="formula tag not closed")
         }
-        let open_tag = try! f_rest[:open_end]
+        let open_tag = f_rest[:open_end]
         let open_chars = open_tag.to_array()
         let mut last = open_chars.length() - 1
         while last >= 0 && is_attr_space(open_chars[last]) {
@@ -100,12 +100,12 @@ fn parse_worksheet(
         if is_self_closing {
           (Some(""), kind, ref_value, si_value)
         } else {
-          let after_open = try! f_rest[open_end + 1:]
+          let after_open = f_rest[open_end + 1:]
           let close_end = match after_open.find("</f>") {
             Some(value) => value
             None => raise InvalidXml(msg="formula not closed")
           }
-          let content = unescape_xml_text(try! after_open[:close_end])
+          let content = unescape_xml_text(after_open[:close_end])
           (Some(content), kind, ref_value, si_value)
         }
       }
@@ -113,12 +113,12 @@ fn parse_worksheet(
     }
     let raw_value_opt = match rest.find("<v>") {
       Some(pos) => {
-        let v_rest = try! rest[pos + 3:]
+        let v_rest = rest[pos + 3:]
         let v_end = match v_rest.find("</v>") {
           Some(end) => end
           None => raise InvalidXml(msg="cell value not closed")
         }
-        Some(try! v_rest[:v_end].to_string())
+        Some(v_rest[:v_end].to_string())
       }
       None => None
     }

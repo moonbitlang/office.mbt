@@ -135,9 +135,7 @@ fn parse_ignored_errors(
           None => raise InvalidXml(msg="ignoredError tag not closed")
         }
     }
-    let tag = text[:end] catch {
-        _ => raise InvalidXml(msg="ignoredError tag invalid")
-      }
+    let tag = text[:end]
     let sqref = match attr_value(tag, "sqref") {
       Some(value) => unescape_xml_text(value)
       None => raise InvalidXml(msg="ignoredError sqref missing")

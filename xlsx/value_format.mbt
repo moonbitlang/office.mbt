@@ -224,7 +224,7 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
   while i < len {
     let c = section[i]
     if escape_next {
-      sb.write_view(try! section[i:i + 1])
+      sb.write_view(section[i:i + 1])
       escape_next = false
       i = i + 1
       continue
@@ -252,7 +252,7 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
             j = j + 1
           }
           if j < len {
-            let content = try! section[i + 1:j]
+            let content = section[i + 1:j]
             let lower = content.to_lower().to_string()
             if lower == "h" ||
               lower == "hh" ||
@@ -264,11 +264,11 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
               sb.write_view(lower)
               sb.write_char(']')
             } else if content.has_prefix("$") {
-              let trimmed = try! content[1:]
+              let trimmed = content[1:]
               match trimmed.rev_find("-") {
                 Some(pos) => {
-                  let prefix = (try! trimmed[:pos]).to_string()
-                  let tag = (try! trimmed[pos + 1:]).to_string()
+                  let prefix = trimmed[:pos].to_string()
+                  let tag = trimmed[pos + 1:].to_string()
                   if prefix != "" {
                     currency_prefix = prefix
                   }
@@ -284,7 +284,7 @@ fn parse_section_metadata(section : String) -> (String, String?, String) {
         } else {
           sb.write_char('[')
         }
-      _ => sb.write_view(try! section[i:i + 1])
+      _ => sb.write_view(section[i:i + 1])
     }
     i = i + 1
   }
@@ -386,7 +386,7 @@ fn has_date_tokens(code : StringView) -> Bool {
             j = j + 1
           }
           if j < len {
-            let content = try! lower[i + 1:j]
+            let content = lower[i + 1:j]
             if content == "h" ||
               content == "hh" ||
               content == "m" ||
@@ -538,14 +538,14 @@ fn parse_number_pattern(
   }
   let (prefix, suffix) = match (first_placeholder, last_placeholder) {
     (Some(start), Some(end)) => {
-      let prefix = render_literal_segment((try! pattern[:start]).to_string())
-      let suffix = render_literal_segment((try! pattern[end + 1:]).to_string())
+      let prefix = render_literal_segment(pattern[:start].to_string())
+      let suffix = render_literal_segment(pattern[end + 1:].to_string())
       (prefix, suffix)
     }
     _ => (render_literal_segment(pattern), "")
   }
   let placeholder_body = match (first_placeholder, last_placeholder) {
-    (Some(start), Some(end)) => (try! pattern[start:end + 1]).to_string()
+    (Some(start), Some(end)) => pattern[start:end + 1].to_string()
     _ => ""
   }
   let mut min_int_digits = 0
@@ -558,8 +558,8 @@ fn parse_number_pattern(
   has_fraction = slash_pos is Some(_)
   match slash_pos {
     Some(pos) => {
-      let left = (try! placeholder_body[:pos]).to_string()
-      let right = (try! placeholder_body[pos + 1:]).to_string()
+      let left = placeholder_body[:pos].to_string()
+      let right = placeholder_body[pos + 1:].to_string()
       let mut j = left.length() - 1
       while j >= 0 {
         let ch = left[j]
@@ -570,7 +570,7 @@ fn parse_number_pattern(
           break
         }
       }
-      let int_part = if j >= 0 { (try! left[:j + 1]).to_string() } else { "" }
+      let int_part = if j >= 0 { left[:j + 1].to_string() } else { "" }
       use_group = int_part.contains(",")
       for c in int_part {
         if c == '0' {
@@ -593,8 +593,8 @@ fn parse_number_pattern(
       let (int_part, dec_part) = match dot_pos {
         Some(pos) =>
           (
-            (try! placeholder_body[:pos]).to_string(),
-            (try! placeholder_body[pos + 1:]).to_string(),
+            placeholder_body[:pos].to_string(),
+            placeholder_body[pos + 1:].to_string(),
           )
         None => (placeholder_body, "")
       }
@@ -880,8 +880,8 @@ fn trim_optional_decimals(text : String, required_decimals : Int) -> String {
   match dot {
     None => text
     Some(pos) => {
-      let int_part = (try! text[:pos]).to_string()
-      let frac_part = (try! text[pos + 1:]).to_string()
+      let int_part = text[:pos].to_string()
+      let frac_part = text[pos + 1:].to_string()
       let mut end = frac_part.length()
       while end > required_decimals {
         if frac_part[end - 1] == '0' {
@@ -893,7 +893,7 @@ fn trim_optional_decimals(text : String, required_decimals : Int) -> String {
       if end == 0 && required_decimals == 0 {
         int_part
       } else {
-        int_part + "." + (try! frac_part[:end]).to_string()
+        int_part + "." + frac_part[:end].to_string()
       }
     }
   }
@@ -1175,7 +1175,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
   let mut i = 0
   while i < len {
     if escape_next {
-      sb.write_view(try! pattern[i:i + 1])
+      sb.write_view(pattern[i:i + 1])
       has_literal = true
       escape_next = false
       i = i + 1
@@ -1192,7 +1192,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
             j = j + 1
           }
           if j < len {
-            let content = try! lower[i + 1:j]
+            let content = lower[i + 1:j]
             if has_literal {
               tokens.push(Literal(sb.to_string()))
               sb = StringBuilder::new()
@@ -1213,7 +1213,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
       _ =>
         if !in_quote {
           let maybe_ampm = if i + 4 < len {
-            (try! lower[i:i + 5]).to_string()
+            lower[i:i + 5].to_string()
           } else {
             ""
           }
@@ -1223,14 +1223,14 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
               sb = StringBuilder::new()
               has_literal = false
             }
-            let raw = (try! pattern[i:i + 5]).to_string()
+            let raw = pattern[i:i + 5].to_string()
             let upper = raw.contains("A") || raw.contains("P")
             tokens.push(AmPm(upper))
             i = i + 5
             continue
           }
           let maybe_ap = if i + 2 < len {
-            (try! lower[i:i + 3]).to_string()
+            lower[i:i + 3].to_string()
           } else {
             ""
           }
@@ -1240,7 +1240,7 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
               sb = StringBuilder::new()
               has_literal = false
             }
-            let raw = (try! pattern[i:i + 3]).to_string()
+            let raw = pattern[i:i + 3].to_string()
             let upper = raw.contains("A") || raw.contains("P")
             tokens.push(Ap(upper))
             i = i + 3
@@ -1272,16 +1272,16 @@ fn tokenize_date_pattern(pattern : String) -> Array[DateToken] {
               'd' => Day(count)
               'h' => Hour(count)
               's' => Second(count)
-              _ => Literal((try! pattern[i:j]).to_string())
+              _ => Literal(pattern[i:j].to_string())
             }
             tokens.push(kind)
             i = j
             continue
           }
-          sb.write_view(try! pattern[i:i + 1])
+          sb.write_view(pattern[i:i + 1])
           has_literal = true
         } else {
-          sb.write_view(try! pattern[i:i + 1])
+          sb.write_view(pattern[i:i + 1])
           has_literal = true
         }
     }
@@ -1481,7 +1481,7 @@ fn month_initial_name(month : Int) -> String {
   if name.length() == 0 {
     ""
   } else {
-    (try! name[:1]).to_string()
+    name[:1].to_string()
   }
 }
 

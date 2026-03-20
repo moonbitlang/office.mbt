@@ -16,9 +16,7 @@ pub struct SparklineColor {
 fn rgb(value : StringView) -> SparklineColor raise XlsxError {
   let raw = value.to_string().to_upper()
   let hex = if raw.has_prefix("#") {
-    let rest = raw[1:] catch {
-        _ => raise InvalidSparkline(msg="sparkline color invalid")
-      }
+    let rest = raw[1:]
     rest.to_string()
   } else {
     raw
@@ -943,12 +941,12 @@ fn find_sparkline_color_in_body(
     Some(pos) => pos
     None => return None
   }
-  let rest = text[start:] catch { _ => return None }
+  let rest = text[start:]
   let end = match rest.find(">") {
     Some(pos) => pos
     None => return None
   }
-  let tag = rest[:end] catch { _ => return None }
+  let tag = rest[:end]
   parse_sparkline_color(tag)
 }
 
@@ -962,9 +960,7 @@ fn parse_sparkline_groups(
     let text = range_ref.to_string()
     match text.find("!") {
       Some(pos) => {
-        let range_part = text[pos + 1:] catch {
-            _ => raise InvalidCellRef(value=text)
-          }
+        let range_part = text[pos + 1:]
         normalize_range_ref(range_part)
       }
       None => normalize_range_ref(text)
@@ -986,16 +982,12 @@ fn parse_sparkline_groups(
       Some(pos) => pos
       None => raise InvalidXml(msg="sparklineGroup tag not closed")
     }
-    let tag = text[:tag_end] catch {
-        _ => raise InvalidXml(msg="sparklineGroup tag invalid")
-      }
+    let tag = text[:tag_end]
     let group_end = match text.find("</x14:sparklineGroup>") {
       Some(pos) => pos
       None => raise InvalidXml(msg="sparklineGroup end missing")
     }
-    let body = text[tag_end + 1:group_end] catch {
-        _ => raise InvalidXml(msg="sparklineGroup body invalid")
-      }
+    let body = text[tag_end + 1:group_end]
     let kind = match attr_value(tag, "type") {
       Some(value) => sparkline_type_from_string(value)
       None => Line
@@ -1108,32 +1100,26 @@ fn parse_sparkline_groups(
         Some(pos) => pos
         None => raise InvalidXml(msg="sparkline end missing")
       }
-      let spark_body = spark_text[:spark_end] catch {
-          _ => raise InvalidXml(msg="sparkline body invalid")
-        }
+      let spark_body = spark_text[:spark_end]
       let range = match spark_body.find("<xm:f>") {
         Some(pos) => {
-          let rest = spark_body[pos + 6:] catch {
-              _ => raise InvalidXml(msg="sparkline range invalid")
-            }
+          let rest = spark_body[pos + 6:]
           let end = match rest.find("</xm:f>") {
             Some(value) => value
             None => raise InvalidXml(msg="sparkline range end missing")
           }
-          unescape_xml_text(try! rest[:end])
+          unescape_xml_text(rest[:end])
         }
         None => raise InvalidXml(msg="sparkline range missing")
       }
       let location = match spark_body.find("<xm:sqref>") {
         Some(pos) => {
-          let rest = spark_body[pos + 10:] catch {
-              _ => raise InvalidXml(msg="sparkline location invalid")
-            }
+          let rest = spark_body[pos + 10:]
           let end = match rest.find("</xm:sqref>") {
             Some(value) => value
             None => raise InvalidXml(msg="sparkline location end missing")
           }
-          unescape_xml_text(try! rest[:end])
+          unescape_xml_text(rest[:end])
         }
         None => raise InvalidXml(msg="sparkline location missing")
       }
@@ -1226,12 +1212,8 @@ fn build_sparklines(
     let text = range_ref.to_string()
     match text.find("!") {
       Some(pos) => {
-        let sheet_prefix = text[:pos + 1] catch {
-            _ => raise InvalidCellRef(value=text)
-          }
-        let range_part = text[pos + 1:] catch {
-            _ => raise InvalidCellRef(value=text)
-          }
+        let sheet_prefix = text[:pos + 1]
+        let range_part = text[pos + 1:]
         let normalized = normalize_range_ref(range_part)
         sheet_prefix.to_string() + normalized
       }

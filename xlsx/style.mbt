@@ -1373,7 +1373,7 @@ fn write_styles_xml(
   fn fill_rgb(color : String, transparency : Int) -> String {
     let normalized = color.replace_all(old="#", new="")
     let base = if normalized.length() == 8 {
-      (normalized[2:] catch { _ => normalized }).to_string()
+      normalized[2:].to_string()
     } else {
       normalized
     }

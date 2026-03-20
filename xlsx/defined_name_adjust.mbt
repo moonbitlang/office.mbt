@@ -192,8 +192,8 @@ fn adjust_ref_after_row_insert(
   let text = ref_text.to_string()
   match text.find(":") {
     Some(pos) => {
-      let left = text[:pos] catch { _ => return Some(text) }
-      let right = text[pos + 1:] catch { _ => return Some(text) }
+      let left = text[:pos]
+      let right = text[pos + 1:]
       match (parse_cell_ref(left), parse_cell_ref(right)) {
         (Some((r1, c1, ar1, ac1)), Some((r2, c2, ar2, ac2))) => {
           let (new_min, new_max) = adjust_range_rows_after_insert(
@@ -244,8 +244,8 @@ fn adjust_ref_after_row_remove(
   let text = ref_text.to_string()
   match text.find(":") {
     Some(pos) => {
-      let left = text[:pos] catch { _ => return Some(text) }
-      let right = text[pos + 1:] catch { _ => return Some(text) }
+      let left = text[:pos]
+      let right = text[pos + 1:]
       match (parse_cell_ref(left), parse_cell_ref(right)) {
         (Some((r1, c1, ar1, ac1)), Some((r2, c2, ar2, ac2))) =>
           match adjust_range_rows_after_remove(r1, r2, row, count) {
@@ -300,8 +300,8 @@ fn adjust_ref_after_col_insert(
   let text = ref_text.to_string()
   match text.find(":") {
     Some(pos) => {
-      let left = text[:pos] catch { _ => return Some(text) }
-      let right = text[pos + 1:] catch { _ => return Some(text) }
+      let left = text[:pos]
+      let right = text[pos + 1:]
       match (parse_cell_ref(left), parse_cell_ref(right)) {
         (Some((r1, c1, ar1, ac1)), Some((r2, c2, ar2, ac2))) => {
           let (new_min, new_max) = adjust_range_cols_after_insert(
@@ -352,8 +352,8 @@ fn adjust_ref_after_col_remove(
   let text = ref_text.to_string()
   match text.find(":") {
     Some(pos) => {
-      let left = text[:pos] catch { _ => return Some(text) }
-      let right = text[pos + 1:] catch { _ => return Some(text) }
+      let left = text[:pos]
+      let right = text[pos + 1:]
       match (parse_cell_ref(left), parse_cell_ref(right)) {
         (Some((r1, c1, ar1, ac1)), Some((r2, c2, ar2, ac2))) =>
           match adjust_range_cols_after_remove(c1, c2, col, count) {

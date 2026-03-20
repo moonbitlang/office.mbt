@@ -20,7 +20,7 @@ fn parse_header_footer_shape_id(
     _ => return None
   }
   let suffix = if id_norm.length() > 2 {
-    let view = id_norm[2:] catch { _ => return None }
+    let view = id_norm[2:]
     view.to_string()
   } else {
     ""
@@ -41,12 +41,12 @@ fn parse_style_value(style : StringView, key : StringView) -> String? {
     Some(pos) => pos + needle.length()
     None => return None
   }
-  let rest = style_str[start:] catch { _ => return None }
+  let rest = style_str[start:]
   let end = match rest.find(";") {
     Some(pos) => pos
     None => rest.length()
   }
-  let slice = rest[:end] catch { _ => return None }
+  let slice = rest[:end]
   let trimmed = slice.to_string().trim()
   let value = trimmed.to_string()
   if value == "" {
@@ -67,7 +67,7 @@ fn extension_from_path(path : StringView) -> String? {
   if start >= path_str.length() {
     return None
   }
-  let slice = path_str[start:] catch { _ => return None }
+  let slice = path_str[start:]
   let value = slice.to_string().to_lower()
   if value == "" {
     None

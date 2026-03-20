@@ -240,16 +240,12 @@ fn tag_attributes(
   match xml_str.find(needle) {
     None => None
     Some(start) => {
-      let rest = xml_str[start + needle.length():] catch {
-          _ => raise InvalidEncryptionInfo(msg="invalid tag slice")
-        }
+      let rest = xml_str[start + needle.length():]
       let end = match rest.find(">") {
         Some(pos) => pos
         None => raise InvalidEncryptionInfo(msg="tag not closed")
       }
-      let tag = rest[:end] catch {
-          _ => raise InvalidEncryptionInfo(msg="invalid tag body")
-        }
+      let tag = rest[:end]
       Some(tag.to_string())
     }
   }
