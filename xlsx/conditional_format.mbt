@@ -377,7 +377,7 @@ fn palette_color(color : StringView) -> String {
     return "FF000000"
   }
   let text = color.to_string()
-  let trimmed = if text.has_prefix("#") { text[1:] } else { text }
+  let trimmed = text.strip_prefix("#").unwrap_or(text)
   "FF\{trimmed.to_upper()}"
 }
 
@@ -943,11 +943,9 @@ fn extract_tag_bodies(
 ///|
 fn color_text_from_rgb(rgb : StringView) -> String {
   let text = rgb.to_string()
-  if text.has_prefix("FF") && text.length() == 8 {
-    let rest = text[2:]
-    "#\{rest}"
-  } else {
-    "#\{text}"
+  match text.strip_prefix("FF") {
+    Some(rest) if text.length() == 8 => "#\{rest}"
+    _ => "#\{text}"
   }
 }
 

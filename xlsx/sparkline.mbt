@@ -15,11 +15,9 @@ pub struct SparklineColor {
 ///|
 fn rgb(value : StringView) -> SparklineColor raise XlsxError {
   let raw = value.to_string().to_upper()
-  let hex = if raw.has_prefix("#") {
-    let rest = raw[1:]
-    rest.to_string()
-  } else {
-    raw
+  let hex = match raw.strip_prefix("#") {
+    Some(rest) => rest.to_string()
+    None => raw
   }
   let normalized = match hex.length() {
     6 => "FF" + hex

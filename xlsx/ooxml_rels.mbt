@@ -31,24 +31,15 @@ fn rels_path_for(path : StringView, folder : StringView) -> String {
 ///|
 fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
   let path_str = path.to_string()
-  let prefix_str = prefix.to_string()
-  if !path_str.has_prefix(prefix_str) || !path_str.has_suffix(".xml") {
-    return 0
+  let num = match path_str.strip_prefix(prefix) {
+    Some(rest) =>
+      match rest.to_string().strip_suffix(".xml") {
+        Some(n) => n
+        None => return 0
+      }
+    None => return 0
   }
-  let start = prefix_str.length()
-  let end = path_str.length() - 4
-  if start > end {
-    return 0
-  }
-  let sb = StringBuilder::new()
-  for i, ch in path_str {
-    if i >= start && i < end {
-      sb.write_view(ch.to_string())
-    }
-  }
-  @strconv.parse_int(sb.to_string(), base=10) catch {
-    _ => 0
-  }
+  @strconv.parse_int(num.to_string(), base=10) catch { _ => 0 }
 }
 
 ///|

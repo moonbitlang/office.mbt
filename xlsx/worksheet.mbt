@@ -1013,24 +1013,10 @@ pub fn Worksheet::delete_pivot_table(
 
 ///|
 fn normalize_extension(extension : StringView) -> String raise XlsxError {
-  fn trim_leading_dot(value : StringView) -> String {
-    let parts = Array::from_iter(value.split("."))
-    let rest : Array[String] = []
-    for i, part in parts {
-      if i > 0 {
-        rest.push(part.to_string())
-      }
-    }
-    rest.join(".")
-  }
   let value = extension.to_string()
-  let trimmed = if value.has_prefix(".") {
-    if value.length() <= 1 {
-      raise UnsupportedFeature(msg="image extension missing")
-    }
-    trim_leading_dot(value)
-  } else {
-    value
+  let trimmed = match value.strip_prefix(".") {
+    Some(rest) => rest.to_string()
+    None => value
   }
   if trimmed == "" {
     raise UnsupportedFeature(msg="image extension missing")

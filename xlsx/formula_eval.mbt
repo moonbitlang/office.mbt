@@ -5031,7 +5031,7 @@ fn parse_complex_text(text : StringView) -> Result[Complex, FormulaValue] {
     return Err(Error(formula_error_num))
   }
   if normalized.has_suffix("i") {
-    let body = normalized.unsafe_substring(start=0, end=normalized.length() - 1)
+    let body = normalized.strip_suffix("i").unwrap().to_string()
     let (real_text, imag_text) = split_complex_body(body)
     match (parse_double_opt(real_text), parse_double_opt(imag_text)) {
       (Some(real), Some(imag)) => Ok(complex_new(real, imag))
@@ -5213,15 +5213,13 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
 
 ///|
 fn strip_hex_prefix(text : String) -> String {
-  if text.length() > 2 && (text.has_prefix("0x") || text.has_prefix("0X")) {
-    let chars = text.to_array()
-    let sb = StringBuilder::new()
-    for i in 2..<chars.length() {
-      sb.write_char(chars[i])
-    }
-    sb.to_string()
-  } else {
-    text
+  match text.strip_prefix("0x") {
+    Some(rest) => rest.to_string()
+    None =>
+      match text.strip_prefix("0X") {
+        Some(rest) => rest.to_string()
+        None => text
+      }
   }
 }
 

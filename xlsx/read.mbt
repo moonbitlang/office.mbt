@@ -246,12 +246,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       match attr_value(tag, "rgb") {
         Some(value) => {
           let rgb = unescape_xml_text(value)
-          let normalized = if rgb.length() == 8 && rgb.has_prefix("FF") {
-            rgb[2:].to_string()
-          } else {
-            rgb.to_string()
-          }
-          font.color = Some(normalized)
+          font.color = Some(normalize_rgb_hex(rgb))
         }
         None => ()
       }
@@ -684,12 +679,13 @@ fn parse_border_entry(
     }
     match color {
       Some(rgb) => {
-        let normalized = if rgb.length() == 8 && rgb.has_prefix("FF") {
-          rgb[2:].to_string()
-        } else {
-          rgb.to_string()
-        }
-        Some(Border::with_values(side.to_string(), color=normalized, style~))
+        Some(
+          Border::with_values(
+            side.to_string(),
+            color=normalize_rgb_hex(rgb),
+            style~,
+          ),
+        )
       }
       None =>
         if style > 0 {
@@ -1294,11 +1290,9 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
 ///|
 fn color_text_from_rgb_x14(rgb : StringView) -> String {
   let text = rgb.to_string()
-  if text.has_prefix("FF") && text.length() == 8 {
-    let rest = text[2:]
-    "#\{rest}"
-  } else {
-    "#\{text}"
+  match text.strip_prefix("FF") {
+    Some(rest) if text.length() == 8 => "#\{rest}"
+    _ => "#\{text}"
   }
 }
 
