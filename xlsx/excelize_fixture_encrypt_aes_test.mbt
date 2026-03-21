@@ -1,5 +1,5 @@
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "excelize fixture encryptAES.xlsx opens with password" {
   let encrypted_bytes = @async/fs.read_file(
     ".repos/excelize/test/encryptAES.xlsx",
@@ -31,7 +31,7 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "excelize fixture encryptAES.xlsx wrong password errors" {
   let result : Result[Workbook, Error] = try? open_file(
     ".repos/excelize/test/encryptAES.xlsx",

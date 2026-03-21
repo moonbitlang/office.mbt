@@ -67,7 +67,7 @@ test "rows/cols/get_rows/get_cols validate sheet name" {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "excelize Book1 iterators match get_rows/get_cols" {
   let path = ".repos/excelize/test/Book1.xlsx"
   let workbook = open_file(path)

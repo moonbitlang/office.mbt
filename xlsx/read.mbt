@@ -678,7 +678,7 @@ fn parse_border_entry(
       None => ()
     }
     match color {
-      Some(rgb) => {
+      Some(rgb) =>
         Some(
           Border::with_values(
             side.to_string(),
@@ -686,7 +686,6 @@ fn parse_border_entry(
             style~,
           ),
         )
-      }
       None =>
         if style > 0 {
           Some(Border::with_values(side.to_string(), style~))

@@ -1,5 +1,5 @@
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

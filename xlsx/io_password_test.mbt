@@ -1,5 +1,5 @@
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "open file and reader with password" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -24,7 +24,7 @@ async test "open file and reader with password" {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "options password used for write_to_buffer and save_as" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

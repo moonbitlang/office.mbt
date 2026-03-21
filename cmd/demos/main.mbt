@@ -41,7 +41,7 @@ fn usage() -> Unit {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async fn ensure_dir(path : String) -> Unit {
   @async/fs.mkdir(path, permission=0o755, recursive=true) catch {
     _ => ()
@@ -49,7 +49,7 @@ async fn ensure_dir(path : String) -> Unit {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async fn write_out(out_dir : String, name : String, bytes : Bytes) -> Unit {
   ensure_dir(out_dir)
   let path = "\{out_dir}/\{name}"
@@ -63,13 +63,13 @@ async fn write_out(out_dir : String, name : String, bytes : Bytes) -> Unit {
 }
 
 ///|
-#cfg(target = "js")
+#cfg(target="js")
 fn write_out(_out_dir : String, name : String, bytes : Bytes) -> Unit {
   println("generated \{name} (\{bytes.length()} bytes)")
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async fn cleanup_stale_resave_files(out_dir : String) -> Unit {
   let names = @async/fs.readdir(out_dir) catch { _ => [] }
   for name in names {
@@ -84,7 +84,7 @@ async fn cleanup_stale_resave_files(out_dir : String) -> Unit {
 }
 
 ///|
-#cfg(target = "js")
+#cfg(target="js")
 fn cleanup_stale_resave_files(_out_dir : String) -> Unit {
   ()
 }

@@ -39,7 +39,9 @@ fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
       }
     None => return 0
   }
-  @strconv.parse_int(num.to_string(), base=10) catch { _ => 0 }
+  @strconv.parse_int(num.to_string(), base=10) catch {
+    _ => 0
+  }
 }
 
 ///|

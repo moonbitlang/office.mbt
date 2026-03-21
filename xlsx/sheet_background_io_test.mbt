@@ -1,5 +1,5 @@
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "set sheet background from file" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

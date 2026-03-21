@@ -1,5 +1,5 @@
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "xlsx writer generates OpenXML-valid package" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

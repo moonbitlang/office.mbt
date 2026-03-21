@@ -107,7 +107,7 @@ async test "mbtexcel read_zip_reader wrapper with transcoder branch" {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "mbtexcel open_file wrapper" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
@@ -126,7 +126,7 @@ async test "mbtexcel open_file wrapper" {
 }
 
 ///|
-#cfg(target = "native")
+#cfg(target="native")
 async test "mbtexcel open_file wrapper with transcoder branch" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))

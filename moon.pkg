@@ -3,7 +3,7 @@ import {
   "moonbitlang/x/time",
   "moonbitlang/async/io" @async/io,
 }
-supported_targets = "native+js"
+
 import {
   // TODO(upstream): test deps should not impose on main deps  
   // test deps 
@@ -15,3 +15,5 @@ import {
   "moonbitlang/core/env",
   "bobzhang/mbtexcel/zip",
 } for "test"
+
+supported_targets = "native+js"
