@@ -739,6 +739,7 @@ test "workbook: calc_cell_value raw/options/rc/style branches" {
 }
 
 ///|
+#cfg(target = "native")
 async test "workbook: async missing-sheet picture/header wrappers" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

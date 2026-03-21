@@ -79,6 +79,7 @@ impl @async/io.Writer for MemWriter with write_reader(
 }
 
 ///|
+#cfg(target = "native")
 async test "open file save and save_as" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -98,6 +99,7 @@ async test "open file save and save_as" {
 }
 
 ///|
+#cfg(target = "native")
 async test "save_as rejects unsupported extension" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -110,6 +112,7 @@ async test "save_as rejects unsupported extension" {
 }
 
 ///|
+#cfg(target = "native")
 async test "save_as sets workbook content type by extension" {
   let stamp = @env.now().to_string()
   let path_xltx = "mbtexcel_type_\{stamp}.xltx"

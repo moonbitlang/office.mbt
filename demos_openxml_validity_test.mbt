@@ -1,4 +1,5 @@
 ///|
+#cfg(target = "native")
 async test "complex demos generate OpenXML-valid packages" {
   let stamp = @env.now()
     .to_string()

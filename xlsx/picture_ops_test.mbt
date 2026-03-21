@@ -453,6 +453,7 @@ test "picture positioning absolute" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture autofit preserves aspect" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -470,6 +471,7 @@ async test "picture autofit preserves aspect" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture autofit ignore aspect" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
@@ -557,6 +559,7 @@ test "picture options validation" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture invalid sheet name (from file path)" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -571,6 +574,7 @@ async test "picture invalid sheet name (from file path)" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture file path guards: missing extension and missing file" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -593,6 +597,7 @@ async test "picture file path guards: missing extension and missing file" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture with options file path guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -621,6 +626,7 @@ async test "picture with options file path guards" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture with options file path explicit values" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -667,6 +673,7 @@ async test "picture with options file path explicit values" {
 }
 
 ///|
+#cfg(target = "native")
 async test "picture from file path" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

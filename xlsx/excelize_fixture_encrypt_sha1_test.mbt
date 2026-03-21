@@ -1,4 +1,5 @@
 ///|
+#cfg(target = "native")
 async test "excelize fixture encryptSHA1.xlsx opens with password" {
   let workbook = open_file(
     ".repos/excelize/test/encryptSHA1.xlsx",
@@ -8,6 +9,7 @@ async test "excelize fixture encryptSHA1.xlsx opens with password" {
 }
 
 ///|
+#cfg(target = "native")
 async test "excelize fixture encryptSHA1.xlsx wrong password errors" {
   let result : Result[Workbook, Error] = try? open_file(
     ".repos/excelize/test/encryptSHA1.xlsx",

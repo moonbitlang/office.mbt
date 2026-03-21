@@ -150,6 +150,7 @@ test "header footer image file options require async api" {
 }
 
 ///|
+#cfg(target = "native")
 async test "header footer image from file path requires file option" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -172,6 +173,7 @@ async test "header footer image from file path requires file option" {
 }
 
 ///|
+#cfg(target = "native")
 async test "header footer image from file path read failure" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
@@ -188,6 +190,7 @@ async test "header footer image from file path read failure" {
 }
 
 ///|
+#cfg(target = "native")
 async test "header footer image from file path" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))

@@ -6,7 +6,7 @@ import {
   "moonbitlang/core/env",
 }
 
-supported_targets = "native"
+supported_targets = "native+js"
 
 options(
   "is-main": true,

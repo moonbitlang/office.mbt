@@ -1,4 +1,5 @@
 ///|
+#cfg(target = "native")
 async test "excelize fixture OverflowNumericCell.xlsx reads large integer" {
   let workbook = open_file(".repos/excelize/test/OverflowNumericCell.xlsx")
   inspect(
