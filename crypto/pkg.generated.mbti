@@ -19,8 +19,7 @@ pub fn u64_from_le(BytesView, Int) -> UInt64
 // Errors
 pub suberror CryptoError {
   InvalidCrypto(msg~ : String)
-}
-pub impl Show for CryptoError
+} derive(Show)
 
 // Types and methods
 

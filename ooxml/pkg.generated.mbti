@@ -9,8 +9,7 @@ pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String]
 // Errors
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
-}
-pub impl Show for ParseXmlError
+} derive(Show)
 
 // Types and methods
 type WorkbookManifest

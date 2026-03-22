@@ -65,8 +65,7 @@ pub suberror UtfIndexError {
   OutOfRange(index~ : Int, len~ : Int)
   InvalidBoundary(index~ : Int)
   InvalidUtf8(offset~ : Int)
-}
-pub impl Show for UtfIndexError
+} derive(Show)
 
 // Types and methods
 
