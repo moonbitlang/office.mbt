@@ -16,4 +16,6 @@ import {
   "bobzhang/mbtexcel/zip",
 } for "test"
 
+warnings = "-a"
+
 supported_targets = "native+js"

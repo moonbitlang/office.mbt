@@ -19,3 +19,5 @@ import {
 import {
   "moonbitlang/async",
 } for "test"
+
+warnings = "-a"
