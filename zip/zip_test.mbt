@@ -27,7 +27,7 @@ test "zip store roundtrip" {
 
 ///|
 test "zip invalid bytes" {
-  let bad : Bytes = "not a zip"
+  let bad : Bytes = b"not a zip"
   let result : Result[Archive, ZipError] = try? read(bad)
   inspect(result is Err(_), content="true")
 }

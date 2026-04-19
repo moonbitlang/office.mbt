@@ -59,5 +59,5 @@ pub fn Archive::get(self : Archive, name : StringView) -> Bytes? {
 
 ///|
 pub fn Archive::entries(self : Archive) -> ArrayView[Entry] {
-  self.entries[:]
+  self.entries
 }

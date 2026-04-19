@@ -22,7 +22,7 @@ test "ooxml read_parse wb: relationship type-missing branch continues" {
     #|  <Relationship Id="rId1" Target="a.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_relationship_targets(xml[:], "t1")
+  let targets = parse_relationship_targets(xml, "t1")
   inspect(targets, content="{}")
 }
 
@@ -34,7 +34,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override ContentType="application/xml"/>
     #|</Types>
     #|
-  let result_missing_part = try? parse_content_type_overrides(missing_part[:])
+  let result_missing_part = try? parse_content_type_overrides(missing_part)
   match result_missing_part {
     Err(ParseXmlError::InvalidXml(msg~)) =>
       inspect(msg, content="content type override part name missing")
@@ -48,7 +48,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|</Types>
     #|
   let result_missing_content = try? parse_content_type_overrides(
-    missing_content_type[:],
+    missing_content_type,
   )
   match result_missing_content {
     Err(ParseXmlError::InvalidXml(msg~)) =>

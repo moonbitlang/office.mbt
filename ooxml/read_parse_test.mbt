@@ -8,7 +8,7 @@ test "ooxml read_parse: parse_relationship_targets supports self-closing and exp
     #|  <Relationship Id="rId3" Type="t1" Target="c.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_relationship_targets(xml[:], "t1")
+  let targets = parse_relationship_targets(xml, "t1")
   inspect(targets, content="{\"rId1\": \"a.xml\", \"rId3\": \"c.xml\"}")
 }
 
@@ -20,7 +20,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship Type="t1" Target="a.xml"/>
     #|</Relationships>
     #|
-  let result_missing_id = try? parse_relationship_targets(missing_id[:], "t1")
+  let result_missing_id = try? parse_relationship_targets(missing_id, "t1")
   match result_missing_id {
     Err(ParseXmlError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship id missing")
@@ -34,7 +34,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|</Relationships>
     #|
   let result_missing_target = try? parse_relationship_targets(
-    missing_target[:],
+    missing_target,
     "t1",
   )
   match result_missing_target {
@@ -49,7 +49,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship 
     #|</Relationships>
     #|
-  let result_malformed = try? parse_relationship_targets(malformed[:], "t1")
+  let result_malformed = try? parse_relationship_targets(malformed, "t1")
   match result_malformed {
     Err(ParseXmlError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship tag not closed")
@@ -69,7 +69,7 @@ test "ooxml read_parse: parse_content_type_overrides and find workbook part" {
     #|</Types>
     #|
   inspect(
-    find_override_part_by_content_types(xml[:], [
+    find_override_part_by_content_types(xml, [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
       "application/vnd.ms-excel.sheet.macroEnabled.main+xml",
     ]),
@@ -85,7 +85,7 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
     #|  <Override PartName="/xl/workbook.xml" 
     #|</Types>
     #|
-  let result = try? find_override_part_by_content_types(malformed[:], [
+  let result = try? find_override_part_by_content_types(malformed, [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
   ])
   match result {

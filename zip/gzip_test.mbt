@@ -32,7 +32,7 @@ test "gzip/gunzip roundtrip with optional header fields" {
     }
   }
   // FEXTRA
-  out.append(u16_to_le_bytes(3)[:])
+  out.append(u16_to_le_bytes(3))
   out.append([(1).to_byte(), (2).to_byte(), (3).to_byte()])
   // FNAME
   for b in @encoding/utf8.encode("name") {
