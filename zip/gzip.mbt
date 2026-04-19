@@ -83,7 +83,7 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   if trailer_isize != expected_isize {
     raise UnsupportedFeature(msg="gzip size mismatch")
   }
-  let actual_crc = crc32(decoded[:])
+  let actual_crc = crc32(decoded)
   if trailer_crc != actual_crc {
     raise UnsupportedFeature(msg="gzip crc mismatch")
   }

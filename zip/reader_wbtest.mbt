@@ -29,8 +29,8 @@ fn push_bytes(buf : Array[Byte], bytes : BytesView) -> Unit {
 
 ///|
 test "zip read data descriptor" {
-  let name : Bytes = "a.txt"
-  let data : Bytes = "hi"
+  let name : Bytes = b"a.txt"
+  let data : Bytes = b"hi"
   let crc = crc32(data)
   let buf : Array[Byte] = []
   // local header
@@ -93,8 +93,8 @@ test "zip read data descriptor" {
 
 ///|
 test "zip read zip64 extra sizes" {
-  let name : Bytes = "b.txt"
-  let data : Bytes = "zip64"
+  let name : Bytes = b"b.txt"
+  let data : Bytes = b"zip64"
   let crc = crc32(data)
   let buf : Array[Byte] = []
   // local header with zip64 extra

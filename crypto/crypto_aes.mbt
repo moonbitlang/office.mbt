@@ -321,7 +321,7 @@ pub fn aes_ecb_encrypt(
   while offset < data.length() {
     let block = data[offset:offset + 16]
     let enc = aes_encrypt_block(schedule, block)
-    out.append(enc[:])
+    out.append(enc)
     offset = offset + 16
   }
   Bytes::from_array(out)
@@ -341,7 +341,7 @@ pub fn aes_ecb_decrypt(
   while offset < data.length() {
     let block = data[offset:offset + 16]
     let dec = aes_decrypt_block(schedule, block)
-    out.append(dec[:])
+    out.append(dec)
     offset = offset + 16
   }
   Bytes::from_array(out)
@@ -369,7 +369,7 @@ pub fn aes_cbc_decrypt(
     for i in 0..<=15 {
       dec[i] = byte_xor(dec[i], prev[i])
     }
-    out.append(dec[:])
+    out.append(dec)
     prev = block
     offset = offset + 16
   }

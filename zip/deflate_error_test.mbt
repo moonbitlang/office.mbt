@@ -12,7 +12,7 @@ fn gzip_bytes_with_deflate_payload(payload : Array[Byte]) -> Bytes {
   out.push((0x00).to_byte())
   out.push((0x00).to_byte())
   out.push((0xFF).to_byte())
-  out.append(payload[:])
+  out.append(payload)
   // Trailer (CRC32 + ISIZE). Not validated if deflate decode fails.
   for _ in 0..<=7 {
     out.push((0x00).to_byte())

@@ -31,7 +31,7 @@ test "deflate dynamic huffman" {
     0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
     0xAA, 0xAA, 0xAA, 0xAA, 0xFA, 0x7F, 0xDD, 0x01,
   ]
-  let phrase : Bytes = "The quick brown fox jumps over the lazy dog"
+  let phrase : Bytes = b"The quick brown fox jumps over the lazy dog"
   let expected_array : Array[Byte] = []
   for _ in 0..<200 {
     for b in phrase {
@@ -44,7 +44,7 @@ test "deflate dynamic huffman" {
 
 ///|
 test "deflate encode fixed literals" {
-  let data : Bytes = "MoonBit deflate"
+  let data : Bytes = b"MoonBit deflate"
   let compressed = deflate_encode(data)
   inspect(deflate_decode(compressed) == data, content="true")
 }
