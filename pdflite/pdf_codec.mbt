@@ -826,6 +826,79 @@ pub fn pdf_encode_stream_with_filter(
 }
 
 ///|
+fn pdf_predictor_decodeparms(
+  predictor : Int,
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+) -> PdfObject {
+  pdf_dictionary([
+    (pdf_predictor_key(), PdfInteger(predictor)),
+    (pdf_colors_key(), PdfInteger(colors)),
+    (pdf_bits_per_component_key(), PdfInteger(bits_per_component)),
+    (pdf_columns_key(), PdfInteger(columns)),
+  ])
+}
+
+///|
+fn pdf_add_decodeparms_to_dictionary(
+  dictionary : PdfObject,
+  decodeparms : PdfObject,
+) -> PdfObject raise PdfError {
+  match dictionary.lookup_immediate(pdf_decodeparms_key()) {
+    None => dictionary.add_dict_entry(pdf_decodeparms_key(), decodeparms)
+    Some(PdfDictionary(_) as existing) =>
+      dictionary.replace_dict_entry(
+        pdf_decodeparms_key(),
+        PdfArray([decodeparms, existing]),
+      )
+    Some(PdfArray(values)) =>
+      dictionary.replace_dict_entry(
+        pdf_decodeparms_key(),
+        PdfArray([decodeparms, ..values]),
+      )
+    _ => raise PredictorExpected
+  }
+}
+
+///|
+pub fn pdf_encode_stream_with_filter_and_predictor(
+  filter : PdfName,
+  predictor : Int,
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match object {
+    PdfStreamObject(stream) =>
+      match stream.data {
+        StreamGot(data) => {
+          let predicted = pdf_encode_predictor(
+            predictor, colors, bits_per_component, columns, data,
+          )
+          let encoded = pdf_encode_filter_bytes(filter, predicted)
+          let dictionary = pdf_stream_replace_length(
+            pdf_add_filter_to_dictionary(
+              pdf_add_decodeparms_to_dictionary(
+                stream.dictionary,
+                pdf_predictor_decodeparms(
+                  predictor, colors, bits_per_component, columns,
+                ),
+              ),
+              filter,
+            ),
+            encoded.length(),
+          )
+          pdf_stream(dictionary, StreamGot(encoded))
+        }
+        _ => raise StreamDataExpected
+      }
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
 fn pdf_run_length_flush_literal(
   output : Array[Byte],
   literal : ArrayView[Byte],

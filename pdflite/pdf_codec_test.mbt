@@ -413,6 +413,50 @@ test "pdf_encode_stream_with_filter adds filter and updates length" {
 }
 
 ///|
+test "pdf_encode_stream_with_filter_and_predictor round trips through decode stream" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(6))]),
+    StreamGot(codec_bytes_for_test([10, 20, 30, 11, 25, 35])),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    12,
+    1,
+    8,
+    3,
+    stream,
+  )
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  @test.assert_eq(
+    encoded_stream.data,
+    StreamGot(codec_ascii_for_test("020A141E02010505>")),
+  )
+  @test.assert_eq(
+    encoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+  )
+  guard encoded_stream.dictionary.lookup_immediate(decodeparms)
+    is Some(PdfDictionary(_)) else {
+    fail("expected DecodeParms dictionary")
+  }
+  let decoded = try! @pdflite.pdf_decode_stream(encoded)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([10, 20, 30, 11, 25, 35])),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
 test "pdf_decode_stream_onestage reports malformed stream filters" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

@@ -93,6 +93,8 @@ pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_encode_stream_with_filter(PdfName, PdfObject) -> PdfObject raise PdfError
 
+pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject) -> PdfObject raise PdfError
+
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_newline_byte(Int) -> Bool

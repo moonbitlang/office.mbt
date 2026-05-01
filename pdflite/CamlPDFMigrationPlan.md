@@ -237,9 +237,10 @@ MoonBit consequences for this project:
    TIFF predictor 2 at 8 bpc and PNG row predictors, and owned stream decode now
    applies the first direct `/DecodeParms` or `/DP` predictor. Predictor
    encoding is started for PNG Sub (`11`) and PNG Up (`12`) rows, including
-   explicit negative-delta normalization to PDF byte range. Indirect filter
-   dictionaries, deferred stream materialization, and other filters remain
-   deferred.
+   explicit negative-delta normalization to PDF byte range. Owned stream encode
+   can now add a filter plus direct `/DecodeParms` predictor dictionary and
+   round-trip through owned stream decode. Indirect filter dictionaries,
+   deferred stream materialization, and other filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
