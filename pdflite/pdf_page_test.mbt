@@ -864,6 +864,51 @@ test "PdfDocument change_pages rejects reference renumbering when counts differ"
 }
 
 ///|
+test "PdfDocument pdf_of_pages extracts pages in requested order" {
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+    page_indexed_blank_for_test(2),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let extracted = try! doc.pdf_of_pages([3, 1])
+  @test.assert_eq(try! extracted.endpage(), 2)
+  let pages = try! extracted.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 2)
+  @test.assert_eq(pages[0].mediabox, page_index_mediabox_for_test(2))
+  @test.assert_eq(pages[1].mediabox, page_index_mediabox_for_test(0))
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(extracted),
+  )
+  let reparsed_pages = try! reparsed.pages_of_pagetree()
+  @test.assert_eq(reparsed_pages.length(), 2)
+  @test.assert_eq(reparsed_pages[0].mediabox, page_index_mediabox_for_test(2))
+  @test.assert_eq(reparsed_pages[1].mediabox, page_index_mediabox_for_test(0))
+}
+
+///|
+test "PdfDocument pdf_of_pages rejects empty and invalid ranges" {
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([page_indexed_blank_for_test(0)])
+  ignore(try! doc.add_root(page_root, []))
+  let empty_page_numbers : Array[Int] = []
+  let empty_result : Result[@pdflite.PdfDocument, Error] = try? doc.pdf_of_pages(
+    empty_page_numbers,
+  )
+  guard empty_result is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected for empty range")
+  }
+  let invalid_result : Result[@pdflite.PdfDocument, Error] = try? doc.pdf_of_pages([
+      2,
+    ],
+  )
+  guard invalid_result is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected for invalid range")
+  }
+}
+
+///|
 test "PdfDocument remove_unreferenced drops detached objects" {
   let key_metadata = page_name_for_test("/Metadata")
   let doc = try! @pdflite.pdf_minimum_valid_pdf()

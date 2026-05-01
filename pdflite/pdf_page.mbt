@@ -822,6 +822,35 @@ pub fn PdfDocument::change_pages(
 }
 
 ///|
+fn pdf_page_select_pages(
+  pages : ArrayView[PdfPage],
+  page_numbers : ArrayView[Int],
+) -> Array[PdfPage] raise PdfError {
+  if page_numbers.length() == 0 {
+    raise PageTreeExpected
+  }
+  let selected : Array[PdfPage] = []
+  for page_number in page_numbers {
+    if page_number < 1 || page_number > pages.length() {
+      raise PageTreeExpected
+    }
+    selected.push(pages[page_number - 1])
+  }
+  selected
+}
+
+///|
+pub fn PdfDocument::pdf_of_pages(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> PdfDocument raise PdfError {
+  let selected = pdf_page_select_pages(self.pages_of_pagetree(), page_numbers)
+  let pdf = self.change_pages(selected)
+  pdf.remove_unreferenced()
+  pdf
+}
+
+///|
 fn pdf_page_number_member(numbers : ArrayView[Int], number : Int) -> Bool {
   for candidate in numbers {
     if candidate == number {

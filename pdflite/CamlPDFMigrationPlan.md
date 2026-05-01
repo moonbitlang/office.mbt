@@ -270,8 +270,12 @@ MoonBit consequences for this project:
    replacement page tree in a copied document and can renumber same-count old
    page indirect references to the new page objects. CamlPDF's matrix-aware
    bookmark, annotation, and `/OpenAction` destination transforms remain
-   deferred. `minimum_valid_pdf` is also ported as a writable one-page A4
-   document constructor. Unreferenced-object pruning is started with a
+   deferred. A minimal `pdf_of_pages` is started for 1-based page extraction
+   and reordering by composing `pages_of_pagetree`, `change_pages`, and
+   `remove_unreferenced`; page labels, bookmarks, structure-tree trimming,
+   duplicate annotation handling, and retained-numbering mode remain deferred.
+   `minimum_valid_pdf` is also ported as a writable one-page A4 document
+   constructor. Unreferenced-object pruning is started with a
    `remove_unreferenced` pass that follows indirect references from the catalog
    and trailer, removes unreachable parsed objects, and nullifies references to
    page objects no longer present in the active page tree before pruning.
