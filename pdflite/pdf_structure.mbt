@@ -14,6 +14,16 @@ fn pdf_structure_obj_key() -> PdfName {
 }
 
 ///|
+fn pdf_structure_struct_tree_root_key() -> PdfName {
+  pdf_structure_name("/StructTreeRoot")
+}
+
+///|
+fn pdf_structure_parent_tree_key() -> PdfName {
+  pdf_structure_name("/ParentTree")
+}
+
+///|
 fn pdf_structure_k_key() -> PdfName {
   pdf_structure_name("/K")
 }
@@ -153,6 +163,115 @@ fn pdf_structure_k_object(items : ArrayView[PdfObject]) -> PdfObject {
     items[0]
   } else {
     PdfArray([ for item in items => item ])
+  }
+}
+
+///|
+fn PdfDocument::pdf_structure_root_parent_tree_entries(
+  self : PdfDocument,
+) -> Array[(Int, PdfObject)] {
+  let catalog = self.lookup_object_or_null(self.root())
+  match self.lookup_direct(pdf_structure_struct_tree_root_key(), catalog) {
+    Some(root) =>
+      match self.lookup_direct(pdf_structure_parent_tree_key(), root) {
+        Some(parent_tree) => self.read_number_tree(parent_tree)
+        None => []
+      }
+    None => []
+  }
+}
+
+///|
+fn pdf_structure_changed_parent_tree_key(
+  changes : ArrayView[(Int, Int)],
+  old_key : Int,
+) -> Int? {
+  for change in changes {
+    let (old_key_candidate, new_key) = change
+    if old_key_candidate == old_key {
+      break Some(new_key)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_structure_apply_parent_tree_changes(
+  entries : ArrayView[(Int, PdfObject)],
+  changes : ArrayView[(Int, Int)],
+) -> Array[(Int, PdfObject)] {
+  let output : Array[(Int, PdfObject)] = []
+  for entry in entries {
+    let (old_key, value) = entry
+    match pdf_structure_changed_parent_tree_key(changes, old_key) {
+      Some(new_key) =>
+        output.push(
+          (new_key, pdf_merge_renumber_struct_parent_object(value, changes)),
+        )
+      None => ()
+    }
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_structure_replace_parent_tree(
+  self : PdfDocument,
+  parent_tree : PdfObject,
+) -> Unit raise PdfError {
+  let catalog = self.lookup_object_or_null(self.root())
+  match catalog.lookup_immediate(pdf_structure_struct_tree_root_key()) {
+    Some(PdfIndirect(root_number)) => {
+      let root = self.lookup_object_or_null(root_number)
+      self.add_object_given_number(
+        root_number,
+        root.add_dict_entry(pdf_structure_parent_tree_key(), parent_tree),
+      )
+    }
+    Some(root) =>
+      self.add_object_given_number(
+        self.root(),
+        catalog.add_dict_entry(
+          pdf_structure_struct_tree_root_key(),
+          root.add_dict_entry(pdf_structure_parent_tree_key(), parent_tree),
+        ),
+      )
+    None => ()
+  }
+}
+
+///|
+pub fn pdf_renumber_parent_trees(
+  documents : ArrayView[PdfDocument],
+) -> Unit raise PdfError {
+  if documents.length() > 1 {
+    let all_changes : Array[Array[(Int, Int)]] = []
+    let all_entries : Array[Array[(Int, PdfObject)]] = []
+    let mut next_key = 0
+    for document in documents {
+      let entries = document.pdf_structure_root_parent_tree_entries()
+      let changes : Array[(Int, Int)] = []
+      for entry in entries {
+        let (old_key, _) = entry
+        changes.push((old_key, next_key))
+        next_key += 1
+      }
+      all_entries.push(entries)
+      all_changes.push(changes)
+    }
+    for index in 0..<documents.length() {
+      let document = documents[index]
+      let changes = all_changes[index]
+      if changes.length() > 0 {
+        document.pdf_merge_renumber_struct_parent_entries(changes)
+        document.pdf_structure_replace_parent_tree(
+          document.build_number_tree(
+            pdf_structure_apply_parent_tree_changes(all_entries[index], changes),
+          ),
+        )
+      }
+    }
   }
 }
 
