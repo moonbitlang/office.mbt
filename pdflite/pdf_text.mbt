@@ -1269,6 +1269,66 @@ pub fn pdf_make_font(
 }
 
 ///|
+fn pdf_text_zero_rectangle_object() -> PdfObject {
+  PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(0.0), PdfReal(0.0)])
+}
+
+///|
+fn pdf_text_zero_font_matrix_object() -> PdfObject {
+  PdfArray([
+    PdfReal(0.0),
+    PdfReal(0.0),
+    PdfReal(0.0),
+    PdfReal(0.0),
+    PdfReal(0.0),
+    PdfReal(0.0),
+  ])
+}
+
+///|
+fn pdf_text_type3_charprocs_object(
+  charprocs : ArrayView[(PdfName, PdfObject)],
+) -> PdfObject {
+  PdfDictionary([ for entry in charprocs => (entry.0, PdfNull) ])
+}
+
+///|
+fn PdfDocument::pdf_text_type3_encoding_entries(
+  self : PdfDocument,
+  encoding : PdfEncoding,
+) -> Array[(PdfName, PdfObject)] raise PdfError {
+  match encoding {
+    PdfImplicitInFontFile => []
+    _ =>
+      [(pdf_text_name("/Encoding"), PdfIndirect(self.write_encoding(encoding)))]
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_make_type3_font(
+  self : PdfDocument,
+  data : PdfType3Glyphs,
+  encoding : PdfEncoding,
+) -> PdfObject raise PdfError {
+  PdfDictionary(
+    [
+      (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
+      (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/Type3"))),
+      (pdf_text_name("/FontBBox"), pdf_text_zero_rectangle_object()),
+      (pdf_text_name("/FontMatrix"), pdf_text_zero_font_matrix_object()),
+      (
+        pdf_text_name("/CharProcs"),
+        pdf_text_type3_charprocs_object(data.charprocs),
+      ),
+      (pdf_text_name("/FirstChar"), PdfInteger(0)),
+      (pdf_text_name("/LastChar"), PdfInteger(0)),
+      (pdf_text_name("/Widths"), PdfArray([PdfReal(0.0)])),
+      ..self.pdf_text_type3_encoding_entries(encoding),
+    ],
+  )
+}
+
+///|
 fn PdfDocument::pdf_text_add_font_object(
   self : PdfDocument,
   object : PdfObject,
@@ -1295,6 +1355,15 @@ pub fn PdfDocument::write_font(
         pdf_make_font(font.pdf_name(), encoding),
         objnum,
       )
+    PdfFontSimple({ fonttype: PdfType3(data), encoding, fontdescriptor, .. }) =>
+      match fontdescriptor {
+        Some(_) =>
+          self.pdf_text_add_font_object(
+            self.pdf_text_make_type3_font(data, encoding),
+            objnum,
+          )
+        None => raise FontWriteUnsupported
+      }
     _ => raise FontWriteUnsupported
   }
 }

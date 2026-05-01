@@ -25,6 +25,24 @@ fn text_standard_font_data_for_test(
 }
 
 ///|
+fn text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
+  {
+    ascent: 0.0,
+    descent: 0.0,
+    avgwidth: 0.0,
+    maxwidth: 0.0,
+    flags: 0,
+    fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+    italicangle: 0.0,
+    capheight: 0.0,
+    xheight: 0.0,
+    stemv: 0.0,
+    fontfile: None,
+    charset: None,
+  }
+}
+
+///|
 test "PdfStandardFont exposes CamlPDF standard font names" {
   let fonts : Array[(@pdflite.PdfStandardFont, String)] = [
     (PdfTimesRoman, "Times-Roman"),
@@ -1412,6 +1430,114 @@ test "PdfDocument write_font writes standard14 fonts" {
 }
 
 ///|
+test "PdfDocument write_font writes Type3 fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let number = try! doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfType3({
+        fontbbox: { min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0 },
+        fontmatrix: @pdflite.transform_identity_matrix,
+        charprocs: [
+          (text_name_for_test("/A"), PdfInteger(10)),
+          (text_name_for_test("/B"), PdfInteger(11)),
+        ],
+        resources: @pdflite.pdf_dictionary([
+          (text_name_for_test("/ProcSet"), PdfArray([])),
+        ]),
+      }),
+      basefont: None,
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: Some(text_font_descriptor_for_test()),
+      fontmetrics: None,
+      encoding: PdfImplicitInFontFile,
+    }),
+  )
+  @test.assert_eq(number, 1)
+  @test.assert_eq(
+    doc.lookup_object_or_null(number),
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Type"), PdfNameObject(text_name_for_test("/Font"))),
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type3")),
+      ),
+      (
+        text_name_for_test("/FontBBox"),
+        PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(0.0), PdfReal(0.0)]),
+      ),
+      (
+        text_name_for_test("/FontMatrix"),
+        PdfArray([
+          PdfReal(0.0),
+          PdfReal(0.0),
+          PdfReal(0.0),
+          PdfReal(0.0),
+          PdfReal(0.0),
+          PdfReal(0.0),
+        ]),
+      ),
+      (
+        text_name_for_test("/CharProcs"),
+        @pdflite.pdf_dictionary([
+          (text_name_for_test("/A"), PdfNull),
+          (text_name_for_test("/B"), PdfNull),
+        ]),
+      ),
+      (text_name_for_test("/FirstChar"), PdfInteger(0)),
+      (text_name_for_test("/LastChar"), PdfInteger(0)),
+      (text_name_for_test("/Widths"), PdfArray([PdfReal(0.0)])),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument write_font writes Type3 custom encoding object" {
+  let doc = @pdflite.pdf_document_empty()
+  let number = try! doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfType3({
+        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+        fontmatrix: @pdflite.transform_identity_matrix,
+        charprocs: [(text_name_for_test("/A"), PdfInteger(10))],
+        resources: @pdflite.pdf_dictionary([]),
+      }),
+      basefont: None,
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: Some(text_font_descriptor_for_test()),
+      fontmetrics: None,
+      encoding: PdfCustomEncoding(PdfImplicitInFontFile, [
+        text_difference_for_test("/A", 65),
+      ]),
+    }),
+    objnum=Some(20),
+  )
+  @test.assert_eq(number, 20)
+  @test.assert_eq(
+    doc.lookup_object_or_null(1),
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Type"),
+        PdfNameObject(text_name_for_test("/Encoding")),
+      ),
+      (
+        text_name_for_test("/Differences"),
+        PdfArray([PdfInteger(65), PdfNameObject(text_name_for_test("/A"))]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(20)
+    .lookup_immediate(text_name_for_test("/Encoding")),
+    Some(PdfIndirect(1)),
+  )
+}
+
+///|
 test "PdfDocument write_font rejects unsupported font variants" {
   let doc = @pdflite.pdf_document_empty()
   let unsupported = try? doc.write_font(
@@ -1428,5 +1554,45 @@ test "PdfDocument write_font rejects unsupported font variants" {
   )
   guard unsupported is Err(FontWriteUnsupported) else {
     fail("expected FontWriteUnsupported")
+  }
+  let unsupported_type3 = try? doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfType3({
+        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+        fontmatrix: @pdflite.transform_identity_matrix,
+        charprocs: [],
+        resources: @pdflite.pdf_dictionary([]),
+      }),
+      basefont: None,
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: None,
+      fontmetrics: None,
+      encoding: PdfImplicitInFontFile,
+    }),
+  )
+  guard unsupported_type3 is Err(FontWriteUnsupported) else {
+    fail("expected FontWriteUnsupported")
+  }
+  let unsupported_encoding = try? doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfType3({
+        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+        fontmatrix: @pdflite.transform_identity_matrix,
+        charprocs: [],
+        resources: @pdflite.pdf_dictionary([]),
+      }),
+      basefont: None,
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: Some(text_font_descriptor_for_test()),
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+  )
+  guard unsupported_encoding is Err(EncodingWriteUnsupported) else {
+    fail("expected EncodingWriteUnsupported")
   }
 }

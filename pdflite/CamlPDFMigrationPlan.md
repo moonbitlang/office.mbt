@@ -388,7 +388,11 @@ MoonBit consequences for this project:
    encoding model. Font-writing groundwork is started with custom encoding
    dictionary emission and a Type1 font dictionary helper for predefined
    encodings. Standard-14 font writing is started through `write_font`, with
-   optional object-number placement. ToUnicode CMap parsing remains deferred.
+   optional object-number placement. Type3 font writing is also started for
+   the same minimal subset as CamlPDF's current writer: zero placeholder font
+   box/matrix/width entries, `CharProcs` names mapped to null glyph bodies,
+   implicit-in-font-file encoding omission, and indirect custom encoding
+   dictionaries. ToUnicode CMap parsing remains deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
