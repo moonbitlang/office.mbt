@@ -162,6 +162,96 @@ pub fn pdf_authenticate_user_password(
 }
 
 ///|
+fn pdf_owner_password_key(
+  owner_password : BytesView,
+  revision : Int,
+  key_length_bits : Int,
+) -> PdfBytes {
+  let padded_owner = pdf_pad_password(owner_password)
+  let mut digest = pdf_md5_digest(padded_owner[:])
+  if revision >= 3 {
+    for _ in 0..<50 {
+      digest = pdf_md5_digest(digest[:])
+    }
+  }
+  digest[:key_length_bits / 8].to_owned()
+}
+
+///|
+pub fn pdf_make_owner_password_entry(
+  revision : Int,
+  owner_password : BytesView,
+  user_password : BytesView,
+  key_length_bits : Int,
+) -> PdfBytes raise PdfError {
+  let source_password = if owner_password.length() == 0 {
+    user_password
+  } else {
+    owner_password
+  }
+  let key = pdf_owner_password_key(source_password, revision, key_length_bits)
+  let padded_user = pdf_pad_password(user_password)
+  if revision == 2 {
+    pdf_arc4_crypt(key[:], padded_user[:])
+  } else {
+    let mut encrypted = pdf_arc4_crypt(key[:], padded_user[:])
+    for iteration in 1..<20 {
+      let iteration_key = pdf_key_xor_iteration(key[:], iteration)
+      encrypted = pdf_arc4_crypt(iteration_key[:], encrypted[:])
+    }
+    encrypted
+  }
+}
+
+///|
+pub fn pdf_user_password_from_owner_password(
+  revision : Int,
+  owner_password : BytesView,
+  owner_entry : BytesView,
+  key_length_bits : Int,
+) -> PdfBytes raise PdfError {
+  let key = pdf_owner_password_key(owner_password, revision, key_length_bits)
+  if revision == 2 {
+    pdf_arc4_crypt(key[:], owner_entry)
+  } else {
+    let mut decrypted = owner_entry.to_owned()
+    let mut iteration = 19
+    while iteration >= 0 {
+      let iteration_key = pdf_key_xor_iteration(key[:], iteration)
+      decrypted = pdf_arc4_crypt(iteration_key[:], decrypted[:])
+      iteration -= 1
+    }
+    decrypted
+  }
+}
+
+///|
+pub fn pdf_authenticate_owner_password(
+  no_encrypt_metadata : Bool,
+  owner_password : BytesView,
+  revision : Int,
+  user_entry : BytesView,
+  owner_entry : BytesView,
+  permissions : Int,
+  file_id : BytesView,
+  key_length_bits : Int,
+) -> Bool raise PdfError {
+  let user_password = pdf_user_password_from_owner_password(
+    revision, owner_password, owner_entry, key_length_bits,
+  )
+  pdf_authenticate_user_password(
+    no_encrypt_metadata,
+    user_password[:],
+    revision,
+    user_entry,
+    owner_entry,
+    permissions,
+    file_id,
+    key_length_bits,
+  )
+}
+
+///|
 fn pdf_permission_denied(
   permissions : ArrayView[PdfPermission],
   target : PdfPermission,

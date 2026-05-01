@@ -61,6 +61,8 @@ pub fn pdf_ascii_hex_decode(Bytes) -> Bytes raise PdfError
 
 pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
 
+pub fn pdf_authenticate_owner_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
+
 pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
 
 pub let pdf_bookmark_black : PdfBookmarkColour
@@ -158,6 +160,8 @@ pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise PdfError
 
 pub fn pdf_make_font(PdfName, PdfEncoding) -> PdfObject raise PdfError
+
+pub fn pdf_make_owner_password_entry(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
 
 pub fn pdf_make_user_password_entry(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes raise PdfError
 
@@ -270,6 +274,8 @@ pub fn pdf_standard_font_of_pdf_name(PdfName) -> PdfStandardFont?
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
+
+pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 

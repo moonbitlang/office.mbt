@@ -510,8 +510,10 @@ MoonBit consequences for this project:
     padding and R2/R3/R4 file-key derivation are also started, including the
     revision 4 no-metadata marker branch. R2/R3/R4 `/U` user-password entry
     generation and user-password authentication are started over the ARC4/MD5
-    path. AES, SHA-family helpers beyond the available package surface,
-    document decryption, and re-encryption remain deferred.
+    path. R2/R3/R4 `/O` owner-password entry generation, padded-user recovery,
+    and owner-password authentication are also started. AES, SHA-family helpers
+    beyond the available package surface, document decryption, and re-encryption
+    remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

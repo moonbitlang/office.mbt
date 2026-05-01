@@ -199,6 +199,128 @@ test "pdf_authenticate_user_password validates R2 and R3 user entries" {
 }
 
 ///|
+test "pdf_make_owner_password_entry matches CamlPDF O values" {
+  @test.assert_eq(
+    try! @pdflite.pdf_make_owner_password_entry(
+      2,
+      @ascii.encode("owner")[:],
+      @ascii.encode("user")[:],
+      40,
+    ),
+    crypt_model_bytes_for_test([
+      0x94, 0xe8, 0x09, 0x44, 0x19, 0x66, 0x2a, 0x77, 0x44, 0x42, 0xfb, 0x07, 0x2e,
+      0x3d, 0x9f, 0x19, 0xe9, 0xd1, 0x30, 0xec, 0x09, 0xa4, 0xd0, 0x06, 0x1e, 0x78,
+      0xfe, 0x92, 0x0f, 0x7a, 0xb6, 0x2f,
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_make_owner_password_entry(
+      3,
+      @ascii.encode("owner")[:],
+      Bytes::new(0)[:],
+      128,
+    ),
+    crypt_model_bytes_for_test([
+      0x56, 0x6f, 0xa8, 0x73, 0xee, 0x33, 0xc7, 0x97, 0xcd, 0x3b, 0x90, 0x4f, 0xda,
+      0xdf, 0x81, 0x4a, 0xfa, 0x34, 0xdf, 0x9a, 0x38, 0xf6, 0xed, 0x41, 0xb9, 0x84,
+      0xe2, 0xc6, 0xda, 0x2a, 0xa6, 0xf5,
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_make_owner_password_entry(
+      2,
+      Bytes::new(0)[:],
+      @ascii.encode("user")[:],
+      40,
+    ),
+    crypt_model_bytes_for_test([
+      0x8e, 0xc9, 0x9e, 0x00, 0xc3, 0xd1, 0x84, 0x91, 0x0a, 0x40, 0x64, 0xdf, 0x0f,
+      0x95, 0x16, 0xb0, 0x41, 0x36, 0x2b, 0x9b, 0xf1, 0xdc, 0x3f, 0x68, 0xd1, 0x5b,
+      0xf7, 0x1f, 0xb1, 0x6d, 0xc5, 0xf3,
+    ]),
+  )
+}
+
+///|
+test "pdf_user_password_from_owner_password recovers padded user password" {
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    2,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    40,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_user_password_from_owner_password(
+      2,
+      @ascii.encode("owner")[:],
+      owner_entry[:],
+      40,
+    ),
+    @pdflite.pdf_pad_password(@ascii.encode("user")[:]),
+  )
+  let owner_entry_r3 = try! @pdflite.pdf_make_owner_password_entry(
+    3,
+    @ascii.encode("owner")[:],
+    Bytes::new(0)[:],
+    128,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_user_password_from_owner_password(
+      3,
+      @ascii.encode("owner")[:],
+      owner_entry_r3[:],
+      128,
+    ),
+    @pdflite.pdf_password_padding(),
+  )
+}
+
+///|
+test "pdf_authenticate_owner_password validates through recovered user password" {
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    3,
+    @ascii.encode("owner")[:],
+    Bytes::new(0)[:],
+    128,
+  )
+  let user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    Bytes::new(0)[:],
+    3,
+    owner_entry[:],
+    -3904,
+    @ascii.encode("doc-id")[:],
+    128,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_owner_password(
+      false,
+      @ascii.encode("owner")[:],
+      3,
+      user_entry[:],
+      owner_entry[:],
+      -3904,
+      @ascii.encode("doc-id")[:],
+      128,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_owner_password(
+      false,
+      @ascii.encode("bad")[:],
+      3,
+      user_entry[:],
+      owner_entry[:],
+      -3904,
+      @ascii.encode("doc-id")[:],
+      128,
+    ),
+    false,
+  )
+}
+
+///|
 test "pdf_permissions_of_p parses CamlPDF denied permission bits" {
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-4), [])
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-8), [PdfNoPrint])
