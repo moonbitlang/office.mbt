@@ -382,6 +382,7 @@ pub(all) suberror PdfError {
   EncryptionDictionaryEntryTooShort(PdfName)
   EncryptionIDExpected
   EncryptionAuthenticationUnsupported(PdfCryptType)
+  EncryptionObjectCryptUnsupported(PdfCryptType)
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported
@@ -781,6 +782,11 @@ pub(all) struct PdfDate {
   minute_offset : Int
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfDecryptionResult {
+  document : PdfDocument
+  denied_permissions : Array[PdfPermission]
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfDestination {
   DestAction(PdfObject)
   DestNull
@@ -819,6 +825,7 @@ pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfO
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, TransformMatrix)]) -> Self raise PdfError
 pub fn PdfDocument::copy(Self) -> Self
+pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::encryption_values(Self) -> PdfEncryptionValues raise PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError

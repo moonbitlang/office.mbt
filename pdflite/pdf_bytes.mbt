@@ -55,6 +55,7 @@ pub(all) suberror PdfError {
   EncryptionDictionaryEntryTooShort(PdfName)
   EncryptionIDExpected
   EncryptionAuthenticationUnsupported(PdfCryptType)
+  EncryptionObjectCryptUnsupported(PdfCryptType)
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported

@@ -527,8 +527,12 @@ MoonBit consequences for this project:
     file-key derivation are started on top of parsed encryption values for
     ARC4 revisions 2/3 and AESV2 revision 4, while AESV3 authentication reports
     a structured unsupported error until the SHA-256/384 algorithms are ported.
-    AES object/data crypt, SHA-family helpers beyond the available package
-    surface, document decryption, and re-encryption remain deferred.
+    A copied document-level user-password decryption entry point is started for
+    parsed ARC4 documents; it removes `/Encrypt` from the copied trailer, skips
+    the indirect encryption dictionary object, and returns CamlPDF-style denied
+    permissions. AES object/data crypt, SHA-family helpers beyond the available
+    package surface, owner-password document decryption, deferred stream/object
+    decryption, and re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

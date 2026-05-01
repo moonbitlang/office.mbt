@@ -84,6 +84,16 @@ fn crypt_expect_encryption_method_error_for_test(
 }
 
 ///|
+fn crypt_unwrap_decryption_result_for_test(
+  result : @pdflite.PdfDecryptionResult?,
+) -> @pdflite.PdfDecryptionResult raise {
+  match result {
+    Some(value) => value
+    None => fail("expected decrypted document")
+  }
+}
+
+///|
 test "PdfDocument encryption_values parses legacy ARC4 dictionary values" {
   let doc = crypt_doc_with_encrypt_for_test(
     crypt_standard_encrypt_dictionary_for_test([
@@ -397,6 +407,189 @@ test "PdfEncryptionValues treats AESV2 as revision 4 with 128-bit keys" {
       ),
     ),
   )
+}
+
+///|
+test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a copy" {
+  let file_id = @ascii.encode("doc-id")
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    3,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    128,
+  )
+  let user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user")[:],
+    3,
+    owner_entry[:],
+    -3904,
+    file_id[:],
+    128,
+  )
+  let file_key = @pdflite.pdf_encryption_file_key(
+    false,
+    @ascii.encode("user")[:],
+    3,
+    owner_entry[:],
+    -3904,
+    file_id[:],
+    128,
+  )
+  let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
+    [
+      (crypt_name_for_test("/V"), PdfInteger(2)),
+      (crypt_name_for_test("/Length"), PdfInteger(128)),
+      (crypt_name_for_test("/R"), PdfInteger(3)),
+    ],
+    owner_entry,
+    user_entry,
+    -3904,
+  )
+  let plain_object : @pdflite.PdfObject = PdfDictionary([
+    (crypt_name_for_test("/Title"), PdfString(@ascii.encode("hello"))),
+  ])
+  let encrypted_object = try! @pdflite.pdf_arc4_crypt_pdf_object(
+    1,
+    0,
+    file_key[:],
+    128,
+    plain_object,
+  )
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, encrypted_object)
+  doc.add_object_given_number(2, encrypt_dictionary)
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_name_for_test("/Encrypt"), PdfIndirect(2)),
+      (
+        crypt_name_for_test("/ID"),
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(2),
+    encrypt_dictionary,
+  )
+  @test.assert_eq(
+    decrypted.document
+    .trailer_dict()
+    .lookup_immediate(crypt_name_for_test("/Encrypt")),
+    None,
+  )
+  @test.assert_eq(
+    decrypted.denied_permissions,
+    @pdflite.pdf_permissions_of_p(-3904),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
+  @test.assert_eq(
+    doc.trailer_dict().lookup_immediate(crypt_name_for_test("/Encrypt")),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(
+    try! doc.decrypt_with_user_password(@ascii.encode("bad")[:]),
+    None,
+  )
+
+  let direct_doc = @pdflite.pdf_document_empty()
+  direct_doc.add_object_given_number(1, encrypted_object)
+  direct_doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_name_for_test("/Encrypt"), encrypt_dictionary),
+      (
+        crypt_name_for_test("/ID"),
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+  let direct_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! direct_doc.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(
+    direct_decrypted.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(
+    direct_decrypted.document
+    .trailer_dict()
+    .lookup_immediate(crypt_name_for_test("/Encrypt")),
+    None,
+  )
+
+  let plain_doc = @pdflite.pdf_document_empty()
+  plain_doc.add_object_given_number(1, PdfString(@ascii.encode("plain")))
+  let no_encryption = crypt_unwrap_decryption_result_for_test(
+    try! plain_doc.decrypt_with_user_password(@ascii.encode("anything")[:]),
+  )
+  @test.assert_eq(
+    no_encryption.document.lookup_object_or_null(1),
+    PdfString(@ascii.encode("plain")),
+  )
+  @test.assert_eq(no_encryption.denied_permissions, [])
+}
+
+///|
+test "PdfDocument decrypt_with_user_password reports unsupported object crypt" {
+  let file_id = @ascii.encode("doc-id")
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    4,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    128,
+  )
+  let user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user")[:],
+    4,
+    owner_entry[:],
+    -3904,
+    file_id[:],
+    128,
+  )
+  let doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(4)),
+        (crypt_name_for_test("/R"), PdfInteger(4)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV2")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let unsupported : Result[@pdflite.PdfDecryptionResult?, Error] = try? doc.decrypt_with_user_password(
+    @ascii.encode("user")[:],
+  )
+  guard unsupported
+    is Err(@pdflite.PdfError::EncryptionObjectCryptUnsupported(PdfCryptAESV2)) else {
+    fail("expected unsupported AESV2 object crypt")
+  }
 }
 
 ///|

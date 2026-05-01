@@ -22,6 +22,12 @@ pub(all) struct PdfEncryptionValues {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfDecryptionResult {
+  document : PdfDocument
+  denied_permissions : Array[PdfPermission]
+} derive(Debug, Eq, ToJson)
+
+///|
 fn pdf_crypt_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -359,6 +365,50 @@ pub fn PdfEncryptionValues::file_key_for_owner_password(
     )
   } else {
     None
+  }
+}
+
+///|
+fn PdfDocument::encryption_object_number(self : PdfDocument) -> Int {
+  match self.trailer_dict().lookup_immediate(pdf_crypt_name("/Encrypt")) {
+    Some(PdfIndirect(number)) => number
+    _ => 0
+  }
+}
+
+///|
+pub fn PdfDocument::decrypt_with_user_password(
+  self : PdfDocument,
+  password : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfDecryptionResult? raise PdfError {
+  match self.trailer_dict().lookup_immediate(pdf_crypt_name("/Encrypt")) {
+    None => Some({ document: self.copy(), denied_permissions: [] })
+    Some(_) => {
+      let values = self.encryption_values()
+      let file_key = match
+        values.file_key_for_user_password(password, no_encrypt_metadata~) {
+        Some(key) => key
+        None => return None
+      }
+      match values.crypt_type {
+        PdfCryptARC4(key_length_bits, _) => {
+          let output = self.arc4_crypt_parsed_objects(
+            file_key[:],
+            key_length_bits,
+            skip_object_number=self.encryption_object_number(),
+          )
+          output.set_trailer_dict(
+            output.trailer_dict().remove_dict_entry(pdf_crypt_name("/Encrypt")),
+          )
+          Some({
+            document: output,
+            denied_permissions: pdf_permissions_of_p(values.permissions),
+          })
+        }
+        _ => raise EncryptionObjectCryptUnsupported(values.crypt_type)
+      }
+    }
   }
 }
 
