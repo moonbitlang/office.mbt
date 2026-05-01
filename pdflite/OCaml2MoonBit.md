@@ -226,6 +226,17 @@ MoonBit default arguments are labelled arguments. Write `name? : T = default`
 in the function declaration and call it as `name=value`. Do not write a default
 on an unlabelled positional parameter.
 
+```sh
+moon run -c 'struct Item { value : Int; label : String } derive(Debug)
+fn main { let old = Item::{ value: 1, label: "a" }; let next = { ..old, value: 2 }; println(next.value); println(next.label) }'
+# 2
+# a
+```
+
+MoonBit record update uses `{ ..old, field: value }`, which is the direct
+replacement for OCaml `{ old with field = value }` when translating immutable
+record updates.
+
 ## Core Porting Rules
 
 ### Strings and Bytes
@@ -296,6 +307,7 @@ OCaml uses `ref`, mutable records, and lazy object parsing. MoonBit equivalents:
 - `mut` fields inside structs for document/object-map state.
 - Structs with mutable fields for larger state, instead of hiding mutation
   inside tuple refs or nested mutable containers.
+- Immutable record updates use `{ ..old, field: value }`.
 - Represent lazy/deferred states as explicit `enum` variants.
 
 ### Errors

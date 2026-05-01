@@ -271,8 +271,8 @@ MoonBit consequences for this project:
    Page replacement is now started with a `change_pages` slice that builds a
    replacement page tree in a copied document and can renumber same-count old
    page indirect references to the new page objects. CamlPDF's matrix-aware
-   bookmark, annotation, and `/OpenAction` destination transforms remain
-   deferred. A minimal `pdf_of_pages` is started for 1-based page extraction
+   annotation and `/OpenAction` destination transforms remain deferred. A
+   minimal `pdf_of_pages` is started for 1-based page extraction
    and reordering by composing `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
    to the new page objects, duplicated annotation references are copied to fresh
@@ -317,7 +317,16 @@ MoonBit consequences for this project:
    catalog `/Dests` lookup for named destinations, and `/Root/Names/Dests`
    name-tree lookup for string destinations. Matrix transformation is also
    started for page-object targets, with CamlPDF-style coordinate clipping and
-   `/GoTo` action `/D` rewriting. Bookmark integration remains deferred.
+   `/GoTo` action `/D` rewriting.
+
+   Bookmark support is started with typed `PdfBookmarkColour` and
+   `PdfBookmark` records, `/Root/Outlines` traversal, level reconstruction,
+   byte-preserving titles, direct destination and GoTo action target reading,
+   `preserve_actions` behavior matching CamlPDF's shallow read path, `/Count`
+   open-state handling, colour/flag extraction, root/no-outline behavior, and
+   bookmark target transformation through `PdfDestination`. Bookmark removal,
+   bookmark tree construction/replacement, and `change_pages` integration
+   remain deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,
@@ -332,8 +341,8 @@ MoonBit consequences for this project:
     Use small known-vector tests before document-level encrypted fixtures.
 
 11. Higher-level document features.
-    Port destinations, bookmarks/marks, page labels, annotations, optional
-    content groups, merge, duplicate-font removal, date helpers, and remaining
+    Continue bookmarks/marks, page labels, annotations, optional content
+    groups, merge, duplicate-font removal, date helpers, and remaining
     utilities. Use CamlPDF examples and regression fixtures as acceptance tests.
 
 12. Async I/O and command-facing APIs.

@@ -55,6 +55,8 @@ pub fn pdf_ascii_hex_decode(Bytes) -> Bytes raise PdfError
 
 pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
 
+pub let pdf_bookmark_black : PdfBookmarkColour
+
 pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
 
 pub fn pdf_bytes_get(Bytes, Int) -> Byte?
@@ -353,6 +355,21 @@ pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
 
+pub(all) struct PdfBookmark {
+  level : Int
+  text : Bytes
+  target : PdfDestination
+  is_open : Bool
+  colour : PdfBookmarkColour
+  flags : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfBookmarkColour {
+  red : Double
+  green : Double
+  blue : Double
+} derive(Eq, ToJson, @debug.Debug)
+
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
@@ -489,6 +506,7 @@ pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfEr
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int]) -> Self raise PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
+pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise PdfError
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
@@ -505,6 +523,7 @@ pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
+pub fn PdfDocument::transform_bookmark(Self, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
 pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination) -> PdfDestination raise PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
