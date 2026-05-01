@@ -314,8 +314,9 @@ MoonBit consequences for this project:
    `PdfDestination` values, direct destination-array parsing/writing, `/D`
    dictionary following, shallow named/string destination preservation, old
    catalog `/Dests` lookup for named destinations, and `/Root/Names/Dests`
-   name-tree lookup for string destinations. Matrix transformation, action
-   rewriting, and bookmark integration remain deferred.
+   name-tree lookup for string destinations. Matrix transformation is also
+   started for page-object targets, with CamlPDF-style coordinate clipping and
+   `/GoTo` action `/D` rewriting. Bookmark integration remains deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

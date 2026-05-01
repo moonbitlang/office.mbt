@@ -146,3 +146,98 @@ test "PdfDocument read_destination resolves string name-tree destinations" {
     DestString(dest_bytes_for_test("missing")),
   )
 }
+
+///|
+test "PdfDocument transform_destination adjusts page-object coordinates" {
+  let doc = @pdflite.pdf_document_empty()
+  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestXYZ(TargetPageObject(7), Some(1.0), Some(2.0), Some(3.0)),
+    ),
+    DestXYZ(TargetPageObject(7), Some(11.0), Some(22.0), Some(3.0)),
+  )
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestXYZ(TargetPageObject(7), None, Some(2.0), Some(3.0)),
+    ),
+    DestXYZ(TargetPageObject(7), None, Some(22.0), Some(3.0)),
+  )
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestFitV(TargetPageObject(7), Some(5.0)),
+    ),
+    DestFitV(TargetPageObject(7), Some(15.0)),
+  )
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestFitH(TargetPageObject(7), Some(6.0)),
+    ),
+    DestFitH(TargetPageObject(7), Some(26.0)),
+  )
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestFitR(TargetPageObject(7), 1.0, 2.0, 3.0, 4.0),
+    ),
+    DestFitR(TargetPageObject(7), 11.0, 22.0, 13.0, 24.0),
+  )
+}
+
+///|
+test "PdfDocument transform_destination clips coordinates and skips external targets" {
+  let doc = @pdflite.pdf_document_empty()
+  let matrix = @pdflite.transform_translate(40000.0, -40000.0)
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestXYZ(TargetPageObject(7), Some(1.0), Some(2.0), None),
+    ),
+    DestXYZ(TargetPageObject(7), Some(32768.0), Some(-32768.0), None),
+  )
+  @test.assert_eq(
+    try! doc.transform_destination(
+      matrix,
+      DestFitH(TargetOtherDocPageNumber(3), Some(6.0)),
+    ),
+    DestFitH(TargetOtherDocPageNumber(3), Some(6.0)),
+  )
+}
+
+///|
+test "PdfDocument transform_destination rewrites GoTo action D entry" {
+  let doc = @pdflite.pdf_document_empty()
+  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let action : @pdflite.PdfObject = PdfDictionary([
+    (dest_name_for_test("/S"), PdfNameObject(dest_name_for_test("/GoTo"))),
+    (
+      dest_name_for_test("/D"),
+      PdfArray([
+        PdfIndirect(7),
+        PdfNameObject(dest_name_for_test("/XYZ")),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.transform_destination(matrix, DestAction(action)),
+    DestAction(
+      try! action.add_dict_entry(
+        dest_name_for_test("/D"),
+        PdfArray([
+          PdfIndirect(7),
+          PdfNameObject(dest_name_for_test("/XYZ")),
+          PdfReal(11.0),
+          PdfReal(22.0),
+          PdfNull,
+        ]),
+      ),
+    ),
+  )
+}
