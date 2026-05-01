@@ -372,8 +372,11 @@ MoonBit consequences for this project:
    shadings, text quote operators, Type 3 glyph metrics, marked-content
    operators, compatibility-section markers, and artifact marker helpers.
    Inline images are started with a conservative unfiltered `BI ... ID ... EI`
-   parse/render path that preserves image data as `Bytes`; ambiguous inline
-   image terminators and filter-aware inline image compression remain deferred.
+   parse/render path that preserves image data as `Bytes`; known-size
+   unfiltered inline images now read exact byte counts from direct
+   width/height/colour-space/bits metadata or image-mask metadata, preserving
+   `EI` byte sequences inside payloads. Filter-aware inline image compression
+   and broader resource-dependent inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
    page and page-tree resource dictionaries with CamlPDF's lower-case prefix
    sequence. `add_prefix` is also started for page/page-tree resources and

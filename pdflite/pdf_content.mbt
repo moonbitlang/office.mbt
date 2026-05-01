@@ -605,6 +605,130 @@ fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
 }
 
 ///|
+fn pdf_content_inline_name(text : String) -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii(text))
+}
+
+///|
+fn pdf_content_inline_lookup_orelse(
+  dictionary : PdfObject,
+  first : PdfName,
+  second : PdfName,
+) -> PdfObject? {
+  match dictionary.lookup_immediate(first) {
+    Some(value) => Some(value)
+    None => dictionary.lookup_immediate(second)
+  }
+}
+
+///|
+fn pdf_content_inline_int_orelse(
+  dictionary : PdfObject,
+  first : PdfName,
+  second : PdfName,
+) -> Int? {
+  match pdf_content_inline_lookup_orelse(dictionary, first, second) {
+    Some(PdfInteger(value)) if value >= 0 => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn pdf_content_inline_image_mask(dictionary : PdfObject) -> Bool {
+  match
+    pdf_content_inline_lookup_orelse(
+      dictionary,
+      pdf_content_inline_name("/IM"),
+      pdf_content_inline_name("/ImageMask"),
+    ) {
+    Some(PdfBoolean(true)) => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_content_inline_components(dictionary : PdfObject) -> Int? {
+  match
+    pdf_content_inline_lookup_orelse(
+      dictionary,
+      pdf_content_inline_name("/CS"),
+      pdf_content_inline_name("/ColorSpace"),
+    ) {
+    Some(PdfNameObject(name)) =>
+      if name == pdf_content_inline_name("/G") ||
+        name == pdf_content_inline_name("/DeviceGray") {
+        Some(1)
+      } else if name == pdf_content_inline_name("/RGB") ||
+        name == pdf_content_inline_name("/DeviceRGB") {
+        Some(3)
+      } else if name == pdf_content_inline_name("/CMYK") ||
+        name == pdf_content_inline_name("/DeviceCMYK") {
+        Some(4)
+      } else {
+        None
+      }
+    None if pdf_content_inline_image_mask(dictionary) => Some(1)
+    _ => None
+  }
+}
+
+///|
+fn pdf_content_inline_bits_per_component(dictionary : PdfObject) -> Int? {
+  match
+    pdf_content_inline_int_orelse(
+      dictionary,
+      pdf_content_inline_name("/BPC"),
+      pdf_content_inline_name("/BitsPerComponent"),
+    ) {
+    Some(value) if value > 0 => Some(value)
+    None if pdf_content_inline_image_mask(dictionary) => Some(1)
+    _ => None
+  }
+}
+
+///|
+fn pdf_content_inline_filter_is_empty(dictionary : PdfObject) -> Bool {
+  match pdf_content_inline_filter_value(dictionary) {
+    None | Some(PdfArray([])) => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_content_inline_image_data_length(dictionary : PdfObject) -> Int? {
+  if !pdf_content_inline_filter_is_empty(dictionary) {
+    None
+  } else {
+    match
+      (
+        pdf_content_inline_int_orelse(
+          dictionary,
+          pdf_content_inline_name("/W"),
+          pdf_content_inline_name("/Width"),
+        ),
+        pdf_content_inline_int_orelse(
+          dictionary,
+          pdf_content_inline_name("/H"),
+          pdf_content_inline_name("/Height"),
+        ),
+        pdf_content_inline_bits_per_component(dictionary),
+        pdf_content_inline_components(dictionary),
+      ) {
+      (Some(width), Some(height), Some(bits), Some(components)) => {
+        let row_bits = width * components * bits
+        let row_bytes = if row_bits % 8 == 0 {
+          row_bits / 8
+        } else {
+          row_bits / 8 + 1
+        }
+        Some(row_bytes * height)
+      }
+      _ => None
+    }
+  }
+}
+
+///|
 fn pdf_content_filter_is_inline_dct(filter : PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) =>
@@ -666,6 +790,23 @@ fn pdf_content_read_inline_image_data(
     ignore(cursor.read_view(skip_before_marker))
   }
   ignore(cursor.read_view(2))
+  data
+}
+
+///|
+fn pdf_content_read_sized_inline_image_data(
+  cursor : ByteCursor,
+  length : Int,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  let data = cursor.read_view(length).to_owned() catch {
+      EndOfInput => raise ParseEndStreamExpected
+      error => raise error
+    }
+  pdf_content_read_inline_image_end(cursor)
   data
 }
 
@@ -734,7 +875,10 @@ fn pdf_content_read_inline_image(
     if pdf_content_inline_image_uses_dct(dictionary) {
       pdf_content_read_dct_inline_image_data(cursor)
     } else {
-      pdf_content_read_inline_image_data(cursor)
+      match pdf_content_inline_image_data_length(dictionary) {
+        Some(length) => pdf_content_read_sized_inline_image_data(cursor, length)
+        None => pdf_content_read_inline_image_data(cursor)
+      }
     },
   )
 }

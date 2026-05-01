@@ -772,6 +772,67 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     Bytes::new(0),
   )
+  @test.assert_eq(
+    pdf_content_inline_image_data_length(
+      PdfDictionary([
+        (wbtest_content_name("/W"), PdfInteger(1)),
+        (wbtest_content_name("/H"), PdfInteger(1)),
+        (
+          wbtest_content_name("/CS"),
+          PdfNameObject(wbtest_content_name("/CMYK")),
+        ),
+        (wbtest_content_name("/BPC"), PdfInteger(8)),
+      ]),
+    ),
+    Some(4),
+  )
+  @test.assert_eq(
+    pdf_content_inline_image_data_length(
+      PdfDictionary([
+        (wbtest_content_name("/W"), PdfInteger(1)),
+        (wbtest_content_name("/H"), PdfInteger(1)),
+        (wbtest_content_name("/CS"), PdfNameObject(wbtest_content_name("/G"))),
+        (wbtest_content_name("/BPC"), PdfInteger(1)),
+      ]),
+    ),
+    Some(1),
+  )
+  @test.assert_eq(
+    pdf_content_inline_image_data_length(
+      PdfDictionary([
+        (wbtest_content_name("/W"), PdfInteger(1)),
+        (wbtest_content_name("/H"), PdfInteger(1)),
+        (wbtest_content_name("/CS"), PdfNameObject(wbtest_content_name("/G"))),
+        (wbtest_content_name("/BPC"), PdfInteger(8)),
+        (
+          wbtest_content_name("/Filter"),
+          PdfNameObject(wbtest_content_name("/ASCIIHexDecode")),
+        ),
+      ]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! pdf_content_read_sized_inline_image_data(
+      byte_cursor_of_bytes(@ascii.encode("AB EI")),
+      2,
+    ),
+    @ascii.encode("AB"),
+  )
+  let short_sized_inline : Result[PdfBytes, Error] = try? pdf_content_read_sized_inline_image_data(
+    byte_cursor_of_bytes(@ascii.encode("A")),
+    2,
+  )
+  guard short_sized_inline is Err(PdfError::ParseEndStreamExpected) else {
+    fail("expected ParseEndStreamExpected")
+  }
+  let bad_sized_length : Result[PdfBytes, Error] = try? pdf_content_read_sized_inline_image_data(
+    byte_cursor_of_bytes(@ascii.encode(" EI")),
+    -1,
+  )
+  guard bad_sized_length is Err(PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength")
+  }
   let jpeg_data = try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
   @test.assert_eq(
     try! pdf_content_read_dct_inline_image_data(

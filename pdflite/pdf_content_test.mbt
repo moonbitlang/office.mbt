@@ -272,6 +272,45 @@ test "pdf_parse_content_ops_from_bytes parses simple inline images" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes preserves raw inline image EI bytes" {
+  let data = content_bytes_for_test(
+    "BI /W 6 /H 1 /CS /G /BPC 8 ID A EI B\nEI Q",
+  )
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(6)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("A EI B"),
+    ),
+    Op_Q,
+  ])
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes preserves image mask EI bytes" {
+  let data = content_bytes_for_test("BI /W 16 /H 1 /IM true ID EI\nEI")
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(16)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (content_name_for_test("/IM"), PdfBoolean(true)),
+      ]),
+      None,
+      content_bytes_for_test("EI"),
+    ),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes parses inline image comments" {
   let data = content_bytes_for_test(
     "BI % ignored\n/W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc\nEI",
