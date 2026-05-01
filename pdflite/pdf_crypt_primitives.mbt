@@ -51,6 +51,11 @@ pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
 }
 
 ///|
+pub fn pdf_sha256_digest(data : BytesView) -> PdfBytes {
+  Bytes::from_array(@crypto.sha256(data))
+}
+
+///|
 pub fn pdf_encryption_object_key(
   crypt_type : PdfCryptType,
   object_number : Int,

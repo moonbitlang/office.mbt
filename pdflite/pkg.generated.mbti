@@ -67,7 +67,11 @@ pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
 
 pub fn pdf_authenticate_owner_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
 
+pub fn pdf_authenticate_owner_password_aesv3(Bool, BytesView, BytesView, BytesView) -> Bool raise PdfError
+
 pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
+
+pub fn pdf_authenticate_user_password_aesv3(Bool, BytesView, BytesView) -> Bool raise PdfError
 
 pub let pdf_bookmark_black : PdfBookmarkColour
 
@@ -268,6 +272,8 @@ pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfErr
 pub fn pdf_run_length_decode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode(Bytes) -> Bytes
+
+pub fn pdf_sha256_digest(BytesView) -> Bytes
 
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise PdfError
 

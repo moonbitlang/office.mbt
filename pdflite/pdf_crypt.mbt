@@ -264,17 +264,23 @@ pub fn PdfEncryptionValues::authenticate_user_password(
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> Bool raise PdfError {
-  let (revision, key_length_bits) = self.password_settings()
-  pdf_authenticate_user_password(
-    no_encrypt_metadata,
-    password,
-    revision,
-    self.user_entry[:],
-    self.owner_entry[:],
-    self.permissions,
-    self.file_id[:],
-    key_length_bits,
-  )
+  match self.crypt_type {
+    PdfCryptAESV3(iso) =>
+      pdf_authenticate_user_password_aesv3(iso, password, self.user_entry[:])
+    _ => {
+      let (revision, key_length_bits) = self.password_settings()
+      pdf_authenticate_user_password(
+        no_encrypt_metadata,
+        password,
+        revision,
+        self.user_entry[:],
+        self.owner_entry[:],
+        self.permissions,
+        self.file_id[:],
+        key_length_bits,
+      )
+    }
+  }
 }
 
 ///|
@@ -316,17 +322,28 @@ pub fn PdfEncryptionValues::authenticate_owner_password(
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> Bool raise PdfError {
-  let (revision, key_length_bits) = self.password_settings()
-  pdf_authenticate_owner_password(
-    no_encrypt_metadata,
-    password,
-    revision,
-    self.user_entry[:],
-    self.owner_entry[:],
-    self.permissions,
-    self.file_id[:],
-    key_length_bits,
-  )
+  match self.crypt_type {
+    PdfCryptAESV3(iso) =>
+      pdf_authenticate_owner_password_aesv3(
+        iso,
+        password,
+        self.user_entry[:],
+        self.owner_entry[:],
+      )
+    _ => {
+      let (revision, key_length_bits) = self.password_settings()
+      pdf_authenticate_owner_password(
+        no_encrypt_metadata,
+        password,
+        revision,
+        self.user_entry[:],
+        self.owner_entry[:],
+        self.permissions,
+        self.file_id[:],
+        key_length_bits,
+      )
+    }
+  }
 }
 
 ///|
@@ -467,6 +484,64 @@ pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
     output.push(padding[index - copied])
   }
   Bytes::from_array(output)
+}
+
+///|
+fn pdf_crypt_concat_bytes(parts : ArrayView[BytesView]) -> PdfBytes {
+  let output : Array[Byte] = []
+  for part in parts {
+    for byte in part {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_aesv3_password_hash(
+  iso : Bool,
+  password_data : BytesView,
+) -> PdfBytes raise PdfError {
+  if iso {
+    raise EncryptionAuthenticationUnsupported(PdfCryptAESV3(iso))
+  }
+  pdf_sha256_digest(password_data)
+}
+
+///|
+pub fn pdf_authenticate_user_password_aesv3(
+  iso : Bool,
+  password : BytesView,
+  user_entry : BytesView,
+) -> Bool raise PdfError {
+  if user_entry.length() < 48 {
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_name("/U"))
+  }
+  let input = pdf_crypt_concat_bytes([password, user_entry[32:40]])
+  let expected = pdf_aesv3_password_hash(iso, input[:])
+  pdf_bytes_prefix_equal(user_entry, expected[:], 32)
+}
+
+///|
+pub fn pdf_authenticate_owner_password_aesv3(
+  iso : Bool,
+  password : BytesView,
+  user_entry : BytesView,
+  owner_entry : BytesView,
+) -> Bool raise PdfError {
+  if owner_entry.length() < 48 {
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_name("/O"))
+  }
+  if user_entry.length() < 48 {
+    raise EncryptionDictionaryEntryTooShort(pdf_crypt_name("/U"))
+  }
+  let input = pdf_crypt_concat_bytes([
+    password,
+    owner_entry[32:40],
+    user_entry[:48],
+  ])
+  let expected = pdf_aesv3_password_hash(iso, input[:])
+  pdf_bytes_prefix_equal(owner_entry, expected[:], 32)
 }
 
 ///|

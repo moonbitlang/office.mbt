@@ -525,8 +525,11 @@ MoonBit consequences for this project:
     unsupported encryption methods, malformed required entries, short `/O` or
     `/U` entries, and missing trailer IDs. Typed password authentication and
     file-key derivation are started on top of parsed encryption values for
-    ARC4 revisions 2/3 and AESV2 revision 4, while AESV3 authentication reports
-    a structured unsupported error until the SHA-256/384 algorithms are ported.
+    ARC4 revisions 2/3 and AESV2 revision 4. AESV3 revision 5 SHA-256
+    user-password and owner-password authentication is also started, with
+    revision 6/ISO `shamix`, AES `/UE` and `/OE` file-key unwrap, and AES
+    object crypt still reporting structured unsupported errors until the
+    remaining primitives are available.
     Copied document-level user-password and owner-password decryption entry
     points are started for parsed ARC4 documents; they remove `/Encrypt` from
     the copied trailer, skip the indirect encryption dictionary object, and
