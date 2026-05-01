@@ -509,6 +509,9 @@ MoonBit consequences for this project:
    marker are also accepted. `beginbfchar` lines can contain repeated
    source-to-Unicode pairs, and sequential `beginbfrange` lines can contain
    repeated source ranges.
+   AFM parsing is started with a byte-oriented `pdf_read_afm` API that returns
+   header entries, character-code widths, glyph-name widths, and kerning pairs
+   without converting AFM syntax or glyph names through `String`.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
    and `/Identity-H` CID text, including decoded glyph records, glyph-name
    extraction, flattened codepoint extraction, and reverse ToUnicode charcode

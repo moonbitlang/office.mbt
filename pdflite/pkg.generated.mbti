@@ -287,6 +287,8 @@ pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise PdfError
 
 pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
 
+pub fn pdf_read_afm(BytesView) -> PdfAfmData raise PdfError
+
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
@@ -453,6 +455,7 @@ pub(all) suberror PdfError {
   FontCharProcsExpected
   FontTypeExpected
   FontWriteUnsupported
+  AfmExpected
   BadText
   CIDSystemInfoExpected
   CIDRegistryExpected
@@ -565,6 +568,13 @@ pub(all) enum PdfAesV3RandomField {
   PdfAesV3OwnerValidationSalt
   PdfAesV3OwnerKeySalt
   PdfAesV3PermissionsPadding
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAfmData {
+  headers : Array[(Bytes, Bytes)]
+  char_metrics : Array[(Int, Int)]
+  kerns : Array[(Int, Int, Int)]
+  char_name_widths : Array[(Bytes, Int)]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfAnnotation {

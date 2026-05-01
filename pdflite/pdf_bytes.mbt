@@ -76,6 +76,7 @@ pub(all) suberror PdfError {
   FontCharProcsExpected
   FontTypeExpected
   FontWriteUnsupported
+  AfmExpected
   BadText
   CIDSystemInfoExpected
   CIDRegistryExpected
