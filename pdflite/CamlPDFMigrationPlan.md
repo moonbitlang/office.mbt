@@ -515,11 +515,14 @@ MoonBit consequences for this project:
     IV-prefixed CBC, and ECB primitives are started through the portable
     `illusory0x0/rijndael` MoonBit package, with CamlPDF-compatible PKCS#7
     padding handling. ARC4 object data encryption/decryption using derived
-    object keys is started for the legacy string/stream path. A recursive ARC4
-    object walk is started for PDF strings,
-    arrays, dictionaries, and stream dictionaries/data, with stream data
-    materialized at the crypt boundary and `/Length` refreshed. A copied
-    document-level ARC4 pass is also started for parsed objects, preserving
+    object keys is started for the legacy string/stream path. AESV2 parsed
+    object data decryption is also started for IV-prefixed strings and stream
+    payloads using derived AES object keys. Recursive ARC4 and AESV2 object
+    walks are started for PDF strings, arrays, dictionaries, and stream
+    dictionaries/data, with stream data materialized at the crypt boundary and
+    `/Length` refreshed. Copied document-level ARC4 and AESV2 user-password and
+    owner-password decryption passes are also started for parsed objects,
+    preserving
     already-decrypted and deferred parser states and allowing the encryption
     dictionary object to be skipped. Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
@@ -533,12 +536,12 @@ MoonBit consequences for this project:
     `/UE` and `/OE` file-key unwrap through AES-256-CBC with no padding.
     Revision 6/ISO `shamix` and AES object crypt still report structured
     unsupported errors until the remaining primitives are available.
-    Copied document-level user-password and owner-password decryption entry
-    points are started for parsed ARC4 documents; they remove `/Encrypt` from
-    the copied trailer, skip the indirect encryption dictionary object, and
-    return CamlPDF-style denied permissions. AES object/data crypt, SHA-family
-    helpers beyond the available package surface, deferred stream/object
-    decryption, and re-encryption remain deferred.
+    The document-level decryption entry points for parsed ARC4 and AESV2
+    documents remove `/Encrypt` from the copied trailer, skip the indirect
+    encryption dictionary object, and return CamlPDF-style denied permissions.
+    AESV3 object/data crypt, SHA-family helpers beyond the available package
+    surface, deferred stream/object decryption, and re-encryption remain
+    deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
