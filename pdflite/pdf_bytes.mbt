@@ -48,6 +48,7 @@ pub(all) suberror PdfError {
   InvalidUTF16BE
   InvalidUTF8
   InvalidPDFDocEncoding(Int)
+  CryptoKeyExpected
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported

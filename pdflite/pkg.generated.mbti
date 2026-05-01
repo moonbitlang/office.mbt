@@ -49,6 +49,8 @@ pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : P
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
 
+pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise PdfError
+
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise PdfError
@@ -345,6 +347,7 @@ pub(all) suberror PdfError {
   InvalidUTF16BE
   InvalidUTF8
   InvalidPDFDocEncoding(Int)
+  CryptoKeyExpected
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported

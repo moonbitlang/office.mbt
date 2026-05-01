@@ -497,6 +497,11 @@ MoonBit consequences for this project:
     are stable. Decide the primitive strategy first, then add permission flags,
     key derivation, stream/string encryption, decryption, and re-encryption.
     Use small known-vector tests before document-level encrypted fixtures.
+    Status: started with the pure ARC4 primitive from `pdfcryptprimitives`,
+    exposed as `pdf_arc4_crypt` over `BytesView` inputs and covered with
+    standard ARC4 known vectors plus round-trip and empty-key tests. AES,
+    SHA-family helpers, MD5-backed Algorithm 3.1 object-key derivation,
+    permissions, document decryption, and re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

@@ -529,7 +529,19 @@ meaning:
   explicitly bounded by in-memory `Bytes.length()`.
 - Raw bytes: `Byte`.
 - Bit-level unsigned arithmetic: `UInt`, `UInt64`, or `Byte` as appropriate.
+  For byte-oriented algorithms ported from OCaml `int array`, use `BytesView`
+  for immutable key/data inputs, `Array[Int]` for mutable permutation or table
+  state, and convert at the byte boundary with `.to_int()` / `.to_byte()`.
 - OCaml `float`: usually `Double`.
+
+```sh
+moon run -c 'fn main { println(0x50 ^ 0xeb); println((0xbb).to_byte().to_int()) }'
+# 187
+# 187
+```
+
+MoonBit integer bitwise XOR uses `^`. Keep algorithm state in `Int` when the
+OCaml code relies on arithmetic modulo 256, then freeze output as `Bytes`.
 
 ### Data Structures
 
