@@ -215,6 +215,34 @@ fn crypt_unwrap_decryption_result_for_test(
 }
 
 ///|
+test "PdfDocument is_encrypted follows direct encryption dictionary" {
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let encrypt_dictionary = crypt_standard_encrypt_dictionary_for_test([
+    (crypt_name_for_test("/V"), PdfInteger(1)),
+    (crypt_name_for_test("/R"), PdfInteger(2)),
+  ])
+  let plain_doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(plain_doc.is_encrypted(), false)
+
+  let direct_doc = @pdflite.pdf_document_empty()
+  direct_doc.set_trailer_dict(
+    PdfDictionary([(key_encrypt, encrypt_dictionary)]),
+  )
+  @test.assert_eq(direct_doc.is_encrypted(), true)
+
+  let indirect_doc = @pdflite.pdf_document_empty()
+  indirect_doc.add_object_given_number(7, encrypt_dictionary)
+  indirect_doc.set_trailer_dict(PdfDictionary([(key_encrypt, PdfIndirect(7))]))
+  @test.assert_eq(indirect_doc.is_encrypted(), true)
+
+  let missing_indirect_doc = @pdflite.pdf_document_empty()
+  missing_indirect_doc.set_trailer_dict(
+    PdfDictionary([(key_encrypt, PdfIndirect(99))]),
+  )
+  @test.assert_eq(missing_indirect_doc.is_encrypted(), false)
+}
+
+///|
 test "PdfDocument encryption_values parses legacy ARC4 dictionary values" {
   let doc = crypt_doc_with_encrypt_for_test(
     crypt_standard_encrypt_dictionary_for_test([

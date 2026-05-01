@@ -530,8 +530,9 @@ MoonBit consequences for this project:
     and stream skipping. Copied document-level ARC4, AESV2, and AESV3 revision 5
     user-password and owner-password decryption passes are also started for
     parsed objects, preserving already-decrypted and deferred parser states and
-    allowing the encryption dictionary object to be skipped. Typed
-    standard-encryption dictionary
+    allowing the encryption dictionary object to be skipped. CamlPDF-style
+    `is_encrypted` detection now mirrors CamlPDF's direct `/Encrypt` lookup.
+    Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
     handling. The parser now reports structured errors for unencrypted files,

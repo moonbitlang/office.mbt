@@ -260,6 +260,11 @@ pub fn PdfDocument::encryption_values(
 }
 
 ///|
+pub fn PdfDocument::is_encrypted(self : PdfDocument) -> Bool {
+  self.lookup_direct(pdf_crypt_name("/Encrypt"), self.trailer_dict()) != None
+}
+
+///|
 fn PdfEncryptionValues::effective_no_encrypt_metadata(
   self : PdfEncryptionValues,
   no_encrypt_metadata : Bool,
