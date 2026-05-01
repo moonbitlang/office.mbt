@@ -51,6 +51,8 @@ pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_
 
 pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise PdfError
 
+pub fn pdf_arc4_crypt_object(Int, Int, BytesView, Int, BytesView) -> Bytes raise PdfError
+
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise PdfError

@@ -107,3 +107,23 @@ test "pdf_encryption_object_key matches CamlPDF Algorithm 3.1" {
     ]),
   )
 }
+
+///|
+test "pdf_arc4_crypt_object applies derived object key" {
+  let file_key = crypt_bytes_for_test([1, 2, 3, 4, 5])
+  let encrypted = try! @pdflite.pdf_arc4_crypt_object(
+    12,
+    0,
+    file_key[:],
+    40,
+    @ascii.encode("hello")[:],
+  )
+  @test.assert_eq(
+    encrypted,
+    crypt_bytes_for_test([0x7d, 0x1c, 0x38, 0x4c, 0xca]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_object(12, 0, file_key[:], 40, encrypted[:]),
+    @ascii.encode("hello"),
+  )
+}

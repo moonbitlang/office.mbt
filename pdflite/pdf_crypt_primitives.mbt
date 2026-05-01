@@ -84,3 +84,21 @@ pub fn pdf_encryption_object_key(
   }
   Bytes::from_array(output)
 }
+
+///|
+pub fn pdf_arc4_crypt_object(
+  object_number : Int,
+  generation : Int,
+  file_key : BytesView,
+  key_length_bits : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let object_key = pdf_encryption_object_key(
+    PdfCryptARC4(key_length_bits, 0),
+    object_number,
+    generation,
+    file_key,
+    key_length_bits,
+  )
+  pdf_arc4_crypt(object_key[:], data)
+}

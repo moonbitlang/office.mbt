@@ -511,9 +511,10 @@ MoonBit consequences for this project:
     revision 4 no-metadata marker branch. R2/R3/R4 `/U` user-password entry
     generation and user-password authentication are started over the ARC4/MD5
     path. R2/R3/R4 `/O` owner-password entry generation, padded-user recovery,
-    and owner-password authentication are also started. AES, SHA-family helpers
-    beyond the available package surface, document decryption, and re-encryption
-    remain deferred.
+    and owner-password authentication are also started. ARC4 object data
+    encryption/decryption using derived object keys is started for the legacy
+    string/stream path. AES, SHA-family helpers beyond the available package
+    surface, document decryption, and re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
