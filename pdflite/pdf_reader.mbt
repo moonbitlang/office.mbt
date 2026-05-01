@@ -85,8 +85,33 @@ pub fn pdf_read_primitive_document_from_bytes(
 ) -> PdfDocument raise PdfError {
   let cursor = byte_cursor_of_bytes(data)
   let version = cursor.read_pdf_header()
-  let objects = pdf_parse_indirect_objects(cursor.lex_pdf_tokens())
-  pdf_document_of_parsed_indirect_objects(objects, version~)
+  let document = pdf_document_empty()
+  document.set_version(version.major, version.minor)
+  let mut done = false
+  while !done {
+    let (objects, prefix) = pdf_parse_indirect_object_segments(
+      cursor.lex_pdf_tokens(),
+    )
+    for parsed in objects {
+      document.add_object_given_number(
+        parsed.number,
+        parsed.object,
+        generation=parsed.generation,
+      )
+    }
+    match prefix {
+      Some(prefix) => {
+        let stream = cursor.finish_pdf_stream_object(prefix)
+        document.add_object_given_number(
+          stream.number,
+          stream.object,
+          generation=stream.generation,
+        )
+      }
+      None => done = true
+    }
+  }
+  document
 }
 
 ///|
@@ -130,29 +155,34 @@ fn ByteCursor::consume_pdf_stream_line_break(self : ByteCursor) -> Unit {
 }
 
 ///|
-pub fn pdf_parse_stream_object_from_bytes(
-  data : PdfBytes,
+fn ByteCursor::finish_pdf_stream_object(
+  self : ByteCursor,
+  prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let cursor = byte_cursor_of_bytes(data)
-  let prefix = pdf_parse_indirect_object_prefix_lexemes(cursor.lex_pdf_tokens())
   let length = pdf_stream_length(prefix.object)
-  cursor.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
-  cursor.consume_pdf_stream_line_break()
-  let stream_data = cursor.read_bytes(length)
-  cursor.consume_pdf_stream_line_break()
-  cursor.drop_pdf_whitespace()
-  cursor.consume_pdf_ascii(
+  self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
+  self.consume_pdf_stream_line_break()
+  let stream_data = self.read_bytes(length)
+  self.consume_pdf_stream_line_break()
+  self.drop_pdf_whitespace()
+  self.consume_pdf_ascii(
     [101, 110, 100, 115, 116, 114, 101, 97, 109],
     ParseEndStreamExpected,
   )
-  cursor.drop_pdf_whitespace()
-  cursor.consume_pdf_ascii(
-    [101, 110, 100, 111, 98, 106],
-    ParseEndObjectExpected,
-  )
+  self.drop_pdf_whitespace()
+  self.consume_pdf_ascii([101, 110, 100, 111, 98, 106], ParseEndObjectExpected)
   {
     number: prefix.number,
     generation: prefix.generation,
     object: pdf_stream(prefix.object, StreamGot(stream_data)),
   }
+}
+
+///|
+pub fn pdf_parse_stream_object_from_bytes(
+  data : PdfBytes,
+) -> PdfParsedIndirectObject raise PdfError {
+  let cursor = byte_cursor_of_bytes(data)
+  let prefix = pdf_parse_indirect_object_prefix_lexemes(cursor.lex_pdf_tokens())
+  cursor.finish_pdf_stream_object(prefix)
 }

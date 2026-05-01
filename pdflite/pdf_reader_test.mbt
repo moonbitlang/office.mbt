@@ -82,3 +82,26 @@ test "pdf_parse_stream_object_from_bytes reports missing stream length" {
     fail("expected StreamLengthExpected")
   }
 }
+
+///|
+test "pdf_read_primitive_document_from_bytes includes direct-length stream objects" {
+  let document = try! @pdflite.pdf_read_primitive_document_from_bytes(
+    reader_bytes_for_test([
+      37, 80, 68, 70, 45, 49, 46, 52, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60,
+      32, 47, 76, 101, 110, 103, 116, 104, 32, 53, 32, 62, 62, 10, 115, 116, 114,
+      101, 97, 109, 10, 72, 101, 108, 108, 111, 10, 101, 110, 100, 115, 116, 114,
+      101, 97, 109, 10, 101, 110, 100, 111, 98, 106, 10, 50, 32, 48, 32, 111, 98,
+      106, 10, 110, 117, 108, 108, 10, 101, 110, 100, 111, 98, 106, 10, 120, 114,
+      101, 102,
+    ]),
+  )
+  @test.assert_eq(document.object_numbers(), [1, 2])
+  guard document.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(
+    stream.data,
+    StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
+  )
+  @test.assert_eq(document.lookup_object_or_null(2), PdfNull)
+}

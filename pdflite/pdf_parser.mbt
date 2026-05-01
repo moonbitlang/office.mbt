@@ -219,6 +219,21 @@ fn pdf_parse_indirect_object_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
 ) -> (PdfParsedIndirectObject, Int) raise PdfError {
+  let (object, next, complete) = pdf_parse_indirect_object_segment_at(
+    lexemes, index,
+  )
+  if complete {
+    (object, next)
+  } else {
+    raise ParseEndObjectExpected
+  }
+}
+
+///|
+fn pdf_parse_indirect_object_segment_at(
+  lexemes : ArrayView[PdfLexeme],
+  index : Int,
+) -> (PdfParsedIndirectObject, Int, Bool) raise PdfError {
   let first = pdf_skip_comments(lexemes, index)
   if first + 2 >= lexemes.length() {
     raise ParseIndirectObjectExpected
@@ -229,9 +244,9 @@ fn pdf_parse_indirect_object_at(
       let (object, after_object) = pdf_parse_value_at(lexemes, object_start)
       let end_position = pdf_skip_comments(lexemes, after_object)
       if end_position < lexemes.length() && lexemes[end_position] == LexEndObj {
-        ({ number, generation, object }, end_position + 1)
+        ({ number, generation, object }, end_position + 1, true)
       } else {
-        raise ParseEndObjectExpected
+        ({ number, generation, object }, after_object, false)
       }
     }
     _ => raise ParseIndirectObjectExpected
@@ -289,4 +304,33 @@ pub fn pdf_parse_indirect_objects(
     }
   }
   objects
+}
+
+///|
+fn pdf_parse_indirect_object_segments(
+  lexemes : ArrayView[PdfLexeme],
+) -> (Array[PdfParsedIndirectObject], PdfParsedIndirectObject?) raise PdfError {
+  let objects : Array[PdfParsedIndirectObject] = []
+  let mut prefix : PdfParsedIndirectObject? = None
+  let mut current = 0
+  let mut done = false
+  while !done && current < lexemes.length() {
+    current = pdf_skip_comments(lexemes, current)
+    if current < lexemes.length() {
+      let (object, next, complete) = pdf_parse_indirect_object_segment_at(
+        lexemes, current,
+      )
+      if complete {
+        if next <= current {
+          raise ParseIndirectObjectExpected
+        }
+        objects.push(object)
+        current = next
+      } else {
+        prefix = Some(object)
+        done = true
+      }
+    }
+  }
+  (objects, prefix)
 }

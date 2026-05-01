@@ -183,7 +183,8 @@ MoonBit consequences for this project:
    stream-aware lexing, and a primitive document loader can collect multiple
    non-stream indirect objects from byte input into `PdfDocument`. Direct-length
    stream object parsing is started for `/Length n` streams, materializing owned
-   `StreamGot(Bytes)` data at the object boundary.
+   `StreamGot(Bytes)` data at the object boundary; the primitive document loader
+   now includes those direct-length stream objects.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
