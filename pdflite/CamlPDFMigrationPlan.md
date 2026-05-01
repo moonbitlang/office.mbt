@@ -438,7 +438,9 @@ MoonBit consequences for this project:
     rewind errors, seek-past-end reads, and owned line allocation. Annotation
     coverage was also broadened through public APIs for subtype
     serialization/parsing, border-style parsing, preserved rest entries,
-    existing annotation arrays, and malformed quadpoint preservation.
+    existing annotation arrays, and malformed quadpoint preservation. Bookmark
+    coverage now includes preserved string destinations, action destinations,
+    action fallback behavior, missing titles, and malformed color arrays.
 
 ## Update Discipline
 

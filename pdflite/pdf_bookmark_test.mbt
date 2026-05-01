@@ -93,6 +93,28 @@ fn bookmark_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn bookmark_single_outline_doc_for_test(
+  outline : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  let key_type = bookmark_name_for_test("/Type")
+  let key_outlines = bookmark_name_for_test("/Outlines")
+  let key_first = bookmark_name_for_test("/First")
+  let type_catalog = bookmark_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_outlines, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(2, PdfDictionary([(key_first, PdfIndirect(3))]))
+  doc.add_object_given_number(3, outline)
+  doc
+}
+
+///|
 test "PdfDocument read_bookmarks traverses outline trees" {
   let doc = bookmark_document_for_test()
   @test.assert_eq(try! doc.read_bookmarks(), [
@@ -121,6 +143,62 @@ test "PdfDocument read_bookmarks traverses outline trees" {
       flags: 0,
     },
   ])
+}
+
+///|
+test "PdfDocument read_bookmarks handles preserved destinations and fallback fields" {
+  let key_title = bookmark_name_for_test("/Title")
+  let key_dest = bookmark_name_for_test("/Dest")
+  let key_action = bookmark_name_for_test("/A")
+  let key_s = bookmark_name_for_test("/S")
+  let key_d = bookmark_name_for_test("/D")
+  let key_colour = bookmark_name_for_test("/C")
+  let doc = bookmark_single_outline_doc_for_test(
+    PdfDictionary([
+      (key_dest, PdfString(bookmark_bytes_for_test("named"))),
+      (
+        key_colour,
+        PdfArray([
+          PdfNameObject(bookmark_name_for_test("/Bad")),
+          PdfReal(0.2),
+          PdfReal(0.3),
+        ]),
+      ),
+    ]),
+  )
+  let bookmark = (try! doc.read_bookmarks(preserve_actions=true))[0]
+  @test.assert_eq(bookmark.text, bookmark_bytes_for_test(""))
+  @test.assert_eq(bookmark.target, DestString(bookmark_bytes_for_test("named")))
+  @test.assert_eq(bookmark.colour, @pdflite.pdf_bookmark_black)
+  let action_with_dest : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_d,
+      PdfArray([PdfIndirect(7), PdfNameObject(bookmark_name_for_test("/Fit"))]),
+    ),
+  ])
+  let doc = bookmark_single_outline_doc_for_test(
+    PdfDictionary([
+      (key_title, PdfString(bookmark_bytes_for_test("ActionDest"))),
+      (key_action, action_with_dest),
+    ]),
+  )
+  @test.assert_eq(
+    (try! doc.read_bookmarks(preserve_actions=true))[0].target,
+    DestFit(TargetPageObject(7)),
+  )
+  let action_without_dest : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfNameObject(bookmark_name_for_test("/URI"))),
+  ])
+  let doc = bookmark_single_outline_doc_for_test(
+    PdfDictionary([
+      (key_title, PdfString(bookmark_bytes_for_test("Action"))),
+      (key_action, action_without_dest),
+    ]),
+  )
+  @test.assert_eq(
+    (try! doc.read_bookmarks())[0].target,
+    DestAction(action_without_dest),
+  )
 }
 
 ///|
