@@ -2468,6 +2468,120 @@ test "PdfTextExtractor extracts MacExpert small accent marks" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert small punctuation and currency" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x20, 0x21, 0x23, 0x24, 0x26, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x3A, 0x3B, 0x3F,
+    0x7B, 0x7C, 0x7D, 0xC0, 0xD0, 0xD6,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x20, 0xF721, 0xF7A2, 0xF724, 0xF726, 0x2025, 0x2024, 0x2C, 0x2D, 0x2E, 0x3A,
+    0x3B, 0xF73F, 0x20A1, 0xF6DC, 0xF6DD, 0xF7BF, 0x2012, 0xF7A1,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/space"),
+    text_name_for_test("/exclamsmall"),
+    text_name_for_test("/centoldstyle"),
+    text_name_for_test("/dollaroldstyle"),
+    text_name_for_test("/ampersandsmall"),
+    text_name_for_test("/twodotenleader"),
+    text_name_for_test("/onedotenleader"),
+    text_name_for_test("/comma"),
+    text_name_for_test("/hyphen"),
+    text_name_for_test("/period"),
+    text_name_for_test("/colon"),
+    text_name_for_test("/semicolon"),
+    text_name_for_test("/questionsmall"),
+    text_name_for_test("/colonmonetary"),
+    text_name_for_test("/onefitted"),
+    text_name_for_test("/rupiah"),
+    text_name_for_test("/questiondownsmall"),
+    text_name_for_test("/figuredash"),
+    text_name_for_test("/exclamdownsmall"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF721), Some(0x21))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF724), Some(0x24))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20A1), Some(0x7B))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF7A1), Some(0xD6))
+}
+
+///|
+test "PdfTextExtractor extracts MacExpert superior and inferior punctuation and letters" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x28, 0x29, 0x5B, 0x5D, 0x5F, 0x81, 0x82, 0xA9, 0xAF, 0xB2, 0xB3, 0xB6, 0xE4,
+    0xE5, 0xE6, 0xE9, 0xEA, 0xEB, 0xF1, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x207D, 0x207E, 0x208D, 0x208E, 0xF6E5, 0xF6E9, 0xF6E0, 0xF6DF, 0xF6F0, 0xF6E1,
+    0xF6E7, 0xF6E3, 0xF6EC, 0xF6F1, 0xF6F3, 0xF6ED, 0xF6F2, 0xF6EB, 0xF6EE, 0xF6EA,
+    0x207F, 0xF6EF, 0xF6E2, 0xF6E8,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/parenleftsuperior"),
+    text_name_for_test("/parenrightsuperior"),
+    text_name_for_test("/parenleftinferior"),
+    text_name_for_test("/parenrightinferior"),
+    text_name_for_test("/hypheninferior"),
+    text_name_for_test("/asuperior"),
+    text_name_for_test("/centsuperior"),
+    text_name_for_test("/centinferior"),
+    text_name_for_test("/osuperior"),
+    text_name_for_test("/commainferior"),
+    text_name_for_test("/periodinferior"),
+    text_name_for_test("/dollarinferior"),
+    text_name_for_test("/esuperior"),
+    text_name_for_test("/rsuperior"),
+    text_name_for_test("/tsuperior"),
+    text_name_for_test("/isuperior"),
+    text_name_for_test("/ssuperior"),
+    text_name_for_test("/dsuperior"),
+    text_name_for_test("/lsuperior"),
+    text_name_for_test("/bsuperior"),
+    text_name_for_test("/nsuperior"),
+    text_name_for_test("/msuperior"),
+    text_name_for_test("/commasuperior"),
+    text_name_for_test("/periodsuperior"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x207D), Some(0x28))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6E5), Some(0x5F))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6E0), Some(0x82))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6EA), Some(0xF5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6E8), Some(0xF9))
+}
+
+///|
+test "PdfTextExtractor decodes MacExpert hyphensuperior glyph names" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfMacExpertEncoding, [
+        text_difference_for_test("/hyphensuperior", 0x41),
+      ]),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([0x41, 0x5F])[:]),
+    [0xF6E6, 0xF6E5],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([0x41, 0x5F])[:]),
+    [
+      text_name_for_test("/hyphensuperior"),
+      text_name_for_test("/hypheninferior"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), Some(0x41))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),

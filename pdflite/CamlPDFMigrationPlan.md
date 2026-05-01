@@ -422,7 +422,8 @@ MoonBit consequences for this project:
    letters, and common symbols.
    MacExpert fallback is started for the well-defined ligature, oldstyle digit,
    superior digit, inferior digit, fraction, small-capital, accented
-   small-capital, and small accent-mark codepoints.
+   small-capital, small accent-mark, small punctuation/currency, and
+   superior/inferior punctuation and letter codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
    `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs.
@@ -438,8 +439,10 @@ MoonBit consequences for this project:
    negative-circled-sans-serif-digit, high-byte arrow glyph blocks including
    the gapped final arrow tail, and the remaining bracket glyph names from
    CamlPDF's dingbat Unicode map.
-   General `pdfcmap` parsing, full Adobe Glyph List coverage, and broader
-   MacExpert coverage remain deferred.
+   General `pdfcmap` parsing and full Adobe Glyph List coverage remain
+   deferred. MacExpert byte coverage now matches CamlPDF's table except the
+   duplicate `/hyphensuperior` alias for byte `0x5F`; glyph-name decoding still
+   handles both `/hypheninferior` and `/hyphensuperior`.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
