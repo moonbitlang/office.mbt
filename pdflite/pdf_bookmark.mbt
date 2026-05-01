@@ -485,6 +485,75 @@ pub fn PdfDocument::read_bookmarks(
 }
 
 ///|
+fn PdfDocument::pdf_bookmark_has_outlines(
+  self : PdfDocument,
+) -> Bool raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  self.lookup_direct(pdf_bookmark_outlines_key(), root) is Some(_)
+}
+
+///|
+fn pdf_bookmark_page_member(
+  page_numbers : ArrayView[Int],
+  page_number : Int,
+) -> Bool {
+  for selected in page_numbers {
+    if selected == page_number {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_bookmark_mark_ancestors(
+  bookmarks : ArrayView[PdfBookmark],
+  keep : Array[Bool],
+  index : Int,
+) -> Unit {
+  let mut wanted_level = bookmarks[index].level - 1
+  let mut current = index - 1
+  while current >= 0 && wanted_level >= 0 {
+    if bookmarks[current].level == wanted_level {
+      keep[current] = true
+      wanted_level -= 1
+    }
+    current -= 1
+  }
+}
+
+///|
+fn PdfDocument::pdf_bookmarks_for_pages(
+  self : PdfDocument,
+  page_numbers : ArrayView[Int],
+) -> Array[PdfBookmark] raise PdfError {
+  let bookmarks = self.read_bookmarks(preserve_actions=true)
+  let page_reference_numbers = self.page_reference_numbers()
+  let keep = [ for _ in bookmarks => false ]
+  for index in 0..<bookmarks.length() {
+    let page_number = self.pdf_destination_page_number(
+      bookmarks[index].target,
+      page_reference_numbers,
+    )
+    if pdf_bookmark_page_member(page_numbers, page_number) {
+      keep[index] = true
+      pdf_bookmark_mark_ancestors(bookmarks, keep, index)
+    }
+  }
+  let output : Array[PdfBookmark] = []
+  for index in 0..<bookmarks.length() {
+    if keep[index] {
+      output.push(bookmarks[index])
+    }
+  }
+  output
+}
+
+///|
 pub fn PdfDocument::remove_bookmarks(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {

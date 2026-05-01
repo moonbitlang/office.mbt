@@ -1139,12 +1139,23 @@ pub fn PdfDocument::pdf_of_pages(
   } else {
     []
   }
+  let has_bookmarks = self.pdf_bookmark_has_outlines()
+  let retained_bookmarks = if has_bookmarks {
+    self.pdf_bookmarks_for_pages(page_numbers)
+  } else {
+    []
+  }
   let selected = pdf_page_select_pages(self.pages_of_pagetree(), page_numbers)
   let old_page_numbers = pdf_page_select_numbers(
     self.page_reference_numbers(),
     page_numbers,
   )
   let pdf = self.change_pages(selected)
+  let pdf = if has_bookmarks {
+    pdf.add_bookmarks(retained_bookmarks)
+  } else {
+    pdf
+  }
   pdf.pdf_page_renumber_references(
     pdf_page_reference_changes(old_page_numbers, pdf.page_reference_numbers()),
   )

@@ -348,6 +348,58 @@ pub fn pdf_object_of_destination(destination : PdfDestination) -> PdfObject {
 }
 
 ///|
+fn pdf_destination_page_number_of_target(
+  page_reference_numbers : ArrayView[Int],
+  target : PdfTargetPage,
+) -> Int {
+  match target {
+    TargetOtherDocPageNumber(number) => number + 1
+    TargetPageObject(object_number) =>
+      for index in 0..<page_reference_numbers.length() {
+        if page_reference_numbers[index] == object_number {
+          break index + 1
+        }
+      } nobreak {
+        0
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_destination_page_number(
+  self : PdfDocument,
+  destination : PdfDestination,
+  page_reference_numbers : ArrayView[Int],
+) -> Int raise PdfError {
+  match destination {
+    DestAction(action) =>
+      match
+        (
+          self.lookup_direct(pdf_dest_s_key(), action),
+          self.lookup_direct(pdf_dest_d_key(), action),
+        ) {
+        (Some(PdfNameObject(name)), Some(raw_destination)) if name ==
+          pdf_dest_goto_name() =>
+          self.pdf_destination_page_number(
+            self.read_destination(raw_destination),
+            page_reference_numbers,
+          )
+        _ => 0
+      }
+    DestXYZ(target, _, _, _)
+    | DestFit(target)
+    | DestFitH(target, _)
+    | DestFitV(target, _)
+    | DestFitR(target, _, _, _, _)
+    | DestFitB(target)
+    | DestFitBH(target, _)
+    | DestFitBV(target, _) =>
+      pdf_destination_page_number_of_target(page_reference_numbers, target)
+    _ => 0
+  }
+}
+
+///|
 fn pdf_dest_clip(value : Double) -> Double {
   if value < -32768.0 {
     -32768.0

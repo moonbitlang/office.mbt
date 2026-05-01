@@ -282,8 +282,10 @@ MoonBit consequences for this project:
    entries are also pruned after selected page references are rewritten.
    Page-label handling is started: extracted documents drop stale source
    `/PageLabels` by default and can retain selected-page numbering with
-   `retain_numbering=true`. Bookmarks, structure-tree trimming, and broader
-   retained-numbering behavior remain deferred.
+   `retain_numbering=true`. Bookmark extraction is also started: bookmarks are
+   filtered to selected target pages, ancestor outline context is retained, and
+   selected page targets are renumbered with the extracted page tree. Structure
+   tree trimming and broader retained-numbering behavior remain deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a
    `remove_unreferenced` pass that follows indirect references from the catalog

@@ -991,6 +991,64 @@ test "PdfDocument pdf_of_pages handles page labels" {
 }
 
 ///|
+test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+    page_indexed_blank_for_test(2),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let page_refs = try! doc.page_reference_numbers()
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode("Parent"),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: @ascii.encode("Dropped"),
+      target: DestFit(TargetPageObject(page_refs[1])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: @ascii.encode("Kept"),
+      target: DestFit(TargetPageObject(page_refs[2])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  let extracted = try! bookmarked.pdf_of_pages([3])
+  let extracted_page_refs = try! extracted.page_reference_numbers()
+  @test.assert_eq(try! extracted.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: @ascii.encode("Parent"),
+      target: DestNull,
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: @ascii.encode("Kept"),
+      target: DestFit(TargetPageObject(extracted_page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 test "PdfDocument pdf_of_pages duplicates reused annotations" {
   let key_annots = page_name_for_test("/Annots")
   let key_subtype = page_name_for_test("/Subtype")
