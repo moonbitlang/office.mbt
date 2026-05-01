@@ -319,6 +319,8 @@ pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise PdfError
 
 pub fn pdf_write_document(PdfDocument) -> Bytes raise PdfError
 
+pub fn pdf_write_document_incremental_update(Bytes, PdfDocument) -> Bytes raise PdfError
+
 pub fn pdf_write_document_with_compressed_xref_stream(PdfDocument) -> Bytes raise PdfError
 
 pub fn pdf_write_document_with_xref_stream(PdfDocument) -> Bytes raise PdfError

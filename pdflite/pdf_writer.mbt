@@ -552,6 +552,11 @@ fn pdf_writer_w_name() -> PdfName {
 }
 
 ///|
+fn pdf_writer_prev_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 80, 114, 101, 118]))
+}
+
+///|
 fn pdf_writer_flate_decode_name() -> PdfName {
   pdf_name_of_bytes(
     Bytes::from_array([47, 70, 108, 97, 116, 101, 68, 101, 99, 111, 100, 101]),
@@ -577,12 +582,13 @@ fn pdf_writer_trailer_dictionary(
 }
 
 ///|
-pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = []
-  let (major, minor) = document.version()
-  pdf_writer_push_header(output, major, minor)
-  let xrefs = pdf_writer_write_document_objects(output, document)
-  let xref_start = output.length()
+fn pdf_writer_push_classic_xref_and_trailer(
+  output : Array[Byte],
+  document : PdfDocument,
+  xrefs : ArrayView[(Int, Int, Int)],
+  xref_start : Int,
+  previous_xref : Int?,
+) -> Unit raise PdfError {
   let size = document.objects.max_object_number() + 1
   pdf_writer_push_ascii(output, "xref\n0 ")
   pdf_writer_push_ascii(output, size.to_string())
@@ -602,13 +608,57 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
     }
   }
   pdf_writer_push_ascii(output, "trailer\n")
-  pdf_writer_push_view(
-    output,
-    pdf_write_object(pdf_writer_trailer_dictionary(document))[:],
-  )
+  let trailer = match previous_xref {
+    Some(previous) =>
+      pdf_writer_trailer_dictionary(document).add_dict_entry(
+        pdf_writer_prev_name(),
+        PdfInteger(previous),
+      )
+    None => pdf_writer_trailer_dictionary(document)
+  }
+  pdf_writer_push_view(output, pdf_write_object(trailer)[:])
   pdf_writer_push_ascii(output, "\nstartxref\n")
   pdf_writer_push_ascii(output, xref_start.to_string())
   pdf_writer_push_ascii(output, "\n%%EOF\n")
+}
+
+///|
+pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  let (major, minor) = document.version()
+  pdf_writer_push_header(output, major, minor)
+  let xrefs = pdf_writer_write_document_objects(output, document)
+  let xref_start = output.length()
+  pdf_writer_push_classic_xref_and_trailer(
+    output,
+    document,
+    xrefs[:],
+    xref_start,
+    None,
+  )
+  Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_write_document_incremental_update(
+  original : PdfBytes,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  let previous_xref = pdf_read_startxref_position(original[:])
+  let output : Array[Byte] = []
+  for byte in original {
+    output.push(byte)
+  }
+  pdf_writer_push_byte(output, 10)
+  let xrefs = pdf_writer_write_document_objects(output, document)
+  let xref_start = output.length()
+  pdf_writer_push_classic_xref_and_trailer(
+    output,
+    document,
+    xrefs[:],
+    xref_start,
+    Some(previous_xref),
+  )
   Bytes::from_array(output)
 }
 

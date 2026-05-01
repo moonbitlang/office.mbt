@@ -262,8 +262,12 @@ MoonBit consequences for this project:
    uncompressed xref stream output with `/W [1 4 2]`, free entries for object
    gaps, and a public reader round-trip gate. A Flate-backed
    `pdf_write_document_with_compressed_xref_stream` wrapper is also started and
-   round-trips through the existing xref-stream reader. Incremental update
-   handling and encrypted output remain deferred.
+   round-trips through the existing xref-stream reader. Classic incremental
+   update output is started with `pdf_write_document_incremental_update`, which
+   appends the current parsed object map and a new trailer with `/Prev` pointing
+   to the supplied original bytes' `startxref`. Minimal changed-object
+   detection, xref-stream incremental output, and encrypted output remain
+   deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

@@ -301,6 +301,81 @@ test "pdf_write_document serializes objects with xref and trailer" {
 }
 
 ///|
+test "pdf_write_document_incremental_update appends classic xref revisions" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
+  let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
+  document.add_object_given_number(1, catalog)
+  let original = try! @pdflite.pdf_write_document(document)
+  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+
+  let updated = original_parsed.copy()
+  let updated_catalog = @pdflite.pdf_dictionary([
+    (value_name, PdfInteger(2)),
+    (writer_name_for_test([47, 78, 101, 119]), PdfIndirect(2)),
+  ])
+  updated.add_object_given_number(1, updated_catalog)
+  updated.add_object_given_number(2, PdfInteger(99))
+  let rendered = try! @pdflite.pdf_write_document_incremental_update(
+    original, updated,
+  )
+  @test.assert_eq(rendered.length() > original.length(), true)
+  @test.assert_eq(writer_bytes_start_with_at(rendered, original, 0), true)
+  @test.assert_eq(
+    writer_find_bytes(
+      rendered,
+      writer_ascii_for_test("/Prev " + original_parsed.first_xref().to_string()),
+    ) >
+    0,
+    true,
+  )
+
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(reparsed.first_xref() > original.length(), true)
+  @test.assert_eq(reparsed.root(), 1)
+  @test.assert_eq(reparsed.object_numbers(), [1, 2])
+  @test.assert_eq(reparsed.lookup_object_or_null(1), updated_catalog)
+  @test.assert_eq(reparsed.lookup_object_or_null(2), PdfInteger(99))
+
+  let deleted = reparsed.copy()
+  let deleted_catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(3))])
+  deleted.add_object_given_number(1, deleted_catalog)
+  deleted.remove_object(2)
+  let second_update = try! @pdflite.pdf_write_document_incremental_update(
+    rendered, deleted,
+  )
+  @test.assert_eq(
+    writer_find_bytes(
+      second_update,
+      writer_ascii_for_test("/Prev " + reparsed.first_xref().to_string()),
+    ) >
+    0,
+    true,
+  )
+  let deleted_reparsed = try! @pdflite.pdf_read_document_from_bytes(
+    second_update,
+  )
+  @test.assert_eq(deleted_reparsed.first_xref() > rendered.length(), true)
+  @test.assert_eq(deleted_reparsed.object_numbers(), [1])
+  @test.assert_eq(deleted_reparsed.lookup_object_or_null(1), deleted_catalog)
+  @test.assert_eq(deleted_reparsed.lookup_object_or_null(2), PdfNull)
+}
+
+///|
+test "pdf_write_document_incremental_update rejects originals without startxref" {
+  let document = @pdflite.pdf_document_empty()
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_document_incremental_update(
+    writer_ascii_for_test("%PDF-1.4\n%%EOF\n"),
+    document,
+  )
+  guard result is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected StartXRefExpected")
+  }
+}
+
+///|
 test "pdf_write_document_with_xref_stream round trips through public reader" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 4)
