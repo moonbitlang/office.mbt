@@ -191,6 +191,10 @@ MoonBit consequences for this project:
    trailer, real formatting, and PDF string/name escaping from `.repos/pdfwrite`.
    Acceptance target: build a tiny PDF in MoonBit, serialize it, parse it back,
    and compare stable structure. This becomes the first round-trip gate.
+   Status: started with byte-oriented primitive object rendering, PDF name and
+   literal string escaping, indirect object rendering, and direct `StreamGot`
+   stream rendering. Xref, trailer, complete real formatting parity, and full
+   document serialization remain deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

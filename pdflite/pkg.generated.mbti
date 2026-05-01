@@ -117,6 +117,10 @@ pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfErr
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
+pub fn pdf_write_indirect_object(PdfParsedIndirectObject) -> Bytes raise PdfError
+
+pub fn pdf_write_object(PdfObject) -> Bytes raise PdfError
+
 pub fn point2(Double, Double) -> Point2
 
 pub fn stream_to_get(ByteCursor, Int, Int) -> ToGet
@@ -172,6 +176,7 @@ pub(all) suberror PdfError {
   ParseStreamExpected
   ParseEndStreamExpected
   StreamLengthExpected
+  StreamDataExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 

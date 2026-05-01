@@ -49,6 +49,16 @@ use `(65).to_byte()`, not `65.to_byte()`, because `65.` is parsed as the start
 of a floating-point literal.
 
 ```sh
+moon run -c 'fn main { let b = @ascii.encode("PDF"); println(b.length()); println(b[0].to_int()) }'
+# 3
+# 80
+```
+
+Use ASCII encoding helpers for format syntax that is defined as ASCII bytes,
+then append binary payloads as `Bytes`/`BytesView`. Do not build binary file
+formats through `String` concatenation.
+
+```sh
 moon run -c 'fn main { let (b, u16, i64, u64) : (Byte, UInt16, Int64, UInt64) = (255, 65535, 42, 42); println(b.to_int()); println(u16.to_int()); println(i64.to_string()); println(u64.to_string()) }'
 # 255
 # 65535
