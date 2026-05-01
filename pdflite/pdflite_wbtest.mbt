@@ -151,6 +151,77 @@ test "parser prefix helper reports malformed indirect prefixes" {
 }
 
 ///|
+test "private reader byte-view helpers cover boundary cases" {
+  let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
+  let bad_seek : Result[Unit, Error] = try? cursor.seek_pdf_absolute(-1)
+  guard bad_seek is Err(PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition")
+  }
+
+  let view = @ascii.encode("abc")[:]
+  @test.assert_eq(pdf_view_matches_ascii_at(view, -1, [97]), false)
+  @test.assert_eq(pdf_view_matches_ascii_at(view, 2, [98, 99]), false)
+  @test.assert_eq(pdf_find_last_ascii(view, []), 3)
+  @test.assert_eq(pdf_find_last_ascii(view[:1], [97, 98]), -1)
+  @test.assert_eq(pdf_find_last_ascii(view, [120]), -1)
+
+  let empty_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
+    Bytes::new(0)[:],
+  )
+  guard empty_number is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+  let bad_number : Result[Int, Error] = try? pdf_parse_ascii_int_view(
+    @ascii.encode("12a")[:],
+  )
+  guard bad_number is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+}
+
+///|
+test "private reader xref helpers report malformed inputs" {
+  let empty_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
+    Bytes::new(0)[:],
+  )
+  guard empty_token is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+  let bad_token : Result[Bool, Error] = try? pdf_xref_token_in_use(
+    @ascii.encode("q")[:],
+  )
+  guard bad_token is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let empty_xrefs : Array[PdfClassicXRefEntry] = []
+  @test.assert_eq(pdf_classic_xref_lookup(empty_xrefs[:], 1), None)
+
+  let no_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
+  let no_object_result : Result[PdfParsedIndirectObject, Error] = try? no_object.read_first_indirect_object_at_current(
+    empty_xrefs[:],
+  )
+  guard no_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
+
+  let no_plain_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
+  let no_plain_object_result : Result[PdfParsedIndirectObject, Error] = try? no_plain_object.read_plain_indirect_object_at_current()
+  guard no_plain_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
+
+  let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
+  let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
+    [120],
+    XRefExpected,
+  )
+  guard mismatch_result is Err(PdfError::XRefExpected) else {
+    fail("expected XRefExpected")
+  }
+}
+
+///|
 test "page-label private helpers preserve non-uppercase bytes and root guards" {
   @test.assert_eq(
     pdf_page_label_lowercase(@ascii.encode("A1Z!")),

@@ -287,9 +287,7 @@ fn ByteCursor::read_pdf_classic_xref_entries(
       raise TrailerExpected
     } else {
       let tokens = pdf_split_whitespace_tokens(self.read_line_view())
-      if tokens.length() == 0 {
-        ()
-      } else if tokens.length() == 2 {
+      if tokens.length() == 2 {
         object_number = pdf_parse_ascii_int_view(tokens[0])
         ignore(pdf_parse_ascii_int_view(tokens[1]))
       } else if tokens.length() >= 3 {
@@ -429,7 +427,6 @@ pub fn pdf_read_classic_document_from_bytes(
   let xref_position = pdf_read_startxref_position(cursor.data)
   let xrefs : Array[PdfClassicXRefEntry] = []
   let mut trailer = PdfDictionary([])
-  let mut have_trailer = false
   let mut current_xref = xref_position
   let mut done = false
   let mut depth = 0
@@ -443,18 +440,14 @@ pub fn pdf_read_classic_document_from_bytes(
       cursor.read_pdf_classic_xref_entries(),
     )
     let current_trailer = cursor.read_pdf_trailer_dictionary()
-    if !have_trailer {
+    if depth == 0 {
       trailer = current_trailer
-      have_trailer = true
     }
     match pdf_trailer_prev_position(current_trailer) {
       Some(previous) => current_xref = previous
       None => done = true
     }
     depth += 1
-  }
-  if !have_trailer {
-    raise TrailerExpected
   }
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)

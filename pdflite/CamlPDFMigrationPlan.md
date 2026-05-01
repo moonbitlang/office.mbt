@@ -196,7 +196,10 @@ MoonBit consequences for this project:
    over older ones, including newer free entries that hide older objects. Xref
    streams, object streams, encryption, and malformed-file reconstruction remain
    deferred. `pdf_read_document_from_bytes` is now the public byte-backed reader
-   entry point and currently delegates to the classic xref reader.
+   entry point and currently delegates to the classic xref reader. Reader
+   hardening now covers malformed headers, missing/bad `startxref`, malformed
+   xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
+   breaks, indirect stream-length failures, and xref/object mismatch errors.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
@@ -490,7 +493,11 @@ MoonBit consequences for this project:
     variants, uppercase/lowercase hex escapes in names, false and malformed
     booleans, malformed/oversized numbers, literal-string escape edge cases,
     hex-string EOF/error cases, and token dispatch for booleans, hex strings,
-    non-special `s` keywords, and inline-image stop markers.
+    non-special `s` keywords, and inline-image stop markers. Reader coverage now
+    removes `pdf_reader.mbt` from the uncovered-line report by testing public
+    malformed-file behavior, private byte-view/xref helpers, indirect stream
+    length resolution failures, and by deleting two unreachable defensive
+    branches around xref blank-line parsing and post-loop trailer presence.
 
 ## Update Discipline
 

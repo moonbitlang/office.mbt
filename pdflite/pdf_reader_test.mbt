@@ -43,6 +43,192 @@ fn reader_push_xref_entry(
 }
 
 ///|
+fn reader_pdf_ascii(text : String) -> @pdflite.PdfBytes {
+  @ascii.encode(text)
+}
+
+///|
+fn reader_push_indirect_object(
+  output : Array[Byte],
+  number : Int,
+  generation : Int,
+  body : String,
+) -> Int {
+  let offset = output.length()
+  reader_push_ascii(output, number.to_string())
+  reader_push_byte(output, 32)
+  reader_push_ascii(output, generation.to_string())
+  reader_push_ascii(output, " obj\n")
+  reader_push_ascii(output, body)
+  reader_push_ascii(output, "\nendobj\n")
+  offset
+}
+
+///|
+fn reader_push_classic_trailer(
+  output : Array[Byte],
+  xref_offset : Int,
+  size : Int,
+) -> Unit {
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size ")
+  reader_push_ascii(output, size.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+}
+
+///|
+fn reader_classic_pdf_with_xref_body(
+  xref_body : String,
+  trailer_body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n")
+  reader_push_ascii(output, xref_body)
+  reader_push_ascii(output, "trailer\n")
+  reader_push_ascii(output, trailer_body)
+  reader_push_ascii(output, "\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_without_trailer_after_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  reader_push_ascii(output, "startxref\n")
+  let xref_digits_position = output.length()
+  reader_push_ascii(output, "0000000000\n%%EOF\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 1\n0000000000 65535 f \n")
+  let digits = @ascii.encode(xref_offset.to_string())
+  for i = 0; i < digits.length(); i = i + 1 {
+    output[xref_digits_position + 10 - digits.length() + i] = digits[i]
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_self_prev_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 1\n0000000000 65535 f \n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 1 /Prev ")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_missing_indirect_stream_length() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length 9 0 R >>\nstream\nHello\nendstream",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_non_integer_stream_length() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = reader_push_indirect_object(output, 2, 0, "/Name")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_xref_entry(output, length_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_mismatched_stream_length_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = reader_push_indirect_object(output, 2, 1, "5")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_xref_entry(output, length_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_stream_length_stream_object() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = reader_push_indirect_object(
+    output, 2, 0, "<< /Length 1 >>\nstream\nA\nendstream",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_xref_entry(output, length_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 3)
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_negative_stream_length() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length -1 >>\nstream\nHello\nendstream",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_mismatched_object_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let object_offset = reader_push_indirect_object(output, 2, 0, "2")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n1 1\n")
+  reader_push_xref_entry(output, object_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_unparseable_xref_object() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let object_offset = output.length()
+  reader_push_ascii(output, "notobject\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n1 1\n")
+  reader_push_xref_entry(output, object_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -133,6 +319,28 @@ test "pdf_read_header_from_bytes defaults to PDF 2.0 when no header is found" {
 }
 
 ///|
+test "pdf_read_header_from_bytes ignores malformed header digits" {
+  @test.assert_eq(
+    try! @pdflite.pdf_read_header_from_bytes(reader_pdf_ascii("%PDF-A.B\n")),
+    @pdflite.pdf_default_version,
+  )
+}
+
+///|
+test "pdf_document_of_parsed_indirect_objects preserves version and generations" {
+  let document = @pdflite.pdf_document_of_parsed_indirect_objects(
+    [
+      { number: 7, generation: 2, object: PdfInteger(70) },
+      { number: 3, generation: 0, object: PdfBoolean(true) },
+    ],
+    version={ major: 1, minor: 6 },
+  )
+  @test.assert_eq(document.version(), (1, 6))
+  @test.assert_eq(document.object_numbers(), [3, 7])
+  @test.assert_eq(document.lookup_object_or_null(7), PdfInteger(70))
+}
+
+///|
 test "pdf_read_primitive_document_from_bytes loads non-stream indirect objects" {
   let document = try! @pdflite.pdf_read_primitive_document_from_bytes(
     reader_bytes_for_test([
@@ -181,6 +389,29 @@ test "pdf_parse_stream_object_from_bytes parses direct-length stream objects" {
 }
 
 ///|
+test "pdf_parse_stream_object_from_bytes accepts CR and CRLF stream line breaks" {
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_pdf_ascii(
+      "7 0 obj\n<< /Length 5 >>\nstream\rHello\rendstream\nendobj",
+    ),
+  )
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+
+  let crlf = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_pdf_ascii(
+      "8 0 obj\n<< /Length 5 >>\nstream\r\nWorld\r\nendstream\nendobj",
+    ),
+  )
+  guard crlf.object is PdfStreamObject(crlf_stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(crlf_stream.data, StreamGot(reader_pdf_ascii("World")))
+}
+
+///|
 test "pdf_parse_stream_object_from_bytes reports missing stream length" {
   let result : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
     reader_bytes_for_test([
@@ -190,6 +421,18 @@ test "pdf_parse_stream_object_from_bytes reports missing stream length" {
   )
   guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
     fail("expected StreamLengthExpected")
+  }
+}
+
+///|
+test "pdf_parse_stream_object_from_bytes reports malformed stream keyword" {
+  let result : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_pdf_ascii(
+      "7 0 obj\n<< /Length 5 >>\nstram\nHello\nendstream\nendobj",
+    ),
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
   }
 }
 
@@ -322,6 +565,168 @@ test "pdf_read_classic_document_from_bytes keeps newer deleted xref entries" {
   )
   @test.assert_eq(parsed.object_numbers(), [])
   @test.assert_eq(parsed.lookup_object_or_null(1), PdfNull)
+}
+
+///|
+test "pdf_read_classic_document_from_bytes accepts blank xref lines" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [])
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports missing startxref" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_pdf_ascii(
+      "%PDF-1.4\nxref\n0 1\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 1 >>\n%%EOF\n",
+    ),
+  )
+  guard result is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected StartXRefExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports malformed startxref number" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
+  )
+  guard result is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports missing xref marker" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\nstartxref\n9\n%%EOF\n"),
+  )
+  guard result is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected XRefExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports trailerless xrefs" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_without_trailer_after_xref(),
+  )
+  guard result is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected TrailerExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports malformed xref rows" {
+  let bad_token : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 00000 q \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  guard bad_token is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+  let short_row : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body("0\n", "<< /Root 1 0 R /Size 1 >>"),
+  )
+  guard short_row is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports malformed trailers" {
+  let non_dictionary : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body("0 1\n0000000000 65535 f \n", "1"),
+  )
+  guard non_dictionary is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected TrailerExpected")
+  }
+  let missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 65535 f \n", "<< /Size 1 >>",
+    ),
+  )
+  guard missing_root is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+  let bad_prev : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev -1 >>",
+    ),
+  )
+  guard bad_prev is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected TrailerExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes stops cyclic Prev chains" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_self_prev_xref(),
+  )
+  guard result is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected XRefExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports indirect stream length errors" {
+  let missing_xref : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_missing_indirect_stream_length(),
+  )
+  guard missing_xref is Err(@pdflite.PdfError::StreamLengthExpected) else {
+    fail("expected StreamLengthExpected")
+  }
+
+  let non_integer : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_non_integer_stream_length(),
+  )
+  guard non_integer is Err(@pdflite.PdfError::StreamLengthExpected) else {
+    fail("expected StreamLengthExpected")
+  }
+
+  let mismatched : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_mismatched_stream_length_xref(),
+  )
+  guard mismatched is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let stream_length_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_stream_length_stream_object(),
+  )
+  guard stream_length_object is Err(@pdflite.PdfError::StreamLengthExpected) else {
+    fail("expected StreamLengthExpected")
+  }
+
+  let negative_direct : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_negative_stream_length(),
+  )
+  guard negative_direct is Err(@pdflite.PdfError::StreamLengthExpected) else {
+    fail("expected StreamLengthExpected")
+  }
+}
+
+///|
+test "pdf_read_classic_document_from_bytes reports xref object mismatches" {
+  let mismatched_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_mismatched_object_xref(),
+  )
+  guard mismatched_object is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+  let unparseable_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_unparseable_xref_object(),
+  )
+  guard unparseable_object
+    is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
 }
 
 ///|
