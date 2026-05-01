@@ -2044,6 +2044,39 @@ test "PdfDocument pdf_of_pages extracts pages in requested order" {
 }
 
 ///|
+test "PdfDocument pdf_of_pages repeats selected pages with distinct objects" {
+  let key_parent = page_name_for_test("/Parent")
+  let key_kids = page_name_for_test("/Kids")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let extracted = try! doc.pdf_of_pages([1, 1])
+  let page_refs = try! extracted.page_reference_numbers()
+  @test.assert_eq(page_refs.length(), 2)
+  @test.assert_eq(page_refs[0] == page_refs[1], false)
+  let pages = try! extracted.pages_of_pagetree()
+  @test.assert_eq(pages[0].mediabox, page_index_mediabox_for_test(0))
+  @test.assert_eq(pages[1].mediabox, page_index_mediabox_for_test(0))
+  guard extracted
+    .lookup_object_or_null(page_refs[0])
+    .lookup_immediate(key_parent)
+    is Some(PdfIndirect(parent_number)) else {
+    fail("expected first page parent")
+  }
+  @test.assert_eq(
+    extracted.lookup_object_or_null(page_refs[1]).lookup_immediate(key_parent),
+    Some(PdfIndirect(parent_number)),
+  )
+  @test.assert_eq(
+    extracted.lookup_object_or_null(parent_number).lookup_immediate(key_kids),
+    Some(PdfArray([PdfIndirect(page_refs[0]), PdfIndirect(page_refs[1])])),
+  )
+}
+
+///|
 test "PdfDocument pdf_of_pages handles page labels" {
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([

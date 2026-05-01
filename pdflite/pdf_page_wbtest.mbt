@@ -954,3 +954,180 @@ test "private page reference collection covers malformed nodes" {
   fast_doc.add_object_given_number(2, PdfDictionary([]))
   @test.assert_eq(try! fast_doc.endpage_fast(), 0)
 }
+
+///|
+fn page_wb_duplicate_page_tree_doc() -> PdfDocument {
+  let doc = pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
+      (pdf_page_pages_key(), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+      (pdf_page_kids_key(), PdfArray([PdfIndirect(3), PdfIndirect(3)])),
+      (pdf_page_count_key(), PdfInteger(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
+      (pdf_page_parent_key(), PdfIndirect(2)),
+    ]),
+  )
+  doc
+}
+
+///|
+test "private page tree duplicate fixup copies repeated page references" {
+  let doc = page_wb_duplicate_page_tree_doc()
+  @test.assert_eq(try! pdf_page_root_pages_number(doc), 2)
+  @test.assert_eq(try! doc.pdf_page_tree_nodes_not_pages(), [2])
+  @test.assert_eq(try! doc.pdf_page_reference_numbers_unordered(), [3, 3])
+  @test.assert_eq(pdf_page_first_duplicate_number([5, 3, 5, 4]), Some(5))
+  @test.assert_eq(pdf_page_first_duplicate_number([5, 3, 4]), None)
+
+  let (rewritten_kids, rewritten) = pdf_page_rewrite_first_kid(
+    [PdfIndirect(3), PdfIndirect(3), PdfInteger(0)],
+    3,
+    4,
+  )
+  @test.assert_eq(rewritten, true)
+  @test.assert_eq(rewritten_kids, [
+    PdfIndirect(4),
+    PdfIndirect(3),
+    PdfInteger(0),
+  ])
+  let (_, not_rewritten) = pdf_page_rewrite_first_kid([PdfInteger(0)], 3, 4)
+  @test.assert_eq(not_rewritten, false)
+  @test.assert_eq(try! doc.pdf_page_rewrite_first_indirect(3, 99, 100), false)
+
+  try! doc.pdf_page_fixup_duplicate_pages()
+  @test.assert_eq(try! doc.page_reference_numbers(), [4, 3])
+  @test.assert_eq(
+    doc.lookup_object_or_null(2).lookup_immediate(pdf_page_kids_key()),
+    Some(PdfArray([PdfIndirect(4), PdfIndirect(3)])),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(4), doc.lookup_object_or_null(3))
+  try! doc.pdf_page_fixup_duplicate_pages()
+  @test.assert_eq(try! doc.page_reference_numbers(), [4, 3])
+}
+
+///|
+test "private page tree parent fixup rewrites stale parent links" {
+  let doc = pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
+      (pdf_page_pages_key(), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+      (pdf_page_kids_key(), PdfArray([PdfIndirect(4)])),
+      (pdf_page_count_key(), PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    4,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+      (pdf_page_parent_key(), PdfIndirect(99)),
+      (pdf_page_kids_key(), PdfArray([PdfIndirect(3), PdfInteger(0)])),
+      (pdf_page_count_key(), PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
+      (pdf_page_parent_key(), PdfIndirect(99)),
+    ]),
+  )
+  @test.assert_eq(try! doc.pdf_page_tree_nodes_not_pages(), [2, 4])
+  @test.assert_eq(try! doc.pdf_page_reference_numbers_unordered(), [3])
+  try! doc.pdf_page_fixup_parents()
+  @test.assert_eq(
+    doc.lookup_object_or_null(4).lookup_immediate(pdf_page_parent_key()),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(3).lookup_immediate(pdf_page_parent_key()),
+    Some(PdfIndirect(4)),
+  )
+}
+
+///|
+test "private page tree repair helpers report malformed roots and depth" {
+  let missing_root = pdf_document_empty()
+  missing_root.set_root(99)
+  let missing_pages : Result[Int, Error] = try? pdf_page_root_pages_number(
+    missing_root,
+  )
+  guard missing_pages is Err(PdfError::RootExpected) else {
+    fail("expected missing root")
+  }
+
+  let direct_pages = pdf_document_empty()
+  direct_pages.set_root(1)
+  direct_pages.add_object_given_number(
+    1,
+    PdfDictionary([(pdf_page_pages_key(), PdfDictionary([]))]),
+  )
+  let bad_pages : Result[Int, Error] = try? pdf_page_root_pages_number(
+    direct_pages,
+  )
+  guard bad_pages is Err(PdfError::PageTreeExpected) else {
+    fail("expected indirect pages root")
+  }
+
+  let doc = page_wb_duplicate_page_tree_doc()
+  let node_depth : Result[Array[Int], Error] = try? doc.pdf_page_tree_nodes_not_pages_inner(
+    PdfDictionary([]),
+    2,
+    10001,
+  )
+  guard node_depth is Err(PdfError::PageTreeExpected) else {
+    fail("expected node depth guard")
+  }
+  @test.assert_eq(
+    try! doc.pdf_page_tree_nodes_not_pages_inner(PdfDictionary([]), 2, 0),
+    [],
+  )
+  let unordered_depth : Result[Array[Int], Error] = try? doc.pdf_page_reference_numbers_unordered_inner(
+    PdfDictionary([]),
+    2,
+    10001,
+  )
+  guard unordered_depth is Err(PdfError::PageTreeExpected) else {
+    fail("expected unordered depth guard")
+  }
+  @test.assert_eq(
+    try! doc.pdf_page_reference_numbers_unordered_inner(PdfDictionary([]), 2, 0),
+    [2],
+  )
+  let parent_depth : Result[Unit, Error] = try? doc.pdf_page_fixup_parents_inner(
+    0, 2, 10001,
+  )
+  guard parent_depth is Err(PdfError::PageTreeExpected) else {
+    fail("expected parent depth guard")
+  }
+  let rewrite_missing : Result[Unit, Error] = try? doc.pdf_page_rewrite_page_tree_first(
+    [],
+    3,
+  )
+  guard rewrite_missing is Err(PdfError::PageTreeExpected) else {
+    fail("expected rewrite failure")
+  }
+  @test.assert_eq(doc.lookup_object_or_null(4), PdfNull)
+}

@@ -383,6 +383,10 @@ MoonBit consequences for this project:
    within each extracted page, and `/Root/Names/Dests` name-tree entries whose
    page targets were nulled are pruned. Old-style catalog `/Dests` dictionary
    entries are also pruned after selected page references are rewritten.
+   CamlPDF's duplicate page-reference repair is now ported for malformed or
+   object-preserving page trees: repeated `/Kids` references are copied to fresh
+   page objects, the first repeated kid is rewritten, and stale page-tree
+   `/Parent` links are repaired recursively.
    Page-label handling is started: extracted documents drop stale source
    `/PageLabels` by default and can retain selected-page numbering with
    `retain_numbering=true`. Bookmark extraction is also started: bookmarks are
@@ -915,10 +919,11 @@ MoonBit consequences for this project:
     for malformed array readers, sparse order/app dictionaries, usage
     fallbacks, malformed OCProperties roots, copy/merge helpers, and optional
     writer fields. Page coverage now removes `pdf_page.mbt` from the
-    uncovered-line report with whitebox checks for page-tree guards, content
-    stream shapes, destination and annotation transform fallbacks, duplicate
-    annotation/destination cleanup, resource prefixing and renumbering, and
-    reference collection edge cases. Colour-space coverage now covers typed
+    uncovered-line report with whitebox checks for page-tree guards, duplicate
+    page-object repair, parent-link repair, content stream shapes, destination
+    and annotation transform fallbacks, duplicate annotation/destination
+    cleanup, resource prefixing and renumbering, and reference collection edge
+    cases. Colour-space coverage now covers typed
     debug-name variants, document resource fallbacks, calibrated defaults,
     ICCBased defaults and malformed dictionaries, Indexed table parsing and
     malformed table bounds, and Separation/DeviceN parsing fallbacks.

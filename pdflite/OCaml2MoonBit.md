@@ -449,6 +449,20 @@ usually become `xs.sort_by(fn(a, b) { ...compare... })` after copying to an
 owned `Array` if the source is an `ArrayView` or other read-only view.
 
 ```sh
+moon run -c 'fn first_sorted(xs : ArrayView[Int]) -> Int { let ys = xs.to_owned(); ys.sort(); ys[0] }
+fn main { let fixed : FixedArray[Int] = [3, 1, 2]; let grow = [4, 2, 3]; println(first_sorted(fixed)); println(first_sorted(grow)); println(fixed[0]); println(grow[0]) }'
+# 1
+# 2
+# 3
+# 4
+```
+
+Use `.to_owned()` when a view must become a mutable owned `Array`, for example
+before `sort()`/`sort_by()`. This allocates, so keep it at explicit ownership
+boundaries; it also prevents in-place algorithms from mutating an `Array`
+caller or requiring a copy from `FixedArray`.
+
+```sh
 moon run -c 'fn apply_twice(f : (Int) -> Int, value : Int) -> Int { f(f(value)) }
 fn main { println(apply_twice(fn(x) { x + 1 }, 40)) }'
 # 42
