@@ -744,6 +744,182 @@ pub fn PdfDocument::change_pages(
 }
 
 ///|
+fn pdf_page_number_member(numbers : ArrayView[Int], number : Int) -> Bool {
+  for candidate in numbers {
+    if candidate == number {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_page_deleted_numbers(
+  all_page_numbers : ArrayView[Int],
+  active_page_numbers : ArrayView[Int],
+) -> Array[Int] {
+  let deleted : Array[Int] = []
+  for number in all_page_numbers {
+    if !pdf_page_number_member(active_page_numbers, number) {
+      deleted.push(number)
+    }
+  }
+  deleted
+}
+
+///|
+fn PdfDocument::pdf_page_object_numbers_in_map(
+  self : PdfDocument,
+) -> Array[Int] {
+  let page_numbers : Array[Int] = []
+  for number in self.object_numbers() {
+    let object = self.lookup_object_or_null(number)
+    match object.lookup_immediate(pdf_page_type_key()) {
+      Some(PdfNameObject(name)) if name == pdf_page_type_page() =>
+        page_numbers.push(number)
+      _ => ()
+    }
+  }
+  page_numbers
+}
+
+///|
+fn pdf_page_nullify_references(
+  object : PdfObject,
+  deleted_pages : ArrayView[Int],
+) -> PdfObject {
+  match object {
+    PdfIndirect(number) if pdf_page_number_member(deleted_pages, number) =>
+      PdfNull
+    PdfArray(items) => {
+      let output : Array[PdfObject] = []
+      for item in items {
+        output.push(pdf_page_nullify_references(item, deleted_pages))
+      }
+      PdfArray(output)
+    }
+    PdfDictionary(entries) => {
+      let output : Array[(PdfName, PdfObject)] = []
+      for entry in entries {
+        let (key, value) = entry
+        output.push((key, pdf_page_nullify_references(value, deleted_pages)))
+      }
+      PdfDictionary(output)
+    }
+    PdfStreamObject(stream) =>
+      PdfStreamObject({
+        dictionary: pdf_page_nullify_references(
+          stream.dictionary,
+          deleted_pages,
+        ),
+        data: stream.data,
+      })
+    _ => object
+  }
+}
+
+///|
+fn pdf_page_nullify_entry(
+  entry : PdfObjectEntry,
+  deleted_pages : ArrayView[Int],
+) -> PdfObjectEntry {
+  match entry.data {
+    ObjectParsed(object) =>
+      {
+        data: ObjectParsed(pdf_page_nullify_references(object, deleted_pages)),
+        generation: entry.generation,
+      }
+    ObjectParsedAlreadyDecrypted(object) =>
+      {
+        data: ObjectParsedAlreadyDecrypted(
+          pdf_page_nullify_references(object, deleted_pages),
+        ),
+        generation: entry.generation,
+      }
+    _ => { data: entry.data, generation: entry.generation }
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_nullify_deleted_page_references(
+  self : PdfDocument,
+) -> Unit raise PdfError {
+  let page_numbers = self.pdf_page_object_numbers_in_map()
+  let active_page_numbers = self.page_reference_numbers()
+  if page_numbers.length() != active_page_numbers.length() {
+    let deleted_pages = pdf_page_deleted_numbers(
+      page_numbers, active_page_numbers,
+    )
+    for number in self.object_numbers() {
+      match self.objects.get_entry(number) {
+        Some(entry) =>
+          self.objects.set_entry(
+            number,
+            pdf_page_nullify_entry(entry, deleted_pages),
+          )
+        None => ()
+      }
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_referenced_from_object(
+  self : PdfDocument,
+  found : @hashmap.HashMap[Int, Bool],
+  object : PdfObject,
+) -> Unit {
+  match object {
+    PdfIndirect(number) =>
+      if number > 0 && !found.contains(number) {
+        found[number] = true
+        let resolved = self.lookup_object_or_null(number)
+        if resolved != PdfNull {
+          self.pdf_referenced_from_object(found, resolved)
+        }
+      }
+    PdfArray(items) =>
+      for item in items {
+        self.pdf_referenced_from_object(found, item)
+      }
+    PdfDictionary(entries) =>
+      for entry in entries {
+        let (_, value) = entry
+        self.pdf_referenced_from_object(found, value)
+      }
+    PdfStreamObject(stream) =>
+      self.pdf_referenced_from_object(found, stream.dictionary)
+    _ => ()
+  }
+}
+
+///|
+pub fn PdfDocument::remove_unreferenced(
+  self : PdfDocument,
+) -> Unit raise PdfError {
+  self.pdf_page_nullify_deleted_page_references()
+  let found : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  if self.root() > 0 {
+    found[self.root()] = true
+    self.pdf_referenced_from_object(
+      found,
+      self.lookup_object_or_null(self.root()),
+    )
+  }
+  self.pdf_referenced_from_object(found, self.trailer_dict())
+  let to_remove : Array[Int] = []
+  for number in self.object_numbers() {
+    if !found.contains(number) {
+      to_remove.push(number)
+    }
+  }
+  for number in to_remove {
+    self.remove_object(number)
+  }
+}
+
+///|
 fn pdf_page_reference_numbers_inner(
   pdf : PdfDocument,
   pages_node : PdfObject,

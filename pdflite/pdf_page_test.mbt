@@ -517,6 +517,60 @@ test "PdfDocument change_pages rejects reference renumbering when counts differ"
 }
 
 ///|
+test "PdfDocument remove_unreferenced drops detached objects" {
+  let key_metadata = page_name_for_test("/Metadata")
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let kept = doc.add_object(PdfString(@ascii.encode("kept")))
+  let removed = doc.add_object(PdfString(@ascii.encode("removed")))
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_metadata, PdfIndirect(kept)),
+  )
+  try! doc.remove_unreferenced()
+  @test.assert_eq(
+    doc.lookup_object_or_null(kept),
+    PdfString(@ascii.encode("kept")),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(removed), PdfNull)
+  @test.assert_eq(try! doc.endpage(), 1)
+}
+
+///|
+test "PdfDocument remove_unreferenced nullifies deleted page references" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_fit = page_name_for_test("/Fit")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    { ..@pdflite.pdf_page_blank(@pdflite.paper_a4), rotate: Rotate90 },
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([PdfIndirect(old_numbers[1]), PdfNameObject(type_fit)]),
+    ),
+  )
+  let pages = try! doc.pages_of_pagetree()
+  let changed = try! doc.change_pages([pages[0]])
+  try! changed.remove_unreferenced()
+  @test.assert_eq(try! changed.endpage(), 1)
+  @test.assert_eq(changed.lookup_object_or_null(old_numbers[1]), PdfNull)
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(PdfArray([PdfNull, PdfNameObject(type_fit)])),
+  )
+}
+
+///|
 test "PdfDocument page_reference_numbers reports missing catalog object" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(99)

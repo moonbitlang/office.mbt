@@ -432,6 +432,7 @@ pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfEr
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
+pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
