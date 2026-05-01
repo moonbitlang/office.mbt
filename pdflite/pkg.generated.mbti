@@ -353,6 +353,7 @@ pub(all) suberror PdfError {
   FontLastCharExpected
   FontWidthsExpected
   FontWidthExpected
+  FontCharProcsExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -760,6 +761,7 @@ pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
 pub fn PdfDocument::read_optional_content_groups(Self) -> PdfOptionalContent? raise PdfError
 pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise PdfError
+pub fn PdfDocument::read_simple_font(Self, PdfObject) -> PdfSimpleFont raise PdfError
 pub fn PdfDocument::read_standard14_font(Self, PdfObject) -> PdfStandardFontData raise PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
@@ -1064,6 +1066,26 @@ pub(all) struct PdfSampledFunction {
   samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfSimpleFont {
+  fonttype : PdfSimpleFontType
+  basefont : PdfName?
+  firstchar : Int
+  lastchar : Int
+  widths : Array[Int]
+  fontdescriptor : PdfFontDescriptor?
+  fontmetrics : Array[Double]?
+  encoding : PdfEncoding
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfSimpleFont::debug_name(Self) -> String
+
+pub(all) enum PdfSimpleFontType {
+  PdfType1
+  PdfMMType1
+  PdfType3(PdfType3Glyphs)
+  PdfTrueType
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfSimpleFontType::debug_name(Self) -> String
+
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
   PdfTimesBold
@@ -1117,6 +1139,13 @@ pub(all) struct PdfTristimulusPoint {
   x : Double
   y : Double
   z : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfType3Glyphs {
+  fontbbox : PdfRectangle
+  fontmatrix : TransformMatrix
+  charprocs : Array[(PdfName, PdfObject)]
+  resources : PdfObject
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfUnit {

@@ -665,6 +665,150 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
 }
 
 ///|
+test "PdfDocument read_simple_font builds Type1 font records" {
+  let doc = @pdflite.pdf_document_empty()
+  let descriptor = @pdflite.pdf_dictionary([
+    (text_name_for_test("/Ascent"), PdfInteger(700)),
+    (text_name_for_test("/FontFile2"), PdfIndirect(9)),
+    (text_name_for_test("/MissingWidth"), PdfInteger(250)),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/CustomFont")),
+    ),
+    (text_name_for_test("/FontDescriptor"), descriptor),
+    (text_name_for_test("/FirstChar"), PdfInteger(65)),
+    (text_name_for_test("/LastChar"), PdfInteger(65)),
+    (text_name_for_test("/Widths"), PdfArray([PdfInteger(500)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+    ),
+  ])
+  let simple = try! doc.read_simple_font(font)
+  @test.assert_eq(simple.fonttype, PdfType1)
+  @test.assert_eq(simple.basefont, Some(text_name_for_test("/CustomFont")))
+  @test.assert_eq(simple.firstchar, 0)
+  @test.assert_eq(simple.lastchar, 0)
+  @test.assert_eq(simple.widths, [])
+  @test.assert_eq(simple.encoding, PdfWinAnsiEncoding)
+  @test.assert_eq(
+    simple.debug_name(),
+    "fonttype = Type 1\nbasefont /CustomFont\nencoding is WinAnsiEncoding\n",
+  )
+  guard simple.fontdescriptor is Some(fontdescriptor) else {
+    fail("expected font descriptor")
+  }
+  @test.assert_eq(fontdescriptor.ascent, 700.0)
+  @test.assert_eq(fontdescriptor.fontfile, Some(PdfFontFile2(9)))
+  guard simple.fontmetrics is Some(metrics) else {
+    fail("expected font metrics")
+  }
+  @test.assert_eq(metrics.length(), 256)
+  @test.assert_eq(metrics[65], 500.0)
+  @test.assert_eq(metrics[64], 250.0)
+}
+
+///|
+test "PdfDocument read_simple_font reads Type3 glyph data" {
+  let doc = @pdflite.pdf_document_empty()
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type3")),
+    ),
+    (text_name_for_test("/FontBBox"), PdfArray([PdfInteger(1)])),
+    (
+      text_name_for_test("/FontMatrix"),
+      PdfArray([
+        PdfInteger(1),
+        PdfInteger(0),
+        PdfInteger(0),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfInteger(3),
+      ]),
+    ),
+    (
+      text_name_for_test("/CharProcs"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/A"), PdfInteger(1)),
+        (text_name_for_test("/B"), PdfInteger(2)),
+      ]),
+    ),
+    (text_name_for_test("/MissingWidth"), PdfReal(5.5)),
+    (text_name_for_test("/FirstChar"), PdfInteger(0)),
+    (text_name_for_test("/LastChar"), PdfInteger(0)),
+    (text_name_for_test("/Widths"), PdfArray([PdfInteger(9)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/MacRomanEncoding")),
+    ),
+  ])
+  let simple = try! doc.read_simple_font(font)
+  guard simple.fonttype is PdfType3(type3_data) else {
+    fail("expected Type3 font")
+  }
+  @test.assert_eq(type3_data.fontbbox, {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 0.0,
+    max_y: 0.0,
+  })
+  @test.assert_eq(type3_data.fontmatrix, {
+    a: 1.0,
+    b: 0.0,
+    c: 0.0,
+    d: 1.0,
+    e: 2.0,
+    f: 3.0,
+  })
+  @test.assert_eq(type3_data.charprocs, [
+    (text_name_for_test("/A"), PdfInteger(1)),
+    (text_name_for_test("/B"), PdfInteger(2)),
+  ])
+  @test.assert_eq(type3_data.resources, @pdflite.pdf_dictionary([]))
+  @test.assert_eq(simple.encoding, PdfMacRomanEncoding)
+  @test.assert_eq(simple.fonttype.debug_name(), "Type 3: charprocs for/A/B")
+}
+
+///|
+test "PdfDocument read_simple_font rejects malformed simple fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let missing_subtype = try? doc.read_simple_font(@pdflite.pdf_dictionary([]))
+  guard missing_subtype is Err(FontSubtypeExpected) else {
+    fail("expected FontSubtypeExpected for missing subtype")
+  }
+  let unknown_subtype = try? doc.read_simple_font(
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/CIDFontType2")),
+      ),
+    ]),
+  )
+  guard unknown_subtype is Err(FontSubtypeExpected) else {
+    fail("expected FontSubtypeExpected for unknown subtype")
+  }
+  let missing_charprocs = try? doc.read_simple_font(
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type3")),
+      ),
+    ]),
+  )
+  guard missing_charprocs is Err(FontCharProcsExpected) else {
+    fail("expected FontCharProcsExpected")
+  }
+}
+
+///|
 test "PdfDocument detects and reads standard14 fonts" {
   let doc = @pdflite.pdf_document_empty()
   let font = @pdflite.pdf_dictionary([

@@ -377,7 +377,9 @@ MoonBit consequences for this project:
    CamlPDF-style font descriptor reading for metric defaults, font-file
    references, and `/CharSet` parsing. Simple font metric reading is also
    started with 256-entry width tables, `/MissingWidth` filling, direct/indirect
-   numeric width entries, and Type3 top-level metric dictionaries.
+   numeric width entries, and Type3 top-level metric dictionaries. Simple-font
+   records are started for Type1, MMType1, Type3, and TrueType fonts, including
+   byte-preserving base font names and Type3 glyph metadata.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

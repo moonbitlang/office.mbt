@@ -195,6 +195,66 @@ pub(all) struct PdfFontDescriptor {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfType3Glyphs {
+  fontbbox : PdfRectangle
+  fontmatrix : TransformMatrix
+  charprocs : Array[(PdfName, PdfObject)]
+  resources : PdfObject
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) enum PdfSimpleFontType {
+  PdfType1
+  PdfMMType1
+  PdfType3(PdfType3Glyphs)
+  PdfTrueType
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfSimpleFont {
+  fonttype : PdfSimpleFontType
+  basefont : PdfName?
+  firstchar : Int
+  lastchar : Int
+  widths : Array[Int]
+  fontdescriptor : PdfFontDescriptor?
+  fontmetrics : Array[Double]?
+  encoding : PdfEncoding
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn PdfSimpleFontType::debug_name(self : PdfSimpleFontType) -> String {
+  match self {
+    PdfType1 => "Type 1"
+    PdfMMType1 => "MM Type 1"
+    PdfType3(data) => {
+      let mut text = "Type 3: charprocs for"
+      for entry in data.charprocs {
+        let (name, _) = entry
+        text = text + pdf_text_string_of_name(name)
+      }
+      text
+    }
+    PdfTrueType => "Truetype"
+  }
+}
+
+///|
+pub fn PdfSimpleFont::debug_name(self : PdfSimpleFont) -> String {
+  let basefont = match self.basefont {
+    Some(name) => pdf_text_string_of_name(name)
+    None => ""
+  }
+  "fonttype = " +
+  self.fonttype.debug_name() +
+  "\nbasefont " +
+  basefont +
+  "\nencoding is " +
+  self.encoding.debug_name() +
+  "\n"
+}
+
+///|
 pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
@@ -501,6 +561,89 @@ pub fn PdfDocument::read_font_metrics(
       }
       Some(metrics)
     }
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_read_type3_glyphs(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfType3Glyphs raise PdfError {
+  let fontbbox = match self.lookup_direct(pdf_text_name("/FontBBox"), font) {
+    Some(value) =>
+      self.parse_rectangle(value) catch {
+        _ => pdf_text_zero_rectangle()
+      }
+    None => pdf_text_zero_rectangle()
+  }
+  let charprocs = match self.lookup_direct(pdf_text_name("/CharProcs"), font) {
+    Some(PdfDictionary(entries)) => entries
+    _ => raise FontCharProcsExpected
+  }
+  let resources = match self.lookup_direct(pdf_text_name("/Resources"), font) {
+    Some(value) => value
+    None => PdfDictionary([])
+  }
+  {
+    fontbbox,
+    fontmatrix: self.parse_matrix(pdf_text_name("/FontMatrix"), font),
+    charprocs,
+    resources,
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_simple_font_type_of_name(
+  self : PdfDocument,
+  font : PdfObject,
+  subtype : PdfName,
+) -> PdfSimpleFontType? raise PdfError {
+  if subtype == pdf_text_name("/Type1") {
+    Some(PdfType1)
+  } else if subtype == pdf_text_name("/MMType1") {
+    Some(PdfMMType1)
+  } else if subtype == pdf_text_name("/Type3") {
+    Some(PdfType3(self.pdf_text_read_type3_glyphs(font)))
+  } else if subtype == pdf_text_name("/TrueType") {
+    Some(PdfTrueType)
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_read_basefont(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfName? {
+  match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+    Some(PdfNameObject(name)) => Some(name)
+    _ => None
+  }
+}
+
+///|
+pub fn PdfDocument::read_simple_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfSimpleFont raise PdfError {
+  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+    Some(PdfNameObject(subtype)) =>
+      match self.pdf_text_simple_font_type_of_name(font, subtype) {
+        Some(fonttype) =>
+          {
+            fonttype,
+            basefont: self.pdf_text_read_basefont(font),
+            firstchar: 0,
+            lastchar: 0,
+            widths: [],
+            fontdescriptor: self.read_font_descriptor(font),
+            fontmetrics: self.read_font_metrics(font),
+            encoding: self.read_encoding(font),
+          }
+        None => raise FontSubtypeExpected
+      }
+    _ => raise FontSubtypeExpected
   }
 }
 
