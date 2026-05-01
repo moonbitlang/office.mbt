@@ -359,6 +359,7 @@ pub(all) suberror PdfError {
   FontCharProcsExpected
   FontTypeExpected
   FontWriteUnsupported
+  BadText
   CIDSystemInfoExpected
   CIDRegistryExpected
   CIDOrderingExpected
@@ -837,6 +838,7 @@ pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise PdfError
+pub fn PdfDocument::text_extractor_of_font(Self, PdfObject) -> PdfTextExtractor raise PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_annotations(Self, TransformMatrix, PdfObject) -> Unit raise PdfError
 pub fn PdfDocument::transform_bookmark(Self, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
@@ -873,6 +875,7 @@ pub(all) enum PdfFont {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::is_identity_h(Self) -> Bool
+pub fn PdfFont::text_extractor(Self) -> PdfTextExtractor
 
 pub(all) struct PdfFontDescriptor {
   ascent : Double
@@ -1201,6 +1204,11 @@ pub(all) enum PdfTargetPage {
   TargetPageObject(Int)
   TargetOtherDocPageNumber(Int)
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTextExtractor {
+  font : PdfFont
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfTextExtractor::codepoints_of_text(Self, BytesView) -> Array[Int] raise PdfError
 
 pub(all) struct PdfTristimulusPoint {
   x : Double

@@ -400,7 +400,9 @@ MoonBit consequences for this project:
    `/ToUnicode` CMap stream shape as CamlPDF when that map is present. Reading
    that simple uncompressed single-code `beginbfrange` CMap shape is also
    started and attaches the parsed map to simple or CID font descriptors.
-   General `pdfcmap` parsing remains deferred.
+   A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
+   and `/Identity-H` CID text. General `pdfcmap` parsing and glyph-list-backed
+   standard encoding extraction remain deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

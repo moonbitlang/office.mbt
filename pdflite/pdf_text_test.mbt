@@ -1747,6 +1747,43 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
       (34, text_bytes_for_test([0x00, 0x42])),
     ]),
   )
+  let extractor = try! doc.text_extractor_of_font(
+    doc.lookup_object_or_null(number),
+  )
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([33, 34, 35])[:]),
+    [0x41, 0x42, 35],
+  )
+}
+
+///|
+test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
+  let cid_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/Top"),
+    composite: {
+      cid_system_info: {
+        registry: text_bytes_for_test([65]),
+        ordering: text_bytes_for_test([73]),
+        supplement: 0,
+      },
+      cid_basefont: text_name_for_test("/Descendant"),
+      cid_fontdescriptor: text_font_descriptor_for_test(),
+      cid_widths: [],
+      cid_widths2: [],
+      cid_default_width: 1000.0,
+      cid_default_width2: [880.0, -1000.0],
+    },
+    encoding: PdfPredefinedCMap(text_name_for_test("/Identity-H")),
+  })
+  let extractor = cid_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x41, 0x20, 0xAC])[:],
+    ),
+    [0x41, 0x20AC],
+  )
+  let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00])[:])
+  guard odd is Err(BadText) else { fail("expected BadText") }
 }
 
 ///|

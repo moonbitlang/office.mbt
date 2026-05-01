@@ -336,6 +336,11 @@ pub(all) enum PdfFont {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfTextExtractor {
+  font : PdfFont
+} derive(Debug, Eq, ToJson)
+
+///|
 pub fn PdfFont::debug_name(self : PdfFont) -> String {
   match self {
     PdfFontStandard(font) => font.debug_name()
@@ -350,6 +355,11 @@ pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
     PdfFontCIDKeyed(font) => font.is_identity_h()
     _ => false
   }
+}
+
+///|
+pub fn PdfFont::text_extractor(self : PdfFont) -> PdfTextExtractor {
+  { font: self }
 }
 
 ///|
@@ -1407,6 +1417,88 @@ pub fn PdfDocument::read_font(
     raise FontTypeExpected
   }
   read.pdf_text_with_tounicode(self.pdf_text_tounicode_of_font(font))
+}
+
+///|
+pub fn PdfDocument::text_extractor_of_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfTextExtractor raise PdfError {
+  self.read_font(font).text_extractor()
+}
+
+///|
+fn PdfFont::pdf_text_tounicode(self : PdfFont) -> Array[(Int, PdfBytes)]? {
+  match self {
+    PdfFontSimple(
+      { fontdescriptor: Some({ tounicode: Some(tounicode), .. }), .. }
+    ) => Some(tounicode)
+    PdfFontCIDKeyed(
+      {
+        composite: {
+          cid_fontdescriptor: { tounicode: Some(tounicode), .. },
+          ..,
+        },
+        ..,
+      }
+    ) => Some(tounicode)
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_lookup_tounicode(
+  tounicode : ArrayView[(Int, PdfBytes)],
+  code : Int,
+) -> PdfBytes? {
+  for entry in tounicode {
+    if entry.0 == code {
+      break Some(entry.1)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn PdfTextExtractor::pdf_text_codepoints_of_charcode(
+  self : PdfTextExtractor,
+  code : Int,
+) -> Array[Int] {
+  match self.font.pdf_text_tounicode() {
+    Some(tounicode) =>
+      match pdf_text_lookup_tounicode(tounicode, code) {
+        Some(bytes) => pdf_codepoints_of_utf16be(bytes[:]) catch { _ => [code] }
+        None => [code]
+      }
+    None => [code]
+  }
+}
+
+///|
+pub fn PdfTextExtractor::codepoints_of_text(
+  self : PdfTextExtractor,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  let output : Array[Int] = []
+  if self.font.is_identity_h() {
+    guard text.length() % 2 == 0 else { raise BadText }
+    let mut index = 0
+    while index < text.length() {
+      let code = (text[index].to_int() << 8) | text[index + 1].to_int()
+      for codepoint in self.pdf_text_codepoints_of_charcode(code) {
+        output.push(codepoint)
+      }
+      index += 2
+    }
+  } else {
+    for byte in text {
+      for codepoint in self.pdf_text_codepoints_of_charcode(byte.to_int()) {
+        output.push(codepoint)
+      }
+    }
+  }
+  output
 }
 
 ///|
