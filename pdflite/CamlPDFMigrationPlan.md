@@ -362,8 +362,10 @@ MoonBit consequences for this project:
    Matrix, and Range entries. ICCBased stream parsing is started for direct and
    indirect stream objects, including `/N`, default alternates, explicit
    `/Alternate`, default or explicit `/Range`, and `/Metadata`. Indexed table
-   parsing, Separation/DeviceN functions, and image/JPEG support remain
-   deferred.
+   parsing is started for `/Indexed` and `/I` spaces backed by byte strings or
+   decodable stream data, with RGB/CMYK component tables and recursive
+   alternate-space handling. Separation/DeviceN functions and image/JPEG support
+   remain deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

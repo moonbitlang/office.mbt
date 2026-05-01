@@ -208,6 +208,77 @@ fn pdf_space_default_icc_range(n : Int) -> Array[Double] {
 }
 
 ///|
+fn pdf_space_basic_table_colour_space(space : PdfColourSpace) -> PdfColourSpace {
+  match space {
+    PdfIndexed(alternate, _)
+    | PdfSeparation(_, alternate, _)
+    | PdfDeviceN(_, alternate, _, _)
+    | PdfICCBased(_, alternate, _, _, _) =>
+      pdf_space_basic_table_colour_space(alternate)
+    _ => space
+  }
+}
+
+///|
+fn pdf_space_indexed_component_count(space : PdfColourSpace) -> Int? {
+  match pdf_space_basic_table_colour_space(space) {
+    PdfDeviceRGB | PdfCalRGB(_, _, _, _) | PdfLab(_, _, _) => Some(3)
+    PdfDeviceCMYK => Some(4)
+    _ => None
+  }
+}
+
+///|
+fn pdf_space_read_indexed_table(
+  data : BytesView,
+  hival : Int,
+  components : Int,
+) -> Array[(Int, Array[Int])] raise PdfError {
+  if hival < 0 {
+    raise InvalidReadLength(hival)
+  }
+  let count = hival + 1
+  let required = count * components
+  if data.length() < required {
+    raise EndOfInput
+  }
+  let table : Array[(Int, Array[Int])] = []
+  for index in 0..<count {
+    let values : Array[Int] = []
+    let offset = index * components
+    for component in 0..<components {
+      values.push(data[offset + component].to_int())
+    }
+    table.push((index, values))
+  }
+  table
+}
+
+///|
+fn pdf_space_stream_data(object : PdfObject) -> BytesView raise PdfError {
+  match pdf_decode_stream(object) {
+    PdfStreamObject(stream) =>
+      match stream.data {
+        StreamGot(data) => data[:]
+        _ => raise StreamDataExpected
+      }
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_space_indexed_lookup_data(
+  self : PdfDocument,
+  lookup_data : PdfObject,
+) -> BytesView? raise PdfError {
+  match self.direct(lookup_data) {
+    PdfString(data) => Some(data[:])
+    PdfStreamObject(_) as stream => Some(pdf_space_stream_data(stream))
+    _ => None
+  }
+}
+
+///|
 fn PdfDocument::pdf_space_read_icc_based(
   self : PdfDocument,
   resources : PdfObject,
@@ -253,6 +324,38 @@ fn PdfDocument::pdf_space_read_icc_based(
         _ => None
       }
     _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_space_read_indexed(
+  self : PdfDocument,
+  resources : PdfObject,
+  base_object : PdfObject,
+  hival_object : PdfObject,
+  lookup_data : PdfObject,
+) -> PdfColourSpace? raise PdfError {
+  let hival = match hival_object {
+    PdfInteger(hival) => hival
+    _ => raise NumberExpected
+  }
+  match self.read_colour_space(resources, base_object) {
+    Some(base) =>
+      match
+        (
+          pdf_space_indexed_component_count(base),
+          self.pdf_space_indexed_lookup_data(lookup_data),
+        ) {
+        (Some(components), Some(data)) =>
+          Some(
+            PdfIndexed(
+              base,
+              pdf_space_read_indexed_table(data, hival, components),
+            ),
+          )
+        _ => None
+      }
+    None => None
   }
 }
 
@@ -327,6 +430,10 @@ pub fn PdfDocument::read_colour_space(
     PdfArray([PdfNameObject(name), stream_object]) if name ==
       pdf_space_name("/ICCBased") =>
       self.pdf_space_read_icc_based(resources, stream_object)
+    PdfArray([PdfNameObject(name), base, hival, lookup_data]) if name ==
+      pdf_space_name("/Indexed") ||
+      name == pdf_space_name("/I") =>
+      self.pdf_space_read_indexed(resources, base, hival, lookup_data)
     PdfArray([single]) => self.read_colour_space(resources, single)
     _ => None
   }

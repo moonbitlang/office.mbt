@@ -4,6 +4,11 @@ fn space_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn space_bytes_for_test(values : ArrayView[Byte]) -> Bytes {
+  Bytes::from_array(values)
+}
+
+///|
 test "PdfColourSpace debug names preserve CamlPDF forms" {
   @test.assert_eq(@pdflite.PdfDeviceGray.debug_name(), "/DeviceGray")
   @test.assert_eq(@pdflite.PdfDeviceRGB.debug_name(), "/DeviceRGB")
@@ -366,6 +371,132 @@ test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
   )
   guard result is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected malformed ICCBased range number")
+  }
+}
+
+///|
+test "PdfDocument read_colour_space parses Indexed string and stream tables" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
+        PdfNameObject(space_name_for_test("/DeviceRGB")),
+        PdfInteger(1),
+        PdfString(space_bytes_for_test([10, 20, 30, 40, 50, 60])),
+      ]),
+    ),
+    Some(PdfIndexed(PdfDeviceRGB, [(0, [10, 20, 30]), (1, [40, 50, 60])])),
+  )
+  let lookup_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/Length"), PdfInteger(4))]),
+    StreamGot(space_bytes_for_test([1, 2, 3, 4])),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/I")),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        PdfInteger(0),
+        lookup_stream,
+      ]),
+    ),
+    Some(PdfIndexed(PdfDeviceCMYK, [(0, [1, 2, 3, 4])])),
+  )
+}
+
+///|
+test "PdfDocument read_colour_space parses Indexed through ICCBased alternate" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let icc_base = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
+        PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), icc_base]),
+        PdfInteger(0),
+        PdfString(space_bytes_for_test([7, 8, 9])),
+      ]),
+    ),
+    Some(
+      PdfIndexed(
+        PdfICCBased(
+          3,
+          PdfDeviceRGB,
+          [0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+          None,
+          icc_base,
+        ),
+        [(0, [7, 8, 9])],
+      ),
+    ),
+  )
+}
+
+///|
+test "PdfDocument read_colour_space rejects unsupported Indexed shapes" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
+        PdfNameObject(space_name_for_test("/Pattern")),
+        PdfInteger(0),
+        PdfString(space_bytes_for_test([1, 2, 3])),
+      ]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
+        PdfNameObject(space_name_for_test("/DeviceRGB")),
+        PdfInteger(0),
+        PdfArray([]),
+      ]),
+    ),
+    None,
+  )
+}
+
+///|
+test "PdfDocument read_colour_space reports malformed Indexed data" {
+  let doc = @pdflite.pdf_document_empty()
+  let bad_hival : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
+    @pdflite.pdf_dictionary([]),
+    PdfArray([
+      PdfNameObject(space_name_for_test("/Indexed")),
+      PdfNameObject(space_name_for_test("/DeviceRGB")),
+      PdfNameObject(space_name_for_test("/Bad")),
+      PdfString(space_bytes_for_test([1, 2, 3])),
+    ]),
+  )
+  guard bad_hival is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected for Indexed hival")
+  }
+  let short_table : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
+    @pdflite.pdf_dictionary([]),
+    PdfArray([
+      PdfNameObject(space_name_for_test("/Indexed")),
+      PdfNameObject(space_name_for_test("/DeviceRGB")),
+      PdfInteger(1),
+      PdfString(space_bytes_for_test([1, 2, 3])),
+    ]),
+  )
+  guard short_table is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput for short Indexed table")
   }
 }
 
