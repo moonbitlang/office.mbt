@@ -34,6 +34,81 @@ fn pdf_image_bpc_key() -> PdfName {
 }
 
 ///|
+fn pdf_image_width_key() -> PdfName {
+  pdf_image_name("/Width")
+}
+
+///|
+fn pdf_image_w_key() -> PdfName {
+  pdf_image_name("/W")
+}
+
+///|
+fn pdf_image_height_key() -> PdfName {
+  pdf_image_name("/Height")
+}
+
+///|
+fn pdf_image_h_key() -> PdfName {
+  pdf_image_name("/H")
+}
+
+///|
+fn pdf_image_filter_key() -> PdfName {
+  pdf_image_name("/Filter")
+}
+
+///|
+fn pdf_image_f_key() -> PdfName {
+  pdf_image_name("/F")
+}
+
+///|
+fn pdf_image_decode_key() -> PdfName {
+  pdf_image_name("/Decode")
+}
+
+///|
+fn pdf_image_d_key() -> PdfName {
+  pdf_image_name("/D")
+}
+
+///|
+fn pdf_image_decodeparms_key() -> PdfName {
+  pdf_image_name("/DecodeParms")
+}
+
+///|
+fn pdf_image_dp_key() -> PdfName {
+  pdf_image_name("/DP")
+}
+
+///|
+fn pdf_image_jbig2_globals_key() -> PdfName {
+  pdf_image_name("/JBIG2Globals")
+}
+
+///|
+fn pdf_image_dctdecode_name() -> PdfName {
+  pdf_image_name("/DCTDecode")
+}
+
+///|
+fn pdf_image_dct_name() -> PdfName {
+  pdf_image_name("/DCT")
+}
+
+///|
+fn pdf_image_jbig2decode_name() -> PdfName {
+  pdf_image_name("/JBIG2Decode")
+}
+
+///|
+fn pdf_image_jpxdecode_name() -> PdfName {
+  pdf_image_name("/JPXDecode")
+}
+
+///|
 pub(all) enum PdfPixelLayout {
   PdfBPP1
   PdfBPP8
@@ -108,5 +183,276 @@ pub fn PdfDocument::image_bits_per_component(
       } else {
         None
       }
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_lookup_int_or_else(
+  self : PdfDocument,
+  first_key : PdfName,
+  second_key : PdfName,
+  image : PdfObject,
+) -> Int raise PdfError {
+  match self.lookup_direct_or_else(first_key, second_key, image) {
+    Some(PdfInteger(value)) => value
+    Some(_) => raise NumberExpected
+    None => raise DictionaryKeyNotFound(first_key)
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_bits_per_component_int(
+  self : PdfDocument,
+  image : PdfObject,
+) -> Int? raise PdfError {
+  match self.image_bits_per_component(image) {
+    Some(PdfInteger(value)) => Some(value)
+    Some(_) => raise NumberExpected
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_decode_values(
+  self : PdfDocument,
+  image : PdfObject,
+) -> Array[Double]? raise PdfError {
+  match
+    self.lookup_direct_or_else(pdf_image_decode_key(), pdf_image_d_key(), image) {
+    Some(PdfArray(values)) => {
+      let output : Array[Double] = []
+      for value in values {
+        output.push(self.get_number(value))
+      }
+      Some(output)
+    }
+    Some(_) => raise NumberExpected
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_filter_value(
+  self : PdfDocument,
+  image : PdfObject,
+) -> PdfObject? {
+  self.lookup_direct_or_else(pdf_image_filter_key(), pdf_image_f_key(), image)
+}
+
+///|
+fn PdfDocument::pdf_image_first_filter(
+  self : PdfDocument,
+  image : PdfObject,
+) -> PdfName? raise PdfError {
+  match self.pdf_image_filter_value(image) {
+    None => None
+    Some(PdfArray([])) => None
+    Some(PdfNameObject(name)) => Some(name)
+    Some(PdfArray([PdfNameObject(name), ..])) => Some(name)
+    Some(_) => raise FilterExpected
+  }
+}
+
+///|
+fn pdf_image_is_encoded_stop_filter(name : PdfName) -> Bool {
+  name == pdf_image_dctdecode_name() ||
+  name == pdf_image_dct_name() ||
+  name == pdf_image_jbig2decode_name() ||
+  name == pdf_image_jpxdecode_name()
+}
+
+///|
+fn PdfDocument::pdf_image_decode_to_image(
+  self : PdfDocument,
+  image : PdfObject,
+) -> PdfObject raise PdfError {
+  let mut current = self.direct(image)
+  let mut stages = 0
+  let mut done = false
+  while !done {
+    match self.pdf_image_first_filter(current) {
+      Some(filter) if !pdf_image_is_encoded_stop_filter(filter) => {
+        if stages >= 1024 {
+          raise FilterExpected
+        }
+        current = pdf_decode_stream_onestage(current)
+        stages += 1
+      }
+      _ => done = true
+    }
+  }
+  current
+}
+
+///|
+fn PdfDocument::pdf_image_jbig2_globals(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> Int? {
+  match
+    self.lookup_direct_or_else(
+      pdf_image_decodeparms_key(),
+      pdf_image_dp_key(),
+      dictionary,
+    ) {
+    Some(decodeparms) =>
+      match decodeparms.lookup_immediate(pdf_image_jbig2_globals_key()) {
+        Some(PdfIndirect(number)) => Some(number)
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn pdf_image_require_size(
+  data : BytesView,
+  required : Int,
+) -> Unit raise PdfError {
+  if data.length() < required {
+    raise EndOfInput
+  }
+}
+
+///|
+fn pdf_image_cmyk_component(channel : Int, black : Int) -> Int {
+  let channel = channel.to_double()
+  let black = black.to_double()
+  (255.0 - double_min(255.0, channel / 255.0 * (255.0 - black) + black)).to_int()
+}
+
+///|
+fn pdf_image_rgb_of_cmyk(c : Int, m : Int, y : Int, k : Int) -> (Int, Int, Int) {
+  (
+    pdf_image_cmyk_component(c, k),
+    pdf_image_cmyk_component(m, k),
+    pdf_image_cmyk_component(y, k),
+  )
+}
+
+///|
+fn pdf_image_gray_8bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let pixels = width * height
+  pdf_image_require_size(data, pixels)
+  let output : Array[Byte] = []
+  for index in 0..<pixels {
+    let value = data[index]
+    output.push(value)
+    output.push(value)
+    output.push(value)
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_cmyk_8bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let pixels = width * height
+  pdf_image_require_size(data, pixels * 4)
+  let output : Array[Byte] = []
+  for index in 0..<pixels {
+    let offset = index * 4
+    let (red, green, blue) = pdf_image_rgb_of_cmyk(
+      data[offset].to_int(),
+      data[offset + 1].to_int(),
+      data[offset + 2].to_int(),
+      data[offset + 3].to_int(),
+    )
+    output.push(pdf_byte_of_int(red))
+    output.push(pdf_byte_of_int(green))
+    output.push(pdf_byte_of_int(blue))
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
+  self : PdfDocument,
+  resources : PdfObject,
+  width : Int,
+  height : Int,
+  dictionary : PdfObject,
+  data : BytesView,
+) -> PdfImage raise PdfError {
+  let colour_space = self.image_colour_space(dictionary, resources)
+  let bpc = self.pdf_image_bits_per_component_int(dictionary)
+  match (colour_space, bpc) {
+    (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(8)) => {
+      let required = width * height * 3
+      pdf_image_require_size(data, required)
+      PdfRawImage(width, height, PdfBPP24, data[:required].to_owned())
+    }
+    (PdfDeviceGray | PdfCalGray(_, _, _), Some(8)) =>
+      PdfRawImage(
+        width,
+        height,
+        PdfBPP24,
+        pdf_image_gray_8bpp_as_rgb24(width, height, data),
+      )
+    (PdfDeviceCMYK, Some(8)) =>
+      PdfRawImage(
+        width,
+        height,
+        PdfBPP24,
+        pdf_image_cmyk_8bpp_as_rgb24(width, height, data),
+      )
+    _ => raise FilterExpected
+  }
+}
+
+///|
+pub fn PdfDocument::get_image_24bpp(
+  self : PdfDocument,
+  resources : PdfObject,
+  image : PdfObject,
+) -> PdfImage raise PdfError {
+  let decoded = self.pdf_image_decode_to_image(image)
+  match decoded {
+    PdfStreamObject(stream) => {
+      let width = self.pdf_image_lookup_int_or_else(
+        pdf_image_width_key(),
+        pdf_image_w_key(),
+        stream.dictionary,
+      )
+      let height = self.pdf_image_lookup_int_or_else(
+        pdf_image_height_key(),
+        pdf_image_h_key(),
+        stream.dictionary,
+      )
+      match stream.data {
+        StreamGot(data) =>
+          match self.pdf_image_first_filter(decoded) {
+            Some(filter) if filter == pdf_image_dctdecode_name() ||
+              filter == pdf_image_dct_name() =>
+              PdfJPEG(data, self.pdf_image_decode_values(stream.dictionary))
+            Some(filter) if filter == pdf_image_jpxdecode_name() =>
+              PdfJPEG2000(data, self.pdf_image_decode_values(stream.dictionary))
+            Some(filter) if filter == pdf_image_jbig2decode_name() =>
+              PdfJBIG2(
+                data,
+                self.pdf_image_decode_values(stream.dictionary),
+                self.pdf_image_jbig2_globals(stream.dictionary),
+              )
+            None =>
+              self.pdf_image_raw_8bpp_as_rgb24(
+                resources,
+                width,
+                height,
+                stream.dictionary,
+                data[:],
+              )
+            Some(filter) => raise FilterNotSupported(filter)
+          }
+        _ => raise StreamDataExpected
+      }
+    }
+    _ => raise ParseStreamExpected
   }
 }

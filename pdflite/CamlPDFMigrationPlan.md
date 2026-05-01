@@ -370,8 +370,12 @@ MoonBit consequences for this project:
    data through the `FF D9` EOI marker while leaving following bytes unread.
    `pdfimage` is started with typed image result and pixel-layout enums plus
    image `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
-   including image-mask defaults. Full `Pdffun` tint-transform evaluation,
-   image pixel extraction, and JPEG decoding remain deferred.
+   including image-mask defaults. `get_image_24bpp` is started for encoded
+   JPEG/JPEG2000/JBIG2 pass-through, JBIG2 globals, and raw 8-bit
+   RGB/CalRGB, Gray/CalGray, and CMYK conversion to RGB24. Decode-array
+   transforms, lower bit-depth image conversion, Indexed/Lab/Separation image
+   pixels, full `Pdffun` tint-transform evaluation, and JPEG decoding remain
+   deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

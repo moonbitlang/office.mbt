@@ -4,6 +4,11 @@ fn image_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn image_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_bytes_of_int_array(values)
+}
+
+///|
 test "PdfImage public variants preserve image payload metadata" {
   let layout : @pdflite.PdfPixelLayout = PdfBPP24
   @test.assert_eq(layout, PdfBPP24)
@@ -50,6 +55,146 @@ test "PdfDocument image_colour_space resolves direct and resource colour spaces"
     ),
     PdfDeviceRGB,
   )
+}
+
+///|
+test "PdfDocument get_image_24bpp returns encoded JPEG images" {
+  let doc = @pdflite.pdf_document_empty()
+  let image = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfNameObject(image_name_for_test("/DCTDecode")),
+      ),
+      (image_name_for_test("/Decode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    ]),
+    StreamGot(@ascii.encode("jpg")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])),
+  )
+}
+
+///|
+test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
+  let doc = @pdflite.pdf_document_empty()
+  let jpx = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/W"), PdfInteger(1)),
+      (image_name_for_test("/H"), PdfInteger(1)),
+      (
+        image_name_for_test("/F"),
+        PdfNameObject(image_name_for_test("/JPXDecode")),
+      ),
+    ]),
+    StreamGot(@ascii.encode("jpx")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), jpx),
+    PdfJPEG2000(@ascii.encode("jpx"), None),
+  )
+  let jbig2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfNameObject(image_name_for_test("/JBIG2Decode")),
+      ),
+      (
+        image_name_for_test("/DecodeParms"),
+        @pdflite.pdf_dictionary([
+          (image_name_for_test("/JBIG2Globals"), PdfIndirect(99)),
+        ]),
+      ),
+    ]),
+    StreamGot(@ascii.encode("jbig")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), jbig2),
+    PdfJBIG2(@ascii.encode("jbig"), None, Some(99)),
+  )
+}
+
+///|
+test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let rgb = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceRGB")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([1, 2, 3, 4, 5, 6])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([1, 2, 3, 4, 5, 6])),
+  )
+  let gray = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceGray")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([9, 10])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, gray),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([9, 9, 9, 10, 10, 10])),
+  )
+  let cmyk = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceCMYK")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([0, 0, 0, 0])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, cmyk),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([255, 255, 255])),
+  )
+}
+
+///|
+test "PdfDocument get_image_24bpp reports malformed raw images" {
+  let doc = @pdflite.pdf_document_empty()
+  let short_rgb = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceRGB")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([1, 2, 3])),
+  )
+  let result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
+    @pdflite.pdf_dictionary([]),
+    short_rgb,
+  )
+  guard result is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput for short raw image")
+  }
 }
 
 ///|
