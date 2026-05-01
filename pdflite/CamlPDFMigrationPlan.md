@@ -283,9 +283,10 @@ MoonBit consequences for this project:
    plus the xref stream object. ARC4 encrypted output is now covered for full
    writes and incremental updates through the classic writer plus the
    uncompressed and Flate-compressed xref-stream writer paths. AESV2 encrypted
-   full-document output is started behind an explicit IV-provider API; a default
-   AES writer remains deferred until a project-level random-byte source is
-   selected.
+   full-document output is started behind an explicit IV-provider API and now
+   has classic-writer plus uncompressed and Flate-compressed xref-stream
+   round-trip gates; a default AES writer remains deferred until a project-level
+   random-byte source is selected.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -633,8 +634,10 @@ MoonBit consequences for this project:
     the original encryption values, matching CamlPDF's prerequisite state for
     future re-encryption after modification. Re-encryption is started for saved
     40-bit ARC4, 128-bit ARC4 revision 3, 128-bit ARC4 revision 4, and
-    explicit-IV-provider AESV2 revision 4 documents; default AES recrypt remains
-    deferred until a project-level random-byte source is selected.
+    explicit-IV-provider AESV2 revision 4 documents. AESV2 recrypt also has
+    uncompressed and Flate-compressed xref-stream incremental update gates;
+    default AES recrypt remains deferred until a project-level random-byte source
+    is selected.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
