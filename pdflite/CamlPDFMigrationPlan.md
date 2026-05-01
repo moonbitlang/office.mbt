@@ -427,9 +427,9 @@ MoonBit consequences for this project:
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
    `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs. ToUnicode CMap parsing now
-   handles inline and multiline `bfrange` array mappings, including range
-   headers split before the array, whitespace inside hex strings, and odd
-   hex-string nibbles.
+   handles `bfchar` pairs split across lines, inline and multiline `bfrange`
+   array mappings, including range headers split before the array, whitespace
+   inside hex strings, and odd hex-string nibbles.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol

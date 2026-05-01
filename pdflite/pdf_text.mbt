@@ -1428,23 +1428,50 @@ fn pdf_text_tounicode_bfrange_array_entries(
 }
 
 ///|
-fn pdf_text_tounicode_bfchar_entries_of_line(
+fn pdf_text_push_tounicode_bfchar_entry(
+  entries : Array[(Int, PdfBytes)],
+  source : PdfBytes,
+  unicode : PdfBytes,
+) -> Unit {
+  match pdf_text_bytes_to_int(source[:]) {
+    Some(code) => entries.push((code, unicode))
+    None => ()
+  }
+}
+
+///|
+fn pdf_text_append_tounicode_bfchar_entries(
+  entries : Array[(Int, PdfBytes)],
+  pending_source : PdfBytes?,
   line : BytesView,
-) -> Array[(Int, PdfBytes)]? {
+) -> PdfBytes? {
+  let mut pending = pending_source
   match pdf_text_parse_cmap_hex_groups(line) {
-    Some(groups) if groups.length() % 2 == 0 => {
-      let entries : Array[(Int, PdfBytes)] = []
+    Some(groups) => {
       let mut index = 0
-      while index < groups.length() {
-        match pdf_text_bytes_to_int(groups[index][:]) {
-          Some(code) => entries.push((code, groups[index + 1]))
-          None => return None
-        }
+      match pending {
+        Some(source) =>
+          if groups.length() > 0 {
+            pdf_text_push_tounicode_bfchar_entry(entries, source, groups[0])
+            pending = None
+            index = 1
+          }
+        None => ()
+      }
+      while index + 1 < groups.length() {
+        pdf_text_push_tounicode_bfchar_entry(
+          entries,
+          groups[index],
+          groups[index + 1],
+        )
         index += 2
       }
-      Some(entries)
+      if index < groups.length() {
+        pending = Some(groups[index])
+      }
+      pending
     }
-    _ => None
+    None => pending
   }
 }
 
@@ -1602,6 +1629,7 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
   let cursor = byte_cursor_of_view(data)
   let entries : Array[(Int, PdfBytes)] = []
   let mut section = PdfTextCMapNone
+  let mut pending_bfchar_source : PdfBytes? = None
   let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None
   for raw_line in cursor.read_line_views() {
     let mut line = raw_line
@@ -1634,13 +1662,9 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
       None =>
         match section {
           PdfTextCMapBFChar =>
-            match pdf_text_tounicode_bfchar_entries_of_line(line) {
-              Some(line_entries) =>
-                for entry in line_entries {
-                  entries.push(entry)
-                }
-              None => ()
-            }
+            pending_bfchar_source = pdf_text_append_tounicode_bfchar_entries(
+              entries, pending_bfchar_source, line,
+            )
           PdfTextCMapBFRange =>
             match pdf_text_tounicode_bfrange_entries_of_line(line) {
               Some(line_entries) =>
@@ -1673,6 +1697,7 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
     }
     if end_bfchar && section is PdfTextCMapBFChar {
       section = PdfTextCMapNone
+      pending_bfchar_source = None
     }
     if end_bfrange && section is PdfTextCMapBFRange {
       section = PdfTextCMapNone
