@@ -11,7 +11,22 @@ first files inspected were `.repos/pdfio.mli`, `.repos/pdfio.ml`,
 
 ## Verified MoonBit Facts
 
-Verified with `moon 0.1.20260430`.
+Verified with `moon 0.1.20260430` and OCaml 4.14.1.
+
+The key byte/text contrast was validated on both sides:
+
+```sh
+ocaml -noprompt -noinit <<'EOF'
+let s = "𝄞";;
+Printf.printf "%d\n" (String.length s);;
+Printf.printf "%d\n" (Char.code s.[0]);;
+EOF
+# 4
+# 240
+```
+
+OCaml `String.length` counts bytes. The first byte of the UTF-8 spelling of
+`𝄞` is 240.
 
 Run small language/API probes with `moon run -c '...'` before committing a
 porting pattern to the codebase. Useful verified probes:
@@ -60,19 +75,20 @@ moon run -c 'fn main { let m : @hashmap.HashMap[Int, String] = @hashmap.HashMap:
 ```
 
 Code files do not contain OCaml-style `open`. Add package imports in
-`moon.pkg`, then call imported packages with their `@alias`.
+`moon.pkg`, then call imported packages with their `@alias`. This is validated
+in `ocaml2moonbit_wbtest.mbt` with `@hashmap.HashMap`.
 
 Current package testing status:
 
 ```sh
 moon test --outline
-# Warning: no test entry found.
+# ocaml2moonbit_wbtest.mbt contains the initial migration-assumption tests.
 
 moon test
-# Total tests: 0, passed: 0, failed: 0.
+# Total tests: 5, passed: 5, failed: 0.
 ```
 
-The scaffold has test files but no `test` blocks yet.
+The initial executable validation lives in `ocaml2moonbit_wbtest.mbt`.
 
 ## Core Porting Rules
 
@@ -191,7 +207,8 @@ Test file roles:
 
 Assertion style:
 
-- Use `assert_eq` for stable scalar or structural results.
+- Use `@test.assert_eq` for stable scalar or structural results; it has a
+  `Debug` bound and avoids the deprecated `Show`-based assertion path.
 - Use `assert_true(value is Pattern(...))` or `guard ... else { fail(...) }`
   for pattern checks.
 - Use `inspect(value, content="...")` for snapshot tests of small values.
