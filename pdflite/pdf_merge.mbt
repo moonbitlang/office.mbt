@@ -109,6 +109,11 @@ fn pdf_merge_names_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_ns_key() -> PdfName {
+  pdf_merge_name("/NS")
+}
+
+///|
 fn pdf_merge_parent_key() -> PdfName {
   pdf_merge_name("/P")
 }
@@ -126,6 +131,11 @@ fn pdf_merge_parent_tree_key() -> PdfName {
 ///|
 fn pdf_merge_role_map_key() -> PdfName {
   pdf_merge_name("/RoleMap")
+}
+
+///|
+fn pdf_merge_s_key() -> PdfName {
+  pdf_merge_name("/S")
 }
 
 ///|
@@ -342,7 +352,7 @@ fn PdfDocument::pdf_merge_structure_array(
   self : PdfDocument,
   structure_tree_roots : ArrayView[PdfObject],
   key : PdfName,
-) -> PdfObject? {
+) -> Array[PdfObject] {
   let values : Array[PdfObject] = []
   for root in structure_tree_roots {
     match self.lookup_direct(key, root) {
@@ -355,11 +365,7 @@ fn PdfDocument::pdf_merge_structure_array(
       _ => ()
     }
   }
-  if values.length() > 0 {
-    Some(PdfArray(values))
-  } else {
-    None
-  }
+  values
 }
 
 ///|
@@ -525,6 +531,7 @@ fn PdfDocument::pdf_merge_structure_tree_root(
   self : PdfDocument,
   structure_tree_roots : ArrayView[PdfObject],
   parent_tree_entries : ArrayView[(Int, PdfObject)],
+  add_toplevel_document : Bool,
 ) -> PdfObject? raise PdfError {
   if structure_tree_roots.length() == 0 {
     None
@@ -574,30 +581,57 @@ fn PdfDocument::pdf_merge_structure_tree_root(
       Some(class_map) => entries.push((pdf_merge_class_map_key(), class_map))
       None => ()
     }
-    match
-      self.pdf_merge_structure_array(
-        structure_tree_roots,
-        pdf_merge_namespaces_key(),
-      ) {
-      Some(namespaces) => entries.push((pdf_merge_namespaces_key(), namespaces))
-      None => ()
+    let namespaces = self.pdf_merge_structure_array(
+      structure_tree_roots,
+      pdf_merge_namespaces_key(),
+    )
+    let pdf2_namespace_number = if add_toplevel_document {
+      let number = self.add_object(
+        PdfDictionary([
+          (
+            pdf_merge_ns_key(),
+            PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+          ),
+        ]),
+      )
+      namespaces.insert(0, PdfIndirect(number))
+      Some(number)
+    } else {
+      None
     }
-    match
-      self.pdf_merge_structure_array(
-        structure_tree_roots,
-        pdf_merge_pronunciation_lexicon_key(),
-      ) {
-      Some(lexicon) =>
-        entries.push((pdf_merge_pronunciation_lexicon_key(), lexicon))
-      None => ()
+    if namespaces.length() > 0 {
+      entries.push((pdf_merge_namespaces_key(), PdfArray(namespaces)))
     }
-    match
-      self.pdf_merge_structure_array(structure_tree_roots, pdf_merge_af_key()) {
-      Some(af) => entries.push((pdf_merge_af_key(), af))
-      None => ()
+    let lexicon = self.pdf_merge_structure_array(
+      structure_tree_roots,
+      pdf_merge_pronunciation_lexicon_key(),
+    )
+    if lexicon.length() > 0 {
+      entries.push((pdf_merge_pronunciation_lexicon_key(), PdfArray(lexicon)))
+    }
+    let af = self.pdf_merge_structure_array(
+      structure_tree_roots,
+      pdf_merge_af_key(),
+    )
+    if af.length() > 0 {
+      entries.push((pdf_merge_af_key(), PdfArray(af)))
     }
     if kids.length() > 0 {
-      entries.push((pdf_merge_k_key(), pdf_structure_k_object(kids)))
+      let root_k = match pdf2_namespace_number {
+        Some(namespace_number) => {
+          let top_level_number = self.add_object(
+            PdfDictionary([
+              (pdf_merge_ns_key(), PdfIndirect(namespace_number)),
+              (pdf_merge_s_key(), PdfNameObject(pdf_merge_name("/Document"))),
+              (pdf_merge_parent_key(), PdfIndirect(root_number)),
+              (pdf_merge_k_key(), pdf_structure_k_object(kids)),
+            ]),
+          )
+          PdfIndirect(top_level_number)
+        }
+        None => pdf_structure_k_object(kids)
+      }
+      entries.push((pdf_merge_k_key(), root_k))
     }
     self.add_object_given_number(root_number, PdfDictionary(entries))
     Some(PdfIndirect(root_number))
@@ -891,6 +925,7 @@ pub fn pdf_merge_documents(
   retain_named_destinations? : Bool = true,
   retain_name_dictionary? : Bool = true,
   retain_structure_tree? : Bool = true,
+  add_toplevel_document? : Bool = false,
   retain_info? : Bool = true,
   retain_catalog_entries? : Bool = true,
   remove_duplicate_fonts? : Bool = false,
@@ -982,7 +1017,7 @@ pub fn pdf_merge_documents(
   }
   let merged = match
     merged.pdf_merge_structure_tree_root(
-      structure_tree_roots, parent_tree_entries,
+      structure_tree_roots, parent_tree_entries, add_toplevel_document,
     ) {
     Some(structure_tree_root) =>
       merged.pdf_merge_add_catalog_entry(

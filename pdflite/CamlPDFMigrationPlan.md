@@ -414,7 +414,10 @@ MoonBit consequences for this project:
     `/StructParent` and `/StructParents` integer keys are made globally unique
     across merged inputs and the merged root receives a combined `/ParentTree`.
     Multi-root structure metadata merging now covers `/IDTree`, `/RoleMap`,
-    `/ClassMap`, `/Namespaces`, `/PronunciationLexicon`, and `/AF`.
+    `/ClassMap`, `/Namespaces`, `/PronunciationLexicon`, and `/AF`. Optional
+    top-level `/Document` wrapping is started behind
+    `add_toplevel_document=true`, adding the PDF/UA-2 namespace and placing
+    merged `/K` children under that document node.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

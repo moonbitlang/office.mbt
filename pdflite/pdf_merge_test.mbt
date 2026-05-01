@@ -773,6 +773,76 @@ test "pdf_merge_documents merges structure root metadata" {
 }
 
 ///|
+test "pdf_merge_documents can add top-level document structure element" {
+  let key_k = merge_name_for_test("/K")
+  let key_namespaces = merge_name_for_test("/Namespaces")
+  let key_ns = merge_name_for_test("/NS")
+  let key_p = merge_name_for_test("/P")
+  let key_s = merge_name_for_test("/S")
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let first = merge_structure_tree_doc_for_test()
+  let second = merge_structure_tree_doc_for_test()
+  let merged = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    add_toplevel_document=true,
+  )
+  let root = merged.lookup_object_or_null(merged.root())
+  guard root.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(struct_root_number)) else {
+    fail("expected merged StructTreeRoot")
+  }
+  let struct_root = merged.lookup_object_or_null(struct_root_number)
+  guard struct_root.lookup_immediate(key_k)
+    is Some(PdfIndirect(document_number)) else {
+    fail("expected top-level Document")
+  }
+  let document = merged.lookup_object_or_null(document_number)
+  @test.assert_eq(
+    document.lookup_immediate(key_s),
+    Some(PdfNameObject(merge_name_for_test("/Document"))),
+  )
+  @test.assert_eq(
+    document.lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  guard document.lookup_immediate(key_k) is Some(PdfArray(kids)) else {
+    fail("expected original kids under Document")
+  }
+  @test.assert_eq(kids.length(), 2)
+  guard kids[0] is PdfIndirect(first_child) else {
+    fail("expected first wrapped structure child")
+  }
+  guard kids[1] is PdfIndirect(second_child) else {
+    fail("expected second wrapped structure child")
+  }
+  @test.assert_eq(
+    merged.lookup_object_or_null(first_child).lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(second_child).lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  guard struct_root.lookup_immediate(key_namespaces)
+    is Some(PdfArray(namespaces)) else {
+    fail("expected Namespaces")
+  }
+  @test.assert_eq(namespaces.length() > 0, true)
+  guard namespaces[0] is PdfIndirect(namespace_number) else {
+    fail("expected PDF/UA namespace")
+  }
+  @test.assert_eq(
+    merged.lookup_object_or_null(namespace_number).lookup_immediate(key_ns),
+    Some(PdfString(@ascii.encode("http://iso.org/pdf2/ssn"))),
+  )
+  @test.assert_eq(
+    document.lookup_immediate(key_ns),
+    Some(PdfIndirect(namespace_number)),
+  )
+}
+
+///|
 test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
   let key_info = merge_name_for_test("/Info")
   let doc = @pdflite.pdf_document_empty()
