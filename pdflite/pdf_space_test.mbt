@@ -14,9 +14,37 @@ test "PdfColourSpace debug names preserve CamlPDF forms" {
   @test.assert_eq(@pdflite.PdfDeviceRGB.debug_name(), "/DeviceRGB")
   @test.assert_eq(@pdflite.PdfDeviceCMYK.debug_name(), "/DeviceCMYK")
   @test.assert_eq(
+    @pdflite.PdfCalGray(
+      { x: 1.0, y: 1.0, z: 1.0 },
+      { x: 0.0, y: 0.0, z: 0.0 },
+      1.0,
+    ).debug_name(),
+    "/CalGray",
+  )
+  @test.assert_eq(
+    @pdflite.PdfCalRGB(
+      { x: 1.0, y: 1.0, z: 1.0 },
+      { x: 0.0, y: 0.0, z: 0.0 },
+      [1.0, 1.0, 1.0],
+      [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    ).debug_name(),
+    "/CalRGB",
+  )
+  @test.assert_eq(
+    @pdflite.PdfLab({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, [
+      -100.0, 100.0, -100.0, 100.0,
+    ]).debug_name(),
+    "/Lab",
+  )
+  @test.assert_eq(
+    @pdflite.PdfICCBased(1, PdfDeviceGray, [0.0, 1.0], None, PdfNull).debug_name(),
+    "ICCBased (/DeviceGray)",
+  )
+  @test.assert_eq(
     @pdflite.PdfPatternWithBaseColourSpace(PdfDeviceRGB).debug_name(),
     "PatternWithBaseColourspace (/DeviceRGB)",
   )
+  @test.assert_eq(@pdflite.PdfPattern.debug_name(), "/Pattern")
   @test.assert_eq(
     @pdflite.PdfIndexed(PdfDeviceCMYK, [(0, [0, 0, 0, 255])]).debug_name(),
     "Indexed (/DeviceCMYK)",
@@ -101,6 +129,7 @@ test "pdf_colour_space_of_object reads direct device aliases and patterns" {
     ),
     None,
   )
+  @test.assert_eq(@pdflite.pdf_colour_space_of_object(PdfInteger(1)), None)
 }
 
 ///|
@@ -144,16 +173,39 @@ test "PdfDocument read_colour_space resolves resources and nested arrays" {
   @test.assert_eq(
     try! doc.read_colour_space(
       resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Pattern")),
+        PdfNameObject(space_name_for_test("/Missing")),
+      ]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      resources,
       PdfNameObject(space_name_for_test("/Missing")),
     ),
     None,
   )
+  @test.assert_eq(try! doc.read_colour_space(resources, PdfInteger(1)), None)
 }
 
 ///|
 test "PdfDocument read_colour_space parses calibrated dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   let empty_resources = @pdflite.pdf_dictionary([])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalGray")),
+        @pdflite.pdf_dictionary([]),
+      ]),
+    ),
+    Some(
+      PdfCalGray({ x: 0.0, y: 0.0, z: 0.0 }, { x: 0.0, y: 0.0, z: 0.0 }, 1.0),
+    ),
+  )
   @test.assert_eq(
     try! doc.read_colour_space(
       empty_resources,
@@ -300,6 +352,25 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
       PdfICCBased(1, PdfDeviceCMYK, [0.1, 0.9], Some(metadata), explicit_stream),
     ),
   )
+  let cmyk_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), cmyk_stream]),
+    ),
+    Some(
+      PdfICCBased(
+        4,
+        PdfDeviceCMYK,
+        [0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+        None,
+        cmyk_stream,
+      ),
+    ),
+  )
 }
 
 ///|
@@ -314,6 +385,20 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
     try! doc.read_colour_space(
       empty_resources,
       PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), bad_n_stream]),
+    ),
+    None,
+  )
+  let missing_n_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/ICCBased")),
+        missing_n_stream,
+      ]),
     ),
     None,
   )
@@ -462,6 +547,18 @@ test "PdfDocument read_colour_space rejects unsupported Indexed shapes" {
       empty_resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/Indexed")),
+        PdfNameObject(space_name_for_test("/Missing")),
+        PdfInteger(0),
+        PdfString(space_bytes_for_test([1, 2, 3])),
+      ]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
         PdfNameObject(space_name_for_test("/DeviceRGB")),
         PdfInteger(0),
         PdfArray([]),
@@ -497,6 +594,18 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
   )
   guard short_table is Err(@pdflite.PdfError::EndOfInput) else {
     fail("expected EndOfInput for short Indexed table")
+  }
+  let negative_hival : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
+    @pdflite.pdf_dictionary([]),
+    PdfArray([
+      PdfNameObject(space_name_for_test("/Indexed")),
+      PdfNameObject(space_name_for_test("/DeviceRGB")),
+      PdfInteger(-1),
+      PdfString(space_bytes_for_test([1, 2, 3])),
+    ]),
+  )
+  guard negative_hival is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength for negative Indexed hival")
   }
 }
 
