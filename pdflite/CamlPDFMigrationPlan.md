@@ -438,7 +438,9 @@ MoonBit consequences for this project:
    handles `bfchar` pairs split across lines, inline and multiline `bfrange`
    array mappings, including range headers split before the array, whitespace
    inside hex strings, odd hex-string nibbles, and multiple compact
-   `beginbfchar`/`beginbfrange` sections on the same physical line.
+   `beginbfchar`/`beginbfrange` sections on the same physical line. Inline
+   `bfrange` parsing now consumes repeated array-form and sequential entries
+   from one line instead of stopping after the first array mapping.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol

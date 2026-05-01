@@ -1995,6 +1995,63 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
 }
 
 ///|
+test "PdfDocument reads repeated inline bfrange arrays" {
+  let doc = @pdflite.pdf_document_empty()
+  let tounicode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(
+      @ascii.encode(
+        "2 beginbfrange <40><41>[<0061><0062>] <42><43>[<0063><0064>] endbfrange\n" +
+        "3 beginbfrange <44><45><0065> <46><47>[<0067><0068>] <48><49><0069> endbfrange\n",
+      ),
+    ),
+  )
+  doc.add_object_given_number(2, tounicode)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(2)),
+  ])
+  guard (try! doc.read_font(font)) is PdfFontSimple(read) else {
+    fail("expected simple font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (64, text_bytes_for_test([0x00, 0x61])),
+      (65, text_bytes_for_test([0x00, 0x62])),
+      (66, text_bytes_for_test([0x00, 0x63])),
+      (67, text_bytes_for_test([0x00, 0x64])),
+      (68, text_bytes_for_test([0x00, 0x65])),
+      (69, text_bytes_for_test([0x00, 0x66])),
+      (70, text_bytes_for_test([0x00, 0x67])),
+      (71, text_bytes_for_test([0x00, 0x68])),
+      (72, text_bytes_for_test([0x00, 0x69])),
+      (73, text_bytes_for_test([0x00, 0x6A])),
+    ]),
+  )
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([64, 65, 66, 67, 68, 69, 70, 71, 72, 73])[:],
+    ),
+    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(64))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x66), Some(69))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x6A), Some(73))
+}
+
+///|
 test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
   let doc = @pdflite.pdf_document_empty()
   let tounicode = @pdflite.pdf_stream(
