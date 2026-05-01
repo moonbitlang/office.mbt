@@ -392,7 +392,10 @@ MoonBit consequences for this project:
     destination retention now merges old-style catalog `/Dests` and name-tree
     `/Names` `/Dests`, retargeting page-object destinations to the merged page
     tree. Merge trailer info retention now preserves the first available
-    `/Info` dictionary through the merged trailer.
+    `/Info` dictionary through the merged trailer. Safe catalog-entry retention
+    now carries first-seen non-page/non-handled catalog entries, such as viewer
+    preferences, while dropping `/OpenAction` and other entries that require
+    dedicated merge semantics.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

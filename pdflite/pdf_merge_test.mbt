@@ -323,6 +323,52 @@ test "pdf_merge_documents retains first document info dictionary" {
 }
 
 ///|
+test "pdf_merge_documents retains safe catalog entries" {
+  let key_page_mode = merge_name_for_test("/PageMode")
+  let key_viewer_preferences = merge_name_for_test("/ViewerPreferences")
+  let key_open_action = merge_name_for_test("/OpenAction")
+  let first = merge_add_catalog_entry_for_test(
+    merge_one_page_doc_for_test(1, 4),
+    key_page_mode,
+    PdfNameObject(merge_name_for_test("/UseOutlines")),
+  )
+  let first = merge_add_catalog_entry_for_test(
+    first,
+    key_open_action,
+    PdfString(@ascii.encode("drop")),
+  )
+  let preferences : @pdflite.PdfObject = PdfDictionary([
+    (merge_name_for_test("/HideToolbar"), PdfBoolean(true)),
+  ])
+  let second = merge_add_catalog_entry_for_test(
+    merge_one_page_doc_for_test(1, 4),
+    key_viewer_preferences,
+    preferences,
+  )
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_page_mode),
+    Some(PdfNameObject(merge_name_for_test("/UseOutlines"))),
+  )
+  @test.assert_eq(
+    root.lookup_immediate(key_viewer_preferences),
+    Some(preferences),
+  )
+  @test.assert_eq(root.lookup_immediate(key_open_action), None)
+  let without_catalog_entries = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_catalog_entries=false,
+  )
+  let root = without_catalog_entries.lookup_object_or_null(
+    without_catalog_entries.root(),
+  )
+  @test.assert_eq(root.lookup_immediate(key_page_mode), None)
+  @test.assert_eq(root.lookup_immediate(key_viewer_preferences), None)
+}
+
+///|
 test "pdf_merge_documents rejects empty and mismatched inputs" {
   let doc = merge_one_page_doc_for_test(1, 4)
   let empty : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_documents(

@@ -34,6 +34,41 @@ fn pdf_merge_acroform_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_open_action_key() -> PdfName {
+  pdf_merge_name("/OpenAction")
+}
+
+///|
+fn pdf_merge_ocproperties_key() -> PdfName {
+  pdf_merge_name("/OCProperties")
+}
+
+///|
+fn pdf_merge_outlines_key() -> PdfName {
+  pdf_merge_name("/Outlines")
+}
+
+///|
+fn pdf_merge_page_labels_key() -> PdfName {
+  pdf_merge_name("/PageLabels")
+}
+
+///|
+fn pdf_merge_pages_key() -> PdfName {
+  pdf_merge_name("/Pages")
+}
+
+///|
+fn pdf_merge_struct_tree_root_key() -> PdfName {
+  pdf_merge_name("/StructTreeRoot")
+}
+
+///|
+fn pdf_merge_type_key() -> PdfName {
+  pdf_merge_name("/Type")
+}
+
+///|
 fn pdf_merge_dests_key() -> PdfName {
   pdf_merge_name("/Dests")
 }
@@ -68,6 +103,54 @@ fn PdfDocument::pdf_merge_copy_objects_from(
       None => ()
     }
   }
+}
+
+///|
+fn pdf_merge_name_member(names : ArrayView[PdfName], name : PdfName) -> Bool {
+  for existing in names {
+    if existing == name {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_merge_catalog_extra_key(key : PdfName) -> Bool {
+  !(key == pdf_merge_type_key() ||
+  key == pdf_merge_pages_key() ||
+  key == pdf_merge_page_labels_key() ||
+  key == pdf_merge_outlines_key() ||
+  key == pdf_merge_dests_key() ||
+  key == pdf_merge_names_key() ||
+  key == pdf_merge_ocproperties_key() ||
+  key == pdf_merge_acroform_key() ||
+  key == pdf_merge_struct_tree_root_key() ||
+  key == pdf_merge_open_action_key())
+}
+
+///|
+fn pdf_merge_catalog_extra_entries(
+  documents : ArrayView[PdfDocument],
+) -> Array[(PdfName, PdfObject)] {
+  let entries : Array[(PdfName, PdfObject)] = []
+  let seen : Array[PdfName] = []
+  for document in documents {
+    match document.lookup_object_or_null(document.root()) {
+      PdfDictionary(root_entries) =>
+        for entry in root_entries {
+          let (key, _) = entry
+          if pdf_merge_catalog_extra_key(key) &&
+            !pdf_merge_name_member(seen, key) {
+            entries.push(entry)
+            seen.push(key)
+          }
+        }
+      _ => ()
+    }
+  }
+  entries
 }
 
 ///|
@@ -313,6 +396,7 @@ pub fn pdf_merge_documents(
   retain_acroforms? : Bool = true,
   retain_named_destinations? : Bool = true,
   retain_info? : Bool = true,
+  retain_catalog_entries? : Bool = true,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
@@ -341,6 +425,11 @@ pub fn pdf_merge_documents(
     None
   }
   let info = if retain_info { pdf_merge_info_dictionary(staged) } else { None }
+  let catalog_entries = if retain_catalog_entries {
+    pdf_merge_catalog_extra_entries(staged)
+  } else {
+    []
+  }
   let merged = pdf_document_empty()
   let (major, minor) = pdf_merge_max_version(staged)
   merged.set_version(major, minor)
@@ -366,6 +455,15 @@ pub fn pdf_merge_documents(
   }
   let page_root_number = merged.add_pagetree(pages)
   ignore(merged.add_root(page_root_number, []))
+  let merged = if catalog_entries.length() > 0 {
+    for entry in catalog_entries {
+      let (key, value) = entry
+      ignore(merged.pdf_merge_add_catalog_entry(key, value))
+    }
+    merged
+  } else {
+    merged
+  }
   let new_page_numbers = merged.page_reference_numbers()
   let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
   if retain_named_destinations {
