@@ -644,7 +644,7 @@ fn PdfDocument::read_object_stream_reference(
         Some(_) => raise XRefEntryExpected
         None => ()
       }
-      let decoded_stream = pdf_decode_stream_value(stream)
+      let decoded_stream = self.pdf_decode_stream_value_direct(stream)
       let count = pdf_object_stream_required_int(
         decoded_stream.dictionary,
         pdf_reader_n_name(),

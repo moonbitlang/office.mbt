@@ -201,7 +201,10 @@ MoonBit consequences for this project:
    `/ObjStm` object has been loaded. Object stream extraction is started for
    direct/filter-decodable stream data with direct `/N` and `/First`
    dictionaries, including malformed header, offset, index, and object-number
-   mismatch checks. Hybrid-reference files with a classic trailer `/XRefStm`
+   mismatch checks. Object-stream extraction now uses the document-aware stream
+   decoder once the containing object stream is loaded, so indirect `/Filter`
+   metadata on `/ObjStm` streams is honored. Hybrid-reference files with a
+   classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same
    revision while preserving the classic trailer as the document trailer.
    Xref-stream `/Prev` chains are also covered, including newer updates and
@@ -311,8 +314,9 @@ MoonBit consequences for this project:
    the remaining filter metadata. Content streams, sampled functions, indexed
    colour lookup streams, ToUnicode CMap streams, and staged image decoding now
    use the document-aware stream decoder internally, so indirect filter metadata
-   is honored across those callers. Higher-ratio Flate compression and other
-   filters remain deferred.
+   is honored across those callers. Reader object-stream extraction also uses
+   document-aware decoding after the object map is loaded. Higher-ratio Flate
+   compression and other filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
