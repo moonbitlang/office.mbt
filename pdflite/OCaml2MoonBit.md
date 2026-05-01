@@ -159,6 +159,22 @@ MoonBit does not use OCaml's floating exponentiation operator `**`. Use
 `@math.pow(base, exponent)` when porting OCaml `float ** float` calculations.
 
 ```sh
+moon run -c 'fn main { println((4.0).sqrt()); println((-3.0).abs()); println((5.5).mod(2.0)) }'
+# 2
+# 3
+# 1.5
+```
+
+Many OCaml `float` helpers map to `Double` methods in MoonBit. Verified method
+forms include `value.sqrt()`, `value.abs()`, and `value.mod(other)`. The
+`@math` package also provides free functions such as `@math.sin`, `@math.cos`,
+`@math.atan2`, `@math.ln`, `@math.log10`, `@math.floor`, `@math.ceil`,
+`@math.round`, `@math.trunc`, and `@math.exp`. Prefer a `moon ide doc` query
+or `moon run -c` probe before assuming an OCaml Stdlib function has the same
+MoonBit package path; for example `@math.sqrt` and `@math.abs` are not valid,
+but `Double::sqrt`/`value.sqrt()` and `Double::abs`/`value.abs()` are.
+
+```sh
 moon run -c 'fn main { let r : Ref[Int] = Ref::{ val: 0 }; r.val += 1; let xs = [1, 2, 3]; xs[0] = 9; println(r.val); println(xs[0]) }'
 # 1
 # 9

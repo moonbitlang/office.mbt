@@ -367,7 +367,8 @@ MoonBit consequences for this project:
    alternate-space handling. Separation and DeviceN parsing is started for
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
    attributes. `pdffun` is started with Type 0 sampled, Type 2 interpolation,
-   Type 3 stitching, and basic Type 4 calculator function parsing/evaluation,
+   Type 3 stitching, and Type 4 calculator function parsing/evaluation for
+   numeric literals, common numeric operators, and numeric stack operators,
    stream decoding for sampled/calculator functions, domain clamping, and range
    clamping. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG data through the
    `FF D9` EOI marker while leaving following bytes unread. `pdfimage` is
@@ -383,8 +384,9 @@ MoonBit consequences for this project:
    is started for 8-bit samples. CamlPDF-style `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. Separation image pixels are started for 8-bit
-   samples with Type 2 tint functions and DeviceCMYK alternates. Full Type 4
-   calculator operator coverage and JPEG decoding remain deferred.
+   samples with Type 2 tint functions and DeviceCMYK alternates. Type 4
+   calculator boolean/comparison/conditional coverage and JPEG decoding remain
+   deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

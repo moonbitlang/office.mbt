@@ -96,10 +96,33 @@ pub(all) struct PdfStitchingFunction {
 pub(all) enum PdfCalculatorOp {
   PdfCalculatorInt(Int)
   PdfCalculatorFloat(Double)
+  PdfCalculatorAbs
   PdfCalculatorAdd
+  PdfCalculatorAtan
+  PdfCalculatorCeiling
+  PdfCalculatorCos
+  PdfCalculatorCopy
+  PdfCalculatorCvi
+  PdfCalculatorCvr
   PdfCalculatorSub
   PdfCalculatorMul
   PdfCalculatorDiv
+  PdfCalculatorDup
+  PdfCalculatorExch
+  PdfCalculatorExp
+  PdfCalculatorFloor
+  PdfCalculatorIdiv
+  PdfCalculatorIndex
+  PdfCalculatorLn
+  PdfCalculatorLog
+  PdfCalculatorMod
+  PdfCalculatorNeg
+  PdfCalculatorPop
+  PdfCalculatorRoll
+  PdfCalculatorRound
+  PdfCalculatorSin
+  PdfCalculatorSqrt
+  PdfCalculatorTruncate
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -396,10 +419,33 @@ fn pdf_fun_calculator_op_of_token(
   text : String,
 ) -> PdfCalculatorOp raise PdfError {
   match text {
+    "abs" => PdfCalculatorAbs
     "add" => PdfCalculatorAdd
+    "atan" => PdfCalculatorAtan
+    "ceiling" => PdfCalculatorCeiling
+    "cos" => PdfCalculatorCos
+    "copy" => PdfCalculatorCopy
+    "cvi" => PdfCalculatorCvi
+    "cvr" => PdfCalculatorCvr
     "sub" => PdfCalculatorSub
     "mul" => PdfCalculatorMul
     "div" => PdfCalculatorDiv
+    "dup" => PdfCalculatorDup
+    "exch" => PdfCalculatorExch
+    "exp" => PdfCalculatorExp
+    "floor" => PdfCalculatorFloor
+    "idiv" => PdfCalculatorIdiv
+    "index" => PdfCalculatorIndex
+    "ln" => PdfCalculatorLn
+    "log" => PdfCalculatorLog
+    "mod" => PdfCalculatorMod
+    "neg" => PdfCalculatorNeg
+    "pop" => PdfCalculatorPop
+    "roll" => PdfCalculatorRoll
+    "round" => PdfCalculatorRound
+    "sin" => PdfCalculatorSin
+    "sqrt" => PdfCalculatorSqrt
+    "truncate" => PdfCalculatorTruncate
     _ => {
       let integer : Result[Int, Error] = try? @strconv.from_str(text)
       match integer {
@@ -712,6 +758,67 @@ fn pdf_fun_calculator_pop(stack : Array[Double]) -> Double raise PdfError {
 }
 
 ///|
+fn pdf_fun_calculator_pop_int(stack : Array[Double]) -> Int raise PdfError {
+  let value = pdf_fun_calculator_pop(stack)
+  let truncated = value.trunc()
+  if value != truncated {
+    raise BadFunctionEvaluation("calculator integer operand expected")
+  }
+  truncated.to_int()
+}
+
+///|
+fn pdf_fun_calculator_copy(stack : Array[Double]) -> Unit raise PdfError {
+  let count = pdf_fun_calculator_pop_int(stack)
+  if count < 0 || count > stack.length() {
+    raise BadFunctionEvaluation("calculator copy operand out of range")
+  }
+  let start = stack.length() - count
+  let end = stack.length()
+  for index in start..<end {
+    stack.push(stack[index])
+  }
+}
+
+///|
+fn pdf_fun_calculator_index(stack : Array[Double]) -> Unit raise PdfError {
+  let index = pdf_fun_calculator_pop_int(stack)
+  if index < 0 || index >= stack.length() {
+    raise BadFunctionEvaluation("calculator index operand out of range")
+  }
+  stack.push(stack[stack.length() - index - 1])
+}
+
+///|
+fn pdf_fun_calculator_roll(stack : Array[Double]) -> Unit raise PdfError {
+  let distance = pdf_fun_calculator_pop_int(stack)
+  let count = pdf_fun_calculator_pop_int(stack)
+  if count < 1 || count > stack.length() {
+    raise BadFunctionEvaluation("calculator roll operand out of range")
+  }
+  let start = stack.length() - count
+  let offset = (distance % count + count) % count
+  let rolled : Array[Double] = []
+  for index in 0..<count {
+    let source = start + (index - offset + count) % count
+    rolled.push(stack[source])
+  }
+  for index in 0..<count {
+    stack[start + index] = rolled[index]
+  }
+}
+
+///|
+fn pdf_fun_degrees_to_radians(value : Double) -> Double {
+  value * @math.PI / 180.0
+}
+
+///|
+fn pdf_fun_radians_to_degrees(value : Double) -> Double {
+  value * 180.0 / @math.PI
+}
+
+///|
 fn PdfCalculatorFunction::eval_calculator(
   self : PdfCalculatorFunction,
   clamped_inputs : ArrayView[Double],
@@ -724,11 +831,27 @@ fn PdfCalculatorFunction::eval_calculator(
     match operation {
       PdfCalculatorInt(value) => stack.push(value.to_double())
       PdfCalculatorFloat(value) => stack.push(value)
+      PdfCalculatorAbs => stack.push(pdf_fun_calculator_pop(stack).abs())
       PdfCalculatorAdd => {
         let right = pdf_fun_calculator_pop(stack)
         let left = pdf_fun_calculator_pop(stack)
         stack.push(left + right)
       }
+      PdfCalculatorAtan => {
+        let denominator = pdf_fun_calculator_pop(stack)
+        let numerator = pdf_fun_calculator_pop(stack)
+        stack.push(
+          pdf_fun_radians_to_degrees(@math.atan2(numerator, denominator)),
+        )
+      }
+      PdfCalculatorCeiling => stack.push(pdf_fun_calculator_pop(stack).ceil())
+      PdfCalculatorCos =>
+        stack.push(
+          @math.cos(pdf_fun_degrees_to_radians(pdf_fun_calculator_pop(stack))),
+        )
+      PdfCalculatorCopy => pdf_fun_calculator_copy(stack)
+      PdfCalculatorCvi => stack.push(pdf_fun_calculator_pop(stack).trunc())
+      PdfCalculatorCvr => stack.push(pdf_fun_calculator_pop(stack))
       PdfCalculatorSub => {
         let right = pdf_fun_calculator_pop(stack)
         let left = pdf_fun_calculator_pop(stack)
@@ -744,6 +867,52 @@ fn PdfCalculatorFunction::eval_calculator(
         let left = pdf_fun_calculator_pop(stack)
         stack.push(left / right)
       }
+      PdfCalculatorDup => {
+        if stack.length() == 0 {
+          raise BadFunctionEvaluation("calculator stack underflow")
+        }
+        stack.push(stack[stack.length() - 1])
+      }
+      PdfCalculatorExch => {
+        if stack.length() < 2 {
+          raise BadFunctionEvaluation("calculator stack underflow")
+        }
+        let last = stack.length() - 1
+        let value = stack[last]
+        stack[last] = stack[last - 1]
+        stack[last - 1] = value
+      }
+      PdfCalculatorExp => {
+        let exponent = pdf_fun_calculator_pop(stack)
+        let base = pdf_fun_calculator_pop(stack)
+        stack.push(@math.pow(base, exponent))
+      }
+      PdfCalculatorFloor => stack.push(pdf_fun_calculator_pop(stack).floor())
+      PdfCalculatorIdiv => {
+        let right = pdf_fun_calculator_pop_int(stack)
+        let left = pdf_fun_calculator_pop_int(stack)
+        stack.push((left / right).to_double())
+      }
+      PdfCalculatorIndex => pdf_fun_calculator_index(stack)
+      PdfCalculatorLn => stack.push(@math.ln(pdf_fun_calculator_pop(stack)))
+      PdfCalculatorLog => stack.push(@math.log10(pdf_fun_calculator_pop(stack)))
+      PdfCalculatorMod => {
+        let right = pdf_fun_calculator_pop_int(stack)
+        let left = pdf_fun_calculator_pop_int(stack)
+        stack.push((left % right).to_double())
+      }
+      PdfCalculatorNeg => stack.push(-pdf_fun_calculator_pop(stack))
+      PdfCalculatorPop => {
+        let _ = pdf_fun_calculator_pop(stack)
+      }
+      PdfCalculatorRoll => pdf_fun_calculator_roll(stack)
+      PdfCalculatorRound => stack.push(pdf_fun_calculator_pop(stack).round())
+      PdfCalculatorSin =>
+        stack.push(
+          @math.sin(pdf_fun_degrees_to_radians(pdf_fun_calculator_pop(stack))),
+        )
+      PdfCalculatorSqrt => stack.push(pdf_fun_calculator_pop(stack).sqrt())
+      PdfCalculatorTruncate => stack.push(pdf_fun_calculator_pop(stack).trunc())
     }
   }
   [

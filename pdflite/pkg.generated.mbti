@@ -485,10 +485,33 @@ pub(all) struct PdfCalculatorFunction {
 pub(all) enum PdfCalculatorOp {
   PdfCalculatorInt(Int)
   PdfCalculatorFloat(Double)
+  PdfCalculatorAbs
   PdfCalculatorAdd
+  PdfCalculatorAtan
+  PdfCalculatorCeiling
+  PdfCalculatorCos
+  PdfCalculatorCopy
+  PdfCalculatorCvi
+  PdfCalculatorCvr
   PdfCalculatorSub
   PdfCalculatorMul
   PdfCalculatorDiv
+  PdfCalculatorDup
+  PdfCalculatorExch
+  PdfCalculatorExp
+  PdfCalculatorFloor
+  PdfCalculatorIdiv
+  PdfCalculatorIndex
+  PdfCalculatorLn
+  PdfCalculatorLog
+  PdfCalculatorMod
+  PdfCalculatorNeg
+  PdfCalculatorPop
+  PdfCalculatorRoll
+  PdfCalculatorRound
+  PdfCalculatorSin
+  PdfCalculatorSqrt
+  PdfCalculatorTruncate
 } derive(Eq, ToJson, @debug.Debug)
 
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
