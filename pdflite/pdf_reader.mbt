@@ -972,6 +972,16 @@ fn pdf_read_reconstructed_document_from_bytes(
 }
 
 ///|
+fn pdf_read_reconstructed_or_raise(
+  data : PdfBytes,
+  original_error : PdfError,
+) -> PdfDocument raise PdfError {
+  pdf_read_reconstructed_document_from_bytes(data) catch {
+    _ => raise original_error
+  }
+}
+
+///|
 pub fn pdf_read_classic_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
@@ -1074,6 +1084,7 @@ pub fn pdf_read_document_from_bytes(
 ) -> PdfDocument raise PdfError {
   pdf_read_classic_document_from_bytes(data) catch {
     StartXRefExpected => pdf_read_reconstructed_document_from_bytes(data)
+    XRefExpected => pdf_read_reconstructed_or_raise(data, XRefExpected)
     error => raise error
   }
 }

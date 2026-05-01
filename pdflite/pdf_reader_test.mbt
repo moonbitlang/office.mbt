@@ -444,6 +444,16 @@ fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
+  reader_push_ascii(output, "startxref\n9\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -970,6 +980,16 @@ test "pdf_read_document_from_bytes reconstructs missing startxref PDFs" {
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
     Some(PdfInteger(3)),
   )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
 }
 
 ///|
