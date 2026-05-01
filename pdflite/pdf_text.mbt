@@ -42,6 +42,11 @@ fn pdf_text_name(text : String) -> PdfName {
 }
 
 ///|
+fn pdf_text_string_of_name(name : PdfName) -> String {
+  @ascii.decode_lossy(name.bytes()[:])
+}
+
+///|
 pub fn PdfStandardFont::pdf_name(self : PdfStandardFont) -> PdfName {
   pdf_text_name("/" + self.name())
 }
@@ -152,6 +157,75 @@ pub fn PdfStandardFont::flags(self : PdfStandardFont) -> Int {
     PdfCourier | PdfCourierBold | PdfCourierOblique | PdfCourierBoldOblique =>
       33
     _ => 32
+  }
+}
+
+///|
+pub(all) struct PdfEncodingDifference {
+  name : PdfName
+  code : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) enum PdfEncoding {
+  PdfImplicitInFontFile
+  PdfStandardEncoding
+  PdfMacRomanEncoding
+  PdfWinAnsiEncoding
+  PdfMacExpertEncoding
+  PdfCustomEncoding(PdfEncoding, Array[PdfEncodingDifference])
+  PdfFillUndefinedWithStandard(PdfEncoding)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn PdfEncoding::debug_name(self : PdfEncoding) -> String {
+  match self {
+    PdfImplicitInFontFile => "ImplicitInFontFile"
+    PdfStandardEncoding => "StandardEncoding"
+    PdfMacRomanEncoding => "MacRomanEncoding"
+    PdfWinAnsiEncoding => "WinAnsiEncoding"
+    PdfMacExpertEncoding => "MacExpertEncoding"
+    PdfCustomEncoding(base, differences) => {
+      let mut text = "CustomEncoding with base " +
+        base.debug_name() +
+        " and differences "
+      for difference in differences {
+        text = text +
+          difference.code.to_string() +
+          " -> " +
+          pdf_text_string_of_name(difference.name) +
+          ", "
+      }
+      text
+    }
+    PdfFillUndefinedWithStandard(base) =>
+      "FillUndefinedWithStandard " + base.debug_name()
+  }
+}
+
+///|
+pub fn PdfEncoding::pdf_name(self : PdfEncoding) -> PdfName? {
+  match self {
+    PdfStandardEncoding => Some(pdf_text_name("/StandardEncoding"))
+    PdfMacRomanEncoding => Some(pdf_text_name("/MacRomanEncoding"))
+    PdfWinAnsiEncoding => Some(pdf_text_name("/WinAnsiEncoding"))
+    PdfMacExpertEncoding => Some(pdf_text_name("/MacExpertEncoding"))
+    _ => None
+  }
+}
+
+///|
+pub fn pdf_encoding_of_name(name : PdfName) -> PdfEncoding? {
+  match name {
+    name if name == pdf_text_name("/StandardEncoding") =>
+      Some(PdfStandardEncoding)
+    name if name == pdf_text_name("/MacRomanEncoding") =>
+      Some(PdfMacRomanEncoding)
+    name if name == pdf_text_name("/WinAnsiEncoding") =>
+      Some(PdfWinAnsiEncoding)
+    name if name == pdf_text_name("/MacExpertEncoding") =>
+      Some(PdfMacExpertEncoding)
+    _ => None
   }
 }
 

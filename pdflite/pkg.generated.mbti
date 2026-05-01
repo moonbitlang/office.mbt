@@ -117,6 +117,8 @@ pub fn pdf_encode_stream_with_filter(PdfName, PdfObject) -> PdfObject raise PdfE
 
 pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject) -> PdfObject raise PdfError
 
+pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
+
 pub fn pdf_flate_decode(Bytes) -> Bytes raise PdfError
 
 pub fn pdf_flate_encode(Bytes) -> Bytes
@@ -747,6 +749,23 @@ pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise PdfError
+
+pub(all) enum PdfEncoding {
+  PdfImplicitInFontFile
+  PdfStandardEncoding
+  PdfMacRomanEncoding
+  PdfWinAnsiEncoding
+  PdfMacExpertEncoding
+  PdfCustomEncoding(PdfEncoding, Array[PdfEncodingDifference])
+  PdfFillUndefinedWithStandard(PdfEncoding)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfEncoding::debug_name(Self) -> String
+pub fn PdfEncoding::pdf_name(Self) -> PdfName?
+
+pub(all) struct PdfEncodingDifference {
+  name : PdfName
+  code : Int
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfFunction {
   func : PdfFunctionKind

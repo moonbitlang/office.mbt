@@ -149,3 +149,53 @@ test "PdfStandardFont exposes standard14 baseline stem and flags" {
     @test.assert_eq(entry.0.flags(), entry.3)
   }
 }
+
+///|
+test "PdfEncoding debug names preserve CamlPDF forms" {
+  @test.assert_eq(
+    @pdflite.PdfImplicitInFontFile.debug_name(),
+    "ImplicitInFontFile",
+  )
+  @test.assert_eq(@pdflite.PdfStandardEncoding.debug_name(), "StandardEncoding")
+  @test.assert_eq(@pdflite.PdfMacRomanEncoding.debug_name(), "MacRomanEncoding")
+  @test.assert_eq(@pdflite.PdfWinAnsiEncoding.debug_name(), "WinAnsiEncoding")
+  @test.assert_eq(
+    @pdflite.PdfMacExpertEncoding.debug_name(),
+    "MacExpertEncoding",
+  )
+  let difference : @pdflite.PdfEncodingDifference = {
+    name: text_name_for_test("/A"),
+    code: 65,
+  }
+  @test.assert_eq(
+    @pdflite.PdfCustomEncoding(PdfWinAnsiEncoding, [difference]).debug_name(),
+    "CustomEncoding with base WinAnsiEncoding and differences 65 -> /A, ",
+  )
+  @test.assert_eq(
+    @pdflite.PdfFillUndefinedWithStandard(PdfMacRomanEncoding).debug_name(),
+    "FillUndefinedWithStandard MacRomanEncoding",
+  )
+}
+
+///|
+test "PdfEncoding converts predefined encoding names" {
+  let encodings : Array[(@pdflite.PdfEncoding, @pdflite.PdfName)] = [
+    (PdfStandardEncoding, text_name_for_test("/StandardEncoding")),
+    (PdfMacRomanEncoding, text_name_for_test("/MacRomanEncoding")),
+    (PdfWinAnsiEncoding, text_name_for_test("/WinAnsiEncoding")),
+    (PdfMacExpertEncoding, text_name_for_test("/MacExpertEncoding")),
+  ]
+  for entry in encodings {
+    @test.assert_eq(entry.0.pdf_name(), Some(entry.1))
+    @test.assert_eq(@pdflite.pdf_encoding_of_name(entry.1), Some(entry.0))
+  }
+  @test.assert_eq(@pdflite.PdfImplicitInFontFile.pdf_name(), None)
+  @test.assert_eq(
+    @pdflite.PdfCustomEncoding(PdfStandardEncoding, []).pdf_name(),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_encoding_of_name(text_name_for_test("/MissingEncoding")),
+    None,
+  )
+}
