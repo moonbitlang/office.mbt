@@ -2505,6 +2505,29 @@ test "PdfTextExtractor extracts implicit ZapfDingbats geometric glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit ZapfDingbats card suit glyphs" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
+  )
+  let extractor = dingbat_font.text_extractor()
+  let text = text_bytes_for_test([0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2766, 0x2767, 0x2663, 0x2666, 0x2665, 0x2660,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/a107"),
+    text_name_for_test("/a108"),
+    text_name_for_test("/a112"),
+    text_name_for_test("/a111"),
+    text_name_for_test("/a110"),
+    text_name_for_test("/a109"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2766), Some(0xA6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2663), Some(0xA8))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2660), Some(0xAB))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
