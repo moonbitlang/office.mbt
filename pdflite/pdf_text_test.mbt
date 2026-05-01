@@ -2713,6 +2713,46 @@ test "PdfTextExtractor extracts implicit ZapfDingbats extended arrow glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit ZapfDingbats final arrow glyphs" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
+  )
+  let extractor = dingbat_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD,
+    0xFE,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x27B1, 0x27B2, 0x27B3, 0x27B4, 0x27B5, 0x27B6, 0x27B7, 0x27B8, 0x27B9, 0x27BA,
+    0x27BB, 0x27BC, 0x27BD, 0x27BE,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/a201"),
+    text_name_for_test("/a183"),
+    text_name_for_test("/a184"),
+    text_name_for_test("/a197"),
+    text_name_for_test("/a185"),
+    text_name_for_test("/a194"),
+    text_name_for_test("/a198"),
+    text_name_for_test("/a186"),
+    text_name_for_test("/a195"),
+    text_name_for_test("/a187"),
+    text_name_for_test("/a188"),
+    text_name_for_test("/a189"),
+    text_name_for_test("/a190"),
+    text_name_for_test("/a191"),
+  ])
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([0xF0])[:]),
+    [text_name_for_test(".notdef")],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x27B0), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x27B1), Some(0xF1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x27B8), Some(0xF8))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x27BE), Some(0xFE))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(

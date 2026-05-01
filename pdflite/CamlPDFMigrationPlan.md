@@ -431,7 +431,8 @@ MoonBit consequences for this project:
    CamlPDF's Symbol encoding table. The ZapfDingbats subset now includes the
    cross/star, starburst, sparkle, geometric, quote-style, high-byte card
    suit, circled-digit, filled-circled-digit, circled-sans-serif-digit,
-   negative-circled-sans-serif-digit, and high-byte arrow glyph blocks.
+   negative-circled-sans-serif-digit, and high-byte arrow glyph blocks,
+   including the gapped final arrow tail.
    General `pdfcmap` parsing, full Adobe Glyph List coverage, broader
    MacExpert coverage, and broader Symbol/ZapfDingbats coverage remain
    deferred.
