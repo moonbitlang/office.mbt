@@ -410,7 +410,8 @@ MoonBit consequences for this project:
    custom encoding differences, and reverse charcode lookup over that subset.
    StandardEncoding high-byte fallback is started for common punctuation,
    ligatures, bullets, and text marks.
-   MacRoman high-byte fallback is started for common accented Latin letters.
+   MacRoman high-byte fallback is started for common accented Latin letters,
+   including the contiguous lower-vowel accent block.
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, and `eacute`.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,

@@ -1994,6 +1994,47 @@ test "PdfTextExtractor extracts MacRoman accented glyphs" {
   @test.assert_eq(extractor.charcode_of_codepoint(0x00C9), Some(0x83))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00E1), Some(0x87))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00E9), Some(0x8E))
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E,
+        0x9F,
+      ])[:],
+    ),
+    [
+      0x00ED, 0x00EC, 0x00EE, 0x00EF, 0x00F1, 0x00F3, 0x00F2, 0x00F4, 0x00F6, 0x00F5,
+      0x00FA, 0x00F9, 0x00FB, 0x00FC,
+    ],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([
+        0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E,
+        0x9F,
+      ])[:],
+    ),
+    [
+      text_name_for_test("/iacute"),
+      text_name_for_test("/igrave"),
+      text_name_for_test("/icircumflex"),
+      text_name_for_test("/idieresis"),
+      text_name_for_test("/ntilde"),
+      text_name_for_test("/oacute"),
+      text_name_for_test("/ograve"),
+      text_name_for_test("/ocircumflex"),
+      text_name_for_test("/odieresis"),
+      text_name_for_test("/otilde"),
+      text_name_for_test("/uacute"),
+      text_name_for_test("/ugrave"),
+      text_name_for_test("/ucircumflex"),
+      text_name_for_test("/udieresis"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00ED), Some(0x92))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00F1), Some(0x96))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00F3), Some(0x97))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00FA), Some(0x9C))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00FC), Some(0x9F))
 }
 
 ///|
