@@ -326,8 +326,11 @@ MoonBit consequences for this project:
    open-state handling, colour/flag extraction, root/no-outline behavior, and
    bookmark target transformation through `PdfDestination`. Bookmark removal
    is also started as a returned-copy catalog replacement that drops
-   `/Outlines` and updates the trailer `/Root`. Bookmark tree
-   construction/replacement and `change_pages` integration remain deferred.
+   `/Outlines` and updates the trailer `/Root`. Bookmark tree construction and
+   replacement are started with fresh outline object numbering, `/Parent`,
+   `/First`, `/Last`, `/Next`, `/Prev`, and positive/negative `/Count` link
+   generation, destination-vs-action field selection, and returned-copy catalog
+   replacement. `change_pages` integration remains deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

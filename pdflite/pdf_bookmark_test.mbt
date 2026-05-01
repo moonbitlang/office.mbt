@@ -211,6 +211,123 @@ test "PdfDocument remove_bookmarks requires a root catalog" {
 }
 
 ///|
+test "PdfDocument add_bookmarks builds linked outline objects" {
+  let key_root = bookmark_name_for_test("/Root")
+  let key_type = bookmark_name_for_test("/Type")
+  let key_outlines = bookmark_name_for_test("/Outlines")
+  let key_first = bookmark_name_for_test("/First")
+  let key_last = bookmark_name_for_test("/Last")
+  let key_next = bookmark_name_for_test("/Next")
+  let key_prev = bookmark_name_for_test("/Prev")
+  let key_parent = bookmark_name_for_test("/Parent")
+  let key_count = bookmark_name_for_test("/Count")
+  let key_action = bookmark_name_for_test("/A")
+  let key_s = bookmark_name_for_test("/S")
+  let type_catalog = bookmark_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
+  )
+  let action : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfNameObject(bookmark_name_for_test("/URI"))),
+  ])
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestFit(TargetPageObject(10)),
+      is_open: true,
+      colour: bookmark_colour_for_test(0.4, 0.5, 0.6),
+      flags: 2,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Child"),
+      target: DestXYZ(TargetPageObject(11), Some(1.0), Some(2.0), None),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Closed"),
+      target: DestNull,
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 1,
+      text: bookmark_bytes_for_test("Hidden"),
+      target: DestAction(action),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  let updated = try! doc.add_bookmarks(bookmarks)
+  @test.assert_eq(try! doc.read_bookmarks(), [])
+  @test.assert_eq(try! updated.read_bookmarks(preserve_actions=true), bookmarks)
+  @test.assert_eq(updated.root(), 7)
+  let catalog = updated.lookup_object_or_null(updated.root())
+  @test.assert_eq(catalog.lookup_immediate(key_outlines), Some(PdfIndirect(6)))
+  let outline_root = updated.lookup_object_or_null(6)
+  @test.assert_eq(
+    outline_root.lookup_immediate(key_first),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(outline_root.lookup_immediate(key_last), Some(PdfIndirect(4)))
+  @test.assert_eq(outline_root.lookup_immediate(key_count), Some(PdfInteger(3)))
+  let top = updated.lookup_object_or_null(2)
+  @test.assert_eq(top.lookup_immediate(key_parent), Some(PdfIndirect(6)))
+  @test.assert_eq(top.lookup_immediate(key_first), Some(PdfIndirect(3)))
+  @test.assert_eq(top.lookup_immediate(key_last), Some(PdfIndirect(3)))
+  @test.assert_eq(top.lookup_immediate(key_next), Some(PdfIndirect(4)))
+  @test.assert_eq(top.lookup_immediate(key_count), Some(PdfInteger(1)))
+  let closed = updated.lookup_object_or_null(4)
+  @test.assert_eq(closed.lookup_immediate(key_parent), Some(PdfIndirect(6)))
+  @test.assert_eq(closed.lookup_immediate(key_prev), Some(PdfIndirect(2)))
+  @test.assert_eq(closed.lookup_immediate(key_first), Some(PdfIndirect(5)))
+  @test.assert_eq(closed.lookup_immediate(key_last), Some(PdfIndirect(5)))
+  @test.assert_eq(closed.lookup_immediate(key_count), Some(PdfInteger(-1)))
+  let hidden = updated.lookup_object_or_null(5)
+  @test.assert_eq(hidden.lookup_immediate(key_parent), Some(PdfIndirect(4)))
+  @test.assert_eq(hidden.lookup_immediate(key_action), Some(action))
+}
+
+///|
+test "PdfDocument add_bookmarks with an empty list removes outlines" {
+  let doc = bookmark_document_for_test()
+  let updated = try! doc.add_bookmarks([])
+  @test.assert_eq(try! updated.read_bookmarks(), [])
+  @test.assert_eq((try! doc.read_bookmarks()).length(), 3)
+}
+
+///|
+test "PdfDocument add_bookmarks requires a root catalog" {
+  let doc = @pdflite.pdf_document_empty()
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestNull,
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  let result : Result[@pdflite.PdfDocument, Error] = try? doc.add_bookmarks(
+    bookmarks,
+  )
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}
+
+///|
 test "PdfDocument transform_bookmark transforms bookmark target" {
   let doc = @pdflite.pdf_document_empty()
   let bookmark : @pdflite.PdfBookmark = {

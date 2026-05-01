@@ -370,6 +370,8 @@ pub(all) struct PdfBookmarkColour {
   blue : Double
 } derive(Eq, ToJson, @debug.Debug)
 
+type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
+
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
@@ -476,6 +478,7 @@ pub struct PdfDocument {
   mut first_xref : Int
   mut revision_read : Int
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDocument::add_bookmarks(Self, ArrayView[PdfBookmark]) -> Self raise PdfError
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
