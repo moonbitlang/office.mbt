@@ -351,9 +351,10 @@ fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
 }
 
 ///|
-fn merge_acroform_doc_for_test(
+fn merge_acroform_doc_with_entries_for_test(
   field_number : Int,
   label : String,
+  extra_entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
 ) -> @pdflite.PdfDocument {
   let key_acroform = merge_name_for_test("/AcroForm")
   let key_fields = merge_name_for_test("/Fields")
@@ -363,9 +364,13 @@ fn merge_acroform_doc_for_test(
     field_number,
     PdfDictionary([(key_t, PdfString(@ascii.encode(label)))]),
   )
-  let form : @pdflite.PdfObject = PdfDictionary([
+  let form_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
     (key_fields, PdfArray([PdfIndirect(field_number)])),
-  ])
+  ]
+  for entry in extra_entries {
+    form_entries.push(entry)
+  }
+  let form : @pdflite.PdfObject = PdfDictionary(form_entries)
   merge_add_catalog_entry_for_test(doc, key_acroform, form)
 }
 
@@ -478,9 +483,14 @@ test "pdf_merge_documents retains optional content groups before pruning" {
 test "pdf_merge_documents merges AcroForm fields" {
   let key_acroform = merge_name_for_test("/AcroForm")
   let key_fields = merge_name_for_test("/Fields")
+  let key_need_appearances = merge_name_for_test("/NeedAppearances")
   let key_t = merge_name_for_test("/T")
-  let first = merge_acroform_doc_for_test(30, "first")
-  let second = merge_acroform_doc_for_test(30, "second")
+  let first = merge_acroform_doc_with_entries_for_test(30, "first", [
+    (key_need_appearances, PdfBoolean(false)),
+  ])
+  let second = merge_acroform_doc_with_entries_for_test(30, "second", [
+    (key_need_appearances, PdfBoolean(true)),
+  ])
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   let root = merged.lookup_object_or_null(merged.root())
   guard merged.lookup_direct(key_acroform, root) is Some(form) else {
@@ -504,6 +514,17 @@ test "pdf_merge_documents merges AcroForm fields" {
     merged.lookup_object_or_null(second_field).lookup_immediate(key_t),
     Some(PdfString(@ascii.encode("second"))),
   )
+  guard form.dictionary_view() is Some(form_entries) else {
+    fail("expected AcroForm dictionary")
+  }
+  let appearances : Array[@pdflite.PdfObject] = []
+  for entry in form_entries {
+    let (key, value) = entry
+    if key == key_need_appearances {
+      appearances.push(value)
+    }
+  }
+  @test.assert_eq(appearances, [PdfBoolean(true)])
   let without_acroform = try! @pdflite.pdf_merge_documents(
     [first, second],
     [[1], [1]],

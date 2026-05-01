@@ -677,7 +677,7 @@ fn pdf_merge_acroforms(
             _ => ()
           }
         } else {
-          entries.push(entry)
+          pdf_merge_add_dictionary_entry(entries, key, value)
         }
       }
     }

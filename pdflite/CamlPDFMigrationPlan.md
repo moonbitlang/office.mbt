@@ -720,8 +720,9 @@ MoonBit consequences for this project:
     bookmarks, then retargets retained page-object destinations to the merged
     page tree. Merge optional-content retention now combines already-renumbered
     OCG metadata before unreferenced imported OCG objects are pruned. Basic
-    AcroForm merge support now flattens retained `/Fields` arrays while
-    preserving referenced field objects through the final cleanup. Named
+    AcroForm merge support now flattens retained `/Fields` arrays, retains
+    non-field form entries with later entries replacing earlier duplicate keys,
+    and preserves referenced field objects through the final cleanup. Named
     destination retention now merges old-style catalog `/Dests` and name-tree
     `/Names` `/Dests`, retargeting page-object destinations to the merged page
     tree. Destination-name collisions across merged `/Names/Dests` trees and
