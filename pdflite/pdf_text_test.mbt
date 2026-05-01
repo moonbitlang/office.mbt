@@ -2753,6 +2753,58 @@ test "PdfTextExtractor extracts implicit ZapfDingbats final arrow glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts custom ZapfDingbats bracket glyph names" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfZapfDingbats,
+      PdfCustomEncoding(PdfStandardEncoding, [
+        text_difference_for_test("/a89", 65),
+        text_difference_for_test("/a90", 66),
+        text_difference_for_test("/a93", 67),
+        text_difference_for_test("/a94", 68),
+        text_difference_for_test("/a91", 69),
+        text_difference_for_test("/a92", 70),
+        text_difference_for_test("/a205", 71),
+        text_difference_for_test("/a85", 72),
+        text_difference_for_test("/a206", 73),
+        text_difference_for_test("/a86", 74),
+        text_difference_for_test("/a87", 75),
+        text_difference_for_test("/a88", 76),
+        text_difference_for_test("/a95", 77),
+        text_difference_for_test("/a96", 78),
+      ]),
+    ),
+  )
+  let extractor = dingbat_font.text_extractor()
+  let text = text_bytes_for_test([
+    65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2768, 0x2769, 0x276A, 0x276B, 0x276C, 0x276D, 0x276E, 0x276F, 0x2770, 0x2771,
+    0x2772, 0x2773, 0x2774, 0x2775,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/a89"),
+    text_name_for_test("/a90"),
+    text_name_for_test("/a93"),
+    text_name_for_test("/a94"),
+    text_name_for_test("/a91"),
+    text_name_for_test("/a92"),
+    text_name_for_test("/a205"),
+    text_name_for_test("/a85"),
+    text_name_for_test("/a206"),
+    text_name_for_test("/a86"),
+    text_name_for_test("/a87"),
+    text_name_for_test("/a88"),
+    text_name_for_test("/a95"),
+    text_name_for_test("/a96"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2768), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2770), Some(73))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2775), Some(78))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
