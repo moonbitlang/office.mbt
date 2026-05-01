@@ -2644,6 +2644,38 @@ test "PdfTextExtractor extracts implicit ZapfDingbats negative circled sans-seri
 }
 
 ///|
+test "PdfTextExtractor extracts implicit ZapfDingbats high-byte arrow glyphs" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
+  )
+  let extractor = dingbat_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2794, 0x2192, 0x2194, 0x2195, 0x2798, 0x2799, 0x279A, 0x279B, 0x279C, 0x279D,
+    0x279E, 0x279F,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/a160"),
+    text_name_for_test("/a161"),
+    text_name_for_test("/a163"),
+    text_name_for_test("/a164"),
+    text_name_for_test("/a196"),
+    text_name_for_test("/a165"),
+    text_name_for_test("/a192"),
+    text_name_for_test("/a166"),
+    text_name_for_test("/a167"),
+    text_name_for_test("/a168"),
+    text_name_for_test("/a169"),
+    text_name_for_test("/a170"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2794), Some(0xD4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2195), Some(0xD7))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x279F), Some(0xDF))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
