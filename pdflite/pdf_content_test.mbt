@@ -60,6 +60,29 @@ fn extended_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn marked_text_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_quote(content_bytes_for_test("Next")),
+    Op_double_quote(3.0, 4.0, content_bytes_for_test("Spacing")),
+    Op_d0(500.0, 0.0),
+    Op_d1(500.0, 0.0, 0.0, -10.0, 600.0, 700.0),
+    Op_MP(content_name_for_test("/Span")),
+    Op_DP(
+      content_name_for_test("/Span"),
+      PdfDictionary([(content_name_for_test("/MCID"), PdfInteger(7))]),
+    ),
+    Op_BMC(content_name_for_test("/Artifact")),
+    Op_BDC(
+      content_name_for_test("/Span"),
+      PdfNameObject(content_name_for_test("/P")),
+    ),
+    Op_EMC,
+    Op_BX,
+    Op_EX,
+  ]
+}
+
+///|
 fn content_stream_for_test(text : String) -> @pdflite.PdfObject {
   let data = content_bytes_for_test(text)
   @pdflite.pdf_stream(
@@ -157,6 +180,33 @@ test "pdf_parse_content_ops_from_bytes parses hello-style content bytes" {
       ),
     ),
     hello_content_ops_for_test(),
+  )
+}
+
+///|
+test "pdf_content_bytes_of_ops renders marked content and text quote operators" {
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(marked_text_content_ops_for_test()),
+    content_bytes_for_test(
+      "(Next) ' 3 4 (Spacing) \" 500 0 d0 500 0 0 -10 600 700 d1 /Span MP /Span << /MCID 7 >> DP /Artifact BMC /Span /P BDC EMC BX EX",
+    ),
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes parses marked content and text quote operators" {
+  let data = content_bytes_for_test(
+    "(Next) ' 3 4 (Spacing) \" 500 0 d0 500 0 0 -10 600 700 d1 /Span MP /Span << /MCID 7 >> DP /Artifact BMC /Span /P BDC EMC BX EX",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    marked_text_content_ops_for_test(),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(
+      try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    ),
+    data,
   )
 }
 

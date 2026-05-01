@@ -396,6 +396,10 @@ pub(all) enum PdfContentOp {
   Op_Tstar
   Op_Tj(Bytes)
   Op_TJ(PdfObject)
+  Op_quote(Bytes)
+  Op_double_quote(Double, Double, Bytes)
+  Op_d0(Double, Double)
+  Op_d1(Double, Double, Double, Double, Double, Double)
   Op_G(Double)
   Op_g(Double)
   Op_RG(Double, Double, Double)
@@ -413,6 +417,13 @@ pub(all) enum PdfContentOp {
   Op_scnName(PdfName, Array[Double])
   Op_sh(PdfName)
   Op_Do(PdfName)
+  Op_MP(PdfName)
+  Op_DP(PdfName, PdfObject)
+  Op_BMC(PdfName)
+  Op_BDC(PdfName, PdfObject)
+  Op_EMC
+  Op_BX
+  Op_EX
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
 

@@ -278,7 +278,8 @@ MoonBit consequences for this project:
    text operators used by the `pdfhello.ml` workflow. Operator coverage now
    also includes dash patterns, rendering intent, flatness, Bezier curves, text
    state operators, color-space/color setters including named SCN/scn patterns,
-   and shadings.
+   shadings, text quote operators, Type 3 glyph metrics, marked-content
+   operators, and compatibility-section markers. Inline images remain deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,
