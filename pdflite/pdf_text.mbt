@@ -161,6 +161,17 @@ pub fn PdfStandardFont::flags(self : PdfStandardFont) -> Int {
 }
 
 ///|
+pub(all) struct PdfStandardFontData {
+  font : PdfStandardFont
+  encoding : PdfEncoding
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn PdfStandardFontData::debug_name(self : PdfStandardFontData) -> String {
+  "StandardFont " + self.font.name()
+}
+
+///|
 pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
@@ -386,6 +397,39 @@ pub fn PdfDocument::read_encoding(
       }
     Some(_) => PdfImplicitInFontFile
     None => PdfImplicitInFontFile
+  }
+}
+
+///|
+pub fn PdfDocument::is_standard14_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+    Some(PdfNameObject(subtype)) if subtype == pdf_text_name("/Type1") =>
+      match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+        Some(PdfNameObject(base_font)) =>
+          pdf_standard_font_of_pdf_name(base_font) != None &&
+          self.lookup_direct(pdf_text_name("/Widths"), font) == None
+        _ => false
+      }
+    _ => false
+  }
+}
+
+///|
+pub fn PdfDocument::read_standard14_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfStandardFontData raise PdfError {
+  match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
+    Some(PdfNameObject(base_font)) =>
+      match pdf_standard_font_of_pdf_name(base_font) {
+        Some(standard_font) =>
+          { font: standard_font, encoding: self.read_encoding(font) }
+        None => raise StandardFontExpected
+      }
+    _ => raise BaseFontExpected
   }
 }
 

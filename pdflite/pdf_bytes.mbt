@@ -50,6 +50,8 @@ pub(all) suberror PdfError {
   EncodingDifferencesMalformed
   FontSubtypeExpected
   FontFlagsExpected
+  StandardFontExpected
+  BaseFontExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

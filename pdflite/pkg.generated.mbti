@@ -323,6 +323,8 @@ pub(all) suberror PdfError {
   EncodingDifferencesMalformed
   FontSubtypeExpected
   FontFlagsExpected
+  StandardFontExpected
+  BaseFontExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -701,6 +703,7 @@ pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage rais
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise PdfError
+pub fn PdfDocument::is_standard14_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> PdfObject?
@@ -727,6 +730,7 @@ pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
 pub fn PdfDocument::read_optional_content_groups(Self) -> PdfOptionalContent? raise PdfError
 pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise PdfError
+pub fn PdfDocument::read_standard14_font(Self, PdfObject) -> PdfStandardFontData raise PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
@@ -1030,6 +1034,12 @@ pub fn PdfStandardFont::flags(Self) -> Int
 pub fn PdfStandardFont::name(Self) -> String
 pub fn PdfStandardFont::pdf_name(Self) -> PdfName
 pub fn PdfStandardFont::stemv(Self) -> Int
+
+pub(all) struct PdfStandardFontData {
+  font : PdfStandardFont
+  encoding : PdfEncoding
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFontData::debug_name(Self) -> String
 
 pub(all) struct PdfStitchingFunction {
   functions : Array[PdfFunction]

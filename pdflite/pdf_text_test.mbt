@@ -17,6 +17,14 @@ fn text_difference_for_test(
 }
 
 ///|
+fn text_standard_font_data_for_test(
+  font : @pdflite.PdfStandardFont,
+  encoding : @pdflite.PdfEncoding,
+) -> @pdflite.PdfStandardFontData {
+  { font, encoding }
+}
+
+///|
 test "PdfStandardFont exposes CamlPDF standard font names" {
   let fonts : Array[(@pdflite.PdfStandardFont, String)] = [
     (PdfTimesRoman, "Times-Roman"),
@@ -362,5 +370,75 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   let subtype_result = try? doc.read_encoding(bad_subtype)
   guard subtype_result is Err(FontSubtypeExpected) else {
     fail("expected FontSubtypeExpected")
+  }
+}
+
+///|
+test "PdfDocument detects and reads standard14 fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Arial,Bold")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+    ),
+  ])
+  @test.assert_eq(doc.is_standard14_font(font), true)
+  let standard = try! doc.read_standard14_font(font)
+  @test.assert_eq(
+    standard,
+    text_standard_font_data_for_test(PdfHelveticaBold, PdfWinAnsiEncoding),
+  )
+  @test.assert_eq(standard.debug_name(), "StandardFont Helvetica-Bold")
+  let overridden = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Helvetica")),
+    ),
+    (text_name_for_test("/Widths"), PdfArray([])),
+  ])
+  @test.assert_eq(doc.is_standard14_font(overridden), false)
+  let wrong_subtype = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/TrueType")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Helvetica")),
+    ),
+  ])
+  @test.assert_eq(doc.is_standard14_font(wrong_subtype), false)
+}
+
+///|
+test "PdfDocument read_standard14_font rejects bad base fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let unknown = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/NotStandard")),
+    ),
+  ])
+  let unknown_result = try? doc.read_standard14_font(unknown)
+  guard unknown_result is Err(StandardFontExpected) else {
+    fail("expected StandardFontExpected")
+  }
+  let missing_result = try? doc.read_standard14_font(
+    @pdflite.pdf_dictionary([]),
+  )
+  guard missing_result is Err(BaseFontExpected) else {
+    fail("expected BaseFontExpected")
   }
 }

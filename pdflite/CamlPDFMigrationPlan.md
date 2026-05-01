@@ -370,8 +370,9 @@ MoonBit consequences for this project:
    enum, CamlPDF-compatible canonical names and aliases, PDF-name conversion,
    baseline/stem/flag helpers, typed simple encoding values and differences,
    predefined encoding name conversion, simple-font `/Encoding` dictionary
-   parsing, byte-oriented UTF-16BE PDF Unicode string emission, BOM detection,
-   and strict UTF-16BE codepoint parsing.
+   parsing, standard-14 font detection/reading, byte-oriented UTF-16BE PDF
+   Unicode string emission, BOM detection, and strict UTF-16BE codepoint
+   parsing.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
