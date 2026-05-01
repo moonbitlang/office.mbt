@@ -1425,20 +1425,32 @@ fn pdf_text_tounicode_bfrange_entries_of_line(
   line : BytesView,
 ) -> Array[(Int, PdfBytes)]? {
   match pdf_text_parse_cmap_hex_groups(line) {
-    Some([source, stop, unicode]) =>
-      match (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
-        (Some(first), Some(last)) if first <= last => {
-          let entries : Array[(Int, PdfBytes)] = []
-          for code in first..<=last {
-            match pdf_text_add_to_big_endian_bytes(unicode, code - first) {
-              Some(bytes) => entries.push((code, bytes))
-              None => return None
+    Some(groups) if groups.length() % 3 == 0 => {
+      let entries : Array[(Int, PdfBytes)] = []
+      let mut index = 0
+      while index < groups.length() {
+        match
+          (
+            pdf_text_bytes_to_int(groups[index][:]),
+            pdf_text_bytes_to_int(groups[index + 1][:]),
+          ) {
+          (Some(first), Some(last)) if first <= last =>
+            for code in first..<=last {
+              match
+                pdf_text_add_to_big_endian_bytes(
+                  groups[index + 2],
+                  code - first,
+                ) {
+                Some(bytes) => entries.push((code, bytes))
+                None => return None
+              }
             }
-          }
-          Some(entries)
+          _ => return None
         }
-        _ => None
+        index += 3
       }
+      Some(entries)
+    }
     Some([source, stop]) =>
       match
         (
