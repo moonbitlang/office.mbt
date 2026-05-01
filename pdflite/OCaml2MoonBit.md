@@ -166,6 +166,16 @@ moon run -c 'fn main { let pairs = [(1, 2), (3, 4)]; let firsts = [ for pair in 
 ```
 
 ```sh
+moon run -c 'fn main { let xs = [(2, "b"), (1, "a")]; xs.sort_by(fn(a, b) { a.0.compare(b.0) }); println(xs[0].0) }'
+# 1
+```
+
+MoonBit `Array::sort_by` sorts the mutable array in place. Its comparator
+returns an `Int`, so OCaml `List.sort compare` or `Array.sort compare` ports can
+usually become `xs.sort_by(fn(a, b) { ...compare... })` after copying to an
+owned `Array` if the source is an `ArrayView` or other read-only view.
+
+```sh
 moon run -c 'fn main { let xs = [1, 2, 3]; match xs { [_, .. rest] => { let owned = [ for x in rest => x ]; println(rest.length()); println(owned.length()); println(owned[0]) }; _ => () } }'
 # 2
 # 2
