@@ -1269,6 +1269,37 @@ pub fn pdf_make_font(
 }
 
 ///|
+fn PdfDocument::pdf_text_add_font_object(
+  self : PdfDocument,
+  object : PdfObject,
+  objnum : Int?,
+) -> Int {
+  match objnum {
+    Some(number) => {
+      self.add_object_given_number(number, object)
+      number
+    }
+    None => self.add_object(object)
+  }
+}
+
+///|
+pub fn PdfDocument::write_font(
+  self : PdfDocument,
+  font : PdfFont,
+  objnum? : Int? = None,
+) -> Int raise PdfError {
+  match font {
+    PdfFontStandard({ font, encoding }) =>
+      self.pdf_text_add_font_object(
+        pdf_make_font(font.pdf_name(), encoding),
+        objnum,
+      )
+    _ => raise FontWriteUnsupported
+  }
+}
+
+///|
 pub fn pdf_is_unicode_string(bytes : BytesView) -> Bool {
   bytes.length() >= 2 && bytes[0].to_int() == 0xFE && bytes[1].to_int() == 0xFF
 }

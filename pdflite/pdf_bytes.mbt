@@ -61,6 +61,7 @@ pub(all) suberror PdfError {
   FontWidthExpected
   FontCharProcsExpected
   FontTypeExpected
+  FontWriteUnsupported
   CIDSystemInfoExpected
   CIDRegistryExpected
   CIDOrderingExpected

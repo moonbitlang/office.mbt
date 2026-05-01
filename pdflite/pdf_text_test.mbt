@@ -1355,3 +1355,78 @@ test "pdf_make_font builds Type1 font dictionaries" {
     fail("expected EncodingWriteUnsupported")
   }
 }
+
+///|
+test "PdfDocument write_font writes standard14 fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let number = try! doc.write_font(
+    PdfFontStandard(
+      text_standard_font_data_for_test(PdfHelveticaBold, PdfWinAnsiEncoding),
+    ),
+  )
+  @test.assert_eq(number, 1)
+  @test.assert_eq(
+    doc.lookup_object_or_null(number),
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Type"), PdfNameObject(text_name_for_test("/Font"))),
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type1")),
+      ),
+      (
+        text_name_for_test("/Encoding"),
+        PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+      ),
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Helvetica-Bold")),
+      ),
+    ]),
+  )
+
+  let fixed_number = try! doc.write_font(
+    PdfFontStandard(
+      text_standard_font_data_for_test(PdfTimesRoman, PdfMacRomanEncoding),
+    ),
+    objnum=Some(20),
+  )
+  @test.assert_eq(fixed_number, 20)
+  @test.assert_eq(
+    doc.lookup_object_or_null(20),
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Type"), PdfNameObject(text_name_for_test("/Font"))),
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type1")),
+      ),
+      (
+        text_name_for_test("/Encoding"),
+        PdfNameObject(text_name_for_test("/MacRomanEncoding")),
+      ),
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Times-Roman")),
+      ),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument write_font rejects unsupported font variants" {
+  let doc = @pdflite.pdf_document_empty()
+  let unsupported = try? doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfType1,
+      basefont: Some(text_name_for_test("/CustomFont")),
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: None,
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+  )
+  guard unsupported is Err(FontWriteUnsupported) else {
+    fail("expected FontWriteUnsupported")
+  }
+}
