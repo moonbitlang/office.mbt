@@ -207,6 +207,19 @@ test "pdf_flate_decode reports malformed zlib data" {
 }
 
 ///|
+test "pdf_flate_encode emits zlib stored blocks" {
+  let encoded = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
+  @test.assert_eq(
+    encoded,
+    codec_bytes_for_test([120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(encoded),
+    codec_ascii_for_test("Hi"),
+  )
+}
+
+///|
 test "pdf_decode_filter_bytes dispatches supported filter names" {
   @test.assert_eq(
     try! @pdflite.pdf_decode_filter_bytes(
@@ -274,6 +287,13 @@ test "pdf_encode_filter_bytes dispatches supported filter names" {
       codec_ascii_for_test("A"),
     ),
     codec_bytes_for_test([0, 65, 128]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_filter_bytes(
+      codec_name_for_test("/FlateDecode"),
+      codec_ascii_for_test("Hi"),
+    ),
+    codec_bytes_for_test([120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
   )
 }
 

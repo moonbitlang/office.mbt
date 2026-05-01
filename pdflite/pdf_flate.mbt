@@ -373,6 +373,61 @@ fn pdf_flate_check_adler32(
 }
 
 ///|
+fn pdf_flate_push_u16_le(output : Array[Byte], value : Int) -> Unit {
+  output.push((value & 0xFF).to_byte())
+  output.push(((value >> 8) & 0xFF).to_byte())
+}
+
+///|
+fn pdf_flate_push_stored_block(
+  output : Array[Byte],
+  data : PdfBytes,
+  offset : Int,
+  length : Int,
+  final_block : Bool,
+) -> Unit {
+  output.push(if final_block { 1 } else { 0 })
+  pdf_flate_push_u16_le(output, length)
+  pdf_flate_push_u16_le(output, 0xFFFF - length)
+  for i in 0..<length {
+    output.push(data[offset + i])
+  }
+}
+
+///|
+fn pdf_flate_push_adler32(output : Array[Byte], data : PdfBytes) -> Unit {
+  let (s1, s2) = pdf_flate_adler32(data[:])
+  output.push(((s2 >> 8) & 0xFF).to_byte())
+  output.push((s2 & 0xFF).to_byte())
+  output.push(((s1 >> 8) & 0xFF).to_byte())
+  output.push((s1 & 0xFF).to_byte())
+}
+
+///|
+pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
+  let output : Array[Byte] = [0x78, 0x01]
+  if data.length() == 0 {
+    pdf_flate_push_stored_block(output, data, 0, 0, true)
+  } else {
+    let mut offset = 0
+    while offset < data.length() {
+      let remaining = data.length() - offset
+      let length = if remaining > 65535 { 65535 } else { remaining }
+      pdf_flate_push_stored_block(
+        output,
+        data,
+        offset,
+        length,
+        offset + length == data.length(),
+      )
+      offset += length
+    }
+  }
+  pdf_flate_push_adler32(output, data)
+  Bytes::from_array(output)
+}
+
+///|
 pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
   if data.length() == 0 {
     data

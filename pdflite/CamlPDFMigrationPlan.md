@@ -214,8 +214,8 @@ MoonBit consequences for this project:
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
-   ASCIIHex/ASCII85/RunLength because they are byte-local. Then add flate and
-   predictors after deciding whether to bind C/zlib or use a MoonBit package.
+   ASCIIHex/ASCII85/RunLength because they are byte-local. Add flate through
+   pure MoonBit zlib/DEFLATE code, then layer predictors on decoded bytes.
    Keep DCT/JBIG2/CCITT behavior behind explicit capability checks until image
    support needs them.
    Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
@@ -230,7 +230,9 @@ MoonBit consequences for this project:
    `/ASCII85Decode`/`/A85`, `/RunLengthDecode`/`/RL`,
    `/FlateDecode`/`/Fl`, `/LZWDecode`/`/LZW`, and identity `/Crypt` to those
    byte codecs. Low-level Flate decode is started for zlib-wrapped stored,
-   fixed-Huffman, and dynamic-Huffman DEFLATE blocks with Adler-32 validation.
+   fixed-Huffman, and dynamic-Huffman DEFLATE blocks with Adler-32 validation;
+   Flate encode emits valid zlib stored blocks for semantic round-tripping,
+   leaving compression-ratio work for later.
    Low-level LZW decode is started with clear/EOD handling and default
    EarlyChange 1; owned stream decode reads direct first-stage `/EarlyChange`
    from `/DecodeParms` or `/DP` for `/LZWDecode`/`/LZW`. Owned `StreamGot`
@@ -245,8 +247,8 @@ MoonBit consequences for this project:
    (`11`) and PNG Up (`12`) rows, including explicit negative-delta
    normalization to PDF byte range. Owned stream encode can now add a filter
    plus direct `/DecodeParms` predictor dictionary and round-trip through owned
-   stream decode. Flate encode, indirect filter dictionaries, deferred stream
-   materialization, and other filters remain deferred.
+   stream decode. Flate compression heuristics, indirect filter dictionaries,
+   deferred stream materialization, and other filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the

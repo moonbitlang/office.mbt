@@ -409,6 +409,8 @@ pub fn pdf_encode_filter_bytes(
     pdf_ascii85_encode(data)
   } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
     pdf_run_length_encode(data)
+  } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+    pdf_flate_encode(data)
   } else {
     raise FilterNotSupported(filter)
   }
