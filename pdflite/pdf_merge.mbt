@@ -98,6 +98,7 @@ pub fn pdf_merge_documents(
   ranges : ArrayView[Array[Int]],
   retain_numbering? : Bool = false,
   retain_bookmarks? : Bool = true,
+  retain_optional_content? : Bool = true,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
@@ -114,6 +115,11 @@ pub fn pdf_merge_documents(
     let renumbered = extracted.renumber_objects_by_offset(offset)
     offset = renumbered.objects.max_object_number()
     staged.push(renumbered)
+  }
+  let optional_content = if retain_optional_content {
+    pdf_optional_content_merge(staged)
+  } else {
+    None
   }
   let merged = pdf_document_empty()
   let (major, minor) = pdf_merge_max_version(staged)
@@ -137,6 +143,10 @@ pub fn pdf_merge_documents(
   }
   let page_root_number = merged.add_pagetree(pages)
   ignore(merged.add_root(page_root_number, []))
+  let merged = match optional_content {
+    Some(content) => merged.write_optional_content_groups(content)
+    None => merged
+  }
   let new_page_numbers = merged.page_reference_numbers()
   merged.remove_unreferenced()
   let merged = if retain_bookmarks && bookmarks.length() > 0 {

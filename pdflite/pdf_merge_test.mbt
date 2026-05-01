@@ -25,6 +25,34 @@ fn merge_bookmarked_doc_for_test(label : String) -> @pdflite.PdfDocument {
 }
 
 ///|
+fn merge_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn merge_ocg_doc_for_test(number : Int, label : String) -> @pdflite.PdfDocument {
+  let doc = merge_one_page_doc_for_test(1, 5)
+  try! doc.write_optional_content_groups({
+    ocgs: [
+      (
+        number,
+        {
+          name: @ascii.encode(label),
+          intent: [merge_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+    ],
+    default_config: {
+      ..@pdflite.pdf_ocg_default_config(),
+      on: [number],
+      order: Some([(Some(@ascii.encode(label)), [number])]),
+    },
+    configs: [],
+  })
+}
+
+///|
 test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
   let first = merge_one_page_doc_for_test(1, 4)
   let second = merge_one_page_doc_for_test(1, 7)
@@ -89,6 +117,26 @@ test "pdf_merge_documents retargets retained bookmarks to merged pages" {
     retain_bookmarks=false,
   )
   @test.assert_eq(try! without_bookmarks.read_bookmarks(), [])
+}
+
+///|
+test "pdf_merge_documents retains optional content groups before pruning" {
+  let first = merge_ocg_doc_for_test(20, "Layer A")
+  let second = merge_ocg_doc_for_test(20, "Layer B")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  guard (try! merged.read_optional_content_groups()) is Some(content) else {
+    fail("expected optional content")
+  }
+  @test.assert_eq(content.ocgs.length(), 2)
+  @test.assert_eq(content.ocgs[0].1.name, @ascii.encode("Layer A"))
+  @test.assert_eq(content.ocgs[1].1.name, @ascii.encode("Layer B"))
+  @test.assert_eq(content.default_config.on.length(), 2)
+  let without_ocg = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_optional_content=false,
+  )
+  @test.assert_eq(try! without_ocg.read_optional_content_groups(), None)
 }
 
 ///|

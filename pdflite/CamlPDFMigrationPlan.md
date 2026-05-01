@@ -385,7 +385,8 @@ MoonBit consequences for this project:
     through the existing page-label merge helper behind an explicit option.
     Merge bookmark retention now reuses per-document page extraction to filter
     bookmarks, then retargets retained page-object destinations to the merged
-    page tree.
+    page tree. Merge optional-content retention now combines already-renumbered
+    OCG metadata before unreferenced imported OCG objects are pruned.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the
