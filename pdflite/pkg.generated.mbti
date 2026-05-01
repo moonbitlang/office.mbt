@@ -123,6 +123,10 @@ pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
+pub fn pdf_run_length_decode(Bytes) -> Bytes
+
+pub fn pdf_run_length_encode(Bytes) -> Bytes
+
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
 pub fn pdf_write_document(PdfDocument) -> Bytes raise PdfError

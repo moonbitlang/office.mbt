@@ -221,7 +221,9 @@ MoonBit consequences for this project:
    Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
    decoder skips PDF whitespace, accepts uppercase and lowercase hex digits,
    pads an odd final nibble before `>`, and reports malformed data with
-   `InvalidHexEscape`. Stream dictionary integration and other filters remain
+   `InvalidHexEscape`. Low-level RunLength encode/decode is also started, with
+   literal chunks, repeat chunks, EOD marker handling, and tolerant missing-EOD
+   decode behavior. Stream dictionary integration and other filters remain
    deferred.
 
 8. Page tree and content streams.

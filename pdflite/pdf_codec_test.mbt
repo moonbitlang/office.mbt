@@ -41,3 +41,29 @@ test "pdf_ascii_hex_decode reports invalid hex data" {
     fail("expected InvalidHexEscape")
   }
 }
+
+///|
+test "pdf_run_length_decode expands literal and repeat chunks" {
+  @test.assert_eq(
+    @pdflite.pdf_run_length_decode(
+      codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
+    ),
+    codec_ascii_for_test("ABCZZZZ"),
+  )
+}
+
+///|
+test "pdf_run_length_encode emits literal repeat and eod chunks" {
+  @test.assert_eq(
+    @pdflite.pdf_run_length_encode(codec_ascii_for_test("ABCZZZZ")),
+    codec_bytes_for_test([2, 65, 66, 67, 253, 90, 128]),
+  )
+}
+
+///|
+test "pdf_run_length_decode tolerates missing eod marker" {
+  @test.assert_eq(
+    @pdflite.pdf_run_length_decode(codec_bytes_for_test([0, 65])),
+    codec_ascii_for_test("A"),
+  )
+}

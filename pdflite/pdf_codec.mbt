@@ -62,3 +62,87 @@ pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
   }
   Bytes::from_array(output)
 }
+
+///|
+fn pdf_run_length_flush_literal(
+  output : Array[Byte],
+  literal : ArrayView[Byte],
+) -> Unit {
+  if literal.length() > 0 {
+    output.push((literal.length() - 1).to_byte())
+    for byte in literal {
+      output.push(byte)
+    }
+  }
+}
+
+///|
+pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
+  let output : Array[Byte] = []
+  let mut literal : Array[Byte] = []
+  let mut index = 0
+  while index < data.length() {
+    let value = data[index]
+    let mut run_length = 1
+    while index + run_length < data.length() &&
+          data[index + run_length] == value &&
+          run_length < 128 {
+      run_length += 1
+    }
+    if run_length >= 3 {
+      pdf_run_length_flush_literal(output, literal[:])
+      literal = []
+      output.push((257 - run_length).to_byte())
+      output.push(value)
+      index += run_length
+    } else {
+      if literal.length() + run_length > 128 {
+        pdf_run_length_flush_literal(output, literal[:])
+        literal = []
+      }
+      for _ in 0..<run_length {
+        literal.push(value)
+      }
+      index += run_length
+    }
+  }
+  pdf_run_length_flush_literal(output, literal[:])
+  output.push(128)
+  Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
+  let output : Array[Byte] = []
+  let mut index = 0
+  let mut done = false
+  while !done && index < data.length() {
+    let control = data[index].to_int()
+    index += 1
+    if control < 128 {
+      let wanted = control + 1
+      let available = if index + wanted > data.length() {
+        data.length() - index
+      } else {
+        wanted
+      }
+      for i in 0..<available {
+        output.push(data[index + i])
+      }
+      index += available
+    } else if control > 128 {
+      if index < data.length() {
+        let value = data[index]
+        index += 1
+        for _ in 0..<(257 - control) {
+          output.push(value)
+        }
+      } else {
+        done = true
+      }
+    } else {
+      done = true
+    }
+  }
+  Bytes::from_array(output)
+}
