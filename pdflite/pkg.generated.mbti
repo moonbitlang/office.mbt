@@ -44,6 +44,8 @@ pub let paper_uslegal : PaperSize
 
 pub let paper_usletter : PaperSize
 
+pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
+
 pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
 
 pub fn pdf_bytes_get(Bytes, Int) -> Byte?
@@ -60,11 +62,17 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
+
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub let pdf_no_more : Int
 
+pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
+
 pub fn point2(Double, Double) -> Point2
+
+pub fn stream_to_get(ByteCursor, Int, Int) -> ToGet
 
 pub fn transform_apply_ops(ArrayView[TransformOp], Point2) -> Point2
 
@@ -102,6 +110,8 @@ pub(all) suberror PdfError {
   InvalidBit(Int)
   InvalidBitCount(Int)
   MatrixNotInvertable
+  DictionaryExpected
+  DictionaryKeyNotFound(PdfName)
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -180,6 +190,34 @@ pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
 pub fn PdfName::bytes(Self) -> Bytes
 
+pub(all) enum PdfObject {
+  PdfNull
+  PdfBoolean(Bool)
+  PdfInteger(Int)
+  PdfReal(Double)
+  PdfString(Bytes)
+  PdfNameObject(PdfName)
+  PdfArray(Array[PdfObject])
+  PdfDictionary(Array[(PdfName, PdfObject)])
+  PdfStreamObject(PdfStream)
+  PdfIndirect(Int)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfObject::add_dict_entry(Self, PdfName, Self) -> Self raise PdfError
+pub fn PdfObject::dictionary_view(Self) -> ArrayView[(PdfName, Self)]?
+pub fn PdfObject::lookup_immediate(Self, PdfName) -> Self?
+pub fn PdfObject::remove_dict_entry(Self, PdfName) -> Self raise PdfError
+pub fn PdfObject::replace_dict_entry(Self, PdfName, Self) -> Self raise PdfError
+
+pub(all) struct PdfStream {
+  mut dictionary : PdfObject
+  mut data : PdfStreamData
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfStreamData {
+  StreamGot(Bytes)
+  StreamToGet(ToGet)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfUnit {
   PdfPoint
   Inch
@@ -191,6 +229,15 @@ pub(all) struct Point2 {
   x : Double
   y : Double
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ToGet {
+  input : ByteCursor
+  position : Int
+  length : Int
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ToGet::input(Self) -> ByteCursor
+pub fn ToGet::length(Self) -> Int
+pub fn ToGet::position(Self) -> Int
 
 pub(all) struct TransformMatrix {
   a : Double

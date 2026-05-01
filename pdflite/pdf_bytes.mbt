@@ -6,6 +6,8 @@ pub(all) suberror PdfError {
   InvalidBit(Int)
   InvalidBitCount(Int)
   MatrixNotInvertable
+  DictionaryExpected
+  DictionaryKeyNotFound(PdfName)
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

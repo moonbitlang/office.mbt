@@ -142,6 +142,9 @@ MoonBit consequences for this project:
    renumbering, and name tree helpers. Use `PdfName` for names, `Bytes` for PDF
    strings and streams, `ArrayView`/`BytesView` for read-only sequence
    parameters, and `FixedArray` for fixed OCaml-array semantics.
+   Status: started with `PdfObject`, `PdfStream`, `ToGet`, ordered dictionary
+   construction, immediate lookup, add/replace/remove helpers, stream
+   dictionary mutation, and tests preserving CamlPDF's new-key dictionary order.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:

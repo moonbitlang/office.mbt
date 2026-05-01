@@ -98,6 +98,14 @@ moon run -c 'fn main { let fixed : FixedArray[Int] = [1, 2, 3]; let doubled = [ 
 ```
 
 MoonBit array/list comprehension syntax is `[ for x in xs => expr ]`.
+Use a simple identifier as the comprehension or `for ... in` binder; destructure
+tuples inside the loop body or access tuple fields.
+
+```sh
+moon run -c 'fn main { let pairs = [(1, 2), (3, 4)]; let firsts = [ for pair in pairs => pair.0 ]; println(firsts[0]); println(firsts[1]) }'
+# 1
+# 3
+```
 
 ```sh
 moon run -c 'fn main { let m : @hashmap.HashMap[Int, String] = @hashmap.HashMap::new(); m[7] = "seven"; println(m.get(7).unwrap()) }'
