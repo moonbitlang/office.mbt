@@ -46,6 +46,10 @@ pub(all) suberror PdfError {
   BadDate
   InvalidUnicodeCodepoint(Int)
   InvalidUTF16BE
+  EncodingExpected
+  EncodingDifferencesMalformed
+  FontSubtypeExpected
+  FontFlagsExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

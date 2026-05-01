@@ -230,6 +230,166 @@ pub fn pdf_encoding_of_name(name : PdfName) -> PdfEncoding? {
 }
 
 ///|
+fn pdf_text_dictionary_has_key(object : PdfObject, key : PdfName) -> Bool {
+  match object.dictionary_view() {
+    Some(entries) =>
+      for entry in entries {
+        let (name, _) = entry
+        if name == key {
+          break true
+        }
+      } nobreak {
+        false
+      }
+    None => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_font_is_embedded(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_text_name("/FontDescriptor"), font) {
+    Some(descriptor) =>
+      pdf_text_dictionary_has_key(descriptor, pdf_text_name("/FontFile")) ||
+      pdf_text_dictionary_has_key(descriptor, pdf_text_name("/FontFile2")) ||
+      pdf_text_dictionary_has_key(descriptor, pdf_text_name("/FontFile3"))
+    None => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_font_is_symbolic(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Bool raise PdfError {
+  match self.lookup_direct(pdf_text_name("/FontDescriptor"), font) {
+    Some(descriptor) =>
+      match self.lookup_direct(pdf_text_name("/Flags"), descriptor) {
+        Some(PdfInteger(flags)) => (flags & (1 << 3)) > 0
+        _ => raise FontFlagsExpected
+      }
+    None => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_default_base_encoding(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfEncoding raise PdfError {
+  if self.pdf_text_font_is_embedded(font) ||
+    self.pdf_text_font_is_symbolic(font) {
+    PdfImplicitInFontFile
+  } else {
+    PdfStandardEncoding
+  }
+}
+
+///|
+fn PdfDocument::read_encoding_base(
+  self : PdfDocument,
+  encoding_dictionary : PdfObject,
+  font : PdfObject,
+) -> PdfEncoding raise PdfError {
+  match
+    self.lookup_direct(pdf_text_name("/BaseEncoding"), encoding_dictionary) {
+    Some(PdfNameObject(name)) =>
+      match pdf_encoding_of_name(name) {
+        Some(encoding) => encoding
+        None => raise EncodingExpected
+      }
+    Some(_) => raise EncodingExpected
+    None => self.pdf_text_default_base_encoding(font)
+  }
+}
+
+///|
+fn PdfDocument::read_encoding_differences(
+  self : PdfDocument,
+  differences : PdfObject,
+) -> Array[PdfEncodingDifference] raise PdfError {
+  match self.direct(differences) {
+    PdfArray(values) => {
+      let output : Array[PdfEncodingDifference] = []
+      let mut next_code : Int? = None
+      for value in values {
+        match self.direct(value) {
+          PdfInteger(code) => next_code = Some(code)
+          PdfNameObject(name) =>
+            match next_code {
+              Some(code) => {
+                output.push({ name, code })
+                next_code = Some(code + 1)
+              }
+              None => raise EncodingDifferencesMalformed
+            }
+          _ => raise EncodingDifferencesMalformed
+        }
+      }
+      output
+    }
+    _ => raise EncodingDifferencesMalformed
+  }
+}
+
+///|
+fn pdf_text_is_true_type_name(name : PdfName) -> Bool {
+  name == pdf_text_name("/TrueType")
+}
+
+///|
+fn pdf_text_is_simple_font_subtype_name(name : PdfName) -> Bool {
+  name == pdf_text_name("/Type1") ||
+  name == pdf_text_name("/MMType1") ||
+  name == pdf_text_name("/Type3") ||
+  name == pdf_text_name("/TrueType")
+}
+
+///|
+pub fn PdfDocument::read_encoding(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfEncoding raise PdfError {
+  match self.lookup_direct(pdf_text_name("/Encoding"), font) {
+    Some(PdfNameObject(name)) =>
+      match pdf_encoding_of_name(name) {
+        Some(encoding) => encoding
+        None => PdfImplicitInFontFile
+      }
+    Some(PdfDictionary(_) as encoding_dictionary) =>
+      match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+        Some(PdfNameObject(subtype)) if pdf_text_is_simple_font_subtype_name(
+            subtype,
+          ) => {
+          let base = self.read_encoding_base(encoding_dictionary, font)
+          let encoding = match
+            self.lookup_direct(
+              pdf_text_name("/Differences"),
+              encoding_dictionary,
+            ) {
+            Some(differences) =>
+              PdfCustomEncoding(
+                base,
+                self.read_encoding_differences(differences),
+              )
+            None => base
+          }
+          if pdf_text_is_true_type_name(subtype) {
+            PdfFillUndefinedWithStandard(encoding)
+          } else {
+            encoding
+          }
+        }
+        _ => raise FontSubtypeExpected
+      }
+    Some(_) => PdfImplicitInFontFile
+    None => PdfImplicitInFontFile
+  }
+}
+
+///|
 pub fn pdf_is_unicode_string(bytes : BytesView) -> Bool {
   bytes.length() >= 2 && bytes[0].to_int() == 0xFE && bytes[1].to_int() == 0xFF
 }
