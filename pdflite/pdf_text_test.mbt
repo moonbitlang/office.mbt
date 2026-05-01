@@ -1963,6 +1963,50 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
   @test.assert_eq(extractor.charcode_of_codepoint(0xFB02), Some(0xAF))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2022), Some(0xB7))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2026), Some(0xBC))
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0xC1, 0xC2, 0xC6, 0xC7, 0xCA, 0xCD, 0xCF, 0xD0, 0xE1, 0xE8, 0xEA, 0xF1, 0xF5,
+        0xF8, 0xFA, 0xFB,
+      ])[:],
+    ),
+    [
+      96, 0x00B4, 0x02D8, 0x02D9, 0x02DA, 0x02DD, 0x02C7, 0x2014, 0x00C6, 0x0141,
+      0x0152, 0x00E6, 0x0131, 0x0142, 0x0153, 0x00DF,
+    ],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([
+        0xC1, 0xC2, 0xC6, 0xC7, 0xCA, 0xCD, 0xCF, 0xD0, 0xE1, 0xE8, 0xEA, 0xF1, 0xF5,
+        0xF8, 0xFA, 0xFB,
+      ])[:],
+    ),
+    [
+      text_name_for_test("/grave"),
+      text_name_for_test("/acute"),
+      text_name_for_test("/breve"),
+      text_name_for_test("/dotaccent"),
+      text_name_for_test("/ring"),
+      text_name_for_test("/hungarumlaut"),
+      text_name_for_test("/caron"),
+      text_name_for_test("/emdash"),
+      text_name_for_test("/AE"),
+      text_name_for_test("/Lslash"),
+      text_name_for_test("/OE"),
+      text_name_for_test("/ae"),
+      text_name_for_test("/dotlessi"),
+      text_name_for_test("/lslash"),
+      text_name_for_test("/oe"),
+      text_name_for_test("/germandbls"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02D8), Some(0xC6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2014), Some(0xD0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C6), Some(0xE1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0141), Some(0xE8))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0131), Some(0xF5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00DF), Some(0xFB))
 }
 
 ///|
