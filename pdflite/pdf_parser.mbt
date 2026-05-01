@@ -215,10 +215,11 @@ pub(all) struct PdfParsedIndirectObject {
 } derive(Debug, Eq, ToJson)
 
 ///|
-pub fn pdf_parse_indirect_object_lexemes(
+fn pdf_parse_indirect_object_at(
   lexemes : ArrayView[PdfLexeme],
-) -> PdfParsedIndirectObject raise PdfError {
-  let first = pdf_skip_comments(lexemes, 0)
+  index : Int,
+) -> (PdfParsedIndirectObject, Int) raise PdfError {
+  let first = pdf_skip_comments(lexemes, index)
   if first + 2 >= lexemes.length() {
     raise ParseIndirectObjectExpected
   }
@@ -228,7 +229,7 @@ pub fn pdf_parse_indirect_object_lexemes(
       let (object, after_object) = pdf_parse_value_at(lexemes, object_start)
       let end_position = pdf_skip_comments(lexemes, after_object)
       if end_position < lexemes.length() && lexemes[end_position] == LexEndObj {
-        { number, generation, object }
+        ({ number, generation, object }, end_position + 1)
       } else {
         raise ParseEndObjectExpected
       }
@@ -238,8 +239,36 @@ pub fn pdf_parse_indirect_object_lexemes(
 }
 
 ///|
+pub fn pdf_parse_indirect_object_lexemes(
+  lexemes : ArrayView[PdfLexeme],
+) -> PdfParsedIndirectObject raise PdfError {
+  let (object, _) = pdf_parse_indirect_object_at(lexemes, 0)
+  object
+}
+
+///|
 pub fn pdf_parse_indirect_object_from_bytes(
   data : PdfBytes,
 ) -> PdfParsedIndirectObject raise PdfError {
   pdf_parse_indirect_object_lexemes(pdf_lex_bytes(data))
+}
+
+///|
+pub fn pdf_parse_indirect_objects(
+  lexemes : ArrayView[PdfLexeme],
+) -> Array[PdfParsedIndirectObject] raise PdfError {
+  let objects : Array[PdfParsedIndirectObject] = []
+  let mut current = 0
+  while current < lexemes.length() {
+    current = pdf_skip_comments(lexemes, current)
+    if current < lexemes.length() {
+      let (object, next) = pdf_parse_indirect_object_at(lexemes, current)
+      if next <= current {
+        raise ParseIndirectObjectExpected
+      }
+      objects.push(object)
+      current = next
+    }
+  }
+  objects
 }

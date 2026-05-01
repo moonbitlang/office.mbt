@@ -69,6 +69,8 @@ pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument
 
+pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject], version? : PdfVersion) -> PdfDocument
+
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_newline_byte(Int) -> Bool
@@ -99,6 +101,8 @@ pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject ra
 
 pub fn pdf_parse_indirect_object_lexemes(ArrayView[PdfLexeme]) -> PdfParsedIndirectObject raise PdfError
 
+pub fn pdf_parse_indirect_objects(ArrayView[PdfLexeme]) -> Array[PdfParsedIndirectObject] raise PdfError
+
 pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise PdfError
 
 pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
@@ -106,6 +110,8 @@ pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
+
+pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 

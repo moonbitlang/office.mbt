@@ -21,3 +21,22 @@ test "pdf_read_header_from_bytes defaults to PDF 2.0 when no header is found" {
     @pdflite.pdf_default_version,
   )
 }
+
+///|
+test "pdf_read_primitive_document_from_bytes loads non-stream indirect objects" {
+  let document = try! @pdflite.pdf_read_primitive_document_from_bytes(
+    reader_bytes_for_test([
+      37, 80, 68, 70, 45, 49, 46, 52, 10, 49, 32, 48, 32, 111, 98, 106, 10, 60, 60,
+      32, 47, 84, 121, 112, 101, 32, 47, 67, 97, 116, 97, 108, 111, 103, 32, 47,
+      80, 97, 103, 101, 115, 32, 50, 32, 48, 32, 82, 32, 62, 62, 10, 101, 110, 100,
+      111, 98, 106, 10, 50, 32, 48, 32, 111, 98, 106, 10, 91, 49, 32, 50, 93, 10,
+      101, 110, 100, 111, 98, 106, 10, 120, 114, 101, 102,
+    ]),
+  )
+  @test.assert_eq(document.version(), (1, 4))
+  @test.assert_eq(document.object_numbers(), [1, 2])
+  @test.assert_eq(
+    document.lookup_object_or_null(2),
+    @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
+  )
+}

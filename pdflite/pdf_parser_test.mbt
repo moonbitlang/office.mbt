@@ -167,3 +167,26 @@ test "pdf_parse_indirect_object_lexemes reports malformed indirect objects" {
     fail("expected ParseEndObjectExpected")
   }
 }
+
+///|
+test "pdf_parse_indirect_objects parses multiple primitive indirect objects" {
+  let objects = try! @pdflite.pdf_parse_indirect_objects([
+    LexInt(1),
+    LexInt(0),
+    LexObj,
+    LexNull,
+    LexEndObj,
+    LexInt(2),
+    LexInt(3),
+    LexObj,
+    LexInt(42),
+    LexEndObj,
+  ])
+  @test.assert_eq(objects.length(), 2)
+  @test.assert_eq(objects[0].number, 1)
+  @test.assert_eq(objects[0].generation, 0)
+  @test.assert_eq(objects[0].object, PdfNull)
+  @test.assert_eq(objects[1].number, 2)
+  @test.assert_eq(objects[1].generation, 3)
+  @test.assert_eq(objects[1].object, PdfInteger(42))
+}

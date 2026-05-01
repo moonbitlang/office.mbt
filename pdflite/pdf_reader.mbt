@@ -61,3 +61,30 @@ pub fn ByteCursor::read_pdf_header(
 pub fn pdf_read_header_from_bytes(data : PdfBytes) -> PdfVersion raise PdfError {
   byte_cursor_of_bytes(data).read_pdf_header()
 }
+
+///|
+pub fn pdf_document_of_parsed_indirect_objects(
+  objects : ArrayView[PdfParsedIndirectObject],
+  version? : PdfVersion = pdf_default_version,
+) -> PdfDocument {
+  let document = pdf_document_empty()
+  document.set_version(version.major, version.minor)
+  for parsed in objects {
+    document.add_object_given_number(
+      parsed.number,
+      parsed.object,
+      generation=parsed.generation,
+    )
+  }
+  document
+}
+
+///|
+pub fn pdf_read_primitive_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  let cursor = byte_cursor_of_bytes(data)
+  let version = cursor.read_pdf_header()
+  let objects = pdf_parse_indirect_objects(cursor.lex_pdf_tokens())
+  pdf_document_of_parsed_indirect_objects(objects, version~)
+}
