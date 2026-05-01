@@ -174,6 +174,50 @@ test "pdf filter dispatch reports unsupported filters" {
 }
 
 ///|
+test "pdf_decode_predictor decodes tiff predictor 2" {
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(
+      2,
+      1,
+      8,
+      3,
+      codec_bytes_for_test([10, 5, 5, 1, 1, 1]),
+    ),
+    codec_bytes_for_test([10, 15, 20, 1, 2, 3]),
+  )
+}
+
+///|
+test "pdf_decode_predictor decodes png row filters" {
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(
+      15,
+      1,
+      8,
+      3,
+      codec_bytes_for_test([
+        0, 10, 20, 30, 1, 1, 2, 3, 2, 1, 1, 1, 3, 2, 4, 6, 4, 1, 1, 1,
+      ]),
+    ),
+    codec_bytes_for_test([10, 20, 30, 1, 3, 6, 2, 4, 7, 3, 7, 13, 4, 8, 14]),
+  )
+}
+
+///|
+test "pdf_decode_predictor reports unsupported predictor" {
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
+    9,
+    1,
+    8,
+    1,
+    codec_bytes_for_test([0]),
+  )
+  guard result is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
+    fail("expected PredictorNotSupported")
+  }
+}
+
+///|
 test "pdf_decode_stream_onestage decodes single stream filter" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
@@ -194,6 +238,42 @@ test "pdf_decode_stream_onestage decodes single stream filter" {
     Some(PdfInteger(2)),
   )
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+}
+
+///|
+test "pdf_decode_stream_onestage applies first DecodeParms predictor" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let predictor = codec_name_for_test("/Predictor")
+  let columns = codec_name_for_test("/Columns")
+  let encoded = @pdflite.pdf_ascii_hex_encode(
+    codec_bytes_for_test([1, 10, 10, 10]),
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+      (
+        decodeparms,
+        @pdflite.pdf_dictionary([
+          (predictor, PdfInteger(15)),
+          (columns, PdfInteger(3)),
+        ]),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([10, 20, 30])),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
 }
 
 ///|

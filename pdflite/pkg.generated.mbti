@@ -73,6 +73,8 @@ pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
 pub fn pdf_decode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
+pub fn pdf_decode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
+
 pub fn pdf_decode_stream(PdfObject) -> PdfObject raise PdfError
 
 pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise PdfError
@@ -199,6 +201,8 @@ pub(all) suberror PdfError {
   InvalidASCII85Data
   FilterNotSupported(PdfName)
   FilterExpected
+  PredictorExpected
+  PredictorNotSupported(Int)
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected

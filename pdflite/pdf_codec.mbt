@@ -287,6 +287,26 @@ fn pdf_codec_length_key() -> PdfName {
 }
 
 ///|
+fn pdf_predictor_key() -> PdfName {
+  pdf_filter_name("/Predictor")
+}
+
+///|
+fn pdf_colors_key() -> PdfName {
+  pdf_filter_name("/Colors")
+}
+
+///|
+fn pdf_bits_per_component_key() -> PdfName {
+  pdf_filter_name("/BitsPerComponent")
+}
+
+///|
+fn pdf_columns_key() -> PdfName {
+  pdf_filter_name("/Columns")
+}
+
+///|
 fn pdf_stream_dictionary_length(dictionary : PdfObject) -> Unit raise PdfError {
   match dictionary.lookup_immediate(pdf_codec_length_key()) {
     Some(PdfInteger(_)) => ()
@@ -379,6 +399,243 @@ fn pdf_stream_replace_length(
 }
 
 ///|
+fn pdf_predictor_scanline_width(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+) -> Int raise PdfError {
+  if colors <= 0 || bits_per_component <= 0 || columns <= 0 {
+    raise PredictorExpected
+  }
+  (colors * bits_per_component * columns + 7) / 8
+}
+
+///|
+fn pdf_predictor_bytes_per_pixel(
+  colors : Int,
+  bits_per_component : Int,
+) -> Int raise PdfError {
+  if colors <= 0 || bits_per_component <= 0 {
+    raise PredictorExpected
+  }
+  (colors * bits_per_component + 7) / 8
+}
+
+///|
+fn pdf_predictor_get0(values : ArrayView[Int], index : Int) -> Int {
+  if index < 0 {
+    0
+  } else {
+    values[index]
+  }
+}
+
+///|
+fn pdf_paeth_predictor(a : Int, b : Int, c : Int) -> Int {
+  let p = a + b - c
+  let pa = (p - a).abs()
+  let pb = (p - b).abs()
+  let pc = (p - c).abs()
+  if pa <= pb && pa <= pc {
+    a
+  } else if pb <= pc {
+    b
+  } else {
+    c
+  }
+}
+
+///|
+fn pdf_decode_tiff_predictor(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  if bits_per_component != 8 {
+    raise PredictorNotSupported(2)
+  }
+  let scanline_width = pdf_predictor_scanline_width(
+    colors, bits_per_component, columns,
+  )
+  let output = data.to_array()
+  for line in 0..<(data.length() / scanline_width) {
+    let line_start = line * scanline_width
+    let mut position = colors
+    while position < scanline_width {
+      let index = line_start + position
+      output[index] = ((
+        output[index - colors].to_int() + output[index].to_int()
+      ) %
+      256).to_byte()
+      position += 1
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_decode_png_scanline(
+  predictor : Int,
+  prior_decoded : ArrayView[Int],
+  current : ArrayView[Int],
+  bytes_per_pixel : Int,
+) -> Array[Int] raise PdfError {
+  let output : Array[Int] = [ for value in current => value ]
+  match predictor {
+    0 => ()
+    1 =>
+      for i in 0..<output.length() {
+        output[i] = (
+            current[i] + pdf_predictor_get0(output[:], i - bytes_per_pixel)
+          ) %
+          256
+      }
+    2 =>
+      for i in 0..<output.length() {
+        output[i] = (current[i] + pdf_predictor_get0(prior_decoded, i)) % 256
+      }
+    3 =>
+      for i in 0..<output.length() {
+        output[i] = (
+            current[i] +
+            (
+              pdf_predictor_get0(output[:], i - bytes_per_pixel) +
+              pdf_predictor_get0(prior_decoded, i)
+            ) /
+            2
+          ) %
+          256
+      }
+    4 =>
+      for i in 0..<output.length() {
+        let left = pdf_predictor_get0(output[:], i - bytes_per_pixel)
+        let up = pdf_predictor_get0(prior_decoded, i)
+        let up_left = pdf_predictor_get0(prior_decoded, i - bytes_per_pixel)
+        output[i] = (current[i] + pdf_paeth_predictor(left, up, up_left)) % 256
+      }
+    _ => raise PredictorNotSupported(predictor)
+  }
+  output
+}
+
+///|
+fn pdf_decode_png_predictor(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  let scanline_width = pdf_predictor_scanline_width(
+    colors, bits_per_component, columns,
+  )
+  let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
+    colors, bits_per_component,
+  )
+  let output : Array[Byte] = []
+  let mut prior_decoded : Array[Int] = [ for _ in 0..<scanline_width => 0 ]
+  let mut index = 0
+  while index < data.length() {
+    let predictor = data[index].to_int()
+    index += 1
+    let current : Array[Int] = [ for _ in 0..<scanline_width => 0 ]
+    let available = if index + scanline_width > data.length() {
+      data.length() - index
+    } else {
+      scanline_width
+    }
+    for i in 0..<available {
+      current[i] = data[index + i].to_int()
+    }
+    index += available
+    let decoded = pdf_decode_png_scanline(
+      predictor,
+      prior_decoded[:],
+      current[:],
+      bytes_per_pixel,
+    )
+    for value in decoded {
+      output.push(value.to_byte())
+    }
+    prior_decoded = decoded
+  }
+  Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_decode_predictor(
+  predictor : Int,
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  match predictor {
+    1 => data
+    2 => pdf_decode_tiff_predictor(colors, bits_per_component, columns, data)
+    value if value >= 10 && value <= 15 =>
+      pdf_decode_png_predictor(colors, bits_per_component, columns, data)
+    _ => raise PredictorNotSupported(predictor)
+  }
+}
+
+///|
+fn pdf_decodeparms_value(dictionary : PdfObject) -> PdfObject? {
+  match dictionary.lookup_immediate(pdf_decodeparms_key()) {
+    Some(value) => Some(value)
+    None => dictionary.lookup_immediate(pdf_short_decodeparms_key())
+  }
+}
+
+///|
+fn pdf_first_decodeparms(dictionary : PdfObject) -> PdfObject? raise PdfError {
+  match pdf_decodeparms_value(dictionary) {
+    None | Some(PdfNull) | Some(PdfArray([])) => None
+    Some(PdfDictionary(_) as value) => Some(value)
+    Some(PdfArray([PdfNull, ..])) => None
+    Some(PdfArray([PdfDictionary(_) as value, ..])) => Some(value)
+    _ => raise PredictorExpected
+  }
+}
+
+///|
+fn pdf_decodeparms_int(
+  dictionary : PdfObject,
+  key : PdfName,
+  default : Int,
+) -> Int raise PdfError {
+  match dictionary.lookup_immediate(key) {
+    None => default
+    Some(PdfInteger(value)) => value
+    _ => raise PredictorExpected
+  }
+}
+
+///|
+fn pdf_apply_first_predictor(
+  dictionary : PdfObject,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  match pdf_first_decodeparms(dictionary) {
+    None => data
+    Some(decodeparms) => {
+      let predictor = pdf_decodeparms_int(decodeparms, pdf_predictor_key(), 1)
+      if predictor == 1 {
+        data
+      } else {
+        pdf_decode_predictor(
+          predictor,
+          pdf_decodeparms_int(decodeparms, pdf_colors_key(), 1),
+          pdf_decodeparms_int(decodeparms, pdf_bits_per_component_key(), 8),
+          pdf_decodeparms_int(decodeparms, pdf_columns_key(), 1),
+          data,
+        )
+      }
+    }
+  }
+}
+
+///|
 pub fn pdf_decode_stream_onestage(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
@@ -397,11 +654,15 @@ pub fn pdf_decode_stream_onestage(
             }
             Some(filter) => {
               let decoded = pdf_decode_filter_bytes(filter, data)
+              let unpredicted = pdf_apply_first_predictor(
+                stream.dictionary,
+                decoded,
+              )
               let dictionary = pdf_stream_replace_length(
                 pdf_remove_first_decoder(stream.dictionary),
-                decoded.length(),
+                unpredicted.length(),
               )
-              pdf_stream(dictionary, StreamGot(decoded))
+              pdf_stream(dictionary, StreamGot(unpredicted))
             }
           }
         _ => raise StreamDataExpected

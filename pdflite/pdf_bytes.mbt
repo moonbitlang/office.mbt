@@ -16,6 +16,8 @@ pub(all) suberror PdfError {
   InvalidASCII85Data
   FilterNotSupported(PdfName)
   FilterExpected
+  PredictorExpected
+  PredictorNotSupported(Int)
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected
