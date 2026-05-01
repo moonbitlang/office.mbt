@@ -223,7 +223,8 @@ MoonBit consequences for this project:
    reader can now recover around unreadable stream lengths when another
    reconstructed object supplies the trailer root. Public reconstruction also
    skips stream objects with malformed `stream`, `endstream`, or `endobj`
-   markers when a later reconstructed catalog remains valid.
+   markers, plus truncated stream data, when a later reconstructed catalog
+   remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset. Reader

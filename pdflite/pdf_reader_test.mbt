@@ -581,6 +581,27 @@ fn reader_classic_pdf_with_malformed_stream_and_catalog(
 }
 
 ///|
+fn reader_classic_pdf_with_truncated_stream_before_catalog() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let stream_offset = output.length()
+  reader_push_ascii(output, "2 0 obj\n<< /Length 1000 >>\nstream\nHi\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 1\n0000000000 65535 f \n")
+  reader_push_ascii(output, "2 1\n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_ascii(output, "1 1\n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -1275,6 +1296,22 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
     fail("expected strict ParseEndObjectExpected")
   }
   reader_assert_reconstructs_catalog(bad_endobj)
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs around truncated stream data" {
+  let data = reader_classic_pdf_with_truncated_stream_before_catalog()
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    data,
+  )
+  guard strict is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected strict EndOfInput")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(data)
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
 }
 
 ///|
