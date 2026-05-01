@@ -1727,18 +1727,19 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
   for raw_line in cursor.read_line_views() {
     for raw_segment in pdf_text_cmap_section_line_views(raw_line) {
       let mut line = raw_segment
-      if pdf_text_line_contains_ascii(raw_segment, "beginbfchar") {
-        section = PdfTextCMapBFChar
-        match pdf_text_after_ascii(raw_segment, "beginbfchar") {
-          Some(rest) => line = rest
-          None => ()
+      match pdf_text_after_ascii(raw_segment, "beginbfchar") {
+        Some(rest) => {
+          section = PdfTextCMapBFChar
+          line = rest
         }
-      } else if pdf_text_line_contains_ascii(raw_segment, "beginbfrange") {
-        section = PdfTextCMapBFRange
-        match pdf_text_after_ascii(raw_segment, "beginbfrange") {
-          Some(rest) => line = rest
-          None => ()
-        }
+        None =>
+          match pdf_text_after_ascii(raw_segment, "beginbfrange") {
+            Some(rest) => {
+              section = PdfTextCMapBFRange
+              line = rest
+            }
+            None => ()
+          }
       }
       let end_bfchar = pdf_text_line_contains_ascii(line, "endbfchar")
       let end_bfrange = pdf_text_line_contains_ascii(line, "endbfrange")
@@ -1806,19 +1807,27 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
 }
 
 ///|
+fn pdf_text_stream_data_bytes(data : PdfStreamData) -> PdfBytes? {
+  try pdf_stream_data_bytes(data) catch {
+    _ => None
+  } noraise {
+    bytes => Some(bytes)
+  }
+}
+
+///|
 fn pdf_text_decoded_stream_data(object : PdfObject) -> PdfBytes? {
   match object {
-    PdfStreamObject({ dictionary, data: StreamGot(bytes) }) =>
-      try pdf_stream_first_filter(dictionary) catch {
+    PdfStreamObject(stream) =>
+      try pdf_stream_first_filter(stream.dictionary) catch {
         _ => None
       } noraise {
-        None => Some(bytes)
+        None => pdf_text_stream_data_bytes(stream.data)
         Some(_) =>
-          try pdf_decode_stream(object) catch {
+          try pdf_decode_stream_value(stream) catch {
             _ => None
           } noraise {
-            PdfStreamObject({ data: StreamGot(decoded), .. }) => Some(decoded)
-            _ => None
+            decoded => pdf_text_stream_data_bytes(decoded.data)
           }
       }
     _ => None

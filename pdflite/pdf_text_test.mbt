@@ -57,6 +57,51 @@ fn text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 }
 
 ///|
+fn text_cid_system_info_object_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
+    (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+    (text_name_for_test("/Supplement"), PdfInteger(0)),
+  ])
+}
+
+///|
+fn text_valid_cid_descendant_for_test(
+  extra : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+) -> @pdflite.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      text_cid_system_info_object_for_test(),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Descendant")),
+    ),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+  ]
+  for entry in extra {
+    entries.push(entry)
+  }
+  @pdflite.pdf_dictionary(entries)
+}
+
+///|
+fn text_cid_top_font_for_test(
+  descendant_number : Int,
+  encoding : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (
+      text_name_for_test("/DescendantFonts"),
+      PdfArray([PdfIndirect(descendant_number)]),
+    ),
+    (text_name_for_test("/Encoding"), encoding),
+  ])
+}
+
+///|
 test "PdfStandardFont exposes CamlPDF standard font names" {
   let fonts : Array[(@pdflite.PdfStandardFont, String)] = [
     (PdfTimesRoman, "Times-Roman"),
@@ -170,6 +215,18 @@ test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
   )
   guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
     fail("expected InvalidUnicodeCodepoint for decoded surrogate")
+  }
+  let bad_four_byte_continuation = try? @pdflite.pdf_codepoints_of_utf8(
+    text_bytes_for_test([0xF0, 0x9D, 0x28, 0x9E])[:],
+  )
+  guard bad_four_byte_continuation is Err(InvalidUTF8) else {
+    fail("expected InvalidUTF8 for bad four-byte continuation")
+  }
+  let invalid_leading_byte = try? @pdflite.pdf_codepoints_of_utf8(
+    text_bytes_for_test([0xFF])[:],
+  )
+  guard invalid_leading_byte is Err(InvalidUTF8) else {
+    fail("expected InvalidUTF8 for invalid leading byte")
   }
 }
 
@@ -382,6 +439,48 @@ test "PdfEncoding converts predefined encoding names" {
 }
 
 ///|
+test "Pdf font debug names cover non-Type1 variants" {
+  let external_cmap : @pdflite.PdfCMapEncoding = PdfCMap(7)
+  @test.assert_eq(external_cmap.is_identity_h(), false)
+  let mm_type1_type : @pdflite.PdfSimpleFontType = PdfMMType1
+  let true_type_type : @pdflite.PdfSimpleFontType = PdfTrueType
+  @test.assert_eq(mm_type1_type.debug_name(), "MM Type 1")
+  @test.assert_eq(true_type_type.debug_name(), "Truetype")
+  let simple_font : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfMMType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: None,
+    encoding: PdfImplicitInFontFile,
+  })
+  @test.assert_eq(
+    simple_font.debug_name(),
+    "SimpleFont fonttype = MM Type 1\nbasefont \nencoding is ImplicitInFontFile\n",
+  )
+  let cid_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/Top"),
+    composite: {
+      cid_system_info: {
+        registry: text_bytes_for_test([82]),
+        ordering: text_bytes_for_test([79]),
+        supplement: 0,
+      },
+      cid_basefont: text_name_for_test("/Descendant"),
+      cid_fontdescriptor: text_font_descriptor_for_test(),
+      cid_widths: [],
+      cid_widths2: [],
+      cid_default_width: 1000.0,
+      cid_default_width2: [880.0, -1000.0],
+    },
+    encoding: PdfCMap(7),
+  })
+  @test.assert_eq(cid_font.debug_name(), "CIDKeyedFont /Top")
+}
+
+///|
 test "PdfDocument read_encoding reads direct and dictionary encodings" {
   let doc = @pdflite.pdf_document_empty()
   let direct_font = @pdflite.pdf_dictionary([
@@ -494,6 +593,13 @@ test "PdfDocument read_encoding handles default and TrueType encodings" {
 ///|
 test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   let doc = @pdflite.pdf_document_empty()
+  let non_dictionary_encoding = @pdflite.pdf_dictionary([
+    (text_name_for_test("/Encoding"), PdfInteger(1)),
+  ])
+  @test.assert_eq(
+    try! doc.read_encoding(non_dictionary_encoding),
+    PdfImplicitInFontFile,
+  )
   let bad_differences = @pdflite.pdf_dictionary([
     (
       text_name_for_test("/Subtype"),
@@ -528,6 +634,74 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   let base_result = try? doc.read_encoding(bad_base)
   guard base_result is Err(EncodingExpected) else {
     fail("expected EncodingExpected")
+  }
+  let unknown_base = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (
+          text_name_for_test("/BaseEncoding"),
+          PdfNameObject(text_name_for_test("/UnknownEncoding")),
+        ),
+      ]),
+    ),
+  ])
+  let unknown_base_result = try? doc.read_encoding(unknown_base)
+  guard unknown_base_result is Err(EncodingExpected) else {
+    fail("expected EncodingExpected for unknown base")
+  }
+  let bad_difference_object = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (
+          text_name_for_test("/Differences"),
+          PdfArray([PdfInteger(65), PdfNull]),
+        ),
+      ]),
+    ),
+  ])
+  let bad_difference_object_result = try? doc.read_encoding(
+    bad_difference_object,
+  )
+  guard bad_difference_object_result is Err(EncodingDifferencesMalformed) else {
+    fail("expected EncodingDifferencesMalformed for bad difference object")
+  }
+  let non_array_differences = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Differences"), PdfInteger(65)),
+      ]),
+    ),
+  ])
+  let non_array_result = try? doc.read_encoding(non_array_differences)
+  guard non_array_result is Err(EncodingDifferencesMalformed) else {
+    fail("expected EncodingDifferencesMalformed for non-array differences")
+  }
+  let missing_flags = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (text_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+  ])
+  let missing_flags_result = try? doc.read_encoding(missing_flags)
+  guard missing_flags_result is Err(FontFlagsExpected) else {
+    fail("expected FontFlagsExpected")
   }
   let bad_subtype = @pdflite.pdf_dictionary([
     (text_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
@@ -622,6 +796,23 @@ test "PdfDocument read_font_descriptor uses CamlPDF defaults and fontfile priori
 }
 
 ///|
+test "PdfDocument read_font_descriptor accepts FontFile3 and stops malformed charset" {
+  let doc = @pdflite.pdf_document_empty()
+  let descriptor = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontFile3"), PdfIndirect(12)),
+    (text_name_for_test("/CharSet"), PdfString(@ascii.encode("/A 7 /B"))),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), descriptor),
+  ])
+  guard (try! doc.read_font_descriptor(font)) is Some(read_descriptor) else {
+    fail("expected font descriptor")
+  }
+  @test.assert_eq(read_descriptor.fontfile, Some(PdfFontFile3(12)))
+  @test.assert_eq(read_descriptor.charset, Some([text_name_for_test("/A")]))
+}
+
+///|
 test "PdfDocument read_font_metrics builds 256-entry width table" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(7, PdfInteger(620))
@@ -693,6 +884,38 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   let bad_width_result = try? doc.read_font_metrics(bad_width)
   guard bad_width_result is Err(FontWidthExpected) else {
     fail("expected FontWidthExpected")
+  }
+
+  let bad_firstchar = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (text_name_for_test("/FirstChar"), PdfInteger(-1)),
+    (text_name_for_test("/LastChar"), PdfInteger(65)),
+    (text_name_for_test("/Widths"), PdfArray([PdfInteger(600)])),
+  ])
+  let bad_firstchar_result = try? doc.read_font_metrics(bad_firstchar)
+  guard bad_firstchar_result is Err(FontFirstCharExpected) else {
+    fail("expected FontFirstCharExpected")
+  }
+
+  let missing_widths = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (text_name_for_test("/FirstChar"), PdfInteger(65)),
+    (text_name_for_test("/LastChar"), PdfInteger(65)),
+  ])
+  let missing_widths_result = try? doc.read_font_metrics(missing_widths)
+  guard missing_widths_result is Err(FontWidthsExpected) else {
+    fail("expected FontWidthsExpected for missing widths")
+  }
+
+  let inverted_bounds = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (text_name_for_test("/FirstChar"), PdfInteger(66)),
+    (text_name_for_test("/LastChar"), PdfInteger(65)),
+    (text_name_for_test("/Widths"), PdfArray([])),
+  ])
+  let inverted_bounds_result = try? doc.read_font_metrics(inverted_bounds)
+  guard inverted_bounds_result is Err(FontWidthsExpected) else {
+    fail("expected FontWidthsExpected for inverted bounds")
   }
 }
 
@@ -810,6 +1033,59 @@ test "PdfDocument read_simple_font reads Type3 glyph data" {
 }
 
 ///|
+test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let mm_type1 = try! doc.read_simple_font(
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/MMType1")),
+      ),
+    ]),
+  )
+  @test.assert_eq(mm_type1.fonttype, PdfMMType1)
+  @test.assert_eq(
+    mm_type1.debug_name(),
+    "fonttype = MM Type 1\nbasefont \nencoding is ImplicitInFontFile\n",
+  )
+
+  let true_type = try! doc.read_simple_font(
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/TrueType")),
+      ),
+    ]),
+  )
+  @test.assert_eq(true_type.fonttype, PdfTrueType)
+  @test.assert_eq(true_type.fonttype.debug_name(), "Truetype")
+
+  let resources = @pdflite.pdf_dictionary([
+    (text_name_for_test("/ProcSet"), PdfArray([])),
+  ])
+  let type3 = try! doc.read_simple_font(
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type3")),
+      ),
+      (
+        text_name_for_test("/CharProcs"),
+        @pdflite.pdf_dictionary([(text_name_for_test("/A"), PdfInteger(1))]),
+      ),
+      (text_name_for_test("/Resources"), resources),
+      (text_name_for_test("/FirstChar"), PdfInteger(0)),
+      (text_name_for_test("/LastChar"), PdfInteger(0)),
+      (text_name_for_test("/Widths"), PdfArray([PdfInteger(9)])),
+    ]),
+  )
+  guard type3.fonttype is PdfType3(type3_data) else {
+    fail("expected Type3 font")
+  }
+  @test.assert_eq(type3_data.resources, resources)
+}
+
+///|
 test "PdfDocument read_simple_font rejects malformed simple fonts" {
   let doc = @pdflite.pdf_document_empty()
   let missing_subtype = try? doc.read_simple_font(@pdflite.pdf_dictionary([]))
@@ -900,6 +1176,15 @@ test "PdfDocument detects and reads standard14 fonts" {
   ])
   @test.assert_eq(doc.is_standard14_font(wrong_subtype), false)
   @test.assert_eq(doc.is_simple_font(wrong_subtype), false)
+  let missing_base = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+  ])
+  @test.assert_eq(doc.is_standard14_font(missing_base), false)
+  @test.assert_eq(doc.is_simple_font(@pdflite.pdf_dictionary([])), false)
+  @test.assert_eq(doc.is_cidkeyed_font(@pdflite.pdf_dictionary([])), false)
 }
 
 ///|
@@ -1191,6 +1476,12 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
 ///|
 test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let doc = @pdflite.pdf_document_empty()
+  let missing_basefont = try? doc.read_cidkeyed_font(
+    @pdflite.pdf_dictionary([]),
+  )
+  guard missing_basefont is Err(BaseFontExpected) else {
+    fail("expected BaseFontExpected")
+  }
   let missing_descendant = try? doc.read_cidkeyed_font(
     @pdflite.pdf_dictionary([
       (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
@@ -1198,6 +1489,16 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   )
   guard missing_descendant is Err(DescendantFontExpected) else {
     fail("expected DescendantFontExpected")
+  }
+
+  let bad_supplement = try? doc.read_cid_system_info(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
+      (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+    ]),
+  )
+  guard bad_supplement is Err(CIDSupplementExpected) else {
+    fail("expected CIDSupplementExpected")
   }
 
   let bad_system_info = @pdflite.pdf_dictionary([
@@ -1226,6 +1527,69 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let system_result = try? doc.read_cidkeyed_font(bad_system_font)
   guard system_result is Err(CIDRegistryExpected) else {
     fail("expected CIDRegistryExpected")
+  }
+
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Descendant")),
+      ),
+      (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    ]),
+  )
+  let missing_system_result = try? doc.read_cidkeyed_font(
+    text_cid_top_font_for_test(
+      10,
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  )
+  guard missing_system_result is Err(CIDSystemInfoExpected) else {
+    fail("expected CIDSystemInfoExpected")
+  }
+
+  doc.add_object_given_number(
+    11,
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/CIDSystemInfo"),
+        text_cid_system_info_object_for_test(),
+      ),
+      (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    ]),
+  )
+  let missing_cid_basefont_result = try? doc.read_cidkeyed_font(
+    text_cid_top_font_for_test(
+      11,
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  )
+  guard missing_cid_basefont_result is Err(CIDBaseFontExpected) else {
+    fail("expected CIDBaseFontExpected")
+  }
+
+  doc.add_object_given_number(
+    12,
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/CIDSystemInfo"),
+        text_cid_system_info_object_for_test(),
+      ),
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Descendant")),
+      ),
+    ]),
+  )
+  let missing_descriptor_result = try? doc.read_cidkeyed_font(
+    text_cid_top_font_for_test(
+      12,
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  )
+  guard missing_descriptor_result is Err(CIDFontDescriptorExpected) else {
+    fail("expected CIDFontDescriptorExpected")
   }
 
   let bad_widths = @pdflite.pdf_dictionary([
@@ -1261,6 +1625,42 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected CIDWidthsExpected")
   }
 
+  let malformed_widths : Array[@pdflite.PdfObject] = [
+    text_valid_cid_descendant_for_test([
+      (
+        text_name_for_test("/W"),
+        PdfArray([
+          PdfInteger(1),
+          PdfArray([PdfNameObject(text_name_for_test("/Bad"))]),
+        ]),
+      ),
+    ]),
+    text_valid_cid_descendant_for_test([
+      (
+        text_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfNameObject(text_name_for_test("/Bad"))]),
+      ),
+    ]),
+    text_valid_cid_descendant_for_test([
+      (
+        text_name_for_test("/W"),
+        PdfArray([PdfNameObject(text_name_for_test("/Bad"))]),
+      ),
+    ]),
+  ]
+  for index in 0..<malformed_widths.length() {
+    doc.add_object_given_number(13 + index, malformed_widths[index])
+    let result = try? doc.read_cidkeyed_font(
+      text_cid_top_font_for_test(
+        13 + index,
+        PdfNameObject(text_name_for_test("/Identity-H")),
+      ),
+    )
+    guard result is Err(CIDWidthsExpected) else {
+      fail("expected CIDWidthsExpected for malformed widths")
+    }
+  }
+
   let bad_widths2 = @pdflite.pdf_dictionary([
     (
       text_name_for_test("/CIDSystemInfo"),
@@ -1294,6 +1694,45 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected CIDWidths2Expected")
   }
 
+  let malformed_widths2 : Array[@pdflite.PdfObject] = [
+    text_valid_cid_descendant_for_test([
+      (
+        text_name_for_test("/W2"),
+        PdfArray([
+          PdfInteger(5),
+          PdfInteger(4),
+          PdfInteger(100),
+          PdfInteger(1),
+          PdfInteger(2),
+        ]),
+      ),
+    ]),
+    text_valid_cid_descendant_for_test([
+      (
+        text_name_for_test("/W2"),
+        PdfArray([PdfInteger(1), PdfNameObject(text_name_for_test("/Bad"))]),
+      ),
+    ]),
+    text_valid_cid_descendant_for_test([
+      (
+        text_name_for_test("/W2"),
+        PdfArray([PdfNameObject(text_name_for_test("/Bad"))]),
+      ),
+    ]),
+  ]
+  for index in 0..<malformed_widths2.length() {
+    doc.add_object_given_number(16 + index, malformed_widths2[index])
+    let result = try? doc.read_cidkeyed_font(
+      text_cid_top_font_for_test(
+        16 + index,
+        PdfNameObject(text_name_for_test("/Identity-H")),
+      ),
+    )
+    guard result is Err(CIDWidths2Expected) else {
+      fail("expected CIDWidths2Expected for malformed vertical widths")
+    }
+  }
+
   let valid_descendant = @pdflite.pdf_dictionary([
     (
       text_name_for_test("/CIDSystemInfo"),
@@ -1321,6 +1760,12 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let direct_cmap_result = try? doc.read_cidkeyed_font(direct_cmap)
   guard direct_cmap_result is Err(CMapEncodingExpected) else {
     fail("expected CMapEncodingExpected")
+  }
+  let bad_cmap = try? doc.read_cidkeyed_font(
+    text_cid_top_font_for_test(9, PdfInteger(1)),
+  )
+  guard bad_cmap is Err(CMapEncodingExpected) else {
+    fail("expected CMapEncodingExpected for non-name encoding")
   }
 }
 

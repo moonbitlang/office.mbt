@@ -1083,3 +1083,282 @@ test "private function helpers cover parser and evaluator guards" {
     fail("expected min-int neg to promote")
   }
 }
+
+///|
+fn wbtest_text_bytes(values : ArrayView[Int]) -> PdfBytes {
+  try! pdf_bytes_of_int_array(values)
+}
+
+///|
+fn wbtest_text_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn wbtest_text_simple_font(
+  encoding : PdfEncoding,
+  descriptor : PdfFontDescriptor?,
+) -> PdfFont {
+  PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: descriptor,
+    fontmetrics: None,
+    encoding,
+  })
+}
+
+///|
+test "private text ToUnicode CMap helpers reject malformed ranges" {
+  @test.assert_eq(pdf_text_parse_hex_bytes(@ascii.encode("0g")[:], 0, 2), None)
+  @test.assert_eq(
+    pdf_text_after_ascii(@ascii.encode("abc")[:], "missing"),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_hex_groups(@ascii.encode("<0g>")[:]),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_hex_group_at(@ascii.encode("<0g>")[:], 0),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_tounicode_bfrange_inline_entries(
+      @ascii.encode("<01><02>[<0041>]")[:],
+    ),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_tounicode_bfrange_inline_entries(
+      @ascii.encode("<01><01>[<0g>]")[:],
+    ),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<00><01><ff>")[:]),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_tounicode_bfrange_inline_entries(
+      @ascii.encode("<02><01><0041>")[:],
+    ),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01>")[:]),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_add_to_big_endian_bytes(wbtest_text_bytes([0xff]), 1),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_tounicode_bfrange_array_entries(1, 2, [wbtest_text_bytes([0])]),
+    None,
+  )
+  let bfchar_entries : Array[(Int, PdfBytes)] = []
+  pdf_text_push_tounicode_bfchar_entry(
+    bfchar_entries,
+    Bytes::new(0),
+    wbtest_text_bytes([0x00, 0x41]),
+  )
+  @test.assert_eq(bfchar_entries, [])
+
+  guard pdf_text_cmap_bfrange_array_start(@ascii.encode("<02><01>[")[:]) is None else {
+    fail("expected invalid bfrange array start")
+  }
+  guard pdf_text_cmap_bfrange_array_start(@ascii.encode("<01>[")[:]) is None else {
+    fail("expected incomplete bfrange array start")
+  }
+  guard pdf_text_cmap_bfrange_array_header(@ascii.encode("<02><01>")[:]) is None else {
+    fail("expected invalid bfrange array header")
+  }
+  let pending : PdfTextCMapBFRangeArray = { first: 1, last: 2, unicodes: [] }
+  let pending_entries : Array[(Int, PdfBytes)] = []
+  @test.assert_eq(
+    pdf_text_append_pending_bfrange_array(
+      pending_entries,
+      pending,
+      @ascii.encode("<0041>]")[:],
+    ),
+    true,
+  )
+  @test.assert_eq(pending_entries, [])
+  @test.assert_eq(pdf_text_parse_tounicode(@ascii.encode("plain")[:]), None)
+  @test.assert_eq(
+    pdf_text_parse_tounicode(
+      @ascii.encode("1 beginbfrange <01><02>[<0041>] endbfrange\n")[:],
+    ),
+    None,
+  )
+}
+
+///|
+test "private text stream helpers treat malformed ToUnicode streams as absent" {
+  let key = wbtest_text_name("/Missing")
+  @test.assert_eq(pdf_text_dictionary_has_key(PdfInteger(1), key), false)
+  @test.assert_eq(pdf_text_find_immediate_indirect(PdfInteger(1), key), None)
+
+  let bad_deferred = pdf_stream(
+    PdfDictionary([]),
+    StreamToGet(
+      stream_to_get(byte_cursor_of_bytes(@ascii.encode("abc")), -1, 1),
+    ),
+  )
+  @test.assert_eq(pdf_text_decoded_stream_data(bad_deferred), None)
+  let bad_filter = pdf_stream(
+    PdfDictionary([(wbtest_text_name("/Filter"), PdfInteger(1))]),
+    StreamGot(@ascii.encode("x")),
+  )
+  @test.assert_eq(pdf_text_decoded_stream_data(bad_filter), None)
+  let unsupported_filter = pdf_stream(
+    PdfDictionary([
+      (wbtest_text_name("/Length"), PdfInteger(1)),
+      (
+        wbtest_text_name("/Filter"),
+        PdfNameObject(wbtest_text_name("/NoSuchFilter")),
+      ),
+    ]),
+    StreamGot(@ascii.encode("x")),
+  )
+  @test.assert_eq(pdf_text_decoded_stream_data(unsupported_filter), None)
+  @test.assert_eq(pdf_text_decoded_stream_data(PdfInteger(1)), None)
+
+  let doc = pdf_document_empty()
+  let font = PdfDictionary([
+    (wbtest_text_name("/ToUnicode"), unsupported_filter),
+  ])
+  @test.assert_eq(doc.pdf_text_tounicode_of_font(font), None)
+}
+
+///|
+test "private text glyph helpers cover fallback and CID ToUnicode branches" {
+  let implicit : PdfEncoding = PdfImplicitInFontFile
+  @test.assert_eq(implicit.pdf_text_glyphname_of_charcode(65), None)
+  let filled : PdfEncoding = PdfFillUndefinedWithStandard(PdfImplicitInFontFile)
+  @test.assert_eq(
+    filled.pdf_text_glyphname_of_charcode(65),
+    Some(wbtest_text_name("/A")),
+  )
+  let filled_existing : PdfEncoding = PdfFillUndefinedWithStandard(
+    PdfWinAnsiEncoding,
+  )
+  @test.assert_eq(
+    filled_existing.pdf_text_glyphname_of_charcode(65),
+    Some(wbtest_text_name("/A")),
+  )
+  let simple = wbtest_text_simple_font(PdfWinAnsiEncoding, None)
+  @test.assert_eq(
+    simple.pdf_text_glyphname_of_charcode(65),
+    Some(wbtest_text_name("/A")),
+  )
+  @test.assert_eq(simple.pdf_text_uses_symbol_codepoints(), false)
+
+  @test.assert_eq(
+    pdf_text_codepoint_of_punctuation_glyphname(
+      wbtest_text_name("/twosuperior"),
+    ),
+    Some(0x00B2),
+  )
+  @test.assert_eq(
+    pdf_text_codepoint_of_punctuation_glyphname(
+      wbtest_text_name("/threesuperior"),
+    ),
+    Some(0x00B3),
+  )
+  @test.assert_eq(
+    pdf_text_codepoint_of_punctuation_glyphname(
+      wbtest_text_name("/onesuperior"),
+    ),
+    Some(0x00B9),
+  )
+  @test.assert_eq(
+    pdf_text_codepoint_of_symbol_glyphname(wbtest_text_name("/logicalnot")),
+    Some(0x00AC),
+  )
+  @test.assert_eq(
+    pdf_text_codepoint_of_symbol_glyphname(wbtest_text_name("/degree")),
+    Some(0x00B0),
+  )
+  @test.assert_eq(
+    pdf_text_codepoint_of_symbol_glyphname(wbtest_text_name("/florin")),
+    Some(0x0192),
+  )
+  @test.assert_eq(
+    pdf_text_parse_hex_codepoint(@ascii.encode("D800")[:], 0, 4),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_uni_glyphname_codepoints(@ascii.encode("/uniD800")[:]),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_codepoints_of_glyphname(wbtest_text_name("/twosuperior.alt")),
+    Some([0x00B2]),
+  )
+  @test.assert_eq(
+    pdf_text_codepoints_of_glyphname(wbtest_text_name("/!")),
+    None,
+  )
+
+  let fallback_font = wbtest_text_simple_font(
+    PdfCustomEncoding(PdfImplicitInFontFile, [
+      { name: wbtest_text_name("/unknown"), code: 65 },
+    ]),
+    None,
+  )
+  let fallback_extractor = fallback_font.text_extractor()
+  @test.assert_eq(fallback_extractor.pdf_text_encoded_glyph_of_charcode(65), {
+    glyphname: wbtest_text_name("/unknown"),
+    codepoints: [65],
+  })
+
+  let invalid_tounicode = [(65, wbtest_text_bytes([0]))]
+  let invalid_font = wbtest_text_simple_font(
+    PdfWinAnsiEncoding,
+    Some({
+      ..pdf_text_empty_font_descriptor(),
+      tounicode: Some(invalid_tounicode),
+    }),
+  )
+  let invalid_extractor = invalid_font.text_extractor()
+  @test.assert_eq(
+    try! invalid_extractor.codepoints_of_text(wbtest_text_bytes([65])[:]),
+    [65],
+  )
+  @test.assert_eq(invalid_extractor.charcode_of_codepoint(65), None)
+
+  let tounicode = [(65, wbtest_text_bytes([0x00, 0x41]))]
+  let cid_font : PdfFont = PdfFontCIDKeyed({
+    basefont: wbtest_text_name("/Top"),
+    composite: {
+      cid_system_info: {
+        registry: wbtest_text_bytes([82]),
+        ordering: wbtest_text_bytes([79]),
+        supplement: 0,
+      },
+      cid_basefont: wbtest_text_name("/Descendant"),
+      cid_fontdescriptor: pdf_text_empty_font_descriptor(),
+      cid_widths: [],
+      cid_widths2: [],
+      cid_default_width: 1000.0,
+      cid_default_width2: [880.0, -1000.0],
+    },
+    encoding: PdfPredefinedCMap(wbtest_text_name("/Identity-H")),
+  })
+  let cid_with_tounicode = cid_font.pdf_text_with_tounicode(Some(tounicode))
+  @test.assert_eq(cid_with_tounicode.pdf_text_tounicode(), Some(tounicode))
+  let standard_font : PdfFont = PdfFontStandard({
+    font: PdfHelvetica,
+    encoding: PdfWinAnsiEncoding,
+  })
+  @test.assert_eq(
+    standard_font.pdf_text_with_tounicode(Some(tounicode)),
+    standard_font,
+  )
+  @test.assert_eq(pdf_text_hex_int_min2(7), "07")
+}

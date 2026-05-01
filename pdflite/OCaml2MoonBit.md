@@ -311,6 +311,17 @@ support pattern matching with rest patterns. Prefer passing or returning
 owned `Bytes` value is required. `BytesView::to_owned()` returns the original
 bytes for a whole view but allocates and copies for a partial slice.
 
+For byte-oriented section parsers, prefer one option-returning helper that both
+finds a marker and returns the remaining `BytesView`. This avoids the common
+porting shape `contains(marker)` followed by a second lookup with an unreachable
+`None` branch.
+
+```sh
+moon run -c $'fn after_ascii(line : BytesView, word : String) -> BytesView? { let needle = @ascii.encode(word); guard needle.length() > 0 && line.length() >= needle.length() else { return None }; for index in 0..=(line.length() - needle.length()) { let mut matched = true; for offset in 0..<needle.length() { if line[index + offset] != needle[offset] { matched = false } }; if matched { break Some(line[index + needle.length():]) } } nobreak { None } }\nfn main { let bytes = @ascii.encode("1 beginbfchar <41><0041>"); match after_ascii(bytes[:], "beginbfchar") { Some(rest) => println(rest[0].to_int()); None => println(-1) }; println(after_ascii(bytes[:], "missing") == None) }'
+# 32
+# true
+```
+
 ```sh
 moon run -c 'fn main { let data : Bytes = [60, 65, 62, 0, 12, 60, 66, 62]; println(data.length()); println(data[3].to_int()); println(data[4].to_int()); let view = data[5:]; match view { [60, 66, 62] => println("match"); _ => println("miss") } }'
 # 8

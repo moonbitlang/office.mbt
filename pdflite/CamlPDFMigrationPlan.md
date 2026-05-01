@@ -693,9 +693,13 @@ MoonBit consequences for this project:
     removes `pdf_fun.mbt` from the uncovered-line report by exercising sampled
     function option/default/error paths, interpolation and stitching dictionary
     validation, calculator parser errors, calculator evaluator stack/type
-    errors, and private sampled/stitching guard paths. A refreshed coverage
-    pass reports 83 uncovered lines in 2 files: the template executable
-    `cmd/main`, plus remaining branches in text handling.
+    errors, and private sampled/stitching guard paths. Text coverage now
+    removes `pdf_text.mbt` from the uncovered-line report by using the private
+    stream-returning decoder for ToUnicode streams, simplifying CMap marker
+    extraction, and covering malformed encodings, font descriptors, CID widths,
+    ToUnicode CMap parser guards, glyph fallback paths, and UTF-8 failure
+    modes. A refreshed coverage pass reports 1 uncovered line in 1 file: the
+    template executable `cmd/main`.
 
 ## Update Discipline
 
