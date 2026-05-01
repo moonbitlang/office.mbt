@@ -392,7 +392,11 @@ MoonBit consequences for this project:
    the same minimal subset as CamlPDF's current writer: zero placeholder font
    box/matrix/width entries, `CharProcs` names mapped to null glyph bodies,
    implicit-in-font-file encoding omission, and indirect custom encoding
-   dictionaries. ToUnicode CMap parsing remains deferred.
+   dictionaries. Embedded TrueType font writing is started for the cpdf-style
+   subset with `/FontFile2`, descriptor metrics, widths, predefined base
+   encodings, `FillUndefinedWithStandard` collapsed to its base encoding, and
+   optional object-number placement. ToUnicode CMap parsing and writing remain
+   deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

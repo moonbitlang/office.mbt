@@ -1538,6 +1538,130 @@ test "PdfDocument write_font writes Type3 custom encoding object" {
 }
 
 ///|
+test "PdfDocument write_font writes embedded TrueType fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let descriptor : @pdflite.PdfFontDescriptor = {
+    ..text_font_descriptor_for_test(),
+    ascent: 720.0,
+    descent: -180.0,
+    avgwidth: 501.0,
+    maxwidth: 1000.0,
+    flags: 32,
+    fontbbox: { min_x: -10.0, min_y: -200.0, max_x: 500.0, max_y: 700.0 },
+    italicangle: -12.0,
+    capheight: 680.0,
+    xheight: 450.0,
+    stemv: 90.0,
+    fontfile: Some(PdfFontFile2(9)),
+  }
+  let number = try! doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(text_name_for_test("/Subset+Custom")),
+      firstchar: 65,
+      lastchar: 66,
+      widths: [500, 610],
+      fontdescriptor: Some(descriptor),
+      fontmetrics: None,
+      encoding: PdfFillUndefinedWithStandard(PdfWinAnsiEncoding),
+    }),
+  )
+  @test.assert_eq(number, 2)
+  @test.assert_eq(
+    doc.lookup_object_or_null(1),
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Type"),
+        PdfNameObject(text_name_for_test("/FontDescriptor")),
+      ),
+      (
+        text_name_for_test("/FontName"),
+        PdfNameObject(text_name_for_test("/Subset+Custom")),
+      ),
+      (text_name_for_test("/Flags"), PdfInteger(32)),
+      (
+        text_name_for_test("/FontBBox"),
+        PdfArray([
+          PdfInteger(-10),
+          PdfInteger(-200),
+          PdfInteger(500),
+          PdfInteger(700),
+        ]),
+      ),
+      (text_name_for_test("/ItalicAngle"), PdfInteger(-12)),
+      (text_name_for_test("/Ascent"), PdfInteger(720)),
+      (text_name_for_test("/Descent"), PdfInteger(-180)),
+      (text_name_for_test("/CapHeight"), PdfInteger(680)),
+      (text_name_for_test("/StemV"), PdfInteger(90)),
+      (text_name_for_test("/XHeight"), PdfInteger(450)),
+      (text_name_for_test("/AvgWidth"), PdfInteger(501)),
+      (text_name_for_test("/MaxWidth"), PdfInteger(1000)),
+      (text_name_for_test("/FontFile2"), PdfIndirect(9)),
+    ]),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(number),
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Type"), PdfNameObject(text_name_for_test("/Font"))),
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/TrueType")),
+      ),
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Subset+Custom")),
+      ),
+      (text_name_for_test("/FontDescriptor"), PdfIndirect(1)),
+      (text_name_for_test("/FirstChar"), PdfInteger(65)),
+      (text_name_for_test("/LastChar"), PdfInteger(66)),
+      (
+        text_name_for_test("/Widths"),
+        PdfArray([PdfInteger(500), PdfInteger(610)]),
+      ),
+      (
+        text_name_for_test("/Encoding"),
+        PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+      ),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument write_font places embedded TrueType fonts at requested object number" {
+  let doc = @pdflite.pdf_document_empty()
+  let descriptor : @pdflite.PdfFontDescriptor = {
+    ..text_font_descriptor_for_test(),
+    fontfile: Some(PdfFontFile2(7)),
+  }
+  let number = try! doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(text_name_for_test("/Placed")),
+      firstchar: 0,
+      lastchar: 0,
+      widths: [300],
+      fontdescriptor: Some(descriptor),
+      fontmetrics: None,
+      encoding: PdfMacRomanEncoding,
+    }),
+    objnum=Some(20),
+  )
+  @test.assert_eq(number, 20)
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(20)
+    .lookup_immediate(text_name_for_test("/FontDescriptor")),
+    Some(PdfIndirect(1)),
+  )
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(20)
+    .lookup_immediate(text_name_for_test("/Encoding")),
+    Some(PdfNameObject(text_name_for_test("/MacRomanEncoding"))),
+  )
+}
+
+///|
 test "PdfDocument write_font rejects unsupported font variants" {
   let doc = @pdflite.pdf_document_empty()
   let unsupported = try? doc.write_font(
@@ -1593,6 +1717,39 @@ test "PdfDocument write_font rejects unsupported font variants" {
     }),
   )
   guard unsupported_encoding is Err(EncodingWriteUnsupported) else {
+    fail("expected EncodingWriteUnsupported")
+  }
+  let unsupported_truetype = try? doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(text_name_for_test("/MissingFontFile2")),
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: Some(text_font_descriptor_for_test()),
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+  )
+  guard unsupported_truetype is Err(FontWriteUnsupported) else {
+    fail("expected FontWriteUnsupported")
+  }
+  let unsupported_truetype_encoding = try? doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(text_name_for_test("/CustomEncoding")),
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: Some({
+        ..text_font_descriptor_for_test(),
+        fontfile: Some(PdfFontFile2(7)),
+      }),
+      fontmetrics: None,
+      encoding: PdfCustomEncoding(PdfImplicitInFontFile, []),
+    }),
+  )
+  guard unsupported_truetype_encoding is Err(EncodingWriteUnsupported) else {
     fail("expected EncodingWriteUnsupported")
   }
 }

@@ -1329,6 +1329,101 @@ fn PdfDocument::pdf_text_make_type3_font(
 }
 
 ///|
+fn pdf_text_integer_of_double(value : Double) -> PdfObject {
+  PdfInteger(value.to_int())
+}
+
+///|
+fn pdf_text_font_descriptor_bbox_object(fontbbox : PdfRectangle) -> PdfObject {
+  PdfArray([
+    pdf_text_integer_of_double(fontbbox.min_x),
+    pdf_text_integer_of_double(fontbbox.min_y),
+    pdf_text_integer_of_double(fontbbox.max_x),
+    pdf_text_integer_of_double(fontbbox.max_y),
+  ])
+}
+
+///|
+fn pdf_text_fontfile2_number(fontfile : PdfFontFile?) -> Int? {
+  match fontfile {
+    Some(PdfFontFile2(number)) => Some(number)
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_true_type_encoding_name(encoding : PdfEncoding) -> PdfName? {
+  match encoding {
+    PdfFillUndefinedWithStandard(base) => base.pdf_name()
+    _ => encoding.pdf_name()
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_make_true_type_font(
+  self : PdfDocument,
+  basefont : PdfName,
+  firstchar : Int,
+  lastchar : Int,
+  widths : Array[Int],
+  descriptor : PdfFontDescriptor,
+  encoding : PdfEncoding,
+) -> PdfObject raise PdfError {
+  let ttf = match pdf_text_fontfile2_number(descriptor.fontfile) {
+    Some(number) => number
+    None => raise FontWriteUnsupported
+  }
+  let encoding_name = match pdf_text_true_type_encoding_name(encoding) {
+    Some(name) => name
+    None => raise EncodingWriteUnsupported
+  }
+  let fontdescriptor = PdfDictionary([
+    (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/FontDescriptor"))),
+    (pdf_text_name("/FontName"), PdfNameObject(basefont)),
+    (pdf_text_name("/Flags"), PdfInteger(descriptor.flags)),
+    (
+      pdf_text_name("/FontBBox"),
+      pdf_text_font_descriptor_bbox_object(descriptor.fontbbox),
+    ),
+    (
+      pdf_text_name("/ItalicAngle"),
+      pdf_text_integer_of_double(descriptor.italicangle),
+    ),
+    (pdf_text_name("/Ascent"), pdf_text_integer_of_double(descriptor.ascent)),
+    (pdf_text_name("/Descent"), pdf_text_integer_of_double(descriptor.descent)),
+    (
+      pdf_text_name("/CapHeight"),
+      pdf_text_integer_of_double(descriptor.capheight),
+    ),
+    (pdf_text_name("/StemV"), pdf_text_integer_of_double(descriptor.stemv)),
+    (pdf_text_name("/XHeight"), pdf_text_integer_of_double(descriptor.xheight)),
+    (
+      pdf_text_name("/AvgWidth"),
+      pdf_text_integer_of_double(descriptor.avgwidth),
+    ),
+    (
+      pdf_text_name("/MaxWidth"),
+      pdf_text_integer_of_double(descriptor.maxwidth),
+    ),
+    (pdf_text_name("/FontFile2"), PdfIndirect(ttf)),
+  ])
+  let fontdescriptor_number = self.add_object(fontdescriptor)
+  PdfDictionary([
+    (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
+    (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/TrueType"))),
+    (pdf_text_name("/BaseFont"), PdfNameObject(basefont)),
+    (pdf_text_name("/FontDescriptor"), PdfIndirect(fontdescriptor_number)),
+    (pdf_text_name("/FirstChar"), PdfInteger(firstchar)),
+    (pdf_text_name("/LastChar"), PdfInteger(lastchar)),
+    (
+      pdf_text_name("/Widths"),
+      PdfArray([ for width in widths => PdfInteger(width) ]),
+    ),
+    (pdf_text_name("/Encoding"), PdfNameObject(encoding_name)),
+  ])
+}
+
+///|
 fn PdfDocument::pdf_text_add_font_object(
   self : PdfDocument,
   object : PdfObject,
@@ -1364,6 +1459,24 @@ pub fn PdfDocument::write_font(
           )
         None => raise FontWriteUnsupported
       }
+    PdfFontSimple(
+      {
+        fonttype: PdfTrueType,
+        basefont: Some(basefont),
+        firstchar,
+        lastchar,
+        widths,
+        fontdescriptor: Some(descriptor),
+        encoding,
+        ..,
+      }
+    ) =>
+      self.pdf_text_add_font_object(
+        self.pdf_text_make_true_type_font(
+          basefont, firstchar, lastchar, widths, descriptor, encoding,
+        ),
+        objnum,
+      )
     _ => raise FontWriteUnsupported
   }
 }
