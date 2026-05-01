@@ -397,6 +397,105 @@ test "PdfDocument postpend_operators avoids protection for empty content" {
 }
 
 ///|
+test "PdfDocument change_pages writes modified content into a replacement page tree" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops(page_hello_ops_for_test()),
+    ],
+    resources: page_hello_resources_for_test(),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let original_pages = try! doc.pages_of_pagetree()
+  let changed_page = try! doc.postpend_operators(original_pages[0], [Op_g(0.25)])
+  let changed = try! doc.change_pages([changed_page])
+  @test.assert_eq(
+    try! doc.parse_content_ops(original_pages[0].content),
+    page_hello_ops_for_test(),
+  )
+  let changed_pages = try! changed.pages_of_pagetree()
+  let expected_ops : Array[@pdflite.PdfContentOp] = [
+    Op_q,
+    ..page_hello_ops_for_test(),
+    Op_Q,
+    Op_g(0.25),
+  ]
+  @test.assert_eq(
+    try! changed.parse_content_ops(changed_pages[0].content),
+    expected_ops,
+  )
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(changed),
+  )
+  @test.assert_eq(
+    try! reparsed.parse_content_ops(
+      (try! reparsed.pages_of_pagetree())[0].content,
+    ),
+    expected_ops,
+  )
+}
+
+///|
+test "PdfDocument change_pages renumbers same-count page references" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_fit = page_name_for_test("/Fit")
+  let doc = @pdflite.pdf_document_empty()
+  let first = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let second = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    rotate: Rotate90,
+  }
+  let page_root = try! doc.add_pagetree([first, second])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([PdfIndirect(old_numbers[0]), PdfNameObject(type_fit)]),
+    ),
+  )
+  let changed = try! doc.change_pages(
+    try! doc.pages_of_pagetree(),
+    change_references=true,
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  @test.assert_eq(old_numbers.length(), 2)
+  @test.assert_eq(new_numbers.length(), 2)
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(PdfArray([PdfIndirect(new_numbers[0]), PdfNameObject(type_fit)])),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(doc.root()).lookup_immediate(key_open_action),
+    Some(PdfArray([PdfIndirect(old_numbers[0]), PdfNameObject(type_fit)])),
+  )
+}
+
+///|
+test "PdfDocument change_pages rejects reference renumbering when counts differ" {
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let result : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
+    [@pdflite.pdf_page_blank(@pdflite.paper_a4)],
+    change_references=true,
+  )
+  guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected")
+  }
+}
+
+///|
 test "PdfDocument page_reference_numbers reports missing catalog object" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(99)

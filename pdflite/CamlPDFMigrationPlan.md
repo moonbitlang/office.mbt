@@ -263,6 +263,11 @@ MoonBit consequences for this project:
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
    Page content mutation is started with `protect`, `prepend_operators`, and
    `postpend_operators` helpers over `PdfContentOp` streams.
+   Page replacement is now started with a `change_pages` slice that builds a
+   replacement page tree in a copied document and can renumber same-count old
+   page indirect references to the new page objects. CamlPDF's matrix-aware
+   bookmark, annotation, and `/OpenAction` destination transforms remain
+   deferred.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and

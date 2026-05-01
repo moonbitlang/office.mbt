@@ -407,6 +407,8 @@ pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
+pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool) -> Self raise PdfError
+pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise PdfError

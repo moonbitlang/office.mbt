@@ -86,3 +86,31 @@ test "PdfDocument object helpers delegate to document object state" {
     (1, ObjectDeleted),
   ])
 }
+
+///|
+test "PdfDocument copy preserves metadata and separates object map state" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  doc.set_root(4)
+  doc.set_was_linearized(true)
+  doc.set_first_xref(256)
+  doc.set_revision_read(3)
+  doc.add_object_given_number(4, PdfDictionary([]), generation=2)
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (@pdflite.pdf_name_of_bytes(@ascii.encode("/Root")), PdfIndirect(4)),
+    ]),
+  )
+  let copied = doc.copy()
+  @test.assert_eq(copied.version(), (1, 6))
+  @test.assert_eq(copied.root(), 4)
+  @test.assert_eq(copied.was_linearized(), true)
+  @test.assert_eq(copied.first_xref(), 256)
+  @test.assert_eq(copied.revision_read(), 3)
+  @test.assert_eq(copied.trailer_dict(), doc.trailer_dict())
+  @test.assert_eq(copied.lookup_object_or_null(4), PdfDictionary([]))
+  copied.add_object_given_number(9, PdfInteger(9))
+  copied.remove_object(4)
+  @test.assert_eq(doc.object_numbers(), [4])
+  @test.assert_eq(copied.object_numbers(), [9])
+}

@@ -619,6 +619,123 @@ pub fn PdfDocument::postpend_operators(
 }
 
 ///|
+fn pdf_page_changed_reference(
+  changes : ArrayView[(Int, Int)],
+  number : Int,
+) -> Int {
+  for change in changes {
+    let (old_number, new_number) = change
+    if number == old_number {
+      break new_number
+    }
+  } nobreak {
+    number
+  }
+}
+
+///|
+fn pdf_page_renumber_object(
+  object : PdfObject,
+  changes : ArrayView[(Int, Int)],
+) -> PdfObject {
+  match object {
+    PdfIndirect(number) =>
+      PdfIndirect(pdf_page_changed_reference(changes, number))
+    PdfArray(items) => {
+      let output : Array[PdfObject] = []
+      for item in items {
+        output.push(pdf_page_renumber_object(item, changes))
+      }
+      PdfArray(output)
+    }
+    PdfDictionary(entries) => {
+      let output : Array[(PdfName, PdfObject)] = []
+      for entry in entries {
+        let (key, value) = entry
+        output.push((key, pdf_page_renumber_object(value, changes)))
+      }
+      PdfDictionary(output)
+    }
+    PdfStreamObject(stream) =>
+      PdfStreamObject({
+        dictionary: pdf_page_renumber_object(stream.dictionary, changes),
+        data: stream.data,
+      })
+    _ => object
+  }
+}
+
+///|
+fn pdf_page_renumber_entry(
+  entry : PdfObjectEntry,
+  changes : ArrayView[(Int, Int)],
+) -> PdfObjectEntry {
+  match entry.data {
+    ObjectParsed(object) =>
+      {
+        data: ObjectParsed(pdf_page_renumber_object(object, changes)),
+        generation: entry.generation,
+      }
+    ObjectParsedAlreadyDecrypted(object) =>
+      {
+        data: ObjectParsedAlreadyDecrypted(
+          pdf_page_renumber_object(object, changes),
+        ),
+        generation: entry.generation,
+      }
+    _ => { data: entry.data, generation: entry.generation }
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_renumber_references(
+  self : PdfDocument,
+  changes : ArrayView[(Int, Int)],
+) -> Unit {
+  for number in self.object_numbers() {
+    match self.objects.get_entry(number) {
+      Some(entry) =>
+        self.objects.set_entry(number, pdf_page_renumber_entry(entry, changes))
+      None => ()
+    }
+  }
+}
+
+///|
+fn pdf_page_reference_changes(
+  old_numbers : ArrayView[Int],
+  new_numbers : ArrayView[Int],
+) -> Array[(Int, Int)] raise PdfError {
+  if old_numbers.length() != new_numbers.length() {
+    raise PageTreeExpected
+  }
+  let changes : Array[(Int, Int)] = []
+  for i in 0..<old_numbers.length() {
+    changes.push((old_numbers[i], new_numbers[i]))
+  }
+  changes
+}
+
+///|
+pub fn PdfDocument::change_pages(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+  change_references? : Bool = false,
+) -> PdfDocument raise PdfError {
+  let old_page_numbers = self.page_reference_numbers()
+  let pdf = self.copy()
+  let page_root_number = pdf.add_pagetree(pages)
+  ignore(pdf.add_root(page_root_number, []))
+  if change_references {
+    let new_page_numbers = pdf.page_reference_numbers()
+    pdf.pdf_page_renumber_references(
+      pdf_page_reference_changes(old_page_numbers, new_page_numbers),
+    )
+  }
+  pdf
+}
+
+///|
 fn pdf_page_reference_numbers_inner(
   pdf : PdfDocument,
   pages_node : PdfObject,

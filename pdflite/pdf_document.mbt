@@ -102,6 +102,22 @@ pub fn PdfObjectMap::object_numbers(self : PdfObjectMap) -> Array[Int] {
 }
 
 ///|
+fn PdfObjectMap::copy(self : PdfObjectMap) -> PdfObjectMap {
+  let output = pdf_object_map_empty()
+  for number in self.object_numbers() {
+    match self.get_entry(number) {
+      Some(entry) =>
+        output.set_entry(number, {
+          data: entry.data,
+          generation: entry.generation,
+        })
+      None => ()
+    }
+  }
+  output
+}
+
+///|
 pub fn PdfObjectMap::lookup_parsed_or_null(
   self : PdfObjectMap,
   number : Int,
@@ -131,6 +147,23 @@ pub fn PdfObjects::length(self : PdfObjects) -> Int {
 ///|
 pub fn PdfObjects::object_numbers(self : PdfObjects) -> Array[Int] {
   self.object_map.object_numbers()
+}
+
+///|
+fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
+  let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  for number in self.object_stream_ids.keys().to_array() {
+    match self.object_stream_ids.get(number) {
+      Some(id) => object_stream_ids[number] = id
+      None => ()
+    }
+  }
+  {
+    max_object_number: self.max_object_number,
+    object_map: self.object_map.copy(),
+    object_stream_ids,
+    log: self.log.copy(),
+  }
 }
 
 ///|
@@ -210,6 +243,20 @@ pub fn pdf_document_empty() -> PdfDocument {
     was_linearized: false,
     first_xref: 0,
     revision_read: 1,
+  }
+}
+
+///|
+pub fn PdfDocument::copy(self : PdfDocument) -> PdfDocument {
+  {
+    major: self.major,
+    minor: self.minor,
+    root: self.root,
+    objects: self.objects.copy(),
+    trailer_dict: self.trailer_dict,
+    was_linearized: self.was_linearized,
+    first_xref: self.first_xref,
+    revision_read: self.revision_read,
   }
 }
 
