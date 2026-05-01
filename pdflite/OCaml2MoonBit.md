@@ -407,6 +407,23 @@ expression. If you deliberately match the result of `try? expr`, wrap the
 not valid syntax.
 
 ```sh
+moon run -c 'suberror E { A; B }
+fn f(kind : Int) -> Int raise E { if kind == 1 { raise A }; if kind == 2 { raise B }; 1 }
+fn g(kind : Int) -> Int raise E { f(kind) catch { A => 2; error => raise error } }
+fn main { let r : Result[Int, Error] = try? f(1); match r { Err(E::A) => println("try?"); _ => println("other") }; println(g(0) catch { _ => -1 }); println(g(1) catch { _ => -1 }); println(g(2) catch { B => 3; _ => -1 }) }'
+# try?
+# 1
+# 2
+# 3
+```
+
+`try? expr` materializes failures as `Result[T, Error]`, which is convenient in
+tests and probes but loses the narrower suberror type for re-raising. In
+ordinary ported code that catches one constructor and propagates the rest, use
+`expr catch { SpecificError => fallback; error => raise error }` so the
+function can keep `raise ProjectError`.
+
+```sh
 moon run -c 'enum E { A(Int); B }
 fn f(e : E) -> Int { match e { A(n) if n > 0 => n; _ => 0 } }
 fn main { println(f(A(3))); println(f(A(-1))); println(f(B)) }'
