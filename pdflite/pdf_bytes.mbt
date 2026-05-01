@@ -1,6 +1,9 @@
 ///|
 pub(all) suberror PdfError {
   InvalidByte(Int)
+  InvalidCursorPosition(Int)
+  InvalidReadLength(Int)
+  EndOfInput
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -20,6 +23,11 @@ pub fn pdf_byte_of_int(value : Int) -> Byte raise PdfError {
 ///|
 pub fn pdf_bytes_of_array_view(values : ArrayView[Byte]) -> PdfBytes {
   Bytes::from_array(values)
+}
+
+///|
+pub fn pdf_bytes_of_view(values : BytesView) -> PdfBytes {
+  values.to_owned()
 }
 
 ///|

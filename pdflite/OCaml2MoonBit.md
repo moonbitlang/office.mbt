@@ -86,7 +86,10 @@ fn main { let bytes : Bytes = [65, 66, 67]; let view = bytes[:2]; println(view.l
 
 Use `BytesView` for read-only byte slices. It is the byte-sequence counterpart
 to `ArrayView`: views are cheap slices, expose read-only byte operations, and
-support pattern matching with rest patterns.
+support pattern matching with rest patterns. Prefer passing or returning
+`BytesView` while data can remain borrowed; call `.to_owned()` only when an
+owned `Bytes` value is required. `BytesView::to_owned()` returns the original
+bytes for a whole view but allocates and copies for a partial slice.
 
 ```sh
 moon run -c 'fn main { let fixed : FixedArray[Int] = [1, 2, 3]; let doubled = [ for x in fixed => x * 2 ]; println(doubled.length()); println(doubled[2]) }'

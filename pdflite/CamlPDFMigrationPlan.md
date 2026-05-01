@@ -116,7 +116,11 @@ MoonBit consequences for this project:
    builders, copy/freeze helpers, input position/source labels, `peek`, `read`,
    `rewind`, `nudge`, line reading, EOF behavior, and bitstream read/write.
    Keep this synchronous and in-memory. Add white-box tests for offset
-   accounting and black-box tests for public byte helpers.
+   accounting and black-box tests for public byte helpers. Prefer `BytesView`
+   return values for slices and call `.to_owned()` only for explicit ownership
+   boundaries.
+   Status: started with `ByteCursor` backed by `BytesView`, byte/line reads,
+   offset handling, checked cursor errors, and black-box tests.
 
 2. Small pure support modules.
    Port `.repos/pdftransform`, `.repos/pdfunits`, `.repos/pdfpaper`, and the
