@@ -266,6 +266,43 @@ test "PdfDocument get_image_24bpp reads raw ICCBased images through alternate sp
 }
 
 ///|
+test "PdfDocument get_image_24bpp reads Separation images with Type 2 CMYK tint" {
+  let doc = @pdflite.pdf_document_empty()
+  let tint_function = @pdflite.pdf_dictionary([
+    (image_name_for_test("/FunctionType"), PdfInteger(2)),
+    (image_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (
+      image_name_for_test("/C0"),
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(0), PdfInteger(0)]),
+    ),
+    (
+      image_name_for_test("/C1"),
+      PdfArray([PdfInteger(0), PdfInteger(1), PdfInteger(0), PdfInteger(0)]),
+    ),
+    (image_name_for_test("/N"), PdfInteger(1)),
+  ])
+  let separation : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Separation")),
+    PdfNameObject(image_name_for_test("/Spot")),
+    PdfNameObject(image_name_for_test("/DeviceCMYK")),
+    tint_function,
+  ])
+  let image = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), separation),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([255])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([255, 255, 0])),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
   let doc = @pdflite.pdf_document_empty()
   let mask = @pdflite.pdf_stream(

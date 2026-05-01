@@ -151,6 +151,14 @@ overflow, infinity, or zero scales, validate the exact edge behavior with a
 small `moon run -c` probe and cover the branch directly.
 
 ```sh
+moon run -c 'fn main { println(@math.pow(0.5, 2.0)) }'
+# 0.25
+```
+
+MoonBit does not use OCaml's floating exponentiation operator `**`. Use
+`@math.pow(base, exponent)` when porting OCaml `float ** float` calculations.
+
+```sh
 moon run -c 'fn main { let r : Ref[Int] = Ref::{ val: 0 }; r.val += 1; let xs = [1, 2, 3]; xs[0] = 9; println(r.val); println(xs[0]) }'
 # 1
 # 9

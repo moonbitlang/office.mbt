@@ -89,6 +89,36 @@ fn pdf_image_jbig2_globals_key() -> PdfName {
 }
 
 ///|
+fn pdf_image_function_type_key() -> PdfName {
+  pdf_image_name("/FunctionType")
+}
+
+///|
+fn pdf_image_domain_key() -> PdfName {
+  pdf_image_name("/Domain")
+}
+
+///|
+fn pdf_image_range_key() -> PdfName {
+  pdf_image_name("/Range")
+}
+
+///|
+fn pdf_image_c0_key() -> PdfName {
+  pdf_image_name("/C0")
+}
+
+///|
+fn pdf_image_c1_key() -> PdfName {
+  pdf_image_name("/C1")
+}
+
+///|
+fn pdf_image_n_key() -> PdfName {
+  pdf_image_name("/N")
+}
+
+///|
 fn pdf_image_dctdecode_name() -> PdfName {
   pdf_image_name("/DCTDecode")
 }
@@ -386,6 +416,140 @@ fn pdf_image_require_size(
 ) -> Unit raise PdfError {
   if data.length() < required {
     raise EndOfInput
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_number_array(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Array[Double] raise PdfError {
+  match self.direct(object) {
+    PdfArray(values) => {
+      let output : Array[Double] = []
+      for value in values {
+        output.push(self.get_number(value))
+      }
+      output
+    }
+    _ => raise NumberExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_lookup_number_array_or(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  key : PdfName,
+  default : ArrayView[Double],
+) -> Array[Double] raise PdfError {
+  match self.lookup_direct(key, dictionary) {
+    Some(value) => self.pdf_image_number_array(value)
+    None => [ for value in default => value ]
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_lookup_required_number_array(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  key : PdfName,
+) -> Array[Double] raise PdfError {
+  match self.lookup_direct(key, dictionary) {
+    Some(value) => self.pdf_image_number_array(value)
+    None => raise DictionaryKeyNotFound(key)
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_lookup_required_number(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  key : PdfName,
+) -> Double raise PdfError {
+  match self.lookup_direct(key, dictionary) {
+    Some(value) => self.get_number(value)
+    None => raise DictionaryKeyNotFound(key)
+  }
+}
+
+///|
+fn pdf_image_clamp(value : Double, low : Double, high : Double) -> Double {
+  if value < low {
+    low
+  } else if value > high {
+    high
+  } else {
+    value
+  }
+}
+
+///|
+fn pdf_image_clamp_to_range(
+  values : Array[Double],
+  range : ArrayView[Double],
+) -> Array[Double] raise PdfError {
+  if range.length() != values.length() * 2 {
+    raise FilterExpected
+  }
+  let output : Array[Double] = []
+  for index in 0..<values.length() {
+    output.push(
+      pdf_image_clamp(values[index], range[index * 2], range[index * 2 + 1]),
+    )
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_image_eval_type2_function(
+  self : PdfDocument,
+  function_object : PdfObject,
+  input : Double,
+) -> Array[Double] raise PdfError {
+  let function_dictionary = self.direct(function_object)
+  match self.lookup_direct(pdf_image_function_type_key(), function_dictionary) {
+    Some(PdfInteger(2)) => ()
+    Some(_) => raise NumberExpected
+    None => raise DictionaryKeyNotFound(pdf_image_function_type_key())
+  }
+  let domain = self.pdf_image_lookup_required_number_array(
+    function_dictionary,
+    pdf_image_domain_key(),
+  )
+  if domain.length() < 2 {
+    raise FilterExpected
+  }
+  let c0 = self.pdf_image_lookup_number_array_or(
+    function_dictionary,
+    pdf_image_c0_key(),
+    [0.0],
+  )
+  let c1 = self.pdf_image_lookup_number_array_or(
+    function_dictionary,
+    pdf_image_c1_key(),
+    [1.0],
+  )
+  if c0.length() != c1.length() {
+    raise FilterExpected
+  }
+  let n = self.pdf_image_lookup_required_number(
+    function_dictionary,
+    pdf_image_n_key(),
+  )
+  let clamped_input = pdf_image_clamp(input, domain[0], domain[1])
+  let factor = @math.pow(clamped_input, n)
+  let output : Array[Double] = []
+  for index in 0..<c0.length() {
+    output.push(c0[index] + factor * (c1[index] - c0[index]))
+  }
+  match self.lookup_direct(pdf_image_range_key(), function_dictionary) {
+    Some(range_object) =>
+      pdf_image_clamp_to_range(
+        output,
+        self.pdf_image_number_array(range_object),
+      )
+    None => output
   }
 }
 
@@ -789,7 +953,39 @@ fn pdf_image_cmyk_indexed_4bpp_as_rgb24(
 }
 
 ///|
-fn pdf_image_raw_colour_space_as_rgb24(
+fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
+  self : PdfDocument,
+  width : Int,
+  height : Int,
+  tint : PdfObject,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let pixels = width * height
+  pdf_image_require_size(data, pixels)
+  let output : Array[Byte] = []
+  for index in 0..<pixels {
+    let values = self.pdf_image_eval_type2_function(
+      tint,
+      data[index].to_double() / 255.0,
+    )
+    if values.length() != 4 {
+      raise FilterExpected
+    }
+    let c = (values[0] * 255.0).to_int()
+    let m = (values[2] * 255.0).to_int()
+    let y = (values[1] * 255.0).to_int()
+    let k = (values[3] * 255.0).to_int()
+    let (red, green, blue) = pdf_image_rgb_of_cmyk(c, m, y, k)
+    output.push(pdf_byte_of_int(red))
+    output.push(pdf_byte_of_int(green))
+    output.push(pdf_byte_of_int(blue))
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
+  self : PdfDocument,
   width : Int,
   height : Int,
   colour_space : PdfColourSpace,
@@ -875,8 +1071,17 @@ fn pdf_image_raw_colour_space_as_rgb24(
           )
         _ => raise FilterExpected
       }
+    (PdfSeparation(_, PdfDeviceCMYK, tint), Some(8)) =>
+      PdfRawImage(
+        width,
+        height,
+        PdfBPP24,
+        self.pdf_image_separation_cmyk_8bpp_as_rgb24(width, height, tint, data),
+      )
     (PdfICCBased(_, alternate, _, _, _), _) =>
-      pdf_image_raw_colour_space_as_rgb24(width, height, alternate, bpc, data)
+      self.pdf_image_raw_colour_space_as_rgb24(
+        width, height, alternate, bpc, data,
+      )
     _ => raise FilterExpected
   }
 }
@@ -890,7 +1095,7 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
   dictionary : PdfObject,
   data : BytesView,
 ) -> PdfImage raise PdfError {
-  pdf_image_raw_colour_space_as_rgb24(
+  self.pdf_image_raw_colour_space_as_rgb24(
     width,
     height,
     self.image_colour_space(dictionary, resources),
