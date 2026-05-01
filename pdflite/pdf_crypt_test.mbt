@@ -88,6 +88,32 @@ fn crypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn crypt_aesv3_r5_permissions_for_test(
+  permissions? : Int = -3904,
+  encrypt_metadata? : Bool = true,
+) -> @pdflite.PdfBytes {
+  let block : Array[Byte] = []
+  for shift in [0, 8, 16, 24] {
+    block.push(((permissions >> shift) & 0xff).to_byte())
+  }
+  for _ in 0..<4 {
+    block.push((255).to_byte())
+  }
+  block.push(if encrypt_metadata { b'T' } else { b'F' })
+  block.push(b'a')
+  block.push(b'd')
+  block.push(b'b')
+  for _ in 0..<4 {
+    block.push(b'\x00')
+  }
+  let block_bytes = Bytes::from_array(block)
+  try! @pdflite.pdf_aes_encrypt_block(
+    crypt_aesv3_r5_file_key_for_test()[:],
+    block_bytes[:],
+  )
+}
+
+///|
 fn crypt_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -559,6 +585,10 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
           crypt_name_for_test("/OE"),
           PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
         ),
+        (
+          crypt_name_for_test("/Perms"),
+          PdfString(crypt_aesv3_r5_permissions_for_test()),
+        ),
       ],
       owner_entry,
       user_entry,
@@ -599,6 +629,182 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
     try! values.file_key_for_owner_password(@ascii.encode("bad")[:]),
     None,
   )
+
+  let missing_perms_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/UE"),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+        ),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let missing_perms = try! missing_perms_doc.encryption_values()
+  let missing_perms_result : Result[@pdflite.PdfBytes?, Error] = try? missing_perms.file_key_for_user_password(
+    @ascii.encode("user")[:],
+  )
+  guard missing_perms_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    name == crypt_name_for_test("/Perms") else {
+    fail("expected missing AESV3 /Perms")
+  }
+
+  let short_perms_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/UE"),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+        ),
+        (crypt_name_for_test("/Perms"), PdfString(Bytes::new(15))),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let short_perms = try! short_perms_doc.encryption_values()
+  let short_perms_result : Result[@pdflite.PdfBytes?, Error] = try? short_perms.file_key_for_user_password(
+    @ascii.encode("user")[:],
+  )
+  guard short_perms_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_name_for_test("/Perms") else {
+    fail("expected short AESV3 /Perms")
+  }
+
+  let corrupt_perms_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/UE"),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+        ),
+        (crypt_name_for_test("/Perms"), PdfString(Bytes::new(16))),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let corrupt_perms = try! corrupt_perms_doc.encryption_values()
+  let corrupt_perms_result : Result[@pdflite.PdfBytes?, Error] = try? corrupt_perms.file_key_for_user_password(
+    @ascii.encode("user")[:],
+  )
+  guard corrupt_perms_result
+    is Err(@pdflite.PdfError::EncryptionPermissionsCorrupt) else {
+    fail("expected corrupt AESV3 /Perms")
+  }
+
+  let mismatched_perms_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/UE"),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+        ),
+        (
+          crypt_name_for_test("/Perms"),
+          PdfString(crypt_aesv3_r5_permissions_for_test(permissions=-4)),
+        ),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let mismatched_perms = try! mismatched_perms_doc.encryption_values()
+  let mismatched_perms_result : Result[@pdflite.PdfBytes?, Error] = try? mismatched_perms.file_key_for_owner_password(
+    @ascii.encode("owner")[:],
+  )
+  guard mismatched_perms_result
+    is Err(@pdflite.PdfError::EncryptionPermissionsMismatch(-4, -3904)) else {
+    fail("expected mismatched AESV3 /Perms")
+  }
 
   let missing_ue_doc = crypt_doc_with_encrypt_for_test(
     crypt_standard_encrypt_dictionary_values_for_test(
@@ -1217,6 +1423,10 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
       (
         crypt_name_for_test("/OE"),
         PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+      ),
+      (
+        crypt_name_for_test("/Perms"),
+        PdfString(crypt_aesv3_r5_permissions_for_test()),
       ),
     ],
     owner_entry,

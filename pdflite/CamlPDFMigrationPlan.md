@@ -541,6 +541,8 @@ MoonBit consequences for this project:
     ARC4 revisions 2/3 and AESV2 revision 4. AESV3 revision 5 SHA-256
     user-password and owner-password authentication is also started, including
     `/UE` and `/OE` file-key unwrap through AES-256-CBC with no padding.
+    AESV3 `/Perms` parsing and validation is started for revision 5 file-key
+    unwraps, including missing, short, corrupt marker, and `/P` mismatch errors.
     Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
     structured unsupported errors until the remaining primitives are available.
     The document-level decryption entry points for parsed ARC4 and AESV2

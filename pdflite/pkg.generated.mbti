@@ -406,6 +406,8 @@ pub(all) suberror PdfError {
   EncryptionIDExpected
   EncryptionAuthenticationUnsupported(PdfCryptType)
   EncryptionObjectCryptUnsupported(PdfCryptType)
+  EncryptionPermissionsCorrupt
+  EncryptionPermissionsMismatch(Int, Int)
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported
@@ -953,6 +955,7 @@ pub(all) struct PdfEncryptionValues {
   permissions : Int
   file_id : Bytes
   encrypt_metadata : Bool
+  permissions_entry : Bytes?
   user_encryption_key : Bytes?
   owner_encryption_key : Bytes?
 } derive(Eq, ToJson, @debug.Debug)

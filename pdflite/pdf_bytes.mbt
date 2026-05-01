@@ -57,6 +57,8 @@ pub(all) suberror PdfError {
   EncryptionIDExpected
   EncryptionAuthenticationUnsupported(PdfCryptType)
   EncryptionObjectCryptUnsupported(PdfCryptType)
+  EncryptionPermissionsCorrupt
+  EncryptionPermissionsMismatch(Int, Int)
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported

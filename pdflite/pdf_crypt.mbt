@@ -18,6 +18,7 @@ pub(all) struct PdfEncryptionValues {
   permissions : Int
   file_id : PdfBytes
   encrypt_metadata : Bool
+  permissions_entry : PdfBytes?
   user_encryption_key : PdfBytes?
   owner_encryption_key : PdfBytes?
 } derive(Debug, Eq, ToJson)
@@ -240,6 +241,11 @@ pub fn PdfDocument::encryption_values(
     permissions,
     file_id,
     encrypt_metadata,
+    permissions_entry: pdf_crypt_lookup_string(
+      self,
+      pdf_crypt_name("/Perms"),
+      encrypt_dictionary,
+    ),
     user_encryption_key: pdf_crypt_lookup_string(
       self,
       pdf_crypt_name("/UE"),
@@ -312,12 +318,19 @@ pub fn PdfEncryptionValues::file_key_for_user_password(
   )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
-      pdf_file_key_for_user_password_aesv3(
-        iso,
-        password,
-        self.user_entry[:],
-        self.user_encryption_key,
-      )
+      match
+        pdf_file_key_for_user_password_aesv3(
+          iso,
+          password,
+          self.user_entry[:],
+          self.user_encryption_key,
+        ) {
+        Some(key) => {
+          self.validate_aesv3_permissions(key[:])
+          Some(key)
+        }
+        None => None
+      }
     _ => {
       let (revision, key_length_bits) = self.password_settings()
       if pdf_authenticate_user_password(
@@ -392,13 +405,20 @@ pub fn PdfEncryptionValues::file_key_for_owner_password(
   )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
-      pdf_file_key_for_owner_password_aesv3(
-        iso,
-        password,
-        self.user_entry[:],
-        self.owner_entry[:],
-        self.owner_encryption_key,
-      )
+      match
+        pdf_file_key_for_owner_password_aesv3(
+          iso,
+          password,
+          self.user_entry[:],
+          self.owner_entry[:],
+          self.owner_encryption_key,
+        ) {
+        Some(key) => {
+          self.validate_aesv3_permissions(key[:])
+          Some(key)
+        }
+        None => None
+      }
     _ => {
       let (revision, key_length_bits) = self.password_settings()
       let user_password = pdf_user_password_from_owner_password(
@@ -648,6 +668,51 @@ fn pdf_aesv3_unwrap_file_key(
   let zero_iv = Bytes::new(16)
   let data = pdf_crypt_concat_bytes([zero_iv[:], encrypted_key[:]])
   pdf_aes_cbc_decrypt(digest[:], data[:], remove_padding=false)
+}
+
+///|
+fn pdf_aesv3_permissions_key() -> PdfName {
+  pdf_crypt_name("/Perms")
+}
+
+///|
+fn pdf_aesv3_permissions_from_entry(
+  file_key : BytesView,
+  permissions_entry : BytesView,
+) -> Int raise PdfError {
+  if permissions_entry.length() < 16 {
+    raise EncryptionDictionaryEntryTooShort(pdf_aesv3_permissions_key())
+  }
+  let decrypted = pdf_aes_ecb_decrypt(
+    file_key,
+    permissions_entry[:16],
+    remove_padding=false,
+  )
+  guard decrypted[9] == b'a' && decrypted[10] == b'd' && decrypted[11] == b'b' else {
+    raise EncryptionPermissionsCorrupt
+  }
+  decrypted[0].to_int() |
+  (decrypted[1].to_int() << 8) |
+  (decrypted[2].to_int() << 16) |
+  (decrypted[3].to_int() << 24)
+}
+
+///|
+fn PdfEncryptionValues::validate_aesv3_permissions(
+  self : PdfEncryptionValues,
+  file_key : BytesView,
+) -> Unit raise PdfError {
+  let permissions_entry = match self.permissions_entry {
+    Some(value) => value
+    None => raise EncryptionDictionaryEntryExpected(pdf_aesv3_permissions_key())
+  }
+  let permissions = pdf_aesv3_permissions_from_entry(
+    file_key,
+    permissions_entry[:],
+  )
+  if permissions != self.permissions {
+    raise EncryptionPermissionsMismatch(permissions, self.permissions)
+  }
 }
 
 ///|
