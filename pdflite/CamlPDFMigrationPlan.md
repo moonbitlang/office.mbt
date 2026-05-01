@@ -732,9 +732,11 @@ MoonBit consequences for this project:
     trailer info retention now
     preserves the first available `/Info` dictionary through the merged trailer.
     Safe catalog-entry retention now carries first-seen non-page/non-handled
-    catalog entries, such as viewer
-    preferences, while dropping `/OpenAction` and other entries that require
-    dedicated merge semantics. Duplicate-font removal is started with
+    catalog entries, such as viewer preferences. Catalog `/OpenAction`
+    retention is now started behind the same flag: the merge keeps the first
+    valid destination/action that still targets a retained page and retargets
+    its page reference to the merged page tree. Duplicate-font removal is
+    started with
     CamlPDF-style identical owned-stream coalescing: references to duplicate
     `StreamGot` objects are rewritten to the first matching stream, and
     `pdf_merge_documents` can run this pass behind an explicit option. Generic

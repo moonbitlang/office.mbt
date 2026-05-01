@@ -768,6 +768,86 @@ test "pdf_merge_documents retains safe catalog entries" {
 }
 
 ///|
+test "pdf_merge_documents retains and retargets OpenAction destinations" {
+  let key_open_action = merge_name_for_test("/OpenAction")
+  let type_fit = merge_name_for_test("/Fit")
+  let first = merge_one_page_doc_for_test(1, 4)
+  let first_page_refs = try! first.page_reference_numbers()
+  let open_action : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(first_page_refs[0]),
+    PdfNameObject(type_fit),
+  ])
+  let first = merge_add_catalog_entry_for_test(
+    first, key_open_action, open_action,
+  )
+  let second = merge_one_page_doc_for_test(1, 4)
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let merged_page_refs = try! merged.page_reference_numbers()
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_open_action),
+    Some(PdfArray([PdfIndirect(merged_page_refs[0]), PdfNameObject(type_fit)])),
+  )
+  let without_open_action = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_catalog_entries=false,
+  )
+  let root = without_open_action.lookup_object_or_null(
+    without_open_action.root(),
+  )
+  @test.assert_eq(root.lookup_immediate(key_open_action), None)
+}
+
+///|
+test "pdf_merge_documents keeps first valid OpenAction action" {
+  let key_open_action = merge_name_for_test("/OpenAction")
+  let key_s = merge_name_for_test("/S")
+  let key_d = merge_name_for_test("/D")
+  let type_goto = merge_name_for_test("/GoTo")
+  let type_fit = merge_name_for_test("/Fit")
+  let first = merge_add_catalog_entry_for_test(
+    merge_one_page_doc_for_test(1, 4),
+    key_open_action,
+    PdfString(@ascii.encode("drop")),
+  )
+  let second = merge_one_page_doc_for_test(1, 4)
+  let second_page_refs = try! second.page_reference_numbers()
+  let open_action : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfNameObject(type_goto)),
+    (
+      key_d,
+      PdfArray([PdfIndirect(second_page_refs[0]), PdfNameObject(type_fit)]),
+    ),
+  ])
+  let second = merge_add_catalog_entry_for_test(
+    second, key_open_action, open_action,
+  )
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let merged_page_refs = try! merged.page_reference_numbers()
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_open_action),
+    Some(
+      PdfDictionary([
+        (key_s, PdfNameObject(type_goto)),
+        (
+          key_d,
+          PdfArray([PdfIndirect(merged_page_refs[1]), PdfNameObject(type_fit)]),
+        ),
+      ]),
+    ),
+  )
+  guard root.lookup_immediate(key_open_action) is Some(action) else {
+    fail("expected OpenAction")
+  }
+  @test.assert_eq(
+    try! merged.page_number_of_target(try! merged.read_destination(action)),
+    2,
+  )
+}
+
+///|
 test "pdf_merge_documents rewrites retained page references to merged pages" {
   let key_first_reference = merge_name_for_test("/PieceInfo")
   let key_second_reference = merge_name_for_test("/Metadata")

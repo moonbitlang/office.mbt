@@ -704,6 +704,50 @@ fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
 }
 
 ///|
+fn PdfDocument::pdf_merge_open_action_destination(
+  self : PdfDocument,
+  open_action : PdfObject,
+) -> PdfDestination raise PdfError {
+  match self.direct(open_action) {
+    PdfArray(_) as destination =>
+      self.read_destination(destination, shallow=true)
+    PdfDictionary(_) as action => DestAction(action)
+    _ => DestNull
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_open_action(
+  self : PdfDocument,
+) -> PdfObject? raise PdfError {
+  match self.pdf_merge_catalog_entry(pdf_merge_open_action_key()) {
+    Some(open_action) => {
+      let destination = self.pdf_merge_open_action_destination(open_action)
+      if self.page_number_of_target(destination) > 0 {
+        Some(open_action)
+      } else {
+        None
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn pdf_merge_open_action(
+  documents : ArrayView[PdfDocument],
+) -> PdfObject? raise PdfError {
+  for document in documents {
+    match document.pdf_merge_open_action() {
+      Some(open_action) => break Some(open_action)
+      None => ()
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
 fn PdfDocument::pdf_merge_name_tree_entries(
   self : PdfDocument,
   tree_key : PdfName,
@@ -1335,6 +1379,11 @@ pub fn pdf_merge_documents(
   } else {
     []
   }
+  let open_action = if retain_catalog_entries {
+    pdf_merge_open_action(staged)
+  } else {
+    None
+  }
   let merged = pdf_document_empty()
   let (major, minor) = pdf_merge_max_version(staged)
   merged.set_version(major, minor)
@@ -1383,6 +1432,14 @@ pub fn pdf_merge_documents(
   let new_page_numbers = merged.page_reference_numbers()
   let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
   merged.pdf_page_renumber_references(changes)
+  let merged = match open_action {
+    Some(open_action) =>
+      merged.pdf_merge_add_catalog_entry(
+        pdf_merge_open_action_key(),
+        pdf_page_renumber_object(open_action, changes),
+      )
+    None => merged
+  }
   if retain_named_destinations {
     for i in 0..<staged.length() {
       let document = staged[i]
