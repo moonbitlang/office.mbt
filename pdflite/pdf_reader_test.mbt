@@ -63,6 +63,34 @@ fn reader_classic_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_prev_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let original_offset = output.length()
+  reader_push_ascii(output, "1 0 obj\n1\nendobj\n")
+  let base_xref = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, original_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  let updated_offset = output.length()
+  reader_push_ascii(output, "1 0 obj\n2\nendobj\n")
+  let second_offset = output.length()
+  reader_push_ascii(output, "2 0 obj\n3\nendobj\n")
+  let final_xref = output.length()
+  reader_push_ascii(output, "xref\n1 2\n")
+  reader_push_xref_entry(output, updated_offset, 0)
+  reader_push_xref_entry(output, second_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 /Prev ")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n")
+  reader_push_ascii(output, final_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 test "ByteCursor read_pdf_header finds header and sets input offset" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     reader_bytes_for_test([0, 1, 2, 37, 80, 68, 70, 45, 49, 46, 55, 10, 65]),
@@ -252,4 +280,14 @@ test "pdf_read_classic_document_from_bytes resolves indirect stream length" {
     StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
   )
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
+}
+
+///|
+test "pdf_read_classic_document_from_bytes follows trailer Prev xrefs" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(3))
 }

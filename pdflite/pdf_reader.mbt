@@ -244,6 +244,32 @@ fn pdf_classic_xref_lookup(
 }
 
 ///|
+fn pdf_classic_xrefs_contain(
+  xrefs : ArrayView[PdfClassicXRefEntry],
+  object_number : Int,
+) -> Bool {
+  for xref in xrefs {
+    if xref.object_number == object_number {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_classic_xrefs_add_newer_first(
+  target : Array[PdfClassicXRefEntry],
+  entries : ArrayView[PdfClassicXRefEntry],
+) -> Unit {
+  for entry in entries {
+    if !pdf_classic_xrefs_contain(target[:], entry.object_number) {
+      target.push(entry)
+    }
+  }
+}
+
+///|
 fn ByteCursor::read_pdf_classic_xref_entries(
   self : ByteCursor,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
@@ -369,6 +395,20 @@ fn pdf_reader_root_name() -> PdfName {
 }
 
 ///|
+fn pdf_reader_prev_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 80, 114, 101, 118]))
+}
+
+///|
+fn pdf_trailer_prev_position(trailer : PdfObject) -> Int? raise PdfError {
+  match trailer.lookup_immediate(pdf_reader_prev_name()) {
+    Some(PdfInteger(position)) if position >= 0 => Some(position)
+    Some(_) => raise TrailerExpected
+    None => None
+  }
+}
+
+///|
 fn PdfDocument::set_trailer_and_root(
   self : PdfDocument,
   trailer : PdfObject,
@@ -387,9 +427,35 @@ pub fn pdf_read_classic_document_from_bytes(
   let cursor = byte_cursor_of_bytes(data)
   let version = cursor.read_pdf_header()
   let xref_position = pdf_read_startxref_position(cursor.data)
-  cursor.seek_pdf_absolute(xref_position)
-  let xrefs = cursor.read_pdf_classic_xref_entries()
-  let trailer = cursor.read_pdf_trailer_dictionary()
+  let xrefs : Array[PdfClassicXRefEntry] = []
+  let mut trailer = PdfDictionary([])
+  let mut have_trailer = false
+  let mut current_xref = xref_position
+  let mut done = false
+  let mut depth = 0
+  while !done {
+    if depth >= 1024 {
+      raise XRefExpected
+    }
+    cursor.seek_pdf_absolute(current_xref)
+    pdf_classic_xrefs_add_newer_first(
+      xrefs,
+      cursor.read_pdf_classic_xref_entries(),
+    )
+    let current_trailer = cursor.read_pdf_trailer_dictionary()
+    if !have_trailer {
+      trailer = current_trailer
+      have_trailer = true
+    }
+    match pdf_trailer_prev_position(current_trailer) {
+      Some(previous) => current_xref = previous
+      None => done = true
+    }
+    depth += 1
+  }
+  if !have_trailer {
+    raise TrailerExpected
+  }
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   document.set_first_xref(xref_position)
