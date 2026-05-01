@@ -257,8 +257,10 @@ MoonBit consequences for this project:
    cursor slice during stream serialization. A separate
    `pdf_write_document_with_xref_stream` path is now started for PDF 1.5-style
    uncompressed xref stream output with `/W [1 4 2]`, free entries for object
-   gaps, and a public reader round-trip gate. Incremental update handling,
-   compressed xref streams, and encrypted output remain deferred.
+   gaps, and a public reader round-trip gate. A Flate-backed
+   `pdf_write_document_with_compressed_xref_stream` wrapper is also started and
+   round-trips through the existing xref-stream reader. Incremental update
+   handling and encrypted output remain deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

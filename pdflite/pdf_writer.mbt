@@ -552,6 +552,13 @@ fn pdf_writer_w_name() -> PdfName {
 }
 
 ///|
+fn pdf_writer_flate_decode_name() -> PdfName {
+  pdf_name_of_bytes(
+    Bytes::from_array([47, 70, 108, 97, 116, 101, 68, 101, 99, 111, 100, 101]),
+  )
+}
+
+///|
 fn pdf_writer_trailer_dictionary(
   document : PdfDocument,
 ) -> PdfObject raise PdfError {
@@ -689,8 +696,9 @@ fn pdf_writer_xref_stream_trailer(
 }
 
 ///|
-pub fn pdf_write_document_with_xref_stream(
+fn pdf_write_document_with_xref_stream_filter(
   document : PdfDocument,
+  filter : PdfName?,
 ) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   let (major, minor) = document.version()
@@ -703,27 +711,50 @@ pub fn pdf_write_document_with_xref_stream(
   let xref_stream_offset = output.length()
   let xref_stream_number = document.objects.max_object_number() + 1
   let size = xref_stream_number + 1
-  let stream = pdf_stream(
-    pdf_writer_xref_stream_trailer(document, size),
-    StreamGot(
-      pdf_writer_xref_stream_data(
-        xrefs[:],
-        size,
-        xref_stream_number,
-        xref_stream_offset,
-      ),
-    ),
+  let xref_data = pdf_writer_xref_stream_data(
+    xrefs[:],
+    size,
+    xref_stream_number,
+    xref_stream_offset,
   )
+  let stream = pdf_stream(
+    pdf_writer_xref_stream_trailer(document, size).add_dict_entry(
+      pdf_writer_length_name(),
+      PdfInteger(xref_data.length()),
+    ),
+    StreamGot(xref_data),
+  )
+  let xref_object = match filter {
+    Some(filter) => pdf_encode_stream_with_filter(filter, stream)
+    None => stream
+  }
   pdf_writer_push_view(
     output,
     pdf_write_indirect_object({
       number: xref_stream_number,
       generation: 0,
-      object: stream,
+      object: xref_object,
     })[:],
   )
   pdf_writer_push_ascii(output, "startxref\n")
   pdf_writer_push_ascii(output, xref_stream_offset.to_string())
   pdf_writer_push_ascii(output, "\n%%EOF\n")
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_write_document_with_xref_stream(
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  pdf_write_document_with_xref_stream_filter(document, None)
+}
+
+///|
+pub fn pdf_write_document_with_compressed_xref_stream(
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  pdf_write_document_with_xref_stream_filter(
+    document,
+    Some(pdf_writer_flate_decode_name()),
+  )
 }
