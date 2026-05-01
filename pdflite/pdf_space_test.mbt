@@ -491,6 +491,32 @@ test "PdfDocument read_colour_space parses Indexed string and stream tables" {
     ),
     Some(PdfIndexed(PdfDeviceCMYK, [(0, [1, 2, 3, 4])])),
   )
+  doc.add_object_given_number(
+    8,
+    PdfNameObject(space_name_for_test("/ASCIIHexDecode")),
+  )
+  let encoded_lookup = @pdflite.pdf_ascii_hex_encode(
+    space_bytes_for_test([1, 2, 3, 4]),
+  )
+  let lookup_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (space_name_for_test("/Length"), PdfInteger(encoded_lookup.length())),
+      (space_name_for_test("/Filter"), PdfIndirect(8)),
+    ]),
+    StreamGot(encoded_lookup),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/I")),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        PdfInteger(0),
+        lookup_stream,
+      ]),
+    ),
+    Some(PdfIndexed(PdfDeviceCMYK, [(0, [1, 2, 3, 4])])),
+  )
 }
 
 ///|

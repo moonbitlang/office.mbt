@@ -110,6 +110,22 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), array_jpeg),
     PdfJPEG(@ascii.encode("array-jpg"), None),
   )
+  doc.add_object_given_number(
+    8,
+    PdfNameObject(image_name_for_test("/DCTDecode")),
+  )
+  let indirect_array_jpeg = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/Filter"), PdfArray([PdfIndirect(8)])),
+    ]),
+    StreamGot(@ascii.encode("indirect-array-jpg")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), indirect_array_jpeg),
+    PdfJPEG(@ascii.encode("indirect-array-jpg"), None),
+  )
 }
 
 ///|

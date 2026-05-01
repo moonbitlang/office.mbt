@@ -63,6 +63,25 @@ test "PdfDocument parse_function decodes filtered sampled function streams" {
   let function = try! doc.parse_function(function_object)
   @test.assert_eq(try! function.eval([0.0]), [1.0])
   @test.assert_eq(try! function.eval([1.0]), [0.0])
+  doc.add_object_given_number(
+    8,
+    PdfNameObject(fun_name_for_test("/FlateDecode")),
+  )
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(encoded.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
+      (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
+      (fun_name_for_test("/Filter"), PdfIndirect(8)),
+    ]),
+    StreamGot(encoded),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([0.0]), [1.0])
+  @test.assert_eq(try! function.eval([1.0]), [0.0])
 }
 
 ///|

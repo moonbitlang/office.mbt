@@ -308,8 +308,11 @@ MoonBit consequences for this project:
    through indirect references, and LZW `EarlyChange` reached through direct
    document lookup. A document-aware `pdf_decode_stream_until_unknown` slice now
    mirrors CamlPDF's stop-at-first-unsupported-filter behavior while preserving
-   the remaining filter metadata. Higher-ratio Flate compression and other
-   filters remain deferred.
+   the remaining filter metadata. Content streams, sampled functions, indexed
+   colour lookup streams, and staged image decoding now use the document-aware
+   stream decoder internally, so indirect filter metadata is honored across
+   those callers. Higher-ratio Flate compression and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the

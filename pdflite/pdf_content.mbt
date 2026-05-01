@@ -488,7 +488,9 @@ pub fn PdfDocument::parse_content_ops(
     match self.direct(stream_ref) {
       PdfStreamObject(stream) =>
         raw_streams.push(
-          pdf_stream_data_bytes(pdf_decode_stream_value(stream).data),
+          pdf_stream_data_bytes(
+            self.pdf_decode_stream_value_direct(stream).data,
+          ),
         )
       _ => raise ParseStreamExpected
     }

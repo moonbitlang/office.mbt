@@ -54,16 +54,6 @@ fn pdf_image_h_key() -> PdfName {
 }
 
 ///|
-fn pdf_image_filter_key() -> PdfName {
-  pdf_image_name("/Filter")
-}
-
-///|
-fn pdf_image_f_key() -> PdfName {
-  pdf_image_name("/F")
-}
-
-///|
 fn pdf_image_decode_key() -> PdfName {
   pdf_image_name("/Decode")
 }
@@ -307,28 +297,6 @@ fn PdfDocument::pdf_image_decode_values_with_defaults(
 }
 
 ///|
-fn PdfDocument::pdf_image_filter_value(
-  self : PdfDocument,
-  image : PdfObject,
-) -> PdfObject? {
-  self.lookup_direct_or_else(pdf_image_filter_key(), pdf_image_f_key(), image)
-}
-
-///|
-fn PdfDocument::pdf_image_first_filter(
-  self : PdfDocument,
-  image : PdfObject,
-) -> PdfName? raise PdfError {
-  match self.pdf_image_filter_value(image) {
-    None => None
-    Some(PdfArray([])) => None
-    Some(PdfNameObject(name)) => Some(name)
-    Some(PdfArray([PdfNameObject(name), ..])) => Some(name)
-    Some(_) => raise FilterExpected
-  }
-}
-
-///|
 priv enum PdfImageDecodedStream {
   PdfImageRawStream(PdfStream)
   PdfImageDctStream(PdfStream)
@@ -342,7 +310,7 @@ fn PdfDocument::pdf_image_decode_stream_stages(
   current : PdfStream,
   stages : Int,
 ) -> PdfImageDecodedStream raise PdfError {
-  match self.pdf_image_first_filter(current.dictionary) {
+  match self.pdf_stream_first_filter_direct(current.dictionary) {
     Some(filter) if filter == pdf_image_dctdecode_name() ||
       filter == pdf_image_dct_name() => PdfImageDctStream(current)
     Some(filter) if filter == pdf_image_jpxdecode_name() =>
@@ -354,7 +322,7 @@ fn PdfDocument::pdf_image_decode_stream_stages(
         raise FilterExpected
       }
       self.pdf_image_decode_stream_stages(
-        pdf_decode_stream_onestage_value(current),
+        self.pdf_decode_stream_onestage_value_direct(current),
         stages + 1,
       )
     }

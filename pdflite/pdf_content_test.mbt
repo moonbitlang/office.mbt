@@ -515,6 +515,22 @@ test "PdfDocument parse_content_ops reads indirect owned content streams" {
     try! doc.parse_content_ops([PdfIndirect(7)]),
     hello_content_ops_for_test(),
   )
+  doc.add_object_given_number(
+    8,
+    PdfNameObject(content_name_for_test("/ASCIIHexDecode")),
+  )
+  let encoded = @pdflite.pdf_ascii_hex_encode(content_bytes_for_test("q Q"))
+  doc.add_object_given_number(
+    9,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (content_name_for_test("/Length"), PdfInteger(encoded.length())),
+        (content_name_for_test("/Filter"), PdfIndirect(8)),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  @test.assert_eq(try! doc.parse_content_ops([PdfIndirect(9)]), [Op_q, Op_Q])
 }
 
 ///|
