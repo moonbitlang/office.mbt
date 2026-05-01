@@ -949,6 +949,7 @@ pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
 pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
+pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError

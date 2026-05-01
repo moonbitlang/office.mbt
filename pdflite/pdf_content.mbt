@@ -488,6 +488,29 @@ pub fn PdfDocument::parse_content_ops(
   self : PdfDocument,
   streams : ArrayView[PdfObject],
 ) -> Array[PdfContentOp] raise PdfError {
+  let raw_streams = self.pdf_content_raw_streams(streams)
+  pdf_parse_content_ops_from_bytes(pdf_content_concat_streams(raw_streams))
+}
+
+///|
+pub fn PdfDocument::parse_content_ops_with_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  streams : ArrayView[PdfObject],
+) -> Array[PdfContentOp] raise PdfError {
+  let raw_streams = self.pdf_content_raw_streams(streams)
+  pdf_parse_content_ops_from_bytes_with_context(
+    pdf_content_concat_streams(raw_streams),
+    Some(self),
+    resources,
+  )
+}
+
+///|
+fn PdfDocument::pdf_content_raw_streams(
+  self : PdfDocument,
+  streams : ArrayView[PdfObject],
+) -> Array[PdfBytes] raise PdfError {
   let raw_streams : Array[PdfBytes] = []
   for stream_ref in streams {
     match self.direct(stream_ref) {
@@ -500,7 +523,7 @@ pub fn PdfDocument::parse_content_ops(
       _ => raise ParseStreamExpected
     }
   }
-  pdf_parse_content_ops_from_bytes(pdf_content_concat_streams(raw_streams))
+  raw_streams
 }
 
 ///|
@@ -672,7 +695,11 @@ fn pdf_content_inline_image_mask(dictionary : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_inline_components(dictionary : PdfObject) -> Int? {
+fn pdf_content_inline_components(
+  document : PdfDocument?,
+  resources : PdfObject,
+  dictionary : PdfObject,
+) -> Int? raise PdfError {
   match
     pdf_content_inline_lookup_orelse(
       dictionary,
@@ -690,7 +717,19 @@ fn pdf_content_inline_components(dictionary : PdfObject) -> Int? {
         name == pdf_content_inline_name("/DeviceCMYK") {
         Some(4)
       } else {
-        None
+        match document {
+          Some(document) =>
+            Some(
+              document.colour_space_components(resources, PdfNameObject(name)),
+            )
+          None => None
+        }
+      }
+    Some(colour_space) =>
+      match document {
+        Some(document) =>
+          Some(document.colour_space_components(resources, colour_space))
+        None => None
       }
     None if pdf_content_inline_image_mask(dictionary) => Some(1)
     _ => None
@@ -720,7 +759,11 @@ fn pdf_content_inline_filter_is_empty(dictionary : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_inline_image_data_length(dictionary : PdfObject) -> Int? {
+fn pdf_content_inline_image_data_length(
+  document : PdfDocument?,
+  resources : PdfObject,
+  dictionary : PdfObject,
+) -> Int? raise PdfError {
   if !pdf_content_inline_filter_is_empty(dictionary) {
     None
   } else {
@@ -737,7 +780,7 @@ fn pdf_content_inline_image_data_length(dictionary : PdfObject) -> Int? {
           pdf_content_inline_name("/Height"),
         ),
         pdf_content_inline_bits_per_component(dictionary),
-        pdf_content_inline_components(dictionary),
+        pdf_content_inline_components(document, resources, dictionary),
       ) {
       (Some(width), Some(height), Some(bits), Some(components)) => {
         let row_bits = width * components * bits
@@ -921,6 +964,8 @@ fn pdf_content_read_dct_inline_image_data(
 ///|
 fn pdf_content_read_inline_image(
   cursor : ByteCursor,
+  document : PdfDocument?,
+  resources : PdfObject,
 ) -> PdfContentOp raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = []
   let mut decode_parms : PdfObject? = None
@@ -961,7 +1006,8 @@ fn pdf_content_read_inline_image(
     Op_InlineImage(
       dictionary,
       decode_parms,
-      match pdf_content_inline_image_data_length(dictionary) {
+      match
+        pdf_content_inline_image_data_length(document, resources, dictionary) {
         Some(length) => pdf_content_read_sized_inline_image_data(cursor, length)
         None => pdf_content_read_inline_image_data(cursor)
       },
@@ -1515,6 +1561,15 @@ fn pdf_content_parse_section(
 pub fn pdf_parse_content_ops_from_bytes(
   data : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
+  pdf_parse_content_ops_from_bytes_with_context(data, None, PdfDictionary([]))
+}
+
+///|
+fn pdf_parse_content_ops_from_bytes_with_context(
+  data : PdfBytes,
+  document : PdfDocument?,
+  resources : PdfObject,
+) -> Array[PdfContentOp] raise PdfError {
   let cursor = byte_cursor_of_bytes(data)
   let ops : Array[PdfContentOp] = []
   let operands : Array[PdfObject] = []
@@ -1526,7 +1581,7 @@ pub fn pdf_parse_content_ops_from_bytes(
       ContentOperand(object) => operands.push(object)
       ContentOperator(operator) =>
         if operator == pdf_content_ascii("BI") && operands.length() == 0 {
-          ops.push(pdf_content_read_inline_image(cursor))
+          ops.push(pdf_content_read_inline_image(cursor, document, resources))
         } else {
           ops.push(pdf_content_parse_section(operands, operator))
           operands.clear()

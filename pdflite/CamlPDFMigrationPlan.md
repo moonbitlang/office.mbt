@@ -418,6 +418,10 @@ MoonBit consequences for this project:
    `PdfDocument::colour_space_components`, covering device, calibrated,
    resource-named, ICCBased, Indexed, Separation, Pattern-with-base, and DeviceN
    spaces for inline-image and image-data sizing callers.
+   Resource-aware content parsing is started with
+   `PdfDocument::parse_content_ops_with_resources`, so inline images whose
+   colour space comes from `/Resources/ColorSpace` can use exact byte counts and
+   preserve `EI` sequences inside unfiltered payloads.
    Filter-aware binary inline image compression and broader resource-dependent
    inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

@@ -286,6 +286,26 @@ test "pdf_parse_content_ops_from_bytes parses simple inline images" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes falls back for array inline image spaces" {
+  let data = content_bytes_for_test("BI /W 1 /H 1 /CS [/RGB] /BPC 8 ID abc EI")
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      @pdflite.pdf_dictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfArray([PdfNameObject(content_name_for_test("/RGB"))]),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("abc"),
+    ),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes preserves raw inline image EI bytes" {
   let data = content_bytes_for_test(
     "BI /W 6 /H 1 /CS /G /BPC 8 ID A EI B\nEI Q",
@@ -652,6 +672,82 @@ test "PdfDocument parse_content_ops inserts whitespace between split streams" {
       Op_ET,
     ],
   )
+}
+
+///|
+test "PdfDocument parse_content_ops_with_resources sizes named inline image spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([
+    (
+      content_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (
+          content_name_for_test("/CS1"),
+          PdfNameObject(content_name_for_test("/RGB")),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.parse_content_ops_with_resources(resources, [
+      content_stream_for_test("BI /W 2 /H 1 /BPC 8 /CS /CS1 ID A EI B EI Q"),
+    ]),
+    [
+      Op_InlineImage(
+        @pdflite.pdf_dictionary([
+          (content_name_for_test("/W"), PdfInteger(2)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+          (
+            content_name_for_test("/CS"),
+            PdfNameObject(content_name_for_test("/CS1")),
+          ),
+        ]),
+        None,
+        content_bytes_for_test("A EI B"),
+      ),
+      Op_Q,
+    ],
+  )
+}
+
+///|
+test "PdfDocument parse_content_ops_with_resources sizes array inline image spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    try! doc.parse_content_ops_with_resources(@pdflite.pdf_dictionary([]), [
+      content_stream_for_test("BI /W 2 /H 1 /BPC 8 /CS [/RGB] ID A EI B EI Q"),
+    ]),
+    [
+      Op_InlineImage(
+        @pdflite.pdf_dictionary([
+          (content_name_for_test("/W"), PdfInteger(2)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+          (
+            content_name_for_test("/CS"),
+            PdfArray([PdfNameObject(content_name_for_test("/RGB"))]),
+          ),
+        ]),
+        None,
+        content_bytes_for_test("A EI B"),
+      ),
+      Op_Q,
+    ],
+  )
+}
+
+///|
+test "PdfDocument parse_content_ops_with_resources reports missing inline image resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? doc.parse_content_ops_with_resources(
+    @pdflite.pdf_dictionary([]),
+    [content_stream_for_test("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")],
+  )
+  guard result is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+    name == content_name_for_test("/ColorSpace") else {
+    fail("expected missing ColorSpace resource dictionary")
+  }
 }
 
 ///|
