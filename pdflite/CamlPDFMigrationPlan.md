@@ -156,6 +156,9 @@ MoonBit consequences for this project:
    literal strings, hex strings, comments, dictionaries, arrays, and stream-data
    lexemes. Use snapshot tests for malformed inputs and `@test.assert_eq` for
    stable tokens.
+   Status: started with the byte-oriented `PdfLexeme` enum, PDF whitespace and
+   delimiter predicates, whitespace dropping, and regular-token `BytesView`
+   scanning over `ByteCursor`.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only

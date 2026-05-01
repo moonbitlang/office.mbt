@@ -67,6 +67,16 @@ pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument
 
+pub fn pdf_is_delimiter_byte(Int) -> Bool
+
+pub fn pdf_is_not_whitespace_byte(Int) -> Bool
+
+pub fn pdf_is_whitespace_byte(Int) -> Bool
+
+pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
+
+pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
+
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub let pdf_no_more : Int
@@ -170,6 +180,7 @@ pub struct ByteCursor {
   source : String
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ByteCursor::absolute_position(Self) -> Int
+pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::length(Self) -> Int
 pub fn ByteCursor::nudge(Self) -> Unit
@@ -183,6 +194,8 @@ pub fn ByteCursor::read_line(Self) -> Bytes raise PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise PdfError
 pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
 pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
+pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
+pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView
 pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
 pub fn ByteCursor::remaining_length(Self) -> Int
 pub fn ByteCursor::remaining_view(Self) -> BytesView
@@ -242,6 +255,27 @@ pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
+
+pub(all) enum PdfLexeme {
+  LexNull
+  LexBool(Bool)
+  LexInt(Int)
+  LexReal(Double)
+  LexString(Bytes)
+  LexName(PdfName)
+  LexLeftSquare
+  LexRightSquare
+  LexLeftDict
+  LexRightDict
+  LexStream(PdfStreamData)
+  LexEndStream
+  LexObj
+  LexEndObj
+  LexR
+  LexComment(Bytes)
+  StopLexing
+  LexNone
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
