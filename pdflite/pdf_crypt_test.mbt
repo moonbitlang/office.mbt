@@ -1546,6 +1546,70 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
 }
 
 ///|
+test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
+  let key_type = crypt_name_for_test("/Type")
+  let key_catalog = crypt_name_for_test("/Catalog")
+  let key_pages = crypt_name_for_test("/Pages")
+  let key_kids = crypt_name_for_test("/Kids")
+  let key_count = crypt_name_for_test("/Count")
+  let key_title = crypt_name_for_test("/Title")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_catalog)),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_pages)),
+      (key_kids, PdfArray([])),
+      (key_count, PdfInteger(0)),
+    ]),
+  )
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("secret"))),
+  ])
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  doc.add_object_given_number(5, secret_object)
+  doc.add_object_given_number(6, metadata_stream)
+  let encrypted = try! doc.encrypt_128bit_r4(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let rendered = try! @pdflite.pdf_write_document(encrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(parsed.is_encrypted(), true)
+  @test.assert_eq(
+    parsed.trailer_dict().lookup_immediate(key_encrypt) is Some(PdfIndirect(_)),
+    true,
+  )
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.is_encrypted(), false)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
+}
+
+///|
 test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
   let owner_entry = try! @pdflite.pdf_make_owner_password_entry(

@@ -549,7 +549,8 @@ MoonBit consequences for this project:
     preserves or installs trailer `/ID`, derives `/O` and `/U`, encrypts parsed
     objects in a copy, installs an indirect `/Encrypt` dictionary, applies the
     revision 4 `/EncryptMetadata` file-key and metadata-stream rules, and
-    round-trips through the existing password decryption APIs.
+    round-trips through the existing password decryption APIs. The revision 4
+    ARC4 path now also has a writer/classic-reader/decrypt integration gate.
     Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
     structured unsupported errors until the remaining primitives are available.
     The document-level decryption entry points for parsed ARC4 and AESV2
