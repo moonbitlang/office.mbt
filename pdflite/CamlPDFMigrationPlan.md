@@ -506,9 +506,11 @@ MoonBit consequences for this project:
     through `moonbitlang/x/crypto`, with RFC 1321 vectors over `BytesView`
     input. MD5-backed Algorithm 3.1 object-key derivation is started for R2/R3/R4
     encryption, including object/generation little-endian byte packing,
-    key-length truncation, and the AESV2 `sAlT` suffix branch. AES,
-    SHA-family helpers beyond the available package surface, document
-    decryption, and re-encryption remain deferred.
+    key-length truncation, and the AESV2 `sAlT` suffix branch. PDF password
+    padding and R2/R3/R4 file-key derivation are also started, including the
+    revision 4 no-metadata marker branch. AES, SHA-family helpers beyond the
+    available package surface, document decryption, and re-encryption remain
+    deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

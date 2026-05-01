@@ -129,6 +129,8 @@ pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, 
 
 pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
 
+pub fn pdf_encryption_file_key(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes
+
 pub fn pdf_encryption_object_key(PdfCryptType, Int, Int, BytesView, Int) -> Bytes
 
 pub fn pdf_flate_decode(Bytes) -> Bytes raise PdfError
@@ -183,6 +185,8 @@ pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent?
 
 pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
 
+pub fn pdf_pad_password(BytesView) -> Bytes
+
 pub fn pdf_page_blank(PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
@@ -228,6 +232,8 @@ pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
 
 pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
+
+pub fn pdf_password_padding() -> Bytes
 
 pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
 

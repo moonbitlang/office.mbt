@@ -11,6 +11,75 @@ pub(all) enum PdfPermission {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_password_padding_fixed() -> FixedArray[Byte] {
+  [
+    0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff,
+    0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c,
+    0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a,
+  ]
+}
+
+///|
+pub fn pdf_password_padding() -> PdfBytes {
+  Bytes::from_array(pdf_password_padding_fixed())
+}
+
+///|
+pub fn pdf_pad_password(password : BytesView) -> PdfBytes {
+  let padding = pdf_password_padding_fixed()
+  let output : Array[Byte] = []
+  let copied = if password.length() < 32 { password.length() } else { 32 }
+  for index in 0..<copied {
+    output.push(password[index])
+  }
+  for index in copied..<32 {
+    output.push(padding[index - copied])
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_crypt_low_byte(value : Int, shift : Int) -> Byte {
+  ((value >> shift) & 0xff).to_byte()
+}
+
+///|
+pub fn pdf_encryption_file_key(
+  no_encrypt_metadata : Bool,
+  password : BytesView,
+  revision : Int,
+  owner_entry : BytesView,
+  permissions : Int,
+  file_id : BytesView,
+  key_length_bits : Int,
+) -> PdfBytes {
+  let md5 = @crypto.MD5::new()
+  let padded_password = pdf_pad_password(password)
+  md5.update(padded_password[:])
+  md5.update(owner_entry)
+  let permissions_bytes : FixedArray[Byte] = [
+    pdf_crypt_low_byte(permissions, 0),
+    pdf_crypt_low_byte(permissions, 8),
+    pdf_crypt_low_byte(permissions, 16),
+    pdf_crypt_low_byte(permissions, 24),
+  ]
+  md5.update(permissions_bytes)
+  md5.update(file_id)
+  if revision >= 4 && no_encrypt_metadata {
+    let no_metadata_marker : FixedArray[Byte] = [0xff, 0xff, 0xff, 0xff]
+    md5.update(no_metadata_marker)
+  }
+  let key_length = key_length_bits / 8
+  let mut hashed = Bytes::from_array(md5.finalize())
+  if revision >= 3 {
+    for _ in 0..<50 {
+      hashed = pdf_md5_digest(hashed[:key_length])
+    }
+  }
+  hashed[:key_length].to_owned()
+}
+
+///|
 fn pdf_permission_denied(
   permissions : ArrayView[PdfPermission],
   target : PdfPermission,
