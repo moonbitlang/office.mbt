@@ -413,6 +413,9 @@ MoonBit consequences for this project:
    MacRoman high-byte fallback is started for common accented Latin letters.
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, and `eacute`.
+   Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
+   `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
+   effective encoding for single-codepoint glyphs.
    General `pdfcmap` parsing, full Adobe Glyph List coverage, MacExpert,
    Symbol, and ZapfDingbats extraction remain deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3

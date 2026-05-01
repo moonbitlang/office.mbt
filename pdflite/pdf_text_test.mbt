@@ -2042,20 +2042,38 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
       PdfHelvetica,
       PdfCustomEncoding(PdfStandardEncoding, [
         text_difference_for_test("/Euro", 65),
+        text_difference_for_test("/A.alt", 66),
+        text_difference_for_test("/uni20AC", 67),
+        text_difference_for_test("/u00A9", 68),
+        text_difference_for_test("/uni00410042", 69),
       ]),
     ),
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])[:]),
-    [0x20AC, 66],
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([65, 66, 67, 68, 69, 70])[:],
+    ),
+    [0x20AC, 65, 0x20AC, 0x00A9, 65, 66, 70],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([65, 66])[:]),
-    [text_name_for_test("/Euro"), text_name_for_test("/B")],
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([65, 66, 67, 68, 69, 70])[:],
+    ),
+    [
+      text_name_for_test("/Euro"),
+      text_name_for_test("/A.alt"),
+      text_name_for_test("/uni20AC"),
+      text_name_for_test("/u00A9"),
+      text_name_for_test("/uni00410042"),
+      text_name_for_test("/F"),
+    ],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(65))
-  @test.assert_eq(extractor.charcode_of_codepoint(66), Some(66))
+  @test.assert_eq(extractor.charcode_of_codepoint(65), Some(66))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00A9), Some(68))
+  @test.assert_eq(extractor.charcode_of_codepoint(66), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(70), Some(70))
 }
 
 ///|
