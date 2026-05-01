@@ -513,8 +513,11 @@ MoonBit consequences for this project:
     path. R2/R3/R4 `/O` owner-password entry generation, padded-user recovery,
     and owner-password authentication are also started. ARC4 object data
     encryption/decryption using derived object keys is started for the legacy
-    string/stream path. AES, SHA-family helpers beyond the available package
-    surface, document decryption, and re-encryption remain deferred.
+    string/stream path. A recursive ARC4 object walk is started for PDF strings,
+    arrays, dictionaries, and stream dictionaries/data, with stream data
+    materialized at the crypt boundary and `/Length` refreshed. AES,
+    SHA-family helpers beyond the available package surface, document
+    decryption, and re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

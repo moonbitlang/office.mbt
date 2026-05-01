@@ -53,6 +53,8 @@ pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_arc4_crypt_object(Int, Int, BytesView, Int, BytesView) -> Bytes raise PdfError
 
+pub fn pdf_arc4_crypt_pdf_object(Int, Int, BytesView, Int, PdfObject) -> PdfObject raise PdfError
+
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise PdfError

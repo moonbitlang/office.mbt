@@ -252,6 +252,84 @@ pub fn pdf_authenticate_owner_password(
 }
 
 ///|
+fn pdf_crypt_stream_length_key() -> PdfName {
+  pdf_name_of_bytes(@ascii.encode("/Length"))
+}
+
+///|
+pub fn pdf_arc4_crypt_pdf_object(
+  object_number : Int,
+  generation : Int,
+  file_key : BytesView,
+  key_length_bits : Int,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match object {
+    PdfString(bytes) =>
+      PdfString(
+        pdf_arc4_crypt_object(
+          object_number,
+          generation,
+          file_key,
+          key_length_bits,
+          bytes[:],
+        ),
+      )
+    PdfArray(values) => {
+      let output : Array[PdfObject] = []
+      for value in values {
+        output.push(
+          pdf_arc4_crypt_pdf_object(
+            object_number, generation, file_key, key_length_bits, value,
+          ),
+        )
+      }
+      PdfArray(output)
+    }
+    PdfDictionary(entries) => {
+      let output : Array[(PdfName, PdfObject)] = []
+      for entry in entries {
+        let (name, value) = entry
+        output.push(
+          (
+            name,
+            pdf_arc4_crypt_pdf_object(
+              object_number, generation, file_key, key_length_bits, value,
+            ),
+          ),
+        )
+      }
+      PdfDictionary(output)
+    }
+    PdfStreamObject(stream) => {
+      let dictionary = pdf_arc4_crypt_pdf_object(
+        object_number,
+        generation,
+        file_key,
+        key_length_bits,
+        stream.dictionary,
+      )
+      let data = pdf_stream_data_bytes(stream.data)
+      let encrypted_data = pdf_arc4_crypt_object(
+        object_number,
+        generation,
+        file_key,
+        key_length_bits,
+        data[:],
+      )
+      PdfStreamObject({
+        dictionary: dictionary.add_dict_entry(
+          pdf_crypt_stream_length_key(),
+          PdfInteger(encrypted_data.length()),
+        ),
+        data: StreamGot(encrypted_data),
+      })
+    }
+    _ => object
+  }
+}
+
+///|
 fn pdf_permission_denied(
   permissions : ArrayView[PdfPermission],
   target : PdfPermission,

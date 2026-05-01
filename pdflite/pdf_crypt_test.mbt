@@ -321,6 +321,91 @@ test "pdf_authenticate_owner_password validates through recovered user password"
 }
 
 ///|
+test "pdf_arc4_crypt_pdf_object recurses through strings arrays and dictionaries" {
+  let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
+  let encrypted_hello = crypt_model_bytes_for_test([
+    0x7d, 0x1c, 0x38, 0x4c, 0xca,
+  ])
+  let key_s = @pdflite.pdf_name_of_bytes(@ascii.encode("/S"))
+  let key_a = @pdflite.pdf_name_of_bytes(@ascii.encode("/A"))
+  let key_n = @pdflite.pdf_name_of_bytes(@ascii.encode("/N"))
+  let object : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfString(@ascii.encode("hello"))),
+    (
+      key_a,
+      PdfArray([
+        PdfString(@ascii.encode("hello")),
+        PdfNameObject(key_n),
+        PdfIndirect(9),
+      ]),
+    ),
+  ])
+  let encrypted = try! @pdflite.pdf_arc4_crypt_pdf_object(
+    12,
+    0,
+    key[:],
+    40,
+    object,
+  )
+  @test.assert_eq(
+    encrypted,
+    PdfDictionary([
+      (key_s, PdfString(encrypted_hello)),
+      (
+        key_a,
+        PdfArray([
+          PdfString(encrypted_hello),
+          PdfNameObject(key_n),
+          PdfIndirect(9),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key[:], 40, encrypted),
+    object,
+  )
+}
+
+///|
+test "pdf_arc4_crypt_pdf_object encrypts stream dictionaries and data" {
+  let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
+  let encrypted_hello = crypt_model_bytes_for_test([
+    0x7d, 0x1c, 0x38, 0x4c, 0xca,
+  ])
+  let key_length = @pdflite.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_title = @pdflite.pdf_name_of_bytes(@ascii.encode("/Title"))
+  let object : @pdflite.PdfObject = PdfStreamObject({
+    dictionary: PdfDictionary([
+      (key_length, PdfInteger(5)),
+      (key_title, PdfString(@ascii.encode("hello"))),
+    ]),
+    data: StreamGot(@ascii.encode("hello")),
+  })
+  let encrypted = try! @pdflite.pdf_arc4_crypt_pdf_object(
+    12,
+    0,
+    key[:],
+    40,
+    object,
+  )
+  @test.assert_eq(
+    encrypted,
+    PdfStreamObject({
+      dictionary: PdfDictionary([
+        (key_length, PdfInteger(5)),
+        (key_title, PdfString(encrypted_hello)),
+      ]),
+      data: StreamGot(encrypted_hello),
+    }),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key[:], 40, encrypted),
+    object,
+  )
+}
+
+///|
 test "pdf_permissions_of_p parses CamlPDF denied permission bits" {
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-4), [])
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-8), [PdfNoPrint])
