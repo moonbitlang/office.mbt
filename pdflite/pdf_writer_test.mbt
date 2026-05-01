@@ -109,6 +109,21 @@ test "pdf_write_object renders primitive scalar objects" {
 }
 
 ///|
+test "pdf_write_name renders PDF names with escapes" {
+  @test.assert_eq(
+    @pdflite.pdf_write_name(writer_name_for_test([47, 65, 32, 66, 35, 67, 255])),
+    writer_bytes_for_test([47, 65, 35, 50, 48, 66, 35, 50, 51, 67, 35, 70, 70]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_write_name(writer_name_for_test([65, 40, 41, 60, 62, 47, 93])),
+    writer_bytes_for_test([
+      47, 65, 35, 50, 56, 35, 50, 57, 35, 51, 67, 35, 51, 69, 35, 50, 70, 35, 53,
+      68,
+    ]),
+  )
+}
+
+///|
 test "pdf_write_hex_string renders byte strings as PDF hex strings" {
   @test.assert_eq(
     @pdflite.pdf_write_hex_string(

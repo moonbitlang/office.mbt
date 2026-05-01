@@ -80,6 +80,13 @@ fn pdf_write_name_to(output : Array[Byte], name : PdfName) -> Unit {
 }
 
 ///|
+pub fn pdf_write_name(name : PdfName) -> PdfBytes {
+  let output : Array[Byte] = []
+  pdf_write_name_to(output, name)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_write_string_to(output : Array[Byte], bytes : BytesView) -> Unit {
   pdf_writer_push_byte(output, 40)
   for byte in bytes {
