@@ -43,3 +43,109 @@ test "PdfDocument copy preserves parser-private object states" {
   @test.assert_eq(doc.lookup_object_or_null(5), PdfInteger(50))
   @test.assert_eq(doc.objects.object_stream_ids.get(8), Some(5))
 }
+
+///|
+test "writer parses signed integer fragments for scientific reals" {
+  @test.assert_eq(
+    try! pdf_writer_parse_signed_int(@ascii.encode("+12")[:], 0),
+    12,
+  )
+  @test.assert_eq(
+    try! pdf_writer_parse_signed_int(@ascii.encode("12")[:], 0),
+    12,
+  )
+  let missing : Result[Int, Error] = try? pdf_writer_parse_signed_int(
+    @ascii.encode("+")[:],
+    0,
+  )
+  guard missing is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+  let malformed : Result[Int, Error] = try? pdf_writer_parse_signed_int(
+    @ascii.encode("12a")[:],
+    0,
+  )
+  guard malformed is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+}
+
+///|
+test "writer expands scientific real edge forms" {
+  let plus_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    plus_output,
+    @ascii.encode("+1.25e2")[:],
+    5,
+  )
+  @test.assert_eq(Bytes::from_array(plus_output), @ascii.encode("125"))
+
+  let negative_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    negative_output,
+    @ascii.encode("-1.25e2")[:],
+    5,
+  )
+  @test.assert_eq(Bytes::from_array(negative_output), @ascii.encode("-125"))
+
+  let padded_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    padded_output,
+    @ascii.encode("1.2e3")[:],
+    3,
+  )
+  @test.assert_eq(Bytes::from_array(padded_output), @ascii.encode("1200"))
+
+  let middle_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    middle_output,
+    @ascii.encode("1.25e1")[:],
+    4,
+  )
+  @test.assert_eq(Bytes::from_array(middle_output), @ascii.encode("12.5"))
+
+  let zero_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(zero_output, @ascii.encode(".e1")[:], 1)
+  @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
+
+  let malformed_output : Array[Byte] = []
+  let malformed : Result[Unit, Error] = try? pdf_writer_push_scientific_real(
+    malformed_output,
+    @ascii.encode("1Ae1")[:],
+    2,
+  )
+  guard malformed is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+}
+
+///|
+test "pdf_write_document rejects deferred object states" {
+  let doc = pdf_document_empty()
+  doc.objects.set_entry(1, pdf_object_entry(ObjectToParse))
+  let result : Result[PdfBytes, Error] = try? pdf_write_document(doc)
+  guard result is Err(PdfError::ParsedObjectExpected) else {
+    fail("expected ParsedObjectExpected")
+  }
+}
+
+///|
+test "parser prefix helper reports malformed indirect prefixes" {
+  let too_short : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
+      LexInt(1),
+      LexInt(0),
+    ],
+  )
+  guard too_short is Err(PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
+  let bad_header : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
+      LexInt(1),
+      LexInt(0),
+      LexNull,
+    ],
+  )
+  guard bad_header is Err(PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
+}

@@ -72,6 +72,37 @@ test "pdf_parse_single_lexeme_object mirrors CamlPDF empty dictionary recovery" 
     LexRightDict,
   ])
   @test.assert_eq(odd, @pdflite.pdf_dictionary([]))
+  let missing_value = try! @pdflite.pdf_parse_single_lexeme_object([
+    LexLeftDict,
+    LexName(parser_name_for_test([47, 77, 105, 115, 115, 105, 110, 103])),
+  ])
+  @test.assert_eq(missing_value, @pdflite.pdf_dictionary([]))
+  let comment_after_key = try! @pdflite.pdf_parse_single_lexeme_object([
+    LexLeftDict,
+    LexName(parser_name_for_test([47, 67, 111, 109, 109, 101, 110, 116])),
+    LexComment(parser_bytes_for_test([37])),
+  ])
+  @test.assert_eq(comment_after_key, @pdflite.pdf_dictionary([]))
+  let nested_tail = try! @pdflite.pdf_parse_single_lexeme_object([
+    LexLeftDict,
+    LexInt(1),
+    LexLeftDict,
+  ])
+  @test.assert_eq(nested_tail, @pdflite.pdf_dictionary([]))
+}
+
+///|
+test "pdf_parse_single_lexeme_object tolerates truncated arrays and dictionaries" {
+  let unterminated_array = try! @pdflite.pdf_parse_single_lexeme_object([
+    LexLeftSquare,
+    LexComment(parser_bytes_for_test([37])),
+  ])
+  @test.assert_eq(unterminated_array, @pdflite.pdf_array([]))
+  let unterminated_dictionary = try! @pdflite.pdf_parse_single_lexeme_object([
+    LexLeftDict,
+    LexComment(parser_bytes_for_test([37])),
+  ])
+  @test.assert_eq(unterminated_dictionary, @pdflite.pdf_dictionary([]))
 }
 
 ///|
@@ -147,6 +178,14 @@ test "pdf_parse_indirect_object_from_bytes parses primitive indirect objects" {
 
 ///|
 test "pdf_parse_indirect_object_lexemes reports malformed indirect objects" {
+  let too_short : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
+      LexInt(7),
+      LexInt(0),
+    ],
+  )
+  guard too_short is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
   let missing_header : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
       LexInt(7),
       LexInt(0),
@@ -165,6 +204,16 @@ test "pdf_parse_indirect_object_lexemes reports malformed indirect objects" {
   )
   guard missing_end is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
     fail("expected ParseEndObjectExpected")
+  }
+  let missing_object : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
+      LexInt(7),
+      LexInt(0),
+      LexObj,
+      LexComment(parser_bytes_for_test([37])),
+    ],
+  )
+  guard missing_object is Err(@pdflite.PdfError::ParseObjectExpected) else {
+    fail("expected ParseObjectExpected")
   }
 }
 

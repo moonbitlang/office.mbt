@@ -463,7 +463,11 @@ MoonBit consequences for this project:
     coverage now also covers `ToGet` accessors, non-dictionary stream
     dictionary views, checked dictionary mutation errors, stream dictionary
     replace/remove branches, all public unit-conversion arms, and the exported
-    ISO/US paper-size constants.
+    ISO/US paper-size constants. Parser and writer coverage now includes
+    truncated array/dictionary recovery, malformed indirect-object prefixes,
+    byte escaping for uppercase hex, control-character string escapes,
+    deferred stream/object write errors, and private scientific-real formatting
+    branches used by exponent-free PDF number serialization.
 
 ## Update Discipline
 

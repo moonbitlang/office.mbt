@@ -81,10 +81,10 @@ test "pdf_write_object renders real numbers without exponent notation" {
 
 ///|
 test "pdf_write_object escapes names and literal strings as bytes" {
-  let name = writer_name_for_test([47, 65, 32, 66, 35, 67])
+  let name = writer_name_for_test([47, 65, 32, 66, 35, 67, 255])
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfNameObject(name)),
-    writer_bytes_for_test([47, 65, 35, 50, 48, 66, 35, 50, 51, 67]),
+    writer_bytes_for_test([47, 65, 35, 50, 48, 66, 35, 50, 51, 67, 35, 70, 70]),
   )
   let string = writer_bytes_for_test([65, 10, 40, 41, 92, 0, 255])
   @test.assert_eq(
@@ -92,6 +92,11 @@ test "pdf_write_object escapes names and literal strings as bytes" {
     writer_bytes_for_test([
       40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
     ]),
+  )
+  let control_string = writer_bytes_for_test([13, 9, 8, 12])
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfString(control_string)),
+    writer_bytes_for_test([40, 92, 114, 92, 116, 92, 98, 92, 102, 41]),
   )
 }
 
@@ -148,6 +153,21 @@ test "pdf_write_indirect_object adds owned stream length" {
     Some(PdfInteger(2)),
   )
   @test.assert_eq(stream.data, StreamGot(writer_bytes_for_test([72, 105])))
+}
+
+///|
+test "pdf_write_object rejects deferred stream data" {
+  let cursor = @pdflite.byte_cursor_of_bytes(writer_bytes_for_test([72, 105]))
+  let object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamToGet(@pdflite.stream_to_get(cursor, 0, 2)),
+  )
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_object(
+    object,
+  )
+  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
+  }
 }
 
 ///|
