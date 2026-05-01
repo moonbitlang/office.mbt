@@ -478,6 +478,19 @@ pub(all) struct PdfBookmarkColour {
 
 type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfCalculatorFunction {
+  operations : Array[PdfCalculatorOp]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfCalculatorOp {
+  PdfCalculatorInt(Int)
+  PdfCalculatorFloat(Double)
+  PdfCalculatorAdd
+  PdfCalculatorSub
+  PdfCalculatorMul
+  PdfCalculatorDiv
+} derive(Eq, ToJson, @debug.Debug)
+
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfColourSpace {
@@ -697,6 +710,7 @@ pub(all) enum PdfFunctionKind {
   PdfFunctionSampled(PdfSampledFunction)
   PdfFunctionInterpolation(PdfInterpolationFunction)
   PdfFunctionStitching(PdfStitchingFunction)
+  PdfFunctionCalculator(PdfCalculatorFunction)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfImage {

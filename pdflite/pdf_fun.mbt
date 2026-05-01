@@ -93,10 +93,26 @@ pub(all) struct PdfStitchingFunction {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) enum PdfCalculatorOp {
+  PdfCalculatorInt(Int)
+  PdfCalculatorFloat(Double)
+  PdfCalculatorAdd
+  PdfCalculatorSub
+  PdfCalculatorMul
+  PdfCalculatorDiv
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfCalculatorFunction {
+  operations : Array[PdfCalculatorOp]
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) enum PdfFunctionKind {
   PdfFunctionSampled(PdfSampledFunction)
   PdfFunctionInterpolation(PdfInterpolationFunction)
   PdfFunctionStitching(PdfStitchingFunction)
+  PdfFunctionCalculator(PdfCalculatorFunction)
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -371,6 +387,67 @@ fn PdfDocument::pdf_fun_read_stitching(
 }
 
 ///|
+fn pdf_fun_calculator_is_separator(value : Int) -> Bool {
+  pdf_is_whitespace_byte(value) || value == 123 || value == 125
+}
+
+///|
+fn pdf_fun_calculator_op_of_token(
+  text : String,
+) -> PdfCalculatorOp raise PdfError {
+  match text {
+    "add" => PdfCalculatorAdd
+    "sub" => PdfCalculatorSub
+    "mul" => PdfCalculatorMul
+    "div" => PdfCalculatorDiv
+    _ => {
+      let integer : Result[Int, Error] = try? @strconv.from_str(text)
+      match integer {
+        Ok(value) => PdfCalculatorInt(value)
+        Err(_) => {
+          let real : Result[Double, Error] = try? @strconv.from_str(text)
+          match real {
+            Ok(value) => PdfCalculatorFloat(value)
+            Err(_) => raise FunctionExpected
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
+fn pdf_fun_calculator_push_token(
+  operations : Array[PdfCalculatorOp],
+  token : ArrayView[Byte],
+) -> Unit raise PdfError {
+  if token.length() > 0 {
+    let text = @ascii.decode(Bytes::from_array(token)[:]) catch {
+      _ => raise FunctionExpected
+    }
+    operations.push(pdf_fun_calculator_op_of_token(text))
+  }
+}
+
+///|
+fn pdf_fun_parse_calculator(
+  data : PdfBytes,
+) -> PdfCalculatorFunction raise PdfError {
+  let operations : Array[PdfCalculatorOp] = []
+  let mut token : Array[Byte] = []
+  for byte in data {
+    if pdf_fun_calculator_is_separator(byte.to_int()) {
+      pdf_fun_calculator_push_token(operations, token)
+      token = []
+    } else {
+      token.push(byte)
+    }
+  }
+  pdf_fun_calculator_push_token(operations, token)
+  { operations, }
+}
+
+///|
 pub fn PdfDocument::parse_function(
   self : PdfDocument,
   function_object : PdfObject,
@@ -433,6 +510,14 @@ pub fn PdfDocument::parse_function(
         range,
         func: PdfFunctionStitching(
           self.pdf_fun_read_stitching(function_dictionary),
+        ),
+      }
+    4 =>
+      {
+        domain,
+        range,
+        func: PdfFunctionCalculator(
+          pdf_fun_parse_calculator(self.pdf_fun_stream_data(function_object)),
         ),
       }
     other => raise FunctionNotSupported(other)
@@ -619,6 +704,54 @@ fn PdfStitchingFunction::eval_stitching(
 }
 
 ///|
+fn pdf_fun_calculator_pop(stack : Array[Double]) -> Double raise PdfError {
+  match stack.pop() {
+    Some(value) => value
+    None => raise BadFunctionEvaluation("calculator stack underflow")
+  }
+}
+
+///|
+fn PdfCalculatorFunction::eval_calculator(
+  self : PdfCalculatorFunction,
+  clamped_inputs : ArrayView[Double],
+) -> Array[Double] raise PdfError {
+  let stack : Array[Double] = []
+  for input in clamped_inputs {
+    stack.push(input)
+  }
+  for operation in self.operations {
+    match operation {
+      PdfCalculatorInt(value) => stack.push(value.to_double())
+      PdfCalculatorFloat(value) => stack.push(value)
+      PdfCalculatorAdd => {
+        let right = pdf_fun_calculator_pop(stack)
+        let left = pdf_fun_calculator_pop(stack)
+        stack.push(left + right)
+      }
+      PdfCalculatorSub => {
+        let right = pdf_fun_calculator_pop(stack)
+        let left = pdf_fun_calculator_pop(stack)
+        stack.push(left - right)
+      }
+      PdfCalculatorMul => {
+        let right = pdf_fun_calculator_pop(stack)
+        let left = pdf_fun_calculator_pop(stack)
+        stack.push(left * right)
+      }
+      PdfCalculatorDiv => {
+        let right = pdf_fun_calculator_pop(stack)
+        let left = pdf_fun_calculator_pop(stack)
+        stack.push(left / right)
+      }
+    }
+  }
+  [
+    for value in stack => value
+  ]
+}
+
+///|
 fn PdfFunction::clamped_inputs(
   self : PdfFunction,
   inputs : ArrayView[Double],
@@ -659,6 +792,8 @@ pub fn PdfFunction::eval(
     }
     PdfFunctionStitching(stitching) =>
       stitching.eval_stitching(self, clamped_inputs)
+    PdfFunctionCalculator(calculator) =>
+      calculator.eval_calculator(clamped_inputs)
   }
   match self.range {
     Some(range) => pdf_fun_clamp_values(output, range)
