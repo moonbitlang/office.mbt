@@ -209,14 +209,34 @@ fn pdf_writer_push_scientific_real(
 }
 
 ///|
+fn pdf_writer_push_fixed_six_real(output : Array[Byte], value : Double) -> Unit {
+  if value < 0.0 {
+    pdf_writer_push_byte(output, 45)
+  }
+  pdf_writer_push_ascii(output, "0.")
+  let magnitude = if value < 0.0 { -value } else { value }
+  let scaled = (magnitude * 1000000.0).round().to_int()
+  let mut divisor = 100000
+  while divisor > 0 {
+    pdf_writer_push_byte(output, 48 + scaled / divisor % 10)
+    divisor /= 10
+  }
+}
+
+///|
 fn pdf_writer_push_real(
   output : Array[Byte],
   value : Double,
 ) -> Unit raise PdfError {
-  let text = @ascii.encode(value.to_string())
-  match pdf_writer_exponent_marker(text[:]) {
-    -1 => pdf_writer_push_view(output, text[:])
-    exponent_at => pdf_writer_push_scientific_real(output, text[:], exponent_at)
+  if value.trunc() != value && value < 0.0001 && value > -0.0001 {
+    pdf_writer_push_fixed_six_real(output, value)
+  } else {
+    let text = @ascii.encode(value.to_string())
+    match pdf_writer_exponent_marker(text[:]) {
+      -1 => pdf_writer_push_view(output, text[:])
+      exponent_at =>
+        pdf_writer_push_scientific_real(output, text[:], exponent_at)
+    }
   }
 }
 

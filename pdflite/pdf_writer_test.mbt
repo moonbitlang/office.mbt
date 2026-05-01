@@ -70,7 +70,17 @@ test "pdf_write_object renders real numbers without exponent notation" {
   let tiny : Double = try! @strconv.from_str("1e-10")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(tiny)),
-    writer_bytes_for_test([48, 46, 48, 48, 48, 48, 48, 48, 48, 48, 48, 49]),
+    writer_bytes_for_test([48, 46, 48, 48, 48, 48, 48, 48]),
+  )
+  let small : Double = try! @strconv.from_str("0.00009")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(small)),
+    writer_bytes_for_test([48, 46, 48, 48, 48, 48, 57, 48]),
+  )
+  let negative_small : Double = try! @strconv.from_str("-0.00009")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(negative_small)),
+    writer_bytes_for_test([45, 48, 46, 48, 48, 48, 48, 57, 48]),
   )
   let large : Double = try! @strconv.from_str("1.25e6")
   @test.assert_eq(

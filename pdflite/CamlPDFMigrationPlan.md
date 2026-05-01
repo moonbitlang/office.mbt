@@ -212,10 +212,11 @@ MoonBit consequences for this project:
    `startxref`, and `%%EOF` document serialization are also started, with a
    primitive writer-reader round-trip test for parsed objects. Owned stream
    serialization now writes a direct `/Length` entry from the byte payload.
-   Real number serialization now avoids exponent notation, but complete
-   CamlPDF `format_real` parity remains deferred. Incremental update handling,
-   compressed xref streams, encrypted output, and lazy `StreamToGet`
-   materialization remain deferred.
+   Real number serialization now avoids exponent notation and includes the
+   CamlPDF fixed-six formatting branch for tiny non-integer real numbers.
+   Complete CamlPDF `format_real` `%.12g` precision parity remains deferred.
+   Incremental update handling, compressed xref streams, encrypted output, and
+   lazy `StreamToGet` materialization remain deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -602,8 +603,8 @@ MoonBit consequences for this project:
     ISO/US paper-size constants. Parser and writer coverage now includes
     truncated array/dictionary recovery, malformed indirect-object prefixes,
     byte escaping for uppercase hex, control-character string escapes,
-    deferred stream/object write errors, and private scientific-real formatting
-    branches used by exponent-free PDF number serialization. Page-label
+    deferred stream/object write errors, and private scientific/fixed-small real
+    formatting branches used by exponent-free PDF number serialization. Page-label
     coverage now includes empty-source continuation insertion, high-value Roman
     labels, lowercase letter labels, writing all public label style variants,
     private lowercase byte preservation, and the private root guard used by
