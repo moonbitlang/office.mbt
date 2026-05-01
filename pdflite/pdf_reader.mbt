@@ -1087,6 +1087,8 @@ pub fn pdf_read_document_from_bytes(
     XRefExpected => pdf_read_reconstructed_or_raise(data, XRefExpected)
     XRefEntryExpected =>
       pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
+    TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
+    RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
     error => raise error
   }
 }

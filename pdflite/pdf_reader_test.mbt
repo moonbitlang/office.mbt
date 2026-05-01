@@ -467,6 +467,40 @@ fn reader_malformed_pdf_with_bad_xref_entry() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_bad_trailer_object() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n1\n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_malformed_pdf_with_missing_root_trailer() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Size 2 >>\n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -1020,6 +1054,37 @@ test "pdf_read_document_from_bytes reconstructs bad xref rows" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs malformed trailers" {
+  let strict_bad_trailer : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_bad_trailer_object(),
+  )
+  guard strict_bad_trailer is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected strict TrailerExpected")
+  }
+
+  let bad_trailer = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_bad_trailer_object(),
+  )
+  @test.assert_eq(bad_trailer.first_xref(), 0)
+  @test.assert_eq(bad_trailer.root(), 1)
+  @test.assert_eq(bad_trailer.object_numbers(), [1])
+
+  let strict_missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_missing_root_trailer(),
+  )
+  guard strict_missing_root is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected strict RootExpected")
+  }
+
+  let missing_root = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_missing_root_trailer(),
+  )
+  @test.assert_eq(missing_root.first_xref(), 0)
+  @test.assert_eq(missing_root.root(), 1)
+  @test.assert_eq(missing_root.object_numbers(), [1])
 }
 
 ///|
