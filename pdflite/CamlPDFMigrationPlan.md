@@ -523,7 +523,11 @@ MoonBit consequences for this project:
     removes `pdf_ocg.mbt` from the uncovered-line report with whitebox checks
     for malformed array readers, sparse order/app dictionaries, usage
     fallbacks, malformed OCProperties roots, copy/merge helpers, and optional
-    writer fields.
+    writer fields. Page coverage now removes `pdf_page.mbt` from the
+    uncovered-line report with whitebox checks for page-tree guards, content
+    stream shapes, destination and annotation transform fallbacks, duplicate
+    annotation/destination cleanup, resource prefixing and renumbering, and
+    reference collection edge cases.
 
 ## Update Discipline
 

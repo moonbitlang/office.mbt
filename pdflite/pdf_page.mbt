@@ -824,11 +824,8 @@ fn PdfDocument::pdf_page_renumber_references(
   changes : ArrayView[(Int, Int)],
 ) -> Unit {
   for number in self.object_numbers() {
-    match self.objects.get_entry(number) {
-      Some(entry) =>
-        self.objects.set_entry(number, pdf_page_renumber_entry(entry, changes))
-      None => ()
-    }
+    let entry = self.objects.get_entry(number).unwrap()
+    self.objects.set_entry(number, pdf_page_renumber_entry(entry, changes))
   }
 }
 
@@ -1566,14 +1563,11 @@ fn PdfDocument::pdf_page_nullify_deleted_page_references(
       page_numbers, active_page_numbers,
     )
     for number in self.object_numbers() {
-      match self.objects.get_entry(number) {
-        Some(entry) =>
-          self.objects.set_entry(
-            number,
-            pdf_page_nullify_entry(entry, deleted_pages),
-          )
-        None => ()
-      }
+      let entry = self.objects.get_entry(number).unwrap()
+      self.objects.set_entry(
+        number,
+        pdf_page_nullify_entry(entry, deleted_pages),
+      )
     }
   }
 }
@@ -1674,9 +1668,7 @@ fn pdf_page_next_prefix(prefix : String) -> String {
     } else {
       let output = bytes.to_array()
       output[0] = (output[0].to_int() + 1).to_byte()
-      @ascii.decode(Bytes::from_array(output)[:]) catch {
-        _ => "a"
-      }
+      try! @ascii.decode(Bytes::from_array(output)[:])
     }
   }
 }
