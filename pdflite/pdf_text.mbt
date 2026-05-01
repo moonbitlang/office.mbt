@@ -1816,15 +1816,18 @@ fn pdf_text_stream_data_bytes(data : PdfStreamData) -> PdfBytes? {
 }
 
 ///|
-fn pdf_text_decoded_stream_data(object : PdfObject) -> PdfBytes? {
-  match object {
+fn PdfDocument::pdf_text_decoded_stream_data_direct(
+  self : PdfDocument,
+  object : PdfObject,
+) -> PdfBytes? {
+  match self.direct(object) {
     PdfStreamObject(stream) =>
-      try pdf_stream_first_filter(stream.dictionary) catch {
+      try self.pdf_stream_first_filter_direct(stream.dictionary) catch {
         _ => None
       } noraise {
         None => pdf_text_stream_data_bytes(stream.data)
         Some(_) =>
-          try pdf_decode_stream_value(stream) catch {
+          try self.pdf_decode_stream_value_direct(stream) catch {
             _ => None
           } noraise {
             decoded => pdf_text_stream_data_bytes(decoded.data)
@@ -1841,7 +1844,7 @@ fn PdfDocument::pdf_text_tounicode_of_font(
 ) -> Array[(Int, PdfBytes)]? {
   match self.lookup_direct(pdf_text_name("/ToUnicode"), font) {
     Some(PdfStreamObject(_) as stream) =>
-      match pdf_text_decoded_stream_data(stream) {
+      match self.pdf_text_decoded_stream_data_direct(stream) {
         Some(bytes) => pdf_text_parse_tounicode(bytes[:])
         None => None
       }

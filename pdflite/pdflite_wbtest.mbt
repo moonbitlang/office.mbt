@@ -1525,6 +1525,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   let key = wbtest_text_name("/Missing")
   @test.assert_eq(pdf_text_dictionary_has_key(PdfInteger(1), key), false)
   @test.assert_eq(pdf_text_find_immediate_indirect(PdfInteger(1), key), None)
+  let helper_doc = pdf_document_empty()
 
   let bad_deferred = pdf_stream(
     PdfDictionary([]),
@@ -1532,12 +1533,18 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
       stream_to_get(byte_cursor_of_bytes(@ascii.encode("abc")), -1, 1),
     ),
   )
-  @test.assert_eq(pdf_text_decoded_stream_data(bad_deferred), None)
+  @test.assert_eq(
+    helper_doc.pdf_text_decoded_stream_data_direct(bad_deferred),
+    None,
+  )
   let bad_filter = pdf_stream(
     PdfDictionary([(wbtest_text_name("/Filter"), PdfInteger(1))]),
     StreamGot(@ascii.encode("x")),
   )
-  @test.assert_eq(pdf_text_decoded_stream_data(bad_filter), None)
+  @test.assert_eq(
+    helper_doc.pdf_text_decoded_stream_data_direct(bad_filter),
+    None,
+  )
   let unsupported_filter = pdf_stream(
     PdfDictionary([
       (wbtest_text_name("/Length"), PdfInteger(1)),
@@ -1548,8 +1555,14 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
     ]),
     StreamGot(@ascii.encode("x")),
   )
-  @test.assert_eq(pdf_text_decoded_stream_data(unsupported_filter), None)
-  @test.assert_eq(pdf_text_decoded_stream_data(PdfInteger(1)), None)
+  @test.assert_eq(
+    helper_doc.pdf_text_decoded_stream_data_direct(unsupported_filter),
+    None,
+  )
+  @test.assert_eq(
+    helper_doc.pdf_text_decoded_stream_data_direct(PdfInteger(1)),
+    None,
+  )
 
   let doc = pdf_document_empty()
   let font = PdfDictionary([
