@@ -443,6 +443,11 @@ fn pdf_predictor_key() -> PdfName {
 }
 
 ///|
+fn pdf_early_change_key() -> PdfName {
+  pdf_filter_name("/EarlyChange")
+}
+
+///|
 fn pdf_colors_key() -> PdfName {
   pdf_filter_name("/Colors")
 }
@@ -873,6 +878,28 @@ fn pdf_apply_first_predictor(
 }
 
 ///|
+fn pdf_lzw_early_change(dictionary : PdfObject) -> Int raise PdfError {
+  match pdf_first_decodeparms(dictionary) {
+    None => 1
+    Some(decodeparms) =>
+      pdf_decodeparms_int(decodeparms, pdf_early_change_key(), 1)
+  }
+}
+
+///|
+fn pdf_decode_stream_filter_bytes(
+  filter : PdfName,
+  dictionary : PdfObject,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+    pdf_lzw_decode(data, early_change=pdf_lzw_early_change(dictionary))
+  } else {
+    pdf_decode_filter_bytes(filter, data)
+  }
+}
+
+///|
 pub fn pdf_decode_stream_onestage(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
@@ -890,7 +917,11 @@ pub fn pdf_decode_stream_onestage(
               pdf_stream(dictionary, StreamGot(data))
             }
             Some(filter) => {
-              let decoded = pdf_decode_filter_bytes(filter, data)
+              let decoded = pdf_decode_stream_filter_bytes(
+                filter,
+                stream.dictionary,
+                data,
+              )
               let unpredicted = pdf_apply_first_predictor(
                 stream.dictionary,
                 decoded,

@@ -14,6 +14,40 @@ fn codec_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn codec_lzw_codes_for_test(
+  codes : ArrayView[Int],
+  early_change : Int,
+) -> @pdflite.PdfBytes {
+  let writer = @pdflite.bit_writer_new()
+  let mut code_length = 9
+  let mut next_code = 258
+  let mut old_code = 256
+  for code in codes {
+    try! writer.put_value_int(code_length, code)
+    match code {
+      256 => {
+        code_length = 9
+        next_code = 258
+        old_code = 256
+      }
+      257 => ()
+      _ =>
+        if old_code == 256 {
+          old_code = code
+        } else {
+          next_code += 1
+          match next_code + early_change {
+            512 | 1024 | 2048 => code_length += 1
+            _ => ()
+          }
+          old_code = code
+        }
+    }
+  }
+  writer.to_bytes()
+}
+
+///|
 test "pdf_ascii_hex_encode renders uppercase hex with terminator" {
   @test.assert_eq(
     @pdflite.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
@@ -350,6 +384,38 @@ test "pdf_decode_stream_onestage applies first DecodeParms predictor" {
   @test.assert_eq(
     decoded_stream.data,
     StreamGot(codec_bytes_for_test([10, 20, 30])),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "pdf_decode_stream_onestage applies lzw EarlyChange DecodeParms" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let early_change = codec_name_for_test("/EarlyChange")
+  let codes : Array[Int] = [256]
+  for _ in 0..<255 {
+    codes.push(65)
+  }
+  codes.push(257)
+  let encoded = codec_lzw_codes_for_test(codes[:], 0)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(codec_name_for_test("/LZWDecode"))),
+      (decodeparms, @pdflite.pdf_dictionary([(early_change, PdfInteger(0))])),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([ for _ in 0..<255 => 65 ])),
   )
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
