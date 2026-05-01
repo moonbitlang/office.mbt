@@ -17,6 +17,25 @@ fn crypt_concat_bytes_for_test(
 }
 
 ///|
+fn crypt_bytes_start_with_at(
+  haystack : @pdflite.PdfBytes,
+  needle : @pdflite.PdfBytes,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
 fn crypt_aesv2_encrypt_data_for_test(
   object_number : Int,
   generation : Int,
@@ -1548,6 +1567,177 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
     plain_object,
   )
   @test.assert_eq(arc4_128_roundtrip.denied_permissions, [PdfNoCopy])
+}
+
+///|
+test "PdfDocument recrypt_with_password supports classic incremental update" {
+  let key_type = crypt_name_for_test("/Type")
+  let key_catalog = crypt_name_for_test("/Catalog")
+  let key_pages = crypt_name_for_test("/Pages")
+  let key_kids = crypt_name_for_test("/Kids")
+  let key_count = crypt_name_for_test("/Count")
+  let key_title = crypt_name_for_test("/Title")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_catalog)),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_pages)),
+      (key_kids, PdfArray([])),
+      (key_count, PdfInteger(0)),
+    ]),
+  )
+  let original_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("original"))),
+  ])
+  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("updated"))),
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("added"))
+  doc.add_object_given_number(5, original_secret)
+  let encrypted = try! doc.encrypt_128bit_r4(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    encrypt_metadata=true,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let original = try! @pdflite.pdf_write_document(encrypted)
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      original,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.document.event_log(), [])
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), original_secret)
+
+  decrypted.document.add_object_given_number(5, updated_secret)
+  decrypted.document.add_object_given_number(8, added_object)
+  let recrypted = try! decrypted.document.recrypt_with_password(
+    @ascii.encode("owner")[:],
+  )
+  let rendered = try! @pdflite.pdf_write_document_incremental_update(
+    original, recrypted,
+  )
+  @test.assert_eq(crypt_bytes_start_with_at(rendered, original, 0), true)
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  @test.assert_eq(roundtrip.document.root(), 1)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(5), updated_secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(8), added_object)
+  @test.assert_eq(roundtrip.denied_permissions, [PdfNoPrint])
+  @test.assert_eq(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
+  )
+}
+
+///|
+test "PdfDocument recrypt_with_password supports xref stream incremental updates" {
+  let key_type = crypt_name_for_test("/Type")
+  let key_catalog = crypt_name_for_test("/Catalog")
+  let key_pages = crypt_name_for_test("/Pages")
+  let key_kids = crypt_name_for_test("/Kids")
+  let key_count = crypt_name_for_test("/Count")
+  let key_title = crypt_name_for_test("/Title")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 5)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_catalog)),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_pages)),
+      (key_kids, PdfArray([])),
+      (key_count, PdfInteger(0)),
+    ]),
+  )
+  let original_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("original-xref"))),
+  ])
+  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("updated-xref"))),
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("xref-added"))
+  doc.add_object_given_number(5, original_secret)
+  let encrypted = try! doc.encrypt_128bit_r4(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoCopy],
+    encrypt_metadata=true,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let original = try! @pdflite.pdf_write_document_with_xref_stream(encrypted)
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      original,
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.document.event_log(), [])
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), original_secret)
+
+  decrypted.document.add_object_given_number(5, updated_secret)
+  decrypted.document.add_object_given_number(8, added_object)
+  let recrypted = try! decrypted.document.recrypt_with_password(
+    @ascii.encode("user")[:],
+  )
+  let rendered = try! @pdflite.pdf_write_document_incremental_update_with_xref_stream(
+    original, recrypted,
+  )
+  @test.assert_eq(crypt_bytes_start_with_at(rendered, original, 0), true)
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(5), updated_secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(8), added_object)
+  @test.assert_eq(roundtrip.denied_permissions, [PdfNoCopy])
+
+  let compressed = try! @pdflite.pdf_write_document_incremental_update_with_compressed_xref_stream(
+    original, recrypted,
+  )
+  @test.assert_eq(crypt_bytes_start_with_at(compressed, original, 0), true)
+  let compressed_roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      compressed,
+      user_password=Some(@ascii.encode("bad")[:]),
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  @test.assert_eq(
+    compressed_roundtrip.document.lookup_object_or_null(5),
+    updated_secret,
+  )
+  @test.assert_eq(
+    compressed_roundtrip.document.lookup_object_or_null(8),
+    added_object,
+  )
+  @test.assert_eq(compressed_roundtrip.denied_permissions, [PdfNoCopy])
 }
 
 ///|

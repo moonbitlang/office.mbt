@@ -277,10 +277,10 @@ MoonBit consequences for this project:
    through `/Prev`; reader materialization no longer records loaded objects as
    user mutations. Xref-stream incremental updates now use the same changed
    object detection and emit sparse `/Index` ranges for changed/deleted objects
-   plus the xref stream object. ARC4 encrypted output is now covered for the
-   classic writer plus the uncompressed and Flate-compressed xref-stream writer
-   paths; AES encrypted output remains deferred until an IV/randomness policy
-   is selected.
+   plus the xref stream object. ARC4 encrypted output is now covered for full
+   writes and incremental updates through the classic writer plus the
+   uncompressed and Flate-compressed xref-stream writer paths; AES encrypted
+   output remains deferred until an IV/randomness policy is selected.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -648,8 +648,9 @@ MoonBit consequences for this project:
     objects in a copy, installs an indirect `/Encrypt` dictionary, applies the
     revision 4 `/EncryptMetadata` file-key and metadata-stream rules, and
     round-trips through the existing password decryption APIs. The revision 4
-    ARC4 path now also has classic-writer/classic-reader/decrypt and
-    xref-stream-writer/xref-stream-reader/decrypt integration gates.
+    ARC4 path now also has classic-writer/classic-reader/decrypt,
+    xref-stream-writer/xref-stream-reader/decrypt, and encrypted incremental
+    update integration gates.
     Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
     structured unsupported errors until the remaining primitives are available.
     The document-level decryption entry points for parsed ARC4 and AESV2
