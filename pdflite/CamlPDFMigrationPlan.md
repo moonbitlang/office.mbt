@@ -288,7 +288,10 @@ MoonBit consequences for this project:
    `retain_numbering=true`. Bookmark extraction is also started: bookmarks are
    filtered to selected target pages, ancestor outline context is retained, and
    selected page targets are renumbered with the extracted page tree. Structure
-   tree trimming and broader retained-numbering behavior remain deferred.
+   tree trimming is started behind `process_struct_tree=true`: structure nodes
+   whose `/Pg` points to removed pages are deleted and ancestor `/K` child
+   lists are pruned until stable. Broader retained-numbering behavior remains
+   deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a
    `remove_unreferenced` pass that follows indirect references from the catalog

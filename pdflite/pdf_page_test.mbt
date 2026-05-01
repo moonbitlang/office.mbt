@@ -1267,6 +1267,102 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
 }
 
 ///|
+test "PdfDocument pdf_of_pages can trim structure tree" {
+  let key_struct_tree_root = page_name_for_test("/StructTreeRoot")
+  let key_k = page_name_for_test("/K")
+  let key_pg = page_name_for_test("/Pg")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_page_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    30,
+    @pdflite.pdf_dictionary([
+      (key_k, PdfArray([PdfIndirect(31), PdfIndirect(32)])),
+    ]),
+  )
+  doc.add_object_given_number(
+    31,
+    @pdflite.pdf_dictionary([
+      (key_pg, PdfIndirect(old_page_numbers[0])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  doc.add_object_given_number(
+    32,
+    @pdflite.pdf_dictionary([
+      (key_pg, PdfIndirect(old_page_numbers[1])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_struct_tree_root, PdfIndirect(30)),
+  )
+  let extracted = try! doc.pdf_of_pages([1], process_struct_tree=true)
+  let new_page_numbers = try! extracted.page_reference_numbers()
+  @test.assert_eq(
+    extracted
+    .lookup_object_or_null(extracted.root())
+    .lookup_immediate(key_struct_tree_root),
+    Some(PdfIndirect(30)),
+  )
+  @test.assert_eq(
+    extracted.lookup_object_or_null(30).lookup_immediate(key_k),
+    Some(PdfIndirect(31)),
+  )
+  @test.assert_eq(
+    extracted.lookup_object_or_null(31).lookup_immediate(key_pg),
+    Some(PdfIndirect(new_page_numbers[0])),
+  )
+  @test.assert_eq(extracted.lookup_object_or_null(32), PdfNull)
+}
+
+///|
+test "PdfDocument trim_structure_tree prunes deleted page kids" {
+  let key_k = page_name_for_test("/K")
+  let key_pg = page_name_for_test("/Pg")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let page_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    30,
+    @pdflite.pdf_dictionary([
+      (key_k, PdfArray([PdfIndirect(31), PdfIndirect(32)])),
+    ]),
+  )
+  doc.add_object_given_number(
+    31,
+    @pdflite.pdf_dictionary([
+      (key_pg, PdfIndirect(page_numbers[0])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  doc.add_object_given_number(
+    32,
+    @pdflite.pdf_dictionary([
+      (key_pg, PdfIndirect(page_numbers[1])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  try! doc.trim_structure_tree([1])
+  @test.assert_eq(
+    doc.lookup_object_or_null(30).lookup_immediate(key_k),
+    Some(PdfIndirect(31)),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(32), PdfNull)
+}
+
+///|
 test "PdfDocument pdf_of_pages duplicates reused annotations" {
   let key_annots = page_name_for_test("/Annots")
   let key_subtype = page_name_for_test("/Subtype")

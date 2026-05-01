@@ -1402,6 +1402,7 @@ pub fn PdfDocument::pdf_of_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   retain_numbering? : Bool = false,
+  process_struct_tree? : Bool = false,
 ) -> PdfDocument raise PdfError {
   let has_page_labels = self.pdf_page_label_has_labels()
   let retained_page_labels = if retain_numbering && has_page_labels {
@@ -1420,10 +1421,13 @@ pub fn PdfDocument::pdf_of_pages(
     []
   }
   let selected = pdf_page_select_pages(self.pages_of_pagetree(), page_numbers)
-  let old_page_numbers = pdf_page_select_numbers(
-    self.page_reference_numbers(),
-    page_numbers,
-  )
+  let all_page_numbers = self.page_reference_numbers()
+  let old_page_numbers = pdf_page_select_numbers(all_page_numbers, page_numbers)
+  let deleted_page_numbers = if process_struct_tree {
+    pdf_page_deleted_numbers(all_page_numbers, old_page_numbers)
+  } else {
+    []
+  }
   let pdf = self.change_pages(selected)
   let pdf = if has_bookmarks {
     pdf.add_bookmarks(retained_bookmarks)
@@ -1433,6 +1437,9 @@ pub fn PdfDocument::pdf_of_pages(
   pdf.pdf_page_renumber_references(
     pdf_page_reference_changes(old_page_numbers, pdf.page_reference_numbers()),
   )
+  if process_struct_tree {
+    pdf.pdf_structure_trim_deleted_pages(deleted_page_numbers)
+  }
   pdf.pdf_page_fixup_duplicate_annots()
   pdf.remove_unreferenced()
   pdf.pdf_page_fixup_destination_name_tree()
