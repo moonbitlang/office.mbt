@@ -238,6 +238,12 @@ test "pdf_flate_decode expands zlib stored and dynamic blocks" {
   )
   @test.assert_eq(
     try! @pdflite.pdf_flate_decode(
+      codec_bytes_for_test([120, 1, 115, 4, 0, 0, 66, 0, 66]),
+    ),
+    codec_ascii_for_test("A"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(
       codec_bytes_for_test([
         120, 156, 237, 196, 57, 1, 0, 0, 8, 4, 160, 172, 231, 211, 191, 130, 41,
         220, 96, 32, 213, 179, 145, 36, 73, 146, 36, 73, 146, 244, 217, 1, 198, 122,
@@ -250,10 +256,29 @@ test "pdf_flate_decode expands zlib stored and dynamic blocks" {
 
 ///|
 test "pdf_flate_decode reports malformed zlib data" {
+  @test.assert_eq(try! @pdflite.pdf_flate_decode(codec_bytes_for_test([])), [])
+  let short_data : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+    codec_bytes_for_test([120, 1, 0]),
+  )
+  guard short_data is Err(@pdflite.PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
   let bad_header : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
     codec_bytes_for_test([120, 2, 1, 0, 0, 255, 255, 0, 0, 0, 1]),
   )
   guard bad_header is Err(@pdflite.PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_stored_length : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+    codec_bytes_for_test([120, 1, 1, 1, 0, 0, 0, 65, 0, 66, 0, 66]),
+  )
+  guard bad_stored_length is Err(@pdflite.PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_block_type : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+    codec_bytes_for_test([120, 1, 7, 0, 1, 0, 0]),
+  )
+  guard bad_block_type is Err(@pdflite.PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
   }
   let bad_checksum : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
@@ -266,6 +291,12 @@ test "pdf_flate_decode reports malformed zlib data" {
 
 ///|
 test "pdf_flate_encode emits zlib stored blocks" {
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(
+      @pdflite.pdf_flate_encode(codec_bytes_for_test([])),
+    ),
+    codec_bytes_for_test([]),
+  )
   let encoded = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
   @test.assert_eq(
     encoded,

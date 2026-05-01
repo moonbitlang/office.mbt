@@ -483,7 +483,10 @@ MoonBit consequences for this project:
     decode-parameter, predictor-byte-width, and LZW table-validation guards.
     Name/number tree coverage now includes malformed key-type rejection,
     duplicate number-key replacement, large nested tree construction with child
-    `/Limits`, and private grouping threshold checks.
+    `/Limits`, and private grouping threshold checks. Flate coverage now
+    includes empty and short zlib inputs, fixed-Huffman blocks, invalid stored
+    block lengths, invalid block types, empty stored-block encoding, and private
+    bit-reader/Huffman-table guards.
 
 ## Update Discipline
 

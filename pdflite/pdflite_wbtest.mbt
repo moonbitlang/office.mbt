@@ -258,3 +258,31 @@ test "private tree group count covers threshold branches" {
   @test.assert_eq(pdf_tree_group_count(11), 2)
   @test.assert_eq(pdf_tree_group_count(101), 10)
 }
+
+///|
+test "private flate bit reader and huffman guards reject malformed inputs" {
+  let reader = FlateBitReader::new(Bytes::new(0)[:])
+  let negative_bits : Result[UInt, Error] = try? reader.read_bits(-1)
+  guard negative_bits is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let exhausted = FlateBitReader::new(Bytes::new(0)[:])
+  let missing_byte : Result[UInt, Error] = try? exhausted.read_bits(1)
+  guard missing_byte is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_length : Result[FlateHuffmanTable, Error] = try? pdf_flate_build_huffman([
+      -1,
+    ],
+  )
+  guard bad_length is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let empty_table : Result[FlateHuffmanTable, Error] = try? pdf_flate_build_huffman([
+      0,
+    ],
+  )
+  guard empty_table is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+}
