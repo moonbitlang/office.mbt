@@ -268,6 +268,90 @@ test "writer rounds plain significant real helper edge forms" {
 }
 
 ///|
+test "private xref stream helpers cover malformed and deferred entries" {
+  let key_w = pdf_reader_name("/W")
+  let key_index = pdf_reader_name("/Index")
+  let malformed_array_value : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
+    PdfDictionary([(key_w, PdfArray([PdfNameObject(pdf_reader_name("/Name"))]))]),
+    key_w,
+  )
+  guard malformed_array_value is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let malformed_non_array : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
+    PdfDictionary([(key_w, PdfInteger(1))]),
+    key_w,
+  )
+  guard malformed_non_array is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let malformed_widths : Result[(Int, Int, Int), Error] = try? pdf_xref_stream_widths(
+    PdfDictionary([(key_w, PdfArray([PdfInteger(1), PdfInteger(2)]))]),
+  )
+  guard malformed_widths is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let odd_index : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
+    PdfDictionary([(key_index, PdfArray([PdfInteger(0)]))]),
+  )
+  guard odd_index is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let negative_index : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
+    PdfDictionary([(key_index, PdfArray([PdfInteger(0), PdfInteger(-1)]))]),
+  )
+  guard negative_index is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let missing_size : Result[Array[(Int, Int)], Error] = try? pdf_xref_stream_index_pairs(
+    PdfDictionary([]),
+  )
+  guard missing_size is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  @test.assert_eq(
+    try! pdf_xref_stream_read_field(@ascii.encode("ab")[:], 0, 0),
+    (0, 0),
+  )
+  let short_field : Result[(Int, Int), Error] = try? pdf_xref_stream_read_field(
+    @ascii.encode("a")[:],
+    0,
+    2,
+  )
+  guard short_field is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let default_kind_entries = try! pdf_xref_stream_entries(
+    Bytes::from_array([9, 0, 8, 1])[:],
+    (0, 1, 1),
+    [(5, 2)][:],
+  )
+  @test.assert_eq(default_kind_entries.length(), 2)
+  @test.assert_eq(default_kind_entries[0].object_number, 5)
+  @test.assert_eq(default_kind_entries[0].offset, 9)
+  @test.assert_eq(default_kind_entries[0].generation, 0)
+  @test.assert_eq(default_kind_entries[0].in_use, true)
+
+  let deferred_entries = try! pdf_xref_stream_entries(
+    Bytes::from_array([2, 7, 0, 9, 0, 0])[:],
+    (1, 1, 1),
+    [(3, 2)][:],
+  )
+  @test.assert_eq(deferred_entries.length(), 1)
+  @test.assert_eq(deferred_entries[0].object_number, 3)
+  @test.assert_eq(deferred_entries[0].offset, 7)
+  @test.assert_eq(deferred_entries[0].generation, 0)
+  @test.assert_eq(deferred_entries[0].in_use, false)
+}
+
+///|
 test "private stream data materialization reports invalid deferred slices" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
   let bad_position : Result[BytesView, Error] = try? pdf_stream_data_view(

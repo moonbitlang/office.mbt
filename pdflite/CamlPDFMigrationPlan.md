@@ -194,9 +194,14 @@ MoonBit consequences for this project:
    `/Length n 0 R` entries through that xref table. Incremental trailer
    `/Prev` chains are started for classic xref tables, preserving newer entries
    over older ones, including newer free entries that hide older objects. Xref
-   streams, object streams, encryption, and malformed-file reconstruction remain
-   deferred. `pdf_read_document_from_bytes` is now the public byte-backed reader
-   entry point and currently delegates to the classic xref reader. Reader
+   stream reading is now started for direct/filter-decodable stream data,
+   default `/Size` ranges, explicit `/Index` ranges, and ordinary type-1
+   entries; xref stream objects are omitted from the loaded object map, and
+   type-2 object-stream entries currently hide older entries until object
+   stream extraction is ported. Object streams and malformed-file
+   reconstruction remain deferred. `pdf_read_document_from_bytes` is now the
+   public byte-backed reader entry point and handles classic tables and the
+   started xref-stream subset. Reader
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.

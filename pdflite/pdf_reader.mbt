@@ -123,6 +123,13 @@ struct PdfClassicXRefEntry {
 } derive(Debug, Eq, ToJson)
 
 ///|
+priv struct PdfXRefSection {
+  entries : Array[PdfClassicXRefEntry]
+  trailer : PdfObject
+  stream_object_number : Int?
+}
+
+///|
 fn ByteCursor::seek_pdf_absolute(
   self : ByteCursor,
   position : Int,
@@ -307,6 +314,266 @@ fn ByteCursor::read_pdf_classic_xref_entries(
 }
 
 ///|
+fn pdf_reader_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_reader_type_name() -> PdfName {
+  pdf_reader_name("/Type")
+}
+
+///|
+fn pdf_reader_xref_name() -> PdfName {
+  pdf_reader_name("/XRef")
+}
+
+///|
+fn pdf_reader_w_name() -> PdfName {
+  pdf_reader_name("/W")
+}
+
+///|
+fn pdf_reader_index_name() -> PdfName {
+  pdf_reader_name("/Index")
+}
+
+///|
+fn pdf_reader_size_name() -> PdfName {
+  pdf_reader_name("/Size")
+}
+
+///|
+fn pdf_reader_filter_name() -> PdfName {
+  pdf_reader_name("/Filter")
+}
+
+///|
+fn pdf_reader_short_filter_name() -> PdfName {
+  pdf_reader_name("/F")
+}
+
+///|
+fn pdf_reader_decodeparms_name() -> PdfName {
+  pdf_reader_name("/DecodeParms")
+}
+
+///|
+fn pdf_reader_short_decodeparms_name() -> PdfName {
+  pdf_reader_name("/DP")
+}
+
+///|
+fn pdf_reader_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
+  for item in values {
+    if item == value {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_reader_stream_dictionary_without_xref_keys(
+  dictionary : PdfObject,
+) -> PdfObject raise PdfError {
+  dictionary
+  .remove_dict_entry(pdf_reader_type_name())
+  .remove_dict_entry(pdf_reader_w_name())
+  .remove_dict_entry(pdf_reader_index_name())
+  .remove_dict_entry(pdf_length_name())
+  .remove_dict_entry(pdf_reader_filter_name())
+  .remove_dict_entry(pdf_reader_short_filter_name())
+  .remove_dict_entry(pdf_reader_decodeparms_name())
+  .remove_dict_entry(pdf_reader_short_decodeparms_name())
+}
+
+///|
+fn pdf_xref_stream_int_array(
+  dictionary : PdfObject,
+  key : PdfName,
+) -> Array[Int]? raise PdfError {
+  match dictionary.lookup_immediate(key) {
+    Some(PdfArray(values)) => {
+      let output : Array[Int] = []
+      for value in values {
+        match value {
+          PdfInteger(number) => output.push(number)
+          _ => raise XRefEntryExpected
+        }
+      }
+      Some(output)
+    }
+    Some(_) => raise XRefEntryExpected
+    None => None
+  }
+}
+
+///|
+fn pdf_xref_stream_widths(
+  dictionary : PdfObject,
+) -> (Int, Int, Int) raise PdfError {
+  match pdf_xref_stream_int_array(dictionary, pdf_reader_w_name()) {
+    Some([w0, w1, w2]) if w0 >= 0 && w1 >= 0 && w2 >= 0 && w0 + w1 + w2 > 0 =>
+      (w0, w1, w2)
+    _ => raise XRefEntryExpected
+  }
+}
+
+///|
+fn pdf_xref_stream_index_pairs(
+  dictionary : PdfObject,
+) -> Array[(Int, Int)] raise PdfError {
+  match pdf_xref_stream_int_array(dictionary, pdf_reader_index_name()) {
+    Some(values) => {
+      if values.length() % 2 != 0 {
+        raise XRefEntryExpected
+      }
+      let pairs : Array[(Int, Int)] = []
+      for i = 0; i < values.length(); i = i + 2 {
+        let start = values[i]
+        let length = values[i + 1]
+        if start < 0 || length < 0 {
+          raise XRefEntryExpected
+        }
+        pairs.push((start, length))
+      }
+      pairs
+    }
+    None =>
+      match dictionary.lookup_immediate(pdf_reader_size_name()) {
+        Some(PdfInteger(size)) if size >= 0 => [(0, size)]
+        _ => raise XRefEntryExpected
+      }
+  }
+}
+
+///|
+fn pdf_xref_stream_read_field(
+  data : BytesView,
+  position : Int,
+  width : Int,
+) -> (Int, Int) raise PdfError {
+  if width == 0 {
+    (0, position)
+  } else if position < 0 || position + width > data.length() {
+    raise XRefEntryExpected
+  } else {
+    let mut value = 0
+    for i in position..<(position + width) {
+      value = value * 256 + data[i].to_int()
+    }
+    (value, position + width)
+  }
+}
+
+///|
+fn pdf_xref_stream_read_entry(
+  data : BytesView,
+  position : Int,
+  w0 : Int,
+  w1 : Int,
+  w2 : Int,
+) -> (Int, Int, Int, Int) raise PdfError {
+  let (raw_kind, after_kind) = pdf_xref_stream_read_field(data, position, w0)
+  let (field2, after_field2) = pdf_xref_stream_read_field(data, after_kind, w1)
+  let (field3, after_field3) = pdf_xref_stream_read_field(
+    data, after_field2, w2,
+  )
+  let kind = if w0 == 0 { 1 } else { raw_kind }
+  (kind, field2, field3, after_field3)
+}
+
+///|
+fn pdf_xref_stream_entries(
+  data : BytesView,
+  widths : (Int, Int, Int),
+  index_pairs : ArrayView[(Int, Int)],
+) -> Array[PdfClassicXRefEntry] raise PdfError {
+  let (w0, w1, w2) = widths
+  let entries : Array[PdfClassicXRefEntry] = []
+  let mut position = 0
+  for pair in index_pairs {
+    let (start_object, count) = pair
+    for offset in 0..<count {
+      let object_number = start_object + offset
+      let (kind, field2, field3, next_position) = pdf_xref_stream_read_entry(
+        data, position, w0, w1, w2,
+      )
+      position = next_position
+      match kind {
+        0 =>
+          entries.push({
+            object_number,
+            offset: field2,
+            generation: field3,
+            in_use: false,
+          })
+        1 =>
+          entries.push({
+            object_number,
+            offset: field2,
+            generation: field3,
+            in_use: true,
+          })
+        // Object-stream entries are intentionally kept as non-loadable entries
+        // until object stream extraction is ported. They still hide older xrefs.
+        2 =>
+          entries.push({
+            object_number,
+            offset: field2,
+            generation: field3,
+            in_use: false,
+          })
+        _ => ()
+      }
+    }
+  }
+  entries
+}
+
+///|
+fn ByteCursor::read_pdf_xref_stream_section(
+  self : ByteCursor,
+) -> PdfXRefSection raise PdfError {
+  if !pdf_is_digit_byte(self.peek_byte()) {
+    raise XRefExpected
+  }
+  let parsed = self.read_first_indirect_object_at_current([])
+  guard parsed.object is PdfStreamObject(stream) else { raise XRefExpected }
+  match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
+    Some(PdfNameObject(name)) if name == pdf_reader_xref_name() => ()
+    _ => raise XRefExpected
+  }
+  let decoded_stream = pdf_decode_stream_value(stream)
+  let widths = pdf_xref_stream_widths(decoded_stream.dictionary)
+  let index_pairs = pdf_xref_stream_index_pairs(decoded_stream.dictionary)
+  let data = pdf_stream_data_bytes(decoded_stream.data)
+  {
+    entries: pdf_xref_stream_entries(data[:], widths, index_pairs[:]),
+    trailer: pdf_reader_stream_dictionary_without_xref_keys(
+      decoded_stream.dictionary,
+    ),
+    stream_object_number: Some(parsed.number),
+  }
+}
+
+///|
+fn ByteCursor::read_pdf_xref_section(
+  self : ByteCursor,
+) -> PdfXRefSection raise PdfError {
+  let position = self.absolute_position()
+  if self.matches_pdf_ascii_at(position, [120, 114, 101, 102]) {
+    let entries = self.read_pdf_classic_xref_entries()
+    let trailer = self.read_pdf_trailer_dictionary()
+    { entries, trailer, stream_object_number: None }
+  } else {
+    self.read_pdf_xref_stream_section()
+  }
+}
+
+///|
 fn ByteCursor::read_pdf_trailer_dictionary(
   self : ByteCursor,
 ) -> PdfObject raise PdfError {
@@ -427,6 +694,7 @@ pub fn pdf_read_classic_document_from_bytes(
   let xref_position = pdf_read_startxref_position(cursor.data)
   let xrefs : Array[PdfClassicXRefEntry] = []
   let mut trailer = PdfDictionary([])
+  let xref_stream_objects : Array[Int] = []
   let mut current_xref = xref_position
   let mut done = false
   let mut depth = 0
@@ -435,11 +703,13 @@ pub fn pdf_read_classic_document_from_bytes(
       raise XRefExpected
     }
     cursor.seek_pdf_absolute(current_xref)
-    pdf_classic_xrefs_add_newer_first(
-      xrefs,
-      cursor.read_pdf_classic_xref_entries(),
-    )
-    let current_trailer = cursor.read_pdf_trailer_dictionary()
+    let section = cursor.read_pdf_xref_section()
+    pdf_classic_xrefs_add_newer_first(xrefs, section.entries)
+    match section.stream_object_number {
+      Some(number) => xref_stream_objects.push(number)
+      None => ()
+    }
+    let current_trailer = section.trailer
     if depth == 0 {
       trailer = current_trailer
     }
@@ -454,7 +724,9 @@ pub fn pdf_read_classic_document_from_bytes(
   document.set_first_xref(xref_position)
   document.set_trailer_and_root(trailer)
   for xref in xrefs {
-    if xref.in_use && xref.object_number != 0 {
+    if xref.in_use &&
+      xref.object_number != 0 &&
+      !pdf_reader_int_array_contains(xref_stream_objects[:], xref.object_number) {
       cursor.seek_pdf_absolute(xref.offset)
       let parsed = cursor.read_first_indirect_object_at_current(xrefs)
       if parsed.number != xref.object_number ||

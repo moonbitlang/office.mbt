@@ -88,6 +88,18 @@ not part of the public signature. In one-line probes, separate enum variants
 with semicolons; in source files, normal block-style variant lines work after
 `moon fmt`.
 
+```sh
+moon run -c 'priv struct S { value : Int }
+fn make() -> S { { value: 1 } }
+fn main { let s = make(); println(s.value) }'
+# 1
+```
+
+Use `priv struct` for internal helper records that should not be exposed in the
+generated package interface. Avoid deriving traits on private helpers unless a
+test or debug path actually uses those implementations, because unused derives
+can produce warnings under stricter project checks.
+
 When an OCaml function returns a broad variant and later code relies on an
 informal invariant, prefer a narrow private MoonBit enum for the post-checked
 state. This makes impossible fallback branches explicit at the type boundary
