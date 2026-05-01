@@ -204,9 +204,11 @@ MoonBit consequences for this project:
    mismatch checks. Hybrid-reference files with a classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same
    revision while preserving the classic trailer as the document trailer.
-   Malformed-file reconstruction remains deferred. `pdf_read_document_from_bytes`
-   is now the public byte-backed reader entry point and handles classic tables
-   plus the started xref-stream/object-stream subset. Reader
+   Xref-stream `/Prev` chains are also covered, including newer updates and
+   free entries hiding older objects. Malformed-file reconstruction remains
+   deferred. `pdf_read_document_from_bytes` is now the public byte-backed reader
+   entry point and handles classic tables plus the started
+   xref-stream/object-stream subset. Reader
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.

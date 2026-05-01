@@ -394,6 +394,69 @@ fn reader_hybrid_xref_stream_pdf() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let original_offset = reader_push_indirect_object(output, 1, 0, "1")
+  let base_xref = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, original_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  let updated_offset = reader_push_indirect_object(output, 1, 0, "2")
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, updated_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /Prev ")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, " /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_stream_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_prev_deleted_object() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let original_offset = reader_push_indirect_object(output, 1, 0, "1")
+  let base_xref = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, original_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 0, 0, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /Prev ")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, " /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_stream_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_object_stream_number(
   stored_object_number : Int,
 ) -> @pdflite.PdfBytes {
@@ -796,6 +859,21 @@ test "pdf_read_document_from_bytes follows classic trailer XRefStm" {
     fail("expected XRefStm")
   }
   @test.assert_eq(xref_stream_position > 0, true)
+}
+
+///|
+test "pdf_read_document_from_bytes follows xref stream Prev chains" {
+  let updated = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_prev_update(),
+  )
+  @test.assert_eq(updated.object_numbers(), [1])
+  @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(2))
+
+  let deleted = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_prev_deleted_object(),
+  )
+  @test.assert_eq(deleted.object_numbers(), [])
+  @test.assert_eq(deleted.lookup_object_or_null(1), PdfNull)
 }
 
 ///|
