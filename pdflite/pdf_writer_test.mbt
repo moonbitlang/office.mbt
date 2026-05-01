@@ -110,6 +110,20 @@ test "pdf_write_object renders real numbers without exponent notation" {
     try! @pdflite.pdf_write_object(PdfReal(large_exponent)),
     writer_ascii_for_test("1000000000000000000000"),
   )
+  let rounded_large_exponent : Double = try! @strconv.from_str(
+    "1.23456789012345e21",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(rounded_large_exponent)),
+    writer_ascii_for_test("1234567890120000000000"),
+  )
+  let carry_large_exponent : Double = try! @strconv.from_str(
+    "9.999999999999e21",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(carry_large_exponent)),
+    writer_ascii_for_test("10000000000000000000000"),
+  )
   let precise : Double = try! @strconv.from_str("1.23456789012345")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(precise)),

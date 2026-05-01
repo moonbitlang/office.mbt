@@ -144,6 +144,58 @@ test "writer expands scientific real edge forms" {
     @ascii.encode("0.00125"),
   )
 
+  let rounded_exponent_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    rounded_exponent_output,
+    @ascii.encode("1.23456789012345e21")[:],
+    16,
+  )
+  @test.assert_eq(
+    Bytes::from_array(rounded_exponent_output),
+    @ascii.encode("1234567890120000000000"),
+  )
+
+  let carry_exponent_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    carry_exponent_output,
+    @ascii.encode("9.999999999999e21")[:],
+    14,
+  )
+  @test.assert_eq(
+    Bytes::from_array(carry_exponent_output),
+    @ascii.encode("10000000000000000000000"),
+  )
+
+  let rounded_no_carry_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    rounded_no_carry_output,
+    @ascii.encode("1.234567890125e21")[:],
+    14,
+  )
+  @test.assert_eq(
+    Bytes::from_array(rounded_no_carry_output),
+    @ascii.encode("1234567890130000000000"),
+  )
+
+  let trimmed_fraction_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    trimmed_fraction_output,
+    @ascii.encode("1.230000000001e-1")[:],
+    14,
+  )
+  @test.assert_eq(
+    Bytes::from_array(trimmed_fraction_output),
+    @ascii.encode("0.123"),
+  )
+
+  let zero_digits_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    zero_digits_output,
+    @ascii.encode("0.000e10")[:],
+    5,
+  )
+  @test.assert_eq(Bytes::from_array(zero_digits_output), @ascii.encode("0"))
+
   let zero_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(zero_output, @ascii.encode(".e1")[:], 1)
   @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))

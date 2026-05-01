@@ -251,6 +251,18 @@ specific float formatter for serialized data, port that formatter as an
 explicit boundary function and test rounding/carry cases.
 
 ```sh
+moon run -c 'fn main { let a : Double = try! @strconv.from_str("1.23456789012345e20"); let b : Double = try! @strconv.from_str("1.23456789012345e21"); println(a.to_string()); println(b.to_string()) }'
+# 123456789012345000000
+# 1.23456789012345e+21
+```
+
+MoonBit and OCaml choose different thresholds and digit counts for default
+float strings. When porting OCaml serialization code that used
+`format_float "%.12g"` and then required exponent-free output, do not expand
+`Double::to_string()` directly. Round to the OCaml-required significant-digit
+policy first, then render into the target grammar.
+
+```sh
 moon run -c 'fn main { let divisor = 1.0e308 * 1.0e308; let scale = 1.0 / divisor; println(scale == 0.0); println(divisor); println(scale) }'
 # true
 # Infinity

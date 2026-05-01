@@ -148,6 +148,76 @@ fn pdf_writer_push_digits(
 }
 
 ///|
+fn pdf_writer_push_rounded_significant_digits(
+  output : Array[Byte],
+  digits : Array[Byte],
+  decimal_position : Int,
+) -> Unit {
+  let significant_start = for i in 0..<digits.length() {
+    if digits[i].to_int() != 48 {
+      break i
+    }
+  } nobreak {
+    -1
+  }
+  if significant_start < 0 {
+    pdf_writer_push_byte(output, 48)
+  } else {
+    let keep_end = significant_start + 12
+    let copy_end = if keep_end < digits.length() {
+      keep_end
+    } else {
+      digits.length()
+    }
+    let rounded : Array[Byte] = []
+    for i in significant_start..<copy_end {
+      rounded.push(digits[i])
+    }
+    let mut adjusted_decimal_position = decimal_position - significant_start
+    if keep_end < digits.length() && digits[keep_end].to_int() >= 53 {
+      let mut carry = true
+      let mut carry_index = rounded.length() - 1
+      while carry && carry_index >= 0 {
+        let next = rounded[carry_index].to_int() - 48 + 1
+        if next == 10 {
+          rounded[carry_index] = 48
+          carry_index -= 1
+        } else {
+          rounded[carry_index] = (48 + next).to_byte()
+          carry = false
+        }
+      }
+      if carry {
+        rounded.insert(0, 49)
+        adjusted_decimal_position += 1
+      }
+    }
+    let mut end = rounded.length()
+    while end > adjusted_decimal_position &&
+          end > 0 &&
+          rounded[end - 1].to_int() == 48 {
+      end -= 1
+    }
+    if adjusted_decimal_position <= 0 {
+      pdf_writer_push_ascii(output, "0.")
+      for _ in 0..<-adjusted_decimal_position {
+        pdf_writer_push_byte(output, 48)
+      }
+      pdf_writer_push_digits(output, rounded, 0, end)
+    } else if adjusted_decimal_position >= end {
+      pdf_writer_push_digits(output, rounded, 0, end)
+      for _ in 0..<(adjusted_decimal_position - end) {
+        pdf_writer_push_byte(output, 48)
+      }
+    } else {
+      pdf_writer_push_digits(output, rounded, 0, adjusted_decimal_position)
+      pdf_writer_push_byte(output, 46)
+      pdf_writer_push_digits(output, rounded, adjusted_decimal_position, end)
+    }
+  }
+}
+
+///|
 fn pdf_writer_push_int_digits(
   output : Array[Byte],
   digits : ArrayView[Int],
@@ -197,22 +267,7 @@ fn pdf_writer_push_scientific_real(
     pdf_writer_push_byte(output, 48)
   } else {
     let decimal_position = digits.length() + exponent - fractional_digits
-    if decimal_position <= 0 {
-      pdf_writer_push_ascii(output, "0.")
-      for _ in 0..<-decimal_position {
-        pdf_writer_push_byte(output, 48)
-      }
-      pdf_writer_push_digits(output, digits, 0, digits.length())
-    } else if decimal_position >= digits.length() {
-      pdf_writer_push_digits(output, digits, 0, digits.length())
-      for _ in 0..<(decimal_position - digits.length()) {
-        pdf_writer_push_byte(output, 48)
-      }
-    } else {
-      pdf_writer_push_digits(output, digits, 0, decimal_position)
-      pdf_writer_push_byte(output, 46)
-      pdf_writer_push_digits(output, digits, decimal_position, digits.length())
-    }
+    pdf_writer_push_rounded_significant_digits(output, digits, decimal_position)
   }
 }
 
