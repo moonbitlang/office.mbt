@@ -59,6 +59,16 @@ fn pdf_fun_bits_per_sample_key() -> PdfName {
 }
 
 ///|
+fn pdf_fun_functions_key() -> PdfName {
+  pdf_fun_name("/Functions")
+}
+
+///|
+fn pdf_fun_bounds_key() -> PdfName {
+  pdf_fun_name("/Bounds")
+}
+
+///|
 pub(all) struct PdfInterpolationFunction {
   c0 : Array[Double]
   c1 : Array[Double]
@@ -76,9 +86,17 @@ pub(all) struct PdfSampledFunction {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfStitchingFunction {
+  functions : Array[PdfFunction]
+  bounds : Array[Double]
+  stitch_encode : Array[Double]
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) enum PdfFunctionKind {
   PdfFunctionSampled(PdfSampledFunction)
   PdfFunctionInterpolation(PdfInterpolationFunction)
+  PdfFunctionStitching(PdfStitchingFunction)
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -159,6 +177,29 @@ fn PdfDocument::pdf_fun_int_array(
       output
     }
     _ => raise NumberExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_fun_object_array(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Array[PdfObject] raise PdfError {
+  match self.direct(object) {
+    PdfArray(values) => [ for value in values => value ]
+    _ => raise FunctionExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_fun_lookup_required_object_array(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  key : PdfName,
+) -> Array[PdfObject] raise PdfError {
+  match self.lookup_direct(key, dictionary) {
+    Some(value) => self.pdf_fun_object_array(value)
+    None => raise DictionaryKeyNotFound(key)
   }
 }
 
@@ -301,6 +342,35 @@ fn PdfDocument::pdf_fun_read_sampled(
 }
 
 ///|
+fn PdfDocument::pdf_fun_read_stitching(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> PdfStitchingFunction raise PdfError {
+  let function_objects = self.pdf_fun_lookup_required_object_array(
+    dictionary,
+    pdf_fun_functions_key(),
+  )
+  let functions : Array[PdfFunction] = []
+  for function_object in function_objects {
+    functions.push(self.parse_function(function_object))
+  }
+  let bounds = self.pdf_fun_lookup_required_number_array(
+    dictionary,
+    pdf_fun_bounds_key(),
+  )
+  let stitch_encode = self.pdf_fun_lookup_required_number_array(
+    dictionary,
+    pdf_fun_encode_key(),
+  )
+  if functions.length() == 0 ||
+    bounds.length() != functions.length() - 1 ||
+    stitch_encode.length() != functions.length() * 2 {
+    raise FunctionExpected
+  }
+  { functions, bounds, stitch_encode }
+}
+
+///|
 pub fn PdfDocument::parse_function(
   self : PdfDocument,
   function_object : PdfObject,
@@ -357,6 +427,14 @@ pub fn PdfDocument::parse_function(
         }),
       }
     }
+    3 =>
+      {
+        domain,
+        range,
+        func: PdfFunctionStitching(
+          self.pdf_fun_read_stitching(function_dictionary),
+        ),
+      }
     other => raise FunctionNotSupported(other)
   }
 }
@@ -504,6 +582,43 @@ fn PdfSampledFunction::eval_sampled(
 }
 
 ///|
+fn PdfStitchingFunction::eval_stitching(
+  self : PdfStitchingFunction,
+  function : PdfFunction,
+  clamped_inputs : ArrayView[Double],
+) -> Array[Double] raise PdfError {
+  if clamped_inputs.length() != 1 || function.domain.length() != 2 {
+    raise BadFunctionEvaluation("stitching function arity mismatch")
+  }
+  let input = clamped_inputs[0]
+  let points : Array[Double] = [function.domain[0]]
+  for bound in self.bounds {
+    points.push(bound)
+  }
+  points.push(function.domain[1])
+  let mut chosen = -1
+  for index in 0..<self.functions.length() {
+    let low = points[index]
+    let high = points[index + 1]
+    if (input >= low && input < high) || input == high {
+      chosen = index
+      break
+    }
+  }
+  if chosen < 0 {
+    raise BadFunctionEvaluation("stitching function bounds mismatch")
+  }
+  let encoded = pdf_fun_interpolate(
+    input,
+    points[chosen],
+    points[chosen + 1],
+    self.stitch_encode[chosen * 2],
+    self.stitch_encode[chosen * 2 + 1],
+  )
+  self.functions[chosen].eval([encoded])
+}
+
+///|
 fn PdfFunction::clamped_inputs(
   self : PdfFunction,
   inputs : ArrayView[Double],
@@ -542,6 +657,8 @@ pub fn PdfFunction::eval(
       }
       values
     }
+    PdfFunctionStitching(stitching) =>
+      stitching.eval_stitching(self, clamped_inputs)
   }
   match self.range {
     Some(range) => pdf_fun_clamp_values(output, range)

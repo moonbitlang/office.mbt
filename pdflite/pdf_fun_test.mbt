@@ -54,6 +54,40 @@ test "PdfDocument parse_function decodes filtered sampled function streams" {
 }
 
 ///|
+test "PdfDocument parse_function reads and evaluates Type 3 stitching functions" {
+  let doc = @pdflite.pdf_document_empty()
+  let first = @pdflite.pdf_dictionary([
+    (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+    (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (fun_name_for_test("/C0"), PdfArray([PdfInteger(0)])),
+    (fun_name_for_test("/C1"), PdfArray([PdfInteger(0)])),
+    (fun_name_for_test("/N"), PdfInteger(1)),
+  ])
+  let second = @pdflite.pdf_dictionary([
+    (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+    (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (fun_name_for_test("/C0"), PdfArray([PdfInteger(1)])),
+    (fun_name_for_test("/C1"), PdfArray([PdfInteger(1)])),
+    (fun_name_for_test("/N"), PdfInteger(1)),
+  ])
+  let function_object = @pdflite.pdf_dictionary([
+    (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+    (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (fun_name_for_test("/Functions"), PdfArray([first, second])),
+    (fun_name_for_test("/Bounds"), PdfArray([PdfReal(0.5)])),
+    (
+      fun_name_for_test("/Encode"),
+      PdfArray([PdfInteger(0), PdfInteger(1), PdfInteger(0), PdfInteger(1)]),
+    ),
+  ])
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([0.25]), [0.0])
+  @test.assert_eq(try! function.eval([0.5]), [0.0])
+  @test.assert_eq(try! function.eval([0.75]), [1.0])
+}
+
+///|
 test "PdfDocument parse_function reads and evaluates Type 2 interpolation functions" {
   let doc = @pdflite.pdf_document_empty()
   let function_object = @pdflite.pdf_dictionary([
@@ -89,11 +123,11 @@ test "PdfDocument parse_function reports unsupported or malformed functions" {
   let doc = @pdflite.pdf_document_empty()
   let unsupported : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
     @pdflite.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
   )
-  guard unsupported is Err(@pdflite.PdfError::FunctionNotSupported(3)) else {
+  guard unsupported is Err(@pdflite.PdfError::FunctionNotSupported(4)) else {
     fail("expected FunctionNotSupported")
   }
   let missing_domain : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
