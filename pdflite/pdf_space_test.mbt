@@ -99,6 +99,155 @@ test "pdf_colour_space_of_object reads direct device aliases and patterns" {
 }
 
 ///|
+test "PdfDocument read_colour_space resolves resources and nested arrays" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([
+    (
+      space_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (
+          space_name_for_test("/CS1"),
+          PdfNameObject(space_name_for_test("/RGB")),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      resources,
+      PdfNameObject(space_name_for_test("/CS1")),
+    ),
+    Some(PdfDeviceRGB),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      resources,
+      PdfArray([PdfNameObject(space_name_for_test("/CS1"))]),
+    ),
+    Some(PdfDeviceRGB),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Pattern")),
+        PdfNameObject(space_name_for_test("/CS1")),
+      ]),
+    ),
+    Some(PdfPatternWithBaseColourSpace(PdfDeviceRGB)),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      resources,
+      PdfNameObject(space_name_for_test("/Missing")),
+    ),
+    None,
+  )
+}
+
+///|
+test "PdfDocument read_colour_space parses calibrated dictionaries" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalGray")),
+        @pdflite.pdf_dictionary([
+          (
+            space_name_for_test("/WhitePoint"),
+            PdfArray([PdfReal(0.9), PdfReal(1.0), PdfReal(0.8)]),
+          ),
+          (space_name_for_test("/Gamma"), PdfReal(2.2)),
+        ]),
+      ]),
+    ),
+    Some(
+      PdfCalGray({ x: 0.9, y: 1.0, z: 0.8 }, { x: 0.0, y: 0.0, z: 0.0 }, 2.2),
+    ),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalRGB")),
+        @pdflite.pdf_dictionary([
+          (
+            space_name_for_test("/WhitePoint"),
+            PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
+          ),
+          (
+            space_name_for_test("/Gamma"),
+            PdfArray([PdfReal(1.8), PdfReal(1.9), PdfReal(2.0)]),
+          ),
+        ]),
+      ]),
+    ),
+    Some(
+      PdfCalRGB(
+        { x: 1.0, y: 1.0, z: 1.0 },
+        { x: 0.0, y: 0.0, z: 0.0 },
+        [1.8, 1.9, 2.0],
+        [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+      ),
+    ),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Lab")),
+        @pdflite.pdf_dictionary([
+          (
+            space_name_for_test("/WhitePoint"),
+            PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
+          ),
+          (
+            space_name_for_test("/Range"),
+            PdfArray([
+              PdfInteger(-80),
+              PdfInteger(90),
+              PdfInteger(-70),
+              PdfInteger(85),
+            ]),
+          ),
+        ]),
+      ]),
+    ),
+    Some(
+      PdfLab({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, [
+        -80.0, 90.0, -70.0, 85.0,
+      ]),
+    ),
+  )
+}
+
+///|
+test "PdfDocument read_colour_space reports malformed calibrated numbers" {
+  let doc = @pdflite.pdf_document_empty()
+  let result : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
+    @pdflite.pdf_dictionary([]),
+    PdfArray([
+      PdfNameObject(space_name_for_test("/CalGray")),
+      @pdflite.pdf_dictionary([
+        (
+          space_name_for_test("/WhitePoint"),
+          PdfArray([
+            PdfNameObject(space_name_for_test("/Bad")),
+            PdfInteger(1),
+            PdfInteger(1),
+          ]),
+        ),
+      ]),
+    ]),
+  )
+  guard result is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected malformed calibrated number")
+  }
+}
+
+///|
 test "pdf_object_of_colour_space writes supported direct colour spaces" {
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(PdfDeviceGray),
