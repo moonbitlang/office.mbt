@@ -239,6 +239,24 @@ fn pdf_parse_indirect_object_at(
 }
 
 ///|
+fn pdf_parse_indirect_object_prefix_lexemes(
+  lexemes : ArrayView[PdfLexeme],
+) -> PdfParsedIndirectObject raise PdfError {
+  let first = pdf_skip_comments(lexemes, 0)
+  if first + 2 >= lexemes.length() {
+    raise ParseIndirectObjectExpected
+  }
+  match (lexemes[first], lexemes[first + 1], lexemes[first + 2]) {
+    (LexInt(number), LexInt(generation), LexObj) => {
+      let object_start = pdf_skip_comments(lexemes, first + 3)
+      let (object, _) = pdf_parse_value_at(lexemes, object_start)
+      { number, generation, object }
+    }
+    _ => raise ParseIndirectObjectExpected
+  }
+}
+
+///|
 pub fn pdf_parse_indirect_object_lexemes(
   lexemes : ArrayView[PdfLexeme],
 ) -> PdfParsedIndirectObject raise PdfError {

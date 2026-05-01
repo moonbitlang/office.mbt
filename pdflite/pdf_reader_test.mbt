@@ -40,3 +40,45 @@ test "pdf_read_primitive_document_from_bytes loads non-stream indirect objects" 
     @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
   )
 }
+
+///|
+test "pdf_parse_stream_object_from_bytes parses direct-length stream objects" {
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_bytes_for_test([
+      55, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 76, 101, 110, 103, 116, 104,
+      32, 53, 32, 62, 62, 10, 115, 116, 114, 101, 97, 109, 10, 72, 101, 108, 108,
+      111, 10, 101, 110, 100, 115, 116, 114, 101, 97, 109, 10, 101, 110, 100, 111,
+      98, 106,
+    ]),
+  )
+  @test.assert_eq(parsed.number, 7)
+  @test.assert_eq(parsed.generation, 0)
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(
+        reader_bytes_for_test([47, 76, 101, 110, 103, 116, 104]),
+      ),
+    ),
+    Some(PdfInteger(5)),
+  )
+  @test.assert_eq(
+    stream.data,
+    StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
+  )
+}
+
+///|
+test "pdf_parse_stream_object_from_bytes reports missing stream length" {
+  let result : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_bytes_for_test([
+      55, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 62, 62, 10, 115, 116, 114, 101,
+      97, 109, 10,
+    ]),
+  )
+  guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
+    fail("expected StreamLengthExpected")
+  }
+}

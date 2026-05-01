@@ -88,3 +88,71 @@ pub fn pdf_read_primitive_document_from_bytes(
   let objects = pdf_parse_indirect_objects(cursor.lex_pdf_tokens())
   pdf_document_of_parsed_indirect_objects(objects, version~)
 }
+
+///|
+fn pdf_length_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
+}
+
+///|
+fn pdf_stream_length(object : PdfObject) -> Int raise PdfError {
+  match object.lookup_immediate(pdf_length_name()) {
+    Some(PdfInteger(length)) if length >= 0 => length
+    _ => raise StreamLengthExpected
+  }
+}
+
+///|
+fn ByteCursor::consume_pdf_ascii(
+  self : ByteCursor,
+  values : ArrayView[Int],
+  error : PdfError,
+) -> Unit raise PdfError {
+  let position = self.absolute_position()
+  if self.matches_pdf_ascii_at(position, values) {
+    self.seek(position + values.length())
+  } else {
+    raise error
+  }
+}
+
+///|
+fn ByteCursor::consume_pdf_stream_line_break(self : ByteCursor) -> Unit {
+  let value = self.peek_byte()
+  if value == 13 {
+    self.nudge()
+    if self.peek_byte() == 10 {
+      self.nudge()
+    }
+  } else if value == 10 {
+    self.nudge()
+  }
+}
+
+///|
+pub fn pdf_parse_stream_object_from_bytes(
+  data : PdfBytes,
+) -> PdfParsedIndirectObject raise PdfError {
+  let cursor = byte_cursor_of_bytes(data)
+  let prefix = pdf_parse_indirect_object_prefix_lexemes(cursor.lex_pdf_tokens())
+  let length = pdf_stream_length(prefix.object)
+  cursor.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
+  cursor.consume_pdf_stream_line_break()
+  let stream_data = cursor.read_bytes(length)
+  cursor.consume_pdf_stream_line_break()
+  cursor.drop_pdf_whitespace()
+  cursor.consume_pdf_ascii(
+    [101, 110, 100, 115, 116, 114, 101, 97, 109],
+    ParseEndStreamExpected,
+  )
+  cursor.drop_pdf_whitespace()
+  cursor.consume_pdf_ascii(
+    [101, 110, 100, 111, 98, 106],
+    ParseEndObjectExpected,
+  )
+  {
+    number: prefix.number,
+    generation: prefix.generation,
+    object: pdf_stream(prefix.object, StreamGot(stream_data)),
+  }
+}

@@ -109,6 +109,8 @@ pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
 
+pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
@@ -167,6 +169,9 @@ pub(all) suberror PdfError {
   ParseSingleObjectExpected
   ParseIndirectObjectExpected
   ParseEndObjectExpected
+  ParseStreamExpected
+  ParseEndStreamExpected
+  StreamLengthExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 

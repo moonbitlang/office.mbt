@@ -181,7 +181,9 @@ MoonBit consequences for this project:
    fallback when no valid header is found. Primitive indirect object parsing is
    also started for `n gen obj ... endobj` forms whose bodies do not require
    stream-aware lexing, and a primitive document loader can collect multiple
-   non-stream indirect objects from byte input into `PdfDocument`.
+   non-stream indirect objects from byte input into `PdfDocument`. Direct-length
+   stream object parsing is started for `/Length n` streams, materializing owned
+   `StreamGot(Bytes)` data at the object boundary.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
