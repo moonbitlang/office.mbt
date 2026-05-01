@@ -37,6 +37,29 @@ fn crypt_aesv3_r5_owner_entry_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn crypt_aesv3_r5_file_key_for_test() -> @pdflite.PdfBytes {
+  crypt_model_bytes_for_test([ for value in 0..<32 => value ])
+}
+
+///|
+fn crypt_aesv3_r5_user_encryption_key_for_test() -> @pdflite.PdfBytes {
+  crypt_model_bytes_for_test([
+    0xe4, 0x35, 0xfd, 0x1c, 0x68, 0x70, 0xfc, 0x3b, 0x50, 0x7f, 0x7c, 0x3d, 0x30,
+    0xd0, 0x2e, 0x06, 0xb7, 0x60, 0x68, 0x50, 0x81, 0x95, 0xc1, 0x29, 0x87, 0x9c,
+    0x23, 0xce, 0x43, 0xee, 0xda, 0x22,
+  ])
+}
+
+///|
+fn crypt_aesv3_r5_owner_encryption_key_for_test() -> @pdflite.PdfBytes {
+  crypt_model_bytes_for_test([
+    0x93, 0x8a, 0x69, 0x29, 0xac, 0xa0, 0x6a, 0x79, 0x47, 0xde, 0x9d, 0xc4, 0x68,
+    0x29, 0x04, 0xca, 0xda, 0x26, 0xbf, 0x1b, 0xb2, 0x8e, 0xc9, 0xc8, 0x2b, 0x83,
+    0x9d, 0x5b, 0x89, 0x4e, 0x6c, 0xec,
+  ])
+}
+
+///|
 fn crypt_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -267,11 +290,11 @@ test "PdfDocument encryption_values parses crypt filter methods" {
         ),
         (
           crypt_name_for_test("/UE"),
-          PdfString(crypt_repeated_bytes_for_test(0x11, 32)),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
         ),
         (
           crypt_name_for_test("/OE"),
-          PdfString(crypt_repeated_bytes_for_test(0x22, 32)),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
         ),
       ],
       owner_length=56,
@@ -284,11 +307,11 @@ test "PdfDocument encryption_values parses crypt filter methods" {
   @test.assert_eq(aesv3_values.user_entry.length(), 48)
   @test.assert_eq(
     aesv3_values.user_encryption_key,
-    Some(crypt_repeated_bytes_for_test(0x11, 32)),
+    Some(crypt_aesv3_r5_user_encryption_key_for_test()),
   )
   @test.assert_eq(
     aesv3_values.owner_encryption_key,
-    Some(crypt_repeated_bytes_for_test(0x22, 32)),
+    Some(crypt_aesv3_r5_owner_encryption_key_for_test()),
   )
   let unsupported : Result[Bool, Error] = try? aesv3_values.authenticate_user_password(
     @ascii.encode("user")[:],
@@ -467,11 +490,11 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
         ),
         (
           crypt_name_for_test("/UE"),
-          PdfString(crypt_repeated_bytes_for_test(0x11, 32)),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
         ),
         (
           crypt_name_for_test("/OE"),
-          PdfString(crypt_repeated_bytes_for_test(0x22, 32)),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
         ),
       ],
       owner_entry,
@@ -497,27 +520,103 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
     try! values.authenticate_owner_password(@ascii.encode("bad")[:]),
     false,
   )
-  let user_key : Result[@pdflite.PdfBytes?, Error] = try? values.file_key_for_user_password(
+  @test.assert_eq(
+    try! values.file_key_for_user_password(@ascii.encode("user")[:]),
+    Some(crypt_aesv3_r5_file_key_for_test()),
+  )
+  @test.assert_eq(
+    try! values.file_key_for_user_password(@ascii.encode("bad")[:]),
+    None,
+  )
+  @test.assert_eq(
+    try! values.file_key_for_owner_password(@ascii.encode("owner")[:]),
+    Some(crypt_aesv3_r5_file_key_for_test()),
+  )
+  @test.assert_eq(
+    try! values.file_key_for_owner_password(@ascii.encode("bad")[:]),
+    None,
+  )
+
+  let missing_ue_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+        ),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let missing_ue = try! missing_ue_doc.encryption_values()
+  let missing_ue_result : Result[@pdflite.PdfBytes?, Error] = try? missing_ue.file_key_for_user_password(
     @ascii.encode("user")[:],
   )
-  guard user_key
-    is Err(
-      @pdflite.PdfError::EncryptionAuthenticationUnsupported(
-        PdfCryptAESV3(false)
-      )
-    ) else {
-    fail("expected unsupported AESV3 user file key")
+  guard missing_ue_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    name == crypt_name_for_test("/UE") else {
+    fail("expected missing AESV3 /UE")
   }
-  let owner_key : Result[@pdflite.PdfBytes?, Error] = try? values.file_key_for_owner_password(
+
+  let short_oe_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/UE"),
+          PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_repeated_bytes_for_test(0x22, 31)),
+        ),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let short_oe = try! short_oe_doc.encryption_values()
+  let short_oe_result : Result[@pdflite.PdfBytes?, Error] = try? short_oe.file_key_for_owner_password(
     @ascii.encode("owner")[:],
   )
-  guard owner_key
-    is Err(
-      @pdflite.PdfError::EncryptionAuthenticationUnsupported(
-        PdfCryptAESV3(false)
-      )
-    ) else {
-    fail("expected unsupported AESV3 owner file key")
+  guard short_oe_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_name_for_test("/OE") else {
+    fail("expected short AESV3 /OE")
   }
 }
 
