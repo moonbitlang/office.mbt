@@ -372,10 +372,10 @@ MoonBit consequences for this project:
    image `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
    including image-mask defaults. `get_image_24bpp` is started for encoded
    JPEG/JPEG2000/JBIG2 pass-through, JBIG2 globals, and raw 8-bit
-   RGB/CalRGB, Gray/CalGray, and CMYK conversion to RGB24. Decode-array
-   transforms, lower bit-depth image conversion, Indexed/Lab/Separation image
-   pixels, full `Pdffun` tint-transform evaluation, and JPEG decoding remain
-   deferred.
+   RGB/CalRGB, Gray/CalGray, and CMYK conversion to RGB24. Raw 1-bit
+   row-padded image masks and 4-bit row-padded DeviceGray images are also
+   started. Decode-array transforms, Indexed/Lab/Separation image pixels, full
+   `Pdffun` tint-transform evaluation, and JPEG decoding remain deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

@@ -174,6 +174,51 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
 }
 
 ///|
+test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
+  let doc = @pdflite.pdf_document_empty()
+  let mask = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(3)),
+      (image_name_for_test("/Height"), PdfInteger(2)),
+      (image_name_for_test("/ImageMask"), PdfBoolean(true)),
+    ]),
+    StreamGot(image_bytes_for_test([0b1010_0000, 0b0100_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), mask),
+    PdfRawImage(
+      3,
+      2,
+      PdfBPP24,
+      image_bytes_for_test([
+        255, 255, 255, 0, 0, 0, 255, 255, 255, 0, 0, 0, 255, 255, 255, 0, 0, 0,
+      ]),
+    ),
+  )
+  let gray4 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(3)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceGray")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(4)),
+    ]),
+    StreamGot(image_bytes_for_test([0x0F, 0x80])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), gray4),
+    PdfRawImage(
+      3,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([0, 0, 0, 255, 255, 255, 136, 136, 136]),
+    ),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp reports malformed raw images" {
   let doc = @pdflite.pdf_document_empty()
   let short_rgb = @pdflite.pdf_stream(

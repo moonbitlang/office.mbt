@@ -373,6 +373,52 @@ fn pdf_image_cmyk_8bpp_as_rgb24(
 }
 
 ///|
+fn pdf_image_1bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = (width + 7) / 8
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let byte = data[row_offset + column / 8].to_int()
+      let bit = (byte >> (7 - column % 8)) & 1
+      let value : Byte = if bit == 1 { 255 } else { 0 }
+      output.push(value)
+      output.push(value)
+      output.push(value)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_gray_4bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = (width + 1) / 2
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let byte = data[row_offset + column / 2].to_int()
+      let nibble = if column % 2 == 0 { byte >> 4 } else { byte & 0x0F }
+      let value = (nibble * 17).to_byte()
+      output.push(value)
+      output.push(value)
+      output.push(value)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
   self : PdfDocument,
   resources : PdfObject,
@@ -402,6 +448,20 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
         height,
         PdfBPP24,
         pdf_image_cmyk_8bpp_as_rgb24(width, height, data),
+      )
+    (_, Some(1)) =>
+      PdfRawImage(
+        width,
+        height,
+        PdfBPP24,
+        pdf_image_1bpp_as_rgb24(width, height, data),
+      )
+    (PdfDeviceGray, Some(4)) =>
+      PdfRawImage(
+        width,
+        height,
+        PdfBPP24,
+        pdf_image_gray_4bpp_as_rgb24(width, height, data),
       )
     _ => raise FilterExpected
   }
