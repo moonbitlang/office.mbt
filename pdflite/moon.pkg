@@ -3,6 +3,7 @@ import {
   "moonbitlang/core/hashmap",
   "moonbitlang/core/math",
   "moonbitlang/core/strconv",
+  "moonbitlang/x/crypto",
 }
 
 import {

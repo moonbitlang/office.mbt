@@ -502,7 +502,9 @@ MoonBit consequences for this project:
     standard ARC4 known vectors plus round-trip and empty-key tests. CamlPDF's
     permission enum and signed PDF `/P` mask conversion are also started,
     preserving the R2/R3 denied-permission bit order and signed `Int32`
-    values such as `-4`, `-8`, and `-3904`. AES, SHA-family helpers,
+    values such as `-4`, `-8`, and `-3904`. The MD5 digest wrapper is started
+    through `moonbitlang/x/crypto`, with RFC 1321 vectors over `BytesView`
+    input. AES, SHA-family helpers beyond the available package surface,
     MD5-backed Algorithm 3.1 object-key derivation, document decryption, and
     re-encryption remain deferred.
 

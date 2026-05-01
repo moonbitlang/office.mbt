@@ -153,6 +153,8 @@ pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise PdfError
 
 pub fn pdf_make_font(PdfName, PdfEncoding) -> PdfObject raise PdfError
 
+pub fn pdf_md5_digest(BytesView) -> Bytes
+
 pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool, retain_acroforms? : Bool, retain_named_destinations? : Bool, retain_name_dictionary? : Bool, retain_structure_tree? : Bool, add_toplevel_document? : Bool, retain_info? : Bool, retain_catalog_entries? : Bool, remove_duplicate_fonts? : Bool) -> PdfDocument raise PdfError
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError

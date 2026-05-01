@@ -32,3 +32,8 @@ pub fn pdf_arc4_crypt(
   }
   Bytes::from_array(output)
 }
+
+///|
+pub fn pdf_md5_digest(data : BytesView) -> PdfBytes {
+  Bytes::from_array(@crypto.md5(data))
+}

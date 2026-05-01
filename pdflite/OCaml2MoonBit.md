@@ -565,6 +565,16 @@ OCaml `array` maps most directly to MoonBit `FixedArray`. MoonBit `Array` is
 resizable. Prefer `ArrayView[T]` for read-only function parameters so callers
 can pass fixed, growable, or read-only arrays by coercion.
 
+```sh
+moon run -c 'fn main { let fixed : FixedArray[Byte] = [1, 2, 3]; let bytes = Bytes::from_array(fixed); println(bytes.length()); println(bytes[2].to_int()) }'
+# 3
+# 3
+```
+
+Use `Bytes::from_array` for byte arrays at ownership boundaries. It accepts a
+`FixedArray[Byte]` through the same read-only array coercion; avoid the
+deprecated fixed-array-specific constructor.
+
 For an OCaml variant, start with a direct MoonBit `enum` shape and make payload
 types explicit:
 
