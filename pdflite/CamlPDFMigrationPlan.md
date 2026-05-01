@@ -437,7 +437,8 @@ MoonBit consequences for this project:
    effective encoding for single-codepoint glyphs. ToUnicode CMap parsing now
    handles `bfchar` pairs split across lines, inline and multiline `bfrange`
    array mappings, including range headers split before the array, whitespace
-   inside hex strings, odd hex-string nibbles, and multiple compact
+   inside hex strings, PDF whitespace separators between CMap tokens, odd
+   hex-string nibbles, and multiple compact
    `beginbfchar`/`beginbfrange` sections on the same physical line. Inline
    `bfrange` parsing now consumes repeated array-form and sequential entries
    from one line instead of stopping after the first array mapping.

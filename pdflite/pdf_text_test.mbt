@@ -9,6 +9,19 @@ fn text_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn text_concat_for_test(
+  parts : ArrayView[@pdflite.PdfBytes],
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for part in parts {
+    for byte in part {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn text_difference_for_test(
   name : String,
   code : Int,
@@ -2100,6 +2113,67 @@ test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
     [0x5A, 0x60, 0x1D11E, 68],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(67))
+}
+
+///|
+test "PdfDocument reads ToUnicode CMaps with PDF whitespace separators" {
+  let doc = @pdflite.pdf_document_empty()
+  let cmap = text_concat_for_test([
+    @ascii.encode("2 beginbfchar"),
+    text_bytes_for_test([12]),
+    @ascii.encode("<41>"),
+    text_bytes_for_test([0]),
+    @ascii.encode("<0041>"),
+    text_bytes_for_test([12]),
+    @ascii.encode("<42>"),
+    text_bytes_for_test([0]),
+    @ascii.encode("<0042> endbfchar\n1 beginbfrange"),
+    text_bytes_for_test([12]),
+    @ascii.encode("<43>"),
+    text_bytes_for_test([0]),
+    @ascii.encode("<44>"),
+    text_bytes_for_test([12]),
+    @ascii.encode("<0043> endbfrange\n"),
+  ])
+  let tounicode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(cmap),
+  )
+  doc.add_object_given_number(2, tounicode)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(2)),
+  ])
+  guard (try! doc.read_font(font)) is PdfFontSimple(read) else {
+    fail("expected simple font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (65, text_bytes_for_test([0x00, 0x41])),
+      (66, text_bytes_for_test([0x00, 0x42])),
+      (67, text_bytes_for_test([0x00, 0x43])),
+      (68, text_bytes_for_test([0x00, 0x44])),
+    ]),
+  )
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([65, 66, 67, 68, 69])[:],
+    ),
+    [0x41, 0x42, 0x43, 0x44, 69],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x44), Some(68))
 }
 
 ///|

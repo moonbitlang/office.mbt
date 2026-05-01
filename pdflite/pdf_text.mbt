@@ -1279,10 +1279,9 @@ fn pdf_text_parse_hex_bytes(
 }
 
 ///|
-fn pdf_text_skip_horizontal_space(line : BytesView, start : Int) -> Int {
+fn pdf_text_skip_cmap_whitespace(line : BytesView, start : Int) -> Int {
   let mut index = start
-  while index < line.length() &&
-        (line[index].to_int() == 32 || line[index].to_int() == 9) {
+  while index < line.length() && pdf_is_whitespace_byte(line[index].to_int()) {
     index += 1
   }
   index
@@ -1382,7 +1381,7 @@ fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[PdfBytes]? {
   let groups : Array[PdfBytes] = []
   let mut index = 0
   while index < line.length() {
-    index = pdf_text_skip_horizontal_space(line, index)
+    index = pdf_text_skip_cmap_whitespace(line, index)
     if index >= line.length() {
       break
     }
@@ -1413,7 +1412,7 @@ fn pdf_text_parse_cmap_hex_group_at(
   line : BytesView,
   start : Int,
 ) -> (PdfBytes, Int)? {
-  let index = pdf_text_skip_horizontal_space(line, start)
+  let index = pdf_text_skip_cmap_whitespace(line, start)
   guard index < line.length() && line[index].to_int() == 60 else { return None }
   let body_start = index + 1
   let mut stop = body_start
@@ -1464,7 +1463,7 @@ fn pdf_text_tounicode_bfrange_inline_entries(
             match
               (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
               (Some(first), Some(last)) if first <= last => {
-                index = pdf_text_skip_horizontal_space(line, after_stop)
+                index = pdf_text_skip_cmap_whitespace(line, after_stop)
                 if index < line.length() && line[index].to_int() == 91 {
                   match pdf_text_index_of_byte(line, 93, index + 1) {
                     Some(close) => {

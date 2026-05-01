@@ -260,6 +260,19 @@ owned `Bytes` value is required. `BytesView::to_owned()` returns the original
 bytes for a whole view but allocates and copies for a partial slice.
 
 ```sh
+moon run -c 'fn main { let data : Bytes = [60, 65, 62, 0, 12, 60, 66, 62]; println(data.length()); println(data[3].to_int()); println(data[4].to_int()); let view = data[5:]; match view { [60, 66, 62] => println("match"); _ => println("miss") } }'
+# 8
+# 0
+# 12
+# match
+```
+
+Byte parsers should port the source predicate exactly. NUL (`0`) and form-feed
+(`12`) are ordinary bytes in MoonBit `Bytes`/`BytesView`, so a format
+whitespace predicate that accepted them in OCaml should not be narrowed to
+string-oriented space/tab checks during migration.
+
+```sh
 moon run -c 'fn main { let fixed : FixedArray[Int] = [1, 2, 3]; let doubled = [ for x in fixed => x * 2 ]; println(doubled.length()); println(doubled[2]) }'
 # 3
 # 6
