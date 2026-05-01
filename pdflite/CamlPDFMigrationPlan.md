@@ -481,6 +481,9 @@ MoonBit consequences for this project:
     and non-dictionary structure values. Codec coverage now includes malformed
     decode-parameter dispatch during stream decode plus private filter-entry,
     decode-parameter, predictor-byte-width, and LZW table-validation guards.
+    Name/number tree coverage now includes malformed key-type rejection,
+    duplicate number-key replacement, large nested tree construction with child
+    `/Limits`, and private grouping threshold checks.
 
 ## Update Discipline
 
