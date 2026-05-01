@@ -1826,6 +1826,160 @@ fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
 }
 
 ///|
+fn pdf_text_symbol_glyphname(code : Int) -> PdfName? {
+  match code {
+    0x20 => Some(pdf_text_name("/space"))
+    0x21 => Some(pdf_text_name("/exclam"))
+    0x22 => Some(pdf_text_name("/universal"))
+    0x23 => Some(pdf_text_name("/numbersign"))
+    0x24 => Some(pdf_text_name("/existential"))
+    0x25 => Some(pdf_text_name("/percent"))
+    0x26 => Some(pdf_text_name("/ampersand"))
+    0x27 => Some(pdf_text_name("/suchthat"))
+    0x28 => Some(pdf_text_name("/parenleft"))
+    0x29 => Some(pdf_text_name("/parenright"))
+    0x2A => Some(pdf_text_name("/asteriskmath"))
+    0x2B => Some(pdf_text_name("/plus"))
+    0x2C => Some(pdf_text_name("/comma"))
+    0x2D => Some(pdf_text_name("/minus"))
+    0x2E => Some(pdf_text_name("/period"))
+    0x2F => Some(pdf_text_name("/slash"))
+    0x30 => Some(pdf_text_name("/zero"))
+    0x31 => Some(pdf_text_name("/one"))
+    0x32 => Some(pdf_text_name("/two"))
+    0x33 => Some(pdf_text_name("/three"))
+    0x34 => Some(pdf_text_name("/four"))
+    0x35 => Some(pdf_text_name("/five"))
+    0x36 => Some(pdf_text_name("/six"))
+    0x37 => Some(pdf_text_name("/seven"))
+    0x38 => Some(pdf_text_name("/eight"))
+    0x39 => Some(pdf_text_name("/nine"))
+    0x3D => Some(pdf_text_name("/equal"))
+    0x41 => Some(pdf_text_name("/Alpha"))
+    0x42 => Some(pdf_text_name("/Beta"))
+    0x43 => Some(pdf_text_name("/Chi"))
+    0x44 => Some(pdf_text_name("/Delta"))
+    0x45 => Some(pdf_text_name("/Epsilon"))
+    0x46 => Some(pdf_text_name("/Phi"))
+    0x47 => Some(pdf_text_name("/Gamma"))
+    0x48 => Some(pdf_text_name("/Eta"))
+    0x49 => Some(pdf_text_name("/Iota"))
+    0x4B => Some(pdf_text_name("/Kappa"))
+    0x4C => Some(pdf_text_name("/Lambda"))
+    0x4D => Some(pdf_text_name("/Mu"))
+    0x4E => Some(pdf_text_name("/Nu"))
+    0x4F => Some(pdf_text_name("/Omicron"))
+    0x50 => Some(pdf_text_name("/Pi"))
+    0x51 => Some(pdf_text_name("/Theta"))
+    0x52 => Some(pdf_text_name("/Rho"))
+    0x53 => Some(pdf_text_name("/Sigma"))
+    0x54 => Some(pdf_text_name("/Tau"))
+    0x55 => Some(pdf_text_name("/Upsilon"))
+    0x57 => Some(pdf_text_name("/Omega"))
+    0x58 => Some(pdf_text_name("/Xi"))
+    0x59 => Some(pdf_text_name("/Psi"))
+    0x5A => Some(pdf_text_name("/Zeta"))
+    0x61 => Some(pdf_text_name("/alpha"))
+    0x62 => Some(pdf_text_name("/beta"))
+    0x63 => Some(pdf_text_name("/chi"))
+    0x64 => Some(pdf_text_name("/delta"))
+    0x65 => Some(pdf_text_name("/epsilon"))
+    0x66 => Some(pdf_text_name("/phi"))
+    0x67 => Some(pdf_text_name("/gamma"))
+    0x68 => Some(pdf_text_name("/eta"))
+    0x69 => Some(pdf_text_name("/iota"))
+    0x6B => Some(pdf_text_name("/kappa"))
+    0x6C => Some(pdf_text_name("/lambda"))
+    0x6D => Some(pdf_text_name("/mu"))
+    0x6E => Some(pdf_text_name("/nu"))
+    0x6F => Some(pdf_text_name("/omicron"))
+    0x70 => Some(pdf_text_name("/pi"))
+    0x71 => Some(pdf_text_name("/theta"))
+    0x72 => Some(pdf_text_name("/rho"))
+    0x73 => Some(pdf_text_name("/sigma"))
+    0x74 => Some(pdf_text_name("/tau"))
+    0x75 => Some(pdf_text_name("/upsilon"))
+    0x76 => Some(pdf_text_name("/omega1"))
+    0x77 => Some(pdf_text_name("/omega"))
+    0x78 => Some(pdf_text_name("/xi"))
+    0x79 => Some(pdf_text_name("/psi"))
+    0x7A => Some(pdf_text_name("/zeta"))
+    0xA0 => Some(pdf_text_name("/Euro"))
+    0xA1 => Some(pdf_text_name("/Upsilon1"))
+    0xA3 => Some(pdf_text_name("/lessequal"))
+    0xA5 => Some(pdf_text_name("/infinity"))
+    0xA7 => Some(pdf_text_name("/club"))
+    0xA8 => Some(pdf_text_name("/diamond"))
+    0xA9 => Some(pdf_text_name("/heart"))
+    0xAA => Some(pdf_text_name("/spade"))
+    0xAB => Some(pdf_text_name("/arrowboth"))
+    0xAC => Some(pdf_text_name("/arrowleft"))
+    0xAD => Some(pdf_text_name("/arrowup"))
+    0xAE => Some(pdf_text_name("/arrowright"))
+    0xB0 => Some(pdf_text_name("/degree"))
+    0xB1 => Some(pdf_text_name("/plusminus"))
+    0xB2 => Some(pdf_text_name("/second"))
+    0xB3 => Some(pdf_text_name("/greaterequal"))
+    0xB4 => Some(pdf_text_name("/multiply"))
+    0xB5 => Some(pdf_text_name("/proportional"))
+    0xB6 => Some(pdf_text_name("/partialdiff"))
+    0xB7 => Some(pdf_text_name("/bullet"))
+    0xB8 => Some(pdf_text_name("/divide"))
+    0xB9 => Some(pdf_text_name("/notequal"))
+    0xBA => Some(pdf_text_name("/equivalence"))
+    0xBB => Some(pdf_text_name("/approxequal"))
+    0xBC => Some(pdf_text_name("/ellipsis"))
+    0xC5 => Some(pdf_text_name("/summation"))
+    0xD6 => Some(pdf_text_name("/radical"))
+    0xE0 => Some(pdf_text_name("/lozenge"))
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_zapfdingbats_glyphname(code : Int) -> PdfName? {
+  match code {
+    0x20 => Some(pdf_text_name("/space"))
+    0x21 => Some(pdf_text_name("/a1"))
+    0x22 => Some(pdf_text_name("/a2"))
+    0x23 => Some(pdf_text_name("/a202"))
+    0x24 => Some(pdf_text_name("/a3"))
+    0x25 => Some(pdf_text_name("/a4"))
+    0x26 => Some(pdf_text_name("/a5"))
+    0x27 => Some(pdf_text_name("/a119"))
+    0x28 => Some(pdf_text_name("/a118"))
+    0x29 => Some(pdf_text_name("/a117"))
+    0x2A => Some(pdf_text_name("/a11"))
+    0x2B => Some(pdf_text_name("/a12"))
+    0x2C => Some(pdf_text_name("/a13"))
+    0x2D => Some(pdf_text_name("/a14"))
+    0x2E => Some(pdf_text_name("/a15"))
+    0x2F => Some(pdf_text_name("/a16"))
+    0x30 => Some(pdf_text_name("/a105"))
+    0x31 => Some(pdf_text_name("/a17"))
+    0x32 => Some(pdf_text_name("/a18"))
+    0x33 => Some(pdf_text_name("/a19"))
+    0x34 => Some(pdf_text_name("/a20"))
+    0x35 => Some(pdf_text_name("/a21"))
+    0x36 => Some(pdf_text_name("/a22"))
+    0x37 => Some(pdf_text_name("/a23"))
+    0x38 => Some(pdf_text_name("/a24"))
+    0x39 => Some(pdf_text_name("/a25"))
+    0x48 => Some(pdf_text_name("/a35"))
+    0x49 => Some(pdf_text_name("/a36"))
+    0x4A => Some(pdf_text_name("/a37"))
+    0x4B => Some(pdf_text_name("/a38"))
+    0x4C => Some(pdf_text_name("/a39"))
+    0xA1 => Some(pdf_text_name("/a101"))
+    0xA2 => Some(pdf_text_name("/a102"))
+    0xA3 => Some(pdf_text_name("/a103"))
+    0xA4 => Some(pdf_text_name("/a104"))
+    0xA5 => Some(pdf_text_name("/a106"))
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_difference_glyphname(
   differences : ArrayView[PdfEncodingDifference],
   code : Int,
@@ -1859,6 +2013,34 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
         Some(name) => Some(name)
         None => PdfStandardEncoding.pdf_text_glyphname_of_charcode(code)
       }
+  }
+}
+
+///|
+fn PdfStandardFontData::pdf_text_glyphname_of_charcode(
+  self : PdfStandardFontData,
+  code : Int,
+) -> PdfName? {
+  match self.encoding {
+    PdfImplicitInFontFile =>
+      match self.font {
+        PdfSymbol => pdf_text_symbol_glyphname(code)
+        PdfZapfDingbats => pdf_text_zapfdingbats_glyphname(code)
+        _ => PdfStandardEncoding.pdf_text_glyphname_of_charcode(code)
+      }
+    _ => self.encoding.pdf_text_glyphname_of_charcode(code)
+  }
+}
+
+///|
+fn PdfFont::pdf_text_glyphname_of_charcode(
+  self : PdfFont,
+  code : Int,
+) -> PdfName? {
+  match self {
+    PdfFontStandard(data) => data.pdf_text_glyphname_of_charcode(code)
+    PdfFontSimple(font) => font.encoding.pdf_text_glyphname_of_charcode(code)
+    PdfFontCIDKeyed(_) => None
   }
 }
 
@@ -1980,6 +2162,130 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_symbol_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Alpha" => Some(0x0391)
+    "/Beta" => Some(0x0392)
+    "/Gamma" => Some(0x0393)
+    "/Delta" => Some(0x0394)
+    "/Epsilon" => Some(0x0395)
+    "/Zeta" => Some(0x0396)
+    "/Eta" => Some(0x0397)
+    "/Theta" => Some(0x0398)
+    "/Iota" => Some(0x0399)
+    "/Kappa" => Some(0x039A)
+    "/Lambda" => Some(0x039B)
+    "/Mu" => Some(0x039C)
+    "/Nu" => Some(0x039D)
+    "/Xi" => Some(0x039E)
+    "/Omicron" => Some(0x039F)
+    "/Pi" => Some(0x03A0)
+    "/Rho" => Some(0x03A1)
+    "/Sigma" => Some(0x03A3)
+    "/Tau" => Some(0x03A4)
+    "/Upsilon" | "/Upsilon1" => Some(0x03A5)
+    "/Phi" => Some(0x03A6)
+    "/Chi" => Some(0x03A7)
+    "/Psi" => Some(0x03A8)
+    "/Omega" => Some(0x03A9)
+    "/alpha" => Some(0x03B1)
+    "/beta" => Some(0x03B2)
+    "/gamma" => Some(0x03B3)
+    "/delta" => Some(0x03B4)
+    "/epsilon" => Some(0x03B5)
+    "/zeta" => Some(0x03B6)
+    "/eta" => Some(0x03B7)
+    "/theta" | "/theta1" => Some(0x03B8)
+    "/iota" => Some(0x03B9)
+    "/kappa" => Some(0x03BA)
+    "/lambda" => Some(0x03BB)
+    "/mu" => Some(0x03BC)
+    "/nu" => Some(0x03BD)
+    "/xi" => Some(0x03BE)
+    "/omicron" => Some(0x03BF)
+    "/pi" => Some(0x03C0)
+    "/rho" => Some(0x03C1)
+    "/sigma" | "/sigma1" => Some(0x03C3)
+    "/tau" => Some(0x03C4)
+    "/upsilon" => Some(0x03C5)
+    "/phi" | "/phi1" => Some(0x03C6)
+    "/chi" => Some(0x03C7)
+    "/psi" => Some(0x03C8)
+    "/omega" | "/omega1" => Some(0x03C9)
+    "/universal" => Some(0x2200)
+    "/existential" => Some(0x2203)
+    "/suchthat" => Some(0x220B)
+    "/lessequal" => Some(0x2264)
+    "/infinity" => Some(0x221E)
+    "/arrowboth" => Some(0x2194)
+    "/arrowleft" => Some(0x2190)
+    "/arrowup" => Some(0x2191)
+    "/arrowright" => Some(0x2192)
+    "/degree" => Some(0x00B0)
+    "/plusminus" => Some(0x00B1)
+    "/second" => Some(0x2033)
+    "/greaterequal" => Some(0x2265)
+    "/multiply" => Some(0x00D7)
+    "/proportional" => Some(0x221D)
+    "/partialdiff" => Some(0x2202)
+    "/divide" => Some(0x00F7)
+    "/notequal" => Some(0x2260)
+    "/equivalence" => Some(0x2261)
+    "/approxequal" => Some(0x2248)
+    "/summation" => Some(0x2211)
+    "/radical" => Some(0x221A)
+    "/lozenge" => Some(0x25CA)
+    "/spade" => Some(0x2660)
+    "/club" => Some(0x2663)
+    "/heart" => Some(0x2665)
+    "/diamond" => Some(0x2666)
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_codepoint_of_dingbat_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/a1" => Some(0x2701)
+    "/a2" => Some(0x2702)
+    "/a202" => Some(0x2703)
+    "/a3" => Some(0x2704)
+    "/a4" => Some(0x260E)
+    "/a5" => Some(0x2706)
+    "/a119" => Some(0x2707)
+    "/a118" => Some(0x2708)
+    "/a117" => Some(0x2709)
+    "/a11" => Some(0x261B)
+    "/a12" => Some(0x261E)
+    "/a13" => Some(0x270C)
+    "/a14" => Some(0x270D)
+    "/a15" => Some(0x270E)
+    "/a16" => Some(0x270F)
+    "/a105" => Some(0x2710)
+    "/a17" => Some(0x2711)
+    "/a18" => Some(0x2712)
+    "/a19" => Some(0x2713)
+    "/a20" => Some(0x2714)
+    "/a21" => Some(0x2715)
+    "/a22" => Some(0x2716)
+    "/a23" => Some(0x2717)
+    "/a24" => Some(0x2718)
+    "/a25" => Some(0x2719)
+    "/a35" => Some(0x2605)
+    "/a36" => Some(0x2729)
+    "/a37" => Some(0x272A)
+    "/a38" => Some(0x272B)
+    "/a39" => Some(0x272C)
+    "/a101" => Some(0x2761)
+    "/a102" => Some(0x2762)
+    "/a103" => Some(0x2763)
+    "/a104" => Some(0x2764)
+    "/a106" => Some(0x2765)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_glyphname_base_bytes(name : PdfName) -> BytesView {
   let bytes = name.bytes()
   let mut end = bytes.length()
@@ -2090,7 +2396,16 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
               None =>
                 match pdf_text_codepoint_of_punctuation_glyphname(base_name) {
                   Some(codepoint) => Some([codepoint])
-                  None => None
+                  None =>
+                    match pdf_text_codepoint_of_symbol_glyphname(base_name) {
+                      Some(codepoint) => Some([codepoint])
+                      None =>
+                        match
+                          pdf_text_codepoint_of_dingbat_glyphname(base_name) {
+                          Some(codepoint) => Some([codepoint])
+                          None => None
+                        }
+                    }
                 }
             }
           }
@@ -2106,36 +2421,6 @@ fn pdf_text_glyphname_has_single_codepoint(
   match pdf_text_codepoints_of_glyphname(glyphname) {
     Some([single]) if single == codepoint => true
     _ => false
-  }
-}
-
-///|
-fn PdfEncoding::pdf_text_charcode_of_codepoint(
-  self : PdfEncoding,
-  codepoint : Int,
-) -> Int? {
-  match self {
-    PdfImplicitInFontFile | PdfMacExpertEncoding => None
-    _ =>
-      for code in 0..<256 {
-        match self.pdf_text_glyphname_of_charcode(code) {
-          Some(glyphname) if pdf_text_glyphname_has_single_codepoint(
-              glyphname, codepoint,
-            ) => break Some(code)
-          _ => ()
-        }
-      } nobreak {
-        None
-      }
-  }
-}
-
-///|
-fn PdfFont::pdf_text_encoding(self : PdfFont) -> PdfEncoding {
-  match self {
-    PdfFontStandard(font) => font.encoding
-    PdfFontSimple(font) => font.encoding
-    PdfFontCIDKeyed(_) => PdfImplicitInFontFile
   }
 }
 
@@ -2158,7 +2443,7 @@ fn PdfTextExtractor::pdf_text_encoded_glyph_of_charcode(
   self : PdfTextExtractor,
   code : Int,
 ) -> PdfTextGlyph {
-  match self.font.pdf_text_encoding().pdf_text_glyphname_of_charcode(code) {
+  match self.font.pdf_text_glyphname_of_charcode(code) {
     Some(glyphname) =>
       match pdf_text_codepoints_of_glyphname(glyphname) {
         Some(codepoints) => { glyphname, codepoints }
@@ -2253,7 +2538,16 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
         None
       }
     None =>
-      self.font.pdf_text_encoding().pdf_text_charcode_of_codepoint(codepoint)
+      for code in 0..<256 {
+        match self.font.pdf_text_glyphname_of_charcode(code) {
+          Some(glyphname) if pdf_text_glyphname_has_single_codepoint(
+              glyphname, codepoint,
+            ) => break Some(code)
+          _ => ()
+        }
+      } nobreak {
+        None
+      }
   }
 }
 

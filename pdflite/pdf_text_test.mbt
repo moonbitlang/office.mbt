@@ -2036,6 +2036,97 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
 }
 
 ///|
+test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
+  let helvetica : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),
+  )
+  let helvetica_extractor = helvetica.text_extractor()
+  @test.assert_eq(
+    try! helvetica_extractor.codepoints_of_text(
+      text_bytes_for_test([65, 39, 96, 0xAE])[:],
+    ),
+    [65, 0x2019, 0x2018, 0xFB01],
+  )
+  @test.assert_eq(
+    try! helvetica_extractor.glyphnames_of_text(
+      text_bytes_for_test([65, 39, 96, 0xAE])[:],
+    ),
+    [
+      text_name_for_test("/A"),
+      text_name_for_test("/quoteright"),
+      text_name_for_test("/quoteleft"),
+      text_name_for_test("/fi"),
+    ],
+  )
+  @test.assert_eq(helvetica_extractor.charcode_of_codepoint(65), Some(65))
+  @test.assert_eq(helvetica_extractor.charcode_of_codepoint(0xFB01), Some(0xAE))
+}
+
+///|
+test "PdfTextExtractor extracts implicit Symbol glyphs" {
+  let symbol_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfSymbol, PdfImplicitInFontFile),
+  )
+  let extractor = symbol_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0x61, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+    ),
+    [0x0391, 0x03B1, 0x221E, 0x2192, 0x2265, 0x221A],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([0x41, 0x61, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+    ),
+    [
+      text_name_for_test("/Alpha"),
+      text_name_for_test("/alpha"),
+      text_name_for_test("/infinity"),
+      text_name_for_test("/arrowright"),
+      text_name_for_test("/greaterequal"),
+      text_name_for_test("/radical"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0391), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03B1), Some(0x61))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x221E), Some(0xA5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2192), Some(0xAE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2265), Some(0xB3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x221A), Some(0xD6))
+}
+
+///|
+test "PdfTextExtractor extracts implicit ZapfDingbats glyphs" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
+  )
+  let extractor = dingbat_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0x21, 0x22, 0x23, 0x48, 0xA1])[:],
+    ),
+    [0x2701, 0x2702, 0x2703, 0x2605, 0x2761],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([0x21, 0x22, 0x23, 0x48, 0xA1])[:],
+    ),
+    [
+      text_name_for_test("/a1"),
+      text_name_for_test("/a2"),
+      text_name_for_test("/a202"),
+      text_name_for_test("/a35"),
+      text_name_for_test("/a101"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2701), Some(0x21))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2702), Some(0x22))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2703), Some(0x23))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2605), Some(0x48))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2761), Some(0xA1))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
