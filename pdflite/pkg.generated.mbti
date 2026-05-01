@@ -896,6 +896,7 @@ pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise PdfErro
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise PdfError
+pub fn PdfDocument::permissions(Self) -> Array[PdfPermission] raise PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::read_annotation(Self, PdfObject) -> PdfAnnotation raise PdfError
@@ -940,6 +941,7 @@ pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination)
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
+pub fn PdfDocument::what_encryption(Self) -> PdfEncryptionMethod? raise PdfError
 pub fn PdfDocument::write_encoding(Self, PdfEncoding) -> Int raise PdfError
 pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise PdfError
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise PdfError
@@ -960,6 +962,15 @@ pub fn PdfEncoding::pdf_name(Self) -> PdfName?
 pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfEncryptionMethod {
+  PdfEncryption40Bit
+  PdfEncryption128Bit
+  PdfEncryptionAES128(Bool)
+  PdfEncryptionAES256(Bool)
+  PdfEncryptionAES256ISO(Bool)
+  PdfEncryptionAlreadyEncrypted
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfEncryptionValues {

@@ -238,6 +238,143 @@ test "PdfDocument is_encrypted follows direct encryption dictionary" {
 }
 
 ///|
+test "PdfDocument reports encryption method and permissions" {
+  let plain_doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(try! plain_doc.what_encryption(), None)
+  @test.assert_eq(try! plain_doc.permissions(), [])
+
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint, PdfNoCopy]
+  let permissions = @pdflite.pdf_p_of_permissions(denied)
+  let arc4_40 = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(1)),
+        (crypt_name_for_test("/R"), PdfInteger(2)),
+      ],
+      crypt_repeated_bytes_for_test(0x4f, 32),
+      crypt_repeated_bytes_for_test(0x55, 32),
+      permissions,
+    ),
+  )
+  @test.assert_eq(try! arc4_40.what_encryption(), Some(PdfEncryption40Bit))
+  @test.assert_eq(try! arc4_40.permissions(), [PdfNoCopy, PdfNoPrint])
+
+  let arc4_128 = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(2)),
+      (crypt_name_for_test("/Length"), PdfInteger(128)),
+      (crypt_name_for_test("/R"), PdfInteger(3)),
+    ]),
+  )
+  @test.assert_eq(try! arc4_128.what_encryption(), Some(PdfEncryption128Bit))
+
+  let arc4_96 = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (crypt_name_for_test("/Length"), PdfInteger(96)),
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(try! arc4_96.what_encryption(), None)
+
+  let aesv2 = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (crypt_name_for_test("/EncryptMetadata"), PdfBoolean(false)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/AESV2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! aesv2.what_encryption(),
+    Some(PdfEncryptionAES128(false)),
+  )
+
+  let aesv3 = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(5)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ],
+      owner_length=56,
+      user_length=56,
+    ),
+  )
+  @test.assert_eq(try! aesv3.what_encryption(), Some(PdfEncryptionAES256(true)))
+
+  let aesv3_iso = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(6)),
+        (crypt_name_for_test("/EncryptMetadata"), PdfBoolean(false)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ],
+      owner_length=56,
+      user_length=56,
+    ),
+  )
+  @test.assert_eq(
+    try! aesv3_iso.what_encryption(),
+    Some(PdfEncryptionAES256ISO(false)),
+  )
+}
+
+///|
 test "PdfDocument encryption_values parses legacy ARC4 dictionary values" {
   let doc = crypt_doc_with_encrypt_for_test(
     crypt_standard_encrypt_dictionary_for_test([

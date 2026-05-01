@@ -11,6 +11,16 @@ pub(all) enum PdfPermission {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) enum PdfEncryptionMethod {
+  PdfEncryption40Bit
+  PdfEncryption128Bit
+  PdfEncryptionAES128(Bool)
+  PdfEncryptionAES256(Bool)
+  PdfEncryptionAES256ISO(Bool)
+  PdfEncryptionAlreadyEncrypted
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) struct PdfEncryptionValues {
   crypt_type : PdfCryptType
   user_entry : PdfBytes
@@ -262,6 +272,37 @@ pub fn PdfDocument::encryption_values(
 ///|
 pub fn PdfDocument::is_encrypted(self : PdfDocument) -> Bool {
   self.lookup_direct(pdf_crypt_name("/Encrypt"), self.trailer_dict()) != None
+}
+
+///|
+pub fn PdfDocument::what_encryption(
+  self : PdfDocument,
+) -> PdfEncryptionMethod? raise PdfError {
+  if self.is_encrypted() {
+    let values = self.encryption_values()
+    match values.crypt_type {
+      PdfCryptARC4(40, _) => Some(PdfEncryption40Bit)
+      PdfCryptARC4(128, _) => Some(PdfEncryption128Bit)
+      PdfCryptAESV2 => Some(PdfEncryptionAES128(values.encrypt_metadata))
+      PdfCryptAESV3(false) => Some(PdfEncryptionAES256(values.encrypt_metadata))
+      PdfCryptAESV3(true) =>
+        Some(PdfEncryptionAES256ISO(values.encrypt_metadata))
+      _ => None
+    }
+  } else {
+    None
+  }
+}
+
+///|
+pub fn PdfDocument::permissions(
+  self : PdfDocument,
+) -> Array[PdfPermission] raise PdfError {
+  if self.is_encrypted() {
+    pdf_permissions_of_p(self.encryption_values().permissions)
+  } else {
+    []
+  }
 }
 
 ///|

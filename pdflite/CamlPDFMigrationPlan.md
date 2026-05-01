@@ -544,7 +544,9 @@ MoonBit consequences for this project:
     A combined `decrypt_with_passwords` convenience path now tries supplied
     user and owner passwords, falls back to an absent/blank user password when
     no credentials are supplied, and returns permissions with the decrypted
-    document.
+    document. CamlPDF-style encrypted-document introspection is also started
+    with `what_encryption` and `permissions`, reporting standard ARC4/AES
+    method families and denied permission lists without requiring decryption.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
