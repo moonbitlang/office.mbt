@@ -418,11 +418,11 @@ MoonBit consequences for this project:
    MacRoman high-byte fallback is started for common accented Latin letters,
    the contiguous lower-vowel accent block, and the `0xA0..0xAF`
    punctuation/symbol block, plus unambiguous sparse `0xB0..0xBF` entries
-   and `0xC0..0xFF` entries. MacRoman byte `0xFD` is normalized to the AGL
-   glyph name `/hungarumlaut`; the CamlPDF source table spells this entry
+   and `0xC0..0xFF` entries. MacRoman and WinAnsi `/mu` now resolve to the
+   AGL micro-sign codepoint, while implicit Symbol still resolves `/mu` to the
+   Greek small mu codepoint. MacRoman byte `0xFD` is normalized to the AGL glyph
+   name `/hungarumlaut`; the CamlPDF source table spells this entry
    `/hungrumlaut`, which is absent from the bundled Adobe glyph list and AFMs.
-   MacRoman `/mu` is still deferred pending context-specific glyph-name
-   codepoint handling, since Symbol maps `/mu` differently.
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
    letters, and common symbols.
@@ -431,7 +431,9 @@ MoonBit consequences for this project:
    small-capital, small accent-mark, small punctuation/currency, and
    superior/inferior punctuation and letter codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
-   `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
+   `uniXXXX` names, and `uXXXX` names; the `/Delta`, `/Omega`, and `/mu`
+   conflicts between AGL names and Symbol font names are handled with
+   font-specific codepoint lookup. Reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs. ToUnicode CMap parsing now
    handles `bfchar` pairs split across lines, inline and multiline `bfrange`
    array mappings, including range headers split before the array, whitespace

@@ -2062,6 +2062,7 @@ fn pdf_text_macroman_glyphname(code : Int) -> PdfName? {
         0xAF => Some(pdf_text_name("/Oslash"))
         0xB1 => Some(pdf_text_name("/plusminus"))
         0xB4 => Some(pdf_text_name("/yen"))
+        0xB5 => Some(pdf_text_name("/mu"))
         0xBB => Some(pdf_text_name("/ordfeminine"))
         0xBC => Some(pdf_text_name("/ordmasculine"))
         0xBE => Some(pdf_text_name("/ae"))
@@ -3733,11 +3734,46 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
 }
 
 ///|
-fn pdf_text_glyphname_has_single_codepoint(
+fn pdf_text_codepoint_of_agl_symbol_conflict_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Delta" => Some(0x2206)
+    "/Omega" => Some(0x2126)
+    "/mu" => Some(0x00B5)
+    _ => None
+  }
+}
+
+///|
+fn PdfFont::pdf_text_uses_symbol_codepoints(self : PdfFont) -> Bool {
+  match self {
+    PdfFontStandard(data) =>
+      data.font == PdfSymbol && data.encoding == PdfImplicitInFontFile
+    _ => false
+  }
+}
+
+///|
+fn PdfFont::pdf_text_codepoints_of_glyphname(
+  self : PdfFont,
+  glyphname : PdfName,
+) -> Array[Int]? {
+  if self.pdf_text_uses_symbol_codepoints() {
+    pdf_text_codepoints_of_glyphname(glyphname)
+  } else {
+    match pdf_text_codepoint_of_agl_symbol_conflict_glyphname(glyphname) {
+      Some(codepoint) => Some([codepoint])
+      None => pdf_text_codepoints_of_glyphname(glyphname)
+    }
+  }
+}
+
+///|
+fn PdfFont::pdf_text_glyphname_has_single_codepoint(
+  self : PdfFont,
   glyphname : PdfName,
   codepoint : Int,
 ) -> Bool {
-  match pdf_text_codepoints_of_glyphname(glyphname) {
+  match self.pdf_text_codepoints_of_glyphname(glyphname) {
     Some([single]) if single == codepoint => true
     _ => false
   }
@@ -3764,7 +3800,7 @@ fn PdfTextExtractor::pdf_text_encoded_glyph_of_charcode(
 ) -> PdfTextGlyph {
   match self.font.pdf_text_glyphname_of_charcode(code) {
     Some(glyphname) =>
-      match pdf_text_codepoints_of_glyphname(glyphname) {
+      match self.font.pdf_text_codepoints_of_glyphname(glyphname) {
         Some(codepoints) => { glyphname, codepoints }
         None => { glyphname, codepoints: [code] }
       }
@@ -3859,9 +3895,12 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
     None =>
       for code in 0..<256 {
         match self.font.pdf_text_glyphname_of_charcode(code) {
-          Some(glyphname) if pdf_text_glyphname_has_single_codepoint(
-              glyphname, codepoint,
-            ) => break Some(code)
+          Some(glyphname) =>
+            if self.font.pdf_text_glyphname_has_single_codepoint(
+                glyphname, codepoint,
+              ) {
+              break Some(code)
+            }
           _ => ()
         }
       } nobreak {

@@ -2313,13 +2313,14 @@ test "PdfTextExtractor extracts MacRoman sparse B-range glyphs" {
     text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
   )
   let extractor = standard_font.text_extractor()
-  let text = text_bytes_for_test([0xB1, 0xB4, 0xBB, 0xBC, 0xBE, 0xBF])
+  let text = text_bytes_for_test([0xB1, 0xB4, 0xB5, 0xBB, 0xBC, 0xBE, 0xBF])
   @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
-    0x00B1, 0x00A5, 0x00AA, 0x00BA, 0x00E6, 0x00F8,
+    0x00B1, 0x00A5, 0x00B5, 0x00AA, 0x00BA, 0x00E6, 0x00F8,
   ])
   @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
     text_name_for_test("/plusminus"),
     text_name_for_test("/yen"),
+    text_name_for_test("/mu"),
     text_name_for_test("/ordfeminine"),
     text_name_for_test("/ordmasculine"),
     text_name_for_test("/ae"),
@@ -2327,6 +2328,8 @@ test "PdfTextExtractor extracts MacRoman sparse B-range glyphs" {
   ])
   @test.assert_eq(extractor.charcode_of_codepoint(0x00B1), Some(0xB1))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00A5), Some(0xB4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00B5), Some(0xB5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03BC), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0x00AA), Some(0xBB))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00F8), Some(0xBF))
 }
@@ -2502,20 +2505,20 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
   @test.assert_eq(
     try! extractor.codepoints_of_text(
       text_bytes_for_test([
-        0xA1, 0xA6, 0xAE, 0xB0, 0xB1, 0xBC, 0xC0, 0xC6, 0xD0, 0xD8, 0xDE, 0xE6, 0xF0,
-        0xF8, 0xFE, 0xFF,
+        0xA1, 0xA6, 0xAE, 0xB0, 0xB1, 0xB5, 0xBC, 0xC0, 0xC6, 0xD0, 0xD8, 0xDE, 0xE6,
+        0xF0, 0xF8, 0xFE, 0xFF,
       ])[:],
     ),
     [
-      0x00A1, 0x00A6, 0x00AE, 0x00B0, 0x00B1, 0x00BC, 0x00C0, 0x00C6, 0x00D0, 0x00D8,
-      0x00DE, 0x00E6, 0x00F0, 0x00F8, 0x00FE, 0x00FF,
+      0x00A1, 0x00A6, 0x00AE, 0x00B0, 0x00B1, 0x00B5, 0x00BC, 0x00C0, 0x00C6, 0x00D0,
+      0x00D8, 0x00DE, 0x00E6, 0x00F0, 0x00F8, 0x00FE, 0x00FF,
     ],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
       text_bytes_for_test([
-        0xA1, 0xA6, 0xAE, 0xB0, 0xB1, 0xBC, 0xC0, 0xC6, 0xD0, 0xD8, 0xDE, 0xE6, 0xF0,
-        0xF8, 0xFE, 0xFF,
+        0xA1, 0xA6, 0xAE, 0xB0, 0xB1, 0xB5, 0xBC, 0xC0, 0xC6, 0xD0, 0xD8, 0xDE, 0xE6,
+        0xF0, 0xF8, 0xFE, 0xFF,
       ])[:],
     ),
     [
@@ -2524,6 +2527,7 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
       text_name_for_test("/registered"),
       text_name_for_test("/degree"),
       text_name_for_test("/plusminus"),
+      text_name_for_test("/mu"),
       text_name_for_test("/onequarter"),
       text_name_for_test("/Agrave"),
       text_name_for_test("/AE"),
@@ -2539,6 +2543,8 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x00A6), Some(0xA6))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00B1), Some(0xB1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00B5), Some(0xB5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03BC), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0x00C0), Some(0xC0))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00C6), Some(0xC6))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00F0), Some(0xF0))
@@ -2976,17 +2982,18 @@ test "PdfTextExtractor extracts implicit Symbol glyphs" {
   let extractor = symbol_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0x61, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+      text_bytes_for_test([0x41, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
     ),
-    [0x0391, 0x03B1, 0x221E, 0x2192, 0x2265, 0x221A],
+    [0x0391, 0x03B1, 0x03BC, 0x221E, 0x2192, 0x2265, 0x221A],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0x41, 0x61, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+      text_bytes_for_test([0x41, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
     ),
     [
       text_name_for_test("/Alpha"),
       text_name_for_test("/alpha"),
+      text_name_for_test("/mu"),
       text_name_for_test("/infinity"),
       text_name_for_test("/arrowright"),
       text_name_for_test("/greaterequal"),
@@ -2995,6 +3002,8 @@ test "PdfTextExtractor extracts implicit Symbol glyphs" {
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0391), Some(0x41))
   @test.assert_eq(extractor.charcode_of_codepoint(0x03B1), Some(0x61))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03BC), Some(0x6D))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00B5), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0x221E), Some(0xA5))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2192), Some(0xAE))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2265), Some(0xB3))
