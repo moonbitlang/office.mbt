@@ -174,14 +174,11 @@ fn PdfDocument::pdf_merge_copy_objects_from(
   source : PdfDocument,
 ) -> Unit {
   for number in source.object_numbers() {
-    match source.objects.get_entry(number) {
-      Some(entry) =>
-        self.objects.set_entry(number, {
-          data: entry.data,
-          generation: entry.generation,
-        })
-      None => ()
-    }
+    let entry = source.objects.get_entry(number).unwrap()
+    self.objects.set_entry(number, {
+      data: entry.data,
+      generation: entry.generation,
+    })
   }
 }
 
@@ -465,14 +462,11 @@ fn PdfDocument::pdf_merge_renumber_struct_parent_entries(
 ) -> Unit {
   if changes.length() > 0 {
     for number in self.object_numbers() {
-      match self.objects.get_entry(number) {
-        Some(entry) =>
-          self.objects.set_entry(
-            number,
-            pdf_merge_renumber_struct_parent_entry(entry, changes),
-          )
-        None => ()
-      }
+      let entry = self.objects.get_entry(number).unwrap()
+      self.objects.set_entry(
+        number,
+        pdf_merge_renumber_struct_parent_entry(entry, changes),
+      )
     }
   }
 }
@@ -654,10 +648,10 @@ fn PdfDocument::pdf_merge_catalog_entry(
 fn pdf_merge_acroforms(
   documents : ArrayView[PdfDocument],
 ) -> PdfObject? raise PdfError {
-  let forms : Array[PdfObject] = []
+  let forms : Array[Array[(PdfName, PdfObject)]] = []
   for document in documents {
     match document.pdf_merge_catalog_entry(pdf_merge_acroform_key()) {
-      Some(PdfDictionary(_) as form) => forms.push(form)
+      Some(PdfDictionary(form_entries)) => forms.push(form_entries)
       _ => ()
     }
   }
@@ -666,24 +660,20 @@ fn pdf_merge_acroforms(
   } else {
     let fields : Array[PdfObject] = []
     let entries : Array[(PdfName, PdfObject)] = []
-    for form in forms {
-      match form {
-        PdfDictionary(form_entries) =>
-          for entry in form_entries {
-            let (key, value) = entry
-            if key == pdf_merge_fields_key() {
-              match value {
-                PdfArray(items) =>
-                  for item in items {
-                    fields.push(item)
-                  }
-                _ => ()
+    for form_entries in forms {
+      for entry in form_entries {
+        let (key, value) = entry
+        if key == pdf_merge_fields_key() {
+          match value {
+            PdfArray(items) =>
+              for item in items {
+                fields.push(item)
               }
-            } else {
-              entries.push(entry)
-            }
+            _ => ()
           }
-        _ => ()
+        } else {
+          entries.push(entry)
+        }
       }
     }
     Some(

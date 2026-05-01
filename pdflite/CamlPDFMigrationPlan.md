@@ -515,7 +515,11 @@ MoonBit consequences for this project:
     private malformed operand fallbacks, inline-image data boundaries, unknown
     and inline-image render sections, complex-object reads, and invalid
     known-operator parsing; `pdf_content.mbt` is down to one defensive
-    post-decode stream-shape branch.
+    post-decode stream-shape branch. Merge coverage now removes
+    `pdf_merge.mbt` from the uncovered-line report with whitebox checks for
+    version guards, catalog extras, structure-parent renumbering, structure
+    lexicon merging, AcroForm field merging, catalog-root errors, and all
+    destination retargeting variants.
 
 ## Update Discipline
 
