@@ -419,6 +419,46 @@ test "PdfDocument page_reference_numbers traverses page tree in order" {
 }
 
 ///|
+test "PdfDocument page_number_of_target resolves named destinations" {
+  let key_dests = page_name_for_test("/Dests")
+  let key_names = page_name_for_test("/Names")
+  let type_fit = page_name_for_test("/Fit")
+  let named_destination = page_name_for_test("/Chapter")
+  let string_destination = @ascii.encode("chapter")
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  let page_refs = try! doc.page_reference_numbers()
+  let dest : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(page_refs[0]),
+    PdfNameObject(type_fit),
+  ])
+  let tree = doc.build_name_tree([(string_destination, dest)])
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_names, PdfDictionary([(key_dests, tree)])),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_dests, PdfDictionary([(named_destination, dest)])),
+  )
+  @test.assert_eq(
+    try! doc.page_number_of_target(DestString(string_destination)),
+    1,
+  )
+  @test.assert_eq(
+    try! doc.page_number_of_target(DestNamed(named_destination)),
+    1,
+  )
+  @test.assert_eq(
+    try! doc.page_number_of_target(DestString(@ascii.encode("missing"))),
+    0,
+  )
+}
+
+///|
 test "PdfDocument page helpers survive writer and reader round trip" {
   let rendered = try! @pdflite.pdf_write_document(page_tree_document_for_test())
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
@@ -1389,6 +1429,99 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
     {
       level: 1,
       text: @ascii.encode("Kept"),
+      target: DestFit(TargetPageObject(extracted_page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
+test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
+  let key_dests = page_name_for_test("/Dests")
+  let key_names = page_name_for_test("/Names")
+  let type_fit = page_name_for_test("/Fit")
+  let catalog_name = page_name_for_test("/CatalogKeep")
+  let string_name = @ascii.encode("string-keep")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let page_refs = try! doc.page_reference_numbers()
+  let kept_dest : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(page_refs[1]),
+    PdfNameObject(type_fit),
+  ])
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_names,
+      PdfDictionary([
+        (key_dests, doc.build_name_tree([(string_name, kept_dest)])),
+      ]),
+    ),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_dests, PdfDictionary([(catalog_name, kept_dest)])),
+  )
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode("String"),
+      target: DestString(string_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("Named"),
+      target: DestNamed(catalog_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  let extracted = try! bookmarked.pdf_of_pages([2])
+  let extracted_page_refs = try! extracted.page_reference_numbers()
+  @test.assert_eq(try! extracted.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: @ascii.encode("String"),
+      target: DestString(string_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("Named"),
+      target: DestNamed(catalog_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  @test.assert_eq(try! extracted.read_bookmarks(), [
+    {
+      level: 0,
+      text: @ascii.encode("String"),
+      target: DestFit(TargetPageObject(extracted_page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("Named"),
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
       colour: @pdflite.pdf_bookmark_black,

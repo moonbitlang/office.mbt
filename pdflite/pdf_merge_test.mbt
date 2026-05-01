@@ -101,6 +101,7 @@ fn merge_nametree_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
 ///|
 fn merge_nametree_dest_callsite_doc_for_test(
   name : String,
+  label : String,
 ) -> @pdflite.PdfDocument {
   let key_annots = merge_name_for_test("/Annots")
   let key_subtype = merge_name_for_test("/Subtype")
@@ -122,7 +123,16 @@ fn merge_nametree_dest_callsite_doc_for_test(
     .lookup_object_or_null(page_refs[0])
     .add_dict_entry(key_annots, PdfArray([PdfIndirect(annotation_number)])),
   )
-  doc
+  try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode(label),
+      target: DestString(@ascii.encode(name)),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
 }
 
 ///|
@@ -485,8 +495,8 @@ test "pdf_merge_documents retains and retargets named destinations" {
 
 ///|
 test "pdf_merge_documents renames colliding string destinations" {
-  let first = merge_nametree_dest_callsite_doc_for_test("shared")
-  let second = merge_nametree_dest_callsite_doc_for_test("shared")
+  let first = merge_nametree_dest_callsite_doc_for_test("shared", "First")
+  let second = merge_nametree_dest_callsite_doc_for_test("shared", "Second")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   let first_name = @ascii.encode("shared-f0")
   let second_name = @ascii.encode("shared-f1")
@@ -504,6 +514,24 @@ test "pdf_merge_documents renames colliding string destinations" {
     merge_first_annotation_dest_for_test(merged, 1),
     Some(PdfString(second_name)),
   )
+  @test.assert_eq(try! merged.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: @ascii.encode("First"),
+      target: DestString(first_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("Second"),
+      target: DestString(second_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
   @test.assert_eq(
     try! merged.page_number_of_target(
       try! merged.read_destination(PdfString(first_name)),

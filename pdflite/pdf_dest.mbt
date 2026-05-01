@@ -372,6 +372,16 @@ fn PdfDocument::pdf_destination_page_number(
   page_reference_numbers : ArrayView[Int],
 ) -> Int raise PdfError {
   match destination {
+    DestNamed(_) | DestString(_) => {
+      let resolved = self.read_destination(
+        pdf_object_of_destination(destination),
+      )
+      if resolved == destination {
+        0
+      } else {
+        self.pdf_destination_page_number(resolved, page_reference_numbers)
+      }
+    }
     DestAction(action) =>
       match
         (

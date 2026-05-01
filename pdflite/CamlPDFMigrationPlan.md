@@ -381,8 +381,10 @@ MoonBit consequences for this project:
    Page-label handling is started: extracted documents drop stale source
    `/PageLabels` by default and can retain selected-page numbering with
    `retain_numbering=true`. Bookmark extraction is also started: bookmarks are
-   filtered to selected target pages, ancestor outline context is retained, and
-   selected page targets are renumbered with the extracted page tree. Structure
+   filtered to selected target pages, named and string destination targets are
+   resolved for page-membership checks while preserving their original target
+   syntax, ancestor outline context is retained, and selected page targets are
+   renumbered with the extracted page tree. Structure
    tree trimming is started behind `process_struct_tree=true`: structure nodes
    whose `/Pg` points to removed pages are deleted and ancestor `/K` child
    lists are pruned until stable. Broader retained-numbering behavior remains
@@ -429,7 +431,9 @@ MoonBit consequences for this project:
    name-tree lookup for string destinations. Matrix transformation is also
    started for page-object targets, with CamlPDF-style coordinate clipping and
    `/GoTo` action `/D` rewriting. Page/destination convenience helpers are
-   started with `page_number_of_target` and `target_of_page_number`.
+   started with `page_number_of_target` and `target_of_page_number`;
+   page-number lookup now resolves named and string destinations when the
+   catalog or destination name tree contains the target.
 
    Bookmark support is started with typed `PdfBookmarkColour` and
    `PdfBookmark` records, `/Root/Outlines` traversal, level reconstruction,
@@ -722,11 +726,12 @@ MoonBit consequences for this project:
     `/Names` `/Dests`, retargeting page-object destinations to the merged page
     tree. Destination-name collisions across merged `/Names/Dests` trees are
     now disambiguated with CamlPDF-style `-fN` suffixes, and string destination
-    callsites such as link annotation `/Dest` entries and GoTo action `/D`
-    entries are rewritten to the renamed keys. Merge trailer info retention now
+    callsites such as link annotation `/Dest` entries, GoTo action `/D`
+    entries, and retained string-target bookmarks are rewritten to the renamed
+    keys. Merge trailer info retention now
     preserves the first available `/Info` dictionary through the merged trailer.
-    Safe catalog-entry retention
-    now carries first-seen non-page/non-handled catalog entries, such as viewer
+    Safe catalog-entry retention now carries first-seen non-page/non-handled
+    catalog entries, such as viewer
     preferences, while dropping `/OpenAction` and other entries that require
     dedicated merge semantics. Duplicate-font removal is started with
     CamlPDF-style identical owned-stream coalescing: references to duplicate
