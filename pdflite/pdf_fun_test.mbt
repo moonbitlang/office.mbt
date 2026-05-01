@@ -122,6 +122,23 @@ test "PdfDocument parse_function ignores Type 4 calculator comments" {
 }
 
 ///|
+test "PdfDocument parse_function salvages doubled-minus calculator numbers" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode("{ --2 mul --1.5 add }")
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfInteger(-3), PdfInteger(0)])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([0.5]), [-2.5])
+}
+
+///|
 test "PdfDocument parse_function evaluates calculator functions with multiple inputs" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ add }")

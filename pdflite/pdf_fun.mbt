@@ -437,6 +437,21 @@ priv enum PdfCalculatorItem {
 }
 
 ///|
+fn pdf_fun_calculator_number_of_token(text : String) -> PdfCalculatorOp? {
+  let integer : Result[Int, Error] = try? @strconv.from_str(text)
+  match integer {
+    Ok(value) => Some(PdfCalculatorInt(value))
+    Err(_) => {
+      let real : Result[Double, Error] = try? @strconv.from_str(text)
+      match real {
+        Ok(value) => Some(PdfCalculatorFloat(value))
+        Err(_) => None
+      }
+    }
+  }
+}
+
+///|
 fn pdf_fun_calculator_op_of_token(
   text : String,
 ) -> PdfCalculatorOp raise PdfError {
@@ -481,19 +496,22 @@ fn pdf_fun_calculator_op_of_token(
     "sqrt" => PdfCalculatorSqrt
     "truncate" => PdfCalculatorTruncate
     "xor" => PdfCalculatorXor
-    _ => {
-      let integer : Result[Int, Error] = try? @strconv.from_str(text)
-      match integer {
-        Ok(value) => PdfCalculatorInt(value)
-        Err(_) => {
-          let real : Result[Double, Error] = try? @strconv.from_str(text)
-          match real {
-            Ok(value) => PdfCalculatorFloat(value)
-            Err(_) => raise FunctionExpected
+    _ =>
+      match pdf_fun_calculator_number_of_token(text) {
+        Some(number) => number
+        None =>
+          if text.has_prefix("--") {
+            match
+              pdf_fun_calculator_number_of_token(
+                text.unsafe_substring(start=1, end=text.length()),
+              ) {
+              Some(number) => number
+              None => raise FunctionExpected
+            }
+          } else {
+            raise FunctionExpected
           }
-        }
       }
-    }
   }
 }
 
