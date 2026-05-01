@@ -49,12 +49,26 @@ test "ByteCursor reads regular token views without consuming delimiter" {
 test "PdfLexeme token shape stores byte-oriented names and strings" {
   let name = @pdflite.pdf_name_of_bytes(lexeme_bytes_for_test([47, 84, 121]))
   let string = lexeme_bytes_for_test([0, 255])
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexNull), "LexNull")
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexBool(false)), "LexBool")
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexName(name)), "LexName")
   @test.assert_eq(
     @pdflite.pdf_lexeme_debug_name(LexString(string)),
     "LexString",
   )
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexInt(42)), "LexInt")
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexReal(1.5)), "LexReal")
+  @test.assert_eq(
+    @pdflite.pdf_lexeme_debug_name(
+      LexStream(StreamGot(lexeme_bytes_for_test([]))),
+    ),
+    "LexStream",
+  )
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexEndStream), "LexEndStream")
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexObj), "LexObj")
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexEndObj), "LexEndObj")
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(StopLexing), "StopLexing")
+  @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexNone), "LexNone")
 }
 
 ///|
@@ -68,17 +82,55 @@ test "ByteCursor lexes PDF booleans and numbers" {
   @test.assert_eq(cursor.lex_pdf_number(), LexInt(-42))
   @test.assert_eq(cursor.lex_pdf_number(), LexReal(0.5))
   @test.assert_eq(cursor.lex_pdf_number(), LexInt(-2))
+  let false_cursor = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([102, 97, 108, 115, 101]),
+  )
+  @test.assert_eq(false_cursor.lex_pdf_bool(), LexBool(false))
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([])).lex_pdf_number(),
+    LexNone,
+  )
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([255])).lex_pdf_number(),
+    LexNone,
+  )
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([46])).lex_pdf_number(),
+    LexNone,
+  )
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([49, 65])).lex_pdf_number(),
+    LexNone,
+  )
+  let huge_integer = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([
+      57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57,
+      57, 57, 57, 57, 57, 57,
+    ]),
+  ).lex_pdf_number()
+  guard huge_integer is LexReal(_) else {
+    fail("expected oversized integer to fall back to LexReal")
+  }
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(
+      lexeme_bytes_for_test([109, 97, 121, 98, 101]),
+    ).lex_pdf_bool(),
+    LexNone,
+  )
 }
 
 ///|
 test "ByteCursor lexes PDF names as bytes including slash and hex escapes" {
   let cursor = @pdflite.byte_cursor_of_bytes(
-    lexeme_bytes_for_test([47, 65, 35, 50, 48, 66, 32, 47, 67]),
+    lexeme_bytes_for_test([
+      47, 65, 35, 50, 48, 66, 35, 52, 49, 35, 54, 49, 35, 65, 70, 35, 97, 102, 32,
+      47, 67,
+    ]),
   )
   let first = try! cursor.lex_pdf_name()
   guard first is LexName(name) else { fail("expected LexName") }
   @test.assert_eq(name.bytes().to_array().map(byte => byte.to_int()), [
-    47, 65, 32, 66,
+    47, 65, 32, 66, 65, 97, 175, 175,
   ])
   @test.assert_eq(cursor.peek_byte(), 32)
   cursor.drop_pdf_whitespace()
@@ -87,6 +139,10 @@ test "ByteCursor lexes PDF names as bytes including slash and hex escapes" {
   @test.assert_eq(second_name.bytes().to_array().map(byte => byte.to_int()), [
     47, 67,
   ])
+  @test.assert_eq(
+    try! @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_name(),
+    LexNone,
+  )
 }
 
 ///|
@@ -112,6 +168,10 @@ test "ByteCursor lexes PDF comments and leaves newline for whitespace scan" {
   @test.assert_eq(cursor.peek_byte(), 13)
   cursor.drop_pdf_whitespace()
   @test.assert_eq(cursor.lex_pdf_number(), LexInt(1))
+  @test.assert_eq(
+    @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_comment(),
+    LexNone,
+  )
 }
 
 ///|
@@ -135,6 +195,18 @@ test "ByteCursor lexes PDF literal strings as bytes" {
   @test.assert_eq(second_bytes.to_array().map(byte => byte.to_int()), [
     120, 40, 121, 41, 122,
   ])
+  let escapes = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([
+      40, 92, 114, 92, 116, 92, 98, 92, 102, 92, 53, 65, 92, 53, 51, 65, 41,
+    ]),
+  )
+  let escaped = try! escapes.lex_pdf_literal_string()
+  guard escaped is LexString(escaped_bytes) else {
+    fail("expected escaped LexString")
+  }
+  @test.assert_eq(escaped_bytes.to_array().map(byte => byte.to_int()), [
+    13, 9, 8, 12, 5, 65, 43, 65,
+  ])
 }
 
 ///|
@@ -145,6 +217,34 @@ test "ByteCursor treats backslash newline in PDF literal strings as continuation
   let lexeme = try! cursor.lex_pdf_literal_string()
   guard lexeme is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 66])
+  let carriage_return = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([40, 65, 92, 13, 66, 41]),
+  )
+  let lexeme = try! carriage_return.lex_pdf_literal_string()
+  guard lexeme is LexString(bytes) else { fail("expected LexString") }
+  @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 66])
+  let line_feed = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([40, 65, 92, 10, 66, 41]),
+  )
+  let lexeme = try! line_feed.lex_pdf_literal_string()
+  guard lexeme is LexString(bytes) else { fail("expected LexString") }
+  @test.assert_eq(bytes.to_array().map(byte => byte.to_int()), [65, 66])
+  @test.assert_eq(
+    try! @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([65])).lex_pdf_literal_string(),
+    LexNone,
+  )
+  let missing_escaped : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([40, 65, 92]),
+  ).lex_pdf_literal_string()
+  guard missing_escaped is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput")
+  }
+  let unterminated : Result[@pdflite.PdfLexeme, Error] = try? @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([40, 65]),
+  ).lex_pdf_literal_string()
+  guard unterminated is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput")
+  }
 }
 
 ///|
@@ -167,6 +267,24 @@ test "ByteCursor lexes PDF hex strings and rejects malformed hex" {
   let dict = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60, 60]))
   @test.assert_eq(try! dict.lex_pdf_hex_string(), LexNone)
   @test.assert_eq(dict.peek_byte(), 60)
+
+  let empty = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60]))
+  @test.assert_eq(
+    try! empty.lex_pdf_hex_string(),
+    LexString(lexeme_bytes_for_test([])),
+  )
+  let dangling = @pdflite.byte_cursor_of_bytes(lexeme_bytes_for_test([60, 52]))
+  @test.assert_eq(
+    try! dangling.lex_pdf_hex_string(),
+    LexString(lexeme_bytes_for_test([])),
+  )
+  let bad_high = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([60, 90, 62]),
+  )
+  let result : Result[@pdflite.PdfLexeme, Error] = try? bad_high.lex_pdf_hex_string()
+  guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
+    fail("expected InvalidHexEscape")
+  }
 }
 
 ///|
@@ -213,4 +331,19 @@ test "ByteCursor lex_pdf_tokens scans primitive PDF object syntax" {
     "LexInt", "LexInt", "LexInt", "LexInt", "LexR", "LexRightSquare", "LexName",
     "LexString", "LexRightDict",
   ])
+}
+
+///|
+test "ByteCursor lex_pdf_token dispatches booleans hex strings and stop markers" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([
+      102, 97, 108, 115, 101, 32, 60, 52, 49, 62, 32, 115, 105, 122, 101, 32, 73,
+    ]),
+  )
+  @test.assert_eq(try! cursor.lex_pdf_token(), LexBool(false))
+  let hex = try! cursor.lex_pdf_token()
+  guard hex is LexString(bytes) else { fail("expected LexString") }
+  @test.assert_eq(bytes, lexeme_bytes_for_test([65]))
+  @test.assert_eq(try! cursor.lex_pdf_token(), LexNone)
+  @test.assert_eq(try! cursor.lex_pdf_token(), StopLexing)
 }

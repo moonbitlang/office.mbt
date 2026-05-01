@@ -486,7 +486,11 @@ MoonBit consequences for this project:
     `/Limits`, and private grouping threshold checks. Flate coverage now
     includes empty and short zlib inputs, fixed-Huffman blocks, invalid stored
     block lengths, invalid block types, empty stored-block encoding, and private
-    bit-reader/Huffman-table guards.
+    bit-reader/Huffman-table guards. Lexeme coverage now includes all debug-name
+    variants, uppercase/lowercase hex escapes in names, false and malformed
+    booleans, malformed/oversized numbers, literal-string escape edge cases,
+    hex-string EOF/error cases, and token dispatch for booleans, hex strings,
+    non-special `s` keywords, and inline-image stop markers.
 
 ## Update Discipline
 
