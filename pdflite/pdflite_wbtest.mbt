@@ -274,6 +274,17 @@ test "private annotation and bookmark guards report malformed roots" {
   guard outlines is Err(PdfError::RootExpected) else {
     fail("expected RootExpected")
   }
+  let output : Array[PdfBookmark] = []
+  let recursion : Result[Unit, Error] = try? doc.pdf_bookmark_traverse_siblings(
+    0,
+    PdfNull,
+    false,
+    output,
+    10001,
+  )
+  guard recursion is Err(PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected")
+  }
 }
 
 ///|
@@ -320,6 +331,14 @@ test "private codec dictionary and predictor guards report malformed inputs" {
 
 ///|
 test "private LZW code expansion rejects malformed tables" {
+  let bad_next_code : Result[Int?, Error] = try? pdf_lzw_next_code(
+    bitstream_of_bytes(Bytes::new(0)),
+    32,
+  )
+  guard bad_next_code is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+
   let short_prefix = Array::make(4, 0)
   let short_append = Array::make(4, 0)
   let out_of_range : Result[Array[Int], Error] = try? pdf_lzw_decode_code(

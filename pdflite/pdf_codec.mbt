@@ -330,9 +330,6 @@ pub fn pdf_lzw_decode(
             } else {
               raise InvalidLZWData
             }
-            if chars.length() == 0 {
-              raise InvalidLZWData
-            }
             character = chars[0]
             for value in chars {
               pdf_lzw_output_literal(output, value)

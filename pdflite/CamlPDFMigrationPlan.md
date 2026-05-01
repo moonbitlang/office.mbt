@@ -504,7 +504,10 @@ MoonBit consequences for this project:
     explicit key-invariant unwraps. Parser and page-label coverage now remove
     those files from the uncovered-line report by replacing impossible parser
     progress checks and non-empty page-label no-break arms with simpler
-    invariant-preserving control flow.
+    invariant-preserving control flow. Bookmark and codec coverage now remove
+    those files from the uncovered-line report by covering the private bookmark
+    traversal depth guard and LZW bit-reader error conversion, while removing an
+    impossible empty LZW expansion check.
 
 ## Update Discipline
 
