@@ -720,8 +720,12 @@ MoonBit consequences for this project:
     preserving referenced field objects through the final cleanup. Named
     destination retention now merges old-style catalog `/Dests` and name-tree
     `/Names` `/Dests`, retargeting page-object destinations to the merged page
-    tree. Merge trailer info retention now preserves the first available
-    `/Info` dictionary through the merged trailer. Safe catalog-entry retention
+    tree. Destination-name collisions across merged `/Names/Dests` trees are
+    now disambiguated with CamlPDF-style `-fN` suffixes, and string destination
+    callsites such as link annotation `/Dest` entries and GoTo action `/D`
+    entries are rewritten to the renamed keys. Merge trailer info retention now
+    preserves the first available `/Info` dictionary through the merged trailer.
+    Safe catalog-entry retention
     now carries first-seen non-page/non-handled catalog entries, such as viewer
     preferences, while dropping `/OpenAction` and other entries that require
     dedicated merge semantics. Duplicate-font removal is started with

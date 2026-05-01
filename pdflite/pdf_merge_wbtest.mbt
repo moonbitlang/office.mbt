@@ -21,6 +21,39 @@ test "private merge helpers cover guards and membership branches" {
 }
 
 ///|
+test "private merge destination-name rewrite covers action and stream callsites" {
+  let old_name = @ascii.encode("shared")
+  let new_name = @ascii.encode("shared-f0")
+  let changes = [(old_name, new_name)]
+  @test.assert_eq(
+    try! pdf_merge_rewrite_destination_callsite_object(
+      PdfDictionary([
+        (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
+        (pdf_dest_d_key(), PdfString(old_name)),
+      ]),
+      changes,
+    ),
+    PdfDictionary([
+      (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
+      (pdf_dest_d_key(), PdfString(new_name)),
+    ]),
+  )
+  @test.assert_eq(
+    try! pdf_merge_rewrite_destination_callsite_object(
+      pdf_stream(
+        PdfDictionary([(pdf_merge_dest_key(), PdfString(old_name))]),
+        StreamGot(@ascii.encode("data")),
+      ),
+      changes,
+    ),
+    pdf_stream(
+      PdfDictionary([(pdf_merge_dest_key(), PdfString(new_name))]),
+      StreamGot(@ascii.encode("data")),
+    ),
+  )
+}
+
+///|
 test "private merge structure helpers cover direct variants" {
   let doc = pdf_document_empty()
   @test.assert_eq(

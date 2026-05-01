@@ -99,6 +99,65 @@ fn merge_nametree_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
 }
 
 ///|
+fn merge_nametree_dest_callsite_doc_for_test(
+  name : String,
+) -> @pdflite.PdfDocument {
+  let key_annots = merge_name_for_test("/Annots")
+  let key_subtype = merge_name_for_test("/Subtype")
+  let key_dest = merge_name_for_test("/Dest")
+  let type_link = merge_name_for_test("/Link")
+  let annotation_number = 50
+  let doc = merge_nametree_dest_doc_for_test(name)
+  let page_refs = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    annotation_number,
+    PdfDictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (key_dest, PdfString(@ascii.encode(name))),
+    ]),
+  )
+  doc.add_object_given_number(
+    page_refs[0],
+    try! doc
+    .lookup_object_or_null(page_refs[0])
+    .add_dict_entry(key_annots, PdfArray([PdfIndirect(annotation_number)])),
+  )
+  doc
+}
+
+///|
+fn merge_destination_name_entries_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
+  match
+    doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
+      merge_name_for_test("/Names"),
+      merge_name_for_test("/Dests"),
+    ]) {
+    Some(tree) => doc.read_name_tree(tree)
+    None => []
+  }
+}
+
+///|
+fn merge_first_annotation_dest_for_test(
+  doc : @pdflite.PdfDocument,
+  page_index : Int,
+) -> @pdflite.PdfObject? {
+  let page_refs = try! doc.page_reference_numbers()
+  match
+    doc
+    .lookup_object_or_null(page_refs[page_index])
+    .lookup_immediate(merge_name_for_test("/Annots")) {
+    Some(PdfArray([PdfIndirect(annotation_number), ..])) =>
+      doc
+      .lookup_object_or_null(annotation_number)
+      .lookup_immediate(merge_name_for_test("/Dest"))
+    _ => None
+  }
+}
+
+///|
 fn merge_name_dictionary_doc_for_test(
   tree_key : @pdflite.PdfName,
   name : String,
@@ -421,6 +480,41 @@ test "pdf_merge_documents retains and retargets named destinations" {
       PdfString(@ascii.encode("second")),
     ),
     DestString(@ascii.encode("second")),
+  )
+}
+
+///|
+test "pdf_merge_documents renames colliding string destinations" {
+  let first = merge_nametree_dest_callsite_doc_for_test("shared")
+  let second = merge_nametree_dest_callsite_doc_for_test("shared")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let first_name = @ascii.encode("shared-f0")
+  let second_name = @ascii.encode("shared-f1")
+  @test.assert_eq(
+    [
+      for entry in merge_destination_name_entries_for_test(merged) => entry.0
+    ],
+    [first_name, second_name],
+  )
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(merged, 0),
+    Some(PdfString(first_name)),
+  )
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(merged, 1),
+    Some(PdfString(second_name)),
+  )
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfString(first_name)),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfString(second_name)),
+    ),
+    2,
   )
 }
 
