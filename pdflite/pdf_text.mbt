@@ -2279,6 +2279,16 @@ fn pdf_text_zapfdingbats_glyphname(code : Int) -> PdfName? {
     0xB3 => Some(pdf_text_name("/a127"))
     0xB4 => Some(pdf_text_name("/a128"))
     0xB5 => Some(pdf_text_name("/a129"))
+    0xB6 => Some(pdf_text_name("/a130"))
+    0xB7 => Some(pdf_text_name("/a131"))
+    0xB8 => Some(pdf_text_name("/a132"))
+    0xB9 => Some(pdf_text_name("/a133"))
+    0xBA => Some(pdf_text_name("/a134"))
+    0xBB => Some(pdf_text_name("/a135"))
+    0xBC => Some(pdf_text_name("/a136"))
+    0xBD => Some(pdf_text_name("/a137"))
+    0xBE => Some(pdf_text_name("/a138"))
+    0xBF => Some(pdf_text_name("/a139"))
     _ => None
   }
 }
@@ -2769,6 +2779,16 @@ fn pdf_text_codepoint_of_dingbat_glyphname(name : PdfName) -> Int? {
     "/a127" => Some(0x2467)
     "/a128" => Some(0x2468)
     "/a129" => Some(0x2469)
+    "/a130" => Some(0x2776)
+    "/a131" => Some(0x2777)
+    "/a132" => Some(0x2778)
+    "/a133" => Some(0x2779)
+    "/a134" => Some(0x277A)
+    "/a135" => Some(0x277B)
+    "/a136" => Some(0x277C)
+    "/a137" => Some(0x277D)
+    "/a138" => Some(0x277E)
+    "/a139" => Some(0x277F)
     _ => None
   }
 }
