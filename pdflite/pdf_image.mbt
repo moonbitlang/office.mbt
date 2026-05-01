@@ -89,36 +89,6 @@ fn pdf_image_jbig2_globals_key() -> PdfName {
 }
 
 ///|
-fn pdf_image_function_type_key() -> PdfName {
-  pdf_image_name("/FunctionType")
-}
-
-///|
-fn pdf_image_domain_key() -> PdfName {
-  pdf_image_name("/Domain")
-}
-
-///|
-fn pdf_image_range_key() -> PdfName {
-  pdf_image_name("/Range")
-}
-
-///|
-fn pdf_image_c0_key() -> PdfName {
-  pdf_image_name("/C0")
-}
-
-///|
-fn pdf_image_c1_key() -> PdfName {
-  pdf_image_name("/C1")
-}
-
-///|
-fn pdf_image_n_key() -> PdfName {
-  pdf_image_name("/N")
-}
-
-///|
 fn pdf_image_dctdecode_name() -> PdfName {
   pdf_image_name("/DCTDecode")
 }
@@ -416,140 +386,6 @@ fn pdf_image_require_size(
 ) -> Unit raise PdfError {
   if data.length() < required {
     raise EndOfInput
-  }
-}
-
-///|
-fn PdfDocument::pdf_image_number_array(
-  self : PdfDocument,
-  object : PdfObject,
-) -> Array[Double] raise PdfError {
-  match self.direct(object) {
-    PdfArray(values) => {
-      let output : Array[Double] = []
-      for value in values {
-        output.push(self.get_number(value))
-      }
-      output
-    }
-    _ => raise NumberExpected
-  }
-}
-
-///|
-fn PdfDocument::pdf_image_lookup_number_array_or(
-  self : PdfDocument,
-  dictionary : PdfObject,
-  key : PdfName,
-  default : ArrayView[Double],
-) -> Array[Double] raise PdfError {
-  match self.lookup_direct(key, dictionary) {
-    Some(value) => self.pdf_image_number_array(value)
-    None => [ for value in default => value ]
-  }
-}
-
-///|
-fn PdfDocument::pdf_image_lookup_required_number_array(
-  self : PdfDocument,
-  dictionary : PdfObject,
-  key : PdfName,
-) -> Array[Double] raise PdfError {
-  match self.lookup_direct(key, dictionary) {
-    Some(value) => self.pdf_image_number_array(value)
-    None => raise DictionaryKeyNotFound(key)
-  }
-}
-
-///|
-fn PdfDocument::pdf_image_lookup_required_number(
-  self : PdfDocument,
-  dictionary : PdfObject,
-  key : PdfName,
-) -> Double raise PdfError {
-  match self.lookup_direct(key, dictionary) {
-    Some(value) => self.get_number(value)
-    None => raise DictionaryKeyNotFound(key)
-  }
-}
-
-///|
-fn pdf_image_clamp(value : Double, low : Double, high : Double) -> Double {
-  if value < low {
-    low
-  } else if value > high {
-    high
-  } else {
-    value
-  }
-}
-
-///|
-fn pdf_image_clamp_to_range(
-  values : Array[Double],
-  range : ArrayView[Double],
-) -> Array[Double] raise PdfError {
-  if range.length() != values.length() * 2 {
-    raise FilterExpected
-  }
-  let output : Array[Double] = []
-  for index in 0..<values.length() {
-    output.push(
-      pdf_image_clamp(values[index], range[index * 2], range[index * 2 + 1]),
-    )
-  }
-  output
-}
-
-///|
-fn PdfDocument::pdf_image_eval_type2_function(
-  self : PdfDocument,
-  function_object : PdfObject,
-  input : Double,
-) -> Array[Double] raise PdfError {
-  let function_dictionary = self.direct(function_object)
-  match self.lookup_direct(pdf_image_function_type_key(), function_dictionary) {
-    Some(PdfInteger(2)) => ()
-    Some(_) => raise NumberExpected
-    None => raise DictionaryKeyNotFound(pdf_image_function_type_key())
-  }
-  let domain = self.pdf_image_lookup_required_number_array(
-    function_dictionary,
-    pdf_image_domain_key(),
-  )
-  if domain.length() < 2 {
-    raise FilterExpected
-  }
-  let c0 = self.pdf_image_lookup_number_array_or(
-    function_dictionary,
-    pdf_image_c0_key(),
-    [0.0],
-  )
-  let c1 = self.pdf_image_lookup_number_array_or(
-    function_dictionary,
-    pdf_image_c1_key(),
-    [1.0],
-  )
-  if c0.length() != c1.length() {
-    raise FilterExpected
-  }
-  let n = self.pdf_image_lookup_required_number(
-    function_dictionary,
-    pdf_image_n_key(),
-  )
-  let clamped_input = pdf_image_clamp(input, domain[0], domain[1])
-  let factor = @math.pow(clamped_input, n)
-  let output : Array[Double] = []
-  for index in 0..<c0.length() {
-    output.push(c0[index] + factor * (c1[index] - c0[index]))
-  }
-  match self.lookup_direct(pdf_image_range_key(), function_dictionary) {
-    Some(range_object) =>
-      pdf_image_clamp_to_range(
-        output,
-        self.pdf_image_number_array(range_object),
-      )
-    None => output
   }
 }
 
@@ -962,12 +798,10 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
   pdf_image_require_size(data, pixels)
+  let tint_function = self.parse_function(tint)
   let output : Array[Byte] = []
   for index in 0..<pixels {
-    let values = self.pdf_image_eval_type2_function(
-      tint,
-      data[index].to_double() / 255.0,
-    )
+    let values = tint_function.eval([data[index].to_double() / 255.0])
     if values.length() != 4 {
       raise FilterExpected
     }

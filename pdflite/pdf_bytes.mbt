@@ -34,6 +34,9 @@ pub(all) suberror PdfError {
   PageRotationExpected(Int)
   ContentOperatorExpected
   ContentOperandExpected
+  FunctionExpected
+  FunctionNotSupported(Int)
+  BadFunctionEvaluation(String)
   StartXRefExpected
   XRefExpected
   XRefEntryExpected

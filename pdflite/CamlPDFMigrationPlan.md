@@ -366,10 +366,12 @@ MoonBit consequences for this project:
    decodable stream data, with RGB/CMYK component tables and recursive
    alternate-space handling. Separation and DeviceN parsing is started for
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
-   attributes. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG
-   data through the `FF D9` EOI marker while leaving following bytes unread.
-   `pdfimage` is started with typed image result and pixel-layout enums plus
-   image `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
+   attributes. `pdffun` is started with Type 2 interpolation function
+   parsing/evaluation, domain clamping, and range clamping. `pdfjpeg` is
+   started with a byte-cursor helper that extracts JPEG data through the
+   `FF D9` EOI marker while leaving following bytes unread. `pdfimage` is
+   started with typed image result and pixel-layout enums plus image
+   `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
    including image-mask defaults. `get_image_24bpp` is started for encoded
    JPEG/JPEG2000/JBIG2 pass-through, JBIG2 globals, filter-stage decoding up
    to raw or encoded-image stop filters, and raw 8-bit RGB/CalRGB,
@@ -380,8 +382,9 @@ MoonBit consequences for this project:
    is started for 8-bit samples. CamlPDF-style `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. Separation image pixels are started for 8-bit
-   samples with Type 2 tint functions and DeviceCMYK alternates. Full `Pdffun`
-   tint-transform evaluation and JPEG decoding remain deferred.
+   samples with Type 2 tint functions and DeviceCMYK alternates. Full sampled,
+   stitching, and calculator `Pdffun` evaluation plus JPEG decoding remain
+   deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

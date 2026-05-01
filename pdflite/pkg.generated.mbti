@@ -295,6 +295,9 @@ pub(all) suberror PdfError {
   PageRotationExpected(Int)
   ContentOperatorExpected
   ContentOperandExpected
+  FunctionExpected
+  FunctionNotSupported(Int)
+  BadFunctionEvaluation(String)
   StartXRefExpected
   XRefExpected
   XRefEntryExpected
@@ -641,6 +644,7 @@ pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
 pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
+pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise PdfError
@@ -682,11 +686,28 @@ pub fn PdfDocument::was_linearized(Self) -> Bool
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise PdfError
 
+pub(all) struct PdfFunction {
+  func : PdfFunctionKind
+  domain : Array[Double]
+  range : Array[Double]?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFunction::eval(Self, ArrayView[Double]) -> Array[Double] raise PdfError
+
+pub(all) enum PdfFunctionKind {
+  PdfFunctionInterpolation(PdfInterpolationFunction)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfImage {
   PdfJPEG(Bytes, Array[Double]?)
   PdfJPEG2000(Bytes, Array[Double]?)
   PdfJBIG2(Bytes, Array[Double]?, Int?)
   PdfRawImage(Int, Int, PdfPixelLayout, Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfInterpolationFunction {
+  c0 : Array[Double]
+  c1 : Array[Double]
+  n : Double
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfLexeme {
