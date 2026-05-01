@@ -25,14 +25,9 @@ fn crypt_aesv2_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> @pdflite.PdfBytes {
-  let object_key = @pdflite.pdf_encryption_object_key(
-    PdfCryptAESV2,
-    object_number,
-    generation,
-    file_key,
-    key_length_bits,
+  try! @pdflite.pdf_aesv2_encrypt_object_data(
+    object_number, generation, file_key, key_length_bits, data, iv,
   )
-  try! @pdflite.pdf_aes_cbc_encrypt_with_iv(object_key[:], iv, data)
 }
 
 ///|
@@ -2916,6 +2911,46 @@ test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
       ],
       encrypted_hello,
     ),
+  )
+}
+
+///|
+test "pdf_aesv2_encrypt_object_data uses object key and IV prefix" {
+  let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
+  let iv = crypt_model_bytes_for_test([
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
+    0x2d, 0x2e, 0x2f,
+  ])
+  let data = @ascii.encode("hello")
+  let encrypted = try! @pdflite.pdf_aesv2_encrypt_object_data(
+    12,
+    0,
+    file_key[:],
+    128,
+    data[:],
+    iv[:],
+  )
+  let object_key = @pdflite.pdf_encryption_object_key(
+    PdfCryptAESV2,
+    12,
+    0,
+    file_key[:],
+    128,
+  )
+  @test.assert_eq(
+    encrypted,
+    try! @pdflite.pdf_aes_cbc_encrypt_with_iv(object_key[:], iv[:], data[:]),
+  )
+  @test.assert_eq(encrypted[:16], iv[:])
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv2_decrypt_object_data(
+      12,
+      0,
+      file_key[:],
+      128,
+      encrypted[:],
+    ),
+    data,
   )
 }
 

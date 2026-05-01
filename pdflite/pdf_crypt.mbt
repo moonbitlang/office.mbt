@@ -1372,6 +1372,25 @@ pub fn pdf_aesv2_decrypt_object_data(
 }
 
 ///|
+pub fn pdf_aesv2_encrypt_object_data(
+  object_number : Int,
+  generation : Int,
+  file_key : BytesView,
+  key_length_bits : Int,
+  data : BytesView,
+  iv : BytesView,
+) -> PdfBytes raise PdfError {
+  let object_key = pdf_encryption_object_key(
+    PdfCryptAESV2,
+    object_number,
+    generation,
+    file_key,
+    key_length_bits,
+  )
+  pdf_aes_cbc_encrypt_with_iv(object_key[:], iv, data)
+}
+
+///|
 fn pdf_aes_decrypt_pdf_object_with_key(
   key : BytesView,
   object : PdfObject,

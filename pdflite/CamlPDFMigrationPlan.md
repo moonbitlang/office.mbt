@@ -515,9 +515,11 @@ MoonBit consequences for this project:
     IV-prefixed CBC, and ECB primitives are started through the portable
     `illusory0x0/rijndael` MoonBit package, with CamlPDF-compatible PKCS#7
     padding handling. ARC4 object data encryption/decryption using derived
-    object keys is started for the legacy string/stream path. AESV2 parsed
-    object data decryption is also started for IV-prefixed strings and stream
-    payloads using derived AES object keys. AESV3 revision 5 parsed object
+    object keys is started for the legacy string/stream path. AESV2 object data
+    encryption/decryption is also started for IV-prefixed strings and stream
+    payloads using derived AES object keys, with encryption requiring a
+    caller-supplied IV until a project-level random-byte source is selected.
+    AESV3 revision 5 parsed object
     data decryption is started with the unwrapped 32-byte file key. Recursive
     ARC4, AESV2, and AESV3 revision 5 object walks are started for PDF strings,
     arrays, dictionaries, and stream dictionaries/data, with stream data
