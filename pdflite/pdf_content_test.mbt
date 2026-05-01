@@ -33,6 +33,33 @@ fn hello_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn extended_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_d([3.0, 2.0], 1.0),
+    Op_ri(content_name_for_test("/RelativeColorimetric")),
+    Op_i(0.5),
+    Op_m(1.0, 2.0),
+    Op_c(1.0, 2.0, 3.0, 4.0, 5.0, 6.0),
+    Op_v(7.0, 8.0, 9.0, 10.0),
+    Op_y(11.0, 12.0, 13.0, 14.0),
+    Op_BT,
+    Op_Tc(1.5),
+    Op_Tw(2.5),
+    Op_Tz(90.0),
+    Op_TL(14.0),
+    Op_Tr(2),
+    Op_Ts(3.5),
+    Op_ET,
+    Op_CS(content_name_for_test("/DeviceRGB")),
+    Op_SC([1.0, 0.0, 0.0]),
+    Op_cs(content_name_for_test("/Pattern")),
+    Op_scnName(content_name_for_test("/P1"), [0.25]),
+    Op_SCNName(content_name_for_test("/P2"), [0.1, 0.2]),
+    Op_sh(content_name_for_test("/S1")),
+  ]
+}
+
+///|
 fn content_stream_for_test(text : String) -> @pdflite.PdfObject {
   let data = content_bytes_for_test(text)
   @pdflite.pdf_stream(
@@ -130,6 +157,33 @@ test "pdf_parse_content_ops_from_bytes parses hello-style content bytes" {
       ),
     ),
     hello_content_ops_for_test(),
+  )
+}
+
+///|
+test "pdf_content_bytes_of_ops renders extended graphics and text operators" {
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(extended_content_ops_for_test()),
+    content_bytes_for_test(
+      "[3 2] 1 d /RelativeColorimetric ri 0.5 i 1 2 m 1 2 3 4 5 6 c 7 8 9 10 v 11 12 13 14 y BT 1.5 Tc 2.5 Tw 90 Tz 14 TL 2 Tr 3.5 Ts ET /DeviceRGB CS 1 0 0 SC /Pattern cs 0.25 /P1 scn 0.1 0.2 /P2 SCN /S1 sh",
+    ),
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes parses extended graphics and text operators" {
+  let data = content_bytes_for_test(
+    "[3 2] 1 d /RelativeColorimetric ri 0.5 i 1 2 m 1 2 3 4 5 6 c 7 8 9 10 v 11 12 13 14 y BT 1.5 Tc 2.5 Tw 90 Tz 14 TL 2 Tr 3.5 Ts ET /DeviceRGB CS 1 0 0 SC /Pattern cs 0.25 /P1 scn 0.1 0.2 /P2 SCN /S1 sh",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    extended_content_ops_for_test(),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(
+      try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    ),
+    data,
   )
 }
 

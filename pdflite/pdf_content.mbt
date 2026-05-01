@@ -4,11 +4,17 @@ pub(all) enum PdfContentOp {
   Op_J(Int)
   Op_j(Int)
   Op_M(Double)
+  Op_d(Array[Double], Double)
+  Op_ri(PdfName)
+  Op_i(Double)
   Op_q
   Op_Q
   Op_cm(TransformMatrix)
   Op_m(Double, Double)
   Op_l(Double, Double)
+  Op_c(Double, Double, Double, Double, Double, Double)
+  Op_v(Double, Double, Double, Double)
+  Op_y(Double, Double, Double, Double)
   Op_h
   Op_re(Double, Double, Double, Double)
   Op_S
@@ -25,7 +31,13 @@ pub(all) enum PdfContentOp {
   Op_Wstar
   Op_BT
   Op_ET
+  Op_Tc(Double)
+  Op_Tw(Double)
+  Op_Tz(Double)
+  Op_TL(Double)
   Op_Tf(PdfName, Double)
+  Op_Tr(Int)
+  Op_Ts(Double)
   Op_Td(Double, Double)
   Op_TD(Double, Double)
   Op_Tm(TransformMatrix)
@@ -39,6 +51,15 @@ pub(all) enum PdfContentOp {
   Op_K(Double, Double, Double, Double)
   Op_k(Double, Double, Double, Double)
   Op_gs(PdfName)
+  Op_CS(PdfName)
+  Op_cs(PdfName)
+  Op_SC(Array[Double])
+  Op_sc(Array[Double])
+  Op_SCN(Array[Double])
+  Op_scn(Array[Double])
+  Op_SCNName(PdfName, Array[Double])
+  Op_scnName(PdfName, Array[Double])
+  Op_sh(PdfName)
   Op_Do(PdfName)
   Op_Unknown(PdfBytes)
 } derive(Debug, Eq, ToJson)
@@ -112,12 +133,32 @@ fn pdf_content_matrix_operands(matrix : TransformMatrix) -> Array[PdfObject] {
 }
 
 ///|
+fn pdf_content_number_array(values : ArrayView[Double]) -> PdfObject {
+  PdfArray([ for value in values => pdf_content_number_object(value) ])
+}
+
+///|
+fn pdf_content_number_operands(values : ArrayView[Double]) -> Array[PdfObject] {
+  [
+    for value in values => pdf_content_number_object(value)
+  ]
+}
+
+///|
 fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
   match op {
     Op_w(width) => ([pdf_content_number_object(width)], pdf_content_ascii("w"))
     Op_J(cap) => ([PdfInteger(cap)], pdf_content_ascii("J"))
     Op_j(join) => ([PdfInteger(join)], pdf_content_ascii("j"))
     Op_M(limit) => ([pdf_content_number_object(limit)], pdf_content_ascii("M"))
+    Op_d(dashes, phase) =>
+      (
+        [pdf_content_number_array(dashes), pdf_content_number_object(phase)],
+        pdf_content_ascii("d"),
+      )
+    Op_ri(intent) => ([PdfNameObject(intent)], pdf_content_ascii("ri"))
+    Op_i(flatness) =>
+      ([pdf_content_number_object(flatness)], pdf_content_ascii("i"))
     Op_q => ([], pdf_content_ascii("q"))
     Op_Q => ([], pdf_content_ascii("Q"))
     Op_cm(matrix) =>
@@ -131,6 +172,38 @@ fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
       (
         [pdf_content_number_object(x), pdf_content_number_object(y)],
         pdf_content_ascii("l"),
+      )
+    Op_c(x1, y1, x2, y2, x3, y3) =>
+      (
+        [
+          pdf_content_number_object(x1),
+          pdf_content_number_object(y1),
+          pdf_content_number_object(x2),
+          pdf_content_number_object(y2),
+          pdf_content_number_object(x3),
+          pdf_content_number_object(y3),
+        ],
+        pdf_content_ascii("c"),
+      )
+    Op_v(x2, y2, x3, y3) =>
+      (
+        [
+          pdf_content_number_object(x2),
+          pdf_content_number_object(y2),
+          pdf_content_number_object(x3),
+          pdf_content_number_object(y3),
+        ],
+        pdf_content_ascii("v"),
+      )
+    Op_y(x1, y1, x3, y3) =>
+      (
+        [
+          pdf_content_number_object(x1),
+          pdf_content_number_object(y1),
+          pdf_content_number_object(x3),
+          pdf_content_number_object(y3),
+        ],
+        pdf_content_ascii("y"),
       )
     Op_h => ([], pdf_content_ascii("h"))
     Op_re(x, y, width, height) =>
@@ -157,11 +230,21 @@ fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
     Op_Wstar => ([], pdf_content_ascii("W*"))
     Op_BT => ([], pdf_content_ascii("BT"))
     Op_ET => ([], pdf_content_ascii("ET"))
+    Op_Tc(spacing) =>
+      ([pdf_content_number_object(spacing)], pdf_content_ascii("Tc"))
+    Op_Tw(spacing) =>
+      ([pdf_content_number_object(spacing)], pdf_content_ascii("Tw"))
+    Op_Tz(scale) =>
+      ([pdf_content_number_object(scale)], pdf_content_ascii("Tz"))
+    Op_TL(leading) =>
+      ([pdf_content_number_object(leading)], pdf_content_ascii("TL"))
     Op_Tf(font, size) =>
       (
         [PdfNameObject(font), pdf_content_number_object(size)],
         pdf_content_ascii("Tf"),
       )
+    Op_Tr(mode) => ([PdfInteger(mode)], pdf_content_ascii("Tr"))
+    Op_Ts(rise) => ([pdf_content_number_object(rise)], pdf_content_ascii("Ts"))
     Op_Td(tx, ty) =>
       (
         [pdf_content_number_object(tx), pdf_content_number_object(ty)],
@@ -218,6 +301,27 @@ fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
         pdf_content_ascii("k"),
       )
     Op_gs(name) => ([PdfNameObject(name)], pdf_content_ascii("gs"))
+    Op_CS(name) => ([PdfNameObject(name)], pdf_content_ascii("CS"))
+    Op_cs(name) => ([PdfNameObject(name)], pdf_content_ascii("cs"))
+    Op_SC(values) =>
+      (pdf_content_number_operands(values), pdf_content_ascii("SC"))
+    Op_sc(values) =>
+      (pdf_content_number_operands(values), pdf_content_ascii("sc"))
+    Op_SCN(values) =>
+      (pdf_content_number_operands(values), pdf_content_ascii("SCN"))
+    Op_scn(values) =>
+      (pdf_content_number_operands(values), pdf_content_ascii("scn"))
+    Op_SCNName(name, values) =>
+      (
+        [..pdf_content_number_operands(values), PdfNameObject(name)],
+        pdf_content_ascii("SCN"),
+      )
+    Op_scnName(name, values) =>
+      (
+        [..pdf_content_number_operands(values), PdfNameObject(name)],
+        pdf_content_ascii("scn"),
+      )
+    Op_sh(name) => ([PdfNameObject(name)], pdf_content_ascii("sh"))
     Op_Do(name) => ([PdfNameObject(name)], pdf_content_ascii("Do"))
     Op_Unknown(bytes) => ([], bytes)
   }
@@ -414,6 +518,66 @@ fn pdf_content_operand_string(
 }
 
 ///|
+fn pdf_content_numbers_from_array(object : PdfObject) -> Array[Double]? {
+  match object {
+    PdfArray(items) => {
+      let output : Array[Double] = []
+      for item in items {
+        match item {
+          PdfReal(value) => output.push(value)
+          PdfInteger(value) => output.push(value.to_double())
+          _ => break None
+        }
+      } nobreak {
+        Some(output)
+      }
+    }
+    _ => None
+  }
+}
+
+///|
+fn pdf_content_numbers_from_operands(
+  operands : ArrayView[PdfObject],
+) -> Array[Double]? {
+  let output : Array[Double] = []
+  for operand in operands {
+    match operand {
+      PdfReal(value) => output.push(value)
+      PdfInteger(value) => output.push(value.to_double())
+      _ => break None
+    }
+  } nobreak {
+    Some(output)
+  }
+}
+
+///|
+fn pdf_content_named_color_operands(
+  operands : ArrayView[PdfObject],
+) -> (PdfName, Array[Double])? {
+  if operands.length() == 0 {
+    None
+  } else {
+    match operands[operands.length() - 1] {
+      PdfNameObject(name) => {
+        let numbers : Array[Double] = []
+        for i in 0..<(operands.length() - 1) {
+          match operands[i] {
+            PdfReal(value) => numbers.push(value)
+            PdfInteger(value) => numbers.push(value.to_double())
+            _ => break None
+          }
+        } nobreak {
+          Some((name, numbers))
+        }
+      }
+      _ => None
+    }
+  }
+}
+
+///|
 fn pdf_content_section_unknown(
   operands : ArrayView[PdfObject],
   operator : PdfBytes,
@@ -487,6 +651,25 @@ fn pdf_content_parse_known_section(
         Some(limit) => Some(Op_M(limit))
         None => None
       }
+    "d" if operands.length() == 2 =>
+      match
+        (
+          pdf_content_numbers_from_array(operands[0]),
+          pdf_content_operand_number(operands, 1),
+        ) {
+        (Some(dashes), Some(phase)) => Some(Op_d(dashes, phase))
+        _ => None
+      }
+    "ri" if operands.length() == 1 =>
+      match pdf_content_operand_name(operands, 0) {
+        Some(intent) => Some(Op_ri(intent))
+        None => None
+      }
+    "i" if operands.length() == 1 =>
+      match pdf_content_operand_number(operands, 0) {
+        Some(flatness) => Some(Op_i(flatness))
+        None => None
+      }
     "cm" if operands.length() == 6 =>
       match pdf_content_matrix_from_operands(operands) {
         Some(matrix) => Some(Op_cm(matrix))
@@ -515,6 +698,42 @@ fn pdf_content_parse_known_section(
         (Some(x), Some(y)) => Some(Op_l(x, y))
         _ => None
       }
+    "c" if operands.length() == 6 =>
+      match
+        (
+          pdf_content_operand_number(operands, 0),
+          pdf_content_operand_number(operands, 1),
+          pdf_content_operand_number(operands, 2),
+          pdf_content_operand_number(operands, 3),
+          pdf_content_operand_number(operands, 4),
+          pdf_content_operand_number(operands, 5),
+        ) {
+        (Some(x1), Some(y1), Some(x2), Some(y2), Some(x3), Some(y3)) =>
+          Some(Op_c(x1, y1, x2, y2, x3, y3))
+        _ => None
+      }
+    "v" if operands.length() == 4 =>
+      match
+        (
+          pdf_content_operand_number(operands, 0),
+          pdf_content_operand_number(operands, 1),
+          pdf_content_operand_number(operands, 2),
+          pdf_content_operand_number(operands, 3),
+        ) {
+        (Some(x2), Some(y2), Some(x3), Some(y3)) => Some(Op_v(x2, y2, x3, y3))
+        _ => None
+      }
+    "y" if operands.length() == 4 =>
+      match
+        (
+          pdf_content_operand_number(operands, 0),
+          pdf_content_operand_number(operands, 1),
+          pdf_content_operand_number(operands, 2),
+          pdf_content_operand_number(operands, 3),
+        ) {
+        (Some(x1), Some(y1), Some(x3), Some(y3)) => Some(Op_y(x1, y1, x3, y3))
+        _ => None
+      }
     "re" if operands.length() == 4 =>
       match
         (
@@ -527,6 +746,26 @@ fn pdf_content_parse_known_section(
           Some(Op_re(x, y, width, height))
         _ => None
       }
+    "Tc" if operands.length() == 1 =>
+      match pdf_content_operand_number(operands, 0) {
+        Some(spacing) => Some(Op_Tc(spacing))
+        None => None
+      }
+    "Tw" if operands.length() == 1 =>
+      match pdf_content_operand_number(operands, 0) {
+        Some(spacing) => Some(Op_Tw(spacing))
+        None => None
+      }
+    "Tz" if operands.length() == 1 =>
+      match pdf_content_operand_number(operands, 0) {
+        Some(scale) => Some(Op_Tz(scale))
+        None => None
+      }
+    "TL" if operands.length() == 1 =>
+      match pdf_content_operand_number(operands, 0) {
+        Some(leading) => Some(Op_TL(leading))
+        None => None
+      }
     "Tf" if operands.length() == 2 =>
       match
         (
@@ -535,6 +774,16 @@ fn pdf_content_parse_known_section(
         ) {
         (Some(font), Some(size)) => Some(Op_Tf(font, size))
         _ => None
+      }
+    "Tr" if operands.length() == 1 =>
+      match pdf_content_operand_int(operands, 0) {
+        Some(mode) => Some(Op_Tr(mode))
+        None => None
+      }
+    "Ts" if operands.length() == 1 =>
+      match pdf_content_operand_number(operands, 0) {
+        Some(rise) => Some(Op_Ts(rise))
+        None => None
       }
     "Td" if operands.length() == 2 =>
       match
@@ -615,6 +864,49 @@ fn pdf_content_parse_known_section(
     "gs" if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(name) => Some(Op_gs(name))
+        None => None
+      }
+    "CS" if operands.length() == 1 =>
+      match pdf_content_operand_name(operands, 0) {
+        Some(name) => Some(Op_CS(name))
+        None => None
+      }
+    "cs" if operands.length() == 1 =>
+      match pdf_content_operand_name(operands, 0) {
+        Some(name) => Some(Op_cs(name))
+        None => None
+      }
+    "SC" =>
+      match pdf_content_numbers_from_operands(operands) {
+        Some(values) => Some(Op_SC(values))
+        None => None
+      }
+    "sc" =>
+      match pdf_content_numbers_from_operands(operands) {
+        Some(values) => Some(Op_sc(values))
+        None => None
+      }
+    "SCN" =>
+      match pdf_content_named_color_operands(operands) {
+        Some((name, values)) => Some(Op_SCNName(name, values))
+        None =>
+          match pdf_content_numbers_from_operands(operands) {
+            Some(values) => Some(Op_SCN(values))
+            None => None
+          }
+      }
+    "scn" =>
+      match pdf_content_named_color_operands(operands) {
+        Some((name, values)) => Some(Op_scnName(name, values))
+        None =>
+          match pdf_content_numbers_from_operands(operands) {
+            Some(values) => Some(Op_scn(values))
+            None => None
+          }
+      }
+    "sh" if operands.length() == 1 =>
+      match pdf_content_operand_name(operands, 0) {
+        Some(name) => Some(Op_sh(name))
         None => None
       }
     "Do" if operands.length() == 1 =>

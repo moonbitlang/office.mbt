@@ -275,7 +275,10 @@ MoonBit consequences for this project:
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and
-   text operators used by the `pdfhello.ml` workflow.
+   text operators used by the `pdfhello.ml` workflow. Operator coverage now
+   also includes dash patterns, rendering intent, flatness, Bezier curves, text
+   state operators, color-space/color setters including named SCN/scn patterns,
+   and shadings.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

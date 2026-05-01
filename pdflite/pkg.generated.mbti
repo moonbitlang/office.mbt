@@ -356,11 +356,17 @@ pub(all) enum PdfContentOp {
   Op_J(Int)
   Op_j(Int)
   Op_M(Double)
+  Op_d(Array[Double], Double)
+  Op_ri(PdfName)
+  Op_i(Double)
   Op_q
   Op_Q
   Op_cm(TransformMatrix)
   Op_m(Double, Double)
   Op_l(Double, Double)
+  Op_c(Double, Double, Double, Double, Double, Double)
+  Op_v(Double, Double, Double, Double)
+  Op_y(Double, Double, Double, Double)
   Op_h
   Op_re(Double, Double, Double, Double)
   Op_S
@@ -377,7 +383,13 @@ pub(all) enum PdfContentOp {
   Op_Wstar
   Op_BT
   Op_ET
+  Op_Tc(Double)
+  Op_Tw(Double)
+  Op_Tz(Double)
+  Op_TL(Double)
   Op_Tf(PdfName, Double)
+  Op_Tr(Int)
+  Op_Ts(Double)
   Op_Td(Double, Double)
   Op_TD(Double, Double)
   Op_Tm(TransformMatrix)
@@ -391,6 +403,15 @@ pub(all) enum PdfContentOp {
   Op_K(Double, Double, Double, Double)
   Op_k(Double, Double, Double, Double)
   Op_gs(PdfName)
+  Op_CS(PdfName)
+  Op_cs(PdfName)
+  Op_SC(Array[Double])
+  Op_sc(Array[Double])
+  Op_SCN(Array[Double])
+  Op_scn(Array[Double])
+  Op_SCNName(PdfName, Array[Double])
+  Op_scnName(PdfName, Array[Double])
+  Op_sh(PdfName)
   Op_Do(PdfName)
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
