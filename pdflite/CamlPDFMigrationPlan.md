@@ -212,12 +212,13 @@ MoonBit consequences for this project:
    `/Type`, `/Filter`, and `/DecodeParms`, while deriving `/Size` from the
    loaded document object map. A first malformed-file reconstruction path is
    started for public reads with missing `startxref`, a `startxref` pointer
-   that is not an xref section, malformed xref rows, malformed trailer syntax,
-   a strict-read trailer missing `/Root`, or xref rows pointing at junk object
-   offsets: it scans recoverable indirect objects, selects the latest trailer
-   whose `/Root` points at a parsed dictionary, sets `first_xref` to zero, and
-   keeps stricter xref errors on the strict classic reader path. Broader
-   malformed xref-table recovery remains deferred. The reconstruction scan now
+   that is not an xref section or is past EOF, malformed xref rows, malformed
+   trailer syntax, a strict-read trailer missing `/Root`, or xref rows pointing
+   at junk object offsets: it scans recoverable indirect objects, selects the
+   latest trailer whose `/Root` points at a parsed dictionary, sets
+   `first_xref` to zero, and keeps stricter xref errors on the strict classic
+   reader path. Broader malformed xref-table recovery remains deferred. The
+   reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered
    streams can resolve plain indirect `/Length n 0 R` entries, and the public
    reader can now recover around unreadable stream lengths when another

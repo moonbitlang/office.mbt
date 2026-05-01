@@ -454,6 +454,16 @@ fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_out_of_range_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
+  reader_push_ascii(output, "startxref\n999999\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_with_bad_xref_entry() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -1156,6 +1166,23 @@ test "pdf_read_document_from_bytes reconstructs missing startxref PDFs" {
 test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_malformed_pdf_with_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs out-of-range startxref PDFs" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_out_of_range_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::InvalidCursorPosition(999999)) else {
+    fail("expected strict InvalidCursorPosition")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_out_of_range_startxref(),
   )
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)

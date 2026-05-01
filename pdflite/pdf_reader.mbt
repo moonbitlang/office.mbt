@@ -1192,6 +1192,8 @@ pub fn pdf_read_document_from_bytes(
     ParseObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
     InvalidHexEscape => pdf_read_reconstructed_or_raise(data, InvalidHexEscape)
+    InvalidCursorPosition(position) =>
+      pdf_read_reconstructed_or_raise(data, InvalidCursorPosition(position))
     error => raise error
   }
 }
