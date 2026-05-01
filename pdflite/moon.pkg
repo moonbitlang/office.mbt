@@ -1,6 +1,8 @@
 import {
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/math",
+  "moonbitlang/core/strconv",
 }
 
 import {

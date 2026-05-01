@@ -137,6 +137,7 @@ pub(all) suberror PdfError {
   RectangleExpected
   BadRectangle
   MatrixMalformed
+  InvalidHexEscape
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -183,6 +184,9 @@ pub fn ByteCursor::absolute_position(Self) -> Int
 pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::length(Self) -> Int
+pub fn ByteCursor::lex_pdf_bool(Self) -> PdfLexeme
+pub fn ByteCursor::lex_pdf_name(Self) -> PdfLexeme raise PdfError
+pub fn ByteCursor::lex_pdf_number(Self) -> PdfLexeme
 pub fn ByteCursor::nudge(Self) -> Unit
 pub fn ByteCursor::peek(Self) -> Byte?
 pub fn ByteCursor::peek_byte(Self) -> Int

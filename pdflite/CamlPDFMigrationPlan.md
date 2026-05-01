@@ -157,8 +157,10 @@ MoonBit consequences for this project:
    lexemes. Use snapshot tests for malformed inputs and `@test.assert_eq` for
    stable tokens.
    Status: started with the byte-oriented `PdfLexeme` enum, PDF whitespace and
-   delimiter predicates, whitespace dropping, and regular-token `BytesView`
-   scanning over `ByteCursor`.
+   delimiter predicates, whitespace dropping, regular-token `BytesView`
+   scanning over `ByteCursor`, boolean and number lexing, CamlPDF-compatible
+   double-minus number salvage, and name lexing with byte-preserving `#xx` hex
+   escapes.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only

@@ -199,6 +199,9 @@ MoonBit uses checked errors:
 - Functions that can fail should declare `raise ProjectError` or plain `raise`
   if the error set is intentionally broad.
 - In tests, use `try? f()` and inspect or pattern-match the `Result`.
+- In ordinary code, avoid `match (try? f()) { Ok(...) => ...; Err(...) => ... }`.
+  MoonBit warns on that anti-pattern; prefer `try f() catch { ... } noraise
+  { ... }`.
 
 ### Async I/O
 

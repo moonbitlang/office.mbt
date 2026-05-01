@@ -53,3 +53,46 @@ test "PdfLexeme token shape stores byte-oriented names and strings" {
   )
   @test.assert_eq(@pdflite.pdf_lexeme_debug_name(LexInt(42)), "LexInt")
 }
+
+///|
+test "ByteCursor lexes PDF booleans and numbers" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([
+      116, 114, 117, 101, 32, 45, 52, 50, 32, 46, 53, 32, 45, 45, 50,
+    ]),
+  )
+  @test.assert_eq(cursor.lex_pdf_bool(), LexBool(true))
+  @test.assert_eq(cursor.lex_pdf_number(), LexInt(-42))
+  @test.assert_eq(cursor.lex_pdf_number(), LexReal(0.5))
+  @test.assert_eq(cursor.lex_pdf_number(), LexInt(-2))
+}
+
+///|
+test "ByteCursor lexes PDF names as bytes including slash and hex escapes" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([47, 65, 35, 50, 48, 66, 32, 47, 67]),
+  )
+  let first = try! cursor.lex_pdf_name()
+  guard first is LexName(name) else { fail("expected LexName") }
+  @test.assert_eq(name.bytes().to_array().map(byte => byte.to_int()), [
+    47, 65, 32, 66,
+  ])
+  @test.assert_eq(cursor.peek_byte(), 32)
+  cursor.drop_pdf_whitespace()
+  let second = try! cursor.lex_pdf_name()
+  guard second is LexName(second_name) else { fail("expected second LexName") }
+  @test.assert_eq(second_name.bytes().to_array().map(byte => byte.to_int()), [
+    47, 67,
+  ])
+}
+
+///|
+test "ByteCursor reports malformed PDF name hex escapes" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    lexeme_bytes_for_test([47, 65, 35, 90, 90]),
+  )
+  let result : Result[@pdflite.PdfLexeme, Error] = try? cursor.lex_pdf_name()
+  guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
+    fail("expected InvalidHexEscape")
+  }
+}

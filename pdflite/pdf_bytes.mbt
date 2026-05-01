@@ -12,6 +12,7 @@ pub(all) suberror PdfError {
   RectangleExpected
   BadRectangle
   MatrixMalformed
+  InvalidHexEscape
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
