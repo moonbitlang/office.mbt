@@ -2404,6 +2404,52 @@ test "PdfTextExtractor extracts implicit Symbol special glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit Symbol assembly glyphs" {
+  let symbol_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfSymbol, PdfImplicitInFontFile),
+  )
+  let extractor = symbol_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF, 0xF2, 0xF3, 0xF4,
+    0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0xF8EB, 0xF8EC, 0xF8ED, 0xF8EE, 0xF8EF, 0xF8F0, 0xF8F1, 0xF8F2, 0xF8F3, 0xF8F4,
+    0x222B, 0x2320, 0xF8F5, 0x2321, 0xF8F6, 0xF8F7, 0xF8F8, 0xF8F9, 0xF8FA, 0xF8FB,
+    0xF8FC, 0xF8FD, 0xF8FE,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/parenlefttp"),
+    text_name_for_test("/parenleftex"),
+    text_name_for_test("/parenleftbt"),
+    text_name_for_test("/bracketlefttp"),
+    text_name_for_test("/bracketleftex"),
+    text_name_for_test("/bracketleftbt"),
+    text_name_for_test("/bracelefttp"),
+    text_name_for_test("/braceleftmid"),
+    text_name_for_test("/braceleftbt"),
+    text_name_for_test("/braceex"),
+    text_name_for_test("/integral"),
+    text_name_for_test("/integraltp"),
+    text_name_for_test("/integralex"),
+    text_name_for_test("/integralbt"),
+    text_name_for_test("/parenrighttp"),
+    text_name_for_test("/parenrightex"),
+    text_name_for_test("/parenrightbt"),
+    text_name_for_test("/bracketrighttp"),
+    text_name_for_test("/bracketrightex"),
+    text_name_for_test("/bracketrightbt"),
+    text_name_for_test("/bracerighttp"),
+    text_name_for_test("/bracerightmid"),
+    text_name_for_test("/bracerightbt"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF8EB), Some(0xE6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x222B), Some(0xF2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2321), Some(0xF5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF8FE), Some(0xFE))
+}
+
+///|
 test "PdfTextExtractor extracts implicit ZapfDingbats glyphs" {
   let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
