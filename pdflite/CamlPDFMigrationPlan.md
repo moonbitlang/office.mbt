@@ -429,8 +429,8 @@ MoonBit consequences for this project:
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
    subset now includes common set, logic, double-arrow, and math glyphs from
    CamlPDF's Symbol encoding table. The ZapfDingbats subset now includes the
-   cross/star, starburst, sparkle, geometric, quote-style, and high-byte card
-   suit glyph blocks.
+   cross/star, starburst, sparkle, geometric, quote-style, high-byte card
+   suit, and circled-digit glyph blocks.
    General `pdfcmap` parsing, full Adobe Glyph List coverage, broader
    MacExpert coverage, and broader Symbol/ZapfDingbats coverage remain
    deferred.
