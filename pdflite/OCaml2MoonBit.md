@@ -781,6 +781,10 @@ Assertion style:
 
 - Use `@test.assert_eq` for stable scalar or structural results; it has a
   `Debug` bound and avoids the deprecated `Show`-based assertion path.
+- Shared test helpers that call `@test.assert_eq` or `try!` on fallible APIs
+  should declare `-> Unit raise Error` unless they use a narrower project
+  error type. Verified with
+  `moon run -c 'fn helper() -> Unit raise Error { @test.assert_eq(1, 1) }\nfn main { try! helper() }'`.
 - Use `assert_true(value is Pattern(...))` or `guard ... else { fail(...) }`
   for pattern checks.
 - Use `inspect(value, content="...")` for snapshot tests of small values.
