@@ -2988,16 +2988,18 @@ test "PdfTextExtractor extracts implicit Symbol glyphs" {
   let extractor = symbol_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([0x41, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+      text_bytes_for_test([0x41, 0x44, 0x57, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
     ),
-    [0x0391, 0x03B1, 0x03BC, 0x221E, 0x2192, 0x2265, 0x221A],
+    [0x0391, 0x0394, 0x03A9, 0x03B1, 0x03BC, 0x221E, 0x2192, 0x2265, 0x221A],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([0x41, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
+      text_bytes_for_test([0x41, 0x44, 0x57, 0x61, 0x6D, 0xA5, 0xAE, 0xB3, 0xD6])[:],
     ),
     [
       text_name_for_test("/Alpha"),
+      text_name_for_test("/Delta"),
+      text_name_for_test("/Omega"),
       text_name_for_test("/alpha"),
       text_name_for_test("/mu"),
       text_name_for_test("/infinity"),
@@ -3007,6 +3009,10 @@ test "PdfTextExtractor extracts implicit Symbol glyphs" {
     ],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x0391), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0394), Some(0x44))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), Some(0x57))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2206), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2126), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0x03B1), Some(0x61))
   @test.assert_eq(extractor.charcode_of_codepoint(0x03BC), Some(0x6D))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00B5), None)
@@ -3681,19 +3687,21 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
         text_difference_for_test("/uni20AC", 67),
         text_difference_for_test("/u00A9", 68),
         text_difference_for_test("/uni00410042", 69),
+        text_difference_for_test("/Delta", 71),
+        text_difference_for_test("/Omega", 72),
       ]),
     ),
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([65, 66, 67, 68, 69, 70])[:],
+      text_bytes_for_test([65, 66, 67, 68, 69, 70, 71, 72])[:],
     ),
-    [0x20AC, 65, 0x20AC, 0x00A9, 65, 66, 70],
+    [0x20AC, 65, 0x20AC, 0x00A9, 65, 66, 70, 0x2206, 0x2126],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([65, 66, 67, 68, 69, 70])[:],
+      text_bytes_for_test([65, 66, 67, 68, 69, 70, 71, 72])[:],
     ),
     [
       text_name_for_test("/Euro"),
@@ -3702,6 +3710,8 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
       text_name_for_test("/u00A9"),
       text_name_for_test("/uni00410042"),
       text_name_for_test("/F"),
+      text_name_for_test("/Delta"),
+      text_name_for_test("/Omega"),
     ],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(65))
@@ -3709,6 +3719,10 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
   @test.assert_eq(extractor.charcode_of_codepoint(0x00A9), Some(68))
   @test.assert_eq(extractor.charcode_of_codepoint(66), None)
   @test.assert_eq(extractor.charcode_of_codepoint(70), Some(70))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2206), Some(71))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2126), Some(72))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0394), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), None)
 }
 
 ///|
