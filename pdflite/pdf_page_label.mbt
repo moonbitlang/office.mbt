@@ -1,0 +1,232 @@
+///|
+fn pdf_page_label_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_page_label_root_key() -> PdfName {
+  pdf_page_label_name("/Root")
+}
+
+///|
+fn pdf_page_label_page_labels_key() -> PdfName {
+  pdf_page_label_name("/PageLabels")
+}
+
+///|
+fn pdf_page_label_style_key() -> PdfName {
+  pdf_page_label_name("/S")
+}
+
+///|
+fn pdf_page_label_prefix_key() -> PdfName {
+  pdf_page_label_name("/P")
+}
+
+///|
+fn pdf_page_label_start_value_key() -> PdfName {
+  pdf_page_label_name("/St")
+}
+
+///|
+fn pdf_page_label_style_decimal_name() -> PdfName {
+  pdf_page_label_name("/D")
+}
+
+///|
+fn pdf_page_label_style_upper_roman_name() -> PdfName {
+  pdf_page_label_name("/R")
+}
+
+///|
+fn pdf_page_label_style_lower_roman_name() -> PdfName {
+  pdf_page_label_name("/r")
+}
+
+///|
+fn pdf_page_label_style_upper_letters_name() -> PdfName {
+  pdf_page_label_name("/A")
+}
+
+///|
+fn pdf_page_label_style_lower_letters_name() -> PdfName {
+  pdf_page_label_name("/a")
+}
+
+///|
+pub(all) enum PdfPageLabelStyle {
+  PageLabelDecimalArabic
+  PageLabelUppercaseRoman
+  PageLabelLowercaseRoman
+  PageLabelUppercaseLetters
+  PageLabelLowercaseLetters
+  PageLabelNoLabelPrefixOnly
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfPageLabel {
+  label_style : PdfPageLabelStyle
+  label_prefix : PdfBytes?
+  start_page : Int
+  start_value : Int
+} derive(Debug, Eq, ToJson)
+
+///|
+pub let pdf_page_label_basic : PdfPageLabel = {
+  label_style: PageLabelDecimalArabic,
+  label_prefix: None,
+  start_page: 1,
+  start_value: 1,
+}
+
+///|
+fn pdf_page_label_style_of_object(object : PdfObject?) -> PdfPageLabelStyle {
+  match object {
+    Some(PdfNameObject(name)) if name == pdf_page_label_style_decimal_name() =>
+      PageLabelDecimalArabic
+    Some(PdfNameObject(name)) if name == pdf_page_label_style_upper_roman_name() =>
+      PageLabelUppercaseRoman
+    Some(PdfNameObject(name)) if name == pdf_page_label_style_lower_roman_name() =>
+      PageLabelLowercaseRoman
+    Some(PdfNameObject(name)) if name ==
+      pdf_page_label_style_upper_letters_name() => PageLabelUppercaseLetters
+    Some(PdfNameObject(name)) if name ==
+      pdf_page_label_style_lower_letters_name() => PageLabelLowercaseLetters
+    _ => PageLabelNoLabelPrefixOnly
+  }
+}
+
+///|
+fn pdf_page_label_style_object(style : PdfPageLabelStyle) -> PdfObject? {
+  match style {
+    PageLabelDecimalArabic =>
+      Some(PdfNameObject(pdf_page_label_style_decimal_name()))
+    PageLabelUppercaseRoman =>
+      Some(PdfNameObject(pdf_page_label_style_upper_roman_name()))
+    PageLabelLowercaseRoman =>
+      Some(PdfNameObject(pdf_page_label_style_lower_roman_name()))
+    PageLabelUppercaseLetters =>
+      Some(PdfNameObject(pdf_page_label_style_upper_letters_name()))
+    PageLabelLowercaseLetters =>
+      Some(PdfNameObject(pdf_page_label_style_lower_letters_name()))
+    PageLabelNoLabelPrefixOnly => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_label_of_range(
+  self : PdfDocument,
+  start_page_zero_based : Int,
+  object : PdfObject,
+) -> PdfPageLabel {
+  {
+    label_style: pdf_page_label_style_of_object(
+      self.lookup_direct(pdf_page_label_style_key(), object),
+    ),
+    label_prefix: match
+      self.lookup_direct(pdf_page_label_prefix_key(), object) {
+      Some(PdfString(prefix)) => Some(prefix)
+      _ => None
+    },
+    start_page: start_page_zero_based + 1,
+    start_value: match
+      self.lookup_direct(pdf_page_label_start_value_key(), object) {
+      Some(PdfInteger(value)) => value
+      _ => 1
+    },
+  }
+}
+
+///|
+fn pdf_page_label_object(label : PdfPageLabel) -> PdfObject {
+  let entries : Array[(PdfName, PdfObject)] = []
+  match pdf_page_label_style_object(label.label_style) {
+    Some(style) => entries.push((pdf_page_label_style_key(), style))
+    None => ()
+  }
+  match label.label_prefix {
+    Some(prefix) =>
+      entries.push((pdf_page_label_prefix_key(), PdfString(prefix)))
+    None => ()
+  }
+  if label.start_value != 1 {
+    entries.push(
+      (pdf_page_label_start_value_key(), PdfInteger(label.start_value)),
+    )
+  }
+  PdfDictionary(entries)
+}
+
+///|
+pub fn PdfDocument::read_page_labels(
+  self : PdfDocument,
+) -> Array[PdfPageLabel] raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  match self.lookup_direct(pdf_page_label_page_labels_key(), root) {
+    Some(label_tree) =>
+      [
+        for entry in self.read_number_tree(label_tree) => {
+          self.pdf_page_label_of_range(entry.0, entry.1)
+        }
+      ]
+    None => []
+  }
+}
+
+///|
+pub fn PdfDocument::remove_page_labels(
+  self : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  let pdf = self.copy()
+  let root_without_labels = root.remove_dict_entry(
+    pdf_page_label_page_labels_key(),
+  )
+  let new_root = pdf.add_object(root_without_labels)
+  pdf.set_root(new_root)
+  pdf.set_trailer_dict(
+    pdf
+    .trailer_dict()
+    .add_dict_entry(pdf_page_label_root_key(), PdfIndirect(new_root)),
+  )
+  pdf
+}
+
+///|
+pub fn PdfDocument::write_page_labels(
+  self : PdfDocument,
+  labels : ArrayView[PdfPageLabel],
+) -> PdfDocument raise PdfError {
+  if labels.length() == 0 {
+    self.remove_page_labels()
+  } else {
+    let root = self.lookup_object_or_null(self.root())
+    if root == PdfNull {
+      raise RootExpected
+    }
+    let pdf = self.copy()
+    let entries : Array[(Int, PdfObject)] = []
+    for label in labels {
+      entries.push((label.start_page - 1, pdf_page_label_object(label)))
+    }
+    let new_root = pdf.add_object(
+      root.add_dict_entry(
+        pdf_page_label_page_labels_key(),
+        pdf.build_number_tree(entries),
+      ),
+    )
+    pdf.set_root(new_root)
+    pdf.set_trailer_dict(
+      pdf
+      .trailer_dict()
+      .add_dict_entry(pdf_page_label_root_key(), PdfIndirect(new_root)),
+    )
+    pdf
+  }
+}
