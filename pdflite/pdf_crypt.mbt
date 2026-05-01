@@ -80,6 +80,88 @@ pub fn pdf_encryption_file_key(
 }
 
 ///|
+fn pdf_key_xor_iteration(key : BytesView, iteration : Int) -> PdfBytes {
+  Bytes::makei(key.length(), index => {
+    (key[index].to_int() ^ iteration).to_byte()
+  })
+}
+
+///|
+pub fn pdf_make_user_password_entry(
+  no_encrypt_metadata : Bool,
+  user_password : BytesView,
+  revision : Int,
+  owner_entry : BytesView,
+  permissions : Int,
+  file_id : BytesView,
+  key_length_bits : Int,
+) -> PdfBytes raise PdfError {
+  let key = pdf_encryption_file_key(
+    no_encrypt_metadata, user_password, revision, owner_entry, permissions, file_id,
+    key_length_bits,
+  )
+  if revision == 2 {
+    pdf_arc4_crypt(key[:], pdf_password_padding()[:])
+  } else {
+    let md5 = @crypto.MD5::new()
+    md5.update(pdf_password_padding()[:])
+    md5.update(file_id)
+    let digest = Bytes::from_array(md5.finalize())
+    let mut encrypted = pdf_arc4_crypt(key[:], digest[:])
+    for iteration in 1..<20 {
+      let iteration_key = pdf_key_xor_iteration(key[:], iteration)
+      encrypted = pdf_arc4_crypt(iteration_key[:], encrypted[:])
+    }
+    let output : Array[Byte] = [ for byte in encrypted => byte ]
+    for _ in 0..<16 {
+      output.push(0)
+    }
+    Bytes::from_array(output)
+  }
+}
+
+///|
+fn pdf_bytes_prefix_equal(
+  left : BytesView,
+  right : BytesView,
+  length : Int,
+) -> Bool {
+  guard left.length() >= length && right.length() >= length else {
+    return false
+  }
+  for index in 0..<length {
+    if left[index] != right[index] {
+      break false
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+pub fn pdf_authenticate_user_password(
+  no_encrypt_metadata : Bool,
+  user_password : BytesView,
+  revision : Int,
+  user_entry : BytesView,
+  owner_entry : BytesView,
+  permissions : Int,
+  file_id : BytesView,
+  key_length_bits : Int,
+) -> Bool raise PdfError {
+  let expected = pdf_make_user_password_entry(
+    no_encrypt_metadata, user_password, revision, owner_entry, permissions, file_id,
+    key_length_bits,
+  )
+  if revision >= 3 {
+    pdf_bytes_prefix_equal(user_entry, expected[:], 16)
+  } else {
+    pdf_bytes_prefix_equal(user_entry, expected[:], expected.length()) &&
+    user_entry.length() == expected.length()
+  }
+}
+
+///|
 fn pdf_permission_denied(
   permissions : ArrayView[PdfPermission],
   target : PdfPermission,

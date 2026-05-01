@@ -71,6 +71,134 @@ test "pdf_encryption_file_key matches CamlPDF R2 through R4 derivation" {
 }
 
 ///|
+test "pdf_make_user_password_entry matches CamlPDF U values" {
+  let owner = crypt_model_bytes_for_test([ for value in 0..<32 => value ])
+  @test.assert_eq(
+    try! @pdflite.pdf_make_user_password_entry(
+      false,
+      @ascii.encode("user")[:],
+      2,
+      owner[:],
+      -4,
+      @ascii.encode("doc-id")[:],
+      40,
+    ),
+    crypt_model_bytes_for_test([
+      0x20, 0x54, 0x2f, 0x95, 0x6b, 0x5f, 0x5d, 0x84, 0x77, 0x36, 0x04, 0xf4, 0x9c,
+      0x46, 0xfb, 0xdf, 0x57, 0x65, 0xe3, 0xa2, 0x96, 0x6c, 0xd3, 0x82, 0xb4, 0x96,
+      0x0b, 0xd3, 0x77, 0xa3, 0x03, 0x41,
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_make_user_password_entry(
+      false,
+      Bytes::new(0)[:],
+      3,
+      owner[:],
+      -3904,
+      @ascii.encode("doc-id")[:],
+      128,
+    ),
+    crypt_model_bytes_for_test([
+      0x3d, 0xae, 0x18, 0x1a, 0x3c, 0x13, 0x8f, 0x79, 0xa6, 0xe2, 0xfa, 0x16, 0x86,
+      0x96, 0x32, 0x9f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_make_user_password_entry(
+      true,
+      Bytes::new(0)[:],
+      4,
+      owner[:],
+      -3904,
+      @ascii.encode("doc-id")[:],
+      128,
+    ),
+    crypt_model_bytes_for_test([
+      0x93, 0x47, 0x7f, 0x4b, 0x13, 0x20, 0xa8, 0x08, 0x4f, 0x6a, 0x03, 0x20, 0xdc,
+      0x1f, 0xd2, 0x9f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ]),
+  )
+}
+
+///|
+test "pdf_authenticate_user_password validates R2 and R3 user entries" {
+  let owner = crypt_model_bytes_for_test([ for value in 0..<32 => value ])
+  let r2_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user")[:],
+    2,
+    owner[:],
+    -4,
+    @ascii.encode("doc-id")[:],
+    40,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password(
+      false,
+      @ascii.encode("user")[:],
+      2,
+      r2_entry[:],
+      owner[:],
+      -4,
+      @ascii.encode("doc-id")[:],
+      40,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password(
+      false,
+      @ascii.encode("bad")[:],
+      2,
+      r2_entry[:],
+      owner[:],
+      -4,
+      @ascii.encode("doc-id")[:],
+      40,
+    ),
+    false,
+  )
+  let r3_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    Bytes::new(0)[:],
+    3,
+    owner[:],
+    -3904,
+    @ascii.encode("doc-id")[:],
+    128,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password(
+      false,
+      Bytes::new(0)[:],
+      3,
+      r3_entry[:16],
+      owner[:],
+      -3904,
+      @ascii.encode("doc-id")[:],
+      128,
+    ),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password(
+      false,
+      Bytes::new(0)[:],
+      3,
+      r3_entry[:8],
+      owner[:],
+      -3904,
+      @ascii.encode("doc-id")[:],
+      128,
+    ),
+    false,
+  )
+}
+
+///|
 test "pdf_permissions_of_p parses CamlPDF denied permission bits" {
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-4), [])
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-8), [PdfNoPrint])
