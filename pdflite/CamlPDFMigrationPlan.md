@@ -423,9 +423,9 @@ MoonBit consequences for this project:
    Greek small mu codepoint. MacRoman byte `0xFD` is normalized to the AGL glyph
    name `/hungarumlaut`; the CamlPDF source table spells this entry
    `/hungrumlaut`, which is absent from the bundled Adobe glyph list and AFMs.
-   A practical WinAnsi high-byte subset is also started for common PDF text
-   bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
-   letters, and common symbols.
+   The WinAnsi high-byte fallback now covers the CamlPDF table, including
+   Euro, smart quotes, dashes, copyright, Latin-1 accented letters, common
+   symbols, and the high-byte `/space` and `/hyphen` entries.
    MacExpert fallback is started for the well-defined ligature, oldstyle digit,
    superior digit, inferior digit, fraction, small-capital, accented
    small-capital, small accent-mark, small punctuation/currency, and
