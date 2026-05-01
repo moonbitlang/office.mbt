@@ -1821,6 +1821,71 @@ test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
 }
 
 ///|
+test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfStandardEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 39, 96])[:]),
+    [65, 0x2019, 0x2018],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([65, 39, 96])[:]),
+    [
+      text_name_for_test("/A"),
+      text_name_for_test("/quoteright"),
+      text_name_for_test("/quoteleft"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(65), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2019), Some(39))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2018), Some(96))
+  @test.assert_eq(extractor.charcode_of_codepoint(39), None)
+}
+
+///|
+test "PdfTextExtractor extracts WinAnsi Basic Latin quote glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([39, 96])[:]),
+    [39, 96],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([39, 96])[:]),
+    [text_name_for_test("/quotesingle"), text_name_for_test("/grave")],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(39), Some(39))
+  @test.assert_eq(extractor.charcode_of_codepoint(96), Some(96))
+}
+
+///|
+test "PdfTextExtractor uses custom encoding differences before base encoding" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, [
+        text_difference_for_test("/Euro", 65),
+      ]),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])[:]),
+    [0x20AC, 66],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([65, 66])[:]),
+    [text_name_for_test("/Euro"), text_name_for_test("/B")],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(66), Some(66))
+}
+
+///|
 test "PdfDocument write_font rejects unsupported font variants" {
   let doc = @pdflite.pdf_document_empty()
   let unsupported = try? doc.write_font(

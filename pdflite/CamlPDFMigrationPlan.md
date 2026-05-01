@@ -403,8 +403,11 @@ MoonBit consequences for this project:
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
    and `/Identity-H` CID text, including decoded glyph records, glyph-name
    extraction, flattened codepoint extraction, and reverse ToUnicode charcode
-   lookup for single Unicode codepoints. General `pdfcmap` parsing and
-   glyph-list-backed standard encoding extraction remain deferred.
+   lookup for single Unicode codepoints. Basic Latin glyph-list-backed fallback
+   is also started for StandardEncoding, MacRomanEncoding, WinAnsiEncoding,
+   custom encoding differences, and reverse charcode lookup over that subset.
+   General `pdfcmap` parsing, full Adobe Glyph List coverage, MacExpert,
+   Symbol, and ZapfDingbats extraction remain deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
