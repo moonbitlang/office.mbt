@@ -383,6 +383,20 @@ expression. If you deliberately match the result of `try? expr`, wrap the
 not valid syntax.
 
 ```sh
+moon run -c 'enum E { A(Int); B }
+fn f(e : E) -> Int { match e { A(n) if n > 0 => n; _ => 0 } }
+fn main { println(f(A(3))); println(f(A(-1))); println(f(B)) }'
+# 3
+# 0
+# 0
+```
+
+Pattern guards are written on the same match arm as the pattern:
+`Pattern if condition => ...`. Do not split the `if` onto the next line as if
+it were a standalone expression; the parser expects `=>` after the pattern
+line.
+
+```sh
 moon run -c 'fn main { let xs = [(2, "b"), (1, "a")]; xs.sort_by(fn(a, b) { a.0.compare(b.0) }); println(xs[0].0) }'
 # 1
 ```

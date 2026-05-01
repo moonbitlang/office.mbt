@@ -1455,6 +1455,102 @@ test "PdfDocument encrypt_40bit adds a file id when missing" {
 }
 
 ///|
+test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
+  let key_title = crypt_name_for_test("/Title")
+  let plain_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("secret"))),
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("added"))
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, plain_object)
+  let encrypted = try! doc.encrypt_128bit_r4(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  decrypted.document.add_object_given_number(2, added_object)
+  let recrypted = try! decrypted.document.recrypt_with_password(
+    @ascii.encode("owner")[:],
+  )
+  @test.assert_eq(recrypted.is_encrypted(), true)
+  @test.assert_eq(recrypted.saved_encryption(), None)
+  @test.assert_eq(try! recrypted.what_encryption(), Some(PdfEncryption128Bit))
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! recrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(2), added_object)
+  @test.assert_eq(roundtrip.denied_permissions, [PdfNoPrint])
+
+  let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password(
+    @ascii.encode("bad")[:],
+  )
+  guard bad_password is Err(@pdflite.PdfError::EncryptionRecryptFailed) else {
+    fail("expected failed recrypt")
+  }
+
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password(
+    @ascii.encode("user")[:],
+  )
+  guard no_saved is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+    fail("expected missing saved encryption")
+  }
+
+  let aes_saved : @pdflite.PdfSavedEncryption = {
+    values: {
+      crypt_type: PdfCryptAESV2,
+      user_entry: crypt_repeated_bytes_for_test(0x55, 32),
+      owner_entry: crypt_repeated_bytes_for_test(0x4f, 32),
+      permissions: -4,
+      file_id: @ascii.encode("doc-id"),
+      encrypt_metadata: true,
+      permissions_entry: None,
+      user_encryption_key: None,
+      owner_encryption_key: None,
+    },
+  }
+  let aes_doc = @pdflite.pdf_document_empty()
+  aes_doc.set_saved_encryption(Some(aes_saved))
+  let unsupported : Result[@pdflite.PdfDocument, Error] = try? aes_doc.recrypt_with_password(
+    @ascii.encode("user")[:],
+  )
+  guard unsupported
+    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptAESV2)) else {
+    fail("expected unsupported AES recrypt")
+  }
+
+  let arc4_128 = try! doc.encrypt_128bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoCopy],
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let arc4_128_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! arc4_128.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  let arc4_128_recrypted = try! arc4_128_decrypted.document.recrypt_with_password(
+    @ascii.encode("user")[:],
+  )
+  @test.assert_eq(
+    try! arc4_128_recrypted.what_encryption(),
+    Some(PdfEncryption128Bit),
+  )
+  let arc4_128_roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! arc4_128_recrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(
+    arc4_128_roundtrip.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(arc4_128_roundtrip.denied_permissions, [PdfNoCopy])
+}
+
+///|
 test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
   let key_title = crypt_name_for_test("/Title")
   let key_encrypt = crypt_name_for_test("/Encrypt")

@@ -549,7 +549,10 @@ MoonBit consequences for this project:
     method families and denied permission lists without requiring decryption.
     Decrypted document copies now preserve a `PdfSavedEncryption` snapshot of
     the original encryption values, matching CamlPDF's prerequisite state for
-    future re-encryption after modification.
+    future re-encryption after modification. Re-encryption is started for saved
+    40-bit ARC4, 128-bit ARC4 revision 3, and 128-bit ARC4 revision 4
+    documents; AES recrypt remains deferred until encrypted AES output has a
+    project-level IV/randomness policy.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
