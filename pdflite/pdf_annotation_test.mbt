@@ -168,6 +168,43 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
 }
 
 ///|
+test "PdfDocument annotation APIs report malformed annotation dictionaries" {
+  let key_annots = annotation_name_for_test("/Annots")
+  let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    try! doc.annotations_of_page(@pdflite.pdf_page_blank(@pdflite.paper_a4)),
+    [],
+  )
+  let missing_rect : Result[@pdflite.PdfAnnotation, Error] = try? doc.read_annotation(
+    PdfDictionary([]),
+  )
+  guard missing_rect is Err(@pdflite.PdfError::RectangleExpected) else {
+    fail("expected RectangleExpected")
+  }
+  let bad_rest = {
+    ..@pdflite.pdf_annotation_make(AnnotationText),
+    rest: PdfInteger(1),
+  }
+  let bad_rest_result : Result[@pdflite.PdfPage, Error] = try? doc.add_annotation(
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    bad_rest,
+  )
+  guard bad_rest_result is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
+  let bad_annots_result : Result[@pdflite.PdfPage, Error] = try? doc.add_annotation(
+    {
+      ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+      rest: PdfDictionary([(key_annots, PdfInteger(1))]),
+    },
+    @pdflite.pdf_annotation_make(AnnotationText),
+  )
+  guard bad_annots_result is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
+}
+
+///|
 test "PdfDocument add_annotation writes subtype names for annotation variants" {
   let key_annots = annotation_name_for_test("/Annots")
   let key_subtype = annotation_name_for_test("/Subtype")
@@ -443,8 +480,30 @@ test "PdfDocument transform_annotations updates annotation geometry" {
       ),
     ]),
   )
+  doc.add_object_given_number(
+    12,
+    PdfDictionary([(key_quadpoints, PdfInteger(1))]),
+  )
+  doc.add_object_given_number(
+    13,
+    PdfDictionary([
+      (
+        key_rect,
+        PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(2), PdfInteger(2)]),
+      ),
+    ]),
+  )
   let rest : @pdflite.PdfObject = PdfDictionary([
-    (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11), PdfNull])),
+    (
+      key_annots,
+      PdfArray([
+        PdfIndirect(10),
+        PdfIndirect(11),
+        PdfIndirect(12),
+        PdfIndirect(13),
+        PdfNull,
+      ]),
+    ),
   ])
   try! doc.transform_annotations(@pdflite.transform_translate(1.0, 2.0), rest)
   let annotation = doc.lookup_object_or_null(10)
@@ -486,6 +545,14 @@ test "PdfDocument transform_annotations updates annotation geometry" {
         PdfInteger(99),
       ]),
     ),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(12).lookup_immediate(key_quadpoints),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(13).lookup_immediate(key_rect),
+    Some(PdfArray([PdfReal(2.0), PdfReal(3.0), PdfReal(3.0), PdfReal(4.0)])),
   )
   try! doc.transform_annotations(
     @pdflite.transform_translate(1.0, 2.0),

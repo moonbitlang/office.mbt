@@ -162,3 +162,18 @@ test "page-label private helpers preserve non-uppercase bytes and root guards" {
     fail("expected RootExpected")
   }
 }
+
+///|
+test "private annotation and bookmark guards report malformed roots" {
+  let annotation_rest : Result[PdfObject, Error] = try? pdf_annotation_rest(
+    PdfInteger(1),
+  )
+  guard annotation_rest is Err(PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
+  let doc = pdf_document_empty()
+  let outlines : Result[Bool, Error] = try? doc.pdf_bookmark_has_outlines()
+  guard outlines is Err(PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}

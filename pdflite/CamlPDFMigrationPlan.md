@@ -471,7 +471,11 @@ MoonBit consequences for this project:
     coverage now includes empty-source continuation insertion, high-value Roman
     labels, lowercase letter labels, writing all public label style variants,
     private lowercase byte preservation, and the private root guard used by
-    page-label removal/write paths.
+    page-label removal/write paths. Annotation/bookmark coverage now includes
+    malformed annotation dictionaries, missing annotation arrays, bad existing
+    annotation arrays, non-array quadpoint transform preservation, rect-only
+    annotation transforms, private annotation rest validation, and the private
+    bookmark outline root guard.
 
 ## Update Discipline
 
