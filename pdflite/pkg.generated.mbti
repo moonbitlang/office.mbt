@@ -694,6 +694,7 @@ pub(all) struct PdfFunction {
 pub fn PdfFunction::eval(Self, ArrayView[Double]) -> Array[Double] raise PdfError
 
 pub(all) enum PdfFunctionKind {
+  PdfFunctionSampled(PdfSampledFunction)
   PdfFunctionInterpolation(PdfInterpolationFunction)
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -909,6 +910,15 @@ pub(all) struct PdfRectangle {
   min_y : Double
   max_x : Double
   max_y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfSampledFunction {
+  size : Array[Int]
+  order : Int
+  encode : Array[Double]
+  decode : Array[Double]
+  bits_per_sample : Int
+  samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfStream {
