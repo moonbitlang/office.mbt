@@ -371,8 +371,9 @@ MoonBit consequences for this project:
    `pdfimage` is started with typed image result and pixel-layout enums plus
    image `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
    including image-mask defaults. `get_image_24bpp` is started for encoded
-   JPEG/JPEG2000/JBIG2 pass-through, JBIG2 globals, and raw 8-bit
-   RGB/CalRGB, Gray/CalGray, CMYK, and ICCBased alternate conversion to RGB24.
+   JPEG/JPEG2000/JBIG2 pass-through, JBIG2 globals, filter-stage decoding up
+   to raw or encoded-image stop filters, and raw 8-bit RGB/CalRGB,
+   Gray/CalGray, CMYK, and ICCBased alternate conversion to RGB24.
    Raw 1-bit row-padded image masks and 4-bit row-padded DeviceGray images are
    also started. Indexed RGB/CalRGB and CMYK table images are started for
    8-bit and 4-bit row-padded samples, and Lab-backed indexed table conversion
