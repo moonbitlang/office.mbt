@@ -274,10 +274,12 @@ MoonBit consequences for this project:
    bookmark, annotation, and `/OpenAction` destination transforms remain
    deferred. A minimal `pdf_of_pages` is started for 1-based page extraction
    and reordering by composing `pages_of_pagetree`, `change_pages`, and
-   `remove_unreferenced`; duplicated annotation references are now copied to
-   fresh object numbers and copied annotation `/Popup` and `/Parent` links are
-   repaired within each extracted page. Page labels, bookmarks, structure-tree
-   trimming, destination name-tree cleanup, and retained-numbering mode remain
+   `remove_unreferenced`; references to selected old page objects are rewritten
+   to the new page objects, duplicated annotation references are copied to fresh
+   object numbers, copied annotation `/Popup` and `/Parent` links are repaired
+   within each extracted page, and `/Root/Names/Dests` name-tree entries whose
+   page targets were nulled are pruned. Page labels, bookmarks, structure-tree
+   trimming, old-style catalog `/Dests`, and retained-numbering mode remain
    deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a

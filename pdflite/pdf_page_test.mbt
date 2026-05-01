@@ -250,6 +250,20 @@ fn page_annotation_numbers_for_test(
 }
 
 ///|
+fn page_destination_entries_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
+  match
+    doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
+      page_name_for_test("/Names"),
+      page_name_for_test("/Dests"),
+    ]) {
+    Some(tree) => doc.read_name_tree(tree)
+    None => []
+  }
+}
+
+///|
 fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -959,6 +973,44 @@ test "PdfDocument pdf_of_pages duplicates reused annotations" {
     .lookup_immediate(key_parent),
     Some(PdfIndirect(second_annots[0])),
   )
+}
+
+///|
+test "PdfDocument pdf_of_pages rewrites and prunes named destinations" {
+  let key_names = page_name_for_test("/Names")
+  let key_dests = page_name_for_test("/Dests")
+  let type_fit = page_name_for_test("/Fit")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_page_numbers = try! doc.page_reference_numbers()
+  let dest_tree = doc.build_name_tree([
+    (
+      @ascii.encode("drop"),
+      PdfArray([PdfIndirect(old_page_numbers[1]), PdfNameObject(type_fit)]),
+    ),
+    (
+      @ascii.encode("keep"),
+      PdfArray([PdfIndirect(old_page_numbers[0]), PdfNameObject(type_fit)]),
+    ),
+  ])
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_names, PdfDictionary([(key_dests, dest_tree)])),
+  )
+  let extracted = try! doc.pdf_of_pages([1])
+  let new_page_numbers = try! extracted.page_reference_numbers()
+  @test.assert_eq(page_destination_entries_for_test(extracted), [
+    (
+      @ascii.encode("keep"),
+      PdfArray([PdfIndirect(new_page_numbers[0]), PdfNameObject(type_fit)]),
+    ),
+  ])
 }
 
 ///|

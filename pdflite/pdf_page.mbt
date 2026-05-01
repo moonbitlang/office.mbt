@@ -54,6 +54,16 @@ fn pdf_page_contents_key() -> PdfName {
 }
 
 ///|
+fn pdf_page_names_key() -> PdfName {
+  pdf_page_name("/Names")
+}
+
+///|
+fn pdf_page_dests_key() -> PdfName {
+  pdf_page_name("/Dests")
+}
+
+///|
 fn pdf_page_annots_key() -> PdfName {
   pdf_page_name("/Annots")
 }
@@ -850,6 +860,24 @@ fn pdf_page_select_pages(
 }
 
 ///|
+fn pdf_page_select_numbers(
+  numbers : ArrayView[Int],
+  page_numbers : ArrayView[Int],
+) -> Array[Int] raise PdfError {
+  if page_numbers.length() == 0 {
+    raise PageTreeExpected
+  }
+  let selected : Array[Int] = []
+  for page_number in page_numbers {
+    if page_number < 1 || page_number > numbers.length() {
+      raise PageTreeExpected
+    }
+    selected.push(numbers[page_number - 1])
+  }
+  selected
+}
+
+///|
 fn pdf_page_number_index(numbers : ArrayView[Int], number : Int) -> Int? {
   for i in 0..<numbers.length() {
     if numbers[i] == number {
@@ -979,13 +1007,94 @@ fn PdfDocument::pdf_page_fixup_duplicate_annots(
 }
 
 ///|
+fn PdfDocument::pdf_page_destination_was_nulled(
+  self : PdfDocument,
+  destination : PdfObject,
+) -> Bool {
+  match self.direct(destination) {
+    PdfArray(items) if items.length() > 0 =>
+      match items[0] {
+        PdfNull => true
+        PdfIndirect(number) => self.lookup_object_or_null(number) == PdfNull
+        _ => false
+      }
+    _ => false
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_live_destinations(
+  self : PdfDocument,
+  dests_tree : PdfObject,
+) -> Array[(PdfBytes, PdfObject)] {
+  let output : Array[(PdfBytes, PdfObject)] = []
+  for entry in self.read_name_tree(dests_tree) {
+    let (_, destination) = entry
+    if !self.pdf_page_destination_was_nulled(destination) {
+      output.push(entry)
+    }
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_fixup_destination_name_tree(
+  self : PdfDocument,
+) -> Unit raise PdfError {
+  let root_object = self.lookup_object_or_null(self.root())
+  match root_object.lookup_immediate(pdf_page_names_key()) {
+    Some(PdfIndirect(names_number)) => {
+      let names_object = self.lookup_object_or_null(names_number)
+      match self.lookup_direct(pdf_page_dests_key(), names_object) {
+        Some(dests_tree) =>
+          self.add_object_given_number(
+            names_number,
+            names_object.add_dict_entry(
+              pdf_page_dests_key(),
+              self.build_name_tree(self.pdf_page_live_destinations(dests_tree)),
+            ),
+          )
+        None => ()
+      }
+    }
+    Some(PdfDictionary(_) as names_object) =>
+      match self.lookup_direct(pdf_page_dests_key(), names_object) {
+        Some(dests_tree) =>
+          self.add_object_given_number(
+            self.root(),
+            root_object.add_dict_entry(
+              pdf_page_names_key(),
+              names_object.add_dict_entry(
+                pdf_page_dests_key(),
+                self.build_name_tree(
+                  self.pdf_page_live_destinations(dests_tree),
+                ),
+              ),
+            ),
+          )
+        None => ()
+      }
+    _ => ()
+  }
+}
+
+///|
 pub fn PdfDocument::pdf_of_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {
   let selected = pdf_page_select_pages(self.pages_of_pagetree(), page_numbers)
+  let old_page_numbers = pdf_page_select_numbers(
+    self.page_reference_numbers(),
+    page_numbers,
+  )
   let pdf = self.change_pages(selected)
+  pdf.pdf_page_renumber_references(
+    pdf_page_reference_changes(old_page_numbers, pdf.page_reference_numbers()),
+  )
   pdf.pdf_page_fixup_duplicate_annots()
+  pdf.remove_unreferenced()
+  pdf.pdf_page_fixup_destination_name_tree()
   pdf.remove_unreferenced()
   pdf
 }
