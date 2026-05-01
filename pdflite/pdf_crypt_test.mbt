@@ -1759,6 +1759,202 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
 }
 
 ///|
+test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AESV3 revision 5 encryption" {
+  let user_entry = crypt_aesv3_r5_user_entry_for_test()
+  let owner_entry = crypt_aesv3_r5_owner_entry_for_test()
+  let file_key = crypt_aesv3_r5_file_key_for_test()
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let key_id = crypt_name_for_test("/ID")
+  let key_title = crypt_name_for_test("/Title")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
+    [
+      (crypt_name_for_test("/V"), PdfInteger(5)),
+      (crypt_name_for_test("/R"), PdfInteger(5)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (crypt_name_for_test("/Length"), PdfInteger(32)),
+              (
+                crypt_name_for_test("/AuthEvent"),
+                PdfNameObject(crypt_name_for_test("/DocOpen")),
+              ),
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/AESV3")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+      (crypt_name_for_test("/EncryptMetadata"), PdfBoolean(false)),
+      (crypt_name_for_test("/Length"), PdfInteger(256)),
+      (
+        crypt_name_for_test("/UE"),
+        PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+      ),
+      (
+        crypt_name_for_test("/OE"),
+        PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+      ),
+      (
+        crypt_name_for_test("/Perms"),
+        PdfString(crypt_aesv3_r5_permissions_for_test(encrypt_metadata=false)),
+      ),
+      (
+        crypt_name_for_test("/StrF"),
+        PdfNameObject(crypt_name_for_test("/StdCF")),
+      ),
+      (
+        crypt_name_for_test("/StmF"),
+        PdfNameObject(crypt_name_for_test("/StdCF")),
+      ),
+    ],
+    owner_entry,
+    user_entry,
+    -3904,
+  )
+  let original_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3-original"))),
+  ])
+  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3-updated"))),
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("aes3-added"))
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (crypt_name_for_test("/Type"), PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  let encrypted_secret = try! @pdflite.pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+    file_key[:],
+    original_secret,
+    fn(index) { crypt_aes_iv_for_test(index) },
+  )
+  let doc = crypt_minimal_catalog_document_for_test(1, 7)
+  doc.add_object_given_number(5, encrypted_secret)
+  doc.add_object_given_number(6, metadata_stream)
+  doc.add_object_given_number(9, encrypt_dictionary)
+  doc.set_trailer_dict(
+    doc
+    .trailer_dict()
+    .add_dict_entry(key_encrypt, PdfIndirect(9))
+    .add_dict_entry(
+      key_id,
+      PdfArray([
+        PdfString(@ascii.encode("doc-id")),
+        PdfString(@ascii.encode("ignored")),
+      ]),
+    ),
+  )
+
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), original_secret)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  decrypted.document.add_object_given_number(5, updated_secret)
+  decrypted.document.add_object_given_number(7, added_object)
+  let recrypted = try! decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
+    @ascii.encode("owner")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index + 2)
+    },
+  )
+  @test.assert_eq(recrypted.is_encrypted(), true)
+  @test.assert_eq(recrypted.saved_encryption(), None)
+  @test.assert_eq(
+    try! recrypted.what_encryption(),
+    Some(PdfEncryptionAES256(false)),
+  )
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! recrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(5), updated_secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(7), added_object)
+  @test.assert_eq(
+    roundtrip.denied_permissions,
+    @pdflite.pdf_permissions_of_p(-3904),
+  )
+
+  let rendered = try! @pdflite.pdf_write_document(recrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  let read_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(5),
+    updated_secret,
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(7),
+    added_object,
+  )
+
+  let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
+    @ascii.encode("bad")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+  )
+  guard bad_password is Err(@pdflite.PdfError::EncryptionRecryptFailed) else {
+    fail("expected failed AESV3 recrypt")
+  }
+
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try? crypt_minimal_catalog_document_for_test(
+    1, 7,
+  ).recrypt_with_password_aesv3_with_iv_provider(@ascii.encode("user")[:], fn(
+    object_number,
+    generation,
+    index,
+  ) {
+    crypt_aes_document_iv_for_test(object_number, generation, index)
+  })
+  guard no_saved is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+    fail("expected missing AESV3 saved encryption")
+  }
+
+  let iso_saved : @pdflite.PdfSavedEncryption = {
+    values: {
+      crypt_type: PdfCryptAESV3(true),
+      user_entry,
+      owner_entry,
+      permissions: -3904,
+      file_id: @ascii.encode("doc-id"),
+      encrypt_metadata: false,
+      permissions_entry: Some(
+        crypt_aesv3_r5_permissions_for_test(encrypt_metadata=false),
+      ),
+      user_encryption_key: Some(crypt_aesv3_r5_user_encryption_key_for_test()),
+      owner_encryption_key: Some(crypt_aesv3_r5_owner_encryption_key_for_test()),
+    },
+  }
+  let iso_doc = crypt_minimal_catalog_document_for_test(1, 7)
+  iso_doc.set_saved_encryption(Some(iso_saved))
+  let unsupported : Result[@pdflite.PdfDocument, Error] = try? iso_doc.recrypt_with_password_aesv3_with_iv_provider(
+    @ascii.encode("user")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+  )
+  guard unsupported
+    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptAESV3(true))) else {
+    fail("expected unsupported AESV3 revision 6 recrypt")
+  }
+}
+
+///|
 test "PdfDocument AESV2 recrypt supports xref stream incremental updates" {
   let key_title = crypt_name_for_test("/Title")
   let doc = crypt_minimal_catalog_document_for_test(1, 5)

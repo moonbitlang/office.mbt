@@ -1079,6 +1079,72 @@ fn pdf_crypt_saved_aesv2_dictionary(values : PdfEncryptionValues) -> PdfObject {
 }
 
 ///|
+fn pdf_crypt_saved_aesv3_dictionary(
+  values : PdfEncryptionValues,
+) -> PdfObject raise PdfError {
+  let std_cf = pdf_crypt_name("/StdCF")
+  PdfDictionary([
+    (pdf_crypt_name("/Filter"), PdfNameObject(pdf_crypt_name("/Standard"))),
+    (pdf_crypt_name("/V"), PdfInteger(5)),
+    (
+      pdf_crypt_name("/CF"),
+      PdfDictionary([
+        (
+          std_cf,
+          PdfDictionary([
+            (pdf_crypt_name("/Length"), PdfInteger(32)),
+            (
+              pdf_crypt_name("/AuthEvent"),
+              PdfNameObject(pdf_crypt_name("/DocOpen")),
+            ),
+            (pdf_crypt_name("/CFM"), PdfNameObject(pdf_crypt_name("/AESV3"))),
+          ]),
+        ),
+      ]),
+    ),
+    (pdf_crypt_name("/EncryptMetadata"), PdfBoolean(values.encrypt_metadata)),
+    (pdf_crypt_name("/Length"), PdfInteger(256)),
+    (pdf_crypt_name("/R"), PdfInteger(5)),
+    (pdf_crypt_name("/O"), PdfString(values.owner_entry)),
+    (pdf_crypt_name("/U"), PdfString(values.user_entry)),
+    (
+      pdf_crypt_name("/OE"),
+      PdfString(
+        pdf_aesv3_crypt_entry(
+          pdf_crypt_name("/OE"),
+          values.owner_encryption_key,
+        ),
+      ),
+    ),
+    (
+      pdf_crypt_name("/UE"),
+      PdfString(
+        pdf_aesv3_crypt_entry(pdf_crypt_name("/UE"), values.user_encryption_key),
+      ),
+    ),
+    (
+      pdf_aesv3_permissions_key(),
+      PdfString(
+        pdf_crypt_chop_string(
+          pdf_aesv3_permissions_key(),
+          match values.permissions_entry {
+            Some(value) => value
+            None =>
+              raise EncryptionDictionaryEntryExpected(
+                pdf_aesv3_permissions_key(),
+              )
+          },
+          16,
+        ),
+      ),
+    ),
+    (pdf_crypt_name("/P"), PdfInteger(values.permissions)),
+    (pdf_crypt_name("/StrF"), PdfNameObject(std_cf)),
+    (pdf_crypt_name("/StmF"), PdfNameObject(std_cf)),
+  ])
+}
+
+///|
 fn PdfEncryptionValues::file_key_for_recrypt_password(
   self : PdfEncryptionValues,
   password : BytesView,
@@ -1148,6 +1214,31 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
 }
 
 ///|
+fn PdfDocument::recrypt_aesv3_with_file_key(
+  self : PdfDocument,
+  values : PdfEncryptionValues,
+  file_key : BytesView,
+  iv_provider : (Int, Int, Int) -> PdfBytes,
+) -> PdfDocument raise PdfError {
+  let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  document.set_saved_encryption(None)
+  let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
+    file_key,
+    iv_provider,
+    no_encrypt_metadata=!values.encrypt_metadata,
+  )
+  encrypted.set_saved_encryption(None)
+  let encrypt_dictionary = pdf_crypt_saved_aesv3_dictionary(values)
+  let encrypt_number = encrypted.add_object(encrypt_dictionary)
+  encrypted.set_trailer_dict(
+    encrypted
+    .trailer_dict()
+    .add_dict_entry(pdf_crypt_name("/Encrypt"), PdfIndirect(encrypt_number)),
+  )
+  encrypted
+}
+
+///|
 pub fn PdfDocument::recrypt_with_password(
   self : PdfDocument,
   password : BytesView,
@@ -1189,6 +1280,26 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
     PdfCryptAESV2 => {
       let file_key = values.file_key_for_recrypt_password(password)
       self.recrypt_aesv2_with_file_key(values, file_key[:], iv_provider)
+    }
+    _ => raise EncryptionRecryptUnsupported(values.crypt_type)
+  }
+}
+
+///|
+pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
+  self : PdfDocument,
+  password : BytesView,
+  iv_provider : (Int, Int, Int) -> PdfBytes,
+) -> PdfDocument raise PdfError {
+  let saved = match self.saved_encryption() {
+    Some(saved) => saved
+    None => raise EncryptionSavedStateExpected
+  }
+  let values = saved.values
+  match values.crypt_type {
+    PdfCryptAESV3(false) => {
+      let file_key = values.file_key_for_recrypt_password(password)
+      self.recrypt_aesv3_with_file_key(values, file_key[:], iv_provider)
     }
     _ => raise EncryptionRecryptUnsupported(values.crypt_type)
   }

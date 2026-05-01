@@ -142,6 +142,29 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
 }
 
 ///|
+test "private AESV3 saved dictionary requires permissions entry" {
+  let values : PdfEncryptionValues = {
+    crypt_type: PdfCryptAESV3(false),
+    user_entry: Bytes::new(48),
+    owner_entry: Bytes::new(48),
+    permissions: -3904,
+    file_id: @ascii.encode("doc-id"),
+    encrypt_metadata: true,
+    permissions_entry: None,
+    user_encryption_key: Some(Bytes::new(32)),
+    owner_encryption_key: Some(Bytes::new(32)),
+  }
+  let result : Result[PdfObject, Error] = try? pdf_crypt_saved_aesv3_dictionary(
+    values,
+  )
+  match result {
+    Err(PdfError::EncryptionDictionaryEntryExpected(key)) =>
+      @test.assert_eq(key, pdf_aesv3_permissions_key())
+    _ => fail("expected missing AESV3 permissions entry")
+  }
+}
+
+///|
 test "private document decrypt reports unsupported ISO AESV3 object crypt" {
   let values : PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(true),

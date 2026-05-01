@@ -634,10 +634,12 @@ MoonBit consequences for this project:
     the original encryption values, matching CamlPDF's prerequisite state for
     future re-encryption after modification. Re-encryption is started for saved
     40-bit ARC4, 128-bit ARC4 revision 3, 128-bit ARC4 revision 4, and
-    explicit-IV-provider AESV2 revision 4 documents. AESV2 recrypt also has
-    classic plus uncompressed and Flate-compressed xref-stream incremental update
-    gates; default AES recrypt remains deferred until a project-level random-byte
-    source is selected.
+    explicit-IV-provider AESV2 revision 4 and AESV3 revision 5 documents.
+    AESV2 recrypt also has classic plus uncompressed and Flate-compressed
+    xref-stream incremental update gates; AESV3 revision 5 recrypt has a
+    classic writer/read/decrypt round-trip gate, including
+    `/EncryptMetadata false` metadata-stream skipping. Default AES recrypt
+    remains deferred until a project-level random-byte source is selected.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
@@ -665,9 +667,10 @@ MoonBit consequences for this project:
     The document-level decryption entry points for parsed ARC4 and AESV2
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, and return CamlPDF-style denied permissions.
-    AESV3 revision 6 object/data crypt, SHA-family helpers beyond the
-    available package surface, deferred stream/object decryption, and default
-    random-IV AES re-encryption remain deferred.
+    AESV3 revision 6 object/data crypt, AESV3 revision 6/ISO re-encryption,
+    SHA-family helpers beyond the available package surface, deferred
+    stream/object decryption, and default random-IV AES re-encryption remain
+    deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
