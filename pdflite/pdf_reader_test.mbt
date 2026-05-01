@@ -454,6 +454,19 @@ fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_bad_xref_entry() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \nnot-a-row\n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -993,12 +1006,39 @@ test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
 }
 
 ///|
+test "pdf_read_document_from_bytes reconstructs bad xref rows" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_bad_xref_entry(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected strict XRefEntryExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_bad_xref_entry(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
 test "pdf_read_document_from_bytes reports missing reconstructed root" {
   let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
     reader_pdf_ascii("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected RootExpected")
+  }
+}
+
+///|
+test "pdf_read_document_from_bytes propagates unreconstructable errors" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
+  )
+  guard result is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
   }
 }
 

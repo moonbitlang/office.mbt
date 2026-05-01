@@ -1085,6 +1085,8 @@ pub fn pdf_read_document_from_bytes(
   pdf_read_classic_document_from_bytes(data) catch {
     StartXRefExpected => pdf_read_reconstructed_document_from_bytes(data)
     XRefExpected => pdf_read_reconstructed_or_raise(data, XRefExpected)
+    XRefEntryExpected =>
+      pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
     error => raise error
   }
 }
