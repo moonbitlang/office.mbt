@@ -8,6 +8,10 @@ pub(all) suberror PdfError {
   MatrixNotInvertable
   DictionaryExpected
   DictionaryKeyNotFound(PdfName)
+  NumberExpected
+  RectangleExpected
+  BadRectangle
+  MatrixMalformed
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

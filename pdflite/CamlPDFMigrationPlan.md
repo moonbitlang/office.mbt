@@ -146,7 +146,9 @@ MoonBit consequences for this project:
    construction, immediate lookup, add/replace/remove helpers, stream
    dictionary mutation, object map entries, parsed/deferred object states,
    document defaults, add/remove object logging, and tests preserving CamlPDF's
-   new-key dictionary order.
+   new-key dictionary order. Direct indirection resolution, direct dictionary
+   lookup, lookup chains, number extraction, rectangle parsing, matrix parsing,
+   and matrix object rendering are also started.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:
