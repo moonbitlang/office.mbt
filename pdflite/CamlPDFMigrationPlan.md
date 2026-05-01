@@ -635,9 +635,9 @@ MoonBit consequences for this project:
     future re-encryption after modification. Re-encryption is started for saved
     40-bit ARC4, 128-bit ARC4 revision 3, 128-bit ARC4 revision 4, and
     explicit-IV-provider AESV2 revision 4 documents. AESV2 recrypt also has
-    uncompressed and Flate-compressed xref-stream incremental update gates;
-    default AES recrypt remains deferred until a project-level random-byte source
-    is selected.
+    classic plus uncompressed and Flate-compressed xref-stream incremental update
+    gates; default AES recrypt remains deferred until a project-level random-byte
+    source is selected.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`

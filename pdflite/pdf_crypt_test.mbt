@@ -1835,6 +1835,68 @@ test "PdfDocument AESV2 recrypt supports xref stream incremental updates" {
 }
 
 ///|
+test "PdfDocument AESV2 recrypt supports classic incremental update" {
+  let key_title = crypt_name_for_test("/Title")
+  let doc = crypt_minimal_catalog_document_for_test(1, 4)
+  let original_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes-classic-original"))),
+  ])
+  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes-classic-updated"))),
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(
+    @ascii.encode("aes-classic-added"),
+  )
+  doc.add_object_given_number(5, original_secret)
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoForms],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=true,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let original = try! @pdflite.pdf_write_document(encrypted)
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      original,
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), original_secret)
+  decrypted.document.add_object_given_number(5, updated_secret)
+  decrypted.document.add_object_given_number(8, added_object)
+  let recrypted = try! decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index + 9)
+    },
+  )
+  let rendered = try! @pdflite.pdf_write_document_incremental_update(
+    original, recrypted,
+  )
+  @test.assert_eq(crypt_bytes_start_with_at(rendered, original, 0), true)
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(5), updated_secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(8), added_object)
+  @test.assert_eq(roundtrip.denied_permissions, [PdfNoForms])
+  @test.assert_eq(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
+  )
+}
+
+///|
 test "PdfDocument recrypt_with_password supports classic incremental update" {
   let key_type = crypt_name_for_test("/Type")
   let key_catalog = crypt_name_for_test("/Catalog")
