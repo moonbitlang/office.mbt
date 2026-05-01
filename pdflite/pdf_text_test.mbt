@@ -1805,7 +1805,8 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
         "endbfrange\n" +
         "2 beginbfchar <28><005A> <2B><0063> endbfchar\n" +
         "1 beginbfrange <29><2A>[<0061><0062>] endbfrange\n" +
-        "2 beginbfrange <2C><2D><0064> <2E><2F><0066> endbfrange\n",
+        "2 beginbfrange <2C><2D><0064> <2E><2F><0066> endbfrange\n" +
+        "1 beginbfchar <30><0068> endbfchar 1 beginbfrange <31><32><0069> endbfrange\n",
       ),
     ),
   )
@@ -1845,18 +1846,21 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
       (45, text_bytes_for_test([0x00, 0x65])),
       (46, text_bytes_for_test([0x00, 0x66])),
       (47, text_bytes_for_test([0x00, 0x67])),
+      (48, text_bytes_for_test([0x00, 0x68])),
+      (49, text_bytes_for_test([0x00, 0x69])),
+      (50, text_bytes_for_test([0x00, 0x6A])),
     ]),
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     try! extractor.codepoints_of_text(
       text_bytes_for_test([
-        33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+        33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
       ])[:],
     ),
     [
       0x41, 0x42, 0x43, 0x44, 0x20AC, 0x58, 0x59, 0x5A, 0x61, 0x62, 0x63, 0x64, 0x65,
-      0x66, 0x67, 48,
+      0x66, 0x67, 0x68, 0x69, 0x6A, 51,
     ],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(37))
@@ -1866,6 +1870,9 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
   @test.assert_eq(extractor.charcode_of_codepoint(0x63), Some(43))
   @test.assert_eq(extractor.charcode_of_codepoint(0x64), Some(44))
   @test.assert_eq(extractor.charcode_of_codepoint(0x67), Some(47))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x68), Some(48))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x69), Some(49))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x6A), Some(50))
   @test.assert_eq(extractor.charcode_of_codepoint(0x45), None)
 }
 
