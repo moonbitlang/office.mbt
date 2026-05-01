@@ -1945,7 +1945,7 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
         "[\n" +
         "<0067><0068>\n" +
         "<0069>\n" +
-        "] endbfrange\n",
+        "] endbfrange 1 beginbfchar <39><006A> endbfchar\n",
       ),
     ),
   )
@@ -1979,17 +1979,19 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
       (54, text_bytes_for_test([0x00, 0x67])),
       (55, text_bytes_for_test([0x00, 0x68])),
       (56, text_bytes_for_test([0x00, 0x69])),
+      (57, text_bytes_for_test([0x00, 0x6A])),
     ]),
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([48, 49, 50, 51, 52, 53, 54, 55, 56])[:],
+      text_bytes_for_test([48, 49, 50, 51, 52, 53, 54, 55, 56, 57])[:],
     ),
-    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69],
+    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(48))
   @test.assert_eq(extractor.charcode_of_codepoint(0x69), Some(56))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x6A), Some(57))
 }
 
 ///|
