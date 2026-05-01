@@ -809,9 +809,10 @@ pub fn pdf_write_document_with_xref_stream(
 }
 
 ///|
-pub fn pdf_write_document_incremental_update_with_xref_stream(
+fn pdf_write_document_incremental_update_with_xref_stream_filter(
   original : PdfBytes,
   document : PdfDocument,
+  filter : PdfName?,
 ) -> PdfBytes raise PdfError {
   let previous_xref = pdf_read_startxref_position(original[:])
   let output : Array[Byte] = []
@@ -829,13 +830,17 @@ pub fn pdf_write_document_incremental_update_with_xref_stream(
     xref_stream_number,
     xref_stream_offset,
   )
-  let xref_object = pdf_stream(
+  let stream = pdf_stream(
     pdf_writer_xref_stream_trailer(document, size, Some(previous_xref)).add_dict_entry(
       pdf_writer_length_name(),
       PdfInteger(xref_data.length()),
     ),
     StreamGot(xref_data),
   )
+  let xref_object = match filter {
+    Some(filter) => pdf_encode_stream_with_filter(filter, stream)
+    None => stream
+  }
   pdf_writer_push_view(
     output,
     pdf_write_indirect_object({
@@ -851,10 +856,34 @@ pub fn pdf_write_document_incremental_update_with_xref_stream(
 }
 
 ///|
+pub fn pdf_write_document_incremental_update_with_xref_stream(
+  original : PdfBytes,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  pdf_write_document_incremental_update_with_xref_stream_filter(
+    original,
+    document,
+    None,
+  )
+}
+
+///|
 pub fn pdf_write_document_with_compressed_xref_stream(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   pdf_write_document_with_xref_stream_filter(
+    document,
+    Some(pdf_writer_flate_decode_name()),
+  )
+}
+
+///|
+pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(
+  original : PdfBytes,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  pdf_write_document_incremental_update_with_xref_stream_filter(
+    original,
     document,
     Some(pdf_writer_flate_decode_name()),
   )
