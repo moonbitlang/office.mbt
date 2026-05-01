@@ -459,7 +459,11 @@ MoonBit consequences for this project:
     partial `XYZ` targets. Lookup and transform coverage now includes recursive
     indirect-reference depth guards, non-dictionary direct lookup, bad rectangle
     contents, operation-to-matrix dispatch, overflow-scaled matrix inversion,
-    and parser-private already-decrypted object-state copying.
+    and parser-private already-decrypted object-state copying. Pure helper
+    coverage now also covers `ToGet` accessors, non-dictionary stream
+    dictionary views, checked dictionary mutation errors, stream dictionary
+    replace/remove branches, all public unit-conversion arms, and the exported
+    ISO/US paper-size constants.
 
 ## Update Discipline
 

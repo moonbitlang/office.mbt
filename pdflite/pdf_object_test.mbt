@@ -29,6 +29,20 @@ test "PdfObject stores byte strings names arrays and dictionaries" {
     object.lookup_immediate(name_type),
     Some(PdfNameObject(name_type)),
   )
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
+    source="object stream",
+  )
+  let deferred = @pdflite.stream_to_get(cursor, 1, 2)
+  @test.assert_eq(deferred.input().source(), "object stream")
+  @test.assert_eq(deferred.input().length(), 3)
+  @test.assert_eq(deferred.position(), 1)
+  @test.assert_eq(deferred.length(), 2)
+  let non_dict_stream = @pdflite.pdf_stream(
+    PdfInteger(1),
+    StreamToGet(deferred),
+  )
+  @test.assert_eq(non_dict_stream.dictionary_view(), None)
 }
 
 ///|
@@ -64,8 +78,22 @@ test "PdfObject dictionary replace and remove report checked errors" {
     missing_key == name_b else {
     fail("expected DictionaryKeyNotFound")
   }
+  let not_dict_replace : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(
+    1,
+  ).replace_dict_entry(name_a, PdfInteger(2))
+  guard not_dict_replace
+    is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing_key)) &&
+    missing_key == name_a else {
+    fail("expected DictionaryKeyNotFound")
+  }
   let removed = try! dict.remove_dict_entry(name_a)
   @test.assert_eq(removed.lookup_immediate(name_a), None)
+  let not_dict_add : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(
+    1,
+  ).add_dict_entry(name_a, PdfInteger(2))
+  guard not_dict_add is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
   let not_dict : Result[@pdflite.PdfObject, Error] = try? @pdflite.PdfInteger(1).remove_dict_entry(
     name_a,
   )
@@ -83,4 +111,8 @@ test "PdfObject stream dictionary helpers mutate stream dictionaries" {
   let stream = @pdflite.pdf_stream(PdfNull, stream_data)
   let updated = try! stream.add_dict_entry(name_length, PdfInteger(2))
   @test.assert_eq(updated.lookup_immediate(name_length), Some(PdfInteger(2)))
+  let replaced = try! updated.replace_dict_entry(name_length, PdfInteger(4))
+  @test.assert_eq(replaced.lookup_immediate(name_length), Some(PdfInteger(4)))
+  let removed = try! replaced.remove_dict_entry(name_length)
+  @test.assert_eq(removed.lookup_immediate(name_length), None)
 }
