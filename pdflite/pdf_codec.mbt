@@ -262,6 +262,200 @@ pub fn pdf_encode_filter_bytes(
 }
 
 ///|
+fn pdf_filter_key() -> PdfName {
+  pdf_filter_name("/Filter")
+}
+
+///|
+fn pdf_short_filter_key() -> PdfName {
+  pdf_filter_name("/F")
+}
+
+///|
+fn pdf_decodeparms_key() -> PdfName {
+  pdf_filter_name("/DecodeParms")
+}
+
+///|
+fn pdf_short_decodeparms_key() -> PdfName {
+  pdf_filter_name("/DP")
+}
+
+///|
+fn pdf_codec_length_key() -> PdfName {
+  pdf_filter_name("/Length")
+}
+
+///|
+fn pdf_stream_dictionary_length(dictionary : PdfObject) -> Unit raise PdfError {
+  match dictionary.lookup_immediate(pdf_codec_length_key()) {
+    Some(PdfInteger(_)) => ()
+    _ => raise StreamLengthExpected
+  }
+}
+
+///|
+fn pdf_stream_filter_value(dictionary : PdfObject) -> PdfObject? {
+  match dictionary.lookup_immediate(pdf_filter_key()) {
+    Some(value) => Some(value)
+    None => dictionary.lookup_immediate(pdf_short_filter_key())
+  }
+}
+
+///|
+fn pdf_stream_first_filter(dictionary : PdfObject) -> PdfName? raise PdfError {
+  match pdf_stream_filter_value(dictionary) {
+    None => None
+    Some(PdfNameObject(name)) => Some(name)
+    Some(PdfArray([])) => None
+    Some(PdfArray([PdfNameObject(name), ..])) => Some(name)
+    _ => raise FilterExpected
+  }
+}
+
+///|
+fn pdf_remove_first_filter_entry(
+  dictionary : PdfObject,
+  key : PdfName,
+) -> PdfObject raise PdfError {
+  match dictionary.lookup_immediate(key) {
+    None => dictionary
+    Some(PdfNameObject(_)) | Some(PdfArray([_])) =>
+      dictionary.remove_dict_entry(key)
+    Some(PdfArray([_, .. rest])) =>
+      dictionary.replace_dict_entry(
+        key,
+        PdfArray([ for value in rest => value ]),
+      )
+    _ => raise FilterExpected
+  }
+}
+
+///|
+fn pdf_remove_first_decodeparms_entry(
+  dictionary : PdfObject,
+  key : PdfName,
+) -> PdfObject raise PdfError {
+  match dictionary.lookup_immediate(key) {
+    None => dictionary
+    Some(PdfDictionary(_)) | Some(PdfArray([])) =>
+      dictionary.remove_dict_entry(key)
+    Some(PdfArray([_, .. rest])) =>
+      dictionary.replace_dict_entry(
+        key,
+        PdfArray([ for value in rest => value ]),
+      )
+    _ => raise FilterExpected
+  }
+}
+
+///|
+fn pdf_remove_first_decoder(dictionary : PdfObject) -> PdfObject raise PdfError {
+  let without_filter = if dictionary.lookup_immediate(pdf_filter_key()) != None {
+    pdf_remove_first_filter_entry(dictionary, pdf_filter_key())
+  } else {
+    pdf_remove_first_filter_entry(dictionary, pdf_short_filter_key())
+  }
+  let without_decodeparms = if without_filter.lookup_immediate(
+      pdf_decodeparms_key(),
+    ) !=
+    None {
+    pdf_remove_first_decodeparms_entry(without_filter, pdf_decodeparms_key())
+  } else {
+    pdf_remove_first_decodeparms_entry(
+      without_filter,
+      pdf_short_decodeparms_key(),
+    )
+  }
+  without_decodeparms
+}
+
+///|
+fn pdf_stream_replace_length(
+  dictionary : PdfObject,
+  length : Int,
+) -> PdfObject raise PdfError {
+  dictionary.replace_dict_entry(pdf_codec_length_key(), PdfInteger(length))
+}
+
+///|
+pub fn pdf_decode_stream_onestage(
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match object {
+    PdfStreamObject(stream) => {
+      pdf_stream_dictionary_length(stream.dictionary)
+      match stream.data {
+        StreamGot(data) =>
+          match pdf_stream_first_filter(stream.dictionary) {
+            None => {
+              let dictionary = pdf_stream_replace_length(
+                stream.dictionary,
+                data.length(),
+              )
+              pdf_stream(dictionary, StreamGot(data))
+            }
+            Some(filter) => {
+              let decoded = pdf_decode_filter_bytes(filter, data)
+              let dictionary = pdf_stream_replace_length(
+                pdf_remove_first_decoder(stream.dictionary),
+                decoded.length(),
+              )
+              pdf_stream(dictionary, StreamGot(decoded))
+            }
+          }
+        _ => raise StreamDataExpected
+      }
+    }
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
+fn pdf_add_filter_to_dictionary(
+  dictionary : PdfObject,
+  filter : PdfName,
+) -> PdfObject raise PdfError {
+  let filter_object = PdfNameObject(filter)
+  match dictionary.lookup_immediate(pdf_filter_key()) {
+    None => dictionary.add_dict_entry(pdf_filter_key(), filter_object)
+    Some(PdfNameObject(existing)) =>
+      dictionary.replace_dict_entry(
+        pdf_filter_key(),
+        PdfArray([filter_object, PdfNameObject(existing)]),
+      )
+    Some(PdfArray(filters)) =>
+      dictionary.replace_dict_entry(
+        pdf_filter_key(),
+        PdfArray([filter_object, ..filters]),
+      )
+    _ => raise FilterExpected
+  }
+}
+
+///|
+pub fn pdf_encode_stream_with_filter(
+  filter : PdfName,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match object {
+    PdfStreamObject(stream) =>
+      match stream.data {
+        StreamGot(data) => {
+          let encoded = pdf_encode_filter_bytes(filter, data)
+          let dictionary = pdf_stream_replace_length(
+            pdf_add_filter_to_dictionary(stream.dictionary, filter),
+            encoded.length(),
+          )
+          pdf_stream(dictionary, StreamGot(encoded))
+        }
+        _ => raise StreamDataExpected
+      }
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
 fn pdf_run_length_flush_literal(
   output : Array[Byte],
   literal : ArrayView[Byte],

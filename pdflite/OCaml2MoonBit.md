@@ -155,6 +155,17 @@ moon run -c 'fn main { let pairs = [(1, 2), (3, 4)]; let firsts = [ for pair in 
 ```
 
 ```sh
+moon run -c 'fn main { let xs = [1, 2, 3]; match xs { [_, .. rest] => { let owned = [ for x in rest => x ]; println(rest.length()); println(owned.length()); println(owned[0]) }; _ => () } }'
+# 2
+# 2
+# 2
+```
+
+Array rest patterns bind read-only views. If an enum payload or API requires an
+owned `Array[T]`, copy the rest view deliberately with a comprehension such as
+`[ for x in rest => x ]`.
+
+```sh
 moon run -c 'fn main { let m : @hashmap.HashMap[Int, String] = @hashmap.HashMap::new(); m[7] = "seven"; println(m.get(7).unwrap()) }'
 # seven
 ```

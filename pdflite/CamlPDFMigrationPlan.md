@@ -229,8 +229,11 @@ MoonBit consequences for this project:
    behavior. A first filter-name dispatch layer maps `/ASCIIHexDecode`/`/AHx`,
    `/ASCII85Decode`/`/A85`, `/RunLengthDecode`/`/RL`, and identity `/Crypt` to
    those byte codecs; unsupported filters such as `/FlateDecode` report
-   `FilterNotSupported`. Stream dictionary integration and other filters remain
-   deferred.
+   `FilterNotSupported`. Owned `StreamGot` stream dictionary integration is
+   started for one-stage decode and explicit encode with direct `/Filter` or
+   `/F` entries, first-filter array removal, `/DecodeParms` array advancement,
+   and `/Length` refresh. Predictors, indirect filter dictionaries, deferred
+   stream materialization, and other filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
