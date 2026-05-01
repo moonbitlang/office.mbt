@@ -355,6 +355,10 @@ MoonBit consequences for this project:
    blank/custom pages, page-tree construction, root installation, and
    `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
+   CamlPDF's `replace_inherit` helper is also started as
+   `PdfDocument::replace_inherit`, materializing inherited `/MediaBox`,
+   `/CropBox`, `/Rotate`, and `/Resources` entries onto selected page objects
+   while preserving immediate indirect resource references.
    Page-tree construction now preserves the flat shape for small page arrays
    and builds CamlPDF-style balanced `/Pages` branches for larger arrays,
    including `/Parent`, `/Kids`, and `/Count` checks.

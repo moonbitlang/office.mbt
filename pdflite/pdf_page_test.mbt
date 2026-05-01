@@ -927,6 +927,99 @@ test "PdfDocument pages_of_pagetree falls back to last seen mediabox" {
 }
 
 ///|
+test "PdfDocument replace_inherit materializes parent page attributes" {
+  let key_type = page_name_for_test("/Type")
+  let key_parent = page_name_for_test("/Parent")
+  let key_resources = page_name_for_test("/Resources")
+  let key_mediabox = page_name_for_test("/MediaBox")
+  let key_cropbox = page_name_for_test("/CropBox")
+  let key_rotate = page_name_for_test("/Rotate")
+  let parent_mediabox : @pdflite.PdfObject = PdfArray([
+    PdfInteger(0),
+    PdfInteger(0),
+    PdfInteger(300),
+    PdfInteger(400),
+  ])
+  let parent_cropbox : @pdflite.PdfObject = PdfArray([
+    PdfInteger(10),
+    PdfInteger(20),
+    PdfInteger(290),
+    PdfInteger(380),
+  ])
+  let resource_object = @pdflite.pdf_dictionary([
+    (page_name_for_test("/Font"), PdfDictionary([])),
+  ])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(8, resource_object)
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_mediabox, parent_mediabox),
+      (key_cropbox, parent_cropbox),
+      (key_rotate, PdfInteger(90)),
+      (key_resources, PdfIndirect(8)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_parent, PdfIndirect(2)),
+      (key_rotate, PdfInteger(270)),
+    ]),
+  )
+  try! doc.replace_inherit([3])
+  let page = doc.lookup_object_or_null(3)
+  @test.assert_eq(page.lookup_immediate(key_mediabox), Some(parent_mediabox))
+  @test.assert_eq(page.lookup_immediate(key_cropbox), Some(parent_cropbox))
+  @test.assert_eq(page.lookup_immediate(key_rotate), Some(PdfInteger(270)))
+  @test.assert_eq(page.lookup_immediate(key_resources), Some(PdfIndirect(8)))
+  @test.assert_eq(doc.lookup_object_or_null(8), resource_object)
+}
+
+///|
+test "PdfDocument replace_inherit walks parent chain" {
+  let key_type = page_name_for_test("/Type")
+  let key_parent = page_name_for_test("/Parent")
+  let key_mediabox = page_name_for_test("/MediaBox")
+  let inherited_mediabox : @pdflite.PdfObject = PdfArray([
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(500),
+    PdfInteger(600),
+  ])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_mediabox, inherited_mediabox),
+    ]),
+  )
+  doc.add_object_given_number(
+    4,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_parent, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    5,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_parent, PdfIndirect(4)),
+    ]),
+  )
+  try! doc.replace_inherit([5, 999])
+  @test.assert_eq(
+    doc.lookup_object_or_null(5).lookup_immediate(key_mediabox),
+    Some(inherited_mediabox),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(999), PdfNull)
+}
+
+///|
 test "pdf_page_protect balances unmatched graphics saves" {
   @test.assert_eq(@pdflite.pdf_page_protect([Op_q, Op_q, Op_Q]), [Op_Q])
   @test.assert_eq(@pdflite.pdf_page_protect([Op_q, Op_Q, Op_Q]), [])
