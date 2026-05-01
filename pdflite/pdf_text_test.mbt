@@ -2217,6 +2217,35 @@ test "PdfTextExtractor extracts MacExpert ligatures" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert oldstyle digits" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0xF730, 0xF731, 0xF732, 0xF733, 0xF734, 0xF735, 0xF736, 0xF737, 0xF738, 0xF739,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/zerooldstyle"),
+    text_name_for_test("/oneoldstyle"),
+    text_name_for_test("/twooldstyle"),
+    text_name_for_test("/threeoldstyle"),
+    text_name_for_test("/fouroldstyle"),
+    text_name_for_test("/fiveoldstyle"),
+    text_name_for_test("/sixoldstyle"),
+    text_name_for_test("/sevenoldstyle"),
+    text_name_for_test("/eightoldstyle"),
+    text_name_for_test("/nineoldstyle"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF730), Some(0x30))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF735), Some(0x35))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF739), Some(0x39))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),

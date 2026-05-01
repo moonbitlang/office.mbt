@@ -2009,6 +2009,16 @@ fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
 ///|
 fn pdf_text_macexpert_glyphname(code : Int) -> PdfName? {
   match code {
+    0x30 => Some(pdf_text_name("/zerooldstyle"))
+    0x31 => Some(pdf_text_name("/oneoldstyle"))
+    0x32 => Some(pdf_text_name("/twooldstyle"))
+    0x33 => Some(pdf_text_name("/threeoldstyle"))
+    0x34 => Some(pdf_text_name("/fouroldstyle"))
+    0x35 => Some(pdf_text_name("/fiveoldstyle"))
+    0x36 => Some(pdf_text_name("/sixoldstyle"))
+    0x37 => Some(pdf_text_name("/sevenoldstyle"))
+    0x38 => Some(pdf_text_name("/eightoldstyle"))
+    0x39 => Some(pdf_text_name("/nineoldstyle"))
     0x56 => Some(pdf_text_name("/ff"))
     0x57 => Some(pdf_text_name("/fi"))
     0x58 => Some(pdf_text_name("/fl"))
@@ -2488,6 +2498,16 @@ fn pdf_text_codepoint_of_digit_glyphname(name : PdfName) -> Int? {
     "/seven" => Some(55)
     "/eight" => Some(56)
     "/nine" => Some(57)
+    "/zerooldstyle" => Some(0xF730)
+    "/oneoldstyle" => Some(0xF731)
+    "/twooldstyle" => Some(0xF732)
+    "/threeoldstyle" => Some(0xF733)
+    "/fouroldstyle" => Some(0xF734)
+    "/fiveoldstyle" => Some(0xF735)
+    "/sixoldstyle" => Some(0xF736)
+    "/sevenoldstyle" => Some(0xF737)
+    "/eightoldstyle" => Some(0xF738)
+    "/nineoldstyle" => Some(0xF739)
     _ => None
   }
 }

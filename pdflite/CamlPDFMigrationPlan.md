@@ -420,7 +420,8 @@ MoonBit consequences for this project:
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
    letters, and common symbols.
-   MacExpert fallback is started for the well-defined ligature codepoints.
+   MacExpert fallback is started for the well-defined ligature and oldstyle
+   digit codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
    `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs.
