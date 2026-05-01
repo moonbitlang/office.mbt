@@ -587,7 +587,6 @@ fn pdf_writer_push_classic_xref_and_trailer(
   document : PdfDocument,
   xrefs : ArrayView[(Int, Int, Int)],
   xref_start : Int,
-  previous_xref : Int?,
 ) -> Unit raise PdfError {
   let size = document.objects.max_object_number() + 1
   pdf_writer_push_ascii(output, "xref\n0 ")
@@ -608,14 +607,136 @@ fn pdf_writer_push_classic_xref_and_trailer(
     }
   }
   pdf_writer_push_ascii(output, "trailer\n")
-  let trailer = match previous_xref {
-    Some(previous) =>
-      pdf_writer_trailer_dictionary(document).add_dict_entry(
-        pdf_writer_prev_name(),
-        PdfInteger(previous),
-      )
-    None => pdf_writer_trailer_dictionary(document)
+  let trailer = pdf_writer_trailer_dictionary(document)
+  pdf_writer_push_view(output, pdf_write_object(trailer)[:])
+  pdf_writer_push_ascii(output, "\nstartxref\n")
+  pdf_writer_push_ascii(output, xref_start.to_string())
+  pdf_writer_push_ascii(output, "\n%%EOF\n")
+}
+
+///|
+fn pdf_writer_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
+  for item in values {
+    if item == value {
+      break true
+    }
+  } nobreak {
+    false
   }
+}
+
+///|
+fn pdf_writer_changed_object_numbers(document : PdfDocument) -> Array[Int] {
+  let numbers : Array[Int] = [0]
+  for item in document.event_log() {
+    let (number, _) = item
+    if number > 0 && !pdf_writer_int_array_contains(numbers[:], number) {
+      numbers.push(number)
+    }
+  }
+  numbers.sort()
+  numbers
+}
+
+///|
+fn pdf_writer_write_document_objects_for_numbers(
+  output : Array[Byte],
+  document : PdfDocument,
+  numbers : ArrayView[Int],
+) -> Array[(Int, Int, Int)] raise PdfError {
+  let xrefs : Array[(Int, Int, Int)] = []
+  for number in numbers {
+    if number > 0 {
+      match document.objects.get_entry(number) {
+        Some({ data: ObjectParsed(object), generation })
+        | Some({ data: ObjectParsedAlreadyDecrypted(object), generation }) => {
+          xrefs.push((number, output.length(), generation))
+          pdf_writer_push_view(
+            output,
+            pdf_write_indirect_object({ number, generation, object })[:],
+          )
+        }
+        Some(_) => raise ParsedObjectExpected
+        None => ()
+      }
+    }
+  }
+  xrefs
+}
+
+///|
+fn pdf_writer_push_classic_xref_entry(
+  output : Array[Byte],
+  xrefs : ArrayView[(Int, Int, Int)],
+  number : Int,
+) -> Unit {
+  if number == 0 {
+    pdf_writer_push_ascii(output, "0000000000 65535 f \n")
+  } else {
+    match pdf_writer_xref_tuple_for_number(xrefs, number) {
+      Some((offset, generation)) => {
+        pdf_writer_push_padded_decimal(output, offset, 10)
+        pdf_writer_push_byte(output, 32)
+        pdf_writer_push_padded_decimal(output, generation, 5)
+        pdf_writer_push_ascii(output, " n \n")
+      }
+      None => pdf_writer_push_ascii(output, "0000000000 65535 f \n")
+    }
+  }
+}
+
+///|
+fn pdf_writer_push_classic_xref_subsection(
+  output : Array[Byte],
+  xrefs : ArrayView[(Int, Int, Int)],
+  start : Int,
+  length : Int,
+) -> Unit {
+  pdf_writer_push_ascii(output, start.to_string())
+  pdf_writer_push_byte(output, 32)
+  pdf_writer_push_ascii(output, length.to_string())
+  pdf_writer_push_byte(output, 10)
+  for number in start..<(start + length) {
+    pdf_writer_push_classic_xref_entry(output, xrefs, number)
+  }
+}
+
+///|
+fn pdf_writer_push_classic_sparse_xref_and_trailer(
+  output : Array[Byte],
+  document : PdfDocument,
+  xrefs : ArrayView[(Int, Int, Int)],
+  entry_numbers : ArrayView[Int],
+  xref_start : Int,
+  previous_xref : Int,
+) -> Unit raise PdfError {
+  pdf_writer_push_ascii(output, "xref\n")
+  let mut run_start = -1
+  let mut run_length = 0
+  for number in entry_numbers {
+    if run_length == 0 {
+      run_start = number
+      run_length = 1
+    } else if number == run_start + run_length {
+      run_length += 1
+    } else {
+      pdf_writer_push_classic_xref_subsection(
+        output, xrefs, run_start, run_length,
+      )
+      run_start = number
+      run_length = 1
+    }
+  }
+  if run_length > 0 {
+    pdf_writer_push_classic_xref_subsection(
+      output, xrefs, run_start, run_length,
+    )
+  }
+  pdf_writer_push_ascii(output, "trailer\n")
+  let trailer = pdf_writer_trailer_dictionary(document).add_dict_entry(
+    pdf_writer_prev_name(),
+    PdfInteger(previous_xref),
+  )
   pdf_writer_push_view(output, pdf_write_object(trailer)[:])
   pdf_writer_push_ascii(output, "\nstartxref\n")
   pdf_writer_push_ascii(output, xref_start.to_string())
@@ -634,7 +755,6 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
     document,
     xrefs[:],
     xref_start,
-    None,
   )
   Bytes::from_array(output)
 }
@@ -650,14 +770,20 @@ pub fn pdf_write_document_incremental_update(
     output.push(byte)
   }
   pdf_writer_push_byte(output, 10)
-  let xrefs = pdf_writer_write_document_objects(output, document)
+  let changed_numbers = pdf_writer_changed_object_numbers(document)
+  let xrefs = pdf_writer_write_document_objects_for_numbers(
+    output,
+    document,
+    changed_numbers[:],
+  )
   let xref_start = output.length()
-  pdf_writer_push_classic_xref_and_trailer(
+  pdf_writer_push_classic_sparse_xref_and_trailer(
     output,
     document,
     xrefs[:],
+    changed_numbers[:],
     xref_start,
-    Some(previous_xref),
+    previous_xref,
   )
   Bytes::from_array(output)
 }

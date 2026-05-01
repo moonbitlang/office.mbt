@@ -272,8 +272,11 @@ MoonBit consequences for this project:
    Compressed xref-stream incremental update output is also started with
    `pdf_write_document_incremental_update_with_compressed_xref_stream`, using
    the existing Flate stream encoder and the xref-stream reader as its
-   round-trip gate. Minimal changed-object detection and encrypted output remain
-   deferred.
+   round-trip gate. Classic incremental updates now use the document event log
+   to emit only changed or deleted object rows, preserving unchanged objects
+   through `/Prev`; reader materialization no longer records loaded objects as
+   user mutations. Xref-stream sparse `/Index` updates and encrypted output
+   remain deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

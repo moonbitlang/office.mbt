@@ -64,6 +64,31 @@ fn writer_find_bytes(
 }
 
 ///|
+fn writer_find_bytes_from(
+  haystack : @pdflite.PdfBytes,
+  needle : @pdflite.PdfBytes,
+  start_at : Int,
+) -> Int {
+  if needle.length() == 0 {
+    start_at
+  } else if start_at < 0 ||
+    haystack.length() < needle.length() ||
+    start_at > haystack.length() - needle.length() {
+    -1
+  } else {
+    for start = start_at
+        start <= haystack.length() - needle.length()
+        start = start + 1 {
+      if writer_bytes_start_with_at(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 test "pdf_write_object renders primitive scalar objects" {
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfNull),
@@ -361,6 +386,49 @@ test "pdf_write_document_incremental_update appends classic xref revisions" {
   @test.assert_eq(deleted_reparsed.object_numbers(), [1])
   @test.assert_eq(deleted_reparsed.lookup_object_or_null(1), deleted_catalog)
   @test.assert_eq(deleted_reparsed.lookup_object_or_null(2), PdfNull)
+}
+
+///|
+test "pdf_write_document_incremental_update writes only changed classic objects" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
+  let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
+  document.add_object_given_number(1, catalog)
+  document.add_object_given_number(2, PdfInteger(20))
+  let original = try! @pdflite.pdf_write_document(document)
+  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+  @test.assert_eq(original_parsed.event_log(), [])
+
+  let updated = original_parsed.copy()
+  updated.add_object_given_number(2, PdfInteger(30))
+  updated.add_object_given_number(2, PdfInteger(40))
+  let rendered = try! @pdflite.pdf_write_document_incremental_update(
+    original, updated,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      rendered,
+      writer_ascii_for_test("2 0 obj"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      rendered,
+      writer_ascii_for_test("1 0 obj"),
+      original.length(),
+    ),
+    -1,
+  )
+
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(reparsed.object_numbers(), [1, 2])
+  @test.assert_eq(reparsed.lookup_object_or_null(1), catalog)
+  @test.assert_eq(reparsed.lookup_object_or_null(2), PdfInteger(40))
 }
 
 ///|

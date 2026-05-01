@@ -70,7 +70,7 @@ pub fn pdf_document_of_parsed_indirect_objects(
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   for parsed in objects {
-    document.add_object_given_number(
+    document.load_object_given_number(
       parsed.number,
       parsed.object,
       generation=parsed.generation,
@@ -93,7 +93,7 @@ pub fn pdf_read_primitive_document_from_bytes(
       cursor.lex_pdf_tokens(),
     )
     for parsed in objects {
-      document.add_object_given_number(
+      document.load_object_given_number(
         parsed.number,
         parsed.object,
         generation=parsed.generation,
@@ -102,7 +102,7 @@ pub fn pdf_read_primitive_document_from_bytes(
     match prefix {
       Some(prefix) => {
         let stream = cursor.finish_pdf_stream_object(prefix)
-        document.add_object_given_number(
+        document.load_object_given_number(
           stream.number,
           stream.object,
           generation=stream.generation,
@@ -1044,7 +1044,7 @@ fn pdf_read_reconstructed_document_from_bytes(
   document.set_was_linearized(pdf_read_was_linearized(data[:]))
   for parsed in pdf_read_reconstructed_objects(data[:]) {
     if parsed.number > 0 {
-      document.add_object_given_number(
+      document.load_object_given_number(
         parsed.number,
         parsed.object,
         generation=parsed.generation,
@@ -1143,7 +1143,7 @@ pub fn pdf_read_classic_document_from_bytes(
             parsed.generation != xref.generation {
             raise XRefEntryExpected
           }
-          document.add_object_given_number(
+          document.load_object_given_number(
             parsed.number,
             parsed.object,
             generation=parsed.generation,
@@ -1161,7 +1161,7 @@ pub fn pdf_read_classic_document_from_bytes(
           if object_number != xref.object_number {
             raise XRefEntryExpected
           }
-          document.add_object_given_number(xref.object_number, object)
+          document.load_object_given_number(xref.object_number, object)
         }
       None => ()
     }

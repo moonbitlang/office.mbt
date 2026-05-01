@@ -268,6 +268,25 @@ test "writer rounds plain significant real helper edge forms" {
 }
 
 ///|
+test "incremental writer rejects changed deferred objects" {
+  let original_doc = pdf_document_empty()
+  original_doc.set_version(1, 4)
+  original_doc.set_root(1)
+  original_doc.add_object_given_number(1, PdfDictionary([]))
+  let original = try! pdf_write_document(original_doc)
+
+  let changed = try! pdf_read_document_from_bytes(original)
+  changed.objects.set_entry(1, pdf_object_entry(ObjectToParse))
+  changed.objects.log.push((1, ObjectAltered))
+  let result : Result[PdfBytes, Error] = try? pdf_write_document_incremental_update(
+    original, changed,
+  )
+  guard result is Err(PdfError::ParsedObjectExpected) else {
+    fail("expected ParsedObjectExpected")
+  }
+}
+
+///|
 test "private xref stream helpers cover malformed and deferred entries" {
   let key_w = pdf_reader_name("/W")
   let key_index = pdf_reader_name("/Index")
