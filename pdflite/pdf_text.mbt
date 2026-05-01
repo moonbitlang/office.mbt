@@ -1957,6 +1957,18 @@ fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
 }
 
 ///|
+fn pdf_text_macexpert_glyphname(code : Int) -> PdfName? {
+  match code {
+    0x56 => Some(pdf_text_name("/ff"))
+    0x57 => Some(pdf_text_name("/fi"))
+    0x58 => Some(pdf_text_name("/fl"))
+    0x59 => Some(pdf_text_name("/ffi"))
+    0x5A => Some(pdf_text_name("/ffl"))
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_symbol_glyphname(code : Int) -> PdfName? {
   match code {
     0x20 => Some(pdf_text_name("/space"))
@@ -2130,10 +2142,11 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
   code : Int,
 ) -> PdfName? {
   match self {
-    PdfImplicitInFontFile | PdfMacExpertEncoding => None
+    PdfImplicitInFontFile => None
     PdfStandardEncoding => pdf_text_standard_glyphname(code)
     PdfMacRomanEncoding => pdf_text_macroman_glyphname(code)
     PdfWinAnsiEncoding => pdf_text_winansi_glyphname(code)
+    PdfMacExpertEncoding => pdf_text_macexpert_glyphname(code)
     PdfCustomEncoding(base, differences) =>
       match pdf_text_difference_glyphname(differences, code) {
         Some(name) => Some(name)
@@ -2240,8 +2253,11 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
     "/currency" => Some(0x00A4)
     "/guillemotleft" => Some(0x00AB)
     "/guillemotright" => Some(0x00BB)
+    "/ff" => Some(0xFB00)
     "/fi" => Some(0xFB01)
     "/fl" => Some(0xFB02)
+    "/ffi" => Some(0xFB03)
+    "/ffl" => Some(0xFB04)
     "/periodcentered" => Some(0x00B7)
     "/paragraph" => Some(0x00B6)
     "/questiondown" => Some(0x00BF)

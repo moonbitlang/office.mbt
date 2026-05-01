@@ -2165,6 +2165,37 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert ligatures" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0x56, 0x57, 0x58, 0x59, 0x5A])[:],
+    ),
+    [0xFB00, 0xFB01, 0xFB02, 0xFB03, 0xFB04],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([0x56, 0x57, 0x58, 0x59, 0x5A])[:],
+    ),
+    [
+      text_name_for_test("/ff"),
+      text_name_for_test("/fi"),
+      text_name_for_test("/fl"),
+      text_name_for_test("/ffi"),
+      text_name_for_test("/ffl"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB00), Some(0x56))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB01), Some(0x57))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB02), Some(0x58))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB03), Some(0x59))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB04), Some(0x5A))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),

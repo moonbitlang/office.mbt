@@ -416,14 +416,16 @@ MoonBit consequences for this project:
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
    letters, and common symbols.
+   MacExpert fallback is started for the well-defined ligature codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
    `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets.
-   General `pdfcmap` parsing, full Adobe Glyph List coverage, MacExpert, and
-   broader Symbol/ZapfDingbats coverage remain deferred.
+   General `pdfcmap` parsing, full Adobe Glyph List coverage, broader
+   MacExpert coverage, and broader Symbol/ZapfDingbats coverage remain
+   deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
