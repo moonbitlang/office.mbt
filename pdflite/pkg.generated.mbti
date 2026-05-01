@@ -6,6 +6,12 @@ import {
 }
 
 // Values
+pub fn bit_writer_new() -> BitWriter
+
+pub fn bitstream_of_bytes(Bytes, source? : String) -> BitStream
+
+pub fn bitstream_of_cursor(ByteCursor) -> BitStream
+
 pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
 
 pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
@@ -35,10 +41,44 @@ pub(all) suberror PdfError {
   InvalidByte(Int)
   InvalidCursorPosition(Int)
   InvalidReadLength(Int)
+  InvalidBit(Int)
+  InvalidBitCount(Int)
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
 // Types and methods
+pub struct BitStream {
+  input : ByteCursor
+  mut current_byte : Int
+  mut bit_mask : Int
+  mut bits_read : Int
+} derive(Eq, ToJson, @debug.Debug)
+pub fn BitStream::align(Self) -> Unit
+pub fn BitStream::bits_read(Self) -> Int
+pub fn BitStream::get_bit(Self) -> Bool raise PdfError
+pub fn BitStream::get_bit_int(Self) -> Int raise PdfError
+pub fn BitStream::get_value_int(Self, Int) -> Int raise PdfError
+pub fn BitStream::position(Self) -> BitStreamPosition
+pub fn BitStream::seek(Self, BitStreamPosition) -> Unit
+
+pub struct BitStreamPosition {
+  input_position : Int
+  current_byte : Int
+  bit_mask : Int
+  bits_read : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub struct BitWriter {
+  mut current_byte : Int
+  mut bit_index : Int
+  bytes : Array[Byte]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn BitWriter::align(Self) -> Unit
+pub fn BitWriter::bit_length(Self) -> Int
+pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
+pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError
+pub fn BitWriter::to_bytes(Self) -> Bytes
+
 pub struct ByteCursor {
   data : BytesView
   mut position : Int

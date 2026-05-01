@@ -3,6 +3,8 @@ pub(all) suberror PdfError {
   InvalidByte(Int)
   InvalidCursorPosition(Int)
   InvalidReadLength(Int)
+  InvalidBit(Int)
+  InvalidBitCount(Int)
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
