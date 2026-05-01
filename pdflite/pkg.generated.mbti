@@ -129,6 +129,8 @@ pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, 
 
 pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
 
+pub fn pdf_encryption_object_key(PdfCryptType, Int, Int, BytesView, Int) -> Bytes
+
 pub fn pdf_flate_decode(Bytes) -> Bytes raise PdfError
 
 pub fn pdf_flate_encode(Bytes) -> Bytes
@@ -734,6 +736,12 @@ pub(all) enum PdfContentOp {
   Op_BX
   Op_EX
   Op_Unknown(Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfCryptType {
+  PdfCryptARC4(Int, Int)
+  PdfCryptAESV2
+  PdfCryptAESV3(Bool)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfDate {

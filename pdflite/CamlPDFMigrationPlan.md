@@ -504,9 +504,11 @@ MoonBit consequences for this project:
     preserving the R2/R3 denied-permission bit order and signed `Int32`
     values such as `-4`, `-8`, and `-3904`. The MD5 digest wrapper is started
     through `moonbitlang/x/crypto`, with RFC 1321 vectors over `BytesView`
-    input. AES, SHA-family helpers beyond the available package surface,
-    MD5-backed Algorithm 3.1 object-key derivation, document decryption, and
-    re-encryption remain deferred.
+    input. MD5-backed Algorithm 3.1 object-key derivation is started for R2/R3/R4
+    encryption, including object/generation little-endian byte packing,
+    key-length truncation, and the AESV2 `sAlT` suffix branch. AES,
+    SHA-family helpers beyond the available package surface, document
+    decryption, and re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
