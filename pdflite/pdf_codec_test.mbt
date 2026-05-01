@@ -218,6 +218,48 @@ test "pdf_decode_predictor reports unsupported predictor" {
 }
 
 ///|
+test "pdf_encode_predictor emits png sub and up rows" {
+  let sub = try! @pdflite.pdf_encode_predictor(
+    11,
+    1,
+    8,
+    3,
+    codec_bytes_for_test([10, 20, 30]),
+  )
+  @test.assert_eq(sub, codec_bytes_for_test([1, 10, 10, 10]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(11, 1, 8, 3, sub),
+    codec_bytes_for_test([10, 20, 30]),
+  )
+  let up = try! @pdflite.pdf_encode_predictor(
+    12,
+    1,
+    8,
+    3,
+    codec_bytes_for_test([10, 20, 30, 11, 25, 35]),
+  )
+  @test.assert_eq(up, codec_bytes_for_test([2, 10, 20, 30, 2, 1, 5, 5]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(12, 1, 8, 3, up),
+    codec_bytes_for_test([10, 20, 30, 11, 25, 35]),
+  )
+}
+
+///|
+test "pdf_encode_predictor normalizes negative byte deltas" {
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_predictor(
+      12,
+      1,
+      8,
+      1,
+      codec_bytes_for_test([200, 10]),
+    ),
+    codec_bytes_for_test([2, 200, 2, 66]),
+  )
+}
+
+///|
 test "pdf_decode_stream_onestage decodes single stream filter" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

@@ -89,6 +89,8 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_encode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
+pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
+
 pub fn pdf_encode_stream_with_filter(PdfName, PdfObject) -> PdfObject raise PdfError
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool

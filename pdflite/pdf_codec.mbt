@@ -431,6 +431,16 @@ fn pdf_predictor_get0(values : ArrayView[Int], index : Int) -> Int {
 }
 
 ///|
+fn pdf_predictor_wrapping_byte(value : Int) -> Byte {
+  let remainder = value % 256
+  if remainder < 0 {
+    (remainder + 256).to_byte()
+  } else {
+    remainder.to_byte()
+  }
+}
+
+///|
 fn pdf_paeth_predictor(a : Int, b : Int, c : Int) -> Int {
   let p = a + b - c
   let pa = (p - a).abs()
@@ -575,6 +585,82 @@ pub fn pdf_decode_predictor(
     2 => pdf_decode_tiff_predictor(colors, bits_per_component, columns, data)
     value if value >= 10 && value <= 15 =>
       pdf_decode_png_predictor(colors, bits_per_component, columns, data)
+    _ => raise PredictorNotSupported(predictor)
+  }
+}
+
+///|
+fn pdf_encode_png_sub_predictor(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  let scanline_width = pdf_predictor_scanline_width(
+    colors, bits_per_component, columns,
+  )
+  let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
+    colors, bits_per_component,
+  )
+  let output : Array[Byte] = []
+  for row in 0..<(data.length() / scanline_width) {
+    output.push(1)
+    let row_start = row * scanline_width
+    for i in 0..<scanline_width {
+      let left = if i < bytes_per_pixel {
+        0
+      } else {
+        data[row_start + i - bytes_per_pixel].to_int()
+      }
+      output.push(
+        pdf_predictor_wrapping_byte(data[row_start + i].to_int() - left),
+      )
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_encode_png_up_predictor(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  let scanline_width = pdf_predictor_scanline_width(
+    colors, bits_per_component, columns,
+  )
+  let output : Array[Byte] = []
+  for row in 0..<(data.length() / scanline_width) {
+    output.push(2)
+    let row_start = row * scanline_width
+    for i in 0..<scanline_width {
+      let up = if row == 0 {
+        0
+      } else {
+        data[row_start - scanline_width + i].to_int()
+      }
+      output.push(
+        pdf_predictor_wrapping_byte(data[row_start + i].to_int() - up),
+      )
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_encode_predictor(
+  predictor : Int,
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  match predictor {
+    1 => data
+    11 =>
+      pdf_encode_png_sub_predictor(colors, bits_per_component, columns, data)
+    12 => pdf_encode_png_up_predictor(colors, bits_per_component, columns, data)
     _ => raise PredictorNotSupported(predictor)
   }
 }

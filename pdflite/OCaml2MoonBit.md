@@ -94,6 +94,17 @@ large radices. Convert back only after reducing the value into byte range,
 because `UInt64::to_int()` truncates to 32 signed bits for large values.
 
 ```sh
+moon run -c 'fn main { println((-1) % 256); let normalized = if (-1) % 256 < 0 { ((-1) % 256) + 256 } else { (-1) % 256 }; println(normalized); println(normalized.to_byte().to_int()) }'
+# -1
+# 255
+# 255
+```
+
+MoonBit `%` keeps a negative remainder when the left operand is negative. When
+porting OCaml byte-codec expressions such as `(a - b) mod 256`, normalize the
+remainder into `0..255` before converting to `Byte`.
+
+```sh
 moon run -c 'fn main { let tiny : Double = try! @strconv.from_str("1e-10"); println(tiny.to_string()) }'
 # 1e-10
 ```

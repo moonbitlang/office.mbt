@@ -235,9 +235,11 @@ MoonBit consequences for this project:
    and `/Length` refresh. A bounded full decode loop now removes all currently
    supported filters from owned streams. Predictor decoding is started for
    TIFF predictor 2 at 8 bpc and PNG row predictors, and owned stream decode now
-   applies the first direct `/DecodeParms` or `/DP` predictor. Indirect filter
-   dictionaries, deferred stream materialization, predictor encoding, and other
-   filters remain deferred.
+   applies the first direct `/DecodeParms` or `/DP` predictor. Predictor
+   encoding is started for PNG Sub (`11`) and PNG Up (`12`) rows, including
+   explicit negative-delta normalization to PDF byte range. Indirect filter
+   dictionaries, deferred stream materialization, and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
