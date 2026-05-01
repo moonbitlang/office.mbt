@@ -2270,6 +2270,44 @@ test "PdfTextExtractor extracts MacRoman accented glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacRoman punctuation symbols" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC,
+    0xAE, 0xAF,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2020, 0x00B0, 0x00A2, 0x00A3, 0x00A7, 0x2022, 0x00B6, 0x00DF, 0x00AE, 0x00A9,
+    0x2122, 0x00B4, 0x00A8, 0x00C6, 0x00D8,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/dagger"),
+    text_name_for_test("/degree"),
+    text_name_for_test("/cent"),
+    text_name_for_test("/sterling"),
+    text_name_for_test("/section"),
+    text_name_for_test("/bullet"),
+    text_name_for_test("/paragraph"),
+    text_name_for_test("/germandbls"),
+    text_name_for_test("/registered"),
+    text_name_for_test("/copyright"),
+    text_name_for_test("/trademark"),
+    text_name_for_test("/acute"),
+    text_name_for_test("/dieresis"),
+    text_name_for_test("/AE"),
+    text_name_for_test("/Oslash"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2020), Some(0xA0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2022), Some(0xA5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2122), Some(0xAA))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C6), Some(0xAE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00D8), Some(0xAF))
+}
+
+///|
 test "PdfTextExtractor extracts WinAnsi glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),

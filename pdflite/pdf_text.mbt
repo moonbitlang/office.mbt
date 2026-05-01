@@ -2045,6 +2045,21 @@ fn pdf_text_macroman_glyphname(code : Int) -> PdfName? {
         0x9D => Some(pdf_text_name("/ugrave"))
         0x9E => Some(pdf_text_name("/ucircumflex"))
         0x9F => Some(pdf_text_name("/udieresis"))
+        0xA0 => Some(pdf_text_name("/dagger"))
+        0xA1 => Some(pdf_text_name("/degree"))
+        0xA2 => Some(pdf_text_name("/cent"))
+        0xA3 => Some(pdf_text_name("/sterling"))
+        0xA4 => Some(pdf_text_name("/section"))
+        0xA5 => Some(pdf_text_name("/bullet"))
+        0xA6 => Some(pdf_text_name("/paragraph"))
+        0xA7 => Some(pdf_text_name("/germandbls"))
+        0xA8 => Some(pdf_text_name("/registered"))
+        0xA9 => Some(pdf_text_name("/copyright"))
+        0xAA => Some(pdf_text_name("/trademark"))
+        0xAB => Some(pdf_text_name("/acute"))
+        0xAC => Some(pdf_text_name("/dieresis"))
+        0xAE => Some(pdf_text_name("/AE"))
+        0xAF => Some(pdf_text_name("/Oslash"))
         _ => None
       }
   }

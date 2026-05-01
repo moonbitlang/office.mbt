@@ -416,7 +416,8 @@ MoonBit consequences for this project:
    ligatures, bullets, text marks, Adobe Standard accent marks, and common
    ligature/Latin glyph names.
    MacRoman high-byte fallback is started for common accented Latin letters,
-   including the contiguous lower-vowel accent block.
+   the contiguous lower-vowel accent block, and the `0xA0..0xAF`
+   punctuation/symbol block.
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
    letters, and common symbols.
