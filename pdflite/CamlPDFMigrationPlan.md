@@ -395,8 +395,10 @@ MoonBit consequences for this project:
    dictionaries. Embedded TrueType font writing is started for the cpdf-style
    subset with `/FontFile2`, descriptor metrics, widths, predefined base
    encodings, `FillUndefinedWithStandard` collapsed to its base encoding, and
-   optional object-number placement. ToUnicode CMap parsing and writing remain
-   deferred.
+   optional object-number placement. Font descriptors now carry an optional
+   typed ToUnicode map, and TrueType font writing can emit the same simple
+   `/ToUnicode` CMap stream shape as CamlPDF when that map is present.
+   ToUnicode CMap parsing remains deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

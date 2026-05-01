@@ -39,6 +39,7 @@ fn text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
     stemv: 0.0,
     fontfile: None,
     charset: None,
+    tounicode: None,
   }
 }
 
@@ -1163,6 +1164,7 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
         stemv: 0.0,
         fontfile: None,
         charset: None,
+        tounicode: None,
       },
       cid_widths: [],
       cid_widths2: [],
@@ -1658,6 +1660,78 @@ test "PdfDocument write_font places embedded TrueType fonts at requested object 
     .lookup_object_or_null(20)
     .lookup_immediate(text_name_for_test("/Encoding")),
     Some(PdfNameObject(text_name_for_test("/MacRomanEncoding"))),
+  )
+}
+
+///|
+test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
+  let doc = @pdflite.pdf_document_empty()
+  let descriptor : @pdflite.PdfFontDescriptor = {
+    ..text_font_descriptor_for_test(),
+    fontfile: Some(PdfFontFile2(7)),
+    tounicode: Some([
+      (9, text_bytes_for_test([0x00, 0x42])),
+      (3, text_bytes_for_test([0x00, 0x41])),
+    ]),
+  }
+  let number = try! doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(text_name_for_test("/WithToUnicode")),
+      firstchar: 65,
+      lastchar: 66,
+      widths: [500, 610],
+      fontdescriptor: Some(descriptor),
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+  )
+  @test.assert_eq(number, 3)
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(3)
+    .lookup_immediate(text_name_for_test("/ToUnicode")),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(3)
+    .lookup_immediate(text_name_for_test("/Encoding")),
+    None,
+  )
+  guard doc.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected ToUnicode stream")
+  }
+  guard stream.data is StreamGot(bytes) else {
+    fail("expected owned ToUnicode bytes")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(text_name_for_test("/Length")),
+    Some(PdfInteger(bytes.length())),
+  )
+  @test.assert_eq(
+    try! @ascii.decode(bytes[:]),
+    "/CIDInit /ProcSet findresource begin\n" +
+    "12 dict begin\n" +
+    "begincmap\n" +
+    "/CIDSystemInfo <<\n" +
+    "  /Registry (Adobe)\n" +
+    "  /Ordering (UCS)\n" +
+    "  /Supplement 0\n" +
+    ">> def\n" +
+    "/CMapName /Adobe-Identity-UCS def\n" +
+    "/CMapType 2 def\n" +
+    "1 begincodespacerange\n" +
+    "<00><FF>\n" +
+    "endcodespacerange\n" +
+    "2 beginbfrange\n" +
+    "<21><21><0041>\n" +
+    "<22><22><0042>\n" +
+    "endbfrange\n" +
+    "endcmap\n" +
+    "CMapName currentdict /CMap defineresource pop\n" +
+    "end\n" +
+    "end\n",
   )
 }
 

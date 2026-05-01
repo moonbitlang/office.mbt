@@ -887,6 +887,7 @@ pub(all) struct PdfFontDescriptor {
   stemv : Double
   fontfile : PdfFontFile?
   charset : Array[PdfName]?
+  tounicode : Array[(Int, Bytes)]?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfFontFile {

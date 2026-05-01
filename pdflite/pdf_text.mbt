@@ -192,6 +192,7 @@ pub(all) struct PdfFontDescriptor {
   stemv : Double
   fontfile : PdfFontFile?
   charset : Array[PdfName]?
+  tounicode : Array[(Int, PdfBytes)]?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -549,6 +550,7 @@ pub fn PdfDocument::read_font_descriptor(
         stemv: 0.0,
         fontfile: pdf_text_fontfile_of_descriptor(descriptor),
         charset: self.pdf_text_font_charset(descriptor),
+        tounicode: None,
       })
     }
   }
@@ -1360,6 +1362,91 @@ fn pdf_text_true_type_encoding_name(encoding : PdfEncoding) -> PdfName? {
 }
 
 ///|
+fn pdf_text_tounicode_preamble() -> String {
+  "/CIDInit /ProcSet findresource begin\n" +
+  "12 dict begin\n" +
+  "begincmap\n" +
+  "/CIDSystemInfo <<\n" +
+  "  /Registry (Adobe)\n" +
+  "  /Ordering (UCS)\n" +
+  "  /Supplement 0\n" +
+  ">> def\n" +
+  "/CMapName /Adobe-Identity-UCS def\n" +
+  "/CMapType 2 def\n" +
+  "1 begincodespacerange\n" +
+  "<00><FF>\n" +
+  "endcodespacerange\n"
+}
+
+///|
+fn pdf_text_tounicode_postamble() -> String {
+  "endbfrange\n" +
+  "endcmap\n" +
+  "CMapName currentdict /CMap defineresource pop\n" +
+  "end\n" +
+  "end\n"
+}
+
+///|
+fn pdf_text_tounicode_sorted(
+  entries : ArrayView[(Int, PdfBytes)],
+) -> Array[(Int, PdfBytes)] {
+  let sorted = [ for entry in entries => entry ]
+  sorted.sort_by(fn(left, right) { left.0.compare(right.0) })
+  sorted
+}
+
+///|
+fn pdf_text_hex_int_min2(value : Int) -> String {
+  let text = value.to_string(radix=16)
+  if text.length() == 1 {
+    "0" + text
+  } else {
+    text
+  }
+}
+
+///|
+fn pdf_text_push_hex_bytes(output : Array[Byte], bytes : BytesView) -> Unit {
+  for byte in bytes {
+    let value = byte.to_int()
+    output.push(pdf_writer_hex_digit(value / 16))
+    output.push(pdf_writer_hex_digit(value % 16))
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_write_tounicode(
+  self : PdfDocument,
+  entries : ArrayView[(Int, PdfBytes)],
+) -> Int {
+  let sorted = pdf_text_tounicode_sorted(entries)
+  let output : Array[Byte] = []
+  pdf_writer_push_ascii(output, pdf_text_tounicode_preamble())
+  pdf_writer_push_ascii(output, sorted.length().to_string())
+  pdf_writer_push_ascii(output, " beginbfrange\n")
+  let mut charcode = 33
+  for entry in sorted {
+    pdf_writer_push_ascii(output, "<")
+    pdf_writer_push_ascii(output, pdf_text_hex_int_min2(charcode))
+    pdf_writer_push_ascii(output, "><")
+    pdf_writer_push_ascii(output, pdf_text_hex_int_min2(charcode))
+    pdf_writer_push_ascii(output, "><")
+    pdf_text_push_hex_bytes(output, entry.1[:])
+    pdf_writer_push_ascii(output, ">\n")
+    charcode += 1
+  }
+  pdf_writer_push_ascii(output, pdf_text_tounicode_postamble())
+  let bytes = Bytes::from_array(output)
+  self.add_object(
+    pdf_stream(
+      PdfDictionary([(pdf_text_name("/Length"), PdfInteger(bytes.length()))]),
+      StreamGot(bytes),
+    ),
+  )
+}
+
+///|
 fn PdfDocument::pdf_text_make_true_type_font(
   self : PdfDocument,
   basefont : PdfName,
@@ -1372,10 +1459,6 @@ fn PdfDocument::pdf_text_make_true_type_font(
   let ttf = match pdf_text_fontfile2_number(descriptor.fontfile) {
     Some(number) => number
     None => raise FontWriteUnsupported
-  }
-  let encoding_name = match pdf_text_true_type_encoding_name(encoding) {
-    Some(name) => name
-    None => raise EncodingWriteUnsupported
   }
   let fontdescriptor = PdfDictionary([
     (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/FontDescriptor"))),
@@ -1408,19 +1491,37 @@ fn PdfDocument::pdf_text_make_true_type_font(
     (pdf_text_name("/FontFile2"), PdfIndirect(ttf)),
   ])
   let fontdescriptor_number = self.add_object(fontdescriptor)
-  PdfDictionary([
-    (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
-    (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/TrueType"))),
-    (pdf_text_name("/BaseFont"), PdfNameObject(basefont)),
-    (pdf_text_name("/FontDescriptor"), PdfIndirect(fontdescriptor_number)),
-    (pdf_text_name("/FirstChar"), PdfInteger(firstchar)),
-    (pdf_text_name("/LastChar"), PdfInteger(lastchar)),
-    (
-      pdf_text_name("/Widths"),
-      PdfArray([ for width in widths => PdfInteger(width) ]),
-    ),
-    (pdf_text_name("/Encoding"), PdfNameObject(encoding_name)),
-  ])
+  let tounicode_entry = match descriptor.tounicode {
+    Some(tounicode) =>
+      [
+        (
+          pdf_text_name("/ToUnicode"),
+          PdfIndirect(self.pdf_text_write_tounicode(tounicode)),
+        ),
+      ]
+    None => {
+      let encoding_name = match pdf_text_true_type_encoding_name(encoding) {
+        Some(name) => name
+        None => raise EncodingWriteUnsupported
+      }
+      [(pdf_text_name("/Encoding"), PdfNameObject(encoding_name))]
+    }
+  }
+  PdfDictionary(
+    [
+      (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
+      (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/TrueType"))),
+      (pdf_text_name("/BaseFont"), PdfNameObject(basefont)),
+      (pdf_text_name("/FontDescriptor"), PdfIndirect(fontdescriptor_number)),
+      (pdf_text_name("/FirstChar"), PdfInteger(firstchar)),
+      (pdf_text_name("/LastChar"), PdfInteger(lastchar)),
+      (
+        pdf_text_name("/Widths"),
+        PdfArray([ for width in widths => PdfInteger(width) ]),
+      ),
+      ..tounicode_entry,
+    ],
+  )
 }
 
 ///|
