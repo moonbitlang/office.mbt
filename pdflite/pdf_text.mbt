@@ -272,6 +272,20 @@ pub(all) enum PdfEncoding {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) enum PdfFont {
+  PdfFontStandard(PdfStandardFontData)
+  PdfFontSimple(PdfSimpleFont)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn PdfFont::debug_name(self : PdfFont) -> String {
+  match self {
+    PdfFontStandard(font) => font.debug_name()
+    PdfFontSimple(font) => "SimpleFont " + font.debug_name()
+  }
+}
+
+///|
 pub fn PdfEncoding::debug_name(self : PdfEncoding) -> String {
   match self {
     PdfImplicitInFontFile => "ImplicitInFontFile"
@@ -750,6 +764,11 @@ fn pdf_text_is_simple_font_subtype_name(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_is_standard14_subtype_name(name : PdfName) -> Bool {
+  name == pdf_text_name("/Type1") || name == pdf_text_name("/TrueType")
+}
+
+///|
 pub fn PdfDocument::read_encoding(
   self : PdfDocument,
   font : PdfObject,
@@ -797,13 +816,36 @@ pub fn PdfDocument::is_standard14_font(
   font : PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_text_name("/Subtype"), font) {
-    Some(PdfNameObject(subtype)) if subtype == pdf_text_name("/Type1") =>
+    Some(PdfNameObject(subtype)) if pdf_text_is_standard14_subtype_name(subtype) =>
       match self.lookup_direct(pdf_text_name("/BaseFont"), font) {
         Some(PdfNameObject(base_font)) =>
           pdf_standard_font_of_pdf_name(base_font) != None &&
           self.lookup_direct(pdf_text_name("/Widths"), font) == None
         _ => false
       }
+    _ => false
+  }
+}
+
+///|
+pub fn PdfDocument::is_simple_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+    Some(PdfNameObject(subtype)) =>
+      pdf_text_is_simple_font_subtype_name(subtype)
+    _ => false
+  }
+}
+
+///|
+pub fn PdfDocument::is_cidkeyed_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_text_name("/Subtype"), font) {
+    Some(PdfNameObject(subtype)) => subtype == pdf_text_name("/Type0")
     _ => false
   }
 }
@@ -821,6 +863,22 @@ pub fn PdfDocument::read_standard14_font(
         None => raise StandardFontExpected
       }
     _ => raise BaseFontExpected
+  }
+}
+
+///|
+pub fn PdfDocument::read_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfFont raise PdfError {
+  if self.is_standard14_font(font) {
+    PdfFontStandard(self.read_standard14_font(font))
+  } else if self.is_simple_font(font) {
+    PdfFontSimple(self.read_simple_font(font))
+  } else if self.is_cidkeyed_font(font) {
+    raise CompositeFontNotSupported
+  } else {
+    raise FontTypeExpected
   }
 }
 

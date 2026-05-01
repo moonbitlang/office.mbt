@@ -354,6 +354,8 @@ pub(all) suberror PdfError {
   FontWidthsExpected
   FontWidthExpected
   FontCharProcsExpected
+  FontTypeExpected
+  CompositeFontNotSupported
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -732,6 +734,8 @@ pub fn PdfDocument::get_image_24bpp(Self, PdfObject, PdfObject) -> PdfImage rais
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise PdfError
 pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
 pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise PdfError
+pub fn PdfDocument::is_cidkeyed_font(Self, PdfObject) -> Bool
+pub fn PdfDocument::is_simple_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_standard14_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, PdfName, PdfObject) -> PdfObject?
@@ -755,6 +759,7 @@ pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfB
 pub fn PdfDocument::read_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace? raise PdfError
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_encoding(Self, PdfObject) -> PdfEncoding raise PdfError
+pub fn PdfDocument::read_font(Self, PdfObject) -> PdfFont raise PdfError
 pub fn PdfDocument::read_font_descriptor(Self, PdfObject) -> PdfFontDescriptor? raise PdfError
 pub fn PdfDocument::read_font_metrics(Self, PdfObject) -> Array[Double]? raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
@@ -807,6 +812,12 @@ pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfFont {
+  PdfFontStandard(PdfStandardFontData)
+  PdfFontSimple(PdfSimpleFont)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFont::debug_name(Self) -> String
 
 pub(all) struct PdfFontDescriptor {
   ascent : Double

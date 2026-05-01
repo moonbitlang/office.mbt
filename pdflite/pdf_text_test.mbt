@@ -826,6 +826,7 @@ test "PdfDocument detects and reads standard14 fonts" {
     ),
   ])
   @test.assert_eq(doc.is_standard14_font(font), true)
+  @test.assert_eq(doc.is_simple_font(font), true)
   let standard = try! doc.read_standard14_font(font)
   @test.assert_eq(
     standard,
@@ -844,7 +845,7 @@ test "PdfDocument detects and reads standard14 fonts" {
     (text_name_for_test("/Widths"), PdfArray([])),
   ])
   @test.assert_eq(doc.is_standard14_font(overridden), false)
-  let wrong_subtype = @pdflite.pdf_dictionary([
+  let true_type_alias = @pdflite.pdf_dictionary([
     (
       text_name_for_test("/Subtype"),
       PdfNameObject(text_name_for_test("/TrueType")),
@@ -854,7 +855,19 @@ test "PdfDocument detects and reads standard14 fonts" {
       PdfNameObject(text_name_for_test("/Helvetica")),
     ),
   ])
+  @test.assert_eq(doc.is_standard14_font(true_type_alias), true)
+  let wrong_subtype = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/CIDFontType2")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Helvetica")),
+    ),
+  ])
   @test.assert_eq(doc.is_standard14_font(wrong_subtype), false)
+  @test.assert_eq(doc.is_simple_font(wrong_subtype), false)
 }
 
 ///|
@@ -875,5 +888,93 @@ test "PdfDocument read_standard14_font rejects bad base fonts" {
   )
   guard missing_result is Err(BaseFontExpected) else {
     fail("expected BaseFontExpected")
+  }
+}
+
+///|
+test "PdfDocument read_font dispatches standard14 and simple fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let standard = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/TrueType")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Helvetica")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/MacRomanEncoding")),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.read_font(standard),
+    PdfFontStandard(
+      text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+    ),
+  )
+  @test.assert_eq(
+    (try! doc.read_font(standard)).debug_name(),
+    "StandardFont Helvetica",
+  )
+
+  let simple = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/CustomFont")),
+    ),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.read_font(simple),
+    PdfFontSimple({
+      fonttype: PdfType1,
+      basefont: Some(text_name_for_test("/CustomFont")),
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: None,
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+  )
+  @test.assert_eq(
+    (try! doc.read_font(simple)).debug_name(),
+    "SimpleFont fonttype = Type 1\nbasefont /CustomFont\nencoding is WinAnsiEncoding\n",
+  )
+}
+
+///|
+test "PdfDocument read_font rejects unknown and deferred composite fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let composite = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+  ])
+  @test.assert_eq(doc.is_cidkeyed_font(composite), true)
+  let composite_result = try? doc.read_font(composite)
+  guard composite_result is Err(CompositeFontNotSupported) else {
+    fail("expected CompositeFontNotSupported")
+  }
+
+  let unknown = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/CIDFontType2")),
+    ),
+  ])
+  let unknown_result = try? doc.read_font(unknown)
+  guard unknown_result is Err(FontTypeExpected) else {
+    fail("expected FontTypeExpected")
   }
 }

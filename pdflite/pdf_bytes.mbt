@@ -59,6 +59,8 @@ pub(all) suberror PdfError {
   FontWidthsExpected
   FontWidthExpected
   FontCharProcsExpected
+  FontTypeExpected
+  CompositeFontNotSupported
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

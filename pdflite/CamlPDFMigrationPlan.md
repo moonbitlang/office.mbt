@@ -379,7 +379,10 @@ MoonBit consequences for this project:
    started with 256-entry width tables, `/MissingWidth` filling, direct/indirect
    numeric width entries, and Type3 top-level metric dictionaries. Simple-font
    records are started for Type1, MMType1, Type3, and TrueType fonts, including
-   byte-preserving base font names and Type3 glyph metadata.
+   byte-preserving base font names and Type3 glyph metadata. Font-level
+   dispatch is started for standard-14 and simple fonts, including CamlPDF's
+   `/TrueType` standard-14 compatibility path; Type0 composite fonts are still
+   reported as explicitly unsupported until the CID-keyed font slice.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
