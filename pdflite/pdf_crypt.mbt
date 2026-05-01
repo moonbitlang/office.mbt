@@ -330,6 +330,40 @@ pub fn pdf_arc4_crypt_pdf_object(
 }
 
 ///|
+pub fn PdfDocument::arc4_crypt_parsed_objects(
+  self : PdfDocument,
+  file_key : BytesView,
+  key_length_bits : Int,
+  skip_object_number? : Int = 0,
+) -> PdfDocument raise PdfError {
+  let output = self.copy()
+  for number in output.object_numbers() {
+    if number != skip_object_number {
+      let entry = output.objects.get_entry(number).unwrap()
+      match entry.data {
+        ObjectParsed(object) =>
+          output.objects.set_entry(number, {
+            data: ObjectParsed(
+              pdf_arc4_crypt_pdf_object(
+                number,
+                entry.generation,
+                file_key,
+                key_length_bits,
+                object,
+              ),
+            ),
+            generation: entry.generation,
+          })
+        ObjectParsedAlreadyDecrypted(_)
+        | ObjectToParse
+        | ObjectToParseFromObjectStream(_) => ()
+      }
+    }
+  }
+  output
+}
+
+///|
 fn pdf_permission_denied(
   permissions : ArrayView[PdfPermission],
   target : PdfPermission,

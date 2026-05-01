@@ -45,6 +45,29 @@ test "PdfDocument copy preserves parser-private object states" {
 }
 
 ///|
+test "PdfDocument ARC4 crypt preserves parser-private object states" {
+  let key = try! pdf_bytes_of_int_array([1, 2, 3, 4, 5])
+  let doc = pdf_document_empty()
+  doc.objects.set_entry(
+    1,
+    pdf_object_entry(
+      ObjectParsedAlreadyDecrypted(PdfString(@ascii.encode("plain"))),
+    ),
+  )
+  doc.objects.set_entry(2, pdf_object_entry(ObjectToParse))
+  doc.objects.set_entry(
+    3,
+    pdf_object_entry(
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+    ),
+  )
+  let encrypted = try! doc.arc4_crypt_parsed_objects(key[:], 40)
+  @test.assert_eq(encrypted.objects.get_entry(1), doc.objects.get_entry(1))
+  @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
+  @test.assert_eq(encrypted.objects.get_entry(3), doc.objects.get_entry(3))
+}
+
+///|
 test "writer parses signed integer fragments for scientific reals" {
   @test.assert_eq(
     try! pdf_writer_parse_signed_int(@ascii.encode("+12")[:], 0),

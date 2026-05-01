@@ -406,6 +406,58 @@ test "pdf_arc4_crypt_pdf_object encrypts stream dictionaries and data" {
 }
 
 ///|
+test "PdfDocument arc4_crypt_parsed_objects encrypts parsed objects in a copy" {
+  let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, PdfString(@ascii.encode("hello")))
+  doc.add_object_given_number(2, PdfString(@ascii.encode("skip")))
+  doc.add_object_given_number(
+    3,
+    PdfString(@ascii.encode("hello")),
+    generation=1,
+  )
+  let encrypted = try! doc.arc4_crypt_parsed_objects(
+    key[:],
+    40,
+    skip_object_number=2,
+  )
+  @test.assert_eq(
+    encrypted.lookup_object_or_null(1),
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      1,
+      0,
+      key[:],
+      40,
+      PdfString(@ascii.encode("hello")),
+    ),
+  )
+  @test.assert_eq(
+    encrypted.lookup_object_or_null(2),
+    PdfString(@ascii.encode("skip")),
+  )
+  @test.assert_eq(
+    encrypted.lookup_object_or_null(3),
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      3,
+      1,
+      key[:],
+      40,
+      PdfString(@ascii.encode("hello")),
+    ),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(1),
+    PdfString(@ascii.encode("hello")),
+  )
+  @test.assert_eq(
+    (try! encrypted.arc4_crypt_parsed_objects(key[:], 40, skip_object_number=2)).lookup_object_or_null(
+      1,
+    ),
+    PdfString(@ascii.encode("hello")),
+  )
+}
+
+///|
 test "pdf_permissions_of_p parses CamlPDF denied permission bits" {
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-4), [])
   @test.assert_eq(@pdflite.pdf_permissions_of_p(-8), [PdfNoPrint])
