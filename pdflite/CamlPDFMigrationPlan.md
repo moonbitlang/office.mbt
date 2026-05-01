@@ -286,9 +286,10 @@ MoonBit consequences for this project:
    full-document output is started behind an explicit IV-provider API and now
    has classic-writer plus uncompressed and Flate-compressed xref-stream
    round-trip gates. AESV3 revision 5 full-document output is started behind
-   explicit typed random-field and IV-provider callbacks, with a classic
-   writer/read/decrypt round-trip gate. Default AES writers remain deferred
-   until a project-level random-byte source is selected.
+   explicit typed random-field and IV-provider callbacks, with classic-writer
+   plus uncompressed and Flate-compressed xref-stream round-trip gates. Default
+   AES writers remain deferred until a project-level random-byte source is
+   selected.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

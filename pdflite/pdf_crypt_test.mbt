@@ -2926,6 +2926,74 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
 }
 
 ///|
+test "PdfDocument encrypted AESV3 output round trips through xref stream writers" {
+  let key_type = crypt_name_for_test("/Type")
+  let key_title = crypt_name_for_test("/Title")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let doc = crypt_minimal_catalog_document_for_test(1, 7)
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("secret-aes3-xref"))),
+  ])
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  doc.add_object_given_number(5, secret_object)
+  doc.add_object_given_number(6, metadata_stream)
+  let denied_permissions = @pdflite.pdf_permissions_of_p(-3904)
+  let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    denied_permissions[:],
+    crypt_aesv3_r5_random_for_test,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+
+  let rendered = try! @pdflite.pdf_write_document_with_xref_stream(encrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(parsed.is_encrypted(), true)
+  @test.assert_eq(
+    parsed.trailer_dict().lookup_immediate(key_encrypt) is Some(PdfIndirect(_)),
+    true,
+  )
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(decrypted.denied_permissions, denied_permissions)
+
+  let compressed = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
+    encrypted,
+  )
+  let compressed_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      compressed,
+      user_password=Some(@ascii.encode("bad")[:]),
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  @test.assert_eq(
+    compressed_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+  @test.assert_eq(
+    compressed_decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
+  @test.assert_eq(compressed_decrypted.denied_permissions, denied_permissions)
+}
+
+///|
 test "PdfDocument encrypted AESV2 output round trips through xref stream writers" {
   let key_type = crypt_name_for_test("/Type")
   let key_title = crypt_name_for_test("/Title")
