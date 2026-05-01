@@ -157,9 +157,9 @@ pub fn pdf_encode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
-pub fn pdf_encode_stream_with_filter(PdfName, PdfObject) -> PdfObject raise PdfError
+pub fn pdf_encode_stream_with_filter(PdfName, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
 
-pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject) -> PdfObject raise PdfError
+pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
 
 pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
 

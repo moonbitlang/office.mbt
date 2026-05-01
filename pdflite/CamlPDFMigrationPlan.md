@@ -297,15 +297,18 @@ MoonBit consequences for this project:
    (`11`) and PNG Up (`12`) rows, including explicit negative-delta
    normalization to PDF byte range. Owned stream encode can now add a filter
    plus direct `/DecodeParms` predictor dictionary and round-trip through owned
-   stream decode. Stream filter encode/decode now materializes `StreamToGet`
-   data only at the owned-byte boundary required by codec transforms. A
+   stream decode. Stream encoding now supports CamlPDF-style
+   `only_if_smaller` gating, leaving streams unchanged unless the encoded data
+   plus overhead is smaller than the original bytes. Stream filter
+   encode/decode now materializes `StreamToGet` data only at the owned-byte
+   boundary required by codec transforms. A
    document-aware `PdfDocument::pdf_decode_stream` path is now started for
    indirect `/Filter` and `/DecodeParms` entries, including array filters with
    indirect elements, short `/F` and `/DP` keys, predictor dictionaries reached
    through indirect references, and LZW `EarlyChange` reached through direct
    document lookup. A document-aware `pdf_decode_stream_until_unknown` slice now
    mirrors CamlPDF's stop-at-first-unsupported-filter behavior while preserving
-   the remaining filter metadata. Flate compression heuristics and other
+   the remaining filter metadata. Higher-ratio Flate compression and other
    filters remain deferred.
 
 8. Page tree and content streams.
@@ -711,8 +714,9 @@ MoonBit consequences for this project:
     action fallback behavior, missing titles, and malformed color arrays.
     Codec coverage now includes ASCII85 malformed inputs, LZW EOF/reset/error
     boundaries, predictor identity/Paeth/short-row/error paths, stream
-    filter/decode-parameter composition, excessive filter-stage bounds, and
-    RunLength long-literal/truncated-input behavior. Content-stream coverage
+    filter/decode-parameter composition, `only_if_smaller` stream encode
+    gating, excessive filter-stage bounds, and RunLength
+    long-literal/truncated-input behavior. Content-stream coverage
     now includes broad operator render/parse round trips, unknown operator
     preservation, inline-image comments and malformed dictionaries, nested
     content objects, and parse errors for malformed arrays and non-stream

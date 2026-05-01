@@ -1404,6 +1404,51 @@ test "pdf_encode_stream_with_filter prepends existing filters" {
 }
 
 ///|
+test "pdf_encode_stream_with_filter can skip non-smaller encodings" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let skipped = try! @pdflite.pdf_encode_stream_with_filter(
+    codec_name_for_test("/ASCIIHexDecode"),
+    stream,
+    only_if_smaller=true,
+  )
+  guard skipped is PdfStreamObject(skipped_stream) else {
+    fail("expected skipped stream")
+  }
+  @test.assert_eq(skipped_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(skipped_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(
+    skipped_stream.dictionary.lookup_immediate(length),
+    Some(PdfInteger(2)),
+  )
+  let repeated = codec_bytes_for_test([ for _ in 0..<30 => 65 ])
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(repeated.length()))]),
+    StreamGot(repeated),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter(
+    codec_name_for_test("/RunLengthDecode"),
+    stream,
+    only_if_smaller=true,
+  )
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  @test.assert_eq(
+    encoded_stream.data,
+    StreamGot(@pdflite.pdf_run_length_encode(repeated)),
+  )
+  @test.assert_eq(
+    encoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfNameObject(codec_name_for_test("/RunLengthDecode"))),
+  )
+}
+
+///|
 test "pdf_encode_stream_with_filter_and_predictor round trips through decode stream" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
@@ -1445,6 +1490,32 @@ test "pdf_encode_stream_with_filter_and_predictor round trips through decode str
   )
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "pdf_encode_stream_with_filter_and_predictor can skip non-smaller encodings" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(3))]),
+    StreamGot(codec_ascii_for_test("abc")),
+  )
+  let skipped = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    11,
+    1,
+    8,
+    3,
+    stream,
+    only_if_smaller=true,
+  )
+  guard skipped is PdfStreamObject(skipped_stream) else {
+    fail("expected skipped stream")
+  }
+  @test.assert_eq(skipped_stream.data, StreamGot(codec_ascii_for_test("abc")))
+  @test.assert_eq(skipped_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(skipped_stream.dictionary.lookup_immediate(decodeparms), None)
 }
 
 ///|
