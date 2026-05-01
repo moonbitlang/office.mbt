@@ -2074,6 +2074,50 @@ test "PdfTextExtractor extracts WinAnsi glyphs" {
   @test.assert_eq(extractor.charcode_of_codepoint(0x2014), Some(0x97))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00A9), Some(0xA9))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00E9), Some(0xE9))
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0xA1, 0xA6, 0xAE, 0xB0, 0xB1, 0xBC, 0xC0, 0xC6, 0xD0, 0xD8, 0xDE, 0xE6, 0xF0,
+        0xF8, 0xFE, 0xFF,
+      ])[:],
+    ),
+    [
+      0x00A1, 0x00A6, 0x00AE, 0x00B0, 0x00B1, 0x00BC, 0x00C0, 0x00C6, 0x00D0, 0x00D8,
+      0x00DE, 0x00E6, 0x00F0, 0x00F8, 0x00FE, 0x00FF,
+    ],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([
+        0xA1, 0xA6, 0xAE, 0xB0, 0xB1, 0xBC, 0xC0, 0xC6, 0xD0, 0xD8, 0xDE, 0xE6, 0xF0,
+        0xF8, 0xFE, 0xFF,
+      ])[:],
+    ),
+    [
+      text_name_for_test("/exclamdown"),
+      text_name_for_test("/brokenbar"),
+      text_name_for_test("/registered"),
+      text_name_for_test("/degree"),
+      text_name_for_test("/plusminus"),
+      text_name_for_test("/onequarter"),
+      text_name_for_test("/Agrave"),
+      text_name_for_test("/AE"),
+      text_name_for_test("/Eth"),
+      text_name_for_test("/Oslash"),
+      text_name_for_test("/Thorn"),
+      text_name_for_test("/ae"),
+      text_name_for_test("/eth"),
+      text_name_for_test("/oslash"),
+      text_name_for_test("/thorn"),
+      text_name_for_test("/ydieresis"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00A6), Some(0xA6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00B1), Some(0xB1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C0), Some(0xC0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C6), Some(0xC6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00F0), Some(0xF0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00FF), Some(0xFF))
 }
 
 ///|
