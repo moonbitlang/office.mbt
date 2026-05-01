@@ -258,9 +258,12 @@ MoonBit consequences for this project:
    Status: started with CamlPDF-style page tree reference-number traversal
    through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
    top-level `/Count` based `endpage_fast`, `page_object_number`, page records,
-   blank/custom pages, flat page-tree construction, root installation, and
+   blank/custom pages, page-tree construction, root installation, and
    `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
+   Page-tree construction now preserves the flat shape for small page arrays
+   and builds CamlPDF-style balanced `/Pages` branches for larger arrays,
+   including `/Parent`, `/Kids`, and `/Count` checks.
    Page content mutation is started with `protect`, `prepend_operators`, and
    `postpend_operators` helpers over `PdfContentOp` streams.
    Page replacement is now started with a `change_pages` slice that builds a

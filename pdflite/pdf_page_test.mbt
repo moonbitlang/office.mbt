@@ -76,6 +76,24 @@ fn page_hello_resources_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn page_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
+  PdfArray([
+    PdfInteger(index),
+    PdfInteger(0),
+    PdfInteger(index + 100),
+    PdfInteger(200),
+  ])
+}
+
+///|
+fn page_indexed_blank_for_test(index : Int) -> @pdflite.PdfPage {
+  {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    mediabox: page_index_mediabox_for_test(index),
+  }
+}
+
+///|
 fn page_prefix_resources_for_test(
   names : ArrayView[String],
 ) -> @pdflite.PdfObject {
@@ -390,6 +408,43 @@ test "PdfDocument add_pagetree and add_root build a writable page document" {
     try! parsed.parse_content_ops(pages[0].content),
     page_hello_ops_for_test(),
   )
+}
+
+///|
+test "PdfDocument add_pagetree balances larger page arrays" {
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let doc = @pdflite.pdf_document_empty()
+  let source_pages = [ for i in 0..<12 => page_indexed_blank_for_test(i) ]
+  let page_root = try! doc.add_pagetree(source_pages)
+  ignore(try! doc.add_root(page_root, []))
+  let root_node = doc.lookup_object_or_null(page_root)
+  let root_kids = match root_node.lookup_immediate(key_kids) {
+    Some(PdfArray(kids)) => kids
+    _ => fail("expected root kids")
+  }
+  @test.assert_eq(root_node.lookup_immediate(key_count), Some(PdfInteger(12)))
+  @test.assert_eq(root_kids.length(), 7)
+  guard root_kids[0] is PdfIndirect(left_number) else {
+    fail("expected left branch")
+  }
+  guard root_kids[6] is PdfIndirect(right_number) else {
+    fail("expected right branch")
+  }
+  @test.assert_eq(
+    doc.lookup_object_or_null(left_number).lookup_immediate(key_count),
+    Some(PdfInteger(3)),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(right_number).lookup_immediate(key_count),
+    Some(PdfInteger(4)),
+  )
+  @test.assert_eq(try! doc.endpage_fast(), 12)
+  let extracted = try! doc.pages_of_pagetree()
+  @test.assert_eq(extracted.length(), 12)
+  for i in 0..<12 {
+    @test.assert_eq(extracted[i].mediabox, page_index_mediabox_for_test(i))
+  }
 }
 
 ///|

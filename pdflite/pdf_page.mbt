@@ -233,28 +233,93 @@ fn PdfDocument::pdf_page_object(
 }
 
 ///|
+fn pdf_page_slice(
+  pages : ArrayView[PdfPage],
+  start : Int,
+  stop : Int,
+) -> Array[PdfPage] {
+  let output : Array[PdfPage] = []
+  for i in start..<stop {
+    output.push(pages[i])
+  }
+  output
+}
+
+///|
+fn pdf_page_pages_node_object(
+  kids : ArrayView[Int],
+  count : Int,
+  parent : Int,
+) -> PdfObject {
+  let entries : Array[(PdfName, PdfObject)] = [
+    (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+    (
+      pdf_page_kids_key(),
+      PdfArray([ for number in kids => PdfIndirect(number) ]),
+    ),
+    (pdf_page_count_key(), PdfInteger(count)),
+  ]
+  if parent != 0 {
+    entries.push((pdf_page_parent_key(), PdfIndirect(parent)))
+  }
+  PdfDictionary(entries)
+}
+
+///|
+fn PdfDocument::pdf_page_add_pagetree_node(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+  parent : Int,
+  node_number : Int,
+) -> Unit raise PdfError {
+  if pages.length() < 10 {
+    let page_numbers : Array[Int] = []
+    for page in pages {
+      page_numbers.push(
+        self.add_object(self.pdf_page_object(page, node_number)),
+      )
+    }
+    self.add_object_given_number(
+      node_number,
+      pdf_page_pages_node_object(page_numbers, pages.length(), parent),
+    )
+  } else {
+    let middle_count = 5
+    let left_count = (pages.length() - middle_count) / 2
+    let middle_end = left_count + middle_count
+    let left_number = self.add_object(PdfNull)
+    self.pdf_page_add_pagetree_node(
+      pdf_page_slice(pages, 0, left_count),
+      node_number,
+      left_number,
+    )
+    let kid_numbers : Array[Int] = [left_number]
+    for i in left_count..<middle_end {
+      kid_numbers.push(
+        self.add_object(self.pdf_page_object(pages[i], node_number)),
+      )
+    }
+    let right_number = self.add_object(PdfNull)
+    self.pdf_page_add_pagetree_node(
+      pdf_page_slice(pages, middle_end, pages.length()),
+      node_number,
+      right_number,
+    )
+    kid_numbers.push(right_number)
+    self.add_object_given_number(
+      node_number,
+      pdf_page_pages_node_object(kid_numbers, pages.length(), parent),
+    )
+  }
+}
+
+///|
 pub fn PdfDocument::add_pagetree(
   self : PdfDocument,
   pages : ArrayView[PdfPage],
 ) -> Int raise PdfError {
   let page_root_number = self.add_object(PdfNull)
-  let page_numbers : Array[Int] = []
-  for page in pages {
-    page_numbers.push(
-      self.add_object(self.pdf_page_object(page, page_root_number)),
-    )
-  }
-  self.add_object_given_number(
-    page_root_number,
-    PdfDictionary([
-      (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
-      (
-        pdf_page_kids_key(),
-        PdfArray([ for number in page_numbers => PdfIndirect(number) ]),
-      ),
-      (pdf_page_count_key(), PdfInteger(page_numbers.length())),
-    ]),
-  )
+  self.pdf_page_add_pagetree_node(pages, 0, page_root_number)
   page_root_number
 }
 
