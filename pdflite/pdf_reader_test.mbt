@@ -394,6 +394,43 @@ fn reader_hybrid_xref_stream_pdf() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_linearized_classic_pdf(value : String) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let linearized_offset = reader_push_indirect_object(
+    output,
+    1,
+    0,
+    "<< /Linearized " + value + " /L 0 >>",
+  )
+  let catalog_offset = reader_push_indirect_object(
+    output, 2, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, linearized_offset, 0)
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 2 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_leading_junk() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\nnotobject\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -859,6 +896,30 @@ test "pdf_read_document_from_bytes follows classic trailer XRefStm" {
     fail("expected XRefStm")
   }
   @test.assert_eq(xref_stream_position > 0, true)
+}
+
+///|
+test "pdf_read_document_from_bytes records linearized first-object marker" {
+  let integer_marker = try! @pdflite.pdf_read_document_from_bytes(
+    reader_linearized_classic_pdf("1"),
+  )
+  @test.assert_eq(integer_marker.was_linearized(), true)
+  @test.assert_eq(integer_marker.root(), 2)
+
+  let real_marker = try! @pdflite.pdf_read_document_from_bytes(
+    reader_linearized_classic_pdf("1.0"),
+  )
+  @test.assert_eq(real_marker.was_linearized(), true)
+
+  let non_numeric_marker = try! @pdflite.pdf_read_document_from_bytes(
+    reader_linearized_classic_pdf("/Name"),
+  )
+  @test.assert_eq(non_numeric_marker.was_linearized(), false)
+
+  let leading_junk = try! @pdflite.pdf_read_document_from_bytes(
+    reader_classic_pdf_with_leading_junk(),
+  )
+  @test.assert_eq(leading_junk.was_linearized(), false)
 }
 
 ///|

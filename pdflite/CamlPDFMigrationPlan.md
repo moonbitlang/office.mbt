@@ -205,7 +205,9 @@ MoonBit consequences for this project:
    entry are now started by merging the pointed-to xref stream into the same
    revision while preserving the classic trailer as the document trailer.
    Xref-stream `/Prev` chains are also covered, including newer updates and
-   free entries hiding older objects. Malformed-file reconstruction remains
+   free entries hiding older objects. The reader now mirrors CamlPDF's
+   non-fatal first-object `/Linearized` probe and records the result in
+   `PdfDocument::was_linearized`. Malformed-file reconstruction remains
    deferred. `pdf_read_document_from_bytes` is now the public byte-backed reader
    entry point and handles classic tables plus the started
    xref-stream/object-stream subset. Reader

@@ -361,6 +361,11 @@ fn pdf_reader_first_name() -> PdfName {
 }
 
 ///|
+fn pdf_reader_linearized_name() -> PdfName {
+  pdf_reader_name("/Linearized")
+}
+
+///|
 fn pdf_reader_filter_name() -> PdfName {
   pdf_reader_name("/Filter")
 }
@@ -723,6 +728,27 @@ fn ByteCursor::read_plain_indirect_object_at_current(
 }
 
 ///|
+fn ByteCursor::read_pdf_linearized_marker(
+  self : ByteCursor,
+) -> Bool raise PdfError {
+  ignore(self.read_pdf_header())
+  let parsed = self.read_plain_indirect_object_at_current()
+  match parsed.object.lookup_immediate(pdf_reader_linearized_name()) {
+    Some(PdfInteger(_)) | Some(PdfReal(_)) => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_read_was_linearized(data : BytesView) -> Bool {
+  let result : Result[Bool, Error] = try? byte_cursor_of_view(data).read_pdf_linearized_marker()
+  match result {
+    Ok(value) => value
+    Err(_) => false
+  }
+}
+
+///|
 fn ByteCursor::resolve_classic_stream_length(
   self : ByteCursor,
   object : PdfObject,
@@ -821,6 +847,7 @@ fn PdfDocument::set_trailer_and_root(
 pub fn pdf_read_classic_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
+  let was_linearized = pdf_read_was_linearized(data[:])
   let cursor = byte_cursor_of_bytes(data)
   let version = cursor.read_pdf_header()
   let xref_position = pdf_read_startxref_position(cursor.data)
@@ -863,6 +890,7 @@ pub fn pdf_read_classic_document_from_bytes(
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   document.set_first_xref(xref_position)
+  document.set_was_linearized(was_linearized)
   document.set_trailer_and_root(trailer)
   for xref in xrefs {
     match xref.object_stream {
