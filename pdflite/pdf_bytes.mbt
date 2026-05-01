@@ -1,0 +1,58 @@
+///|
+pub(all) suberror PdfError {
+  InvalidByte(Int)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub type PdfBytes = Bytes
+
+///|
+pub(all) struct PdfName(Bytes) derive(Debug, Eq, ToJson)
+
+///|
+pub fn pdf_byte_of_int(value : Int) -> Byte raise PdfError {
+  if value < 0 || value > 255 {
+    raise InvalidByte(value)
+  }
+  value.to_byte()
+}
+
+///|
+pub fn pdf_bytes_of_array(values : Array[Byte]) -> PdfBytes {
+  Bytes::from_array(values)
+}
+
+///|
+pub fn pdf_bytes_of_int_array(values : Array[Int]) -> PdfBytes raise PdfError {
+  Bytes::makei(values.length(), i => pdf_byte_of_int(values[i]))
+}
+
+///|
+pub fn pdf_bytes_length(bytes : PdfBytes) -> Int {
+  bytes.length()
+}
+
+///|
+pub fn pdf_bytes_get(bytes : PdfBytes, index : Int) -> Byte? {
+  bytes.get(index)
+}
+
+///|
+pub fn pdf_bytes_to_array(bytes : PdfBytes) -> Array[Byte] {
+  bytes.to_array()
+}
+
+///|
+pub fn pdf_name_of_bytes(bytes : PdfBytes) -> PdfName {
+  PdfName(bytes)
+}
+
+///|
+pub fn PdfName::bytes(self : PdfName) -> PdfBytes {
+  self.0
+}
+
+///|
+pub fn PdfName::byte_length(self : PdfName) -> Int {
+  self.0.length()
+}

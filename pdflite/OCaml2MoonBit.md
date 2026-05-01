@@ -85,10 +85,11 @@ moon test --outline
 # ocaml2moonbit_wbtest.mbt contains the initial migration-assumption tests.
 
 moon test
-# Total tests: 5, passed: 5, failed: 0.
+# Total tests: 8, passed: 8, failed: 0.
 ```
 
-The initial executable validation lives in `ocaml2moonbit_wbtest.mbt`.
+The initial executable validation lives in `ocaml2moonbit_wbtest.mbt`; the
+first public byte/name API tests live in `pdflite_test.mbt`.
 
 ## Core Porting Rules
 
@@ -111,6 +112,9 @@ Default rule:
 - Only convert `Bytes` to `String` through named helpers that document the
   encoding assumption: ASCII, UTF-8, UTF-16BE/LE, PDFDocEncoding, or unchecked
   debug output.
+- MoonBit `Bytes` is immutable. This differs from CamlPDF `Pdfio.bytes`, which
+  has mutation helpers such as `bset`. Build mutable byte data with
+  `Array[Byte]` or a buffer, then freeze it into `PdfBytes`/`Bytes`.
 
 ### Numbers
 
@@ -245,8 +249,10 @@ Validation rule for each migration patch:
 
 1. Establish the byte/text foundation.
    Port a minimal `PdfBytes`/byte helper layer inspired by `.repos/pdfio.ml`.
-   Add tests for byte length, byte indexing, mutation/copying, and explicit
-   conversions. Do not parse PDFs yet.
+   Add tests for byte length, byte indexing, construction/freezing, and
+   explicit conversions. Do not parse PDFs yet.
+   Status: started in `pdf_bytes.mbt` with `PdfBytes`, `PdfName`, checked
+   `Int` to `Byte` conversion, and black-box tests in `pdflite_test.mbt`.
 
 2. Port the in-memory PDF object model.
    Add `PdfObject`, stream state, document/object-map types, and dictionary

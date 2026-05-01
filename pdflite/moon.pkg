@@ -1,4 +1,8 @@
 import {
+  "moonbitlang/core/test",
+} for "test"
+
+import {
   "moonbitlang/core/hashmap",
   "moonbitlang/core/test",
 } for "wbtest"
