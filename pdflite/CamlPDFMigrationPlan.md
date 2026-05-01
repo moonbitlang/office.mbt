@@ -435,7 +435,10 @@ MoonBit consequences for this project:
     filter, and page-tree branches.
     Status: started with a coverage pass that tightened public `ByteCursor`
     boundary tests for remaining length, `peek`, end views, negative offsets,
-    rewind errors, seek-past-end reads, and owned line allocation.
+    rewind errors, seek-past-end reads, and owned line allocation. Annotation
+    coverage was also broadened through public APIs for subtype
+    serialization/parsing, border-style parsing, preserved rest entries,
+    existing annotation arrays, and malformed quadpoint preservation.
 
 ## Update Discipline
 

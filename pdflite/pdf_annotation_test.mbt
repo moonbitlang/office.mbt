@@ -168,6 +168,230 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
 }
 
 ///|
+test "PdfDocument add_annotation writes subtype names for annotation variants" {
+  let key_annots = annotation_name_for_test("/Annots")
+  let key_subtype = annotation_name_for_test("/Subtype")
+  let custom_name = annotation_name_for_test("/Custom")
+  let popup_parent = @pdflite.pdf_annotation_make(AnnotationText)
+  let cases : Array[(@pdflite.PdfAnnotationSubtype, @pdflite.PdfName)] = [
+    (AnnotationText, annotation_name_for_test("/Text")),
+    (AnnotationLink, annotation_name_for_test("/Link")),
+    (AnnotationFreeText, annotation_name_for_test("/FreeText")),
+    (AnnotationLine, annotation_name_for_test("/Line")),
+    (AnnotationSquare, annotation_name_for_test("/Square")),
+    (AnnotationCircle, annotation_name_for_test("/Circle")),
+    (AnnotationPolygon, annotation_name_for_test("/Polygon")),
+    (AnnotationPolyLine, annotation_name_for_test("/PolyLine")),
+    (AnnotationHighlight, annotation_name_for_test("/Highlight")),
+    (AnnotationUnderline, annotation_name_for_test("/Underline")),
+    (AnnotationSquiggly, annotation_name_for_test("/Squiggly")),
+    (AnnotationStrikeOut, annotation_name_for_test("/StrikeOut")),
+    (AnnotationStamp, annotation_name_for_test("/Stamp")),
+    (AnnotationCaret, annotation_name_for_test("/Caret")),
+    (AnnotationInk, annotation_name_for_test("/Ink")),
+    (AnnotationPopup(popup_parent), annotation_name_for_test("/Popup")),
+    (AnnotationFileAttachment, annotation_name_for_test("/FileAttachment")),
+    (AnnotationSound, annotation_name_for_test("/Sound")),
+    (AnnotationMovie, annotation_name_for_test("/Movie")),
+    (AnnotationWidget, annotation_name_for_test("/Widget")),
+    (AnnotationScreen, annotation_name_for_test("/Screen")),
+    (AnnotationPrinterMark, annotation_name_for_test("/PrinterMark")),
+    (AnnotationTrapNet, annotation_name_for_test("/TrapNet")),
+    (AnnotationWatermark, annotation_name_for_test("/Watermark")),
+    (AnnotationThreeDee, annotation_name_for_test("/3D")),
+    (AnnotationUnknown(custom_name), custom_name),
+  ]
+  let doc = @pdflite.pdf_document_empty()
+  for case in cases {
+    let page = try! doc.add_annotation(
+      @pdflite.pdf_page_blank(@pdflite.paper_a4),
+      @pdflite.pdf_annotation_make(case.0),
+    )
+    guard page.rest.lookup_immediate(key_annots)
+      is Some(PdfArray([PdfDictionary(_) as annotation])) else {
+      fail("expected one serialized annotation")
+    }
+    @test.assert_eq(
+      annotation.lookup_immediate(key_subtype),
+      Some(PdfNameObject(case.1)),
+    )
+  }
+}
+
+///|
+test "PdfDocument read_annotation maps subtype names and border styles" {
+  let key_subtype = annotation_name_for_test("/Subtype")
+  let key_rect = annotation_name_for_test("/Rect")
+  let key_border = annotation_name_for_test("/Border")
+  let key_bs = annotation_name_for_test("/BS")
+  let key_style = annotation_name_for_test("/S")
+  let key_dash = annotation_name_for_test("/D")
+  let doc = @pdflite.pdf_document_empty()
+  let rectangle : @pdflite.PdfObject = PdfArray([
+    PdfInteger(0),
+    PdfInteger(0),
+    PdfInteger(1),
+    PdfInteger(1),
+  ])
+  let subtype_cases : Array[(@pdflite.PdfName, @pdflite.PdfAnnotationSubtype)] = [
+    (annotation_name_for_test("/Text"), AnnotationText),
+    (annotation_name_for_test("/FreeText"), AnnotationFreeText),
+    (annotation_name_for_test("/Stamp"), AnnotationStamp),
+    (annotation_name_for_test("/Link"), AnnotationLink),
+    (annotation_name_for_test("/Line"), AnnotationLine),
+    (annotation_name_for_test("/Square"), AnnotationSquare),
+    (annotation_name_for_test("/Circle"), AnnotationCircle),
+    (annotation_name_for_test("/Polygon"), AnnotationPolygon),
+    (annotation_name_for_test("/PolyLine"), AnnotationPolyLine),
+    (annotation_name_for_test("/Highlight"), AnnotationHighlight),
+    (annotation_name_for_test("/Underline"), AnnotationUnderline),
+    (annotation_name_for_test("/Squiggly"), AnnotationSquiggly),
+    (annotation_name_for_test("/StrikeOut"), AnnotationStrikeOut),
+    (annotation_name_for_test("/Caret"), AnnotationCaret),
+    (annotation_name_for_test("/Ink"), AnnotationInk),
+    (annotation_name_for_test("/FileAttachment"), AnnotationFileAttachment),
+    (annotation_name_for_test("/Sound"), AnnotationSound),
+    (annotation_name_for_test("/Movie"), AnnotationMovie),
+    (annotation_name_for_test("/Widget"), AnnotationWidget),
+    (annotation_name_for_test("/Screen"), AnnotationScreen),
+    (annotation_name_for_test("/PrinterMark"), AnnotationPrinterMark),
+    (annotation_name_for_test("/TrapNet"), AnnotationTrapNet),
+    (annotation_name_for_test("/Watermark"), AnnotationWatermark),
+    (annotation_name_for_test("/3D"), AnnotationThreeDee),
+  ]
+  for case in subtype_cases {
+    let annotation = try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(case.0)),
+        (key_rect, rectangle),
+      ]),
+    )
+    @test.assert_eq(annotation.subtype, case.1)
+  }
+  let custom_name = annotation_name_for_test("/Custom")
+  @test.assert_eq(
+    (try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(custom_name)),
+        (key_rect, rectangle),
+      ]),
+    )).subtype,
+    AnnotationUnknown(custom_name),
+  )
+  @test.assert_eq(
+    (try! doc.read_annotation(PdfDictionary([(key_rect, rectangle)]))).subtype,
+    AnnotationUnknown(annotation_name_for_test("")),
+  )
+  @test.assert_eq(
+    (try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(annotation_name_for_test("/Popup"))),
+        (key_rect, rectangle),
+      ]),
+    )).subtype,
+    AnnotationUnknown(annotation_name_for_test("")),
+  )
+  let style_cases : Array[(@pdflite.PdfName, @pdflite.PdfAnnotationStyle)] = [
+    (annotation_name_for_test("/S"), AnnotationSolid),
+    (annotation_name_for_test("/D"), AnnotationDashed),
+    (annotation_name_for_test("/B"), AnnotationBeveled),
+    (annotation_name_for_test("/I"), AnnotationInset),
+    (annotation_name_for_test("/U"), AnnotationUnderlineStyle),
+    (annotation_name_for_test("/Unknown"), AnnotationNoStyle),
+  ]
+  for case in style_cases {
+    let annotation = try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(annotation_name_for_test("/Text"))),
+        (key_rect, rectangle),
+        (key_bs, PdfDictionary([(key_style, PdfNameObject(case.0))])),
+      ]),
+    )
+    @test.assert_eq(annotation.border.style, case.1)
+  }
+  @test.assert_eq(
+    (try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(annotation_name_for_test("/Text"))),
+        (key_rect, rectangle),
+        (key_bs, PdfDictionary([])),
+      ]),
+    )).border.style,
+    AnnotationNoStyle,
+  )
+  @test.assert_eq(
+    (try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(annotation_name_for_test("/Text"))),
+        (key_rect, rectangle),
+        (key_bs, PdfDictionary([(key_dash, PdfInteger(9))])),
+      ]),
+    )).border.dash_array,
+    [],
+  )
+  @test.assert_eq(
+    (try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(annotation_name_for_test("/Text"))),
+        (key_rect, rectangle),
+        (key_border, PdfArray([PdfInteger(2), PdfInteger(3), PdfInteger(4)])),
+      ]),
+    )).border,
+    {
+      width: 4.0,
+      vertical_radius: 3.0,
+      horizontal_radius: 2.0,
+      style: AnnotationNoStyle,
+      dash_array: [],
+    },
+  )
+  @test.assert_eq(
+    (try! doc.read_annotation(
+      PdfDictionary([
+        (key_subtype, PdfNameObject(annotation_name_for_test("/Text"))),
+        (key_rect, rectangle),
+        (
+          key_border,
+          PdfArray([
+            PdfInteger(2),
+            PdfInteger(3),
+            PdfInteger(4),
+            PdfArray([PdfInteger(5), PdfInteger(6)]),
+          ]),
+        ),
+      ]),
+    )).border.dash_array,
+    [5, 6],
+  )
+}
+
+///|
+test "PdfDocument add_annotation prepends to existing annotations and keeps rest" {
+  let key_annots = annotation_name_for_test("/Annots")
+  let key_nm = annotation_name_for_test("/NM")
+  let doc = @pdflite.pdf_document_empty()
+  let annotation = {
+    ..@pdflite.pdf_annotation_make(AnnotationText),
+    rest: PdfDictionary([(key_nm, PdfString(@ascii.encode("a1")))]),
+  }
+  let page = try! doc.add_annotation(
+    {
+      ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+      rest: PdfDictionary([(key_annots, PdfArray([PdfIndirect(99)]))]),
+    },
+    annotation,
+  )
+  guard page.rest.lookup_immediate(key_annots)
+    is Some(PdfArray([PdfDictionary(_) as inserted, PdfIndirect(99)])) else {
+    fail("expected prepended direct annotation")
+  }
+  @test.assert_eq(
+    inserted.lookup_immediate(key_nm),
+    Some(PdfString(@ascii.encode("a1"))),
+  )
+}
+
+///|
 test "PdfDocument transform_annotations updates annotation geometry" {
   let key_annots = annotation_name_for_test("/Annots")
   let key_rect = annotation_name_for_test("/Rect")
@@ -200,8 +424,27 @@ test "PdfDocument transform_annotations updates annotation geometry" {
       ),
     ]),
   )
+  doc.add_object_given_number(
+    11,
+    PdfDictionary([
+      (
+        key_quadpoints,
+        PdfArray([
+          PdfInteger(0),
+          PdfNameObject(annotation_name_for_test("/Bad")),
+          PdfInteger(10),
+          PdfInteger(0),
+          PdfInteger(10),
+          PdfInteger(10),
+          PdfInteger(0),
+          PdfInteger(10),
+          PdfInteger(99),
+        ]),
+      ),
+    ]),
+  )
   let rest : @pdflite.PdfObject = PdfDictionary([
-    (key_annots, PdfArray([PdfIndirect(10)])),
+    (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11), PdfNull])),
   ])
   try! doc.transform_annotations(@pdflite.transform_translate(1.0, 2.0), rest)
   let annotation = doc.lookup_object_or_null(10)
@@ -227,5 +470,25 @@ test "PdfDocument transform_annotations updates annotation geometry" {
   @test.assert_eq(
     annotation.lookup_immediate(key_line),
     Some(PdfArray([PdfReal(1.0), PdfReal(2.0), PdfReal(6.0), PdfReal(7.0)])),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(11).lookup_immediate(key_quadpoints),
+    Some(
+      PdfArray([
+        PdfInteger(0),
+        PdfNameObject(annotation_name_for_test("/Bad")),
+        PdfInteger(10),
+        PdfInteger(0),
+        PdfInteger(10),
+        PdfInteger(10),
+        PdfInteger(0),
+        PdfInteger(10),
+        PdfInteger(99),
+      ]),
+    ),
+  )
+  try! doc.transform_annotations(
+    @pdflite.transform_translate(1.0, 2.0),
+    PdfDictionary([]),
   )
 }
