@@ -5,6 +5,7 @@ pub(all) suberror PdfError {
   InvalidReadLength(Int)
   InvalidBit(Int)
   InvalidBitCount(Int)
+  MatrixNotInvertable
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

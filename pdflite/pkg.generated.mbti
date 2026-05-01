@@ -64,6 +64,28 @@ pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub let pdf_no_more : Int
 
+pub fn point2(Double, Double) -> Point2
+
+pub fn transform_apply_ops(ArrayView[TransformOp], Point2) -> Point2
+
+pub let transform_identity_matrix : TransformMatrix
+
+pub fn transform_matrix_compose(TransformMatrix, TransformMatrix) -> TransformMatrix
+
+pub fn transform_matrix_of_op(TransformOp) -> TransformMatrix
+
+pub fn transform_matrix_of_ops(ArrayView[TransformOp]) -> TransformMatrix
+
+pub fn transform_rotate(Point2, Double) -> TransformMatrix
+
+pub fn transform_scale(Point2, Double, Double) -> TransformMatrix
+
+pub fn transform_shear_x(Point2, Double) -> TransformMatrix
+
+pub fn transform_shear_y(Point2, Double) -> TransformMatrix
+
+pub fn transform_translate(Double, Double) -> TransformMatrix
+
 pub fn unit_centimetres(Double, PdfUnit) -> Double
 
 pub fn unit_inches(Double, PdfUnit) -> Double
@@ -79,6 +101,7 @@ pub(all) suberror PdfError {
   InvalidReadLength(Int)
   InvalidBit(Int)
   InvalidBitCount(Int)
+  MatrixNotInvertable
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -162,6 +185,30 @@ pub(all) enum PdfUnit {
   Inch
   Centimetre
   Millimetre
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct Point2 {
+  x : Double
+  y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct TransformMatrix {
+  a : Double
+  b : Double
+  c : Double
+  d : Double
+  e : Double
+  f : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn TransformMatrix::apply(Self, Point2) -> Point2
+pub fn TransformMatrix::invert(Self) -> Self raise PdfError
+
+pub(all) enum TransformOp {
+  Scale(Point2, Double, Double)
+  Rotate(Point2, Double)
+  Translate(Double, Double)
+  ShearX(Point2, Double)
+  ShearY(Point2, Double)
 } derive(Eq, ToJson, @debug.Debug)
 
 // Type aliases

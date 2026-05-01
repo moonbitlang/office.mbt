@@ -128,9 +128,11 @@ MoonBit consequences for this project:
    safe subset of `.repos/pdfutil` needed by later code. Prefer local functions
    over a broad util module when a helper has only one caller. Add assertion
    tests for matrix math, rectangles, units, and paper sizes.
-   Status: started with `PdfUnit` conversions and `PaperSize` constants. The
-   MoonBit port intentionally preserves CamlPDF's historical conversion
-   constants, including the `PdfPoint -> Centimetre` divisor `28.3456`.
+   Status: started with `PdfUnit` conversions, `PaperSize` constants, and the
+   first `Pdftransform` matrix operations: translate, scale, rotate, shear,
+   compose, apply, operation-list ordering, and inversion. The MoonBit port
+   intentionally preserves CamlPDF's historical conversion constants, including
+   the `PdfPoint -> Centimetre` divisor `28.3456`.
 
 3. Core object model and document state.
    Port `.repos/pdf.mli` in slices:
