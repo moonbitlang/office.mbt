@@ -309,6 +309,30 @@ test "pdf_parse_content_ops_from_bytes reads DCT inline images through EOI" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes reads DCTDecode inline image arrays" {
+  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 1 /H 1 /Filter [ /DCTDecode ] ID "),
+    jpeg_data,
+    content_bytes_for_test(" EI"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/Filter"),
+          PdfArray([PdfNameObject(content_name_for_test("/DCTDecode"))]),
+        ),
+      ]),
+      None,
+      jpeg_data,
+    ),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W 1 ID abc"),

@@ -373,7 +373,8 @@ MoonBit consequences for this project:
    and stack operators, stream decoding for sampled/calculator functions,
    domain clamping, and range clamping. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG data through the
    `FF D9` EOI marker while leaving following bytes unread, and content inline
-   image parsing now uses that path for `/DCT` and `/DCTDecode` images. `pdfimage` is
+   image parsing now uses that path for `/DCT`, `/DCTDecode`, and single-item
+   filter arrays. `pdfimage` is
    started with typed image result and pixel-layout enums plus image
    `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
    including image-mask defaults. `get_image_24bpp` is started for encoded
