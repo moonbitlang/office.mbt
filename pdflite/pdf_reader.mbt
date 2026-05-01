@@ -230,6 +230,20 @@ fn pdf_xref_token_in_use(token : BytesView) -> Bool raise PdfError {
 }
 
 ///|
+fn pdf_classic_xref_lookup(
+  xrefs : ArrayView[PdfClassicXRefEntry],
+  object_number : Int,
+) -> PdfClassicXRefEntry? {
+  for xref in xrefs {
+    if xref.in_use && xref.object_number == object_number {
+      break Some(xref)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
 fn ByteCursor::read_pdf_classic_xref_entries(
   self : ByteCursor,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
@@ -283,7 +297,7 @@ fn ByteCursor::read_pdf_trailer_dictionary(
 }
 
 ///|
-fn ByteCursor::read_first_indirect_object_at_current(
+fn ByteCursor::read_plain_indirect_object_at_current(
   self : ByteCursor,
 ) -> PdfParsedIndirectObject raise PdfError {
   let (objects, prefix) = pdf_parse_indirect_object_segments(
@@ -293,7 +307,57 @@ fn ByteCursor::read_first_indirect_object_at_current(
     objects[0]
   } else {
     match prefix {
-      Some(prefix) => self.finish_pdf_stream_object(prefix)
+      Some(_) => raise StreamLengthExpected
+      None => raise ParseIndirectObjectExpected
+    }
+  }
+}
+
+///|
+fn ByteCursor::resolve_classic_stream_length(
+  self : ByteCursor,
+  object : PdfObject,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> Int raise PdfError {
+  match object.lookup_immediate(pdf_length_name()) {
+    Some(PdfInteger(length)) if length >= 0 => length
+    Some(PdfIndirect(number)) =>
+      match pdf_classic_xref_lookup(xrefs, number) {
+        Some(xref) => {
+          let saved_position = self.absolute_position()
+          self.seek_pdf_absolute(xref.offset)
+          let parsed = self.read_plain_indirect_object_at_current()
+          self.seek_pdf_absolute(saved_position)
+          if parsed.number != number || parsed.generation != xref.generation {
+            raise XRefEntryExpected
+          }
+          match parsed.object {
+            PdfInteger(length) if length >= 0 => length
+            _ => raise StreamLengthExpected
+          }
+        }
+        None => raise StreamLengthExpected
+      }
+    _ => raise StreamLengthExpected
+  }
+}
+
+///|
+fn ByteCursor::read_first_indirect_object_at_current(
+  self : ByteCursor,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> PdfParsedIndirectObject raise PdfError {
+  let (objects, prefix) = pdf_parse_indirect_object_segments(
+    self.lex_pdf_tokens(),
+  )
+  if objects.length() > 0 {
+    objects[0]
+  } else {
+    match prefix {
+      Some(prefix) => {
+        let length = self.resolve_classic_stream_length(prefix.object, xrefs)
+        self.finish_pdf_stream_object_with_length(prefix, length)
+      }
       None => raise ParseIndirectObjectExpected
     }
   }
@@ -333,7 +397,7 @@ pub fn pdf_read_classic_document_from_bytes(
   for xref in xrefs {
     if xref.in_use && xref.object_number != 0 {
       cursor.seek_pdf_absolute(xref.offset)
-      let parsed = cursor.read_first_indirect_object_at_current()
+      let parsed = cursor.read_first_indirect_object_at_current(xrefs)
       if parsed.number != xref.object_number ||
         parsed.generation != xref.generation {
         raise XRefEntryExpected
@@ -394,6 +458,15 @@ fn ByteCursor::finish_pdf_stream_object(
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
   let length = pdf_stream_length(prefix.object)
+  self.finish_pdf_stream_object_with_length(prefix, length)
+}
+
+///|
+fn ByteCursor::finish_pdf_stream_object_with_length(
+  self : ByteCursor,
+  prefix : PdfParsedIndirectObject,
+  length : Int,
+) -> PdfParsedIndirectObject raise PdfError {
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
   self.consume_pdf_stream_line_break()
   let stream_data = self.read_bytes(length)

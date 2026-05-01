@@ -187,9 +187,11 @@ MoonBit consequences for this project:
    now includes those direct-length stream objects. A classic xref-table reader
    is also started for the current writer's output: it follows the final
    `startxref`, reads one classic xref section, parses the trailer dictionary,
-   sets `/Root` and `first_xref`, and loads in-use plain objects by offset.
-   Incremental `/Prev` chains, xref streams, object streams, encryption, and
-   malformed-file reconstruction remain deferred.
+   sets `/Root` and `first_xref`, and loads in-use plain objects by offset. It
+   can resolve direct stream `/Length n` and plain indirect stream
+   `/Length n 0 R` entries through that xref table. Incremental `/Prev` chains,
+   xref streams, object streams, encryption, and malformed-file reconstruction
+   remain deferred.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
