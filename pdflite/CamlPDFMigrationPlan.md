@@ -173,6 +173,9 @@ MoonBit consequences for this project:
    `Bytes`. Acceptance target: parse compact hand-written one-page PDFs and
    inspect the object map. Encryption and most filters can report structured
    unsupported errors at this phase.
+   Status: started with byte-backed PDF header detection over `ByteCursor`,
+   including CamlPDF's first-1024-bytes scan and `(2, 0)` default version
+   fallback when no valid header is found.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,

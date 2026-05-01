@@ -63,6 +63,8 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub let pdf_default_version : PdfVersion
+
 pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument
@@ -94,6 +96,8 @@ pub fn pdf_objects_empty() -> PdfObjects
 pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
+
+pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
@@ -212,6 +216,7 @@ pub fn ByteCursor::read_line(Self) -> Bytes raise PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise PdfError
 pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
 pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
+pub fn ByteCursor::read_pdf_header(Self) -> PdfVersion raise PdfError
 pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView
 pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
@@ -384,6 +389,11 @@ pub(all) enum PdfUnit {
   Inch
   Centimetre
   Millimetre
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfVersion {
+  major : Int
+  minor : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct Point2 {
