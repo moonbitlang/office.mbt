@@ -530,6 +530,50 @@ test "pdf_merge_documents retains a single trimmed structure tree" {
 }
 
 ///|
+test "pdf_merge_documents merges multiple structure tree roots" {
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let key_k = merge_name_for_test("/K")
+  let key_p = merge_name_for_test("/P")
+  let key_pg = merge_name_for_test("/Pg")
+  let first = merge_structure_tree_doc_for_test()
+  let second = merge_structure_tree_doc_for_test()
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let page_refs = try! merged.page_reference_numbers()
+  let root = merged.lookup_object_or_null(merged.root())
+  guard root.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(struct_root_number)) else {
+    fail("expected merged StructTreeRoot")
+  }
+  let struct_root = merged.lookup_object_or_null(struct_root_number)
+  guard struct_root.lookup_immediate(key_k) is Some(PdfArray(kids)) else {
+    fail("expected merged structure kids")
+  }
+  @test.assert_eq(kids.length(), 2)
+  guard kids[0] is PdfIndirect(first_child) else {
+    fail("expected first structure child")
+  }
+  guard kids[1] is PdfIndirect(second_child) else {
+    fail("expected second structure child")
+  }
+  @test.assert_eq(
+    merged.lookup_object_or_null(first_child).lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(second_child).lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(first_child).lookup_immediate(key_pg),
+    Some(PdfIndirect(page_refs[0])),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(second_child).lookup_immediate(key_pg),
+    Some(PdfIndirect(page_refs[1])),
+  )
+}
+
+///|
 test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
   let key_info = merge_name_for_test("/Info")
   let doc = @pdflite.pdf_document_empty()

@@ -407,7 +407,10 @@ MoonBit consequences for this project:
     post-page-tree renumbering pass more closely. Structure-tree retention is
     started for the single-root case: extraction trims removed page nodes, the
     merged catalog keeps that `/StructTreeRoot`, and global page-reference
-    rewriting retargets retained `/Pg` links.
+    rewriting retargets retained `/Pg` links. Multi-root structure-tree merging
+    is now started by creating a merged `/StructTreeRoot`, adopting each
+    retained root's `/K` children, and rewriting immediate child `/P` links to
+    the new root; parent-tree renumbering remains deferred.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

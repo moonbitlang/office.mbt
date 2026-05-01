@@ -84,8 +84,18 @@ fn pdf_merge_info_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_k_key() -> PdfName {
+  pdf_merge_name("/K")
+}
+
+///|
 fn pdf_merge_names_key() -> PdfName {
   pdf_merge_name("/Names")
+}
+
+///|
+fn pdf_merge_parent_key() -> PdfName {
+  pdf_merge_name("/P")
 }
 
 ///|
@@ -183,6 +193,74 @@ fn pdf_merge_structure_tree_roots(
     }
   }
   roots
+}
+
+///|
+fn PdfDocument::pdf_merge_structure_tree_root_k_items(
+  self : PdfDocument,
+  root : PdfObject,
+) -> Array[PdfObject] {
+  match self.direct(root).lookup_immediate(pdf_merge_k_key()) {
+    Some(PdfArray(items)) => [ for item in items => item ]
+    Some(item) => [item]
+    None => []
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_structure_parented_item(
+  self : PdfDocument,
+  item : PdfObject,
+  parent_number : Int,
+) -> PdfObject raise PdfError {
+  match item {
+    PdfIndirect(number) => {
+      let object = self.lookup_object_or_null(number)
+      match object {
+        PdfDictionary(_) | PdfStreamObject(_) =>
+          self.add_object_given_number(
+            number,
+            object.add_dict_entry(
+              pdf_merge_parent_key(),
+              PdfIndirect(parent_number),
+            ),
+          )
+        _ => ()
+      }
+      item
+    }
+    PdfDictionary(_) =>
+      item.add_dict_entry(pdf_merge_parent_key(), PdfIndirect(parent_number))
+    _ => item
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_structure_tree_root(
+  self : PdfDocument,
+  structure_tree_roots : ArrayView[PdfObject],
+) -> PdfObject? raise PdfError {
+  if structure_tree_roots.length() == 0 {
+    None
+  } else if structure_tree_roots.length() == 1 {
+    Some(structure_tree_roots[0])
+  } else {
+    let root_number = self.add_object(PdfNull)
+    let kids : Array[PdfObject] = []
+    for root in structure_tree_roots {
+      for item in self.pdf_merge_structure_tree_root_k_items(root) {
+        kids.push(self.pdf_merge_structure_parented_item(item, root_number))
+      }
+    }
+    let entries : Array[(PdfName, PdfObject)] = [
+      (pdf_merge_type_key(), PdfNameObject(pdf_merge_struct_tree_root_key())),
+    ]
+    if kids.length() > 0 {
+      entries.push((pdf_merge_k_key(), pdf_structure_k_object(kids)))
+    }
+    self.add_object_given_number(root_number, PdfDictionary(entries))
+    Some(PdfIndirect(root_number))
+  }
 }
 
 ///|
@@ -555,13 +633,14 @@ pub fn pdf_merge_documents(
   } else {
     merged
   }
-  let merged = if structure_tree_roots.length() == 1 {
-    merged.pdf_merge_add_catalog_entry(
-      pdf_merge_struct_tree_root_key(),
-      structure_tree_roots[0],
-    )
-  } else {
-    merged
+  let merged = match
+    merged.pdf_merge_structure_tree_root(structure_tree_roots) {
+    Some(structure_tree_root) =>
+      merged.pdf_merge_add_catalog_entry(
+        pdf_merge_struct_tree_root_key(),
+        structure_tree_root,
+      )
+    None => merged
   }
   let new_page_numbers = merged.page_reference_numbers()
   let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
