@@ -783,11 +783,25 @@ fn pdf_reader_prev_name() -> PdfName {
 }
 
 ///|
+fn pdf_reader_xrefstm_name() -> PdfName {
+  pdf_reader_name("/XRefStm")
+}
+
+///|
 fn pdf_trailer_prev_position(trailer : PdfObject) -> Int? raise PdfError {
   match trailer.lookup_immediate(pdf_reader_prev_name()) {
     Some(PdfInteger(position)) if position >= 0 => Some(position)
     Some(_) => raise TrailerExpected
     None => None
+  }
+}
+
+///|
+fn pdf_trailer_xref_stream_position(trailer : PdfObject) -> Int? raise PdfError {
+  match trailer.lookup_immediate(pdf_reader_xrefstm_name()) {
+    Some(PdfInteger(position)) if position >= 0 => Some(position)
+    Some(PdfInteger(_)) => raise XRefExpected
+    _ => None
   }
 }
 
@@ -830,6 +844,15 @@ pub fn pdf_read_classic_document_from_bytes(
     let current_trailer = section.trailer
     if depth == 0 {
       trailer = current_trailer
+    }
+    match pdf_trailer_xref_stream_position(current_trailer) {
+      Some(xref_stream_position) => {
+        cursor.seek_pdf_absolute(xref_stream_position)
+        let stream_section = cursor.read_pdf_xref_stream_section()
+        pdf_classic_xrefs_add_newer_first(xrefs, stream_section.entries)
+        xref_stream_objects.push(stream_section.stream_object_number.unwrap())
+      }
+      None => ()
     }
     match pdf_trailer_prev_position(current_trailer) {
       Some(previous) => current_xref = previous

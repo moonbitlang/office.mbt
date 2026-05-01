@@ -362,6 +362,38 @@ fn reader_xref_stream_pdf_with_ascii_hex_filter() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_hybrid_xref_stream_pdf() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let value_offset = reader_push_indirect_object(output, 2, 0, "7")
+  let xref_stream_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_stream_offset, 0)
+  reader_push_ascii(output, "3 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 4 /W [1 4 2] /Index [0 1 2 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let classic_xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 4 /XRefStm ")
+  reader_push_ascii(output, xref_stream_offset.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n")
+  reader_push_ascii(output, classic_xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_object_stream_number(
   stored_object_number : Int,
 ) -> @pdflite.PdfBytes {
@@ -748,6 +780,22 @@ test "pdf_read_document_from_bytes decodes filtered xref streams" {
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
     None,
   )
+}
+
+///|
+test "pdf_read_document_from_bytes follows classic trailer XRefStm" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_hybrid_xref_stream_pdf(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(7))
+  guard parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm")))
+    is Some(PdfInteger(xref_stream_position)) else {
+    fail("expected XRefStm")
+  }
+  @test.assert_eq(xref_stream_position > 0, true)
 }
 
 ///|

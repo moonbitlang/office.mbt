@@ -271,6 +271,13 @@ test "writer rounds plain significant real helper edge forms" {
 test "private xref stream helpers cover malformed and deferred entries" {
   let key_w = pdf_reader_name("/W")
   let key_index = pdf_reader_name("/Index")
+  let negative_xrefstm : Result[Int?, Error] = try? pdf_trailer_xref_stream_position(
+    PdfDictionary([(pdf_reader_xrefstm_name(), PdfInteger(-1))]),
+  )
+  guard negative_xrefstm is Err(PdfError::XRefExpected) else {
+    fail("expected XRefExpected")
+  }
+
   let malformed_array_value : Result[Array[Int]?, Error] = try? pdf_xref_stream_int_array(
     PdfDictionary([(key_w, PdfArray([PdfNameObject(pdf_reader_name("/Name"))]))]),
     key_w,

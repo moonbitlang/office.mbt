@@ -201,10 +201,12 @@ MoonBit consequences for this project:
    `/ObjStm` object has been loaded. Object stream extraction is started for
    direct/filter-decodable stream data with direct `/N` and `/First`
    dictionaries, including malformed header, offset, index, and object-number
-   mismatch checks. Malformed-file reconstruction remains deferred.
-   `pdf_read_document_from_bytes` is now the public byte-backed reader entry
-   point and handles classic tables plus the started xref-stream/object-stream
-   subset. Reader
+   mismatch checks. Hybrid-reference files with a classic trailer `/XRefStm`
+   entry are now started by merging the pointed-to xref stream into the same
+   revision while preserving the classic trailer as the document trailer.
+   Malformed-file reconstruction remains deferred. `pdf_read_document_from_bytes`
+   is now the public byte-backed reader entry point and handles classic tables
+   plus the started xref-stream/object-stream subset. Reader
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.
