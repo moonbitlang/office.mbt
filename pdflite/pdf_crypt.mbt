@@ -566,38 +566,89 @@ pub fn PdfDocument::encrypt_40bit(
   denied_permissions : ArrayView[PdfPermission],
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
+  self.encrypt_arc4_standard(
+    user_password,
+    owner_password,
+    denied_permissions,
+    1,
+    2,
+    40,
+    false,
+    file_id~,
+  )
+}
+
+///|
+pub fn PdfDocument::encrypt_128bit(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  self.encrypt_arc4_standard(
+    user_password,
+    owner_password,
+    denied_permissions,
+    2,
+    3,
+    128,
+    true,
+    file_id~,
+  )
+}
+
+///|
+fn PdfDocument::encrypt_arc4_standard(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  version : Int,
+  revision : Int,
+  key_length_bits : Int,
+  write_length : Bool,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
   let (document, id) = self.with_file_id(file_id~)
   let permissions = pdf_p_of_permissions(denied_permissions)
   let owner_entry = pdf_make_owner_password_entry(
-    2, owner_password, user_password, 40,
+    revision, owner_password, user_password, key_length_bits,
   )
   let user_entry = pdf_make_user_password_entry(
     false,
     user_password,
-    2,
+    revision,
     owner_entry[:],
     permissions,
     id[:],
-    40,
+    key_length_bits,
   )
   let file_key = pdf_encryption_file_key(
     false,
     user_password,
-    2,
+    revision,
     owner_entry[:],
     permissions,
     id[:],
-    40,
+    key_length_bits,
   )
-  let encrypted = document.arc4_crypt_parsed_objects(file_key[:], 40)
-  let encrypt_dictionary : PdfObject = PdfDictionary([
+  let encrypted = document.arc4_crypt_parsed_objects(
+    file_key[:],
+    key_length_bits,
+  )
+  let entries : Array[(PdfName, PdfObject)] = [
     (pdf_crypt_name("/Filter"), PdfNameObject(pdf_crypt_name("/Standard"))),
-    (pdf_crypt_name("/V"), PdfInteger(1)),
-    (pdf_crypt_name("/R"), PdfInteger(2)),
+    (pdf_crypt_name("/V"), PdfInteger(version)),
+    (pdf_crypt_name("/R"), PdfInteger(revision)),
     (pdf_crypt_name("/O"), PdfString(owner_entry)),
     (pdf_crypt_name("/U"), PdfString(user_entry)),
     (pdf_crypt_name("/P"), PdfInteger(permissions)),
-  ])
+  ]
+  if write_length {
+    entries.push((pdf_crypt_name("/Length"), PdfInteger(key_length_bits)))
+  }
+  let encrypt_dictionary : PdfObject = PdfDictionary(entries)
   let encrypt_number = encrypted.add_object(encrypt_dictionary)
   encrypted.set_trailer_dict(
     encrypted

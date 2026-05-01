@@ -855,6 +855,7 @@ pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
+pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encryption_values(Self) -> PdfEncryptionValues raise PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError
