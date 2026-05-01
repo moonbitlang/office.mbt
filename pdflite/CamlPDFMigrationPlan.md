@@ -517,10 +517,10 @@ MoonBit consequences for this project:
     padding handling. ARC4 object data encryption/decryption using derived
     object keys is started for the legacy string/stream path. AESV2 object data
     encryption/decryption is also started for IV-prefixed strings and stream
-    payloads using derived AES object keys, with encryption requiring a
-    caller-supplied IV until a project-level random-byte source is selected.
-    AESV3 revision 5 parsed object
-    data decryption is started with the unwrapped 32-byte file key. Recursive
+    payloads using derived AES object keys. AESV3 object data
+    encryption/decryption is started with the unwrapped 32-byte file key. AES
+    encryption helpers require a caller-supplied IV until a project-level
+    random-byte source is selected. Recursive
     ARC4, AESV2, and AESV3 revision 5 object walks are started for PDF strings,
     arrays, dictionaries, and stream dictionaries/data, with stream data
     materialized at the crypt boundary and `/Length` refreshed. Stream crypt

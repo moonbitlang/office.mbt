@@ -36,7 +36,7 @@ fn crypt_aesv3_encrypt_data_for_test(
   data : BytesView,
   iv : BytesView,
 ) -> @pdflite.PdfBytes {
-  try! @pdflite.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data)
+  try! @pdflite.pdf_aesv3_encrypt_object_data(file_key, data, iv)
 }
 
 ///|
@@ -3079,6 +3079,30 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
       crypt_stream,
     ),
     crypt_stream,
+  )
+}
+
+///|
+test "pdf_aesv3_encrypt_object_data uses file key and IV prefix" {
+  let file_key = crypt_aesv3_r5_file_key_for_test()
+  let iv = crypt_model_bytes_for_test([
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c,
+    0x3d, 0x3e, 0x3f,
+  ])
+  let data = @ascii.encode("hello")
+  let encrypted = try! @pdflite.pdf_aesv3_encrypt_object_data(
+    file_key[:],
+    data[:],
+    iv[:],
+  )
+  @test.assert_eq(
+    encrypted,
+    try! @pdflite.pdf_aes_cbc_encrypt_with_iv(file_key[:], iv[:], data[:]),
+  )
+  @test.assert_eq(encrypted[:16], iv[:])
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv3_decrypt_object_data(file_key[:], encrypted[:]),
+    data,
   )
 }
 
