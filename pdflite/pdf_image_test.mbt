@@ -303,6 +303,59 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 2 CMYK tint"
 }
 
 ///|
+test "PdfDocument get_image_24bpp reads Separation images with Type 4 CMYK tint" {
+  let doc = @pdflite.pdf_document_empty()
+  let tint_data = @ascii.encode(
+    "{ dup 0.5 lt { 0 } { 1 } ifelse exch pop 0 exch 0 0 }",
+  )
+  let tint_function = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Length"), PdfInteger(tint_data.length())),
+      (image_name_for_test("/FunctionType"), PdfInteger(4)),
+      (image_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      (
+        image_name_for_test("/Range"),
+        PdfArray([
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(1),
+          PdfInteger(0),
+          PdfInteger(1),
+        ]),
+      ),
+    ]),
+    StreamGot(tint_data),
+  )
+  let separation : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Separation")),
+    PdfNameObject(image_name_for_test("/Spot")),
+    PdfNameObject(image_name_for_test("/DeviceCMYK")),
+    tint_function,
+  ])
+  let image = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), separation),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([0, 255])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([255, 255, 255, 255, 255, 0]),
+    ),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
   let doc = @pdflite.pdf_document_empty()
   let mask = @pdflite.pdf_stream(

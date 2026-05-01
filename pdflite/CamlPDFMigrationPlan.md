@@ -385,7 +385,7 @@ MoonBit consequences for this project:
    is started for 8-bit samples. CamlPDF-style `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. Separation image pixels are started for 8-bit
-   samples with Type 2 tint functions and DeviceCMYK alternates. Type 4
+   samples with Type 2 and Type 4 tint functions and DeviceCMYK alternates. Type 4
    calculator integer overflow/width edge parity and JPEG decoding remain
    deferred.
 
