@@ -179,6 +179,41 @@ fn page_prefix_content_ops_for_test(
 }
 
 ///|
+fn page_renumber_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_Tf(page_name_for_test("/r1"), 12.0),
+    Op_gs(page_name_for_test("/r2")),
+    Op_CS(page_name_for_test("/DeviceRGB")),
+    Op_cs(page_name_for_test("/r3")),
+    Op_SCNName(page_name_for_test("/r4"), [0.2]),
+    Op_scnName(page_name_for_test("/r4"), [0.3]),
+    Op_sh(page_name_for_test("/r5")),
+    Op_Do(page_name_for_test("/r6")),
+    Op_DP(page_name_for_test("/Span"), PdfNameObject(page_name_for_test("/r7"))),
+    Op_BDC(
+      page_name_for_test("/Span"),
+      PdfNameObject(page_name_for_test("/r7")),
+    ),
+    Op_InlineImage(
+      PdfDictionary([
+        (page_name_for_test("/CS"), PdfNameObject(page_name_for_test("/r3"))),
+        (page_name_for_test("/W"), PdfInteger(1)),
+      ]),
+      None,
+      @ascii.encode("x"),
+    ),
+  ]
+}
+
+///|
+fn page_resource_value_for_test(
+  resources : @pdflite.PdfObject,
+  key : String,
+) -> @pdflite.PdfObject? {
+  resources.lookup_immediate(page_name_for_test(key))
+}
+
+///|
 fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -448,6 +483,88 @@ test "PdfDocument add_prefix rewrites shared content streams once" {
   @test.assert_eq(try! doc.parse_content_ops([PdfIndirect(9)]), [
     Op_Tf(page_name_for_test("/pF0"), 12.0),
   ])
+}
+
+///|
+test "PdfDocument renumber_pages gives duplicate page resources distinct names" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_prefix_resources_for_test(["/F0"]),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_Tf(page_name_for_test("/F0"), 12.0),
+      ]),
+    ],
+  }
+  let pages = try! doc.renumber_pages([page, page])
+  @test.assert_eq(pages.length(), 2)
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/Font"),
+    Some(page_prefix_resource_entry_for_test("/r1")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[1].resources, "/Font"),
+    Some(page_prefix_resource_entry_for_test("/r2")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/ColorSpace"),
+    Some(PdfDictionary([])),
+  )
+  @test.assert_eq(try! doc.parse_content_ops(pages[0].content), [
+    Op_Tf(page_name_for_test("/r1"), 12.0),
+  ])
+  @test.assert_eq(try! doc.parse_content_ops(pages[1].content), [
+    Op_Tf(page_name_for_test("/r2"), 12.0),
+  ])
+}
+
+///|
+test "PdfDocument renumber_pages rewrites resource-backed content operators" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_prefix_full_resources_for_test(),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops(
+        page_prefix_content_ops_for_test(),
+      ),
+    ],
+  }
+  let pages = try! doc.renumber_pages([page])
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/Font"),
+    Some(page_prefix_resource_entry_for_test("/r1")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/ExtGState"),
+    Some(page_prefix_resource_entry_for_test("/r2")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/ColorSpace"),
+    Some(page_prefix_resource_entry_for_test("/r3")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/Pattern"),
+    Some(page_prefix_resource_entry_for_test("/r4")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/Shading"),
+    Some(page_prefix_resource_entry_for_test("/r5")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/XObject"),
+    Some(page_prefix_resource_entry_for_test("/r6")),
+  )
+  @test.assert_eq(
+    page_resource_value_for_test(pages[0].resources, "/Properties"),
+    Some(page_prefix_resource_entry_for_test("/r7")),
+  )
+  @test.assert_eq(
+    try! doc.parse_content_ops(pages[0].content),
+    page_renumber_content_ops_for_test(),
+  )
 }
 
 ///|

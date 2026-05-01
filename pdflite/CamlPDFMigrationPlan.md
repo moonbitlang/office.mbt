@@ -287,7 +287,14 @@ MoonBit consequences for this project:
    page and page-tree resource dictionaries with CamlPDF's lower-case prefix
    sequence. `add_prefix` is also started for page/page-tree resources and
    indirect content streams, including shared stream protection and resource
-   names inside supported content operators.
+   names inside supported content operators. `renumber_pages` is now started
+   for page arrays: it assigns fresh `/rN` resource names per page and resource
+   category, rewrites supported resource-backed content operators, preserves
+   direct device color-space names, and emits a single uncompressed rewritten
+   content stream per returned page. CamlPDF's warning/log behavior for missing
+   optional marked-content properties is represented by preserving the original
+   name; broader destination/bookmark rewrites remain deferred to
+   `change_pages`.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,
