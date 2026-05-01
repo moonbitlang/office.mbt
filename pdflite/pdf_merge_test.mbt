@@ -113,6 +113,15 @@ fn merge_name_dictionary_doc_for_test(
 }
 
 ///|
+fn merge_page_reference_catalog_doc_for_test(
+  key : @pdflite.PdfName,
+) -> @pdflite.PdfDocument {
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let page_refs = try! doc.page_reference_numbers()
+  merge_add_catalog_entry_for_test(doc, key, PdfIndirect(page_refs[0]))
+}
+
+///|
 fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
   let key_info = merge_name_for_test("/Info")
   let key_title = merge_name_for_test("/Title")
@@ -435,6 +444,25 @@ test "pdf_merge_documents retains safe catalog entries" {
   )
   @test.assert_eq(root.lookup_immediate(key_page_mode), None)
   @test.assert_eq(root.lookup_immediate(key_viewer_preferences), None)
+}
+
+///|
+test "pdf_merge_documents rewrites retained page references to merged pages" {
+  let key_first_reference = merge_name_for_test("/PieceInfo")
+  let key_second_reference = merge_name_for_test("/Metadata")
+  let first = merge_page_reference_catalog_doc_for_test(key_first_reference)
+  let second = merge_page_reference_catalog_doc_for_test(key_second_reference)
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let page_refs = try! merged.page_reference_numbers()
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_first_reference),
+    Some(PdfIndirect(page_refs[0])),
+  )
+  @test.assert_eq(
+    root.lookup_immediate(key_second_reference),
+    Some(PdfIndirect(page_refs[1])),
+  )
 }
 
 ///|

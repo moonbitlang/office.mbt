@@ -531,6 +531,7 @@ pub fn pdf_merge_documents(
   }
   let new_page_numbers = merged.page_reference_numbers()
   let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
+  merged.pdf_page_renumber_references(changes)
   if retain_named_destinations {
     for document in staged {
       for entry in document.pdf_merge_oldstyle_destinations(changes) {

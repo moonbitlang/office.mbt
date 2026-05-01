@@ -401,7 +401,10 @@ MoonBit consequences for this project:
     `pdf_merge_documents` can run this pass behind an explicit option. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
-    destination-aware path so page-object targets are retargeted.
+    destination-aware path so page-object targets are retargeted. The merge
+    path now also rewrites retained object references from selected source page
+    objects to the newly built merged page objects, matching CamlPDF's
+    post-page-tree renumbering pass more closely.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the
