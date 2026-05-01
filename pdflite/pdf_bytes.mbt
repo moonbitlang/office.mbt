@@ -13,6 +13,7 @@ pub(all) suberror PdfError {
   BadRectangle
   MatrixMalformed
   InvalidHexEscape
+  InvalidASCII85Data
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected

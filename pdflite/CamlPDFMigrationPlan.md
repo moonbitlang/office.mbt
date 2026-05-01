@@ -221,10 +221,12 @@ MoonBit consequences for this project:
    Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
    decoder skips PDF whitespace, accepts uppercase and lowercase hex digits,
    pads an odd final nibble before `>`, and reports malformed data with
-   `InvalidHexEscape`. Low-level RunLength encode/decode is also started, with
-   literal chunks, repeat chunks, EOD marker handling, and tolerant missing-EOD
-   decode behavior. Stream dictionary integration and other filters remain
-   deferred.
+   `InvalidHexEscape`. Low-level ASCII85 encode/decode is also started, with
+   zero-word `z` compression, `~>` termination, whitespace-tolerant decoding,
+   partial final tuple handling, and structured malformed-data errors.
+   Low-level RunLength encode/decode is also started, with literal chunks,
+   repeat chunks, EOD marker handling, and tolerant missing-EOD decode
+   behavior. Stream dictionary integration and other filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the

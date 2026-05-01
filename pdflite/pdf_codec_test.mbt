@@ -43,6 +43,62 @@ test "pdf_ascii_hex_decode reports invalid hex data" {
 }
 
 ///|
+test "pdf_ascii85_encode renders full partial and zero chunks" {
+  @test.assert_eq(
+    @pdflite.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110, 32])),
+    codec_ascii_for_test("9jqo^~>"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110])),
+    codec_ascii_for_test("9jqo~>"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_ascii85_encode(codec_bytes_for_test([0, 0, 0, 0])),
+    codec_ascii_for_test("z~>"),
+  )
+}
+
+///|
+test "pdf_ascii85_decode expands zero and partial chunks" {
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("9jqo^~>")),
+    codec_bytes_for_test([77, 97, 110, 32]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("9jqo~>")),
+    codec_bytes_for_test([77, 97, 110]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("z~>")),
+    codec_bytes_for_test([0, 0, 0, 0]),
+  )
+}
+
+///|
+test "pdf_ascii85_decode skips whitespace" {
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii85_decode(codec_ascii_for_test("  9j\nqo^ ~>")),
+    codec_bytes_for_test([77, 97, 110, 32]),
+  )
+}
+
+///|
+test "pdf_ascii85_decode reports malformed data" {
+  let bad_char : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+    codec_ascii_for_test("9jqo{~>"),
+  )
+  guard bad_char is Err(@pdflite.PdfError::InvalidASCII85Data) else {
+    fail("expected InvalidASCII85Data")
+  }
+  let bad_zero : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+    codec_ascii_for_test("!z~>"),
+  )
+  guard bad_zero is Err(@pdflite.PdfError::InvalidASCII85Data) else {
+    fail("expected InvalidASCII85Data")
+  }
+}
+
+///|
 test "pdf_run_length_decode expands literal and repeat chunks" {
   @test.assert_eq(
     @pdflite.pdf_run_length_decode(

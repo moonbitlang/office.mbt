@@ -64,6 +64,149 @@ pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
 }
 
 ///|
+let pdf_ascii85_zero : Byte = 122
+
+///|
+let pdf_ascii85_terminator : Byte = 126
+
+///|
+let pdf_ascii85_max_word : UInt64 = 4294967295
+
+///|
+fn pdf_ascii85_encode_word(
+  output : Array[Byte],
+  word : UInt64,
+  output_length : Int,
+  compress_zero : Bool,
+) -> Unit {
+  if compress_zero && word == 0 {
+    output.push(pdf_ascii85_zero)
+  } else {
+    let digits : Array[Byte] = []
+    let mut value = word
+    for _ in 0..<5 {
+      digits.push(((value % 85).to_int() + 33).to_byte())
+      value = value / 85
+    }
+    for i in 0..<output_length {
+      output.push(digits[4 - i])
+    }
+  }
+}
+
+///|
+fn pdf_ascii85_word_from_bytes(
+  data : PdfBytes,
+  start : Int,
+  count : Int,
+) -> UInt64 {
+  let mut word : UInt64 = 0
+  for i in 0..<4 {
+    let byte = if i < count { data[start + i] } else { 0 }
+    word = word * 256 + byte.to_uint64()
+  }
+  word
+}
+
+///|
+pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
+  let output : Array[Byte] = []
+  let mut index = 0
+  while index < data.length() {
+    let remaining = data.length() - index
+    let count = if remaining < 4 { remaining } else { 4 }
+    let word = pdf_ascii85_word_from_bytes(data, index, count)
+    pdf_ascii85_encode_word(output, word, count + 1, count == 4)
+    index += count
+  }
+  output.push(pdf_ascii85_terminator)
+  output.push(62)
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_ascii85_decode_group(
+  digits : ArrayView[Int],
+  output : Array[Byte],
+  output_length : Int,
+) -> Unit raise PdfError {
+  let mut word : UInt64 = 0
+  for digit in digits {
+    word = word * 85 + digit.to_uint64()
+  }
+  if word > pdf_ascii85_max_word {
+    raise InvalidASCII85Data
+  }
+  if output_length >= 1 {
+    output.push((word / 16777216).to_byte())
+  }
+  if output_length >= 2 {
+    output.push((word / 65536 % 256).to_byte())
+  }
+  if output_length >= 3 {
+    output.push((word / 256 % 256).to_byte())
+  }
+  if output_length >= 4 {
+    output.push((word % 256).to_byte())
+  }
+}
+
+///|
+fn pdf_ascii85_finish_partial(
+  digits : Array[Int],
+  output : Array[Byte],
+) -> Unit raise PdfError {
+  if digits.length() == 1 {
+    raise InvalidASCII85Data
+  } else if digits.length() > 1 {
+    let output_length = digits.length() - 1
+    while digits.length() < 5 {
+      digits.push(84)
+    }
+    pdf_ascii85_decode_group(digits[:], output, output_length)
+  }
+}
+
+///|
+pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  let mut digits : Array[Int] = []
+  let mut done = false
+  for byte in data {
+    if !done {
+      let value = byte.to_int()
+      if pdf_is_whitespace_byte(value) {
+        ()
+      } else if byte == pdf_ascii85_terminator {
+        pdf_ascii85_finish_partial(digits, output)
+        done = true
+      } else if byte == pdf_ascii85_zero {
+        if digits.length() == 0 {
+          output.push(0)
+          output.push(0)
+          output.push(0)
+          output.push(0)
+        } else {
+          raise InvalidASCII85Data
+        }
+      } else if value >= 33 && value <= 117 {
+        digits.push(value - 33)
+        if digits.length() == 5 {
+          pdf_ascii85_decode_group(digits[:], output, 4)
+          digits = []
+        }
+      } else {
+        raise InvalidASCII85Data
+      }
+    }
+  }
+  if !done {
+    raise InvalidASCII85Data
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_run_length_flush_literal(
   output : Array[Byte],
   literal : ArrayView[Byte],

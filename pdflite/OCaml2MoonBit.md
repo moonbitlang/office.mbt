@@ -83,6 +83,17 @@ MoonBit has useful scalar types for ports from OCaml: `Byte`, `Int16`,
 `UInt16`, `Int`, `UInt`, `Int64`, `UInt64`, `Float`, and `Double`.
 
 ```sh
+moon run -c 'fn main { let b : Byte = 255; let x : UInt64 = b.to_uint64(); println(x.to_string()); println((x / 85).to_string()); println((x % 85).to_byte().to_int()) }'
+# 255
+# 3
+# 0
+```
+
+For byte-codec arithmetic, promote `Byte` to `UInt64` before multiplying by
+large radices. Convert back only after reducing the value into byte range,
+because `UInt64::to_int()` truncates to 32 signed bits for large values.
+
+```sh
 moon run -c 'fn main { let tiny : Double = try! @strconv.from_str("1e-10"); println(tiny.to_string()) }'
 # 1e-10
 ```
