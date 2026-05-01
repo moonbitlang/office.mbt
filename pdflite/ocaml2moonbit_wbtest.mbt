@@ -60,6 +60,24 @@ test "ArrayView accepts fixed and growable arrays for read-only APIs" {
 }
 
 ///|
+fn bytes_view_has_ab_for_test(view : BytesView) -> Bool {
+  match view {
+    [65, 66, ..] => true
+    _ => false
+  }
+}
+
+///|
+test "BytesView provides read-only byte slices and pattern matching" {
+  let bytes : Bytes = [65, 66, 67]
+  let view = bytes[:2]
+  @test.assert_eq(view.length(), 2)
+  @test.assert_eq(view[0].to_int(), 65)
+  @test.assert_eq(bytes_view_has_ab_for_test(bytes[:]), true)
+  @test.assert_eq(bytes_view_has_ab_for_test(view), true)
+}
+
+///|
 test "Imported packages are used through package aliases" {
   let objects : @hashmap.HashMap[Int, String] = @hashmap.HashMap::new()
   objects[7] = "seven"
