@@ -52,6 +52,37 @@ pub fn stream_to_get(input : ByteCursor, position : Int, length : Int) -> ToGet 
 }
 
 ///|
+fn pdf_stream_data_view(data : PdfStreamData) -> BytesView raise PdfError {
+  match data {
+    StreamGot(bytes) => bytes[:]
+    StreamToGet(to_get) => {
+      let input = to_get.input()
+      let start = to_get.position() + input.offset
+      let length = to_get.length()
+      if start < 0 {
+        raise InvalidCursorPosition(to_get.position())
+      }
+      if length < 0 {
+        raise InvalidReadLength(length)
+      }
+      let end = start + length
+      if end > input.data.length() {
+        raise EndOfInput
+      }
+      input.data[start:end]
+    }
+  }
+}
+
+///|
+fn pdf_stream_data_bytes(data : PdfStreamData) -> PdfBytes raise PdfError {
+  match data {
+    StreamGot(bytes) => bytes
+    StreamToGet(_) => pdf_stream_data_view(data).to_owned()
+  }
+}
+
+///|
 pub fn ToGet::input(self : ToGet) -> ByteCursor {
   self.input
 }

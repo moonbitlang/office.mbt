@@ -907,34 +907,31 @@ pub fn pdf_decode_stream_onestage(
   match object {
     PdfStreamObject(stream) => {
       pdf_stream_dictionary_length(stream.dictionary)
-      match stream.data {
-        StreamGot(data) =>
-          match pdf_stream_first_filter(stream.dictionary) {
-            None => {
-              let dictionary = pdf_stream_replace_length(
-                stream.dictionary,
-                data.length(),
-              )
-              pdf_stream(dictionary, StreamGot(data))
-            }
-            Some(filter) => {
-              let decoded = pdf_decode_stream_filter_bytes(
-                filter,
-                stream.dictionary,
-                data,
-              )
-              let unpredicted = pdf_apply_first_predictor(
-                stream.dictionary,
-                decoded,
-              )
-              let dictionary = pdf_stream_replace_length(
-                pdf_remove_first_decoder(stream.dictionary),
-                unpredicted.length(),
-              )
-              pdf_stream(dictionary, StreamGot(unpredicted))
-            }
-          }
-        _ => raise StreamDataExpected
+      let data = pdf_stream_data_bytes(stream.data)
+      match pdf_stream_first_filter(stream.dictionary) {
+        None => {
+          let dictionary = pdf_stream_replace_length(
+            stream.dictionary,
+            data.length(),
+          )
+          pdf_stream(dictionary, StreamGot(data))
+        }
+        Some(filter) => {
+          let decoded = pdf_decode_stream_filter_bytes(
+            filter,
+            stream.dictionary,
+            data,
+          )
+          let unpredicted = pdf_apply_first_predictor(
+            stream.dictionary,
+            decoded,
+          )
+          let dictionary = pdf_stream_replace_length(
+            pdf_remove_first_decoder(stream.dictionary),
+            unpredicted.length(),
+          )
+          pdf_stream(dictionary, StreamGot(unpredicted))
+        }
       }
     }
     _ => raise ParseStreamExpected
@@ -992,18 +989,15 @@ pub fn pdf_encode_stream_with_filter(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
   match object {
-    PdfStreamObject(stream) =>
-      match stream.data {
-        StreamGot(data) => {
-          let encoded = pdf_encode_filter_bytes(filter, data)
-          let dictionary = pdf_stream_replace_length(
-            pdf_add_filter_to_dictionary(stream.dictionary, filter),
-            encoded.length(),
-          )
-          pdf_stream(dictionary, StreamGot(encoded))
-        }
-        _ => raise StreamDataExpected
-      }
+    PdfStreamObject(stream) => {
+      let data = pdf_stream_data_bytes(stream.data)
+      let encoded = pdf_encode_filter_bytes(filter, data)
+      let dictionary = pdf_stream_replace_length(
+        pdf_add_filter_to_dictionary(stream.dictionary, filter),
+        encoded.length(),
+      )
+      pdf_stream(dictionary, StreamGot(encoded))
+    }
     _ => raise ParseStreamExpected
   }
 }
@@ -1054,29 +1048,26 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
   match object {
-    PdfStreamObject(stream) =>
-      match stream.data {
-        StreamGot(data) => {
-          let predicted = pdf_encode_predictor(
-            predictor, colors, bits_per_component, columns, data,
-          )
-          let encoded = pdf_encode_filter_bytes(filter, predicted)
-          let dictionary = pdf_stream_replace_length(
-            pdf_add_filter_to_dictionary(
-              pdf_add_decodeparms_to_dictionary(
-                stream.dictionary,
-                pdf_predictor_decodeparms(
-                  predictor, colors, bits_per_component, columns,
-                ),
-              ),
-              filter,
+    PdfStreamObject(stream) => {
+      let data = pdf_stream_data_bytes(stream.data)
+      let predicted = pdf_encode_predictor(
+        predictor, colors, bits_per_component, columns, data,
+      )
+      let encoded = pdf_encode_filter_bytes(filter, predicted)
+      let dictionary = pdf_stream_replace_length(
+        pdf_add_filter_to_dictionary(
+          pdf_add_decodeparms_to_dictionary(
+            stream.dictionary,
+            pdf_predictor_decodeparms(
+              predictor, colors, bits_per_component, columns,
             ),
-            encoded.length(),
-          )
-          pdf_stream(dictionary, StreamGot(encoded))
-        }
-        _ => raise StreamDataExpected
-      }
+          ),
+          filter,
+        ),
+        encoded.length(),
+      )
+      pdf_stream(dictionary, StreamGot(encoded))
+    }
     _ => raise ParseStreamExpected
   }
 }

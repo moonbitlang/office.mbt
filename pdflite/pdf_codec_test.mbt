@@ -1042,7 +1042,7 @@ test "pdf_encode_stream_with_filter_and_predictor prepends decodeparms" {
 }
 
 ///|
-test "pdf_decode_stream_onestage reports malformed stream filters" {
+test "pdf_decode_stream_onestage reports malformed stream filters and materializes deferred data" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
   let stream = @pdflite.pdf_stream(
@@ -1086,12 +1086,15 @@ test "pdf_decode_stream_onestage reports malformed stream filters" {
     @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
     StreamToGet(deferred),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
-    stream,
-  )
-  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
+  let decoded_deferred = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded_deferred is PdfStreamObject(decoded_stream) else {
+    fail("expected PdfStreamObject")
   }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(length),
+    Some(PdfInteger(2)),
+  )
   let decodeparms = codec_name_for_test("/DecodeParms")
   let predictor = codec_name_for_test("/Predictor")
   let stream = @pdflite.pdf_stream(
@@ -1130,7 +1133,7 @@ test "pdf_decode_stream_onestage reports malformed stream filters" {
 }
 
 ///|
-test "pdf stream encoding reports malformed objects" {
+test "pdf stream encoding reports malformed objects and materializes deferred data" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
   let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
@@ -1149,13 +1152,15 @@ test "pdf stream encoding reports malformed objects" {
     @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
     StreamToGet(deferred),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
+  let encoded_deferred = try! @pdflite.pdf_encode_stream_with_filter(
     codec_name_for_test("/ASCIIHexDecode"),
     stream,
   )
-  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
+  let decoded_deferred = try! @pdflite.pdf_decode_stream(encoded_deferred)
+  guard decoded_deferred is PdfStreamObject(decoded_stream) else {
+    fail("expected PdfStreamObject")
   }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
   let stream = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_ascii_for_test("Hi")),
@@ -1201,7 +1206,7 @@ test "pdf stream encoding reports malformed objects" {
     @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
     StreamToGet(deferred),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
+  let encoded_deferred = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
     codec_name_for_test("/ASCIIHexDecode"),
     11,
     1,
@@ -1209,9 +1214,11 @@ test "pdf stream encoding reports malformed objects" {
     2,
     stream,
   )
-  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
+  let decoded_deferred = try! @pdflite.pdf_decode_stream(encoded_deferred)
+  guard decoded_deferred is PdfStreamObject(decoded_stream) else {
+    fail("expected PdfStreamObject")
   }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
 }
 
 ///|

@@ -142,7 +142,7 @@ test "private writer stream dictionary uses materialized deferred length" {
   @test.assert_eq(
     pdf_write_stream_dictionary(
       stream_value,
-      pdf_writer_stream_data_view(stream_value.data).length(),
+      pdf_stream_data_view(stream_value.data).length(),
     ),
     PdfDictionary([(pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(1))]),
   )

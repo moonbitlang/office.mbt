@@ -254,8 +254,10 @@ MoonBit consequences for this project:
    (`11`) and PNG Up (`12`) rows, including explicit negative-delta
    normalization to PDF byte range. Owned stream encode can now add a filter
    plus direct `/DecodeParms` predictor dictionary and round-trip through owned
-   stream decode. Flate compression heuristics, indirect filter dictionaries,
-   deferred stream materialization, and other filters remain deferred.
+   stream decode. Stream filter encode/decode now materializes `StreamToGet`
+   data only at the owned-byte boundary required by codec transforms. Flate
+   compression heuristics, indirect filter dictionaries, and other filters
+   remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
@@ -636,8 +638,8 @@ MoonBit consequences for this project:
     branches around xref blank-line parsing and post-loop trailer presence.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
-    deferred-stream guards and by replacing impossible map-key `None` arms with
-    explicit key-invariant unwraps. Parser and page-label coverage now remove
+    stream materialization guards and by replacing impossible map-key `None`
+    arms with explicit key-invariant unwraps. Parser and page-label coverage now remove
     those files from the uncovered-line report by replacing impossible parser
     progress checks and non-empty page-label no-break arms with simpler
     invariant-preserving control flow. Bookmark and codec coverage now remove

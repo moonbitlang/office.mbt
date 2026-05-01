@@ -45,31 +45,6 @@ fn pdf_writer_length_name() -> PdfName {
 }
 
 ///|
-fn pdf_writer_stream_data_view(
-  data : PdfStreamData,
-) -> BytesView raise PdfError {
-  match data {
-    StreamGot(bytes) => bytes[:]
-    StreamToGet(to_get) => {
-      let input = to_get.input()
-      let start = to_get.position() + input.offset
-      let length = to_get.length()
-      if start < 0 {
-        raise InvalidCursorPosition(to_get.position())
-      }
-      if length < 0 {
-        raise InvalidReadLength(length)
-      }
-      let end = start + length
-      if end > input.data.length() {
-        raise EndOfInput
-      }
-      input.data[start:end]
-    }
-  }
-}
-
-///|
 fn pdf_write_stream_dictionary(
   stream : PdfStream,
   length : Int,
@@ -296,7 +271,7 @@ fn pdf_write_object_to(
       pdf_writer_push_ascii(output, " >>")
     }
     PdfStreamObject(stream) => {
-      let bytes = pdf_writer_stream_data_view(stream.data)
+      let bytes = pdf_stream_data_view(stream.data)
       pdf_write_object_to(
         output,
         pdf_write_stream_dictionary(stream, bytes.length()),
