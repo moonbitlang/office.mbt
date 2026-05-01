@@ -50,6 +50,24 @@ test "PdfDocument write_page_labels builds a readable page label tree" {
       start_page: 12,
       start_value: 3,
     },
+    {
+      label_style: PageLabelUppercaseRoman,
+      label_prefix: None,
+      start_page: 20,
+      start_value: 4,
+    },
+    {
+      label_style: PageLabelUppercaseLetters,
+      label_prefix: None,
+      start_page: 21,
+      start_value: 2,
+    },
+    {
+      label_style: PageLabelLowercaseLetters,
+      label_prefix: None,
+      start_page: 22,
+      start_value: 3,
+    },
   ]
   let updated = try! doc.write_page_labels(labels)
   @test.assert_eq(try! doc.read_page_labels(), [])
@@ -267,6 +285,9 @@ test "pdf_page_label_add_label avoids redundant continuation labels" {
   @test.assert_eq(@pdflite.pdf_page_label_add_label(5, [basic], inserted, 5), [
     basic, inserted,
   ])
+  @test.assert_eq(@pdflite.pdf_page_label_add_label(8, [], inserted, 5), [
+    inserted,
+  ])
 }
 
 ///|
@@ -349,6 +370,18 @@ test "pdf_page_label_text_of_page_number renders label bytes" {
       start_page: 12,
       start_value: 1,
     },
+    {
+      label_style: PageLabelUppercaseRoman,
+      label_prefix: None,
+      start_page: 13,
+      start_value: 1000,
+    },
+    {
+      label_style: PageLabelLowercaseLetters,
+      label_prefix: None,
+      start_page: 14,
+      start_value: 27,
+    },
   ]
   @test.assert_eq(
     @pdflite.pdf_page_label_text_of_page_number(4, labels),
@@ -365,6 +398,14 @@ test "pdf_page_label_text_of_page_number renders label bytes" {
   @test.assert_eq(
     @pdflite.pdf_page_label_text_of_page_number(12, labels),
     Some(page_label_bytes_for_test("cover")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(13, labels),
+    Some(page_label_bytes_for_test("M")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(14, labels),
+    Some(page_label_bytes_for_test("aa")),
   )
   @test.assert_eq(@pdflite.pdf_page_label_text_of_page_number(1, []), None)
 }

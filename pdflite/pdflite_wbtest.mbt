@@ -149,3 +149,16 @@ test "parser prefix helper reports malformed indirect prefixes" {
     fail("expected ParseIndirectObjectExpected")
   }
 }
+
+///|
+test "page-label private helpers preserve non-uppercase bytes and root guards" {
+  @test.assert_eq(
+    pdf_page_label_lowercase(@ascii.encode("A1Z!")),
+    @ascii.encode("a1z!"),
+  )
+  let doc = pdf_document_empty()
+  let result : Result[Bool, Error] = try? doc.pdf_page_label_has_labels()
+  guard result is Err(PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}

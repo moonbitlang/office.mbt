@@ -467,7 +467,11 @@ MoonBit consequences for this project:
     truncated array/dictionary recovery, malformed indirect-object prefixes,
     byte escaping for uppercase hex, control-character string escapes,
     deferred stream/object write errors, and private scientific-real formatting
-    branches used by exponent-free PDF number serialization.
+    branches used by exponent-free PDF number serialization. Page-label
+    coverage now includes empty-source continuation insertion, high-value Roman
+    labels, lowercase letter labels, writing all public label style variants,
+    private lowercase byte preservation, and the private root guard used by
+    page-label removal/write paths.
 
 ## Update Discipline
 
