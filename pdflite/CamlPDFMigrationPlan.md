@@ -378,7 +378,10 @@ MoonBit consequences for this project:
     started with a typed helper for combining already-renumbered optional
     content metadata across documents. Merge support code is started with
     returned-copy object renumbering by positive offset, including root,
-    trailer, and nested indirect-reference rewriting.
+    trailer, and nested indirect-reference rewriting. A first minimal document
+    merge helper now extracts requested page ranges, offsets object numbers,
+    concatenates pages, preserves the maximum input version, and removes
+    unreferenced imported roots/catalogs.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the
