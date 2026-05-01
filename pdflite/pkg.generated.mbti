@@ -16,6 +16,34 @@ pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
 
 pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
 
+pub let paper_a0 : PaperSize
+
+pub let paper_a1 : PaperSize
+
+pub let paper_a10 : PaperSize
+
+pub let paper_a2 : PaperSize
+
+pub let paper_a3 : PaperSize
+
+pub let paper_a4 : PaperSize
+
+pub let paper_a5 : PaperSize
+
+pub let paper_a6 : PaperSize
+
+pub let paper_a7 : PaperSize
+
+pub let paper_a8 : PaperSize
+
+pub let paper_a9 : PaperSize
+
+pub fn paper_size_make(PdfUnit, Double, Double) -> PaperSize
+
+pub let paper_uslegal : PaperSize
+
+pub let paper_usletter : PaperSize
+
 pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
 
 pub fn pdf_bytes_get(Bytes, Int) -> Byte?
@@ -35,6 +63,14 @@ pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub let pdf_no_more : Int
+
+pub fn unit_centimetres(Double, PdfUnit) -> Double
+
+pub fn unit_inches(Double, PdfUnit) -> Double
+
+pub fn unit_millimetres(Double, PdfUnit) -> Double
+
+pub fn unit_points(Double, PdfUnit) -> Double
 
 // Errors
 pub(all) suberror PdfError {
@@ -107,9 +143,26 @@ pub fn ByteCursor::seek(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::source(Self) -> String
 
+pub(all) struct PaperSize {
+  unit : PdfUnit
+  width : Double
+  height : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PaperSize::height(Self) -> Double
+pub fn PaperSize::landscape(Self) -> Self
+pub fn PaperSize::unit(Self) -> PdfUnit
+pub fn PaperSize::width(Self) -> Double
+
 pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
 pub fn PdfName::bytes(Self) -> Bytes
+
+pub(all) enum PdfUnit {
+  PdfPoint
+  Inch
+  Centimetre
+  Millimetre
+} derive(Eq, ToJson, @debug.Debug)
 
 // Type aliases
 pub type PdfBytes = Bytes
