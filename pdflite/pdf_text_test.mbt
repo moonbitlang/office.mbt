@@ -2586,6 +2586,35 @@ test "PdfTextExtractor extracts implicit ZapfDingbats filled circled digits" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit ZapfDingbats circled sans-serif digits" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
+  )
+  let extractor = dingbat_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2780, 0x2781, 0x2782, 0x2783, 0x2784, 0x2785, 0x2786, 0x2787, 0x2788, 0x2789,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/a140"),
+    text_name_for_test("/a141"),
+    text_name_for_test("/a142"),
+    text_name_for_test("/a143"),
+    text_name_for_test("/a144"),
+    text_name_for_test("/a145"),
+    text_name_for_test("/a146"),
+    text_name_for_test("/a147"),
+    text_name_for_test("/a148"),
+    text_name_for_test("/a149"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2780), Some(0xC0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2785), Some(0xC5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2789), Some(0xC9))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
