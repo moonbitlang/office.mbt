@@ -310,6 +310,13 @@ MoonBit consequences for this project:
    name; broader destination/bookmark rewrites remain deferred to
    `change_pages`.
 
+   Destination support is started with typed `PdfTargetPage` and
+   `PdfDestination` values, direct destination-array parsing/writing, `/D`
+   dictionary following, shallow named/string destination preservation, old
+   catalog `/Dests` lookup for named destinations, and `/Root/Names/Dests`
+   name-tree lookup for string destinations. Matrix transformation, action
+   rewriting, and bookmark integration remain deferred.
+
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,
    `pdfspace`, `pdfimage`, and `pdfjpeg` in that order. Treat encoding

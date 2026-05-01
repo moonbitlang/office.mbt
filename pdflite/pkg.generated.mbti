@@ -133,6 +133,8 @@ pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
 
 pub fn pdf_object_map_empty() -> PdfObjectMap
 
+pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
+
 pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
@@ -432,6 +434,21 @@ pub(all) enum PdfContentOp {
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) enum PdfDestination {
+  DestAction(PdfObject)
+  DestNull
+  DestNamed(PdfName)
+  DestString(Bytes)
+  DestXYZ(PdfTargetPage, Double?, Double?, Double?)
+  DestFit(PdfTargetPage)
+  DestFitH(PdfTargetPage, Double?)
+  DestFitV(PdfTargetPage, Double?)
+  DestFitR(PdfTargetPage, Double, Double, Double, Double)
+  DestFitB(PdfTargetPage)
+  DestFitBH(PdfTargetPage, Double?)
+  DestFitBV(PdfTargetPage, Double?)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub struct PdfDocument {
   mut major : Int
   mut minor : Int
@@ -472,6 +489,7 @@ pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfEr
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int]) -> Self raise PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
+pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
@@ -614,6 +632,11 @@ pub(all) struct PdfStream {
 pub(all) enum PdfStreamData {
   StreamGot(Bytes)
   StreamToGet(ToGet)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfTargetPage {
+  TargetPageObject(Int)
+  TargetOtherDocPageNumber(Int)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfUnit {
