@@ -386,7 +386,9 @@ MoonBit consequences for this project:
     Merge bookmark retention now reuses per-document page extraction to filter
     bookmarks, then retargets retained page-object destinations to the merged
     page tree. Merge optional-content retention now combines already-renumbered
-    OCG metadata before unreferenced imported OCG objects are pruned.
+    OCG metadata before unreferenced imported OCG objects are pruned. Basic
+    AcroForm merge support now flattens retained `/Fields` arrays while
+    preserving referenced field objects through the final cleanup.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

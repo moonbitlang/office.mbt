@@ -19,6 +19,26 @@ fn pdf_merge_max_version(
 }
 
 ///|
+fn pdf_merge_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_merge_root_key() -> PdfName {
+  pdf_merge_name("/Root")
+}
+
+///|
+fn pdf_merge_acroform_key() -> PdfName {
+  pdf_merge_name("/AcroForm")
+}
+
+///|
+fn pdf_merge_fields_key() -> PdfName {
+  pdf_merge_name("/Fields")
+}
+
+///|
 fn PdfDocument::pdf_merge_copy_objects_from(
   self : PdfDocument,
   source : PdfDocument,
@@ -33,6 +53,83 @@ fn PdfDocument::pdf_merge_copy_objects_from(
       None => ()
     }
   }
+}
+
+///|
+fn PdfDocument::pdf_merge_catalog_entry(
+  self : PdfDocument,
+  key : PdfName,
+) -> PdfObject? raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  self.lookup_direct(key, root)
+}
+
+///|
+fn pdf_merge_acroforms(
+  documents : ArrayView[PdfDocument],
+) -> PdfObject? raise PdfError {
+  let forms : Array[PdfObject] = []
+  for document in documents {
+    match document.pdf_merge_catalog_entry(pdf_merge_acroform_key()) {
+      Some(PdfDictionary(_) as form) => forms.push(form)
+      _ => ()
+    }
+  }
+  if forms.length() == 0 {
+    None
+  } else {
+    let fields : Array[PdfObject] = []
+    let entries : Array[(PdfName, PdfObject)] = []
+    for form in forms {
+      match form {
+        PdfDictionary(form_entries) =>
+          for entry in form_entries {
+            let (key, value) = entry
+            if key == pdf_merge_fields_key() {
+              match value {
+                PdfArray(items) =>
+                  for item in items {
+                    fields.push(item)
+                  }
+                _ => ()
+              }
+            } else {
+              entries.push(entry)
+            }
+          }
+        _ => ()
+      }
+    }
+    Some(
+      PdfDictionary(entries).add_dict_entry(
+        pdf_merge_fields_key(),
+        PdfArray(fields),
+      ),
+    )
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_add_catalog_entry(
+  self : PdfDocument,
+  key : PdfName,
+  value : PdfObject,
+) -> PdfDocument raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  let new_root = self.add_object(root.add_dict_entry(key, value))
+  self.set_root(new_root)
+  self.set_trailer_dict(
+    self
+    .trailer_dict()
+    .add_dict_entry(pdf_merge_root_key(), PdfIndirect(new_root)),
+  )
+  self
 }
 
 ///|
@@ -99,6 +196,7 @@ pub fn pdf_merge_documents(
   retain_numbering? : Bool = false,
   retain_bookmarks? : Bool = true,
   retain_optional_content? : Bool = true,
+  retain_acroforms? : Bool = true,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
@@ -118,6 +216,11 @@ pub fn pdf_merge_documents(
   }
   let optional_content = if retain_optional_content {
     pdf_optional_content_merge(staged)
+  } else {
+    None
+  }
+  let acroform = if retain_acroforms {
+    pdf_merge_acroforms(staged)
   } else {
     None
   }
@@ -145,6 +248,14 @@ pub fn pdf_merge_documents(
   ignore(merged.add_root(page_root_number, []))
   let merged = match optional_content {
     Some(content) => merged.write_optional_content_groups(content)
+    None => merged
+  }
+  let merged = match acroform {
+    Some(form) =>
+      merged.pdf_merge_add_catalog_entry(
+        pdf_merge_acroform_key(),
+        PdfIndirect(merged.add_object(form)),
+      )
     None => merged
   }
   let new_page_numbers = merged.page_reference_numbers()

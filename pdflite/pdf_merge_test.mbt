@@ -53,6 +53,33 @@ fn merge_ocg_doc_for_test(number : Int, label : String) -> @pdflite.PdfDocument 
 }
 
 ///|
+fn merge_acroform_doc_for_test(
+  field_number : Int,
+  label : String,
+) -> @pdflite.PdfDocument {
+  let key_acroform = merge_name_for_test("/AcroForm")
+  let key_fields = merge_name_for_test("/Fields")
+  let key_t = merge_name_for_test("/T")
+  let doc = merge_one_page_doc_for_test(1, 6)
+  doc.add_object_given_number(
+    field_number,
+    PdfDictionary([(key_t, PdfString(@ascii.encode(label)))]),
+  )
+  let form : @pdflite.PdfObject = PdfDictionary([
+    (key_fields, PdfArray([PdfIndirect(field_number)])),
+  ])
+  let root = doc.lookup_object_or_null(doc.root())
+  let new_root = doc.add_object(try! root.add_dict_entry(key_acroform, form))
+  doc.set_root(new_root)
+  doc.set_trailer_dict(
+    try! doc
+    .trailer_dict()
+    .add_dict_entry(merge_name_for_test("/Root"), PdfIndirect(new_root)),
+  )
+  doc
+}
+
+///|
 test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
   let first = merge_one_page_doc_for_test(1, 4)
   let second = merge_one_page_doc_for_test(1, 7)
@@ -137,6 +164,50 @@ test "pdf_merge_documents retains optional content groups before pruning" {
     retain_optional_content=false,
   )
   @test.assert_eq(try! without_ocg.read_optional_content_groups(), None)
+}
+
+///|
+test "pdf_merge_documents merges AcroForm fields" {
+  let key_acroform = merge_name_for_test("/AcroForm")
+  let key_fields = merge_name_for_test("/Fields")
+  let key_t = merge_name_for_test("/T")
+  let first = merge_acroform_doc_for_test(30, "first")
+  let second = merge_acroform_doc_for_test(30, "second")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let root = merged.lookup_object_or_null(merged.root())
+  guard merged.lookup_direct(key_acroform, root) is Some(form) else {
+    fail("expected AcroForm")
+  }
+  guard form.lookup_immediate(key_fields) is Some(PdfArray(fields)) else {
+    fail("expected AcroForm fields")
+  }
+  @test.assert_eq(fields.length(), 2)
+  guard fields[0] is PdfIndirect(first_field) else {
+    fail("expected first field reference")
+  }
+  guard fields[1] is PdfIndirect(second_field) else {
+    fail("expected second field reference")
+  }
+  @test.assert_eq(
+    merged.lookup_object_or_null(first_field).lookup_immediate(key_t),
+    Some(PdfString(@ascii.encode("first"))),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(second_field).lookup_immediate(key_t),
+    Some(PdfString(@ascii.encode("second"))),
+  )
+  let without_acroform = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_acroforms=false,
+  )
+  @test.assert_eq(
+    without_acroform.lookup_direct(
+      key_acroform,
+      without_acroform.lookup_object_or_null(without_acroform.root()),
+    ),
+    None,
+  )
 }
 
 ///|

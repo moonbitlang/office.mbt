@@ -131,7 +131,7 @@ pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 
 pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise PdfError
 
-pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool) -> PdfDocument raise PdfError
+pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool, retain_acroforms? : Bool) -> PdfDocument raise PdfError
 
 pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError
 
