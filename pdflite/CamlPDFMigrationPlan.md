@@ -426,7 +426,8 @@ MoonBit consequences for this project:
    superior/inferior punctuation and letter codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
    `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
-   effective encoding for single-codepoint glyphs.
+   effective encoding for single-codepoint glyphs. ToUnicode CMap parsing now
+   handles inline and multiline `bfrange` array mappings.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -439,8 +440,8 @@ MoonBit consequences for this project:
    negative-circled-sans-serif-digit, high-byte arrow glyph blocks including
    the gapped final arrow tail, and the remaining bracket glyph names from
    CamlPDF's dingbat Unicode map.
-   General `pdfcmap` parsing and full Adobe Glyph List coverage remain
-   deferred. MacExpert byte coverage now matches CamlPDF's table except the
+   Broader predefined/general `pdfcmap` parsing and full Adobe Glyph List
+   coverage remain deferred. MacExpert byte coverage now matches CamlPDF's table except the
    duplicate `/hyphensuperior` alias for byte `0x5F`; glyph-name decoding still
    handles both `/hypheninferior` and `/hyphensuperior`.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3

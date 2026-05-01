@@ -1400,6 +1400,22 @@ fn pdf_text_add_to_big_endian_bytes(
 }
 
 ///|
+fn pdf_text_tounicode_bfrange_array_entries(
+  first : Int,
+  last : Int,
+  unicodes : ArrayView[PdfBytes],
+) -> Array[(Int, PdfBytes)]? {
+  guard first <= last && unicodes.length() == last - first + 1 else {
+    return None
+  }
+  let entries : Array[(Int, PdfBytes)] = []
+  for index in 0..<unicodes.length() {
+    entries.push((first + index, unicodes[index]))
+  }
+  Some(entries)
+}
+
+///|
 fn pdf_text_tounicode_bfchar_entries_of_line(
   line : BytesView,
 ) -> Array[(Int, PdfBytes)]? {
@@ -1458,17 +1474,82 @@ fn pdf_text_tounicode_bfrange_entries_of_line(
           pdf_text_bytes_to_int(stop[:]),
           pdf_text_parse_cmap_hex_array(line),
         ) {
-        (Some(first), Some(last), Some(unicodes)) if first <= last &&
-          unicodes.length() == last - first + 1 => {
-          let entries : Array[(Int, PdfBytes)] = []
-          for index in 0..<unicodes.length() {
-            entries.push((first + index, unicodes[index]))
-          }
-          Some(entries)
-        }
+        (Some(first), Some(last), Some(unicodes)) =>
+          pdf_text_tounicode_bfrange_array_entries(first, last, unicodes[:])
         _ => None
       }
     _ => None
+  }
+}
+
+///|
+priv struct PdfTextCMapBFRangeArray {
+  first : Int
+  last : Int
+  unicodes : Array[PdfBytes]
+}
+
+///|
+fn pdf_text_extend_cmap_hex_groups(
+  output : Array[PdfBytes],
+  line : BytesView,
+) -> Unit {
+  match pdf_text_parse_cmap_hex_groups(line) {
+    Some(groups) =>
+      for group in groups {
+        output.push(group)
+      }
+    None => ()
+  }
+}
+
+///|
+fn pdf_text_cmap_bfrange_array_start(
+  line : BytesView,
+) -> (PdfTextCMapBFRangeArray, Int)? {
+  match pdf_text_index_of_byte(line, 91, 0) {
+    Some(open) =>
+      match pdf_text_parse_cmap_hex_groups(line[0:open]) {
+        Some([source, stop]) =>
+          match
+            (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
+            (Some(first), Some(last)) if first <= last =>
+              Some(({ first, last, unicodes: [] }, open))
+            _ => None
+          }
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn pdf_text_append_pending_bfrange_array(
+  entries : Array[(Int, PdfBytes)],
+  pending : PdfTextCMapBFRangeArray,
+  line : BytesView,
+) -> Bool {
+  match pdf_text_index_of_byte(line, 93, 0) {
+    Some(close) => {
+      pdf_text_extend_cmap_hex_groups(pending.unicodes, line[0:close])
+      match
+        pdf_text_tounicode_bfrange_array_entries(
+          pending.first,
+          pending.last,
+          pending.unicodes[:],
+        ) {
+        Some(line_entries) =>
+          for entry in line_entries {
+            entries.push(entry)
+          }
+        None => ()
+      }
+      true
+    }
+    None => {
+      pdf_text_extend_cmap_hex_groups(pending.unicodes, line)
+      false
+    }
   }
 }
 
@@ -1484,6 +1565,7 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
   let cursor = byte_cursor_of_view(data)
   let entries : Array[(Int, PdfBytes)] = []
   let mut section = PdfTextCMapNone
+  let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None
   for raw_line in cursor.read_line_views() {
     let mut line = raw_line
     if pdf_text_line_contains_ascii(raw_line, "beginbfchar") {
@@ -1501,24 +1583,52 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
     }
     let end_bfchar = pdf_text_line_contains_ascii(line, "endbfchar")
     let end_bfrange = pdf_text_line_contains_ascii(line, "endbfrange")
-    match section {
-      PdfTextCMapBFChar =>
-        match pdf_text_tounicode_bfchar_entries_of_line(line) {
-          Some(line_entries) =>
-            for entry in line_entries {
-              entries.push(entry)
-            }
-          None => ()
+    match pending_bfrange_array {
+      Some(pending) => {
+        let closed = pdf_text_append_pending_bfrange_array(
+          entries, pending, line,
+        )
+        if closed {
+          pending_bfrange_array = None
+        } else {
+          pending_bfrange_array = Some(pending)
         }
-      PdfTextCMapBFRange =>
-        match pdf_text_tounicode_bfrange_entries_of_line(line) {
-          Some(line_entries) =>
-            for entry in line_entries {
-              entries.push(entry)
+      }
+      None =>
+        match section {
+          PdfTextCMapBFChar =>
+            match pdf_text_tounicode_bfchar_entries_of_line(line) {
+              Some(line_entries) =>
+                for entry in line_entries {
+                  entries.push(entry)
+                }
+              None => ()
             }
-          None => ()
+          PdfTextCMapBFRange =>
+            match pdf_text_tounicode_bfrange_entries_of_line(line) {
+              Some(line_entries) =>
+                for entry in line_entries {
+                  entries.push(entry)
+                }
+              None =>
+                match pdf_text_cmap_bfrange_array_start(line) {
+                  Some((pending, open)) => {
+                    let closed = pdf_text_append_pending_bfrange_array(
+                      entries,
+                      pending,
+                      line[open + 1:],
+                    )
+                    if closed {
+                      pending_bfrange_array = None
+                    } else {
+                      pending_bfrange_array = Some(pending)
+                    }
+                  }
+                  None => ()
+                }
+            }
+          PdfTextCMapNone => ()
         }
-      PdfTextCMapNone => ()
     }
     if end_bfchar && section is PdfTextCMapBFChar {
       section = PdfTextCMapNone

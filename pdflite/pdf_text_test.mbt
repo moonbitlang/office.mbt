@@ -1870,6 +1870,65 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
 }
 
 ///|
+test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
+  let doc = @pdflite.pdf_document_empty()
+  let tounicode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(
+      @ascii.encode(
+        "2 beginbfrange\n" +
+        "<30><32> [\n" +
+        "<0061>\n" +
+        "<0062>\n" +
+        "<0063>\n" +
+        "]\n" +
+        "<33><35> [<0064>\n" +
+        "<0065>\n" +
+        "<0066>] endbfrange\n",
+      ),
+    ),
+  )
+  doc.add_object_given_number(2, tounicode)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(2)),
+  ])
+  guard (try! doc.read_font(font)) is PdfFontSimple(read) else {
+    fail("expected simple font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (48, text_bytes_for_test([0x00, 0x61])),
+      (49, text_bytes_for_test([0x00, 0x62])),
+      (50, text_bytes_for_test([0x00, 0x63])),
+      (51, text_bytes_for_test([0x00, 0x64])),
+      (52, text_bytes_for_test([0x00, 0x65])),
+      (53, text_bytes_for_test([0x00, 0x66])),
+    ]),
+  )
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([48, 49, 50, 51, 52, 53])[:],
+    ),
+    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(48))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x66), Some(53))
+}
+
+///|
 test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")
