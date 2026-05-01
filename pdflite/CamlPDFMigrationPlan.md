@@ -280,7 +280,9 @@ MoonBit consequences for this project:
    state operators, color-space/color setters including named SCN/scn patterns,
    shadings, text quote operators, Type 3 glyph metrics, marked-content
    operators, compatibility-section markers, and artifact marker helpers.
-   Inline images remain deferred.
+   Inline images are started with a conservative unfiltered `BI ... ID ... EI`
+   parse/render path that preserves image data as `Bytes`; ambiguous inline
+   image terminators and filter-aware inline image compression remain deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

@@ -65,6 +65,7 @@ pub(all) enum PdfContentOp {
   Op_scnName(PdfName, Array[Double])
   Op_sh(PdfName)
   Op_Do(PdfName)
+  Op_InlineImage(PdfObject, PdfObject?, PdfBytes)
   Op_MP(PdfName)
   Op_DP(PdfName, PdfObject)
   Op_BMC(PdfName)
@@ -371,6 +372,7 @@ fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
       )
     Op_sh(name) => ([PdfNameObject(name)], pdf_content_ascii("sh"))
     Op_Do(name) => ([PdfNameObject(name)], pdf_content_ascii("Do"))
+    Op_InlineImage(_, _, _) => ([], pdf_content_ascii(""))
     Op_MP(tag) => ([PdfNameObject(tag)], pdf_content_ascii("MP"))
     Op_DP(tag, properties) =>
       ([PdfNameObject(tag), properties], pdf_content_ascii("DP"))
@@ -385,12 +387,59 @@ fn pdf_content_op_section(op : PdfContentOp) -> (Array[PdfObject], PdfBytes) {
 }
 
 ///|
+fn pdf_content_push_inline_image_entry(
+  output : Array[Byte],
+  key : PdfName,
+  value : PdfObject,
+) -> Unit raise PdfError {
+  output.push(32)
+  pdf_content_push_object(output, PdfNameObject(key))
+  output.push(32)
+  pdf_content_push_object(output, value)
+}
+
+///|
+fn pdf_content_push_inline_image(
+  output : Array[Byte],
+  dictionary : PdfObject,
+  decode_parms : PdfObject?,
+  data : PdfBytes,
+) -> Unit raise PdfError {
+  if output.length() > 0 {
+    output.push(32)
+  }
+  pdf_content_push_view(output, pdf_content_ascii("BI")[:])
+  match dictionary {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        let (key, value) = entry
+        pdf_content_push_inline_image_entry(output, key, value)
+      }
+    _ => raise DictionaryExpected
+  }
+  match decode_parms {
+    Some(value) =>
+      pdf_content_push_inline_image_entry(
+        output,
+        pdf_name_of_bytes(pdf_content_ascii("/DP")),
+        value,
+      )
+    None => ()
+  }
+  pdf_content_push_view(output, pdf_content_ascii(" ID ")[:])
+  pdf_content_push_view(output, data[:])
+  pdf_content_push_view(output, pdf_content_ascii(" EI")[:])
+}
+
+///|
 pub fn pdf_content_bytes_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   for op in ops {
     match op {
+      Op_InlineImage(dictionary, decode_parms, data) =>
+        pdf_content_push_inline_image(output, dictionary, decode_parms, data)
       Op_Unknown(bytes) => {
         if output.length() > 0 {
           output.push(32)
@@ -510,6 +559,93 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
       pdf_content_operator_or_literal(cursor.read_pdf_regular_token_view())
     _ => ContentOperator(cursor.read_pdf_regular_token_view().to_owned())
   }
+}
+
+///|
+fn pdf_content_inline_decode_parms_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/DecodeParms"))
+}
+
+///|
+fn pdf_content_inline_dp_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/DP"))
+}
+
+///|
+fn pdf_content_read_inline_image_data(
+  cursor : ByteCursor,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  let view = cursor.remaining_view()
+  let mut found = false
+  let mut index = 0
+  let mut data_length = 0
+  let mut skip_before_marker = 0
+  while !found && index + 1 < view.length() {
+    let is_marker = view[index].to_int() == 69 && view[index + 1].to_int() == 73
+    let before_ok = index == 0 ||
+      pdf_is_whitespace_byte(view[index - 1].to_int())
+    let after_index = index + 2
+    let after_ok = after_index >= view.length() ||
+      pdf_is_whitespace_byte(view[after_index].to_int())
+    if is_marker && before_ok && after_ok {
+      found = true
+      if index > 0 && pdf_is_whitespace_byte(view[index - 1].to_int()) {
+        data_length = index - 1
+        skip_before_marker = 1
+      } else {
+        data_length = index
+        skip_before_marker = 0
+      }
+    } else {
+      index += 1
+    }
+  }
+  if !found {
+    raise ParseEndStreamExpected
+  }
+  let data = cursor.read_view(data_length).to_owned()
+  if skip_before_marker > 0 {
+    ignore(cursor.read_view(skip_before_marker))
+  }
+  ignore(cursor.read_view(2))
+  data
+}
+
+///|
+fn pdf_content_read_inline_image(
+  cursor : ByteCursor,
+) -> PdfContentOp raise PdfError {
+  let entries : Array[(PdfName, PdfObject)] = []
+  let mut decode_parms : PdfObject? = None
+  let mut done = false
+  while !done {
+    match pdf_content_lex_next(cursor) {
+      ContentOperator(operator) if operator == pdf_content_ascii("ID") =>
+        done = true
+      ContentOperand(PdfNameObject(key)) =>
+        match pdf_content_lex_next(cursor) {
+          ContentOperand(value) =>
+            if key == pdf_content_inline_dp_name() ||
+              key == pdf_content_inline_decode_parms_name() {
+              decode_parms = Some(value)
+            } else {
+              entries.push((key, value))
+            }
+          _ => raise ContentOperandExpected
+        }
+      ContentComment => ()
+      _ => raise ContentOperandExpected
+    }
+  }
+  Op_InlineImage(
+    PdfDictionary(entries),
+    decode_parms,
+    pdf_content_read_inline_image_data(cursor),
+  )
 }
 
 ///|
@@ -1067,10 +1203,13 @@ pub fn pdf_parse_content_ops_from_bytes(
       ContentEnd => done = true
       ContentComment => ()
       ContentOperand(object) => operands.push(object)
-      ContentOperator(operator) => {
-        ops.push(pdf_content_parse_section(operands, operator))
-        operands.clear()
-      }
+      ContentOperator(operator) =>
+        if operator == pdf_content_ascii("BI") && operands.length() == 0 {
+          ops.push(pdf_content_read_inline_image(cursor))
+        } else {
+          ops.push(pdf_content_parse_section(operands, operator))
+          operands.clear()
+        }
     }
   }
   if operands.length() > 0 {

@@ -83,6 +83,23 @@ fn marked_text_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn inline_image_content_op_for_test() -> @pdflite.PdfContentOp {
+  Op_InlineImage(
+    PdfDictionary([
+      (content_name_for_test("/W"), PdfInteger(1)),
+      (content_name_for_test("/H"), PdfInteger(1)),
+      (
+        content_name_for_test("/CS"),
+        PdfNameObject(content_name_for_test("/RGB")),
+      ),
+      (content_name_for_test("/BPC"), PdfInteger(8)),
+    ]),
+    Some(PdfDictionary([(content_name_for_test("/Predictor"), PdfInteger(1))])),
+    content_bytes_for_test("abc"),
+  )
+}
+
+///|
 fn content_stream_for_test(text : String) -> @pdflite.PdfObject {
   let data = content_bytes_for_test(text)
   @pdflite.pdf_stream(
@@ -181,6 +198,46 @@ test "pdf_parse_content_ops_from_bytes parses hello-style content bytes" {
     ),
     hello_content_ops_for_test(),
   )
+}
+
+///|
+test "pdf_content_bytes_of_ops renders simple inline images" {
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops([inline_image_content_op_for_test()]),
+    content_bytes_for_test(
+      "BI /W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc EI",
+    ),
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes parses simple inline images" {
+  let data = content_bytes_for_test(
+    "q BI /W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc\nEI Q",
+  )
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_q,
+    inline_image_content_op_for_test(),
+    Op_Q,
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(
+      try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    ),
+    content_bytes_for_test(
+      "q BI /W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc EI Q",
+    ),
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    content_bytes_for_test("BI /W 1 ID abc"),
+  )
+  guard result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+    fail("expected ParseEndStreamExpected")
+  }
 }
 
 ///|

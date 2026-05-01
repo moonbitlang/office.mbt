@@ -421,6 +421,7 @@ pub(all) enum PdfContentOp {
   Op_scnName(PdfName, Array[Double])
   Op_sh(PdfName)
   Op_Do(PdfName)
+  Op_InlineImage(PdfObject, PdfObject?, Bytes)
   Op_MP(PdfName)
   Op_DP(PdfName, PdfObject)
   Op_BMC(PdfName)
