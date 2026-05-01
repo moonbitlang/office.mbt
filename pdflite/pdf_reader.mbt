@@ -115,6 +115,240 @@ pub fn pdf_read_primitive_document_from_bytes(
 }
 
 ///|
+struct PdfClassicXRefEntry {
+  object_number : Int
+  offset : Int
+  generation : Int
+  in_use : Bool
+} derive(Debug, Eq, ToJson)
+
+///|
+fn ByteCursor::seek_pdf_absolute(
+  self : ByteCursor,
+  position : Int,
+) -> Unit raise PdfError {
+  if position < 0 || position > self.data.length() {
+    raise InvalidCursorPosition(position)
+  }
+  self.position = position
+}
+
+///|
+fn pdf_view_matches_ascii_at(
+  view : BytesView,
+  position : Int,
+  values : ArrayView[Int],
+) -> Bool {
+  if position < 0 || position + values.length() > view.length() {
+    false
+  } else {
+    for i = 0; i < values.length(); i = i + 1 {
+      if view[position + i].to_int() != values[i] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn pdf_find_last_ascii(view : BytesView, values : ArrayView[Int]) -> Int {
+  if values.length() == 0 {
+    view.length()
+  } else if view.length() < values.length() {
+    -1
+  } else {
+    for start = view.length() - values.length(); start >= 0; start = start - 1 {
+      if pdf_view_matches_ascii_at(view, start, values) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn pdf_parse_ascii_int_view(view : BytesView) -> Int raise PdfError {
+  if view.length() == 0 {
+    raise NumberExpected
+  }
+  let mut value = 0
+  for byte in view {
+    let digit = byte.to_int()
+    if !pdf_is_digit_byte(digit) {
+      raise NumberExpected
+    }
+    value = value * 10 + digit - 48
+  }
+  value
+}
+
+///|
+fn pdf_split_whitespace_tokens(view : BytesView) -> Array[BytesView] {
+  let tokens : Array[BytesView] = []
+  let mut index = 0
+  while index < view.length() {
+    while index < view.length() && pdf_is_whitespace_byte(view[index].to_int()) {
+      index += 1
+    }
+    let start = index
+    while index < view.length() && !pdf_is_whitespace_byte(view[index].to_int()) {
+      index += 1
+    }
+    if start < index {
+      tokens.push(view[start:index])
+    }
+  }
+  tokens
+}
+
+///|
+fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
+  let start = pdf_find_last_ascii(data, [
+    115, 116, 97, 114, 116, 120, 114, 101, 102,
+  ])
+  if start < 0 {
+    raise StartXRefExpected
+  }
+  let cursor = byte_cursor_of_view(data[start + 9:])
+  cursor.drop_pdf_whitespace()
+  pdf_parse_ascii_int_view(cursor.read_pdf_regular_token_view())
+}
+
+///|
+fn pdf_xref_token_in_use(token : BytesView) -> Bool raise PdfError {
+  if token.length() == 0 {
+    raise XRefEntryExpected
+  }
+  match token[0].to_int() {
+    110 => true
+    102 => false
+    _ => raise XRefEntryExpected
+  }
+}
+
+///|
+fn ByteCursor::read_pdf_classic_xref_entries(
+  self : ByteCursor,
+) -> Array[PdfClassicXRefEntry] raise PdfError {
+  self.drop_pdf_whitespace()
+  self.consume_pdf_ascii([120, 114, 101, 102], XRefExpected)
+  let entries : Array[PdfClassicXRefEntry] = []
+  let mut object_number = 0
+  let mut done = false
+  while !done {
+    self.drop_pdf_whitespace()
+    let position = self.absolute_position()
+    if self.matches_pdf_ascii_at(position, [116, 114, 97, 105, 108, 101, 114]) {
+      done = true
+    } else if self.peek_byte() == pdf_no_more {
+      raise TrailerExpected
+    } else {
+      let tokens = pdf_split_whitespace_tokens(self.read_line_view())
+      if tokens.length() == 0 {
+        ()
+      } else if tokens.length() == 2 {
+        object_number = pdf_parse_ascii_int_view(tokens[0])
+        ignore(pdf_parse_ascii_int_view(tokens[1]))
+      } else if tokens.length() >= 3 {
+        entries.push({
+          object_number,
+          offset: pdf_parse_ascii_int_view(tokens[0]),
+          generation: pdf_parse_ascii_int_view(tokens[1]),
+          in_use: pdf_xref_token_in_use(tokens[2]),
+        })
+        object_number += 1
+      } else {
+        raise XRefEntryExpected
+      }
+    }
+  }
+  entries
+}
+
+///|
+fn ByteCursor::read_pdf_trailer_dictionary(
+  self : ByteCursor,
+) -> PdfObject raise PdfError {
+  self.drop_pdf_whitespace()
+  self.consume_pdf_ascii([116, 114, 97, 105, 108, 101, 114], TrailerExpected)
+  self.drop_pdf_whitespace()
+  let object = pdf_parse_single_lexeme_object(self.lex_pdf_tokens())
+  match object {
+    PdfDictionary(_) => object
+    _ => raise TrailerExpected
+  }
+}
+
+///|
+fn ByteCursor::read_first_indirect_object_at_current(
+  self : ByteCursor,
+) -> PdfParsedIndirectObject raise PdfError {
+  let (objects, prefix) = pdf_parse_indirect_object_segments(
+    self.lex_pdf_tokens(),
+  )
+  if objects.length() > 0 {
+    objects[0]
+  } else {
+    match prefix {
+      Some(prefix) => self.finish_pdf_stream_object(prefix)
+      None => raise ParseIndirectObjectExpected
+    }
+  }
+}
+
+///|
+fn pdf_reader_root_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 82, 111, 111, 116]))
+}
+
+///|
+fn PdfDocument::set_trailer_and_root(
+  self : PdfDocument,
+  trailer : PdfObject,
+) -> Unit raise PdfError {
+  self.set_trailer_dict(trailer)
+  match trailer.lookup_immediate(pdf_reader_root_name()) {
+    Some(PdfIndirect(root)) => self.set_root(root)
+    _ => raise RootExpected
+  }
+}
+
+///|
+pub fn pdf_read_classic_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  let cursor = byte_cursor_of_bytes(data)
+  let version = cursor.read_pdf_header()
+  let xref_position = pdf_read_startxref_position(cursor.data)
+  cursor.seek_pdf_absolute(xref_position)
+  let xrefs = cursor.read_pdf_classic_xref_entries()
+  let trailer = cursor.read_pdf_trailer_dictionary()
+  let document = pdf_document_empty()
+  document.set_version(version.major, version.minor)
+  document.set_first_xref(xref_position)
+  document.set_trailer_and_root(trailer)
+  for xref in xrefs {
+    if xref.in_use && xref.object_number != 0 {
+      cursor.seek_pdf_absolute(xref.offset)
+      let parsed = cursor.read_first_indirect_object_at_current()
+      if parsed.number != xref.object_number ||
+        parsed.generation != xref.generation {
+        raise XRefEntryExpected
+      }
+      document.add_object_given_number(
+        parsed.number,
+        parsed.object,
+        generation=parsed.generation,
+      )
+    }
+  }
+  document
+}
+
+///|
 fn pdf_length_name() -> PdfName {
   pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
 }

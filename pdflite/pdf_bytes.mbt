@@ -23,6 +23,11 @@ pub(all) suberror PdfError {
   StreamLengthExpected
   StreamDataExpected
   ParsedObjectExpected
+  StartXRefExpected
+  XRefExpected
+  XRefEntryExpected
+  TrailerExpected
+  RootExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

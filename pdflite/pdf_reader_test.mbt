@@ -105,3 +105,39 @@ test "pdf_read_primitive_document_from_bytes includes direct-length stream objec
   )
   @test.assert_eq(document.lookup_object_or_null(2), PdfNull)
 }
+
+///|
+test "pdf_read_classic_document_from_bytes uses xref and trailer root" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  let type_name = @pdflite.pdf_name_of_bytes(
+    reader_bytes_for_test([47, 84, 121, 112, 101]),
+  )
+  let catalog = @pdflite.pdf_dictionary([
+    (
+      type_name,
+      PdfNameObject(
+        @pdflite.pdf_name_of_bytes(
+          reader_bytes_for_test([47, 67, 97, 116, 97, 108, 111, 103]),
+        ),
+      ),
+    ),
+  ])
+  document.add_object_given_number(1, catalog)
+  let rendered = try! @pdflite.pdf_write_document(document)
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(rendered)
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(parsed.lookup_object_or_null(1), catalog)
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_bytes_for_test([47, 82, 111, 111, 116])),
+    ),
+    Some(PdfIndirect(1)),
+  )
+}

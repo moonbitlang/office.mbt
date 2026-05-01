@@ -184,7 +184,12 @@ MoonBit consequences for this project:
    non-stream indirect objects from byte input into `PdfDocument`. Direct-length
    stream object parsing is started for `/Length n` streams, materializing owned
    `StreamGot(Bytes)` data at the object boundary; the primitive document loader
-   now includes those direct-length stream objects.
+   now includes those direct-length stream objects. A classic xref-table reader
+   is also started for the current writer's output: it follows the final
+   `startxref`, reads one classic xref section, parses the trailer dictionary,
+   sets `/Root` and `first_xref`, and loads in-use plain objects by offset.
+   Incremental `/Prev` chains, xref streams, object streams, encryption, and
+   malformed-file reconstruction remain deferred.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,

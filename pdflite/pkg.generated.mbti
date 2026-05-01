@@ -111,6 +111,8 @@ pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise P
 
 pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
+pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
@@ -180,6 +182,11 @@ pub(all) suberror PdfError {
   StreamLengthExpected
   StreamDataExpected
   ParsedObjectExpected
+  StartXRefExpected
+  XRefExpected
+  XRefEntryExpected
+  TrailerExpected
+  RootExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -272,6 +279,8 @@ pub fn PaperSize::height(Self) -> Double
 pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
+
+type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 
 pub struct PdfDocument {
   mut major : Int
