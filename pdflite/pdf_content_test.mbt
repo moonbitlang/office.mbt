@@ -282,6 +282,33 @@ test "pdf_parse_content_ops_from_bytes parses inline image comments" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes reads DCT inline images through EOI" {
+  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([
+    0xFF, 0xD8, 65, 32, 69, 73, 32, 66, 0xFF, 0xD9,
+  ])
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 1 /H 1 /F /DCT ID "),
+    jpeg_data,
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/F"),
+          PdfNameObject(content_name_for_test("/DCT")),
+        ),
+      ]),
+      None,
+      jpeg_data,
+    ),
+    Op_Q,
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W 1 ID abc"),

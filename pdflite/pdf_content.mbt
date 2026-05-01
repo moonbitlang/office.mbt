@@ -572,6 +572,55 @@ fn pdf_content_inline_dp_name() -> PdfName {
 }
 
 ///|
+fn pdf_content_inline_filter_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/Filter"))
+}
+
+///|
+fn pdf_content_inline_f_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/F"))
+}
+
+///|
+fn pdf_content_inline_dctdecode_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/DCTDecode"))
+}
+
+///|
+fn pdf_content_inline_dct_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/DCT"))
+}
+
+///|
+fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
+  match dictionary.lookup_immediate(pdf_content_inline_f_name()) {
+    Some(value) => Some(value)
+    None => dictionary.lookup_immediate(pdf_content_inline_filter_name())
+  }
+}
+
+///|
+fn pdf_content_filter_is_inline_dct(filter : PdfObject) -> Bool {
+  match filter {
+    PdfNameObject(name) =>
+      name == pdf_content_inline_dctdecode_name() ||
+      name == pdf_content_inline_dct_name()
+    PdfArray([PdfNameObject(name)]) =>
+      name == pdf_content_inline_dctdecode_name() ||
+      name == pdf_content_inline_dct_name()
+    _ => false
+  }
+}
+
+///|
+fn pdf_content_inline_image_uses_dct(dictionary : PdfObject) -> Bool {
+  match pdf_content_inline_filter_value(dictionary) {
+    Some(filter) => pdf_content_filter_is_inline_dct(filter)
+    None => false
+  }
+}
+
+///|
 fn pdf_content_read_inline_image_data(
   cursor : ByteCursor,
 ) -> PdfBytes raise PdfError {
@@ -616,6 +665,38 @@ fn pdf_content_read_inline_image_data(
 }
 
 ///|
+fn pdf_content_skip_whitespace(cursor : ByteCursor) -> Unit {
+  while pdf_is_whitespace_byte(cursor.peek_byte()) {
+    cursor.nudge()
+  }
+}
+
+///|
+fn pdf_content_read_inline_image_end(
+  cursor : ByteCursor,
+) -> Unit raise PdfError {
+  pdf_content_skip_whitespace(cursor)
+  match (cursor.read_byte(), cursor.read_byte()) {
+    (Some(first), Some(second)) if first.to_int() == 69 && second.to_int() == 73 =>
+      ()
+    _ => raise ParseEndStreamExpected
+  }
+}
+
+///|
+fn pdf_content_read_dct_inline_image_data(
+  cursor : ByteCursor,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  let data = cursor.read_jpeg_data()
+  pdf_content_read_inline_image_end(cursor)
+  data
+}
+
+///|
 fn pdf_content_read_inline_image(
   cursor : ByteCursor,
 ) -> PdfContentOp raise PdfError {
@@ -641,10 +722,15 @@ fn pdf_content_read_inline_image(
       _ => raise ContentOperandExpected
     }
   }
+  let dictionary = PdfDictionary(entries)
   Op_InlineImage(
-    PdfDictionary(entries),
+    dictionary,
     decode_parms,
-    pdf_content_read_inline_image_data(cursor),
+    if pdf_content_inline_image_uses_dct(dictionary) {
+      pdf_content_read_dct_inline_image_data(cursor)
+    } else {
+      pdf_content_read_inline_image_data(cursor)
+    },
   )
 }
 
