@@ -304,6 +304,203 @@ test "private structure survival helpers cover direct cases" {
 }
 
 ///|
+fn wbtest_content_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn wbtest_assert_known_content_none(
+  operator : String,
+  operands : ArrayView[PdfObject],
+) -> Unit raise Error {
+  @test.assert_eq(
+    pdf_content_parse_known_section(operands, @ascii.encode(operator)),
+    None,
+  )
+}
+
+///|
+test "private content helpers cover malformed operand fallbacks" {
+  let name = wbtest_content_name("/N")
+  @test.assert_eq(
+    pdf_content_op_section(Op_InlineImage(PdfNull, None, [])),
+    ([], Bytes::new(0)),
+  )
+  @test.assert_eq(
+    pdf_content_op_section(Op_Unknown(@ascii.encode("ZZ"))),
+    ([], @ascii.encode("ZZ")),
+  )
+
+  @test.assert_eq(
+    pdf_content_read_complex_object(
+      byte_cursor_of_bytes(Bytes::new(0)),
+      LexInt(7),
+    ),
+    PdfInteger(7),
+  )
+  let empty_object : Result[PdfObject, Error] = try? pdf_content_read_object(
+    byte_cursor_of_bytes(Bytes::new(0)),
+  )
+  guard empty_object is Err(PdfError::ParseObjectExpected) else {
+    fail("expected ParseObjectExpected")
+  }
+  @test.assert_eq(
+    try! pdf_content_read_inline_image_data(
+      byte_cursor_of_bytes(@ascii.encode("EI ")),
+    ),
+    Bytes::new(0),
+  )
+  let bad_inline : Result[PdfContentOp, Error] = try? pdf_content_read_inline_image(
+    byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
+  )
+  guard bad_inline is Err(PdfError::ContentOperandExpected) else {
+    fail("expected ContentOperandExpected")
+  }
+
+  @test.assert_eq(pdf_content_operand_number([], 0), None)
+  @test.assert_eq(pdf_content_operand_int([], 0), None)
+  @test.assert_eq(pdf_content_operand_int([PdfReal(1.9)], 0), Some(1))
+  @test.assert_eq(pdf_content_operand_name([], 0), None)
+  @test.assert_eq(pdf_content_operand_string([], 0), None)
+  @test.assert_eq(
+    pdf_content_numbers_from_array(PdfArray([PdfReal(1.5), PdfInteger(2)])),
+    Some([1.5, 2.0]),
+  )
+  @test.assert_eq(
+    pdf_content_numbers_from_array(PdfArray([PdfNameObject(name)])),
+    None,
+  )
+  @test.assert_eq(pdf_content_numbers_from_array(PdfNull), None)
+  @test.assert_eq(
+    pdf_content_numbers_from_operands([PdfNameObject(name)]),
+    None,
+  )
+  @test.assert_eq(pdf_content_named_color_operands([]), None)
+  @test.assert_eq(
+    pdf_content_named_color_operands([PdfInteger(1), PdfNameObject(name)]),
+    Some((name, [1.0])),
+  )
+  @test.assert_eq(pdf_content_matrix_from_operands([PdfInteger(1)]), None)
+
+  let bad_number = [PdfNameObject(name)]
+  let bad_name = [PdfInteger(1)]
+  wbtest_assert_known_content_none("j", bad_number)
+  wbtest_assert_known_content_none("M", bad_number)
+  wbtest_assert_known_content_none("d", [PdfNameObject(name), PdfInteger(0)])
+  wbtest_assert_known_content_none("i", bad_number)
+  wbtest_assert_known_content_none("cm", [
+    PdfInteger(1),
+    PdfInteger(0),
+    PdfInteger(0),
+    PdfInteger(1),
+    PdfInteger(0),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("Tm", [
+    PdfInteger(1),
+    PdfInteger(0),
+    PdfInteger(0),
+    PdfInteger(1),
+    PdfInteger(0),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("m", [PdfInteger(1), PdfNameObject(name)])
+  wbtest_assert_known_content_none("l", [PdfInteger(1), PdfNameObject(name)])
+  wbtest_assert_known_content_none("c", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+    PdfInteger(5),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("v", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("y", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("re", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("Tc", bad_number)
+  wbtest_assert_known_content_none("Tw", bad_number)
+  wbtest_assert_known_content_none("Tz", bad_number)
+  wbtest_assert_known_content_none("TL", bad_number)
+  wbtest_assert_known_content_none("Tf", [PdfInteger(1), PdfInteger(12)])
+  wbtest_assert_known_content_none("Tr", bad_number)
+  wbtest_assert_known_content_none("Ts", bad_number)
+  wbtest_assert_known_content_none("Td", [PdfInteger(1), PdfNameObject(name)])
+  wbtest_assert_known_content_none("TD", [PdfInteger(1), PdfNameObject(name)])
+  wbtest_assert_known_content_none("'", bad_name)
+  wbtest_assert_known_content_none("\"", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("d0", [PdfInteger(1), PdfNameObject(name)])
+  wbtest_assert_known_content_none("d1", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+    PdfInteger(5),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("G", bad_number)
+  wbtest_assert_known_content_none("g", bad_number)
+  wbtest_assert_known_content_none("RG", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("rg", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("K", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("k", [
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfNameObject(name),
+  ])
+  wbtest_assert_known_content_none("gs", bad_name)
+  wbtest_assert_known_content_none("CS", bad_name)
+  wbtest_assert_known_content_none("cs", bad_name)
+  wbtest_assert_known_content_none("SC", [PdfNameObject(name)])
+  wbtest_assert_known_content_none("sc", [PdfNameObject(name)])
+  wbtest_assert_known_content_none("SCN", [
+    PdfNameObject(name),
+    PdfNameObject(wbtest_content_name("/Pattern")),
+  ])
+  wbtest_assert_known_content_none("scn", [
+    PdfNameObject(name),
+    PdfNameObject(wbtest_content_name("/Pattern")),
+  ])
+  wbtest_assert_known_content_none("sh", bad_name)
+  wbtest_assert_known_content_none("MP", bad_name)
+  wbtest_assert_known_content_none("DP", [PdfInteger(1), PdfDictionary([])])
+  wbtest_assert_known_content_none("BMC", bad_name)
+  wbtest_assert_known_content_none("BDC", [PdfInteger(1), PdfDictionary([])])
+}
+
+///|
 test "private codec dictionary and predictor guards report malformed inputs" {
   let empty = PdfDictionary([])
   @test.assert_eq(pdf_remove_first_filter_entry(empty, pdf_filter_key()), empty)

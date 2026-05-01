@@ -511,7 +511,11 @@ MoonBit consequences for this project:
     `pdf_flate.mbt` from the uncovered-line report with direct private tests for
     dynamic-code-length symbol bounds, repeated-length overflow, malformed
     dynamic repeats, invalid length symbols, invalid distance symbols, and
-    backwards copies past the available output.
+    backwards copies past the available output. Content coverage now exercises
+    private malformed operand fallbacks, inline-image data boundaries, unknown
+    and inline-image render sections, complex-object reads, and invalid
+    known-operator parsing; `pdf_content.mbt` is down to one defensive
+    post-decode stream-shape branch.
 
 ## Update Discipline
 
