@@ -2376,6 +2376,98 @@ test "PdfTextExtractor extracts MacExpert small capitals" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert accented small capitals" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xBE, 0x87, 0x89, 0x8A, 0x88, 0x8C, 0x8B, 0x8D, 0x8E, 0x90, 0x91, 0x8F, 0x44,
+    0x92, 0x94, 0x95, 0x93, 0xC2, 0x96, 0xCF, 0x97, 0x99, 0x9A, 0x98, 0xBF, 0x9B,
+    0xA7, 0xB9, 0x9C, 0x9E, 0x9F, 0x9D, 0xB4, 0xD8, 0xBD,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0xF7E6, 0xF7E1, 0xF7E2, 0xF7E4, 0xF7E0, 0xF7E5, 0xF7E3, 0xF7E7, 0xF7E9, 0xF7EA,
+    0xF7EB, 0xF7E8, 0xF7F0, 0xF7ED, 0xF7EE, 0xF7EF, 0xF7EC, 0xF6F9, 0xF7F1, 0xF6FA,
+    0xF7F3, 0xF7F4, 0xF7F6, 0xF7F2, 0xF7F8, 0xF7F5, 0xF6FD, 0xF7FE, 0xF7FA, 0xF7FB,
+    0xF7FC, 0xF7F9, 0xF7FD, 0xF7FF, 0xF6FF,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/AEsmall"),
+    text_name_for_test("/Aacutesmall"),
+    text_name_for_test("/Acircumflexsmall"),
+    text_name_for_test("/Adieresissmall"),
+    text_name_for_test("/Agravesmall"),
+    text_name_for_test("/Aringsmall"),
+    text_name_for_test("/Atildesmall"),
+    text_name_for_test("/Ccedillasmall"),
+    text_name_for_test("/Eacutesmall"),
+    text_name_for_test("/Ecircumflexsmall"),
+    text_name_for_test("/Edieresissmall"),
+    text_name_for_test("/Egravesmall"),
+    text_name_for_test("/Ethsmall"),
+    text_name_for_test("/Iacutesmall"),
+    text_name_for_test("/Icircumflexsmall"),
+    text_name_for_test("/Idieresissmall"),
+    text_name_for_test("/Igravesmall"),
+    text_name_for_test("/Lslashsmall"),
+    text_name_for_test("/Ntildesmall"),
+    text_name_for_test("/OEsmall"),
+    text_name_for_test("/Oacutesmall"),
+    text_name_for_test("/Ocircumflexsmall"),
+    text_name_for_test("/Odieresissmall"),
+    text_name_for_test("/Ogravesmall"),
+    text_name_for_test("/Oslashsmall"),
+    text_name_for_test("/Otildesmall"),
+    text_name_for_test("/Scaronsmall"),
+    text_name_for_test("/Thornsmall"),
+    text_name_for_test("/Uacutesmall"),
+    text_name_for_test("/Ucircumflexsmall"),
+    text_name_for_test("/Udieresissmall"),
+    text_name_for_test("/Ugravesmall"),
+    text_name_for_test("/Yacutesmall"),
+    text_name_for_test("/Ydieresissmall"),
+    text_name_for_test("/Zcaronsmall"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF7E6), Some(0xBE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF7F0), Some(0x44))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6FF), Some(0xBD))
+}
+
+///|
+test "PdfTextExtractor extracts MacExpert small accent marks" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x27, 0xF3, 0xAE, 0xC9, 0x5E, 0xAC, 0xFA, 0x60, 0x22, 0xF4, 0xF2, 0xFB, 0x7E,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0xF7B4, 0xF6F4, 0xF6F5, 0xF7B8, 0xF6F6, 0xF7A8, 0xF6F7, 0xF760, 0xF6F8, 0xF7AF,
+    0xF6FB, 0xF6FC, 0xF6FE,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/Acutesmall"),
+    text_name_for_test("/Brevesmall"),
+    text_name_for_test("/Caronsmall"),
+    text_name_for_test("/Cedillasmall"),
+    text_name_for_test("/Circumflexsmall"),
+    text_name_for_test("/Dieresissmall"),
+    text_name_for_test("/Dotaccentsmall"),
+    text_name_for_test("/Gravesmall"),
+    text_name_for_test("/Hungarumlautsmall"),
+    text_name_for_test("/Macronsmall"),
+    text_name_for_test("/Ogoneksmall"),
+    text_name_for_test("/Ringsmall"),
+    text_name_for_test("/Tildesmall"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF7B4), Some(0x27))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6F7), Some(0xFA))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6FE), Some(0x7E))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),

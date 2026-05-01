@@ -421,7 +421,8 @@ MoonBit consequences for this project:
    bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
    letters, and common symbols.
    MacExpert fallback is started for the well-defined ligature, oldstyle digit,
-   superior digit, inferior digit, fraction, and small-capital codepoints.
+   superior digit, inferior digit, fraction, small-capital, accented
+   small-capital, and small accent-mark codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
    `uniXXXX` names, and `uXXXX` names; reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs.
