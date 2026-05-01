@@ -275,8 +275,9 @@ MoonBit consequences for this project:
    round-trip gate. Classic incremental updates now use the document event log
    to emit only changed or deleted object rows, preserving unchanged objects
    through `/Prev`; reader materialization no longer records loaded objects as
-   user mutations. Xref-stream sparse `/Index` updates and encrypted output
-   remain deferred.
+   user mutations. Xref-stream incremental updates now use the same changed
+   object detection and emit sparse `/Index` ranges for changed/deleted objects
+   plus the xref stream object. Encrypted output remains deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

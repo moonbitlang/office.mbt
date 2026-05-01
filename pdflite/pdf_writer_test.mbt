@@ -531,6 +531,69 @@ test "pdf_write_document_incremental_update_with_xref_stream appends xref stream
 }
 
 ///|
+test "pdf_write_document_incremental_update_with_xref_stream writes sparse Index" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 5)
+  document.set_root(1)
+  let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
+  let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
+  document.add_object_given_number(1, catalog)
+  document.add_object_given_number(2, PdfInteger(20))
+  document.add_object_given_number(3, PdfInteger(30))
+  let original = try! @pdflite.pdf_write_document_with_xref_stream(document)
+  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+  @test.assert_eq(original_parsed.event_log(), [])
+
+  let updated = original_parsed.copy()
+  updated.add_object_given_number(2, PdfInteger(33))
+  updated.add_object_given_number(2, PdfInteger(44))
+  updated.remove_object(3)
+  let rendered = try! @pdflite.pdf_write_document_incremental_update_with_xref_stream(
+    original, updated,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      rendered,
+      writer_ascii_for_test("/Index"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      rendered,
+      writer_ascii_for_test("2 0 obj"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      rendered,
+      writer_ascii_for_test("1 0 obj"),
+      original.length(),
+    ),
+    -1,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      rendered,
+      writer_ascii_for_test("3 0 obj"),
+      original.length(),
+    ),
+    -1,
+  )
+
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(reparsed.object_numbers(), [1, 2])
+  @test.assert_eq(reparsed.lookup_object_or_null(1), catalog)
+  @test.assert_eq(reparsed.lookup_object_or_null(2), PdfInteger(44))
+  @test.assert_eq(reparsed.lookup_object_or_null(3), PdfNull)
+}
+
+///|
 test "pdf_write_document_incremental_update_with_compressed_xref_stream uses Flate" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 5)
