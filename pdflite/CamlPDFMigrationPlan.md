@@ -365,7 +365,11 @@ MoonBit consequences for this project:
     catalog-copy updates, basic completion, bounded range insertion,
     single-page label lookup, rendered label bytes for
     decimal/roman/letter/prefix-only styles, adjacent range coalescing, and
-    merge-label construction for selected page ranges.
+    merge-label construction for selected page ranges. Annotation support is
+    started with typed subtypes, borders, colours, byte-preserving
+    contents/subjects, page annotation reading with popup-parent filtering,
+    page-record annotation insertion, and geometry transforms for `/Rect`,
+    `/QuadPoints`, and `/L`.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

@@ -239,6 +239,18 @@ default. If a function parameter is optional-only, pass a non-default value with
 its label, for example `sample(xs=[1, 2, 3])`, not `sample([1, 2, 3])`.
 
 ```sh
+moon run -c 'struct R { x : Int } derive(Debug, Eq)
+fn default_r() -> R { { x: 1 } }
+fn f(r? : R = default_r()) -> Int { r.x }
+fn main { println(f()); println(f(r={ x: 2 })) }'
+# 1
+# 2
+```
+
+Default argument values can call local functions. This is useful when porting
+OCaml optional arguments whose defaults are structured records or arrays.
+
+```sh
 moon run -c 'struct Item { value : Int; label : String } derive(Debug)
 fn main { let old = Item::{ value: 1, label: "a" }; let next = { ..old, value: 2 }; println(next.value); println(next.label) }'
 # 2

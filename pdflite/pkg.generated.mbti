@@ -45,6 +45,10 @@ pub let paper_uslegal : PaperSize
 
 pub let paper_usletter : PaperSize
 
+pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
+
+pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
+
 pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise PdfError
@@ -373,6 +377,68 @@ pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
 
+pub(all) struct PdfAnnotation {
+  subtype : PdfAnnotationSubtype
+  contents : Bytes?
+  subject : Bytes?
+  rectangle : PdfRectangle
+  border : PdfAnnotationBorder
+  colour : PdfAnnotationColour?
+  rest : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAnnotationBorder {
+  width : Double
+  vertical_radius : Double
+  horizontal_radius : Double
+  style : PdfAnnotationStyle
+  dash_array : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAnnotationColour {
+  red : Int
+  green : Int
+  blue : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAnnotationStyle {
+  AnnotationNoStyle
+  AnnotationSolid
+  AnnotationDashed
+  AnnotationBeveled
+  AnnotationInset
+  AnnotationUnderlineStyle
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAnnotationSubtype {
+  AnnotationText
+  AnnotationLink
+  AnnotationFreeText
+  AnnotationLine
+  AnnotationSquare
+  AnnotationCircle
+  AnnotationPolygon
+  AnnotationPolyLine
+  AnnotationHighlight
+  AnnotationUnderline
+  AnnotationSquiggly
+  AnnotationStrikeOut
+  AnnotationStamp
+  AnnotationCaret
+  AnnotationInk
+  AnnotationPopup(PdfAnnotation)
+  AnnotationFileAttachment
+  AnnotationSound
+  AnnotationMovie
+  AnnotationWidget
+  AnnotationScreen
+  AnnotationPrinterMark
+  AnnotationTrapNet
+  AnnotationWatermark
+  AnnotationThreeDee
+  AnnotationUnknown(PdfName)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfBookmark {
   level : Int
   text : Bytes
@@ -496,12 +562,14 @@ pub struct PdfDocument {
   mut first_xref : Int
   mut revision_read : Int
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDocument::add_annotation(Self, PdfPage, PdfAnnotation) -> PdfPage raise PdfError
 pub fn PdfDocument::add_bookmarks(Self, ArrayView[PdfBookmark]) -> Self raise PdfError
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
+pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise PdfError
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, TransformMatrix)]) -> Self raise PdfError
@@ -528,6 +596,7 @@ pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfEr
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
+pub fn PdfDocument::read_annotation(Self, PdfObject) -> PdfAnnotation raise PdfError
 pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise PdfError
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
@@ -549,6 +618,7 @@ pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
+pub fn PdfDocument::transform_annotations(Self, TransformMatrix, PdfObject) -> Unit raise PdfError
 pub fn PdfDocument::transform_bookmark(Self, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
 pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination) -> PdfDestination raise PdfError
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise PdfError
