@@ -463,7 +463,10 @@ MoonBit consequences for this project:
    numeric and boolean literals, named numeric/comparison/logic operators,
    nested `if`/`ifelse` procedures, comments, doubled-minus malformed numbers,
    and stack operators, stream decoding for sampled/calculator functions,
-   domain clamping, and range clamping. `pdfjpeg` is started with a byte-cursor
+   domain clamping, and range clamping. Type 4 calculator integer and float
+   stack values now stay distinct, preserving CamlPDF-style integer-only
+   operator checks and 32-bit wrapping arithmetic for integer add/sub/mul.
+   `pdfjpeg` is started with a byte-cursor
    helper that extracts JPEG data through the `FF D9` EOI marker while leaving
    following bytes unread, and content inline image parsing now uses that path
    for `/DCT`, `/DCTDecode`, and single-item filter arrays. `pdfimage` is

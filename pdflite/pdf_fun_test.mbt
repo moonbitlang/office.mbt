@@ -316,6 +316,48 @@ test "PdfDocument parse_function evaluates integer calculator operators" {
 }
 
 ///|
+test "PdfDocument parse_function preserves calculator integer value semantics" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode(
+    "{ 2147483647 1 add -2147483647 2 sub 65536 65536 mul -2.1 cvi }",
+  )
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([]), [
+    (-2147483648).to_double(),
+    2147483647.0,
+    0.0,
+    -3.0,
+  ])
+}
+
+///|
+test "PdfDocument parse_function rejects float operands for integer operators" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode("{ 6.0 3 and }")
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  let result : Result[Array[Double], Error] = try? function.eval([])
+  guard result is Err(@pdflite.PdfError::BadFunctionEvaluation(_)) else {
+    fail("expected BadFunctionEvaluation for float bitwise operand")
+  }
+}
+
+///|
 test "PdfDocument parse_function reads and evaluates Type 2 interpolation functions" {
   let doc = @pdflite.pdf_document_empty()
   let function_object = @pdflite.pdf_dictionary([

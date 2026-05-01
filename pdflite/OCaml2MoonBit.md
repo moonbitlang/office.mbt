@@ -169,6 +169,19 @@ the direct replacement for byte-codec and bitstream code that masks, packs,
 or inverts bytes.
 
 ```sh
+moon run -c 'fn main { let max = 2147483647; println((max + 1).to_string()); println((-2147483648 - 1).to_string()); println((2147483647 * 2).to_string()); println((1 << 31).to_string()) }'
+# -2147483648
+# 2147483647
+# -2
+# -2147483648
+```
+
+MoonBit `Int` arithmetic wraps at 32-bit signed boundaries. This is useful
+when porting OCaml code that deliberately used `Int32` arithmetic, but it also
+means overflow needs explicit tests when the source relied on arbitrary-size or
+64-bit integer behavior.
+
+```sh
 moon run -c 'fn main { println(Int::lnot(0)); println((0x0F).lnot()); println((!true).to_string()) }'
 # -1
 # -16
