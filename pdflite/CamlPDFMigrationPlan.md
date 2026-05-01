@@ -218,6 +218,11 @@ MoonBit consequences for this project:
    predictors after deciding whether to bind C/zlib or use a MoonBit package.
    Keep DCT/JBIG2/CCITT behavior behind explicit capability checks until image
    support needs them.
+   Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
+   decoder skips PDF whitespace, accepts uppercase and lowercase hex digits,
+   pads an odd final nibble before `>`, and reports malformed data with
+   `InvalidHexEscape`. Stream dictionary integration and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
