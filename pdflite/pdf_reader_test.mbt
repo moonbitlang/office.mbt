@@ -602,6 +602,28 @@ fn reader_classic_pdf_with_truncated_stream_before_catalog() -> @pdflite.PdfByte
 }
 
 ///|
+fn reader_classic_pdf_with_malformed_object_before_catalog(
+  bad_body : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let bad_offset = reader_push_indirect_object(output, 2, 0, bad_body)
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 1\n0000000000 65535 f \n")
+  reader_push_ascii(output, "2 1\n")
+  reader_push_xref_entry(output, bad_offset, 0)
+  reader_push_ascii(output, "1 1\n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -1312,6 +1334,35 @@ test "pdf_read_document_from_bytes reconstructs around truncated stream data" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs around malformed objects" {
+  let bad_object = reader_classic_pdf_with_malformed_object_before_catalog("]")
+  let strict_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    bad_object,
+  )
+  guard strict_object is Err(@pdflite.PdfError::ParseObjectExpected) else {
+    fail("expected strict ParseObjectExpected")
+  }
+  let parsed_object = try! @pdflite.pdf_read_document_from_bytes(bad_object)
+  @test.assert_eq(parsed_object.first_xref(), 0)
+  @test.assert_eq(parsed_object.root(), 1)
+  @test.assert_eq(parsed_object.object_numbers(), [1])
+
+  let bad_name = reader_classic_pdf_with_malformed_object_before_catalog(
+    "/Bad#zz",
+  )
+  let strict_name : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    bad_name,
+  )
+  guard strict_name is Err(@pdflite.PdfError::InvalidHexEscape) else {
+    fail("expected strict InvalidHexEscape")
+  }
+  let parsed_name = try! @pdflite.pdf_read_document_from_bytes(bad_name)
+  @test.assert_eq(parsed_name.first_xref(), 0)
+  @test.assert_eq(parsed_name.root(), 1)
+  @test.assert_eq(parsed_name.object_numbers(), [1])
 }
 
 ///|

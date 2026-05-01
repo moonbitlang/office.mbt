@@ -178,6 +178,23 @@ fn pdf_find_last_ascii(view : BytesView, values : ArrayView[Int]) -> Int {
 }
 
 ///|
+fn pdf_find_ascii_from(
+  view : BytesView,
+  start : Int,
+  values : ArrayView[Int],
+) -> Int {
+  for position = start
+      position <= view.length() - values.length()
+      position = position + 1 {
+    if pdf_view_matches_ascii_at(view, position, values) {
+      break position
+    }
+  } nobreak {
+    -1
+  }
+}
+
+///|
 fn pdf_parse_ascii_int_view(view : BytesView) -> Int raise PdfError {
   if view.length() == 0 {
     raise NumberExpected
@@ -782,19 +799,15 @@ fn ByteCursor::read_first_indirect_object_at_current(
   self : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> PdfParsedIndirectObject raise PdfError {
-  let (objects, prefix) = pdf_parse_indirect_object_segments(
+  let (object, _, complete) = pdf_parse_indirect_object_segment_at(
     self.lex_pdf_tokens(),
+    0,
   )
-  if objects.length() > 0 {
-    objects[0]
+  if complete {
+    object
   } else {
-    match prefix {
-      Some(prefix) => {
-        let length = self.resolve_classic_stream_length(prefix.object, xrefs)
-        self.finish_pdf_stream_object_with_length(prefix, length)
-      }
-      None => raise ParseIndirectObjectExpected
-    }
+    let length = self.resolve_classic_stream_length(object.object, xrefs)
+    self.finish_pdf_stream_object_with_length(object, length)
   }
 }
 
@@ -855,23 +868,49 @@ fn pdf_read_reconstructed_object_at(
 ) -> PdfParsedIndirectObject raise PdfError {
   let cursor = byte_cursor_of_view(data)
   cursor.seek_pdf_absolute(position)
-  cursor.read_first_indirect_object_at_current(xrefs)
+  cursor.read_reconstructed_indirect_object_at_current(xrefs)
+}
+
+///|
+fn ByteCursor::lex_reconstructed_indirect_object_tokens_at_current(
+  self : ByteCursor,
+) -> Array[PdfLexeme] raise PdfError {
+  let start = self.absolute_position()
+  let endobj = pdf_find_ascii_from(self.data, start, [
+    101, 110, 100, 111, 98, 106,
+  ])
+  let end = if endobj < 0 { self.data.length() } else { endobj + 6 }
+  let cursor = byte_cursor_of_view(self.data[start:end])
+  let tokens = cursor.lex_pdf_tokens()
+  self.seek_pdf_absolute(start + cursor.absolute_position())
+  tokens
 }
 
 ///|
 fn ByteCursor::read_reconstructed_indirect_prefix_at_current(
   self : ByteCursor,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let (objects, prefix) = pdf_parse_indirect_object_segments(
-    self.lex_pdf_tokens(),
+  let (object, _, _) = pdf_parse_indirect_object_segment_at(
+    self.lex_reconstructed_indirect_object_tokens_at_current(),
+    0,
   )
-  if objects.length() > 0 {
-    objects[0]
+  object
+}
+
+///|
+fn ByteCursor::read_reconstructed_indirect_object_at_current(
+  self : ByteCursor,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> PdfParsedIndirectObject raise PdfError {
+  let (object, _, complete) = pdf_parse_indirect_object_segment_at(
+    self.lex_reconstructed_indirect_object_tokens_at_current(),
+    0,
+  )
+  if complete {
+    object
   } else {
-    match prefix {
-      Some(prefix) => prefix
-      None => raise ParseIndirectObjectExpected
-    }
+    let length = self.resolve_classic_stream_length(object.object, xrefs)
+    self.finish_pdf_stream_object_with_length(object, length)
   }
 }
 
@@ -1150,6 +1189,9 @@ pub fn pdf_read_document_from_bytes(
     ParseEndObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseEndObjectExpected)
     EndOfInput => pdf_read_reconstructed_or_raise(data, EndOfInput)
+    ParseObjectExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
+    InvalidHexEscape => pdf_read_reconstructed_or_raise(data, InvalidHexEscape)
     error => raise error
   }
 }
