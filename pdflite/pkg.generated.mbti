@@ -487,7 +487,10 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorFloat(Double)
   PdfCalculatorAbs
   PdfCalculatorAdd
+  PdfCalculatorAnd
   PdfCalculatorAtan
+  PdfCalculatorBitshift
+  PdfCalculatorBool(Bool)
   PdfCalculatorCeiling
   PdfCalculatorCos
   PdfCalculatorCopy
@@ -501,17 +504,28 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorExp
   PdfCalculatorFloor
   PdfCalculatorIdiv
+  PdfCalculatorIf(Array[PdfCalculatorOp])
+  PdfCalculatorIfElse(Array[PdfCalculatorOp], Array[PdfCalculatorOp])
   PdfCalculatorIndex
   PdfCalculatorLn
   PdfCalculatorLog
+  PdfCalculatorEq
+  PdfCalculatorGe
+  PdfCalculatorGt
+  PdfCalculatorLe
+  PdfCalculatorLt
   PdfCalculatorMod
+  PdfCalculatorNe
   PdfCalculatorNeg
+  PdfCalculatorNot
+  PdfCalculatorOr
   PdfCalculatorPop
   PdfCalculatorRoll
   PdfCalculatorRound
   PdfCalculatorSin
   PdfCalculatorSqrt
   PdfCalculatorTruncate
+  PdfCalculatorXor
 } derive(Eq, ToJson, @debug.Debug)
 
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)

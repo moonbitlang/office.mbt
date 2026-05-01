@@ -98,7 +98,10 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorFloat(Double)
   PdfCalculatorAbs
   PdfCalculatorAdd
+  PdfCalculatorAnd
   PdfCalculatorAtan
+  PdfCalculatorBitshift
+  PdfCalculatorBool(Bool)
   PdfCalculatorCeiling
   PdfCalculatorCos
   PdfCalculatorCopy
@@ -112,17 +115,28 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorExp
   PdfCalculatorFloor
   PdfCalculatorIdiv
+  PdfCalculatorIf(Array[PdfCalculatorOp])
+  PdfCalculatorIfElse(Array[PdfCalculatorOp], Array[PdfCalculatorOp])
   PdfCalculatorIndex
   PdfCalculatorLn
   PdfCalculatorLog
+  PdfCalculatorEq
+  PdfCalculatorGe
+  PdfCalculatorGt
+  PdfCalculatorLe
+  PdfCalculatorLt
   PdfCalculatorMod
+  PdfCalculatorNe
   PdfCalculatorNeg
+  PdfCalculatorNot
+  PdfCalculatorOr
   PdfCalculatorPop
   PdfCalculatorRoll
   PdfCalculatorRound
   PdfCalculatorSin
   PdfCalculatorSqrt
   PdfCalculatorTruncate
+  PdfCalculatorXor
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -410,8 +424,16 @@ fn PdfDocument::pdf_fun_read_stitching(
 }
 
 ///|
-fn pdf_fun_calculator_is_separator(value : Int) -> Bool {
-  pdf_is_whitespace_byte(value) || value == 123 || value == 125
+priv enum PdfCalculatorToken {
+  PdfCalculatorTokenOpen
+  PdfCalculatorTokenClose
+  PdfCalculatorTokenText(String)
+}
+
+///|
+priv enum PdfCalculatorItem {
+  PdfCalculatorItemOp(PdfCalculatorOp)
+  PdfCalculatorItemProcedure(Array[PdfCalculatorOp])
 }
 
 ///|
@@ -421,7 +443,11 @@ fn pdf_fun_calculator_op_of_token(
   match text {
     "abs" => PdfCalculatorAbs
     "add" => PdfCalculatorAdd
+    "and" => PdfCalculatorAnd
     "atan" => PdfCalculatorAtan
+    "bitshift" => PdfCalculatorBitshift
+    "true" => PdfCalculatorBool(true)
+    "false" => PdfCalculatorBool(false)
     "ceiling" => PdfCalculatorCeiling
     "cos" => PdfCalculatorCos
     "copy" => PdfCalculatorCopy
@@ -435,17 +461,26 @@ fn pdf_fun_calculator_op_of_token(
     "exp" => PdfCalculatorExp
     "floor" => PdfCalculatorFloor
     "idiv" => PdfCalculatorIdiv
+    "eq" => PdfCalculatorEq
+    "ge" => PdfCalculatorGe
+    "gt" => PdfCalculatorGt
     "index" => PdfCalculatorIndex
+    "le" => PdfCalculatorLe
+    "lt" => PdfCalculatorLt
     "ln" => PdfCalculatorLn
     "log" => PdfCalculatorLog
     "mod" => PdfCalculatorMod
+    "ne" => PdfCalculatorNe
     "neg" => PdfCalculatorNeg
+    "not" => PdfCalculatorNot
+    "or" => PdfCalculatorOr
     "pop" => PdfCalculatorPop
     "roll" => PdfCalculatorRoll
     "round" => PdfCalculatorRound
     "sin" => PdfCalculatorSin
     "sqrt" => PdfCalculatorSqrt
     "truncate" => PdfCalculatorTruncate
+    "xor" => PdfCalculatorXor
     _ => {
       let integer : Result[Int, Error] = try? @strconv.from_str(text)
       match integer {
@@ -463,33 +498,168 @@ fn pdf_fun_calculator_op_of_token(
 }
 
 ///|
-fn pdf_fun_calculator_push_token(
-  operations : Array[PdfCalculatorOp],
+fn pdf_fun_calculator_text_token(
   token : ArrayView[Byte],
-) -> Unit raise PdfError {
+) -> PdfCalculatorToken? raise PdfError {
   if token.length() > 0 {
     let text = @ascii.decode(Bytes::from_array(token)[:]) catch {
       _ => raise FunctionExpected
     }
-    operations.push(pdf_fun_calculator_op_of_token(text))
+    Some(PdfCalculatorTokenText(text))
+  } else {
+    None
   }
+}
+
+///|
+fn pdf_fun_calculator_push_text_token(
+  tokens : Array[PdfCalculatorToken],
+  token : ArrayView[Byte],
+) -> Unit raise PdfError {
+  match pdf_fun_calculator_text_token(token) {
+    Some(text) => tokens.push(text)
+    None => ()
+  }
+}
+
+///|
+fn pdf_fun_calculator_tokens(
+  data : PdfBytes,
+) -> Array[PdfCalculatorToken] raise PdfError {
+  let tokens : Array[PdfCalculatorToken] = []
+  let mut token : Array[Byte] = []
+  for byte in data {
+    let value = byte.to_int()
+    if pdf_is_whitespace_byte(value) {
+      pdf_fun_calculator_push_text_token(tokens, token)
+      token = []
+    } else if value == 123 {
+      pdf_fun_calculator_push_text_token(tokens, token)
+      token = []
+      tokens.push(PdfCalculatorTokenOpen)
+    } else if value == 125 {
+      pdf_fun_calculator_push_text_token(tokens, token)
+      token = []
+      tokens.push(PdfCalculatorTokenClose)
+    } else {
+      token.push(byte)
+    }
+  }
+  pdf_fun_calculator_push_text_token(tokens, token)
+  tokens
+}
+
+///|
+fn pdf_fun_calculator_pop_procedure(
+  items : Array[PdfCalculatorItem],
+) -> Array[PdfCalculatorOp] raise PdfError {
+  match items.pop() {
+    Some(PdfCalculatorItemProcedure(operations)) => operations
+    _ => raise FunctionExpected
+  }
+}
+
+///|
+fn pdf_fun_calculator_items_to_operations(
+  items : ArrayView[PdfCalculatorItem],
+) -> Array[PdfCalculatorOp] raise PdfError {
+  let operations : Array[PdfCalculatorOp] = []
+  for item in items {
+    match item {
+      PdfCalculatorItemOp(operation) => operations.push(operation)
+      PdfCalculatorItemProcedure(_) => raise FunctionExpected
+    }
+  }
+  operations
+}
+
+///|
+fn pdf_fun_calculator_push_operator(
+  items : Array[PdfCalculatorItem],
+  text : String,
+) -> Unit raise PdfError {
+  match text {
+    "if" => {
+      let then_branch = pdf_fun_calculator_pop_procedure(items)
+      items.push(PdfCalculatorItemOp(PdfCalculatorIf(then_branch)))
+    }
+    "ifelse" => {
+      let else_branch = pdf_fun_calculator_pop_procedure(items)
+      let then_branch = pdf_fun_calculator_pop_procedure(items)
+      items.push(
+        PdfCalculatorItemOp(PdfCalculatorIfElse(then_branch, else_branch)),
+      )
+    }
+    _ => items.push(PdfCalculatorItemOp(pdf_fun_calculator_op_of_token(text)))
+  }
+}
+
+///|
+fn pdf_fun_calculator_parse_items(
+  tokens : ArrayView[PdfCalculatorToken],
+  start : Int,
+  stop_at_close~ : Bool,
+) -> (Array[PdfCalculatorItem], Int) raise PdfError {
+  let items : Array[PdfCalculatorItem] = []
+  let mut index = start
+  let mut closed = false
+  while index < tokens.length() && !closed {
+    match tokens[index] {
+      PdfCalculatorTokenOpen => {
+        let (operations, next_index) = pdf_fun_calculator_parse_operations(
+          tokens,
+          index + 1,
+          stop_at_close=true,
+        )
+        items.push(PdfCalculatorItemProcedure(operations))
+        index = next_index
+      }
+      PdfCalculatorTokenClose =>
+        if stop_at_close {
+          closed = true
+          index += 1
+        } else {
+          raise FunctionExpected
+        }
+      PdfCalculatorTokenText(text) => {
+        pdf_fun_calculator_push_operator(items, text)
+        index += 1
+      }
+    }
+  }
+  if stop_at_close && !closed {
+    raise FunctionExpected
+  }
+  (items, index)
+}
+
+///|
+fn pdf_fun_calculator_parse_operations(
+  tokens : ArrayView[PdfCalculatorToken],
+  start : Int,
+  stop_at_close~ : Bool,
+) -> (Array[PdfCalculatorOp], Int) raise PdfError {
+  let (items, next_index) = pdf_fun_calculator_parse_items(
+    tokens,
+    start,
+    stop_at_close~,
+  )
+  (pdf_fun_calculator_items_to_operations(items), next_index)
 }
 
 ///|
 fn pdf_fun_parse_calculator(
   data : PdfBytes,
 ) -> PdfCalculatorFunction raise PdfError {
-  let operations : Array[PdfCalculatorOp] = []
-  let mut token : Array[Byte] = []
-  for byte in data {
-    if pdf_fun_calculator_is_separator(byte.to_int()) {
-      pdf_fun_calculator_push_token(operations, token)
-      token = []
-    } else {
-      token.push(byte)
-    }
+  let tokens = pdf_fun_calculator_tokens(data)
+  let (operations, next_index) = match tokens.get(0) {
+    Some(PdfCalculatorTokenOpen) =>
+      pdf_fun_calculator_parse_operations(tokens, 1, stop_at_close=true)
+    _ => pdf_fun_calculator_parse_operations(tokens, 0, stop_at_close=false)
   }
-  pdf_fun_calculator_push_token(operations, token)
+  if next_index != tokens.length() {
+    raise FunctionExpected
+  }
   { operations, }
 }
 
@@ -750,7 +920,15 @@ fn PdfStitchingFunction::eval_stitching(
 }
 
 ///|
-fn pdf_fun_calculator_pop(stack : Array[Double]) -> Double raise PdfError {
+priv enum PdfCalculatorValue {
+  PdfCalculatorNumber(Double)
+  PdfCalculatorBoolean(Bool)
+}
+
+///|
+fn pdf_fun_calculator_pop_value(
+  stack : Array[PdfCalculatorValue],
+) -> PdfCalculatorValue raise PdfError {
   match stack.pop() {
     Some(value) => value
     None => raise BadFunctionEvaluation("calculator stack underflow")
@@ -758,8 +936,18 @@ fn pdf_fun_calculator_pop(stack : Array[Double]) -> Double raise PdfError {
 }
 
 ///|
-fn pdf_fun_calculator_pop_int(stack : Array[Double]) -> Int raise PdfError {
-  let value = pdf_fun_calculator_pop(stack)
+fn pdf_fun_calculator_pop_number(
+  stack : Array[PdfCalculatorValue],
+) -> Double raise PdfError {
+  match pdf_fun_calculator_pop_value(stack) {
+    PdfCalculatorNumber(value) => value
+    PdfCalculatorBoolean(_) =>
+      raise BadFunctionEvaluation("calculator number expected")
+  }
+}
+
+///|
+fn pdf_fun_calculator_integer(value : Double) -> Int raise PdfError {
   let truncated = value.trunc()
   if value != truncated {
     raise BadFunctionEvaluation("calculator integer operand expected")
@@ -768,7 +956,27 @@ fn pdf_fun_calculator_pop_int(stack : Array[Double]) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_fun_calculator_copy(stack : Array[Double]) -> Unit raise PdfError {
+fn pdf_fun_calculator_pop_int(
+  stack : Array[PdfCalculatorValue],
+) -> Int raise PdfError {
+  pdf_fun_calculator_integer(pdf_fun_calculator_pop_number(stack))
+}
+
+///|
+fn pdf_fun_calculator_pop_bool(
+  stack : Array[PdfCalculatorValue],
+) -> Bool raise PdfError {
+  match pdf_fun_calculator_pop_value(stack) {
+    PdfCalculatorBoolean(value) => value
+    PdfCalculatorNumber(_) =>
+      raise BadFunctionEvaluation("calculator boolean expected")
+  }
+}
+
+///|
+fn pdf_fun_calculator_copy(
+  stack : Array[PdfCalculatorValue],
+) -> Unit raise PdfError {
   let count = pdf_fun_calculator_pop_int(stack)
   if count < 0 || count > stack.length() {
     raise BadFunctionEvaluation("calculator copy operand out of range")
@@ -781,7 +989,9 @@ fn pdf_fun_calculator_copy(stack : Array[Double]) -> Unit raise PdfError {
 }
 
 ///|
-fn pdf_fun_calculator_index(stack : Array[Double]) -> Unit raise PdfError {
+fn pdf_fun_calculator_index(
+  stack : Array[PdfCalculatorValue],
+) -> Unit raise PdfError {
   let index = pdf_fun_calculator_pop_int(stack)
   if index < 0 || index >= stack.length() {
     raise BadFunctionEvaluation("calculator index operand out of range")
@@ -790,7 +1000,9 @@ fn pdf_fun_calculator_index(stack : Array[Double]) -> Unit raise PdfError {
 }
 
 ///|
-fn pdf_fun_calculator_roll(stack : Array[Double]) -> Unit raise PdfError {
+fn pdf_fun_calculator_roll(
+  stack : Array[PdfCalculatorValue],
+) -> Unit raise PdfError {
   let distance = pdf_fun_calculator_pop_int(stack)
   let count = pdf_fun_calculator_pop_int(stack)
   if count < 1 || count > stack.length() {
@@ -798,13 +1010,64 @@ fn pdf_fun_calculator_roll(stack : Array[Double]) -> Unit raise PdfError {
   }
   let start = stack.length() - count
   let offset = (distance % count + count) % count
-  let rolled : Array[Double] = []
+  let rolled : Array[PdfCalculatorValue] = []
   for index in 0..<count {
     let source = start + (index - offset + count) % count
     rolled.push(stack[source])
   }
   for index in 0..<count {
     stack[start + index] = rolled[index]
+  }
+}
+
+///|
+fn pdf_fun_calculator_values_equal(
+  left : PdfCalculatorValue,
+  right : PdfCalculatorValue,
+) -> Bool {
+  match (left, right) {
+    (PdfCalculatorNumber(left), PdfCalculatorNumber(right)) => left == right
+    (PdfCalculatorBoolean(left), PdfCalculatorBoolean(right)) => left == right
+    _ => false
+  }
+}
+
+///|
+fn pdf_fun_calculator_boolean_or_integer_binary(
+  stack : Array[PdfCalculatorValue],
+  bool_op : (Bool, Bool) -> Bool,
+  int_op : (Int, Int) -> Int,
+) -> Unit raise PdfError {
+  let right = pdf_fun_calculator_pop_value(stack)
+  let left = pdf_fun_calculator_pop_value(stack)
+  match (left, right) {
+    (PdfCalculatorBoolean(left), PdfCalculatorBoolean(right)) =>
+      stack.push(PdfCalculatorBoolean(bool_op(left, right)))
+    (PdfCalculatorNumber(left), PdfCalculatorNumber(right)) =>
+      stack.push(
+        PdfCalculatorNumber(
+          int_op(
+            pdf_fun_calculator_integer(left),
+            pdf_fun_calculator_integer(right),
+          ).to_double(),
+        ),
+      )
+    _ => raise BadFunctionEvaluation("calculator type mismatch")
+  }
+}
+
+///|
+fn pdf_fun_calculator_not(
+  stack : Array[PdfCalculatorValue],
+) -> Unit raise PdfError {
+  match pdf_fun_calculator_pop_value(stack) {
+    PdfCalculatorBoolean(value) => stack.push(PdfCalculatorBoolean(!value))
+    PdfCalculatorNumber(value) =>
+      stack.push(
+        PdfCalculatorNumber(
+          Int::lnot(pdf_fun_calculator_integer(value)).to_double(),
+        ),
+      )
   }
 }
 
@@ -819,53 +1082,79 @@ fn pdf_fun_radians_to_degrees(value : Double) -> Double {
 }
 
 ///|
-fn PdfCalculatorFunction::eval_calculator(
-  self : PdfCalculatorFunction,
-  clamped_inputs : ArrayView[Double],
-) -> Array[Double] raise PdfError {
-  let stack : Array[Double] = []
-  for input in clamped_inputs {
-    stack.push(input)
-  }
-  for operation in self.operations {
+fn pdf_fun_calculator_eval_operations(
+  operations : ArrayView[PdfCalculatorOp],
+  stack : Array[PdfCalculatorValue],
+) -> Unit raise PdfError {
+  for operation in operations {
     match operation {
-      PdfCalculatorInt(value) => stack.push(value.to_double())
-      PdfCalculatorFloat(value) => stack.push(value)
-      PdfCalculatorAbs => stack.push(pdf_fun_calculator_pop(stack).abs())
+      PdfCalculatorInt(value) =>
+        stack.push(PdfCalculatorNumber(value.to_double()))
+      PdfCalculatorFloat(value) => stack.push(PdfCalculatorNumber(value))
+      PdfCalculatorAbs =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).abs()),
+        )
       PdfCalculatorAdd => {
-        let right = pdf_fun_calculator_pop(stack)
-        let left = pdf_fun_calculator_pop(stack)
-        stack.push(left + right)
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorNumber(left + right))
+      }
+      PdfCalculatorAnd =>
+        pdf_fun_calculator_boolean_or_integer_binary(
+          stack,
+          fn(left, right) { left && right },
+          fn(left, right) { left & right },
+        )
+      PdfCalculatorBool(value) => stack.push(PdfCalculatorBoolean(value))
+      PdfCalculatorBitshift => {
+        let shift = pdf_fun_calculator_pop_int(stack)
+        let value = pdf_fun_calculator_pop_int(stack)
+        let shifted = if shift >= 0 { value << shift } else { value >> -shift }
+        stack.push(PdfCalculatorNumber(shifted.to_double()))
       }
       PdfCalculatorAtan => {
-        let denominator = pdf_fun_calculator_pop(stack)
-        let numerator = pdf_fun_calculator_pop(stack)
+        let denominator = pdf_fun_calculator_pop_number(stack)
+        let numerator = pdf_fun_calculator_pop_number(stack)
         stack.push(
-          pdf_fun_radians_to_degrees(@math.atan2(numerator, denominator)),
+          PdfCalculatorNumber(
+            pdf_fun_radians_to_degrees(@math.atan2(numerator, denominator)),
+          ),
         )
       }
-      PdfCalculatorCeiling => stack.push(pdf_fun_calculator_pop(stack).ceil())
+      PdfCalculatorCeiling =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).ceil()),
+        )
       PdfCalculatorCos =>
         stack.push(
-          @math.cos(pdf_fun_degrees_to_radians(pdf_fun_calculator_pop(stack))),
+          PdfCalculatorNumber(
+            @math.cos(
+              pdf_fun_degrees_to_radians(pdf_fun_calculator_pop_number(stack)),
+            ),
+          ),
         )
       PdfCalculatorCopy => pdf_fun_calculator_copy(stack)
-      PdfCalculatorCvi => stack.push(pdf_fun_calculator_pop(stack).trunc())
-      PdfCalculatorCvr => stack.push(pdf_fun_calculator_pop(stack))
+      PdfCalculatorCvi =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).trunc()),
+        )
+      PdfCalculatorCvr =>
+        stack.push(PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack)))
       PdfCalculatorSub => {
-        let right = pdf_fun_calculator_pop(stack)
-        let left = pdf_fun_calculator_pop(stack)
-        stack.push(left - right)
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorNumber(left - right))
       }
       PdfCalculatorMul => {
-        let right = pdf_fun_calculator_pop(stack)
-        let left = pdf_fun_calculator_pop(stack)
-        stack.push(left * right)
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorNumber(left * right))
       }
       PdfCalculatorDiv => {
-        let right = pdf_fun_calculator_pop(stack)
-        let left = pdf_fun_calculator_pop(stack)
-        stack.push(left / right)
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorNumber(left / right))
       }
       PdfCalculatorDup => {
         if stack.length() == 0 {
@@ -883,41 +1172,139 @@ fn PdfCalculatorFunction::eval_calculator(
         stack[last - 1] = value
       }
       PdfCalculatorExp => {
-        let exponent = pdf_fun_calculator_pop(stack)
-        let base = pdf_fun_calculator_pop(stack)
-        stack.push(@math.pow(base, exponent))
+        let exponent = pdf_fun_calculator_pop_number(stack)
+        let base = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorNumber(@math.pow(base, exponent)))
       }
-      PdfCalculatorFloor => stack.push(pdf_fun_calculator_pop(stack).floor())
+      PdfCalculatorFloor =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).floor()),
+        )
       PdfCalculatorIdiv => {
         let right = pdf_fun_calculator_pop_int(stack)
         let left = pdf_fun_calculator_pop_int(stack)
-        stack.push((left / right).to_double())
+        stack.push(PdfCalculatorNumber((left / right).to_double()))
       }
+      PdfCalculatorIf(then_branch) =>
+        if pdf_fun_calculator_pop_bool(stack) {
+          pdf_fun_calculator_eval_operations(then_branch, stack)
+        }
+      PdfCalculatorIfElse(then_branch, else_branch) =>
+        if pdf_fun_calculator_pop_bool(stack) {
+          pdf_fun_calculator_eval_operations(then_branch, stack)
+        } else {
+          pdf_fun_calculator_eval_operations(else_branch, stack)
+        }
       PdfCalculatorIndex => pdf_fun_calculator_index(stack)
-      PdfCalculatorLn => stack.push(@math.ln(pdf_fun_calculator_pop(stack)))
-      PdfCalculatorLog => stack.push(@math.log10(pdf_fun_calculator_pop(stack)))
+      PdfCalculatorLn =>
+        stack.push(
+          PdfCalculatorNumber(@math.ln(pdf_fun_calculator_pop_number(stack))),
+        )
+      PdfCalculatorLog =>
+        stack.push(
+          PdfCalculatorNumber(@math.log10(pdf_fun_calculator_pop_number(stack))),
+        )
+      PdfCalculatorEq => {
+        let right = pdf_fun_calculator_pop_value(stack)
+        let left = pdf_fun_calculator_pop_value(stack)
+        stack.push(
+          PdfCalculatorBoolean(pdf_fun_calculator_values_equal(left, right)),
+        )
+      }
+      PdfCalculatorGe => {
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorBoolean(left >= right))
+      }
+      PdfCalculatorGt => {
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorBoolean(left > right))
+      }
+      PdfCalculatorLe => {
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorBoolean(left <= right))
+      }
+      PdfCalculatorLt => {
+        let right = pdf_fun_calculator_pop_number(stack)
+        let left = pdf_fun_calculator_pop_number(stack)
+        stack.push(PdfCalculatorBoolean(left < right))
+      }
       PdfCalculatorMod => {
         let right = pdf_fun_calculator_pop_int(stack)
         let left = pdf_fun_calculator_pop_int(stack)
-        stack.push((left % right).to_double())
+        stack.push(PdfCalculatorNumber((left % right).to_double()))
       }
-      PdfCalculatorNeg => stack.push(-pdf_fun_calculator_pop(stack))
+      PdfCalculatorNe => {
+        let right = pdf_fun_calculator_pop_value(stack)
+        let left = pdf_fun_calculator_pop_value(stack)
+        stack.push(
+          PdfCalculatorBoolean(!pdf_fun_calculator_values_equal(left, right)),
+        )
+      }
+      PdfCalculatorNeg =>
+        stack.push(PdfCalculatorNumber(-pdf_fun_calculator_pop_number(stack)))
+      PdfCalculatorNot => pdf_fun_calculator_not(stack)
+      PdfCalculatorOr =>
+        pdf_fun_calculator_boolean_or_integer_binary(
+          stack,
+          fn(left, right) { left || right },
+          fn(left, right) { left | right },
+        )
       PdfCalculatorPop => {
-        let _ = pdf_fun_calculator_pop(stack)
+        let _ = pdf_fun_calculator_pop_value(stack)
       }
       PdfCalculatorRoll => pdf_fun_calculator_roll(stack)
-      PdfCalculatorRound => stack.push(pdf_fun_calculator_pop(stack).round())
+      PdfCalculatorRound =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).round()),
+        )
       PdfCalculatorSin =>
         stack.push(
-          @math.sin(pdf_fun_degrees_to_radians(pdf_fun_calculator_pop(stack))),
+          PdfCalculatorNumber(
+            @math.sin(
+              pdf_fun_degrees_to_radians(pdf_fun_calculator_pop_number(stack)),
+            ),
+          ),
         )
-      PdfCalculatorSqrt => stack.push(pdf_fun_calculator_pop(stack).sqrt())
-      PdfCalculatorTruncate => stack.push(pdf_fun_calculator_pop(stack).trunc())
+      PdfCalculatorSqrt =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).sqrt()),
+        )
+      PdfCalculatorTruncate =>
+        stack.push(
+          PdfCalculatorNumber(pdf_fun_calculator_pop_number(stack).trunc()),
+        )
+      PdfCalculatorXor =>
+        pdf_fun_calculator_boolean_or_integer_binary(
+          stack,
+          fn(left, right) { left != right },
+          fn(left, right) { left ^ right },
+        )
     }
   }
-  [
-    for value in stack => value
-  ]
+}
+
+///|
+fn PdfCalculatorFunction::eval_calculator(
+  self : PdfCalculatorFunction,
+  clamped_inputs : ArrayView[Double],
+) -> Array[Double] raise PdfError {
+  let stack : Array[PdfCalculatorValue] = []
+  for input in clamped_inputs {
+    stack.push(PdfCalculatorNumber(input))
+  }
+  pdf_fun_calculator_eval_operations(self.operations, stack)
+  let output : Array[Double] = []
+  for value in stack {
+    match value {
+      PdfCalculatorNumber(value) => output.push(value)
+      PdfCalculatorBoolean(_) =>
+        raise BadFunctionEvaluation("calculator output must be numeric")
+    }
+  }
+  output
 }
 
 ///|

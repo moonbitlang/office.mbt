@@ -368,9 +368,10 @@ MoonBit consequences for this project:
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
    attributes. `pdffun` is started with Type 0 sampled, Type 2 interpolation,
    Type 3 stitching, and Type 4 calculator function parsing/evaluation for
-   numeric literals, common numeric operators, and numeric stack operators,
-   stream decoding for sampled/calculator functions, domain clamping, and range
-   clamping. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG data through the
+   numeric and boolean literals, named numeric/comparison/logic operators,
+   nested `if`/`ifelse` procedures, and stack operators, stream decoding for
+   sampled/calculator functions, domain clamping, and range clamping. `pdfjpeg`
+   is started with a byte-cursor helper that extracts JPEG data through the
    `FF D9` EOI marker while leaving following bytes unread. `pdfimage` is
    started with typed image result and pixel-layout enums plus image
    `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
@@ -385,7 +386,7 @@ MoonBit consequences for this project:
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. Separation image pixels are started for 8-bit
    samples with Type 2 tint functions and DeviceCMYK alternates. Type 4
-   calculator boolean/comparison/conditional coverage and JPEG decoding remain
+   calculator integer overflow/width edge parity and JPEG decoding remain
    deferred.
 
 10. Encryption.

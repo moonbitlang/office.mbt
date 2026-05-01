@@ -129,6 +129,16 @@ the direct replacement for byte-codec and bitstream code that masks, packs,
 or inverts bytes.
 
 ```sh
+moon run -c 'fn main { println(Int::lnot(0)); println((0x0F).lnot()); println((!true).to_string()) }'
+# -1
+# -16
+# false
+```
+
+Use `Int::lnot(value)` or `value.lnot()` for OCaml integer `lnot`. Boolean
+negation uses `!expr`; avoid porting OCaml `not x` literally.
+
+```sh
 moon run -c 'fn main { let tiny : Double = try! @strconv.from_str("1e-10"); println(tiny.to_string()) }'
 # 1e-10
 ```

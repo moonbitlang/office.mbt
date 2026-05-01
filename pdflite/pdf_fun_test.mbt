@@ -207,6 +207,61 @@ test "PdfDocument parse_function evaluates calculator copy and roll operators" {
 }
 
 ///|
+test "PdfDocument parse_function evaluates calculator ifelse procedures" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode("{ dup 0.5 lt { 0 } { 1 } ifelse exch pop }")
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([0.25]), [0.0])
+  @test.assert_eq(try! function.eval([0.75]), [1.0])
+}
+
+///|
+test "PdfDocument parse_function evaluates calculator if and boolean operators" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode("{ dup 0.5 ge true and { 2 mul } if }")
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(2)])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([0.25]), [0.25])
+  @test.assert_eq(try! function.eval([0.75]), [1.5])
+}
+
+///|
+test "PdfDocument parse_function evaluates integer calculator operators" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode(
+    "{ 6 3 and 8 1 bitshift or 3 xor 0 not 0 ne { 1 } { 0 } ifelse exch pop }",
+  )
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([])),
+      (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([]), [1.0])
+}
+
+///|
 test "PdfDocument parse_function reads and evaluates Type 2 interpolation functions" {
   let doc = @pdflite.pdf_document_empty()
   let function_object = @pdflite.pdf_dictionary([
