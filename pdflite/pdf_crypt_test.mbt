@@ -36,6 +36,15 @@ fn crypt_aesv2_encrypt_data_for_test(
 }
 
 ///|
+fn crypt_aesv3_encrypt_data_for_test(
+  file_key : BytesView,
+  data : BytesView,
+  iv : BytesView,
+) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_aes_cbc_encrypt_with_iv(file_key, iv, data)
+}
+
+///|
 fn crypt_aesv3_r5_user_entry_for_test() -> @pdflite.PdfBytes {
   crypt_model_bytes_for_test([
     0xad, 0x7c, 0x98, 0xe2, 0x51, 0xcb, 0x1c, 0x7b, 0x3e, 0x28, 0x30, 0xb6, 0xf0,
@@ -637,15 +646,28 @@ test "PdfEncryptionValues authenticates AESV3 revision 5 passwords" {
     fail("expected short AESV3 /OE")
   }
 
-  let unsupported_object_crypt : Result[@pdflite.PdfDecryptionResult?, Error] = try? doc.decrypt_with_user_password(
-    @ascii.encode("user")[:],
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_user_password(@ascii.encode("user")[:]),
   )
-  guard unsupported_object_crypt
-    is Err(
-      @pdflite.PdfError::EncryptionObjectCryptUnsupported(PdfCryptAESV3(false))
-    ) else {
-    fail("expected unsupported AESV3 object crypt")
-  }
+  @test.assert_eq(
+    decrypted.document
+    .trailer_dict()
+    .lookup_immediate(crypt_name_for_test("/Encrypt")),
+    None,
+  )
+  @test.assert_eq(
+    decrypted.denied_permissions,
+    @pdflite.pdf_permissions_of_p(-3904),
+  )
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    owner_decrypted.document
+    .trailer_dict()
+    .lookup_immediate(crypt_name_for_test("/Encrypt")),
+    None,
+  )
 }
 
 ///|
@@ -997,6 +1019,114 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
     .trailer_dict()
     .lookup_immediate(crypt_name_for_test("/Encrypt")),
     None,
+  )
+  @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
+  @test.assert_eq(
+    try! doc.decrypt_with_user_password(@ascii.encode("bad")[:]),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.decrypt_with_owner_password(@ascii.encode("bad")[:]),
+    None,
+  )
+}
+
+///|
+test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 objects in a copy" {
+  let user_entry = crypt_aesv3_r5_user_entry_for_test()
+  let owner_entry = crypt_aesv3_r5_owner_entry_for_test()
+  let file_key = crypt_aesv3_r5_file_key_for_test()
+  let encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
+    [
+      (crypt_name_for_test("/V"), PdfInteger(5)),
+      (crypt_name_for_test("/R"), PdfInteger(5)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/AESV3")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+      (
+        crypt_name_for_test("/UE"),
+        PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+      ),
+      (
+        crypt_name_for_test("/OE"),
+        PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+      ),
+    ],
+    owner_entry,
+    user_entry,
+    -3904,
+  )
+  let iv = crypt_model_bytes_for_test([
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
+    0x2d, 0x2e, 0x2f,
+  ])
+  let key_title = crypt_name_for_test("/Title")
+  let plain_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3"))),
+  ])
+  let encrypted_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_title,
+      PdfString(
+        crypt_aesv3_encrypt_data_for_test(
+          file_key[:],
+          @ascii.encode("aes3")[:],
+          iv[:],
+        ),
+      ),
+    ),
+  ])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, encrypted_object)
+  doc.add_object_given_number(2, encrypt_dictionary)
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_name_for_test("/Encrypt"), PdfIndirect(2)),
+      (
+        crypt_name_for_test("/ID"),
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(2),
+    encrypt_dictionary,
+  )
+  @test.assert_eq(
+    decrypted.document
+    .trailer_dict()
+    .lookup_immediate(crypt_name_for_test("/Encrypt")),
+    None,
+  )
+  @test.assert_eq(
+    decrypted.denied_permissions,
+    @pdflite.pdf_permissions_of_p(-3904),
+  )
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    owner_decrypted.document.lookup_object_or_null(1),
+    plain_object,
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
   @test.assert_eq(
@@ -1723,6 +1853,16 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
     @ascii.encode("hello")[:],
     iv[:],
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv2_decrypt_object_data(
+      12,
+      0,
+      file_key[:],
+      128,
+      encrypted_hello[:],
+    ),
+    @ascii.encode("hello"),
+  )
   let object : @pdflite.PdfObject = PdfDictionary([
     (key_s, PdfString(@ascii.encode("hello"))),
     (
@@ -1780,6 +1920,70 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
       128,
       encrypted_stream,
     ),
+    plain_stream,
+  )
+}
+
+///|
+test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries and streams" {
+  let file_key = crypt_aesv3_r5_file_key_for_test()
+  let iv = crypt_model_bytes_for_test([
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
+    0x2d, 0x2e, 0x2f,
+  ])
+  let key_s = @pdflite.pdf_name_of_bytes(@ascii.encode("/S"))
+  let key_a = @pdflite.pdf_name_of_bytes(@ascii.encode("/A"))
+  let key_n = @pdflite.pdf_name_of_bytes(@ascii.encode("/N"))
+  let encrypted_hello = crypt_aesv3_encrypt_data_for_test(
+    file_key[:],
+    @ascii.encode("hello")[:],
+    iv[:],
+  )
+  let object : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfString(@ascii.encode("hello"))),
+    (
+      key_a,
+      PdfArray([
+        PdfString(@ascii.encode("hello")),
+        PdfNameObject(key_n),
+        PdfIndirect(9),
+      ]),
+    ),
+  ])
+  let encrypted : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfString(encrypted_hello)),
+    (
+      key_a,
+      PdfArray([
+        PdfString(encrypted_hello),
+        PdfNameObject(key_n),
+        PdfIndirect(9),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key[:], encrypted),
+    object,
+  )
+
+  let key_length = @pdflite.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_title = @pdflite.pdf_name_of_bytes(@ascii.encode("/Title"))
+  let encrypted_stream : @pdflite.PdfObject = PdfStreamObject({
+    dictionary: PdfDictionary([
+      (key_length, PdfInteger(encrypted_hello.length())),
+      (key_title, PdfString(encrypted_hello)),
+    ]),
+    data: StreamGot(encrypted_hello),
+  })
+  let plain_stream : @pdflite.PdfObject = PdfStreamObject({
+    dictionary: PdfDictionary([
+      (key_length, PdfInteger(5)),
+      (key_title, PdfString(@ascii.encode("hello"))),
+    ]),
+    data: StreamGot(@ascii.encode("hello")),
+  })
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key[:], encrypted_stream),
     plain_stream,
   )
 }

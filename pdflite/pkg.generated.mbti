@@ -59,6 +59,8 @@ pub fn pdf_aesv2_decrypt_object_data(Int, Int, BytesView, Int, BytesView) -> Byt
 
 pub fn pdf_aesv2_decrypt_pdf_object(Int, Int, BytesView, Int, PdfObject) -> PdfObject raise PdfError
 
+pub fn pdf_aesv3_decrypt_pdf_object(BytesView, PdfObject) -> PdfObject raise PdfError
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
@@ -841,6 +843,7 @@ pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
 pub fn PdfDocument::aesv2_decrypt_parsed_objects(Self, BytesView, Int, skip_object_number? : Int) -> Self raise PdfError
+pub fn PdfDocument::aesv3_decrypt_parsed_objects(Self, BytesView, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise PdfError
 pub fn PdfDocument::arc4_crypt_parsed_objects(Self, BytesView, Int, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject

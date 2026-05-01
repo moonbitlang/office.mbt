@@ -517,10 +517,12 @@ MoonBit consequences for this project:
     padding handling. ARC4 object data encryption/decryption using derived
     object keys is started for the legacy string/stream path. AESV2 parsed
     object data decryption is also started for IV-prefixed strings and stream
-    payloads using derived AES object keys. Recursive ARC4 and AESV2 object
-    walks are started for PDF strings, arrays, dictionaries, and stream
-    dictionaries/data, with stream data materialized at the crypt boundary and
-    `/Length` refreshed. Copied document-level ARC4 and AESV2 user-password and
+    payloads using derived AES object keys. AESV3 revision 5 parsed object
+    data decryption is started with the unwrapped 32-byte file key. Recursive
+    ARC4, AESV2, and AESV3 revision 5 object walks are started for PDF strings,
+    arrays, dictionaries, and stream dictionaries/data, with stream data
+    materialized at the crypt boundary and `/Length` refreshed. Copied
+    document-level ARC4, AESV2, and AESV3 revision 5 user-password and
     owner-password decryption passes are also started for parsed objects,
     preserving
     already-decrypted and deferred parser states and allowing the encryption
@@ -534,14 +536,14 @@ MoonBit consequences for this project:
     ARC4 revisions 2/3 and AESV2 revision 4. AESV3 revision 5 SHA-256
     user-password and owner-password authentication is also started, including
     `/UE` and `/OE` file-key unwrap through AES-256-CBC with no padding.
-    Revision 6/ISO `shamix` and AES object crypt still report structured
-    unsupported errors until the remaining primitives are available.
+    Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
+    structured unsupported errors until the remaining primitives are available.
     The document-level decryption entry points for parsed ARC4 and AESV2
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, and return CamlPDF-style denied permissions.
-    AESV3 object/data crypt, SHA-family helpers beyond the available package
-    surface, deferred stream/object decryption, and re-encryption remain
-    deferred.
+    AESV3 revision 6 object/data crypt, SHA-family helpers beyond the
+    available package surface, deferred stream/object decryption, and
+    re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

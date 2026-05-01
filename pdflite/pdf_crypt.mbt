@@ -451,7 +451,20 @@ fn PdfDocument::decrypt_with_file_key(
         denied_permissions: pdf_permissions_of_p(values.permissions),
       }
     }
-    PdfCryptAESV3(_) =>
+    PdfCryptAESV3(false) => {
+      let output = self.aesv3_decrypt_parsed_objects(
+        file_key[:],
+        skip_object_number=self.encryption_object_number(),
+      )
+      output.set_trailer_dict(
+        output.trailer_dict().remove_dict_entry(pdf_crypt_name("/Encrypt")),
+      )
+      {
+        document: output,
+        denied_permissions: pdf_permissions_of_p(values.permissions),
+      }
+    }
+    PdfCryptAESV3(true) =>
       raise EncryptionObjectCryptUnsupported(values.crypt_type)
   }
 }
@@ -960,32 +973,16 @@ pub fn pdf_aesv2_decrypt_object_data(
 }
 
 ///|
-pub fn pdf_aesv2_decrypt_pdf_object(
-  object_number : Int,
-  generation : Int,
-  file_key : BytesView,
-  key_length_bits : Int,
+fn pdf_aes_decrypt_pdf_object_with_key(
+  key : BytesView,
   object : PdfObject,
 ) -> PdfObject raise PdfError {
   match object {
-    PdfString(bytes) =>
-      PdfString(
-        pdf_aesv2_decrypt_object_data(
-          object_number,
-          generation,
-          file_key,
-          key_length_bits,
-          bytes[:],
-        ),
-      )
+    PdfString(bytes) => PdfString(pdf_aes_cbc_decrypt(key, bytes[:]))
     PdfArray(values) => {
       let output : Array[PdfObject] = []
       for value in values {
-        output.push(
-          pdf_aesv2_decrypt_pdf_object(
-            object_number, generation, file_key, key_length_bits, value,
-          ),
-        )
+        output.push(pdf_aes_decrypt_pdf_object_with_key(key, value))
       }
       PdfArray(output)
     }
@@ -993,33 +990,17 @@ pub fn pdf_aesv2_decrypt_pdf_object(
       let output : Array[(PdfName, PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
-        output.push(
-          (
-            name,
-            pdf_aesv2_decrypt_pdf_object(
-              object_number, generation, file_key, key_length_bits, value,
-            ),
-          ),
-        )
+        output.push((name, pdf_aes_decrypt_pdf_object_with_key(key, value)))
       }
       PdfDictionary(output)
     }
     PdfStreamObject(stream) => {
-      let dictionary = pdf_aesv2_decrypt_pdf_object(
-        object_number,
-        generation,
-        file_key,
-        key_length_bits,
+      let dictionary = pdf_aes_decrypt_pdf_object_with_key(
+        key,
         stream.dictionary,
       )
       let data = pdf_stream_data_bytes(stream.data)
-      let decrypted_data = pdf_aesv2_decrypt_object_data(
-        object_number,
-        generation,
-        file_key,
-        key_length_bits,
-        data[:],
-      )
+      let decrypted_data = pdf_aes_cbc_decrypt(key, data[:])
       PdfStreamObject({
         dictionary: dictionary.add_dict_entry(
           pdf_crypt_stream_length_key(),
@@ -1030,6 +1011,32 @@ pub fn pdf_aesv2_decrypt_pdf_object(
     }
     _ => object
   }
+}
+
+///|
+pub fn pdf_aesv2_decrypt_pdf_object(
+  object_number : Int,
+  generation : Int,
+  file_key : BytesView,
+  key_length_bits : Int,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  let object_key = pdf_encryption_object_key(
+    PdfCryptAESV2,
+    object_number,
+    generation,
+    file_key,
+    key_length_bits,
+  )
+  pdf_aes_decrypt_pdf_object_with_key(object_key[:], object)
+}
+
+///|
+pub fn pdf_aesv3_decrypt_pdf_object(
+  file_key : BytesView,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  pdf_aes_decrypt_pdf_object_with_key(file_key, object)
 }
 
 ///|
@@ -1089,6 +1096,31 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
                 object,
               ),
             ),
+            generation: entry.generation,
+          })
+        ObjectParsedAlreadyDecrypted(_)
+        | ObjectToParse
+        | ObjectToParseFromObjectStream(_) => ()
+      }
+    }
+  }
+  output
+}
+
+///|
+pub fn PdfDocument::aesv3_decrypt_parsed_objects(
+  self : PdfDocument,
+  file_key : BytesView,
+  skip_object_number? : Int = 0,
+) -> PdfDocument raise PdfError {
+  let output = self.copy()
+  for number in output.object_numbers() {
+    if number != skip_object_number {
+      let entry = output.objects.get_entry(number).unwrap()
+      match entry.data {
+        ObjectParsed(object) =>
+          output.objects.set_entry(number, {
+            data: ObjectParsed(pdf_aesv3_decrypt_pdf_object(file_key, object)),
             generation: entry.generation,
           })
         ObjectParsedAlreadyDecrypted(_)
