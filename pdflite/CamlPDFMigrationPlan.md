@@ -255,6 +255,9 @@ MoonBit consequences for this project:
    `pdfhello.ml`, `pdfdecomp.ml`, and `pdftest.ml` workflows: create a page,
    parse/write content operators, read pages from a page tree, modify page
    contents, remove unreferenced objects, and write the result.
+   Status: started with CamlPDF-style page tree reference-number traversal
+   through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
+   top-level `/Count` based `endpage_fast`.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

@@ -225,6 +225,7 @@ pub(all) suberror PdfError {
   StreamLengthExpected
   StreamDataExpected
   ParsedObjectExpected
+  PageTreeExpected
   StartXRefExpected
   XRefExpected
   XRefEntryExpected
@@ -338,6 +339,8 @@ pub struct PdfDocument {
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
+pub fn PdfDocument::endpage(Self) -> Int raise PdfError
+pub fn PdfDocument::endpage_fast(Self) -> Int raise PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfDocument::first_xref(Self) -> Int
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise PdfError
@@ -347,6 +350,7 @@ pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> 
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit

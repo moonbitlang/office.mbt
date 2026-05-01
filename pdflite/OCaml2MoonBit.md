@@ -334,6 +334,10 @@ Assertion style:
   `moon test --update`, then review the updated `content=...` diff.
 - For raising functions, use `let result : Result[T, Error] = try? f()` and
   assert or inspect the result.
+- For parser/serializer, encoder/decoder, or loader/writer pairs, pair focused
+  edge-case tests with at least one public API round-trip test when practical.
+  This catches ownership, byte/text, and object-boundary mistakes that isolated
+  unit tests can miss.
 
 Useful commands:
 

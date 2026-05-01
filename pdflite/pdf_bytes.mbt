@@ -30,6 +30,7 @@ pub(all) suberror PdfError {
   StreamLengthExpected
   StreamDataExpected
   ParsedObjectExpected
+  PageTreeExpected
   StartXRefExpected
   XRefExpected
   XRefEntryExpected
