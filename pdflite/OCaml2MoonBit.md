@@ -460,6 +460,18 @@ in the function declaration and call it as `name=value`. Do not write a default
 on an unlabelled positional parameter.
 
 ```sh
+moon run -c 'fn inner(flag? : Bool = false) -> Bool { flag }
+fn outer(flag? : Bool = false) -> Bool { inner(flag~) }
+fn main { println(outer()); println(outer(flag=true)) }'
+# false
+# true
+```
+
+When wrapping a function with the same labelled optional argument name, forward
+the current value with `label~`. This is the MoonBit counterpart to preserving
+OCaml optional argument semantics through helper layers.
+
+```sh
 moon run -c 'fn takes_view(xs : ArrayView[Int]) -> Int { xs.length() }
 fn sample(xs? : ArrayView[Int] = []) -> Int { takes_view(xs) }
 fn main { println(sample()); println(sample(xs=[1, 2, 3])) }'

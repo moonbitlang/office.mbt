@@ -521,12 +521,15 @@ MoonBit consequences for this project:
     data decryption is started with the unwrapped 32-byte file key. Recursive
     ARC4, AESV2, and AESV3 revision 5 object walks are started for PDF strings,
     arrays, dictionaries, and stream dictionaries/data, with stream data
-    materialized at the crypt boundary and `/Length` refreshed. Copied
-    document-level ARC4, AESV2, and AESV3 revision 5 user-password and
-    owner-password decryption passes are also started for parsed objects,
-    preserving
-    already-decrypted and deferred parser states and allowing the encryption
-    dictionary object to be skipped. Typed standard-encryption dictionary
+    materialized at the crypt boundary and `/Length` refreshed. Stream crypt
+    skipping now matches the CamlPDF cases for `/Type /Metadata` when
+    `no_encrypt_metadata=true` and identity `/Crypt` filters with absent,
+    explicit `/Identity`, or nameless first `/DecodeParms`; non-identity crypt
+    filters still decrypt. Copied document-level ARC4, AESV2, and AESV3 revision
+    5 user-password and owner-password decryption passes are also started for
+    parsed objects, preserving already-decrypted and deferred parser states and
+    allowing the encryption dictionary object to be skipped. Typed
+    standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
     handling. The parser now reports structured errors for unencrypted files,

@@ -421,12 +421,14 @@ fn PdfDocument::decrypt_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
   file_key : PdfBytes,
+  no_encrypt_metadata? : Bool = false,
 ) -> PdfDecryptionResult raise PdfError {
   match values.crypt_type {
     PdfCryptARC4(key_length_bits, _) => {
       let output = self.arc4_crypt_parsed_objects(
         file_key[:],
         key_length_bits,
+        no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
       output.set_trailer_dict(
@@ -441,6 +443,7 @@ fn PdfDocument::decrypt_with_file_key(
       let output = self.aesv2_decrypt_parsed_objects(
         file_key[:],
         128,
+        no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
       output.set_trailer_dict(
@@ -454,6 +457,7 @@ fn PdfDocument::decrypt_with_file_key(
     PdfCryptAESV3(false) => {
       let output = self.aesv3_decrypt_parsed_objects(
         file_key[:],
+        no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
       output.set_trailer_dict(
@@ -484,7 +488,7 @@ pub fn PdfDocument::decrypt_with_user_password(
         Some(key) => key
         None => return None
       }
-      Some(self.decrypt_with_file_key(values, file_key))
+      Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata~))
     }
   }
 }
@@ -504,7 +508,7 @@ pub fn PdfDocument::decrypt_with_owner_password(
         Some(key) => key
         None => return None
       }
-      Some(self.decrypt_with_file_key(values, file_key))
+      Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata~))
     }
   }
 }
@@ -882,12 +886,82 @@ fn pdf_crypt_stream_length_key() -> PdfName {
 }
 
 ///|
+fn pdf_crypt_stream_filter_key() -> PdfName {
+  pdf_crypt_name("/Filter")
+}
+
+///|
+fn pdf_crypt_stream_decodeparms_key() -> PdfName {
+  pdf_crypt_name("/DecodeParms")
+}
+
+///|
+fn pdf_crypt_stream_name_key() -> PdfName {
+  pdf_crypt_name("/Name")
+}
+
+///|
+fn pdf_crypt_stream_type_key() -> PdfName {
+  pdf_crypt_name("/Type")
+}
+
+///|
+fn pdf_crypt_object_is_name(object : PdfObject?, text : String) -> Bool {
+  match object {
+    Some(PdfNameObject(name)) => name == pdf_crypt_name(text)
+    _ => false
+  }
+}
+
+///|
+fn pdf_crypt_first_filter_is_crypt(dictionary : PdfObject) -> Bool {
+  match dictionary.lookup_immediate(pdf_crypt_stream_filter_key()) {
+    Some(PdfNameObject(name)) => name == pdf_crypt_name("/Crypt")
+    Some(PdfArray([PdfNameObject(name), ..])) =>
+      name == pdf_crypt_name("/Crypt")
+    _ => false
+  }
+}
+
+///|
+fn pdf_crypt_decodeparms_is_identity(dictionary : PdfObject) -> Bool {
+  match dictionary.lookup_immediate(pdf_crypt_stream_decodeparms_key()) {
+    Some(PdfDictionary(_) as decodeparms)
+    | Some(PdfArray([PdfDictionary(_) as decodeparms, ..])) =>
+      match decodeparms.lookup_immediate(pdf_crypt_stream_name_key()) {
+        Some(PdfNameObject(name)) => name == pdf_crypt_name("/Identity")
+        None => true
+        _ => false
+      }
+    _ => true
+  }
+}
+
+///|
+fn pdf_crypt_stream_is_identity(
+  no_encrypt_metadata : Bool,
+  dictionary : PdfObject,
+) -> Bool {
+  if no_encrypt_metadata &&
+    pdf_crypt_object_is_name(
+      dictionary.lookup_immediate(pdf_crypt_stream_type_key()),
+      "/Metadata",
+    ) {
+    true
+  } else {
+    pdf_crypt_first_filter_is_crypt(dictionary) &&
+    pdf_crypt_decodeparms_is_identity(dictionary)
+  }
+}
+
+///|
 pub fn pdf_arc4_crypt_pdf_object(
   object_number : Int,
   generation : Int,
   file_key : BytesView,
   key_length_bits : Int,
   object : PdfObject,
+  no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   match object {
     PdfString(bytes) =>
@@ -905,7 +979,12 @@ pub fn pdf_arc4_crypt_pdf_object(
       for value in values {
         output.push(
           pdf_arc4_crypt_pdf_object(
-            object_number, generation, file_key, key_length_bits, value,
+            object_number,
+            generation,
+            file_key,
+            key_length_bits,
+            value,
+            no_encrypt_metadata~,
           ),
         )
       }
@@ -919,37 +998,46 @@ pub fn pdf_arc4_crypt_pdf_object(
           (
             name,
             pdf_arc4_crypt_pdf_object(
-              object_number, generation, file_key, key_length_bits, value,
+              object_number,
+              generation,
+              file_key,
+              key_length_bits,
+              value,
+              no_encrypt_metadata~,
             ),
           ),
         )
       }
       PdfDictionary(output)
     }
-    PdfStreamObject(stream) => {
-      let dictionary = pdf_arc4_crypt_pdf_object(
-        object_number,
-        generation,
-        file_key,
-        key_length_bits,
-        stream.dictionary,
-      )
-      let data = pdf_stream_data_bytes(stream.data)
-      let encrypted_data = pdf_arc4_crypt_object(
-        object_number,
-        generation,
-        file_key,
-        key_length_bits,
-        data[:],
-      )
-      PdfStreamObject({
-        dictionary: dictionary.add_dict_entry(
-          pdf_crypt_stream_length_key(),
-          PdfInteger(encrypted_data.length()),
-        ),
-        data: StreamGot(encrypted_data),
-      })
-    }
+    PdfStreamObject(stream) =>
+      if pdf_crypt_stream_is_identity(no_encrypt_metadata, stream.dictionary) {
+        object
+      } else {
+        let dictionary = pdf_arc4_crypt_pdf_object(
+          object_number,
+          generation,
+          file_key,
+          key_length_bits,
+          stream.dictionary,
+          no_encrypt_metadata~,
+        )
+        let data = pdf_stream_data_bytes(stream.data)
+        let encrypted_data = pdf_arc4_crypt_object(
+          object_number,
+          generation,
+          file_key,
+          key_length_bits,
+          data[:],
+        )
+        PdfStreamObject({
+          dictionary: dictionary.add_dict_entry(
+            pdf_crypt_stream_length_key(),
+            PdfInteger(encrypted_data.length()),
+          ),
+          data: StreamGot(encrypted_data),
+        })
+      }
     _ => object
   }
 }
@@ -976,13 +1064,16 @@ pub fn pdf_aesv2_decrypt_object_data(
 fn pdf_aes_decrypt_pdf_object_with_key(
   key : BytesView,
   object : PdfObject,
+  no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   match object {
     PdfString(bytes) => PdfString(pdf_aes_cbc_decrypt(key, bytes[:]))
     PdfArray(values) => {
       let output : Array[PdfObject] = []
       for value in values {
-        output.push(pdf_aes_decrypt_pdf_object_with_key(key, value))
+        output.push(
+          pdf_aes_decrypt_pdf_object_with_key(key, value, no_encrypt_metadata~),
+        )
       }
       PdfArray(output)
     }
@@ -990,25 +1081,38 @@ fn pdf_aes_decrypt_pdf_object_with_key(
       let output : Array[(PdfName, PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
-        output.push((name, pdf_aes_decrypt_pdf_object_with_key(key, value)))
+        output.push(
+          (
+            name,
+            pdf_aes_decrypt_pdf_object_with_key(
+              key,
+              value,
+              no_encrypt_metadata~,
+            ),
+          ),
+        )
       }
       PdfDictionary(output)
     }
-    PdfStreamObject(stream) => {
-      let dictionary = pdf_aes_decrypt_pdf_object_with_key(
-        key,
-        stream.dictionary,
-      )
-      let data = pdf_stream_data_bytes(stream.data)
-      let decrypted_data = pdf_aes_cbc_decrypt(key, data[:])
-      PdfStreamObject({
-        dictionary: dictionary.add_dict_entry(
-          pdf_crypt_stream_length_key(),
-          PdfInteger(decrypted_data.length()),
-        ),
-        data: StreamGot(decrypted_data),
-      })
-    }
+    PdfStreamObject(stream) =>
+      if pdf_crypt_stream_is_identity(no_encrypt_metadata, stream.dictionary) {
+        object
+      } else {
+        let dictionary = pdf_aes_decrypt_pdf_object_with_key(
+          key,
+          stream.dictionary,
+          no_encrypt_metadata~,
+        )
+        let data = pdf_stream_data_bytes(stream.data)
+        let decrypted_data = pdf_aes_cbc_decrypt(key, data[:])
+        PdfStreamObject({
+          dictionary: dictionary.add_dict_entry(
+            pdf_crypt_stream_length_key(),
+            PdfInteger(decrypted_data.length()),
+          ),
+          data: StreamGot(decrypted_data),
+        })
+      }
     _ => object
   }
 }
@@ -1020,6 +1124,7 @@ pub fn pdf_aesv2_decrypt_pdf_object(
   file_key : BytesView,
   key_length_bits : Int,
   object : PdfObject,
+  no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   let object_key = pdf_encryption_object_key(
     PdfCryptAESV2,
@@ -1028,15 +1133,20 @@ pub fn pdf_aesv2_decrypt_pdf_object(
     file_key,
     key_length_bits,
   )
-  pdf_aes_decrypt_pdf_object_with_key(object_key[:], object)
+  pdf_aes_decrypt_pdf_object_with_key(
+    object_key[:],
+    object,
+    no_encrypt_metadata~,
+  )
 }
 
 ///|
 pub fn pdf_aesv3_decrypt_pdf_object(
   file_key : BytesView,
   object : PdfObject,
+  no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
-  pdf_aes_decrypt_pdf_object_with_key(file_key, object)
+  pdf_aes_decrypt_pdf_object_with_key(file_key, object, no_encrypt_metadata~)
 }
 
 ///|
@@ -1044,6 +1154,7 @@ pub fn PdfDocument::arc4_crypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
+  no_encrypt_metadata? : Bool = false,
   skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
   let output = self.copy()
@@ -1060,6 +1171,7 @@ pub fn PdfDocument::arc4_crypt_parsed_objects(
                 file_key,
                 key_length_bits,
                 object,
+                no_encrypt_metadata~,
               ),
             ),
             generation: entry.generation,
@@ -1078,6 +1190,7 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
+  no_encrypt_metadata? : Bool = false,
   skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
   let output = self.copy()
@@ -1094,6 +1207,7 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
                 file_key,
                 key_length_bits,
                 object,
+                no_encrypt_metadata~,
               ),
             ),
             generation: entry.generation,
@@ -1111,6 +1225,7 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
 pub fn PdfDocument::aesv3_decrypt_parsed_objects(
   self : PdfDocument,
   file_key : BytesView,
+  no_encrypt_metadata? : Bool = false,
   skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
   let output = self.copy()
@@ -1120,7 +1235,13 @@ pub fn PdfDocument::aesv3_decrypt_parsed_objects(
       match entry.data {
         ObjectParsed(object) =>
           output.objects.set_entry(number, {
-            data: ObjectParsed(pdf_aesv3_decrypt_pdf_object(file_key, object)),
+            data: ObjectParsed(
+              pdf_aesv3_decrypt_pdf_object(
+                file_key,
+                object,
+                no_encrypt_metadata~,
+              ),
+            ),
             generation: entry.generation,
           })
         ObjectParsedAlreadyDecrypted(_)

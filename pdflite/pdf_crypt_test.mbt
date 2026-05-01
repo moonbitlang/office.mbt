@@ -93,6 +93,17 @@ fn crypt_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn crypt_stream_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  data : @pdflite.PdfBytes,
+) -> @pdflite.PdfObject {
+  PdfStreamObject({
+    dictionary: PdfDictionary([ for entry in entries => entry ]),
+    data: StreamGot(data),
+  })
+}
+
+///|
 fn crypt_repeated_bytes_for_test(
   value : Int,
   length : Int,
@@ -1087,9 +1098,37 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
       ),
     ),
   ])
+  let encrypted_metadata = crypt_aesv3_encrypt_data_for_test(
+    file_key[:],
+    @ascii.encode("meta")[:],
+    iv[:],
+  )
+  let encrypted_metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(encrypted_metadata.length())),
+      (
+        crypt_name_for_test("/Type"),
+        PdfNameObject(crypt_name_for_test("/Metadata")),
+      ),
+      (key_title, PdfString(encrypted_metadata)),
+    ],
+    encrypted_metadata,
+  )
+  let plain_metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/Type"),
+        PdfNameObject(crypt_name_for_test("/Metadata")),
+      ),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("meta"),
+  )
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, encrypted_object)
   doc.add_object_given_number(2, encrypt_dictionary)
+  doc.add_object_given_number(3, encrypted_metadata_stream)
   doc.set_trailer_dict(
     PdfDictionary([
       (crypt_name_for_test("/Encrypt"), PdfIndirect(2)),
@@ -1107,6 +1146,10 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
     try! doc.decrypt_with_user_password(@ascii.encode("user")[:]),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(3),
+    plain_metadata_stream,
+  )
   @test.assert_eq(
     decrypted.document.lookup_object_or_null(2),
     encrypt_dictionary,
@@ -1127,6 +1170,20 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(1),
     plain_object,
+  )
+  let metadata_skipped = crypt_unwrap_decryption_result_for_test(
+    try! doc.decrypt_with_user_password(
+      @ascii.encode("user")[:],
+      no_encrypt_metadata=true,
+    ),
+  )
+  @test.assert_eq(
+    metadata_skipped.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(
+    metadata_skipped.document.lookup_object_or_null(3),
+    encrypted_metadata_stream,
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
   @test.assert_eq(
@@ -1836,6 +1893,211 @@ test "pdf_arc4_crypt_pdf_object encrypts stream dictionaries and data" {
 }
 
 ///|
+test "pdf_arc4_crypt_pdf_object skips metadata and identity Crypt streams" {
+  let key = crypt_model_bytes_for_test([1, 2, 3, 4, 5])
+  let hello = @ascii.encode("hello")
+  let encrypted_hello = crypt_model_bytes_for_test([
+    0x7d, 0x1c, 0x38, 0x4c, 0xca,
+  ])
+  let key_length = crypt_name_for_test("/Length")
+  let key_title = crypt_name_for_test("/Title")
+  let key_type = crypt_name_for_test("/Type")
+  let key_filter = crypt_name_for_test("/Filter")
+  let key_decodeparms = crypt_name_for_test("/DecodeParms")
+  let key_name = crypt_name_for_test("/Name")
+  let name_metadata = crypt_name_for_test("/Metadata")
+  let name_crypt = crypt_name_for_test("/Crypt")
+  let name_identity = crypt_name_for_test("/Identity")
+  let name_stdcf = crypt_name_for_test("/StdCF")
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_type, PdfNameObject(name_metadata)),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      metadata_stream,
+      no_encrypt_metadata=true,
+    ),
+    metadata_stream,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key[:], 40, metadata_stream),
+    crypt_stream_for_test(
+      [
+        (key_length, PdfInteger(5)),
+        (key_type, PdfNameObject(name_metadata)),
+        (key_title, PdfString(encrypted_hello)),
+      ],
+      encrypted_hello,
+    ),
+  )
+  let ordinary_stream = crypt_stream_for_test(
+    [(key_length, PdfInteger(5)), (key_title, PdfString(hello))],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      ordinary_stream,
+      no_encrypt_metadata=true,
+    ),
+    crypt_stream_for_test(
+      [(key_length, PdfInteger(5)), (key_title, PdfString(encrypted_hello))],
+      encrypted_hello,
+    ),
+  )
+
+  let crypt_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_filter, PdfNameObject(name_crypt)),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(12, 0, key[:], 40, crypt_stream),
+    crypt_stream,
+  )
+
+  let identity_dict_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_filter, PdfArray([PdfNameObject(name_crypt)])),
+      (
+        key_decodeparms,
+        PdfDictionary([(key_name, PdfNameObject(name_identity))]),
+      ),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      identity_dict_stream,
+    ),
+    identity_dict_stream,
+  )
+
+  let identity_array_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_filter, PdfNameObject(name_crypt)),
+      (
+        key_decodeparms,
+        PdfArray([PdfDictionary([(key_name, PdfNameObject(name_identity))])]),
+      ),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      identity_array_stream,
+    ),
+    identity_array_stream,
+  )
+
+  let unnamed_crypt_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_filter, PdfNameObject(name_crypt)),
+      (key_decodeparms, PdfDictionary([])),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      unnamed_crypt_stream,
+    ),
+    unnamed_crypt_stream,
+  )
+
+  let named_crypt_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_filter, PdfNameObject(name_crypt)),
+      (key_decodeparms, PdfDictionary([(key_name, PdfNameObject(name_stdcf))])),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      named_crypt_stream,
+    ),
+    crypt_stream_for_test(
+      [
+        (key_length, PdfInteger(5)),
+        (key_filter, PdfNameObject(name_crypt)),
+        (
+          key_decodeparms,
+          PdfDictionary([(key_name, PdfNameObject(name_stdcf))]),
+        ),
+        (key_title, PdfString(encrypted_hello)),
+      ],
+      encrypted_hello,
+    ),
+  )
+
+  let malformed_crypt_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(5)),
+      (key_filter, PdfNameObject(name_crypt)),
+      (key_decodeparms, PdfDictionary([(key_name, PdfInteger(1))])),
+      (key_title, PdfString(hello)),
+    ],
+    hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      12,
+      0,
+      key[:],
+      40,
+      malformed_crypt_stream,
+    ),
+    crypt_stream_for_test(
+      [
+        (key_length, PdfInteger(5)),
+        (key_filter, PdfNameObject(name_crypt)),
+        (key_decodeparms, PdfDictionary([(key_name, PdfInteger(1))])),
+        (key_title, PdfString(encrypted_hello)),
+      ],
+      encrypted_hello,
+    ),
+  )
+}
+
+///|
 test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries and streams" {
   let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
   let iv = crypt_model_bytes_for_test([
@@ -1922,6 +2184,45 @@ test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries 
     ),
     plain_stream,
   )
+  let key_type = crypt_name_for_test("/Type")
+  let key_filter = crypt_name_for_test("/Filter")
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(encrypted_hello.length())),
+      (key_type, PdfNameObject(crypt_name_for_test("/Metadata"))),
+      (key_title, PdfString(encrypted_hello)),
+    ],
+    encrypted_hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv2_decrypt_pdf_object(
+      12,
+      0,
+      file_key[:],
+      128,
+      metadata_stream,
+      no_encrypt_metadata=true,
+    ),
+    metadata_stream,
+  )
+  let crypt_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(encrypted_hello.length())),
+      (key_filter, PdfNameObject(crypt_name_for_test("/Crypt"))),
+      (key_title, PdfString(encrypted_hello)),
+    ],
+    encrypted_hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv2_decrypt_pdf_object(
+      12,
+      0,
+      file_key[:],
+      128,
+      crypt_stream,
+    ),
+    crypt_stream,
+  )
 }
 
 ///|
@@ -1985,6 +2286,25 @@ test "pdf_aesv3_decrypt_pdf_object recurses through strings arrays dictionaries 
   @test.assert_eq(
     try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key[:], encrypted_stream),
     plain_stream,
+  )
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(encrypted_hello.length())),
+      (
+        crypt_name_for_test("/Type"),
+        PdfNameObject(crypt_name_for_test("/Metadata")),
+      ),
+      (key_title, PdfString(encrypted_hello)),
+    ],
+    encrypted_hello,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv3_decrypt_pdf_object(
+      file_key[:],
+      metadata_stream,
+      no_encrypt_metadata=true,
+    ),
+    metadata_stream,
   )
 }
 
