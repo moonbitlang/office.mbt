@@ -550,6 +550,17 @@ MoonBit record update uses `{ ..old, field: value }`, which is the direct
 replacement for OCaml `{ old with field = value }` when translating immutable
 record updates.
 
+```sh
+moon run -c 'struct S { values : Int } derive(Debug)
+fn make(values : Int) -> S? { Some({ values, }) }
+fn main { println(make(7).unwrap().values) }'
+# 7
+```
+
+For single-field struct literals that use field shorthand inside another
+expression, write a trailing comma such as `{ values, }`. This avoids the
+ambiguous-block warning and keeps `moon check --warn-list +73` clean.
+
 ## Core Porting Rules
 
 ### Strings and Bytes

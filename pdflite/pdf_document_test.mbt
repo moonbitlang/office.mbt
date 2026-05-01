@@ -49,6 +49,7 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
   @test.assert_eq(doc.object_count(), 0)
   @test.assert_eq(doc.trailer_dict(), PdfDictionary([]))
   @test.assert_eq(doc.was_linearized(), false)
+  @test.assert_eq(doc.saved_encryption(), None)
   @test.assert_eq(doc.first_xref(), 0)
   @test.assert_eq(doc.revision_read(), 1)
   doc.set_version(1, 7)

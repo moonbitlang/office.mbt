@@ -842,6 +842,7 @@ pub struct PdfDocument {
   objects : PdfObjects
   mut trailer_dict : PdfObject
   mut was_linearized : Bool
+  mut saved_encryption : PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
 } derive(Eq, ToJson, @debug.Debug)
@@ -925,9 +926,11 @@ pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
+pub fn PdfDocument::saved_encryption(Self) -> PdfSavedEncryption?
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_revision_read(Self, Int) -> Unit
 pub fn PdfDocument::set_root(Self, Int) -> Unit
+pub fn PdfDocument::set_saved_encryption(Self, PdfSavedEncryption?) -> Unit
 pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
 pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
@@ -1266,6 +1269,10 @@ pub(all) struct PdfSampledFunction {
   decode : Array[Double]
   bits_per_sample : Int
   samples : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfSavedEncryption {
+  values : PdfEncryptionValues
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfSimpleFont {

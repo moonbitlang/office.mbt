@@ -1398,6 +1398,13 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
     decrypted.document.trailer_dict().lookup_immediate(key_encrypt),
     None,
   )
+  guard decrypted.document.saved_encryption() is Some(saved) else {
+    fail("expected saved encryption")
+  }
+  @test.assert_eq(saved.values.crypt_type, PdfCryptARC4(40, 2))
+  @test.assert_eq(saved.values.permissions, permissions)
+  @test.assert_eq(saved.values.file_id, @ascii.encode("doc-id"))
+  @test.assert_eq(decrypted.document.copy().saved_encryption(), Some(saved))
   let owner_decrypted = crypt_unwrap_decryption_result_for_test(
     try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")[:]),
   )

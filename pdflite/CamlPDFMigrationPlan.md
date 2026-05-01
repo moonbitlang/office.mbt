@@ -547,6 +547,9 @@ MoonBit consequences for this project:
     document. CamlPDF-style encrypted-document introspection is also started
     with `what_encryption` and `permissions`, reporting standard ARC4/AES
     method families and denied permission lists without requiring decryption.
+    Decrypted document copies now preserve a `PdfSavedEncryption` snapshot of
+    the original encryption values, matching CamlPDF's prerequisite state for
+    future re-encryption after modification.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`

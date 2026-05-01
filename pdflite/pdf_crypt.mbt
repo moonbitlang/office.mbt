@@ -34,6 +34,11 @@ pub(all) struct PdfEncryptionValues {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfSavedEncryption {
+  values : PdfEncryptionValues
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[PdfPermission]
@@ -545,6 +550,17 @@ fn PdfDocument::with_file_id(
 }
 
 ///|
+fn PdfDocument::finish_decrypted_copy(
+  self : PdfDocument,
+  values : PdfEncryptionValues,
+) -> Unit raise PdfError {
+  self.set_trailer_dict(
+    self.trailer_dict().remove_dict_entry(pdf_crypt_name("/Encrypt")),
+  )
+  self.set_saved_encryption(Some({ values, }))
+}
+
+///|
 fn PdfDocument::decrypt_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
@@ -562,9 +578,7 @@ fn PdfDocument::decrypt_with_file_key(
         no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
-      output.set_trailer_dict(
-        output.trailer_dict().remove_dict_entry(pdf_crypt_name("/Encrypt")),
-      )
+      output.finish_decrypted_copy(values)
       {
         document: output,
         denied_permissions: pdf_permissions_of_p(values.permissions),
@@ -577,9 +591,7 @@ fn PdfDocument::decrypt_with_file_key(
         no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
-      output.set_trailer_dict(
-        output.trailer_dict().remove_dict_entry(pdf_crypt_name("/Encrypt")),
-      )
+      output.finish_decrypted_copy(values)
       {
         document: output,
         denied_permissions: pdf_permissions_of_p(values.permissions),
@@ -591,9 +603,7 @@ fn PdfDocument::decrypt_with_file_key(
         no_encrypt_metadata~,
         skip_object_number=self.encryption_object_number(),
       )
-      output.set_trailer_dict(
-        output.trailer_dict().remove_dict_entry(pdf_crypt_name("/Encrypt")),
-      )
+      output.finish_decrypted_copy(values)
       {
         document: output,
         denied_permissions: pdf_permissions_of_p(values.permissions),

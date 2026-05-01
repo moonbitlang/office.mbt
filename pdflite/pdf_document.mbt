@@ -45,6 +45,7 @@ pub struct PdfDocument {
   objects : PdfObjects
   mut trailer_dict : PdfObject
   mut was_linearized : Bool
+  mut saved_encryption : PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
 } derive(Debug, Eq, ToJson)
@@ -232,6 +233,7 @@ pub fn pdf_document_empty() -> PdfDocument {
     objects: pdf_objects_empty(),
     trailer_dict: PdfDictionary([]),
     was_linearized: false,
+    saved_encryption: None,
     first_xref: 0,
     revision_read: 1,
   }
@@ -246,6 +248,7 @@ pub fn PdfDocument::copy(self : PdfDocument) -> PdfDocument {
     objects: self.objects.copy(),
     trailer_dict: self.trailer_dict,
     was_linearized: self.was_linearized,
+    saved_encryption: self.saved_encryption,
     first_xref: self.first_xref,
     revision_read: self.revision_read,
   }
@@ -349,6 +352,19 @@ pub fn PdfDocument::set_was_linearized(
   was_linearized : Bool,
 ) -> Unit {
   self.was_linearized = was_linearized
+}
+
+///|
+pub fn PdfDocument::saved_encryption(self : PdfDocument) -> PdfSavedEncryption? {
+  self.saved_encryption
+}
+
+///|
+pub fn PdfDocument::set_saved_encryption(
+  self : PdfDocument,
+  saved_encryption : PdfSavedEncryption?,
+) -> Unit {
+  self.saved_encryption = saved_encryption
 }
 
 ///|
