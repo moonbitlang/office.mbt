@@ -566,7 +566,9 @@ MoonBit consequences for this project:
     reference collection edge cases. Colour-space coverage now covers typed
     debug-name variants, document resource fallbacks, calibrated defaults,
     ICCBased defaults and malformed dictionaries, Indexed table parsing and
-    malformed table bounds, and Separation/DeviceN parsing fallbacks. The
+    malformed table bounds, and Separation/DeviceN parsing fallbacks.
+    Function coverage now directly exercises Type 4 trig, angle, conversion,
+    integer division, remainder, log, comment, and malformed-number paths. The
     remaining uncovered report is now the template executable `cmd/main`
     entrypoint plus defensive post-decode stream-shape branches in content and
     colour-space stream-table handling, which are unreachable with the current

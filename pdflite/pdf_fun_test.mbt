@@ -195,6 +195,26 @@ test "PdfDocument parse_function evaluates numeric calculator operators" {
 }
 
 ///|
+test "PdfDocument parse_function evaluates remaining numeric calculator operators" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode(
+    "{ 90 sin 0 cos 1 0 atan 2.6 round 2.9 cvi 2 cvr 7 3 idiv 7 3 mod 1 ln }",
+  )
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([]), [
+    1.0, 1.0, 90.0, 3.0, 2.0, 2.0, 2.0, 1.0, 0.0,
+  ])
+}
+
+///|
 test "PdfDocument parse_function evaluates calculator stack operators" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ dup 1 index add exch pop }")
