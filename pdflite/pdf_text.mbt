@@ -1339,6 +1339,29 @@ fn pdf_text_bytes_to_int(bytes : BytesView) -> Int? {
 }
 
 ///|
+fn pdf_text_index_of_byte(line : BytesView, target : Int, start : Int) -> Int? {
+  let mut index = start
+  while index < line.length() {
+    if line[index].to_int() == target {
+      break Some(index)
+    }
+    index += 1
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_text_parse_cmap_hex_array(line : BytesView) -> Array[PdfBytes]? {
+  match
+    (pdf_text_index_of_byte(line, 91, 0), pdf_text_index_of_byte(line, 93, 0)) {
+    (Some(start), Some(stop)) if stop > start =>
+      pdf_text_parse_cmap_hex_groups(line[start + 1:stop])
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_add_to_big_endian_bytes(
   bytes : PdfBytes,
   increment : Int,
@@ -1388,6 +1411,23 @@ fn pdf_text_tounicode_bfrange_entries_of_line(
               Some(bytes) => entries.push((code, bytes))
               None => return None
             }
+          }
+          Some(entries)
+        }
+        _ => None
+      }
+    Some([source, stop]) =>
+      match
+        (
+          pdf_text_bytes_to_int(source[:]),
+          pdf_text_bytes_to_int(stop[:]),
+          pdf_text_parse_cmap_hex_array(line),
+        ) {
+        (Some(first), Some(last), Some(unicodes)) if first <= last &&
+          unicodes.length() == last - first + 1 => {
+          let entries : Array[(Int, PdfBytes)] = []
+          for index in 0..<unicodes.length() {
+            entries.push((first + index, unicodes[index]))
           }
           Some(entries)
         }
