@@ -433,6 +433,9 @@ MoonBit consequences for this project:
     Add fixture suites as features land, update snapshots deliberately, and use
     `moon coverage analyze > uncovered.log` to find untested parser, writer,
     filter, and page-tree branches.
+    Status: started with a coverage pass that tightened public `ByteCursor`
+    boundary tests for remaining length, `peek`, end views, negative offsets,
+    rewind errors, seek-past-end reads, and owned line allocation.
 
 ## Update Discipline
 

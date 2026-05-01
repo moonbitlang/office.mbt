@@ -33,6 +33,22 @@ test "ByteCursor reads bytes and preserves peek position" {
 }
 
 ///|
+test "ByteCursor reports remaining length and peek at boundaries" {
+  let bytes = pdf_bytes_for_cursor_test([65, 66])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  @test.assert_eq(cursor.remaining_length(), 2)
+  @test.assert_eq(cursor.peek(), Some(65))
+  @test.assert_eq(cursor.position(), 0)
+  cursor.seek(2)
+  @test.assert_eq(cursor.remaining_length(), 0)
+  @test.assert_eq(cursor.peek(), None)
+  @test.assert_eq(bytes_view_to_ints_for_cursor_test(cursor.remaining_view()), [])
+  cursor.seek(5)
+  @test.assert_eq(cursor.remaining_length(), 0)
+  @test.assert_eq(cursor.read_byte_back(), None)
+}
+
+///|
 test "ByteCursor supports rewind nudge and reading behind" {
   let bytes = pdf_bytes_for_cursor_test([65, 66, 67])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)
@@ -44,6 +60,20 @@ test "ByteCursor supports rewind nudge and reading behind" {
   @test.assert_eq(cursor.read_byte_back(), Some(65))
   @test.assert_eq(cursor.position(), 0)
   @test.assert_eq(cursor.read_byte_back(), None)
+}
+
+///|
+test "ByteCursor reports checked offset and rewind errors" {
+  let bytes = pdf_bytes_for_cursor_test([65, 66])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  let bad_offset : Result[Unit, Error] = try? cursor.set_offset(-1)
+  guard bad_offset is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition for negative offset")
+  }
+  let bad_rewind : Result[Unit, Error] = try? cursor.rewind()
+  guard bad_rewind is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition for rewind before start")
+  }
 }
 
 ///|
@@ -110,6 +140,17 @@ test "ByteCursor read_line allocates owned bytes only when requested" {
   @test.assert_eq(pdf_bytes_to_ints_for_cursor_test(try! cursor.read_line()), [
     65, 10,
   ])
+}
+
+///|
+test "ByteCursor read_lines allocates owned lines" {
+  let bytes = pdf_bytes_for_cursor_test([65, 10, 66])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  let lines = cursor.read_lines()
+  @test.assert_eq(lines.length(), 2)
+  @test.assert_eq(pdf_bytes_to_ints_for_cursor_test(lines[0]), [65, 10])
+  @test.assert_eq(pdf_bytes_to_ints_for_cursor_test(lines[1]), [66])
+  @test.assert_eq(cursor.position(), cursor.length())
 }
 
 ///|
