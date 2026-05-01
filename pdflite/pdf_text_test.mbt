@@ -2246,6 +2246,56 @@ test "PdfTextExtractor extracts MacExpert oldstyle digits" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert superior and inferior digits" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let inferior = text_bytes_for_test([
+    0xBC, 0xC1, 0xAA, 0xA3, 0xA2, 0xB0, 0xA4, 0xA6, 0xA5, 0xBB,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(inferior[:]), [
+    0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087, 0x2088, 0x2089,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(inferior[:]), [
+    text_name_for_test("/zeroinferior"),
+    text_name_for_test("/oneinferior"),
+    text_name_for_test("/twoinferior"),
+    text_name_for_test("/threeinferior"),
+    text_name_for_test("/fourinferior"),
+    text_name_for_test("/fiveinferior"),
+    text_name_for_test("/sixinferior"),
+    text_name_for_test("/seveninferior"),
+    text_name_for_test("/eightinferior"),
+    text_name_for_test("/nineinferior"),
+  ])
+  let superior = text_bytes_for_test([
+    0xE2, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xE0, 0xA1, 0xE1,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(superior[:]), [
+    0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077, 0x2078, 0x2079,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(superior[:]), [
+    text_name_for_test("/zerosuperior"),
+    text_name_for_test("/onesuperior"),
+    text_name_for_test("/twosuperior"),
+    text_name_for_test("/threesuperior"),
+    text_name_for_test("/foursuperior"),
+    text_name_for_test("/fivesuperior"),
+    text_name_for_test("/sixsuperior"),
+    text_name_for_test("/sevensuperior"),
+    text_name_for_test("/eightsuperior"),
+    text_name_for_test("/ninesuperior"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2080), Some(0xBC))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2085), Some(0xB0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2089), Some(0xBB))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2070), Some(0xE2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2075), Some(0xDE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2079), Some(0xE1))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),
