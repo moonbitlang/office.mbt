@@ -2427,6 +2427,44 @@ test "PdfTextExtractor extracts implicit ZapfDingbats starburst glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit ZapfDingbats sparkle glyphs" {
+  let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
+  )
+  let extractor = dingbat_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+    0x68, 0x69, 0x6A, 0x6B,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x273B, 0x273C, 0x273D, 0x273E, 0x273F, 0x2740, 0x2741, 0x2742, 0x2743, 0x2744,
+    0x2745, 0x2746, 0x2747, 0x2748, 0x2749, 0x274A, 0x274B,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/a54"),
+    text_name_for_test("/a55"),
+    text_name_for_test("/a56"),
+    text_name_for_test("/a57"),
+    text_name_for_test("/a58"),
+    text_name_for_test("/a59"),
+    text_name_for_test("/a60"),
+    text_name_for_test("/a61"),
+    text_name_for_test("/a62"),
+    text_name_for_test("/a63"),
+    text_name_for_test("/a64"),
+    text_name_for_test("/a65"),
+    text_name_for_test("/a66"),
+    text_name_for_test("/a67"),
+    text_name_for_test("/a68"),
+    text_name_for_test("/a69"),
+    text_name_for_test("/a70"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x273B), Some(0x5B))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2744), Some(0x64))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x274B), Some(0x6B))
+}
+
+///|
 test "PdfTextExtractor uses custom encoding differences before base encoding" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
