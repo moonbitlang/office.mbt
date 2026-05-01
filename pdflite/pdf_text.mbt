@@ -1485,13 +1485,36 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
 }
 
 ///|
+fn pdf_text_decoded_stream_data(object : PdfObject) -> PdfBytes? {
+  match object {
+    PdfStreamObject({ dictionary, data: StreamGot(bytes) }) =>
+      try pdf_stream_first_filter(dictionary) catch {
+        _ => None
+      } noraise {
+        None => Some(bytes)
+        Some(_) =>
+          try pdf_decode_stream(object) catch {
+            _ => None
+          } noraise {
+            PdfStreamObject({ data: StreamGot(decoded), .. }) => Some(decoded)
+            _ => None
+          }
+      }
+    _ => None
+  }
+}
+
+///|
 fn PdfDocument::pdf_text_tounicode_of_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> Array[(Int, PdfBytes)]? {
   match self.lookup_direct(pdf_text_name("/ToUnicode"), font) {
-    Some(PdfStreamObject({ data: StreamGot(bytes), .. })) =>
-      pdf_text_parse_tounicode(bytes[:])
+    Some(PdfStreamObject(_) as stream) =>
+      match pdf_text_decoded_stream_data(stream) {
+        Some(bytes) => pdf_text_parse_tounicode(bytes[:])
+        None => None
+      }
     _ => None
   }
 }

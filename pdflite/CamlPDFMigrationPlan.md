@@ -399,8 +399,9 @@ MoonBit consequences for this project:
    typed ToUnicode map, and TrueType font writing can emit the same simple
    `/ToUnicode` CMap stream shape as CamlPDF when that map is present. Reading
    simple uncompressed `beginbfchar` forms, sequential `beginbfrange` forms,
-   and array-form `beginbfrange` forms is also started and attaches the parsed
-   maps to simple or CID font descriptors.
+   and array-form `beginbfrange` forms is also started. `/ToUnicode` stream
+   data is decoded through the supported filter pipeline before parsing, and
+   parsed maps are attached to simple or CID font descriptors.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
    and `/Identity-H` CID text, including decoded glyph records, glyph-name
    extraction, flattened codepoint extraction, and reverse ToUnicode charcode

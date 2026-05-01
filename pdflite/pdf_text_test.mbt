@@ -1849,6 +1849,41 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
 }
 
 ///|
+test "PdfDocument decodes filtered ToUnicode CMap streams" {
+  let doc = @pdflite.pdf_document_empty()
+  let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")
+  let encoded = @pdflite.pdf_ascii_hex_encode(cmap)
+  let tounicode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(encoded.length())),
+      (
+        text_name_for_test("/Filter"),
+        PdfNameObject(text_name_for_test("/ASCIIHexDecode")),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+  doc.add_object_given_number(2, tounicode)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(2)),
+  ])
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66])[:]),
+    [0x5A, 66],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(65))
+}
+
+///|
 test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
   let cid_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/Top"),
