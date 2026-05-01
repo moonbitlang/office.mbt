@@ -61,6 +61,10 @@ test "pdf_ascii_hex_decode ignores whitespace and accepts lowercase" {
     try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test("  61 62\n63>")),
     codec_ascii_for_test("abc"),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_ascii_hex_decode(codec_ascii_for_test("af>")),
+    codec_bytes_for_test([175]),
+  )
 }
 
 ///|
@@ -135,6 +139,24 @@ test "pdf_ascii85_decode reports malformed data" {
   guard bad_zero is Err(@pdflite.PdfError::InvalidASCII85Data) else {
     fail("expected InvalidASCII85Data")
   }
+  let one_digit : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+    codec_ascii_for_test("!~>"),
+  )
+  guard one_digit is Err(@pdflite.PdfError::InvalidASCII85Data) else {
+    fail("expected InvalidASCII85Data")
+  }
+  let overflowing_group : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+    codec_ascii_for_test("uuuuu~>"),
+  )
+  guard overflowing_group is Err(@pdflite.PdfError::InvalidASCII85Data) else {
+    fail("expected InvalidASCII85Data")
+  }
+  let unterminated : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_ascii85_decode(
+    codec_ascii_for_test("9jqo"),
+  )
+  guard unterminated is Err(@pdflite.PdfError::InvalidASCII85Data) else {
+    fail("expected InvalidASCII85Data")
+  }
 }
 
 ///|
@@ -150,6 +172,36 @@ test "pdf_lzw_decode expands clear literal dictionary and eod codes" {
 }
 
 ///|
+test "pdf_lzw_decode handles eof and reset boundaries" {
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([])),
+    codec_bytes_for_test([]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([257], 1)),
+    codec_bytes_for_test([]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([256], 1)),
+    codec_bytes_for_test([]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(
+      codec_lzw_codes_for_test([65, 66, 256, 67, 257], 1),
+    ),
+    codec_ascii_for_test("ABC"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([65], 1)),
+    codec_ascii_for_test("A"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_lzw_codes_for_test([65, 256], 1)),
+    codec_ascii_for_test("A"),
+  )
+}
+
+///|
 test "pdf_lzw_decode handles the repeated previous-code case" {
   @test.assert_eq(
     try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 80, 16])),
@@ -161,6 +213,12 @@ test "pdf_lzw_decode handles the repeated previous-code case" {
 test "pdf_lzw_decode reports malformed input codes" {
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_lzw_decode(
     codec_bytes_for_test([128, 75, 32, 32]),
+  )
+  guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_lzw_decode(
+    codec_lzw_codes_for_test([65, 300], 1),
   )
   guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
@@ -269,6 +327,13 @@ test "pdf_decode_filter_bytes dispatches supported filter names" {
 test "pdf_encode_filter_bytes dispatches supported filter names" {
   @test.assert_eq(
     try! @pdflite.pdf_encode_filter_bytes(
+      codec_name_for_test("/Crypt"),
+      codec_ascii_for_test("raw"),
+    ),
+    codec_ascii_for_test("raw"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_filter_bytes(
       codec_name_for_test("/ASCIIHexDecode"),
       codec_ascii_for_test("Hi"),
     ),
@@ -301,6 +366,14 @@ test "pdf_encode_filter_bytes dispatches supported filter names" {
 test "pdf filter dispatch reports unsupported filters" {
   let flate = codec_name_for_test("/DCTDecode")
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_filter_bytes(
+    flate,
+    codec_ascii_for_test("data"),
+  )
+  guard result is Err(@pdflite.PdfError::FilterNotSupported(filter)) &&
+    filter == flate else {
+    fail("expected FilterNotSupported")
+  }
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_filter_bytes(
     flate,
     codec_ascii_for_test("data"),
   )
@@ -341,6 +414,40 @@ test "pdf_decode_predictor decodes png row filters" {
 }
 
 ///|
+test "pdf_decode_predictor covers png paeth and short rows" {
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(
+      15,
+      1,
+      8,
+      2,
+      codec_bytes_for_test([4, 7, 8]),
+    ),
+    codec_bytes_for_test([7, 15]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(
+      15,
+      1,
+      8,
+      2,
+      codec_bytes_for_test([0, 5, 10, 4, 251, 1]),
+    ),
+    codec_bytes_for_test([5, 10, 0, 6]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(
+      10,
+      1,
+      8,
+      3,
+      codec_bytes_for_test([0, 65]),
+    ),
+    codec_bytes_for_test([65, 0, 0]),
+  )
+}
+
+///|
 test "pdf_decode_predictor reports unsupported predictor" {
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
     9,
@@ -351,6 +458,68 @@ test "pdf_decode_predictor reports unsupported predictor" {
   )
   guard result is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
     fail("expected PredictorNotSupported")
+  }
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
+    15,
+    1,
+    8,
+    1,
+    codec_bytes_for_test([9, 0]),
+  )
+  guard result is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
+    fail("expected PredictorNotSupported")
+  }
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
+    2,
+    1,
+    1,
+    1,
+    codec_bytes_for_test([0]),
+  )
+  guard result is Err(@pdflite.PdfError::PredictorNotSupported(2)) else {
+    fail("expected PredictorNotSupported")
+  }
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
+    2,
+    0,
+    8,
+    1,
+    codec_bytes_for_test([0]),
+  )
+  guard result is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected PredictorExpected")
+  }
+}
+
+///|
+test "pdf predictors keep identity data and reject bad encode parameters" {
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(1, 1, 8, 1, codec_ascii_for_test("raw")),
+    codec_ascii_for_test("raw"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_predictor(1, 1, 8, 1, codec_ascii_for_test("raw")),
+    codec_ascii_for_test("raw"),
+  )
+  let unsupported : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
+    13,
+    1,
+    8,
+    1,
+    codec_ascii_for_test("raw"),
+  )
+  guard unsupported is Err(@pdflite.PdfError::PredictorNotSupported(13)) else {
+    fail("expected PredictorNotSupported")
+  }
+  let bad_dimensions : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
+    11,
+    1,
+    0,
+    1,
+    codec_ascii_for_test("raw"),
+  )
+  guard bad_dimensions is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected PredictorExpected")
   }
 }
 
@@ -456,6 +625,35 @@ test "pdf_decode_stream_onestage applies first DecodeParms predictor" {
 }
 
 ///|
+test "pdf_decode_stream_onestage accepts DecodeParms arrays" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let predictor = codec_name_for_test("/Predictor")
+  let encoded = @pdflite.pdf_ascii_hex_encode(codec_ascii_for_test("Hi"))
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+      (
+        decodeparms,
+        PdfArray([@pdflite.pdf_dictionary([(predictor, PdfInteger(1))])]),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(decodeparms),
+    Some(PdfArray([])),
+  )
+}
+
+///|
 test "pdf_decode_stream_onestage applies lzw EarlyChange DecodeParms" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
@@ -485,6 +683,39 @@ test "pdf_decode_stream_onestage applies lzw EarlyChange DecodeParms" {
   )
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "pdf_decode_stream_onestage handles short filters and null decodeparms" {
+  let length = codec_name_for_test("/Length")
+  let short_filter = codec_name_for_test("/F")
+  let short_decodeparms = codec_name_for_test("/DP")
+  let predictor = codec_name_for_test("/Predictor")
+  let encoded = @pdflite.pdf_ascii_hex_encode(codec_ascii_for_test("Hi"))
+  let retained_decodeparms = @pdflite.pdf_dictionary([
+    (predictor, PdfInteger(1)),
+  ])
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (short_filter, PdfNameObject(codec_name_for_test("/AHx"))),
+      (short_decodeparms, PdfArray([PdfNull, retained_decodeparms])),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(short_filter),
+    None,
+  )
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(short_decodeparms),
+    Some(PdfArray([retained_decodeparms])),
+  )
 }
 
 ///|
@@ -522,6 +753,44 @@ test "pdf_decode_stream_onestage removes only first array filter" {
 }
 
 ///|
+test "pdf_decode_stream_onestage treats empty filter arrays as raw" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfArray([]))]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfArray([])),
+  )
+}
+
+///|
+test "pdf_decode_stream_onestage uses default lzw EarlyChange" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let encoded = codec_lzw_codes_for_test([256, 65, 257], 1)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(codec_name_for_test("/LZWDecode"))),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("A")))
+}
+
+///|
 test "pdf_decode_stream decodes all supported filter stages" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
@@ -556,6 +825,32 @@ test "pdf_decode_stream decodes all supported filter stages" {
 }
 
 ///|
+test "pdf_decode_stream bounds excessive filter stages" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(1)),
+      (
+        filter,
+        PdfArray(
+          [
+            for _ in 0..<1025 => PdfNameObject(codec_name_for_test("/Crypt"))
+          ],
+        ),
+      ),
+    ]),
+    StreamGot(codec_ascii_for_test("x")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::FilterExpected) else {
+    fail("expected FilterExpected")
+  }
+}
+
+///|
 test "pdf_encode_stream_with_filter adds filter and updates length" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
@@ -578,6 +873,45 @@ test "pdf_encode_stream_with_filter adds filter and updates length" {
   @test.assert_eq(
     encoded_stream.dictionary.lookup_immediate(filter),
     Some(PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+  )
+}
+
+///|
+test "pdf_encode_stream_with_filter prepends existing filters" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let ascii_hex = codec_name_for_test("/ASCIIHexDecode")
+  let run_length = codec_name_for_test("/RunLengthDecode")
+  let ascii85 = codec_name_for_test("/ASCII85Decode")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(2)),
+      (filter, PdfNameObject(run_length)),
+    ]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter(ascii_hex, stream)
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  @test.assert_eq(
+    encoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfArray([PdfNameObject(ascii_hex), PdfNameObject(run_length)])),
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(2)),
+      (filter, PdfArray([PdfNameObject(ascii85)])),
+    ]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter(run_length, stream)
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  @test.assert_eq(
+    encoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfArray([PdfNameObject(run_length), PdfNameObject(ascii85)])),
   )
 }
 
@@ -626,6 +960,57 @@ test "pdf_encode_stream_with_filter_and_predictor round trips through decode str
 }
 
 ///|
+test "pdf_encode_stream_with_filter_and_predictor prepends decodeparms" {
+  let length = codec_name_for_test("/Length")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let predictor = codec_name_for_test("/Predictor")
+  let existing = @pdflite.pdf_dictionary([(predictor, PdfInteger(1))])
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(3)), (decodeparms, existing)]),
+    StreamGot(codec_ascii_for_test("abc")),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    11,
+    1,
+    8,
+    3,
+    stream,
+  )
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  guard encoded_stream.dictionary.lookup_immediate(decodeparms)
+    is Some(PdfArray([PdfDictionary(_), existing_decodeparms])) else {
+    fail("expected DecodeParms array")
+  }
+  @test.assert_eq(existing_decodeparms, existing)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(3)),
+      (decodeparms, PdfArray([existing])),
+    ]),
+    StreamGot(codec_ascii_for_test("abc")),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    11,
+    1,
+    8,
+    3,
+    stream,
+  )
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  guard encoded_stream.dictionary.lookup_immediate(decodeparms)
+    is Some(PdfArray([PdfDictionary(_), existing_decodeparms])) else {
+    fail("expected DecodeParms array")
+  }
+  @test.assert_eq(existing_decodeparms, existing)
+}
+
+///|
 test "pdf_decode_stream_onestage reports malformed stream filters" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")
@@ -638,6 +1023,149 @@ test "pdf_decode_stream_onestage reports malformed stream filters" {
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
     fail("expected FilterExpected")
+  }
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
+    fail("expected StreamLengthExpected")
+  }
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+    PdfNull,
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
+    PdfNull,
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+  let deferred = @pdflite.stream_to_get(
+    @pdflite.byte_cursor_of_bytes(codec_ascii_for_test("Hi")),
+    0,
+    2,
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamToGet(deferred),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
+  }
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let predictor = codec_name_for_test("/Predictor")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(5)),
+      (filter, PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+      (
+        decodeparms,
+        @pdflite.pdf_dictionary([
+          (predictor, PdfNameObject(codec_name_for_test("/Bad"))),
+        ]),
+      ),
+    ]),
+    StreamGot(codec_ascii_for_test("4869>")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected PredictorExpected")
+  }
+}
+
+///|
+test "pdf stream encoding reports malformed objects" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
+    codec_name_for_test("/ASCIIHexDecode"),
+    PdfNull,
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+  let deferred = @pdflite.stream_to_get(
+    @pdflite.byte_cursor_of_bytes(codec_ascii_for_test("Hi")),
+    0,
+    2,
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamToGet(deferred),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
+    codec_name_for_test("/ASCIIHexDecode"),
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
+  }
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
+    codec_name_for_test("/ASCIIHexDecode"),
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::FilterExpected) else {
+    fail("expected FilterExpected")
+  }
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(2)),
+      (decodeparms, PdfInteger(1)),
+    ]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    11,
+    1,
+    8,
+    2,
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected PredictorExpected")
+  }
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    11,
+    1,
+    8,
+    2,
+    PdfNull,
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamToGet(deferred),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    11,
+    1,
+    8,
+    2,
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
   }
 }
 
@@ -665,4 +1193,27 @@ test "pdf_run_length_decode tolerates missing eod marker" {
     @pdflite.pdf_run_length_decode(codec_bytes_for_test([0, 65])),
     codec_ascii_for_test("A"),
   )
+  @test.assert_eq(
+    @pdflite.pdf_run_length_decode(codec_bytes_for_test([2, 65])),
+    codec_ascii_for_test("A"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_run_length_decode(codec_bytes_for_test([253])),
+    codec_bytes_for_test([]),
+  )
+}
+
+///|
+test "pdf_run_length_encode flushes long literal chunks" {
+  let input = codec_bytes_for_test(
+    [
+      for i in 0..<129 => if i % 2 == 0 { 65 } else { 66 }
+    ],
+  )
+  let encoded = @pdflite.pdf_run_length_encode(input)
+  @test.assert_eq(encoded.length(), 132)
+  @test.assert_eq(encoded[0].to_int(), 127)
+  @test.assert_eq(encoded[129].to_int(), 0)
+  @test.assert_eq(encoded[131].to_int(), 128)
+  @test.assert_eq(@pdflite.pdf_run_length_decode(encoded), input)
 }

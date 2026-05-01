@@ -49,6 +49,17 @@ use `(65).to_byte()`, not `65.to_byte()`, because `65.` is parsed as the start
 of a floating-point literal.
 
 ```sh
+moon run -c 'fn main { let empty = Bytes::new(0); let zeros = Bytes::new(2); println(empty.length()); println(zeros.length()); println(zeros[0].to_int()) }'
+# 0
+# 2
+# 0
+```
+
+`Bytes::new(length)` requires an explicit length and creates zero-filled bytes.
+Use `Bytes::new(0)` or a typed empty byte builder when porting OCaml code that
+used `Bytes.empty` or an empty byte string.
+
+```sh
 moon run -c 'fn main { let b = @ascii.encode("PDF"); println(b.length()); println(b[0].to_int()) }'
 # 3
 # 80

@@ -441,6 +441,10 @@ MoonBit consequences for this project:
     existing annotation arrays, and malformed quadpoint preservation. Bookmark
     coverage now includes preserved string destinations, action destinations,
     action fallback behavior, missing titles, and malformed color arrays.
+    Codec coverage now includes ASCII85 malformed inputs, LZW EOF/reset/error
+    boundaries, predictor identity/Paeth/short-row/error paths, stream
+    filter/decode-parameter composition, excessive filter-stage bounds, and
+    RunLength long-literal/truncated-input behavior.
 
 ## Update Discipline
 
