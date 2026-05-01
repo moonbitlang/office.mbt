@@ -848,6 +848,85 @@ fn pdf_reader_sanitize_trailer(
 }
 
 ///|
+fn pdf_read_reconstructed_object_at(
+  data : BytesView,
+  position : Int,
+) -> PdfParsedIndirectObject raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  cursor.seek_pdf_absolute(position)
+  let empty_xrefs : Array[PdfClassicXRefEntry] = []
+  cursor.read_first_indirect_object_at_current(empty_xrefs)
+}
+
+///|
+fn pdf_read_reconstructed_objects(
+  data : BytesView,
+) -> Array[PdfParsedIndirectObject] {
+  let objects : Array[PdfParsedIndirectObject] = []
+  for position = 0; position < data.length(); position = position + 1 {
+    if pdf_is_digit_byte(data[position].to_int()) {
+      let parsed : Result[PdfParsedIndirectObject, Error] = try? pdf_read_reconstructed_object_at(
+        data, position,
+      )
+      match parsed {
+        Ok(object) => objects.push(object)
+        Err(_) => ()
+      }
+    }
+  }
+  objects
+}
+
+///|
+fn pdf_read_reconstructed_trailer_at(
+  data : BytesView,
+  position : Int,
+) -> PdfObject raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  cursor.seek_pdf_absolute(position)
+  cursor.read_pdf_trailer_dictionary()
+}
+
+///|
+fn pdf_read_reconstructed_trailers(data : BytesView) -> Array[PdfObject] {
+  let trailers : Array[PdfObject] = []
+  for position = 0; position < data.length(); position = position + 1 {
+    if pdf_view_matches_ascii_at(data, position, [
+        116, 114, 97, 105, 108, 101, 114,
+      ]) {
+      let trailer : Result[PdfObject, Error] = try? pdf_read_reconstructed_trailer_at(
+        data, position,
+      )
+      match trailer {
+        Ok(object) => trailers.push(object)
+        Err(_) => ()
+      }
+    }
+  }
+  trailers
+}
+
+///|
+fn PdfDocument::select_reconstructed_trailer(
+  self : PdfDocument,
+  trailers : ArrayView[PdfObject],
+) -> PdfObject raise PdfError {
+  for index = trailers.length() - 1; index >= 0; index = index - 1 {
+    let trailer = trailers[index]
+    match trailer.lookup_immediate(pdf_reader_root_name()) {
+      Some(PdfIndirect(root)) =>
+        match self.lookup_object_or_null(root) {
+          PdfDictionary(_) => break trailer
+          _ => ()
+        }
+      _ => ()
+    }
+  } nobreak {
+    raise RootExpected
+  }
+}
+
+///|
 fn PdfDocument::set_trailer_and_root(
   self : PdfDocument,
   trailer : PdfObject,
@@ -857,6 +936,39 @@ fn PdfDocument::set_trailer_and_root(
     Some(PdfIndirect(root)) => self.set_root(root)
     _ => raise RootExpected
   }
+}
+
+///|
+fn pdf_read_reconstructed_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  let cursor = byte_cursor_of_bytes(data)
+  let version = cursor.read_pdf_header()
+  let document = pdf_document_empty()
+  document.set_version(version.major, version.minor)
+  document.set_first_xref(0)
+  document.set_was_linearized(pdf_read_was_linearized(data[:]))
+  for parsed in pdf_read_reconstructed_objects(data[:]) {
+    if parsed.number > 0 {
+      document.add_object_given_number(
+        parsed.number,
+        parsed.object,
+        generation=parsed.generation,
+      )
+    }
+  }
+  document.set_trailer_and_root(
+    document.select_reconstructed_trailer(
+      pdf_read_reconstructed_trailers(data[:])[:],
+    ),
+  )
+  document.set_trailer_dict(
+    pdf_reader_sanitize_trailer(
+      document.trailer_dict(),
+      document.objects.max_object_number() + 1,
+    ),
+  )
+  document
 }
 
 ///|
@@ -960,7 +1072,10 @@ pub fn pdf_read_classic_document_from_bytes(
 pub fn pdf_read_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
-  pdf_read_classic_document_from_bytes(data)
+  pdf_read_classic_document_from_bytes(data) catch {
+    StartXRefExpected => pdf_read_reconstructed_document_from_bytes(data)
+    error => raise error
+  }
 }
 
 ///|

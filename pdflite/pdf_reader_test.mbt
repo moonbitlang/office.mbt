@@ -431,6 +431,19 @@ fn reader_classic_pdf_with_leading_junk() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  ignore(reader_push_indirect_object(output, 2, 0, "7"))
+  reader_push_ascii(output, "trailer\nnotdict\n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 99 /Prev 4 >>\n")
+  reader_push_ascii(output, "trailer\n<< /Size 99 >>\n")
+  reader_push_ascii(output, "trailer\n<< /Root 2 0 R /Size 99 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -925,6 +938,48 @@ test "pdf_read_document_from_bytes records linearized first-object marker" {
     reader_classic_pdf_with_leading_junk(),
   )
   @test.assert_eq(leading_junk.was_linearized(), false)
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs missing startxref PDFs" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_without_startxref(),
+  )
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
+    Some(PdfInteger(3)),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reports missing reconstructed root" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
+  )
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
 }
 
 ///|
