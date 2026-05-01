@@ -67,7 +67,25 @@ moon run -c 'fn main { let r : Ref[Int] = Ref::{ val: 0 }; r.val += 1; let xs = 
 ```
 
 Use `Ref[T]` for primitive mutability and mutable fields on structs for larger
-state. Arrays are mutable reference values.
+state. MoonBit `Array` is a growable mutable vector; `FixedArray` is the closer
+match for OCaml `array` because its length is fixed.
+
+```sh
+moon run -c $'fn len(xs : ArrayView[Int]) -> Int { xs.length() }\nfn main { let grow = [1, 2, 3]; let fixed : FixedArray[Int] = [1, 2, 3]; println(len(grow)); println(len(fixed)) }'
+# 3
+# 3
+```
+
+Use `ArrayView[T]` for read-only sequence parameters when callers should be
+able to pass `Array`, `FixedArray`, or read-only arrays without copying.
+
+```sh
+moon run -c 'fn main { let fixed : FixedArray[Int] = [1, 2, 3]; let doubled = [ for x in fixed => x * 2 ]; println(doubled.length()); println(doubled[2]) }'
+# 3
+# 6
+```
+
+MoonBit array/list comprehension syntax is `[ for x in xs => expr ]`.
 
 ```sh
 moon run -c 'fn main { let m : @hashmap.HashMap[Int, String] = @hashmap.HashMap::new(); m[7] = "seven"; println(m.get(7).unwrap()) }'
@@ -85,7 +103,7 @@ moon test --outline
 # ocaml2moonbit_wbtest.mbt contains the initial migration-assumption tests.
 
 moon test
-# Total tests: 8, passed: 8, failed: 0.
+# Total tests: 10, passed: 10, failed: 0.
 ```
 
 The initial executable validation lives in `ocaml2moonbit_wbtest.mbt`; the
@@ -114,7 +132,8 @@ Default rule:
   debug output.
 - MoonBit `Bytes` is immutable. This differs from CamlPDF `Pdfio.bytes`, which
   has mutation helpers such as `bset`. Build mutable byte data with
-  `Array[Byte]` or a buffer, then freeze it into `PdfBytes`/`Bytes`.
+  `FixedArray[Byte]`, `Array[Byte]`, or a buffer, then freeze it into
+  `PdfBytes`/`Bytes`.
 
 ### Numbers
 
@@ -132,6 +151,10 @@ meaning:
 
 Map OCaml variants to MoonBit `enum` values. Derive `Debug`, `Eq`, and `ToJson`
 for types that will be inspected in tests.
+
+OCaml `array` maps most directly to MoonBit `FixedArray`. MoonBit `Array` is
+resizable. Prefer `ArrayView[T]` for read-only function parameters so callers
+can pass fixed, growable, or read-only arrays by coercion.
 
 For CamlPDF `Pdf.pdfobject`, start with a MoonBit shape like:
 

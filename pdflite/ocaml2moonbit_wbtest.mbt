@@ -27,13 +27,36 @@ test "Scalar literals narrow by type context" {
 }
 
 ///|
-test "Primitive refs and arrays model OCaml-style mutation explicitly" {
+test "Primitive refs and growable arrays are explicit mutable containers" {
   let counter : Ref[Int] = { val: 0 }
   counter.val += 1
   let bytes : Array[Byte] = [1, 2, 3]
   bytes[1] = 255
   @test.assert_eq(counter.val, 1)
   @test.assert_eq(bytes[1].to_int(), 255)
+}
+
+///|
+test "FixedArray is the closest MoonBit container to OCaml array" {
+  let fixed : FixedArray[Int] = [1, 2, 3]
+  fixed[1] = 9
+  @test.assert_eq(fixed.length(), 3)
+  @test.assert_eq(fixed[1], 9)
+  let doubled = [ for x in fixed => x * 2 ]
+  @test.assert_eq(doubled, [2, 18, 6])
+}
+
+///|
+fn array_view_length_for_test(values : ArrayView[Int]) -> Int {
+  values.length()
+}
+
+///|
+test "ArrayView accepts fixed and growable arrays for read-only APIs" {
+  let fixed : FixedArray[Int] = [1, 2, 3]
+  let growable : Array[Int] = [1, 2, 3]
+  @test.assert_eq(array_view_length_for_test(fixed), 3)
+  @test.assert_eq(array_view_length_for_test(growable), 3)
 }
 
 ///|

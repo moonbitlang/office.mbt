@@ -12,11 +12,13 @@ pub fn pdf_bytes_get(Bytes, Int) -> Byte?
 
 pub fn pdf_bytes_length(Bytes) -> Int
 
-pub fn pdf_bytes_of_array(Array[Byte]) -> Bytes
+pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
 
-pub fn pdf_bytes_of_int_array(Array[Int]) -> Bytes raise PdfError
+pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
+
+pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 

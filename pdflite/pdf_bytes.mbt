@@ -18,12 +18,14 @@ pub fn pdf_byte_of_int(value : Int) -> Byte raise PdfError {
 }
 
 ///|
-pub fn pdf_bytes_of_array(values : Array[Byte]) -> PdfBytes {
+pub fn pdf_bytes_of_array_view(values : ArrayView[Byte]) -> PdfBytes {
   Bytes::from_array(values)
 }
 
 ///|
-pub fn pdf_bytes_of_int_array(values : Array[Int]) -> PdfBytes raise PdfError {
+pub fn pdf_bytes_of_int_array(
+  values : ArrayView[Int],
+) -> PdfBytes raise PdfError {
   Bytes::makei(values.length(), i => pdf_byte_of_int(values[i]))
 }
 
@@ -40,6 +42,11 @@ pub fn pdf_bytes_get(bytes : PdfBytes, index : Int) -> Byte? {
 ///|
 pub fn pdf_bytes_to_array(bytes : PdfBytes) -> Array[Byte] {
   bytes.to_array()
+}
+
+///|
+pub fn pdf_bytes_to_fixed_array(bytes : PdfBytes) -> FixedArray[Byte] {
+  bytes.to_fixedarray()
 }
 
 ///|
