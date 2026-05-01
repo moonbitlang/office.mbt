@@ -268,6 +268,39 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
 }
 
 ///|
+test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
+  let doc = @pdflite.pdf_document_empty()
+  let lab_space : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Lab")),
+    @pdflite.pdf_dictionary([
+      (
+        image_name_for_test("/WhitePoint"),
+        PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
+      ),
+    ]),
+  ])
+  let indexed_lab : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    lab_space,
+    PdfInteger(0),
+    PdfString(image_bytes_for_test([255, 255, 255])),
+  ])
+  let image = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_lab),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([0])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([0, 0, 0])),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp reports malformed raw images" {
   let doc = @pdflite.pdf_document_empty()
   let short_rgb = @pdflite.pdf_stream(

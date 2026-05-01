@@ -464,6 +464,74 @@ fn pdf_image_cmyk_indexed_value(
 }
 
 ///|
+fn pdf_image_clamp_unit(value : Double) -> Double {
+  if value > 1.0 {
+    1.0
+  } else if value < 0.0 {
+    0.0
+  } else {
+    value
+  }
+}
+
+///|
+fn pdf_image_lab_g(value : Double) -> Double {
+  if value >= 6.0 / 29.0 {
+    value * value * value
+  } else {
+    108.0 / 841.0 * (value - 4.0 / 29.0)
+  }
+}
+
+///|
+fn pdf_image_xyz_of_lab(
+  lightness : Double,
+  a : Double,
+  b : Double,
+  white : PdfTristimulusPoint,
+) -> (Double, Double, Double) {
+  let l = (lightness + 16.0) / 116.0 + a / 500.0
+  let m = (lightness + 16.0) / 116.0
+  let n = (lightness + 16.0) / 116.0 - b / 200.0
+  (
+    pdf_image_clamp_unit(white.x * pdf_image_lab_g(l)),
+    pdf_image_clamp_unit(white.y * pdf_image_lab_g(m)),
+    pdf_image_clamp_unit(white.z * pdf_image_lab_g(n)),
+  )
+}
+
+///|
+fn pdf_image_rgb_of_xyz(
+  x : Double,
+  y : Double,
+  z : Double,
+) -> (Double, Double, Double) {
+  (
+    pdf_image_clamp_unit(2.5623 * x + -1.1661 * y + -0.3962 * z),
+    pdf_image_clamp_unit(-1.0215 * x + 1.9778 * y + 0.0437 * z),
+    pdf_image_clamp_unit(0.0752 * x + -0.2562 * y + 1.1810 * z),
+  )
+}
+
+///|
+fn pdf_image_lab_indexed_value(
+  output : Array[Byte],
+  table : ArrayView[(Int, Array[Int])],
+  index : Int,
+  white : PdfTristimulusPoint,
+) -> Unit raise PdfError {
+  let values = pdf_image_indexed_lookup(table, index, 3)
+  let lightness = (values[0] - 127).to_double() / 255.0
+  let a = (values[1] - 127).to_double() / 255.0
+  let b = (values[2] - 127).to_double() / 255.0
+  let (x, y, z) = pdf_image_xyz_of_lab(lightness, a, b, white)
+  let (red, green, blue) = pdf_image_rgb_of_xyz(x, y, z)
+  output.push(pdf_byte_of_int((red * 255.0).to_int()))
+  output.push(pdf_byte_of_int((green * 255.0).to_int()))
+  output.push(pdf_byte_of_int((blue * 255.0).to_int()))
+}
+
+///|
 fn pdf_image_indexed_8bpp_as_rgb24(
   width : Int,
   height : Int,
@@ -475,6 +543,23 @@ fn pdf_image_indexed_8bpp_as_rgb24(
   let output : Array[Byte] = []
   for index in 0..<pixels {
     pdf_image_rgb_indexed_value(output, table, data[index].to_int())
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_lab_indexed_8bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  white : PdfTristimulusPoint,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let pixels = width * height
+  pdf_image_require_size(data, pixels)
+  let output : Array[Byte] = []
+  for index in 0..<pixels {
+    pdf_image_lab_indexed_value(output, table, data[index].to_int(), white)
   }
   Bytes::from_array(output)
 }
@@ -597,6 +682,15 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
             height,
             PdfBPP24,
             pdf_image_cmyk_indexed_8bpp_as_rgb24(width, height, table, data),
+          )
+        PdfLab(white, _, _) =>
+          PdfRawImage(
+            width,
+            height,
+            PdfBPP24,
+            pdf_image_lab_indexed_8bpp_as_rgb24(
+              width, height, table, white, data,
+            ),
           )
         _ => raise FilterExpected
       }

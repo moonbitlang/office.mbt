@@ -375,9 +375,9 @@ MoonBit consequences for this project:
    RGB/CalRGB, Gray/CalGray, and CMYK conversion to RGB24. Raw 1-bit
    row-padded image masks and 4-bit row-padded DeviceGray images are also
    started. Indexed RGB/CalRGB and CMYK table images are started for 8-bit and
-   4-bit row-padded samples. Decode-array transforms, Lab/Separation image
-   pixels, full `Pdffun` tint-transform evaluation, and JPEG decoding remain
-   deferred.
+   4-bit row-padded samples, and Lab-backed indexed table conversion is started
+   for 8-bit samples. Decode-array transforms, Separation image pixels, full
+   `Pdffun` tint-transform evaluation, and JPEG decoding remain deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics
