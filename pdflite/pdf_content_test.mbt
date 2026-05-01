@@ -712,6 +712,43 @@ test "PdfDocument parse_content_ops_with_resources sizes named inline image spac
 }
 
 ///|
+test "PdfDocument parse_content_bytes_with_resources parses one resource-aware stream" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([
+    (
+      content_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (
+          content_name_for_test("/CS1"),
+          PdfNameObject(content_name_for_test("/RGB")),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.parse_content_bytes_with_resources(
+      resources,
+      content_bytes_for_test("BI /W 2 /H 1 /BPC 8 /CS /CS1 ID A EI B EI"),
+    ),
+    [
+      Op_InlineImage(
+        @pdflite.pdf_dictionary([
+          (content_name_for_test("/W"), PdfInteger(2)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+          (
+            content_name_for_test("/CS"),
+            PdfNameObject(content_name_for_test("/CS1")),
+          ),
+        ]),
+        None,
+        content_bytes_for_test("A EI B"),
+      ),
+    ],
+  )
+}
+
+///|
 test "PdfDocument parse_content_ops_with_resources sizes array inline image spaces" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(

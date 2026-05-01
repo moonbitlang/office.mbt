@@ -507,6 +507,15 @@ pub fn PdfDocument::parse_content_ops_with_resources(
 }
 
 ///|
+pub fn PdfDocument::parse_content_bytes_with_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  data : PdfBytes,
+) -> Array[PdfContentOp] raise PdfError {
+  pdf_parse_content_ops_from_bytes_with_context(data, Some(self), resources)
+}
+
+///|
 fn PdfDocument::pdf_content_raw_streams(
   self : PdfDocument,
   streams : ArrayView[PdfObject],

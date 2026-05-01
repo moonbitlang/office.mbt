@@ -423,7 +423,9 @@ MoonBit consequences for this project:
    colour space comes from `/Resources/ColorSpace` can use exact byte counts and
    preserve `EI` sequences inside unfiltered payloads. Page-level content
    mutation and resource-renumbering paths now use that resource-aware parser
-   when the `PdfPage` or page object already carries a resource dictionary.
+   when the `PdfPage` or page object already carries a resource dictionary. A
+   raw-byte resource-aware parser, `PdfDocument::parse_content_bytes_with_resources`,
+   is also exposed for the CamlPDF `parse_single_stream` use case.
    Filter-aware binary inline image compression and broader resource-dependent
    inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
