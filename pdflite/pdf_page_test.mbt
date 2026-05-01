@@ -264,6 +264,28 @@ fn page_destination_entries_for_test(
 }
 
 ///|
+fn page_catalog_destination_for_test(
+  doc : @pdflite.PdfDocument,
+  name : String,
+) -> @pdflite.PdfObject? {
+  match
+    doc
+    .lookup_object_or_null(doc.root())
+    .lookup_immediate(page_name_for_test("/Dests")) {
+    Some(PdfDictionary(entries)) =>
+      for entry in entries {
+        let (key, value) = entry
+        if key == page_name_for_test(name) {
+          break Some(value)
+        }
+      } nobreak {
+        None
+      }
+    _ => None
+  }
+}
+
+///|
 fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -1011,6 +1033,44 @@ test "PdfDocument pdf_of_pages rewrites and prunes named destinations" {
       PdfArray([PdfIndirect(new_page_numbers[0]), PdfNameObject(type_fit)]),
     ),
   ])
+}
+
+///|
+test "PdfDocument pdf_of_pages rewrites and prunes catalog destinations" {
+  let key_dests = page_name_for_test("/Dests")
+  let type_fit = page_name_for_test("/Fit")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_page_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_dests,
+      PdfDictionary([
+        (
+          page_name_for_test("/Drop"),
+          PdfArray([PdfIndirect(old_page_numbers[1]), PdfNameObject(type_fit)]),
+        ),
+        (
+          page_name_for_test("/Keep"),
+          PdfArray([PdfIndirect(old_page_numbers[0]), PdfNameObject(type_fit)]),
+        ),
+      ]),
+    ),
+  )
+  let extracted = try! doc.pdf_of_pages([1])
+  let new_page_numbers = try! extracted.page_reference_numbers()
+  @test.assert_eq(
+    page_catalog_destination_for_test(extracted, "/Keep"),
+    Some(PdfArray([PdfIndirect(new_page_numbers[0]), PdfNameObject(type_fit)])),
+  )
+  @test.assert_eq(page_catalog_destination_for_test(extracted, "/Drop"), None)
 }
 
 ///|

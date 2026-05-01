@@ -278,9 +278,10 @@ MoonBit consequences for this project:
    to the new page objects, duplicated annotation references are copied to fresh
    object numbers, copied annotation `/Popup` and `/Parent` links are repaired
    within each extracted page, and `/Root/Names/Dests` name-tree entries whose
-   page targets were nulled are pruned. Page labels, bookmarks, structure-tree
-   trimming, old-style catalog `/Dests`, and retained-numbering mode remain
-   deferred.
+   page targets were nulled are pruned. Old-style catalog `/Dests` dictionary
+   entries are also pruned after selected page references are rewritten. Page
+   labels, bookmarks, structure-tree trimming, and retained-numbering mode
+   remain deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a
    `remove_unreferenced` pass that follows indirect references from the catalog

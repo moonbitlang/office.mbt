@@ -1038,6 +1038,51 @@ fn PdfDocument::pdf_page_live_destinations(
 }
 
 ///|
+fn PdfDocument::pdf_page_live_catalog_destinations(
+  self : PdfDocument,
+  dests : PdfObject,
+) -> PdfObject {
+  match dests {
+    PdfDictionary(entries) => {
+      let output : Array[(PdfName, PdfObject)] = []
+      for entry in entries {
+        let (_, destination) = entry
+        if !self.pdf_page_destination_was_nulled(destination) {
+          output.push(entry)
+        }
+      }
+      PdfDictionary(output)
+    }
+    _ => dests
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_fixup_catalog_destinations(
+  self : PdfDocument,
+) -> Unit raise PdfError {
+  let root_object = self.lookup_object_or_null(self.root())
+  match root_object.lookup_immediate(pdf_page_dests_key()) {
+    Some(PdfIndirect(dests_number)) =>
+      self.add_object_given_number(
+        dests_number,
+        self.pdf_page_live_catalog_destinations(
+          self.lookup_object_or_null(dests_number),
+        ),
+      )
+    Some(dests) =>
+      self.add_object_given_number(
+        self.root(),
+        root_object.add_dict_entry(
+          pdf_page_dests_key(),
+          self.pdf_page_live_catalog_destinations(dests),
+        ),
+      )
+    None => ()
+  }
+}
+
+///|
 fn PdfDocument::pdf_page_fixup_destination_name_tree(
   self : PdfDocument,
 ) -> Unit raise PdfError {
@@ -1095,6 +1140,7 @@ pub fn PdfDocument::pdf_of_pages(
   pdf.pdf_page_fixup_duplicate_annots()
   pdf.remove_unreferenced()
   pdf.pdf_page_fixup_destination_name_tree()
+  pdf.pdf_page_fixup_catalog_destinations()
   pdf.remove_unreferenced()
   pdf
 }
