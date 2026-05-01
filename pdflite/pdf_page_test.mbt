@@ -328,6 +328,75 @@ test "PdfDocument pages_of_pagetree falls back to last seen mediabox" {
 }
 
 ///|
+test "pdf_page_protect balances unmatched graphics saves" {
+  @test.assert_eq(@pdflite.pdf_page_protect([Op_q, Op_q, Op_Q]), [Op_Q])
+  @test.assert_eq(@pdflite.pdf_page_protect([Op_q, Op_Q, Op_Q]), [])
+}
+
+///|
+test "PdfDocument prepend_operators merges content in non-fast mode" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
+  }
+  let updated = try! doc.prepend_operators(page, [Op_q, Op_Q])
+  @test.assert_eq(updated.content.length(), 1)
+  @test.assert_eq(try! doc.parse_content_ops(updated.content), [
+    Op_q,
+    Op_Q,
+    Op_BT,
+    Op_ET,
+  ])
+}
+
+///|
+test "PdfDocument prepend_operators preserves split streams in fast mode" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
+  }
+  let updated = try! doc.prepend_operators(page, [Op_q, Op_Q], fast=true)
+  @test.assert_eq(updated.content.length(), 2)
+  @test.assert_eq(try! doc.parse_content_ops(updated.content), [
+    Op_q,
+    Op_Q,
+    Op_BT,
+    Op_ET,
+  ])
+}
+
+///|
+test "PdfDocument postpend_operators protects existing content in non-fast mode" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [try! @pdflite.pdf_content_stream_of_ops([Op_q, Op_BT, Op_ET])],
+  }
+  let updated = try! doc.postpend_operators(page, [Op_g(0.5)])
+  @test.assert_eq(updated.content.length(), 1)
+  @test.assert_eq(try! doc.parse_content_ops(updated.content), [
+    Op_q,
+    Op_q,
+    Op_BT,
+    Op_ET,
+    Op_Q,
+    Op_Q,
+    Op_g(0.5),
+  ])
+}
+
+///|
+test "PdfDocument postpend_operators avoids protection for empty content" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
+  let updated = try! doc.postpend_operators(page, [Op_BT, Op_ET])
+  @test.assert_eq(updated.content.length(), 1)
+  @test.assert_eq(try! doc.parse_content_ops(updated.content), [Op_BT, Op_ET])
+}
+
+///|
 test "PdfDocument page_reference_numbers reports missing catalog object" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(99)

@@ -519,6 +519,106 @@ pub fn PdfDocument::pages_of_pagetree(
 }
 
 ///|
+fn pdf_page_concat_ops(
+  first : ArrayView[PdfContentOp],
+  second : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  let output : Array[PdfContentOp] = []
+  for op in first {
+    output.push(op)
+  }
+  for op in second {
+    output.push(op)
+  }
+  output
+}
+
+///|
+fn pdf_page_concat3_ops(
+  first : ArrayView[PdfContentOp],
+  second : ArrayView[PdfContentOp],
+  third : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] {
+  pdf_page_concat_ops(pdf_page_concat_ops(first, second), third)
+}
+
+///|
+pub fn pdf_page_protect(ops : ArrayView[PdfContentOp]) -> Array[PdfContentOp] {
+  let mut saves = 0
+  let mut restores = 0
+  for op in ops {
+    match op {
+      Op_q => saves += 1
+      Op_Q => restores += 1
+      _ => ()
+    }
+  }
+  let output : Array[PdfContentOp] = []
+  if saves > restores {
+    for _ in 0..<(saves - restores) {
+      output.push(Op_Q)
+    }
+  }
+  output
+}
+
+///|
+pub fn PdfDocument::prepend_operators(
+  self : PdfDocument,
+  page : PdfPage,
+  ops : ArrayView[PdfContentOp],
+  fast? : Bool = false,
+) -> PdfPage raise PdfError {
+  if fast {
+    { ..page, content: [pdf_content_stream_of_ops(ops), ..page.content] }
+  } else {
+    let old_ops = self.parse_content_ops(page.content)
+    {
+      ..page,
+      content: [pdf_content_stream_of_ops(pdf_page_concat_ops(ops, old_ops))],
+    }
+  }
+}
+
+///|
+pub fn PdfDocument::postpend_operators(
+  self : PdfDocument,
+  page : PdfPage,
+  ops : ArrayView[PdfContentOp],
+  fast? : Bool = false,
+) -> PdfPage raise PdfError {
+  if fast {
+    {
+      ..page,
+      content: [
+        ..page.content,
+        pdf_content_stream_of_ops(pdf_page_concat3_ops([Op_q], ops, [Op_Q])),
+      ],
+    }
+  } else {
+    let existing_ops = self.parse_content_ops(page.content)
+    if existing_ops.length() == 0 {
+      { ..page, content: [pdf_content_stream_of_ops(ops)] }
+    } else {
+      let before_ops : Array[PdfContentOp] = [Op_q]
+      let after_ops = pdf_page_concat3_ops(
+        pdf_page_protect(existing_ops),
+        [Op_Q],
+        ops,
+      )
+      {
+        ..page,
+        content: [
+          pdf_content_stream_of_ops(
+            pdf_page_concat3_ops(before_ops, existing_ops, after_ops),
+          ),
+        ],
+      }
+    }
+  }
+}
+
+///|
 fn pdf_page_reference_numbers_inner(
   pdf : PdfDocument,
   pages_node : PdfObject,

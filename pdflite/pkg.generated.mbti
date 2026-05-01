@@ -137,6 +137,8 @@ pub fn pdf_page_custom(PdfObject) -> PdfPage
 
 pub fn pdf_page_int_of_rotation(PdfPageRotation) -> Int
 
+pub fn pdf_page_protect(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
+
 pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject
 
 pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise PdfError
@@ -423,6 +425,8 @@ pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
+pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
+pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int

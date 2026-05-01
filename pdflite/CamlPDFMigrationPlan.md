@@ -261,6 +261,8 @@ MoonBit consequences for this project:
    blank/custom pages, flat page-tree construction, root installation, and
    `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
+   Page content mutation is started with `protect`, `prepend_operators`, and
+   `postpend_operators` helpers over `PdfContentOp` streams.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and
