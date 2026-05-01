@@ -45,6 +45,16 @@ pub let paper_uslegal : PaperSize
 
 pub let paper_usletter : PaperSize
 
+pub fn pdf_aes_cbc_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise PdfError
+
+pub fn pdf_aes_cbc_encrypt_with_iv(BytesView, BytesView, BytesView) -> Bytes raise PdfError
+
+pub fn pdf_aes_decrypt_block(BytesView, BytesView) -> Bytes raise PdfError
+
+pub fn pdf_aes_ecb_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise PdfError
+
+pub fn pdf_aes_encrypt_block(BytesView, BytesView) -> Bytes raise PdfError
+
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
 pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_radius? : Double, style? : PdfAnnotationStyle, dash_array? : ArrayView[Int]) -> PdfAnnotationBorder
@@ -382,6 +392,7 @@ pub(all) suberror PdfError {
   InvalidUTF8
   InvalidPDFDocEncoding(Int)
   CryptoKeyExpected
+  InvalidCryptoDataLength(Int)
   EncryptionExpected
   EncryptionMethodExpected
   EncryptionDictionaryEntryExpected(PdfName)

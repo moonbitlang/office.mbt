@@ -511,9 +511,12 @@ MoonBit consequences for this project:
     revision 4 no-metadata marker branch. R2/R3/R4 `/U` user-password entry
     generation and user-password authentication are started over the ARC4/MD5
     path. R2/R3/R4 `/O` owner-password entry generation, padded-user recovery,
-    and owner-password authentication are also started. ARC4 object data
-    encryption/decryption using derived object keys is started for the legacy
-    string/stream path. A recursive ARC4 object walk is started for PDF strings,
+    and owner-password authentication are also started. AES block,
+    IV-prefixed CBC, and ECB primitives are started through the portable
+    `illusory0x0/rijndael` MoonBit package, with CamlPDF-compatible PKCS#7
+    padding handling. ARC4 object data encryption/decryption using derived
+    object keys is started for the legacy string/stream path. A recursive ARC4
+    object walk is started for PDF strings,
     arrays, dictionaries, and stream dictionaries/data, with stream data
     materialized at the crypt boundary and `/Length` refreshed. A copied
     document-level ARC4 pass is also started for parsed objects, preserving

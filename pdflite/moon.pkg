@@ -1,4 +1,5 @@
 import {
+  "illusory0x0/rijndael/rijndael",
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/math",
