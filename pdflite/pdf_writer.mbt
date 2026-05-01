@@ -40,6 +40,23 @@ fn pdf_writer_push_octal_escape(output : Array[Byte], value : Int) -> Unit {
 }
 
 ///|
+fn pdf_writer_length_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
+}
+
+///|
+fn pdf_write_stream_dictionary(stream : PdfStream) -> PdfObject raise PdfError {
+  match stream.data {
+    StreamGot(bytes) =>
+      stream.dictionary.add_dict_entry(
+        pdf_writer_length_name(),
+        PdfInteger(bytes.length()),
+      )
+    StreamToGet(_) => raise StreamDataExpected
+  }
+}
+
+///|
 fn pdf_write_name_to(output : Array[Byte], name : PdfName) -> Unit {
   let bytes = name.bytes()
   let mut start = 0
@@ -113,7 +130,7 @@ fn pdf_write_object_to(
       pdf_writer_push_ascii(output, " >>")
     }
     PdfStreamObject(stream) => {
-      pdf_write_object_to(output, stream.dictionary)
+      pdf_write_object_to(output, pdf_write_stream_dictionary(stream))
       pdf_writer_push_ascii(output, "\nstream\n")
       match stream.data {
         StreamGot(bytes) => pdf_writer_push_view(output, bytes[:])

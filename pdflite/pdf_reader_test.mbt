@@ -141,3 +141,32 @@ test "pdf_read_classic_document_from_bytes uses xref and trailer root" {
     Some(PdfIndirect(1)),
   )
 }
+
+///|
+test "pdf_read_classic_document_from_bytes reads stream objects by xref" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
+  )
+  document.add_object_given_number(1, stream)
+  let rendered = try! @pdflite.pdf_write_document(document)
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(rendered)
+  guard parsed.lookup_object_or_null(1) is PdfStreamObject(parsed_stream) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(
+    parsed_stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(
+        reader_bytes_for_test([47, 76, 101, 110, 103, 116, 104]),
+      ),
+    ),
+    Some(PdfInteger(5)),
+  )
+  @test.assert_eq(
+    parsed_stream.data,
+    StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
+  )
+}

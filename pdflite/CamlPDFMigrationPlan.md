@@ -200,9 +200,11 @@ MoonBit consequences for this project:
    literal string escaping, indirect object rendering, and direct `StreamGot`
    stream rendering. Minimal classic xref-table, trailer dictionary, header,
    `startxref`, and `%%EOF` document serialization are also started, with a
-   primitive writer-reader round-trip test for parsed objects. Complete real
-   formatting parity, incremental update handling, compressed xref streams,
-   encrypted output, and lazy `StreamToGet` materialization remain deferred.
+   primitive writer-reader round-trip test for parsed objects. Owned stream
+   serialization now writes a direct `/Length` entry from the byte payload.
+   Complete real formatting parity, incremental update handling, compressed
+   xref streams, encrypted output, and lazy `StreamToGet` materialization remain
+   deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

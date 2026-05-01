@@ -113,6 +113,30 @@ test "pdf_write_indirect_object renders direct stream data" {
 }
 
 ///|
+test "pdf_write_indirect_object adds owned stream length" {
+  let object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(writer_bytes_for_test([72, 105])),
+  )
+  let rendered = try! @pdflite.pdf_write_indirect_object({
+    number: 8,
+    generation: 0,
+    object,
+  })
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(rendered)
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      writer_name_for_test([47, 76, 101, 110, 103, 116, 104]),
+    ),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(stream.data, StreamGot(writer_bytes_for_test([72, 105])))
+}
+
+///|
 test "pdf_write_document serializes objects with xref and trailer" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 4)
