@@ -527,7 +527,10 @@ MoonBit consequences for this project:
     uncovered-line report with whitebox checks for page-tree guards, content
     stream shapes, destination and annotation transform fallbacks, duplicate
     annotation/destination cleanup, resource prefixing and renumbering, and
-    reference collection edge cases.
+    reference collection edge cases. The remaining uncovered report is now the
+    template executable `cmd/main` entrypoint plus one defensive content parser
+    branch after `pdf_decode_stream`, which is unreachable with the current
+    decoder contract because non-stream inputs raise before returning.
 
 ## Update Discipline
 
