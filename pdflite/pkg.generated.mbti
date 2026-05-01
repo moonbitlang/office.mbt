@@ -544,6 +544,7 @@ pub(all) struct PdfCIDKeyedFont {
   encoding : PdfCMapEncoding
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCIDKeyedFont::debug_name(Self) -> String
+pub fn PdfCIDKeyedFont::is_identity_h(Self) -> Bool
 
 pub(all) struct PdfCIDSystemInfo {
   registry : Bytes
@@ -561,6 +562,7 @@ pub(all) enum PdfCMapEncoding {
   PdfPredefinedCMap(PdfName)
   PdfCMap(Int)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCMapEncoding::is_identity_h(Self) -> Bool
 
 pub(all) struct PdfCalculatorFunction {
   operations : Array[PdfCalculatorOp]
@@ -864,6 +866,7 @@ pub(all) enum PdfFont {
   PdfFontCIDKeyed(PdfCIDKeyedFont)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFont::debug_name(Self) -> String
+pub fn PdfFont::is_identity_h(Self) -> Bool
 
 pub(all) struct PdfFontDescriptor {
   ascent : Double

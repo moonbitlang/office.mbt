@@ -266,6 +266,19 @@ pub fn PdfCIDKeyedFont::debug_name(self : PdfCIDKeyedFont) -> String {
 }
 
 ///|
+pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
+  match self {
+    PdfPredefinedCMap(name) => name == pdf_text_name("/Identity-H")
+    _ => false
+  }
+}
+
+///|
+pub fn PdfCIDKeyedFont::is_identity_h(self : PdfCIDKeyedFont) -> Bool {
+  self.encoding.is_identity_h()
+}
+
+///|
 pub fn PdfSimpleFontType::debug_name(self : PdfSimpleFontType) -> String {
   match self {
     PdfType1 => "Type 1"
@@ -327,6 +340,14 @@ pub fn PdfFont::debug_name(self : PdfFont) -> String {
     PdfFontStandard(font) => font.debug_name()
     PdfFontSimple(font) => "SimpleFont " + font.debug_name()
     PdfFontCIDKeyed(font) => font.debug_name()
+  }
+}
+
+///|
+pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
+  match self {
+    PdfFontCIDKeyed(font) => font.is_identity_h()
+    _ => false
   }
 }
 

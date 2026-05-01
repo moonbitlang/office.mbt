@@ -61,6 +61,20 @@ use `(65).to_byte()`, not `65.to_byte()`, because `65.` is parsed as the start
 of a floating-point literal.
 
 ```sh
+moon run -c 'enum E { A(Int) } derive(Debug)
+fn E::value(self : E) -> Int { match self { A(n) => n } }
+fn main { let value = A(7); println(value.value()) }'
+# 7
+```
+
+When calling a method on a freshly constructed enum value in package code, bind
+the constructor result to a local first, then call the method. In black-box
+tests or other places where constructor names come from an imported package,
+add an explicit enum type annotation if inference has no expected type yet.
+Parentheses can work in a one-off snippet, but `moon fmt` may remove them in
+source files and reintroduce parser/name-resolution ambiguity.
+
+```sh
 moon run -c 'fn main { let empty = Bytes::new(0); let zeros = Bytes::new(2); println(empty.length()); println(zeros.length()); println(zeros[0].to_int()) }'
 # 0
 # 2

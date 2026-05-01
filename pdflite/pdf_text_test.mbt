@@ -1053,6 +1053,18 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
     cid_font.encoding,
     PdfPredefinedCMap(text_name_for_test("/Identity-H")),
   )
+  @test.assert_eq(cid_font.encoding.is_identity_h(), true)
+  @test.assert_eq(cid_font.is_identity_h(), true)
+  let cid_font_value : @pdflite.PdfFont = PdfFontCIDKeyed(cid_font)
+  @test.assert_eq(cid_font_value.is_identity_h(), true)
+  let identity_v : @pdflite.PdfCMapEncoding = PdfPredefinedCMap(
+    text_name_for_test("/Identity-V"),
+  )
+  @test.assert_eq(identity_v.is_identity_h(), false)
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
+  )
+  @test.assert_eq(standard_font.is_identity_h(), false)
   let composite = cid_font.composite
   @test.assert_eq(composite.cid_basefont, text_name_for_test("/DescendantFont"))
   @test.assert_eq(

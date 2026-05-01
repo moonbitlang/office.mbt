@@ -384,7 +384,8 @@ MoonBit consequences for this project:
    including CamlPDF's `/TrueType` standard-14 compatibility path, byte-backed
    CID system info, predefined and indirect CMap encodings, descendant font
    descriptors, horizontal `/W` widths, vertical `/W2` widths, and default CID
-   widths. ToUnicode CMap parsing remains deferred.
+   widths. The `Identity-H` predicate is also started over the typed CMap
+   encoding model. ToUnicode CMap parsing remains deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
