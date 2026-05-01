@@ -2296,6 +2296,38 @@ test "PdfTextExtractor extracts MacExpert superior and inferior digits" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert fractions" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x2F, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x3D,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2044, 0x00BC, 0x00BD, 0x00BE, 0x215B, 0x215C, 0x215D, 0x215E, 0x2153, 0x2154,
+    0xF6DE,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/fraction"),
+    text_name_for_test("/onequarter"),
+    text_name_for_test("/onehalf"),
+    text_name_for_test("/threequarters"),
+    text_name_for_test("/oneeighth"),
+    text_name_for_test("/threeeighths"),
+    text_name_for_test("/fiveeighths"),
+    text_name_for_test("/seveneighths"),
+    text_name_for_test("/onethird"),
+    text_name_for_test("/twothirds"),
+    text_name_for_test("/threequartersemdash"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2044), Some(0x2F))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x215D), Some(0x4C))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2154), Some(0x4F))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6DE), Some(0x3D))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),
