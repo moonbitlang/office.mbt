@@ -1943,21 +1943,42 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
 }
 
 ///|
-test "PdfTextExtractor extracts WinAnsi Basic Latin quote glyphs" {
+test "PdfTextExtractor extracts WinAnsi glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
-    try! extractor.codepoints_of_text(text_bytes_for_test([39, 96])[:]),
-    [39, 96],
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([39, 96, 0x80, 0x91, 0x92, 0x96, 0x97, 0xA9, 0xE9])[:],
+    ),
+    [39, 96, 0x20AC, 0x2018, 0x2019, 0x2013, 0x2014, 0x00A9, 0x00E9],
   )
   @test.assert_eq(
-    try! extractor.glyphnames_of_text(text_bytes_for_test([39, 96])[:]),
-    [text_name_for_test("/quotesingle"), text_name_for_test("/grave")],
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([39, 96, 0x80, 0x91, 0x92, 0x96, 0x97, 0xA9, 0xE9])[:],
+    ),
+    [
+      text_name_for_test("/quotesingle"),
+      text_name_for_test("/grave"),
+      text_name_for_test("/Euro"),
+      text_name_for_test("/quoteleft"),
+      text_name_for_test("/quoteright"),
+      text_name_for_test("/endash"),
+      text_name_for_test("/emdash"),
+      text_name_for_test("/copyright"),
+      text_name_for_test("/eacute"),
+    ],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(39), Some(39))
   @test.assert_eq(extractor.charcode_of_codepoint(96), Some(96))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(0x80))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2018), Some(0x91))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2019), Some(0x92))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2013), Some(0x96))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2014), Some(0x97))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00A9), Some(0xA9))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00E9), Some(0xE9))
 }
 
 ///|

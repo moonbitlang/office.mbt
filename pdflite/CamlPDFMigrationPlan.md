@@ -408,6 +408,8 @@ MoonBit consequences for this project:
    lookup for single Unicode codepoints. Basic Latin glyph-list-backed fallback
    is also started for StandardEncoding, MacRomanEncoding, WinAnsiEncoding,
    custom encoding differences, and reverse charcode lookup over that subset.
+   A practical WinAnsi high-byte subset is also started for common PDF text
+   bytes such as Euro, smart quotes, dashes, copyright, and `eacute`.
    General `pdfcmap` parsing, full Adobe Glyph List coverage, MacExpert,
    Symbol, and ZapfDingbats extraction remain deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3

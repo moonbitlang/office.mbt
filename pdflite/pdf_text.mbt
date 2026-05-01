@@ -1718,6 +1718,46 @@ fn pdf_text_basic_latin_glyphname(
 }
 
 ///|
+fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
+  match pdf_text_basic_latin_glyphname(code, false) {
+    Some(name) => Some(name)
+    None =>
+      match code {
+        0x80 => Some(pdf_text_name("/Euro"))
+        0x82 => Some(pdf_text_name("/quotesinglbase"))
+        0x83 => Some(pdf_text_name("/florin"))
+        0x84 => Some(pdf_text_name("/quotedblbase"))
+        0x85 => Some(pdf_text_name("/ellipsis"))
+        0x86 => Some(pdf_text_name("/dagger"))
+        0x87 => Some(pdf_text_name("/daggerdbl"))
+        0x88 => Some(pdf_text_name("/circumflex"))
+        0x89 => Some(pdf_text_name("/perthousand"))
+        0x8A => Some(pdf_text_name("/Scaron"))
+        0x8B => Some(pdf_text_name("/guilsinglleft"))
+        0x8C => Some(pdf_text_name("/OE"))
+        0x8E => Some(pdf_text_name("/Zcaron"))
+        0x91 => Some(pdf_text_name("/quoteleft"))
+        0x92 => Some(pdf_text_name("/quoteright"))
+        0x93 => Some(pdf_text_name("/quotedblleft"))
+        0x94 => Some(pdf_text_name("/quotedblright"))
+        0x95 => Some(pdf_text_name("/bullet"))
+        0x96 => Some(pdf_text_name("/endash"))
+        0x97 => Some(pdf_text_name("/emdash"))
+        0x98 => Some(pdf_text_name("/tilde"))
+        0x99 => Some(pdf_text_name("/trademark"))
+        0x9A => Some(pdf_text_name("/scaron"))
+        0x9B => Some(pdf_text_name("/guilsinglright"))
+        0x9C => Some(pdf_text_name("/oe"))
+        0x9E => Some(pdf_text_name("/zcaron"))
+        0x9F => Some(pdf_text_name("/Ydieresis"))
+        0xA9 => Some(pdf_text_name("/copyright"))
+        0xE9 => Some(pdf_text_name("/eacute"))
+        _ => None
+      }
+  }
+}
+
+///|
 fn pdf_text_difference_glyphname(
   differences : ArrayView[PdfEncodingDifference],
   code : Int,
@@ -1739,8 +1779,8 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
   match self {
     PdfImplicitInFontFile | PdfMacExpertEncoding => None
     PdfStandardEncoding => pdf_text_basic_latin_glyphname(code, true)
-    PdfMacRomanEncoding | PdfWinAnsiEncoding =>
-      pdf_text_basic_latin_glyphname(code, false)
+    PdfMacRomanEncoding => pdf_text_basic_latin_glyphname(code, false)
+    PdfWinAnsiEncoding => pdf_text_winansi_glyphname(code)
     PdfCustomEncoding(base, differences) =>
       match pdf_text_difference_glyphname(differences, code) {
         Some(name) => Some(name)
@@ -1810,6 +1850,32 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
     "/braceright" => Some(125)
     "/asciitilde" => Some(126)
     "/Euro" => Some(0x20AC)
+    "/quotesinglbase" => Some(0x201A)
+    "/florin" => Some(0x0192)
+    "/quotedblbase" => Some(0x201E)
+    "/ellipsis" => Some(0x2026)
+    "/dagger" => Some(0x2020)
+    "/daggerdbl" => Some(0x2021)
+    "/circumflex" => Some(0x02C6)
+    "/perthousand" => Some(0x2030)
+    "/Scaron" => Some(0x0160)
+    "/guilsinglleft" => Some(0x2039)
+    "/OE" => Some(0x0152)
+    "/Zcaron" => Some(0x017D)
+    "/quotedblleft" => Some(0x201C)
+    "/quotedblright" => Some(0x201D)
+    "/bullet" => Some(0x2022)
+    "/endash" => Some(0x2013)
+    "/emdash" => Some(0x2014)
+    "/tilde" => Some(0x02DC)
+    "/trademark" => Some(0x2122)
+    "/scaron" => Some(0x0161)
+    "/guilsinglright" => Some(0x203A)
+    "/oe" => Some(0x0153)
+    "/zcaron" => Some(0x017E)
+    "/Ydieresis" => Some(0x0178)
+    "/copyright" => Some(0x00A9)
+    "/eacute" => Some(0x00E9)
     _ => None
   }
 }
@@ -1844,6 +1910,32 @@ fn pdf_text_codepoint_to_basic_glyphname(codepoint : Int) -> PdfName? {
       0x2018 => Some(pdf_text_name("/quoteleft"))
       0x2019 => Some(pdf_text_name("/quoteright"))
       0x20AC => Some(pdf_text_name("/Euro"))
+      0x201A => Some(pdf_text_name("/quotesinglbase"))
+      0x0192 => Some(pdf_text_name("/florin"))
+      0x201E => Some(pdf_text_name("/quotedblbase"))
+      0x2026 => Some(pdf_text_name("/ellipsis"))
+      0x2020 => Some(pdf_text_name("/dagger"))
+      0x2021 => Some(pdf_text_name("/daggerdbl"))
+      0x02C6 => Some(pdf_text_name("/circumflex"))
+      0x2030 => Some(pdf_text_name("/perthousand"))
+      0x0160 => Some(pdf_text_name("/Scaron"))
+      0x2039 => Some(pdf_text_name("/guilsinglleft"))
+      0x0152 => Some(pdf_text_name("/OE"))
+      0x017D => Some(pdf_text_name("/Zcaron"))
+      0x201C => Some(pdf_text_name("/quotedblleft"))
+      0x201D => Some(pdf_text_name("/quotedblright"))
+      0x2022 => Some(pdf_text_name("/bullet"))
+      0x2013 => Some(pdf_text_name("/endash"))
+      0x2014 => Some(pdf_text_name("/emdash"))
+      0x02DC => Some(pdf_text_name("/tilde"))
+      0x2122 => Some(pdf_text_name("/trademark"))
+      0x0161 => Some(pdf_text_name("/scaron"))
+      0x203A => Some(pdf_text_name("/guilsinglright"))
+      0x0153 => Some(pdf_text_name("/oe"))
+      0x017E => Some(pdf_text_name("/zcaron"))
+      0x0178 => Some(pdf_text_name("/Ydieresis"))
+      0x00A9 => Some(pdf_text_name("/copyright"))
+      0x00E9 => Some(pdf_text_name("/eacute"))
       _ => pdf_text_ascii_punctuation_glyphname(codepoint, false)
     }
   }
