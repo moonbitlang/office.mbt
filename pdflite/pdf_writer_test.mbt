@@ -66,6 +66,20 @@ test "pdf_write_object renders primitive scalar objects" {
 }
 
 ///|
+test "pdf_write_object renders real numbers without exponent notation" {
+  let tiny : Double = try! @strconv.from_str("1e-10")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(tiny)),
+    writer_bytes_for_test([48, 46, 48, 48, 48, 48, 48, 48, 48, 48, 48, 49]),
+  )
+  let large : Double = try! @strconv.from_str("1.25e6")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(large)),
+    writer_bytes_for_test([49, 50, 53, 48, 48, 48, 48]),
+  )
+}
+
+///|
 test "pdf_write_object escapes names and literal strings as bytes" {
   let name = writer_name_for_test([47, 65, 32, 66, 35, 67])
   @test.assert_eq(

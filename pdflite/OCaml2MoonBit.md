@@ -83,6 +83,16 @@ MoonBit has useful scalar types for ports from OCaml: `Byte`, `Int16`,
 `UInt16`, `Int`, `UInt`, `Int64`, `UInt64`, `Float`, and `Double`.
 
 ```sh
+moon run -c 'fn main { let tiny : Double = try! @strconv.from_str("1e-10"); println(tiny.to_string()) }'
+# 1e-10
+```
+
+`Double::to_string()` may emit scientific notation. When porting binary or
+document formats whose numeric grammar disallows exponents, add a named
+formatter at the serialization boundary instead of writing `Double::to_string()`
+directly.
+
+```sh
 moon run -c 'fn main { let r : Ref[Int] = Ref::{ val: 0 }; r.val += 1; let xs = [1, 2, 3]; xs[0] = 9; println(r.val); println(xs[0]) }'
 # 1
 # 9

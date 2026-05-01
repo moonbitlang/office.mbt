@@ -202,9 +202,10 @@ MoonBit consequences for this project:
    `startxref`, and `%%EOF` document serialization are also started, with a
    primitive writer-reader round-trip test for parsed objects. Owned stream
    serialization now writes a direct `/Length` entry from the byte payload.
-   Complete real formatting parity, incremental update handling, compressed
-   xref streams, encrypted output, and lazy `StreamToGet` materialization remain
-   deferred.
+   Real number serialization now avoids exponent notation, but complete
+   CamlPDF `format_real` parity remains deferred. Incremental update handling,
+   compressed xref streams, encrypted output, and lazy `StreamToGet`
+   materialization remain deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

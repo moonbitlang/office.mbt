@@ -96,6 +96,131 @@ fn pdf_write_string_to(output : Array[Byte], bytes : PdfBytes) -> Unit {
 }
 
 ///|
+fn pdf_writer_exponent_marker(text : BytesView) -> Int {
+  for i = 0; i < text.length(); i = i + 1 {
+    let value = text[i].to_int()
+    if value == 69 || value == 101 {
+      break i
+    }
+  } nobreak {
+    -1
+  }
+}
+
+///|
+fn pdf_writer_parse_signed_int(
+  text : BytesView,
+  start : Int,
+) -> Int raise PdfError {
+  let mut index = start
+  let mut sign = 1
+  if index < text.length() {
+    match text[index].to_int() {
+      43 => index += 1
+      45 => {
+        sign = -1
+        index += 1
+      }
+      _ => ()
+    }
+  }
+  if index >= text.length() {
+    raise NumberExpected
+  }
+  let mut value = 0
+  while index < text.length() {
+    let digit = text[index].to_int()
+    if !pdf_is_digit_byte(digit) {
+      raise NumberExpected
+    }
+    value = value * 10 + digit - 48
+    index += 1
+  }
+  sign * value
+}
+
+///|
+fn pdf_writer_push_digits(
+  output : Array[Byte],
+  digits : Array[Byte],
+  start : Int,
+  end : Int,
+) -> Unit {
+  for i = start; i < end; i = i + 1 {
+    output.push(digits[i])
+  }
+}
+
+///|
+fn pdf_writer_push_scientific_real(
+  output : Array[Byte],
+  text : BytesView,
+  exponent_at : Int,
+) -> Unit raise PdfError {
+  let mut mantissa_start = 0
+  if exponent_at > 0 {
+    match text[0].to_int() {
+      43 => mantissa_start = 1
+      45 => {
+        pdf_writer_push_byte(output, 45)
+        mantissa_start = 1
+      }
+      _ => ()
+    }
+  }
+  let exponent = pdf_writer_parse_signed_int(text, exponent_at + 1)
+  let digits : Array[Byte] = []
+  let mut fractional_digits = 0
+  let mut seen_decimal = false
+  for i = mantissa_start; i < exponent_at; i = i + 1 {
+    let value = text[i].to_int()
+    if value == 46 {
+      seen_decimal = true
+    } else if pdf_is_digit_byte(value) {
+      digits.push(text[i])
+      if seen_decimal {
+        fractional_digits += 1
+      }
+    } else {
+      raise NumberExpected
+    }
+  }
+  if digits.length() == 0 {
+    pdf_writer_push_byte(output, 48)
+  } else {
+    let decimal_position = digits.length() + exponent - fractional_digits
+    if decimal_position <= 0 {
+      pdf_writer_push_ascii(output, "0.")
+      for _ in 0..<-decimal_position {
+        pdf_writer_push_byte(output, 48)
+      }
+      pdf_writer_push_digits(output, digits, 0, digits.length())
+    } else if decimal_position >= digits.length() {
+      pdf_writer_push_digits(output, digits, 0, digits.length())
+      for _ in 0..<(decimal_position - digits.length()) {
+        pdf_writer_push_byte(output, 48)
+      }
+    } else {
+      pdf_writer_push_digits(output, digits, 0, decimal_position)
+      pdf_writer_push_byte(output, 46)
+      pdf_writer_push_digits(output, digits, decimal_position, digits.length())
+    }
+  }
+}
+
+///|
+fn pdf_writer_push_real(
+  output : Array[Byte],
+  value : Double,
+) -> Unit raise PdfError {
+  let text = @ascii.encode(value.to_string())
+  match pdf_writer_exponent_marker(text[:]) {
+    -1 => pdf_writer_push_view(output, text[:])
+    exponent_at => pdf_writer_push_scientific_real(output, text[:], exponent_at)
+  }
+}
+
+///|
 fn pdf_write_object_to(
   output : Array[Byte],
   object : PdfObject,
@@ -105,7 +230,7 @@ fn pdf_write_object_to(
     PdfBoolean(true) => pdf_writer_push_ascii(output, "true")
     PdfBoolean(false) => pdf_writer_push_ascii(output, "false")
     PdfInteger(value) => pdf_writer_push_ascii(output, value.to_string())
-    PdfReal(value) => pdf_writer_push_ascii(output, value.to_string())
+    PdfReal(value) => pdf_writer_push_real(output, value)
     PdfString(bytes) => pdf_write_string_to(output, bytes)
     PdfNameObject(name) => pdf_write_name_to(output, name)
     PdfArray(values) => {
