@@ -257,7 +257,11 @@ MoonBit consequences for this project:
    contents, remove unreferenced objects, and write the result.
    Status: started with CamlPDF-style page tree reference-number traversal
    through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
-   top-level `/Count` based `endpage_fast`.
+   top-level `/Count` based `endpage_fast`. Content stream support is now
+   started with a byte-preserving `PdfContentOp` subset, uncompressed content
+   stream construction, indirect stream parsing through `PdfDocument`, and
+   parsing for the core path, color, XObject, and text operators used by the
+   `pdfhello.ml` workflow.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

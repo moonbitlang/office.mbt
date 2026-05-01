@@ -71,6 +71,10 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfError
+
+pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise PdfError
+
 pub fn pdf_decode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_decode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
@@ -126,6 +130,8 @@ pub fn pdf_object_map_empty() -> PdfObjectMap
 pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
+
+pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfError
 
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
@@ -226,6 +232,8 @@ pub(all) suberror PdfError {
   StreamDataExpected
   ParsedObjectExpected
   PageTreeExpected
+  ContentOperatorExpected
+  ContentOperandExpected
   StartXRefExpected
   XRefExpected
   XRefEntryExpected
@@ -326,6 +334,52 @@ pub fn PaperSize::width(Self) -> Double
 
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 
+type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentOp {
+  Op_w(Double)
+  Op_J(Int)
+  Op_j(Int)
+  Op_M(Double)
+  Op_q
+  Op_Q
+  Op_cm(TransformMatrix)
+  Op_m(Double, Double)
+  Op_l(Double, Double)
+  Op_h
+  Op_re(Double, Double, Double, Double)
+  Op_S
+  Op_s
+  Op_f
+  Op_F
+  Op_fstar
+  Op_B
+  Op_Bstar
+  Op_b
+  Op_bstar
+  Op_n
+  Op_W
+  Op_Wstar
+  Op_BT
+  Op_ET
+  Op_Tf(PdfName, Double)
+  Op_Td(Double, Double)
+  Op_TD(Double, Double)
+  Op_Tm(TransformMatrix)
+  Op_Tstar
+  Op_Tj(Bytes)
+  Op_TJ(PdfObject)
+  Op_G(Double)
+  Op_g(Double)
+  Op_RG(Double, Double, Double)
+  Op_rg(Double, Double, Double)
+  Op_K(Double, Double, Double, Double)
+  Op_k(Double, Double, Double, Double)
+  Op_gs(PdfName)
+  Op_Do(PdfName)
+  Op_Unknown(Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub struct PdfDocument {
   mut major : Int
   mut minor : Int
@@ -351,6 +405,7 @@ pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
+pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
