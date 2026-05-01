@@ -232,6 +232,24 @@ fn page_resource_value_for_test(
 }
 
 ///|
+fn page_annotation_numbers_for_test(
+  page_object : @pdflite.PdfObject,
+) -> Array[Int] {
+  let numbers : Array[Int] = []
+  match page_object.lookup_immediate(page_name_for_test("/Annots")) {
+    Some(PdfArray(items)) =>
+      for item in items {
+        match item {
+          PdfIndirect(number) => numbers.push(number)
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  numbers
+}
+
+///|
 fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -885,6 +903,62 @@ test "PdfDocument pdf_of_pages extracts pages in requested order" {
   @test.assert_eq(reparsed_pages.length(), 2)
   @test.assert_eq(reparsed_pages[0].mediabox, page_index_mediabox_for_test(2))
   @test.assert_eq(reparsed_pages[1].mediabox, page_index_mediabox_for_test(0))
+}
+
+///|
+test "PdfDocument pdf_of_pages duplicates reused annotations" {
+  let key_annots = page_name_for_test("/Annots")
+  let key_subtype = page_name_for_test("/Subtype")
+  let key_popup = page_name_for_test("/Popup")
+  let key_parent = page_name_for_test("/Parent")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(page_name_for_test("/Text"))),
+      (key_popup, PdfIndirect(11)),
+    ]),
+  )
+  doc.add_object_given_number(
+    11,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(page_name_for_test("/Popup"))),
+      (key_parent, PdfIndirect(10)),
+    ]),
+  )
+  let page = {
+    ..page_indexed_blank_for_test(0),
+    rest: @pdflite.pdf_dictionary([
+      (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11)])),
+    ]),
+  }
+  let page_root = try! doc.add_pagetree([page, page])
+  ignore(try! doc.add_root(page_root, []))
+  let extracted = try! doc.pdf_of_pages([1, 2])
+  let page_numbers = try! extracted.page_reference_numbers()
+  let first_annots = page_annotation_numbers_for_test(
+    extracted.lookup_object_or_null(page_numbers[0]),
+  )
+  let second_annots = page_annotation_numbers_for_test(
+    extracted.lookup_object_or_null(page_numbers[1]),
+  )
+  @test.assert_eq(first_annots.length(), 2)
+  @test.assert_eq(second_annots.length(), 2)
+  @test.assert_eq(first_annots, [10, 11])
+  @test.assert_eq(first_annots[0] == second_annots[0], false)
+  @test.assert_eq(first_annots[1] == second_annots[1], false)
+  @test.assert_eq(
+    extracted
+    .lookup_object_or_null(second_annots[0])
+    .lookup_immediate(key_popup),
+    Some(PdfIndirect(second_annots[1])),
+  )
+  @test.assert_eq(
+    extracted
+    .lookup_object_or_null(second_annots[1])
+    .lookup_immediate(key_parent),
+    Some(PdfIndirect(second_annots[0])),
+  )
 }
 
 ///|
