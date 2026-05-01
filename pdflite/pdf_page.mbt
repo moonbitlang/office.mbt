@@ -296,6 +296,14 @@ pub fn PdfDocument::add_root(
 }
 
 ///|
+pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError {
+  let document = pdf_document_empty()
+  let page_root_number = document.add_pagetree([pdf_page_blank(paper_a4)])
+  ignore(document.add_root(page_root_number, []))
+  document
+}
+
+///|
 fn pdf_page_default_mediabox() -> PdfObject {
   PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(612), PdfInteger(792)])
 }

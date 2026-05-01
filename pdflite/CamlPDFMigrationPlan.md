@@ -267,7 +267,8 @@ MoonBit consequences for this project:
    replacement page tree in a copied document and can renumber same-count old
    page indirect references to the new page objects. CamlPDF's matrix-aware
    bookmark, annotation, and `/OpenAction` destination transforms remain
-   deferred.
+   deferred. `minimum_valid_pdf` is also ported as a writable one-page A4
+   document constructor.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and

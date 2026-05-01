@@ -119,6 +119,8 @@ pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 
 pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise PdfError
 
+pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError
+
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub let pdf_no_more : Int

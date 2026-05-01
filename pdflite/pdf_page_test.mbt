@@ -255,6 +255,27 @@ test "PdfDocument add_pagetree and add_root build a writable page document" {
 }
 
 ///|
+test "pdf_minimum_valid_pdf creates a writable one-page document" {
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  @test.assert_eq(try! doc.endpage(), 1)
+  let pages = try! doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0], @pdflite.pdf_page_blank(@pdflite.paper_a4))
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(doc),
+  )
+  @test.assert_eq(try! parsed.endpage(), 1)
+  let parsed_pages = try! parsed.pages_of_pagetree()
+  @test.assert_eq(parsed_pages[0].content, [])
+  @test.assert_eq(parsed_pages[0].resources, PdfDictionary([]))
+  @test.assert_eq(parsed_pages[0].rotate, Rotate0)
+  @test.assert_eq(
+    try! parsed.parse_rectangle(parsed_pages[0].mediabox),
+    try! doc.parse_rectangle(pages[0].mediabox),
+  )
+}
+
+///|
 test "PdfDocument pages_of_pagetree extracts inherited page properties" {
   let doc = page_manual_extract_document_for_test()
   let pages = try! doc.pages_of_pagetree()
