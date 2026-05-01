@@ -225,6 +225,104 @@ test "pdf_page_label_complete supplies a basic first range" {
 }
 
 ///|
+test "pdf_page_label_add_label inserts a bounded label range" {
+  let basic = @pdflite.pdf_page_label_basic
+  let appendix : @pdflite.PdfPageLabel = {
+    label_style: PageLabelUppercaseLetters,
+    label_prefix: Some(page_label_bytes_for_test("A-")),
+    start_page: 10,
+    start_value: 1,
+  }
+  let inserted : @pdflite.PdfPageLabel = {
+    label_style: PageLabelLowercaseRoman,
+    label_prefix: Some(page_label_bytes_for_test("intro-")),
+    start_page: 3,
+    start_value: 1,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_page_label_add_label(12, [basic, appendix], inserted, 5),
+    [basic, inserted, { ..basic, start_page: 6, start_value: 6 }, appendix],
+  )
+}
+
+///|
+test "pdf_page_label_add_label avoids redundant continuation labels" {
+  let basic = @pdflite.pdf_page_label_basic
+  let next : @pdflite.PdfPageLabel = {
+    label_style: PageLabelDecimalArabic,
+    label_prefix: Some(page_label_bytes_for_test("p.")),
+    start_page: 6,
+    start_value: 1,
+  }
+  let inserted : @pdflite.PdfPageLabel = {
+    label_style: PageLabelNoLabelPrefixOnly,
+    label_prefix: Some(page_label_bytes_for_test("cover")),
+    start_page: 3,
+    start_value: 1,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_page_label_add_label(12, [basic, next], inserted, 5),
+    [basic, inserted, next],
+  )
+  @test.assert_eq(@pdflite.pdf_page_label_add_label(5, [basic], inserted, 5), [
+    basic, inserted,
+  ])
+}
+
+///|
+test "pdf_page_label_add_label removes overlapped ranges" {
+  let basic = @pdflite.pdf_page_label_basic
+  let old_inner : @pdflite.PdfPageLabel = {
+    label_style: PageLabelLowercaseRoman,
+    label_prefix: None,
+    start_page: 4,
+    start_value: 1,
+  }
+  let after : @pdflite.PdfPageLabel = {
+    label_style: PageLabelUppercaseLetters,
+    label_prefix: None,
+    start_page: 8,
+    start_value: 1,
+  }
+  let inserted : @pdflite.PdfPageLabel = {
+    label_style: PageLabelDecimalArabic,
+    label_prefix: Some(page_label_bytes_for_test("new-")),
+    start_page: 3,
+    start_value: 10,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_page_label_add_label(
+      12,
+      [basic, old_inner, after],
+      inserted,
+      6,
+    ),
+    [basic, inserted, { ..old_inner, start_page: 7, start_value: 4 }, after],
+  )
+}
+
+///|
+test "pdf_page_label_add_label replaces an existing same-start label" {
+  let basic = @pdflite.pdf_page_label_basic
+  let old : @pdflite.PdfPageLabel = {
+    label_style: PageLabelLowercaseRoman,
+    label_prefix: None,
+    start_page: 4,
+    start_value: 1,
+  }
+  let inserted : @pdflite.PdfPageLabel = {
+    label_style: PageLabelUppercaseRoman,
+    label_prefix: None,
+    start_page: 4,
+    start_value: 20,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_page_label_add_label(10, [basic, old], inserted, 6),
+    [basic, inserted, { ..old, start_page: 7, start_value: 4 }],
+  )
+}
+
+///|
 test "pdf_page_label_text_of_page_number renders label bytes" {
   let labels : Array[@pdflite.PdfPageLabel] = [
     {

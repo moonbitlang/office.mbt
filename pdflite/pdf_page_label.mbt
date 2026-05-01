@@ -99,6 +99,68 @@ pub fn pdf_page_label_complete(
 }
 
 ///|
+fn pdf_page_label_continuation(
+  labels : ArrayView[PdfPageLabel],
+  start_page : Int,
+) -> PdfPageLabel? {
+  if labels.length() == 0 {
+    None
+  } else {
+    let label = labels[labels.length() - 1]
+    Some({
+      ..label,
+      start_page,
+      start_value: start_page + (label.start_value - label.start_page),
+    })
+  }
+}
+
+///|
+pub fn pdf_page_label_add_label(
+  end_page : Int,
+  labels : ArrayView[PdfPageLabel],
+  label : PdfPageLabel,
+  range_end_page : Int,
+) -> Array[PdfPageLabel] {
+  let before_or_during_or_equal : Array[PdfPageLabel] = []
+  let after : Array[PdfPageLabel] = []
+  for existing in labels {
+    if existing.start_page <= range_end_page {
+      before_or_during_or_equal.push(existing)
+    } else {
+      after.push(existing)
+    }
+  }
+  let before_or_during : Array[PdfPageLabel] = []
+  for existing in before_or_during_or_equal {
+    if existing.start_page != label.start_page {
+      before_or_during.push(existing)
+    }
+  }
+  let before : Array[PdfPageLabel] = []
+  for existing in before_or_during {
+    if !(existing.start_page > label.start_page &&
+      existing.start_page <= range_end_page) {
+      before.push(existing)
+    }
+  }
+  let output = before
+  output.push(label)
+  if range_end_page != end_page &&
+    !(after.length() > 0 && after[0].start_page == range_end_page + 1) {
+    match
+      pdf_page_label_continuation(before_or_during_or_equal, range_end_page + 1) {
+      Some(replica) => output.push(replica)
+      None => ()
+    }
+  }
+  for existing in after {
+    output.push(existing)
+  }
+  output
+}
+
+///|
 fn pdf_page_label_push_bytes(output : Array[Byte], bytes : PdfBytes) -> Unit {
   for byte in bytes {
     output.push(byte)

@@ -147,6 +147,8 @@ pub fn pdf_page_custom(PdfObject) -> PdfPage
 
 pub fn pdf_page_int_of_rotation(PdfPageRotation) -> Int
 
+pub fn pdf_page_label_add_label(Int, ArrayView[PdfPageLabel], PdfPageLabel, Int) -> Array[PdfPageLabel]
+
 pub let pdf_page_label_basic : PdfPageLabel
 
 pub fn pdf_page_label_coalesce(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
