@@ -952,6 +952,7 @@ pub(all) struct PdfEncryptionValues {
   owner_entry : Bytes
   permissions : Int
   file_id : Bytes
+  encrypt_metadata : Bool
   user_encryption_key : Bytes?
   owner_encryption_key : Bytes?
 } derive(Eq, ToJson, @debug.Debug)

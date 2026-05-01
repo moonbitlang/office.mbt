@@ -17,6 +17,7 @@ pub(all) struct PdfEncryptionValues {
   owner_entry : PdfBytes
   permissions : Int
   file_id : PdfBytes
+  encrypt_metadata : Bool
   user_encryption_key : PdfBytes?
   owner_encryption_key : PdfBytes?
 } derive(Debug, Eq, ToJson)
@@ -227,12 +228,18 @@ pub fn PdfDocument::encryption_values(
     Some(PdfArray([PdfString(file_id), _])) => file_id
     _ => raise EncryptionIDExpected
   }
+  let encrypt_metadata = match
+    self.lookup_direct(pdf_crypt_name("/EncryptMetadata"), encrypt_dictionary) {
+    Some(PdfBoolean(false)) => false
+    _ => true
+  }
   {
     crypt_type,
     user_entry,
     owner_entry,
     permissions,
     file_id,
+    encrypt_metadata,
     user_encryption_key: pdf_crypt_lookup_string(
       self,
       pdf_crypt_name("/UE"),
@@ -244,6 +251,14 @@ pub fn PdfDocument::encryption_values(
       encrypt_dictionary,
     ),
   }
+}
+
+///|
+fn PdfEncryptionValues::effective_no_encrypt_metadata(
+  self : PdfEncryptionValues,
+  no_encrypt_metadata : Bool,
+) -> Bool {
+  no_encrypt_metadata || !self.encrypt_metadata
 }
 
 ///|
@@ -264,6 +279,9 @@ pub fn PdfEncryptionValues::authenticate_user_password(
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> Bool raise PdfError {
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
+    no_encrypt_metadata,
+  )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
       pdf_authenticate_user_password_aesv3(iso, password, self.user_entry[:])
@@ -289,6 +307,9 @@ pub fn PdfEncryptionValues::file_key_for_user_password(
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfBytes? raise PdfError {
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
+    no_encrypt_metadata,
+  )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
       pdf_file_key_for_user_password_aesv3(
@@ -333,6 +354,9 @@ pub fn PdfEncryptionValues::authenticate_owner_password(
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> Bool raise PdfError {
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
+    no_encrypt_metadata,
+  )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
       pdf_authenticate_owner_password_aesv3(
@@ -363,6 +387,9 @@ pub fn PdfEncryptionValues::file_key_for_owner_password(
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfBytes? raise PdfError {
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
+    no_encrypt_metadata,
+  )
   match self.crypt_type {
     PdfCryptAESV3(iso) =>
       pdf_file_key_for_owner_password_aesv3(
@@ -423,6 +450,9 @@ fn PdfDocument::decrypt_with_file_key(
   file_key : PdfBytes,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfDecryptionResult raise PdfError {
+  let no_encrypt_metadata = values.effective_no_encrypt_metadata(
+    no_encrypt_metadata,
+  )
   match values.crypt_type {
     PdfCryptARC4(key_length_bits, _) => {
       let output = self.arc4_crypt_parsed_objects(

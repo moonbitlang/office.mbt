@@ -525,8 +525,10 @@ MoonBit consequences for this project:
     skipping now matches the CamlPDF cases for `/Type /Metadata` when
     `no_encrypt_metadata=true` and identity `/Crypt` filters with absent,
     explicit `/Identity`, or nameless first `/DecodeParms`; non-identity crypt
-    filters still decrypt. Copied document-level ARC4, AESV2, and AESV3 revision
-    5 user-password and owner-password decryption passes are also started for
+    filters still decrypt. `/EncryptMetadata false` is now parsed into
+    `PdfEncryptionValues` and applied automatically for R4 file-key derivation
+    and stream skipping. Copied document-level ARC4, AESV2, and AESV3 revision 5
+    user-password and owner-password decryption passes are also started for
     parsed objects, preserving already-decrypted and deferred parser states and
     allowing the encryption dictionary object to be skipped. Typed
     standard-encryption dictionary

@@ -8,6 +8,7 @@ test "private encryption password settings reject AESV3" {
     owner_entry: Bytes::new(0),
     permissions: 0,
     file_id: Bytes::new(0),
+    encrypt_metadata: true,
     user_encryption_key: None,
     owner_encryption_key: None,
   }
@@ -72,6 +73,7 @@ test "private document decrypt reports unsupported ISO AESV3 object crypt" {
     owner_entry: Bytes::new(0),
     permissions: 0,
     file_id: Bytes::new(0),
+    encrypt_metadata: true,
     user_encryption_key: None,
     owner_encryption_key: None,
   }
