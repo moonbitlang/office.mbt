@@ -376,8 +376,10 @@ MoonBit consequences for this project:
    row-padded image masks and 4-bit row-padded DeviceGray images are also
    started. Indexed RGB/CalRGB and CMYK table images are started for 8-bit and
    4-bit row-padded samples, and Lab-backed indexed table conversion is started
-   for 8-bit samples. Decode-array transforms, Separation image pixels, full
-   `Pdffun` tint-transform evaluation, and JPEG decoding remain deferred.
+   for 8-bit samples. CamlPDF-style `/Decode` handling is started for raw
+   image masks and 8-bit raw samples, including default decode arrays for
+   encoded image metadata. Separation image pixels, full `Pdffun`
+   tint-transform evaluation, and JPEG decoding remain deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

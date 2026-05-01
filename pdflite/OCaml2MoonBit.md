@@ -116,6 +116,19 @@ porting OCaml byte-codec expressions such as `(a - b) mod 256`, normalize the
 remainder into `0..255` before converting to `Byte`.
 
 ```sh
+moon run -c 'fn main { println(0xF0 & 0x0F); println(0x01 << 7); println(0x80 >> 7); println(0xAA ^ 0xFF) }'
+# 0
+# 128
+# 1
+# 85
+```
+
+MoonBit uses symbolic integer bitwise operators: `&` for OCaml `land`, `|`
+for `lor`, `^` for `lxor`, `<<` for `lsl`, and `>>` for right shift. This is
+the direct replacement for byte-codec and bitstream code that masks, packs,
+or inverts bytes.
+
+```sh
 moon run -c 'fn main { let tiny : Double = try! @strconv.from_str("1e-10"); println(tiny.to_string()) }'
 # 1e-10
 ```

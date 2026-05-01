@@ -76,6 +76,25 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
     PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])),
   )
+  let gray_jpeg = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfNameObject(image_name_for_test("/DCTDecode")),
+      ),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceGray")),
+      ),
+    ]),
+    StreamGot(@ascii.encode("gray-jpg")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), gray_jpeg),
+    PdfJPEG(@ascii.encode("gray-jpg"), Some([0.0, 1.0])),
+  )
 }
 
 ///|
@@ -215,6 +234,44 @@ test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
       PdfBPP24,
       image_bytes_for_test([0, 0, 0, 255, 255, 255, 136, 136, 136]),
     ),
+  )
+}
+
+///|
+test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
+  let doc = @pdflite.pdf_document_empty()
+  let inverted_mask = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ImageMask"), PdfBoolean(true)),
+      (image_name_for_test("/Decode"), PdfArray([PdfInteger(1), PdfInteger(0)])),
+    ]),
+    StreamGot(image_bytes_for_test([0b1000_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), inverted_mask),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([0, 0, 0, 255, 255, 255])),
+  )
+  let inverted_gray = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceGray")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        image_name_for_test("/Decode"),
+        PdfArray([PdfInteger(255), PdfInteger(0)]),
+      ),
+    ]),
+    StreamGot(image_bytes_for_test([0, 255])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), inverted_gray),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([255, 255, 255, 0, 0, 0])),
   )
 }
 
