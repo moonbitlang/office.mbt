@@ -426,7 +426,9 @@ MoonBit consequences for this project:
    effective encoding for single-codepoint glyphs.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
-   ZapfDingbats use focused built-in glyph/codepoint subsets.
+   ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
+   subset now includes common set, logic, double-arrow, and math glyphs from
+   CamlPDF's Symbol encoding table.
    General `pdfcmap` parsing, full Adobe Glyph List coverage, broader
    MacExpert coverage, and broader Symbol/ZapfDingbats coverage remain
    deferred.

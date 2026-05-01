@@ -2277,6 +2277,53 @@ test "PdfTextExtractor extracts implicit Symbol glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit Symbol set and logic glyphs" {
+  let symbol_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfSymbol, PdfImplicitInFontFile),
+  )
+  let extractor = symbol_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x40, 0x5C, 0x5E, 0x7E, 0xC0, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xCE, 0xCF, 0xD0,
+    0xD1, 0xD5, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDE, 0xDF, 0xE5,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2245, 0x2234, 0x22A5, 0x223C, 0x2135, 0x2297, 0x2295, 0x2205, 0x2229, 0x222A,
+    0x2208, 0x2209, 0x2220, 0x2207, 0x220F, 0x00AC, 0x2227, 0x2228, 0x21D4, 0x21D0,
+    0x21D2, 0x21D3, 0x2211,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/congruent"),
+    text_name_for_test("/therefore"),
+    text_name_for_test("/perpendicular"),
+    text_name_for_test("/similar"),
+    text_name_for_test("/aleph"),
+    text_name_for_test("/circlemultiply"),
+    text_name_for_test("/circleplus"),
+    text_name_for_test("/emptyset"),
+    text_name_for_test("/intersection"),
+    text_name_for_test("/union"),
+    text_name_for_test("/element"),
+    text_name_for_test("/notelement"),
+    text_name_for_test("/angle"),
+    text_name_for_test("/gradient"),
+    text_name_for_test("/product"),
+    text_name_for_test("/logicalnot"),
+    text_name_for_test("/logicaland"),
+    text_name_for_test("/logicalor"),
+    text_name_for_test("/arrowdblboth"),
+    text_name_for_test("/arrowdblleft"),
+    text_name_for_test("/arrowdblright"),
+    text_name_for_test("/arrowdbldown"),
+    text_name_for_test("/summation"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2245), Some(0x40))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2205), Some(0xC6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x222A), Some(0xC8))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x21D4), Some(0xDB))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2211), Some(0xE5))
+}
+
+///|
 test "PdfTextExtractor extracts implicit ZapfDingbats glyphs" {
   let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
