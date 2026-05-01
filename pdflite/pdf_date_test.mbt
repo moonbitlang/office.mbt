@@ -34,11 +34,80 @@ test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
     hour_offset: 0,
     minute_offset: 0,
   })
+  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:2024Z"), {
+    year: 2024,
+    month: 1,
+    day: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    hour_offset: 0,
+    minute_offset: 0,
+  })
+  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20241"), {
+    year: 2024,
+    month: 1,
+    day: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    hour_offset: 0,
+    minute_offset: 0,
+  })
+  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405X"), {
+    year: 2024,
+    month: 1,
+    day: 2,
+    hour: 3,
+    minute: 4,
+    second: 5,
+    hour_offset: 0,
+    minute_offset: 0,
+  })
   @test.assert_eq((try! @pdflite.pdf_date_of_string("D:19100")).year, 2000)
 }
 
 ///|
 test "pdf_string_of_date renders checked PDF date syntax" {
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_date({
+      year: 7,
+      month: 1,
+      day: 2,
+      hour: 3,
+      minute: 4,
+      second: 5,
+      hour_offset: 6,
+      minute_offset: 7,
+    }),
+    "D:00070102030405+06'07'",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_date({
+      year: 42,
+      month: 1,
+      day: 2,
+      hour: 3,
+      minute: 4,
+      second: 5,
+      hour_offset: 0,
+      minute_offset: 0,
+    }),
+    "D:00420102030405Z",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_date({
+      year: 999,
+      month: 1,
+      day: 2,
+      hour: 3,
+      minute: 4,
+      second: 5,
+      hour_offset: 0,
+      minute_offset: 0,
+    }),
+    "D:09990102030405Z",
+  )
   @test.assert_eq(
     try! @pdflite.pdf_string_of_date({
       year: 2024,
@@ -80,5 +149,17 @@ test "pdf_date_of_string rejects malformed dates" {
   )
   guard short is Err(@pdflite.PdfError::BadDate) else {
     fail("expected BadDate for short date")
+  }
+  let bad_year_digit : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
+    "D:20A4",
+  )
+  guard bad_year_digit is Err(@pdflite.PdfError::BadDate) else {
+    fail("expected BadDate for year")
+  }
+  let bad_month_digit : Result[@pdflite.PdfDate, Error] = try? @pdflite.pdf_date_of_string(
+    "D:2024AA",
+  )
+  guard bad_month_digit is Err(@pdflite.PdfError::BadDate) else {
+    fail("expected BadDate for month digits")
   }
 }

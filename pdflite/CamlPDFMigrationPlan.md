@@ -448,7 +448,9 @@ MoonBit consequences for this project:
     now includes broad operator render/parse round trips, unknown operator
     preservation, inline-image comments and malformed dictionaries, nested
     content objects, and parse errors for malformed arrays and non-stream
-    content references.
+    content references. Date coverage now includes short-year padding,
+    positive timezone rendering, `Z` and trailing non-local timezone parsing,
+    incomplete optional fields, non-digit failures, and Distiller Y2K recovery.
 
 ## Update Discipline
 
