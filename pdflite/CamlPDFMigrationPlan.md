@@ -452,7 +452,11 @@ MoonBit consequences for this project:
     positive timezone rendering, `Z` and trailing non-local timezone parsing,
     incomplete optional fields, non-digit failures, and Distiller Y2K recovery.
     A focused whitebox check now covers the duplicate-stream comparison
-    fallback for non-stream objects.
+    fallback for non-stream objects. Destination coverage now includes all
+    supported direct destination variants, malformed destination targets,
+    named/string lookup fallbacks, destination object rendering, page-number
+    target variants, and coordinate transforms for `FitBH`, `FitBV`, and
+    partial `XYZ` targets.
 
 ## Update Discipline
 
