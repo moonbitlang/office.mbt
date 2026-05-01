@@ -519,7 +519,11 @@ MoonBit consequences for this project:
     `pdf_merge.mbt` from the uncovered-line report with whitebox checks for
     version guards, catalog extras, structure-parent renumbering, structure
     lexicon merging, AcroForm field merging, catalog-root errors, and all
-    destination retargeting variants.
+    destination retargeting variants. Optional-content-group coverage now
+    removes `pdf_ocg.mbt` from the uncovered-line report with whitebox checks
+    for malformed array readers, sparse order/app dictionaries, usage
+    fallbacks, malformed OCProperties roots, copy/merge helpers, and optional
+    writer fields.
 
 ## Update Discipline
 
