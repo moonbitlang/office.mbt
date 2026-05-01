@@ -365,6 +365,7 @@ pub fn ByteCursor::position(Self) -> Int
 pub fn ByteCursor::read_byte(Self) -> Byte?
 pub fn ByteCursor::read_byte_back(Self) -> Byte?
 pub fn ByteCursor::read_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::read_jpeg_data(Self) -> Bytes raise PdfError
 pub fn ByteCursor::read_line(Self) -> Bytes raise PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise PdfError
 pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]

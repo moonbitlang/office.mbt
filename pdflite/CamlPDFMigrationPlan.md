@@ -366,7 +366,9 @@ MoonBit consequences for this project:
    decodable stream data, with RGB/CMYK component tables and recursive
    alternate-space handling. Separation and DeviceN parsing is started for
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
-   attributes. Full `Pdffun` tint-transform evaluation and image/JPEG support
+   attributes. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG
+   data through the `FF D9` EOI marker while leaving following bytes unread.
+   Full `Pdffun` tint-transform evaluation, image extraction, and JPEG decoding
    remain deferred.
 
 10. Encryption.
