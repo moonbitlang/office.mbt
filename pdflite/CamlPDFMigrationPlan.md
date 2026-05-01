@@ -364,7 +364,9 @@ MoonBit consequences for this project:
    `/Alternate`, default or explicit `/Range`, and `/Metadata`. Indexed table
    parsing is started for `/Indexed` and `/I` spaces backed by byte strings or
    decodable stream data, with RGB/CMYK component tables and recursive
-   alternate-space handling. Separation/DeviceN functions and image/JPEG support
+   alternate-space handling. Separation and DeviceN parsing is started for
+   colourant names, alternate spaces, raw tint-transform objects, and DeviceN
+   attributes. Full `Pdffun` tint-transform evaluation and image/JPEG support
    remain deferred.
 
 10. Encryption.

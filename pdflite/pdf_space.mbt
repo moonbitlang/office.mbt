@@ -360,6 +360,40 @@ fn PdfDocument::pdf_space_read_indexed(
 }
 
 ///|
+fn pdf_space_read_names(values : ArrayView[PdfObject]) -> Array[PdfName]? {
+  let names : Array[PdfName] = []
+  let mut valid = true
+  for value in values {
+    match value {
+      PdfNameObject(name) => names.push(name)
+      _ => valid = false
+    }
+  }
+  if valid {
+    Some(names)
+  } else {
+    None
+  }
+}
+
+///|
+fn PdfDocument::pdf_space_read_device_n(
+  self : PdfDocument,
+  resources : PdfObject,
+  names : ArrayView[PdfObject],
+  alternate : PdfObject,
+  tint : PdfObject,
+  attributes? : PdfObject = pdf_dictionary([]),
+) -> PdfColourSpace? raise PdfError {
+  match
+    (pdf_space_read_names(names), self.read_colour_space(resources, alternate)) {
+    (Some(names), Some(alternate)) =>
+      Some(PdfDeviceN(names, alternate, tint, attributes))
+    _ => None
+  }
+}
+
+///|
 pub fn PdfDocument::read_colour_space(
   self : PdfDocument,
   resources : PdfObject,
@@ -434,6 +468,25 @@ pub fn PdfDocument::read_colour_space(
       pdf_space_name("/Indexed") ||
       name == pdf_space_name("/I") =>
       self.pdf_space_read_indexed(resources, base, hival, lookup_data)
+    PdfArray([PdfNameObject(kind), PdfNameObject(name), alternate, tint]) if kind ==
+      pdf_space_name("/Separation") =>
+      match self.read_colour_space(resources, alternate) {
+        Some(alternate) => Some(PdfSeparation(name, alternate, tint))
+        None => None
+      }
+    PdfArray([PdfNameObject(kind), PdfArray(names), alternate, tint]) if kind ==
+      pdf_space_name("/DeviceN") =>
+      self.pdf_space_read_device_n(resources, names, alternate, tint)
+    PdfArray(
+      [PdfNameObject(kind), PdfArray(names), alternate, tint, attributes]
+    ) if kind == pdf_space_name("/DeviceN") =>
+      self.pdf_space_read_device_n(
+        resources,
+        names,
+        alternate,
+        tint,
+        attributes~,
+      )
     PdfArray([single]) => self.read_colour_space(resources, single)
     _ => None
   }

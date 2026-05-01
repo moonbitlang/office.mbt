@@ -501,6 +501,106 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
 }
 
 ///|
+test "PdfDocument read_colour_space parses Separation and DeviceN spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let tint = @pdflite.pdf_dictionary([
+    (space_name_for_test("/FunctionType"), PdfInteger(2)),
+  ])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Separation")),
+        PdfNameObject(space_name_for_test("/Spot")),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+      ]),
+    ),
+    Some(PdfSeparation(space_name_for_test("/Spot"), PdfDeviceCMYK, tint)),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([
+          PdfNameObject(space_name_for_test("/Cyan")),
+          PdfNameObject(space_name_for_test("/Magenta")),
+        ]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+      ]),
+    ),
+    Some(
+      PdfDeviceN(
+        [space_name_for_test("/Cyan"), space_name_for_test("/Magenta")],
+        PdfDeviceCMYK,
+        tint,
+        @pdflite.pdf_dictionary([]),
+      ),
+    ),
+  )
+  let attributes = @pdflite.pdf_dictionary([
+    (
+      space_name_for_test("/Subtype"),
+      PdfNameObject(space_name_for_test("/NChannel")),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([PdfNameObject(space_name_for_test("/Cyan"))]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+        attributes,
+      ]),
+    ),
+    Some(
+      PdfDeviceN(
+        [space_name_for_test("/Cyan")],
+        PdfDeviceCMYK,
+        tint,
+        attributes,
+      ),
+    ),
+  )
+}
+
+///|
+test "PdfDocument read_colour_space rejects malformed Separation and DeviceN spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let tint = @pdflite.pdf_dictionary([])
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Separation")),
+        PdfNameObject(space_name_for_test("/Spot")),
+        PdfNameObject(space_name_for_test("/Missing")),
+        tint,
+      ]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([PdfNameObject(space_name_for_test("/Cyan")), PdfInteger(1)]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+      ]),
+    ),
+    None,
+  )
+}
+
+///|
 test "pdf_object_of_colour_space writes supported direct colour spaces" {
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(PdfDeviceGray),
