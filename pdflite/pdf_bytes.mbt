@@ -47,6 +47,7 @@ pub(all) suberror PdfError {
   InvalidUnicodeCodepoint(Int)
   InvalidUTF16BE
   InvalidUTF8
+  InvalidPDFDocEncoding(Int)
   EncodingExpected
   EncodingDifferencesMalformed
   FontSubtypeExpected

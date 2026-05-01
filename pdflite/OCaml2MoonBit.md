@@ -296,6 +296,12 @@ moon run -c 'fn main { let alias = 1; println(alias) }'
 MoonBit code should avoid it as a local name, loop binder, or helper name so
 warning-enabled checks stay clean.
 
+When validating ports on the JavaScript backend, also avoid JavaScript sentinel
+names such as `undefined` for local result variables in tests. Simple command
+snippets may compile, but cross-target package tests can still expose generated
+JavaScript name interactions. Prefer descriptive domain names such as
+`missing_key_result` or `undefined_byte_result`.
+
 ```sh
 moon run -c 'fn first_positive(xs : Array[Int]) -> Int? { let mut i = 0; while i < xs.length() { if xs[i] > 0 { break Some(xs[i]) }; i += 1 } nobreak { None } }
 fn main { println(first_positive([-2, 0, 7]).unwrap()); println(first_positive([-2, 0]) is None) }'

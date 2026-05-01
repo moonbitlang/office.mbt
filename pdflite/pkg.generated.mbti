@@ -77,6 +77,12 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise PdfError
+
+pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise PdfError
+
+pub fn pdf_codepoints_of_pdfdocstring(BytesView) -> Array[Int] raise PdfError
+
 pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise PdfError
 
 pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise PdfError
@@ -213,6 +219,14 @@ pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise P
 
 pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
+pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
+
+pub fn pdf_pdfdocencoding_of_codepoints(ArrayView[Int]) -> Bytes?
+
+pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise PdfError
+
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
@@ -225,6 +239,8 @@ pub fn pdf_run_length_decode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode(Bytes) -> Bytes
 
+pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise PdfError
+
 pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
 
 pub fn pdf_standard_font_of_pdf_name(PdfName) -> PdfStandardFont?
@@ -236,6 +252,8 @@ pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise PdfError
 
 pub fn pdf_write_document(PdfDocument) -> Bytes raise PdfError
 
@@ -324,6 +342,7 @@ pub(all) suberror PdfError {
   InvalidUnicodeCodepoint(Int)
   InvalidUTF16BE
   InvalidUTF8
+  InvalidPDFDocEncoding(Int)
   EncodingExpected
   EncodingDifferencesMalformed
   FontSubtypeExpected

@@ -142,6 +142,95 @@ test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
 }
 
 ///|
+test "PDFDocEncoding decodes CamlPDF byte mappings" {
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoint_of_pdfdocencoding_byte(0x09),
+    0x09,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoint_of_pdfdocencoding_byte(0x18),
+    0x02D8,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoint_of_pdfdocencoding_byte(0xA0),
+    0x20AC,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoint_of_pdfdocencoding_byte(0x93),
+    0xFB02,
+  )
+  let undefined_byte_result = try? @pdflite.pdf_codepoint_of_pdfdocencoding_byte(
+    0x94,
+  )
+  guard undefined_byte_result is Err(InvalidPDFDocEncoding(0x94)) else {
+    fail("expected InvalidPDFDocEncoding for undefined byte")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoints_of_pdfdocencoding(
+      text_bytes_for_test([0x41, 0xA0, 0x93])[:],
+    ),
+    [0x41, 0x20AC, 0xFB02],
+  )
+}
+
+///|
+test "PDFDocEncoding encodes codepoints and falls back to UTF16BE" {
+  @test.assert_eq(
+    @pdflite.pdf_pdfdocencoding_byte_of_codepoint(0x20AC),
+    Some(0xA0),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_pdfdocencoding_byte_of_codepoint(0xFB01),
+    Some(0x93),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_pdfdocencoding_of_codepoints([0x41, 0x20AC, 0xFB01]),
+    Some(text_bytes_for_test([0x41, 0xA0, 0x93])),
+  )
+  @test.assert_eq(@pdflite.pdf_pdfdocencoding_of_codepoints([0x4E2D]), None)
+  @test.assert_eq(
+    try! @pdflite.pdf_pdfdocstring_of_codepoints([0x4E2D]),
+    text_bytes_for_test([0xFE, 0xFF, 0x4E, 0x2D]),
+  )
+}
+
+///|
+test "PDF document string helpers bridge PDFDoc UTF16BE and UTF8 bytes" {
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoints_of_pdfdocstring(
+      text_bytes_for_test([0x41, 0xA0])[:],
+    ),
+    [0x41, 0x20AC],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_codepoints_of_pdfdocstring(
+      text_bytes_for_test([0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC])[:],
+    ),
+    [0x41, 0x20AC],
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_utf8_of_pdfdocstring(text_bytes_for_test([0x41, 0xA0])[:]),
+    text_bytes_for_test([0x41, 0xE2, 0x82, 0xAC]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_pdfdocstring_of_utf8(
+      text_bytes_for_test([0x41, 0xE2, 0x82, 0xAC])[:],
+    ),
+    text_bytes_for_test([0x41, 0xA0]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_simplify_utf16be(
+      text_bytes_for_test([0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC])[:],
+    ),
+    text_bytes_for_test([0x41, 0xA0]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_simplify_utf16be(text_bytes_for_test([0x41])[:]),
+    text_bytes_for_test([0x41]),
+  )
+}
+
+///|
 test "pdf_standard_font_of_name accepts CamlPDF aliases" {
   let aliases : Array[(String, @pdflite.PdfStandardFont)] = [
     ("/Times-Roman", PdfTimesRoman),
