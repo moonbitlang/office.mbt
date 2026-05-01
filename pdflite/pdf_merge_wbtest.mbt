@@ -36,6 +36,8 @@ test "private merge destination-name rewrite covers action and stream callsites"
         (pdf_dest_d_key(), PdfString(old_name)),
       ]),
       changes,
+      changes,
+      [],
       [],
     ),
     PdfDictionary([
@@ -50,6 +52,8 @@ test "private merge destination-name rewrite covers action and stream callsites"
         StreamGot(@ascii.encode("data")),
       ),
       changes,
+      changes,
+      [],
       [],
     ),
     pdf_stream(
@@ -67,6 +71,8 @@ test "private merge destination-name rewrite covers action and stream callsites"
         (pdf_dest_d_key(), PdfNameObject(old_catalog_name)),
       ]),
       [],
+      [],
+      catalog_changes,
       catalog_changes,
     ),
     PdfDictionary([
@@ -78,6 +84,8 @@ test "private merge destination-name rewrite covers action and stream callsites"
     try! pdf_merge_rewrite_destination_callsite_object(
       PdfDictionary([(pdf_merge_dest_key(), PdfNameObject(old_catalog_name))]),
       [],
+      [],
+      catalog_changes,
       catalog_changes,
     ),
     PdfDictionary([(pdf_merge_dest_key(), PdfNameObject(new_catalog_name))]),

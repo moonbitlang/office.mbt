@@ -729,7 +729,9 @@ MoonBit consequences for this project:
     old-style catalog `/Dests` dictionaries are now disambiguated with
     CamlPDF-style `-fN` suffixes. String and name destination callsites such as
     link annotation `/Dest` entries, GoTo action `/D` entries, and retained
-    named/string-target bookmarks are rewritten to the renamed keys. Merge
+    named/string-target bookmarks are rewritten to the renamed keys, including
+    cross-document callsites that fall back to the first global renamed target.
+    Merge
     trailer info retention now
     preserves the first available `/Info` dictionary through the merged trailer.
     Safe catalog-entry retention now carries first-seen non-page/non-handled

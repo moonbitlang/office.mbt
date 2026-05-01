@@ -766,7 +766,9 @@ fn pdf_merge_open_action(
   documents : ArrayView[PdfDocument],
   retain_named_destinations : Bool,
   destination_name_changes : ArrayView[Array[(PdfBytes, PdfBytes)]],
+  all_destination_name_changes : ArrayView[(PdfBytes, PdfBytes)],
   catalog_destination_name_changes : ArrayView[Array[(PdfName, PdfName)]],
+  all_catalog_destination_name_changes : ArrayView[(PdfName, PdfName)],
 ) -> PdfObject? raise PdfError {
   for i in 0..<documents.length() {
     let document = documents[i]
@@ -776,7 +778,9 @@ fn pdf_merge_open_action(
           pdf_merge_rewrite_destination_callsite_object(
             open_action,
             destination_name_changes[i],
+            all_destination_name_changes,
             catalog_destination_name_changes[i],
+            all_catalog_destination_name_changes,
           ),
         )
       None => ()
@@ -853,6 +857,20 @@ fn pdf_merge_changed_destination_name(
 }
 
 ///|
+fn pdf_merge_changed_destination_name_with_fallback(
+  name : PdfBytes,
+  changes : ArrayView[(PdfBytes, PdfBytes)],
+  all_changes : ArrayView[(PdfBytes, PdfBytes)],
+) -> PdfBytes {
+  let changed = pdf_merge_changed_destination_name(name, changes)
+  if changed == name {
+    pdf_merge_changed_destination_name(name, all_changes)
+  } else {
+    changed
+  }
+}
+
+///|
 fn pdf_merge_changed_catalog_destination_name(
   name : PdfName,
   changes : ArrayView[(PdfName, PdfName)],
@@ -864,6 +882,20 @@ fn pdf_merge_changed_catalog_destination_name(
     }
   } nobreak {
     name
+  }
+}
+
+///|
+fn pdf_merge_changed_catalog_destination_name_with_fallback(
+  name : PdfName,
+  changes : ArrayView[(PdfName, PdfName)],
+  all_changes : ArrayView[(PdfName, PdfName)],
+) -> PdfName {
+  let changed = pdf_merge_changed_catalog_destination_name(name, changes)
+  if changed == name {
+    pdf_merge_changed_catalog_destination_name(name, all_changes)
+  } else {
+    changed
   }
 }
 
@@ -1044,10 +1076,38 @@ fn pdf_merge_catalog_destination_name_changes(
 }
 
 ///|
+fn pdf_merge_all_destination_name_changes(
+  changes : ArrayView[Array[(PdfBytes, PdfBytes)]],
+) -> Array[(PdfBytes, PdfBytes)] {
+  let output : Array[(PdfBytes, PdfBytes)] = []
+  for document_changes in changes {
+    for change in document_changes {
+      output.push(change)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_merge_all_catalog_destination_name_changes(
+  changes : ArrayView[Array[(PdfName, PdfName)]],
+) -> Array[(PdfName, PdfName)] {
+  let output : Array[(PdfName, PdfName)] = []
+  for document_changes in changes {
+    for change in document_changes {
+      output.push(change)
+    }
+  }
+  output
+}
+
+///|
 fn pdf_merge_rewrite_destination_callsite_object(
   object : PdfObject,
   name_changes : ArrayView[(PdfBytes, PdfBytes)],
+  all_name_changes : ArrayView[(PdfBytes, PdfBytes)],
   catalog_name_changes : ArrayView[(PdfName, PdfName)],
+  all_catalog_name_changes : ArrayView[(PdfName, PdfName)],
 ) -> PdfObject raise PdfError {
   match object {
     PdfArray(items) => {
@@ -1055,7 +1115,7 @@ fn pdf_merge_rewrite_destination_callsite_object(
       for item in items {
         output.push(
           pdf_merge_rewrite_destination_callsite_object(
-            item, name_changes, catalog_name_changes,
+            item, name_changes, all_name_changes, catalog_name_changes, all_catalog_name_changes,
           ),
         )
       }
@@ -1069,7 +1129,7 @@ fn pdf_merge_rewrite_destination_callsite_object(
           (
             key,
             pdf_merge_rewrite_destination_callsite_object(
-              value, name_changes, catalog_name_changes,
+              value, name_changes, all_name_changes, catalog_name_changes, all_catalog_name_changes,
             ),
           ),
         )
@@ -1079,14 +1139,18 @@ fn pdf_merge_rewrite_destination_callsite_object(
         Some(PdfString(name)) =>
           rewritten.add_dict_entry(
             pdf_merge_dest_key(),
-            PdfString(pdf_merge_changed_destination_name(name, name_changes)),
+            PdfString(
+              pdf_merge_changed_destination_name_with_fallback(
+                name, name_changes, all_name_changes,
+              ),
+            ),
           )
         Some(PdfNameObject(name)) =>
           rewritten.add_dict_entry(
             pdf_merge_dest_key(),
             PdfNameObject(
-              pdf_merge_changed_catalog_destination_name(
-                name, catalog_name_changes,
+              pdf_merge_changed_catalog_destination_name_with_fallback(
+                name, catalog_name_changes, all_catalog_name_changes,
               ),
             ),
           )
@@ -1101,15 +1165,19 @@ fn pdf_merge_rewrite_destination_callsite_object(
           pdf_dest_goto_name() =>
           rewritten.add_dict_entry(
             pdf_dest_d_key(),
-            PdfString(pdf_merge_changed_destination_name(name, name_changes)),
+            PdfString(
+              pdf_merge_changed_destination_name_with_fallback(
+                name, name_changes, all_name_changes,
+              ),
+            ),
           )
         (Some(PdfNameObject(action)), Some(PdfNameObject(name))) if action ==
           pdf_dest_goto_name() =>
           rewritten.add_dict_entry(
             pdf_dest_d_key(),
             PdfNameObject(
-              pdf_merge_changed_catalog_destination_name(
-                name, catalog_name_changes,
+              pdf_merge_changed_catalog_destination_name_with_fallback(
+                name, catalog_name_changes, all_catalog_name_changes,
               ),
             ),
           )
@@ -1121,7 +1189,9 @@ fn pdf_merge_rewrite_destination_callsite_object(
         dictionary: pdf_merge_rewrite_destination_callsite_object(
           stream.dictionary,
           name_changes,
+          all_name_changes,
           catalog_name_changes,
+          all_catalog_name_changes,
         ),
         data: stream.data,
       })
@@ -1133,13 +1203,18 @@ fn pdf_merge_rewrite_destination_callsite_object(
 fn PdfDocument::pdf_merge_rewrite_destination_callsite_names(
   self : PdfDocument,
   name_changes : ArrayView[(PdfBytes, PdfBytes)],
+  all_name_changes : ArrayView[(PdfBytes, PdfBytes)],
   catalog_name_changes : ArrayView[(PdfName, PdfName)],
+  all_catalog_name_changes : ArrayView[(PdfName, PdfName)],
 ) -> Unit raise PdfError {
-  if name_changes.length() > 0 || catalog_name_changes.length() > 0 {
+  if name_changes.length() > 0 ||
+    all_name_changes.length() > 0 ||
+    catalog_name_changes.length() > 0 ||
+    all_catalog_name_changes.length() > 0 {
     for number in self.object_numbers() {
       let object = self.lookup_object_or_null(number)
       let rewritten = pdf_merge_rewrite_destination_callsite_object(
-        object, name_changes, catalog_name_changes,
+        object, name_changes, all_name_changes, catalog_name_changes, all_catalog_name_changes,
       )
       if rewritten != object {
         self.add_object_given_number(number, rewritten)
@@ -1149,7 +1224,9 @@ fn PdfDocument::pdf_merge_rewrite_destination_callsite_names(
       pdf_merge_rewrite_destination_callsite_object(
         self.trailer_dict(),
         name_changes,
+        all_name_changes,
         catalog_name_changes,
+        all_catalog_name_changes,
       ),
     )
   }
@@ -1378,9 +1455,16 @@ pub fn pdf_merge_documents(
       for _ in staged => []
     ]
   }
+  let all_destination_name_changes = pdf_merge_all_destination_name_changes(
+    destination_name_changes,
+  )
+  let all_catalog_destination_name_changes = pdf_merge_all_catalog_destination_name_changes(
+    catalog_destination_name_changes,
+  )
   let open_action = if retain_catalog_entries {
     pdf_merge_open_action(
-      staged, retain_named_destinations, destination_name_changes, catalog_destination_name_changes,
+      staged, retain_named_destinations, destination_name_changes, all_destination_name_changes,
+      catalog_destination_name_changes, all_catalog_destination_name_changes,
     )
   } else {
     None
@@ -1389,7 +1473,9 @@ pub fn pdf_merge_documents(
     for i in 0..<staged.length() {
       staged[i].pdf_merge_rewrite_destination_callsite_names(
         destination_name_changes[i],
+        all_destination_name_changes,
         catalog_destination_name_changes[i],
+        all_catalog_destination_name_changes,
       )
     }
   }

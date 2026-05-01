@@ -174,6 +174,33 @@ fn merge_oldstyle_dest_callsite_doc_for_test(
 }
 
 ///|
+fn merge_external_dest_callsite_doc_for_test(
+  destination : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  let key_annots = merge_name_for_test("/Annots")
+  let key_subtype = merge_name_for_test("/Subtype")
+  let key_dest = merge_name_for_test("/Dest")
+  let type_link = merge_name_for_test("/Link")
+  let annotation_number = 52
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let page_refs = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    annotation_number,
+    PdfDictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (key_dest, destination),
+    ]),
+  )
+  doc.add_object_given_number(
+    page_refs[0],
+    try! doc
+    .lookup_object_or_null(page_refs[0])
+    .add_dict_entry(key_annots, PdfArray([PdfIndirect(annotation_number)])),
+  )
+  doc
+}
+
+///|
 fn merge_destination_name_entries_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
@@ -675,6 +702,52 @@ test "pdf_merge_documents renames colliding catalog destinations" {
   @test.assert_eq(
     try! merged.page_number_of_target(
       try! merged.read_destination(PdfNameObject(second_name)),
+    ),
+    2,
+  )
+}
+
+///|
+test "pdf_merge_documents rewrites external destination callsites" {
+  let string_caller = merge_external_dest_callsite_doc_for_test(
+    PdfString(@ascii.encode("shared")),
+  )
+  let string_first = merge_nametree_dest_doc_for_test("shared")
+  let string_second = merge_nametree_dest_doc_for_test("shared")
+  let string_merged = try! @pdflite.pdf_merge_documents(
+    [string_caller, string_first, string_second],
+    [[1], [1], [1]],
+  )
+  let first_string_name = @ascii.encode("shared-f1")
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(string_merged, 0),
+    Some(PdfString(first_string_name)),
+  )
+  @test.assert_eq(
+    try! string_merged.page_number_of_target(
+      try! string_merged.read_destination(PdfString(first_string_name)),
+    ),
+    2,
+  )
+
+  let catalog_name = merge_name_for_test("/Shared")
+  let catalog_caller = merge_external_dest_callsite_doc_for_test(
+    PdfNameObject(catalog_name),
+  )
+  let catalog_first = merge_oldstyle_dest_doc_for_test("/Shared")
+  let catalog_second = merge_oldstyle_dest_doc_for_test("/Shared")
+  let catalog_merged = try! @pdflite.pdf_merge_documents(
+    [catalog_caller, catalog_first, catalog_second],
+    [[1], [1], [1]],
+  )
+  let first_catalog_name = merge_name_for_test("/Shared-f1")
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(catalog_merged, 0),
+    Some(PdfNameObject(first_catalog_name)),
+  )
+  @test.assert_eq(
+    try! catalog_merged.page_number_of_target(
+      try! catalog_merged.read_destination(PdfNameObject(first_catalog_name)),
     ),
     2,
   )
