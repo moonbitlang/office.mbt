@@ -645,6 +645,12 @@ test "private reader xref helpers report malformed inputs" {
     fail("expected ParseIndirectObjectExpected")
   }
 
+  let empty_prefix = byte_cursor_of_bytes(Bytes::new(0))
+  let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? empty_prefix.read_reconstructed_indirect_prefix_at_current()
+  guard empty_prefix_result is Err(PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
+
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
   let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
     [120],

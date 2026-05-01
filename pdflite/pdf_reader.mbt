@@ -851,27 +851,77 @@ fn pdf_reader_sanitize_trailer(
 fn pdf_read_reconstructed_object_at(
   data : BytesView,
   position : Int,
+  xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> PdfParsedIndirectObject raise PdfError {
   let cursor = byte_cursor_of_view(data)
   cursor.seek_pdf_absolute(position)
-  let empty_xrefs : Array[PdfClassicXRefEntry] = []
-  cursor.read_first_indirect_object_at_current(empty_xrefs)
+  cursor.read_first_indirect_object_at_current(xrefs)
+}
+
+///|
+fn ByteCursor::read_reconstructed_indirect_prefix_at_current(
+  self : ByteCursor,
+) -> PdfParsedIndirectObject raise PdfError {
+  let (objects, prefix) = pdf_parse_indirect_object_segments(
+    self.lex_pdf_tokens(),
+  )
+  if objects.length() > 0 {
+    objects[0]
+  } else {
+    match prefix {
+      Some(prefix) => prefix
+      None => raise ParseIndirectObjectExpected
+    }
+  }
+}
+
+///|
+fn pdf_read_reconstructed_xrefs(
+  data : BytesView,
+) -> Array[PdfClassicXRefEntry] raise PdfError {
+  let xrefs : Array[PdfClassicXRefEntry] = []
+  for position = 0; position < data.length(); position = position + 1 {
+    if pdf_is_digit_byte(data[position].to_int()) {
+      let cursor = byte_cursor_of_view(data)
+      cursor.seek_pdf_absolute(position)
+      let parsed : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_indirect_prefix_at_current()
+      match parsed {
+        Ok(object) =>
+          if object.number > 0 {
+            xrefs.push({
+              object_number: object.number,
+              offset: position,
+              generation: object.generation,
+              in_use: true,
+              object_stream: None,
+            })
+          }
+        Err(_) => ()
+      }
+    }
+  }
+  xrefs
 }
 
 ///|
 fn pdf_read_reconstructed_objects(
   data : BytesView,
-) -> Array[PdfParsedIndirectObject] {
+) -> Array[PdfParsedIndirectObject] raise PdfError {
   let objects : Array[PdfParsedIndirectObject] = []
-  for position = 0; position < data.length(); position = position + 1 {
-    if pdf_is_digit_byte(data[position].to_int()) {
-      let parsed : Result[PdfParsedIndirectObject, Error] = try? pdf_read_reconstructed_object_at(
-        data, position,
-      )
-      match parsed {
-        Ok(object) => objects.push(object)
-        Err(_) => ()
-      }
+  let xrefs = pdf_read_reconstructed_xrefs(data)
+  for xref in xrefs {
+    let parsed : Result[PdfParsedIndirectObject, Error] = try? pdf_read_reconstructed_object_at(
+      data,
+      xref.offset,
+      xrefs[:],
+    )
+    match parsed {
+      Ok(object) =>
+        if object.number == xref.object_number &&
+          object.generation == xref.generation {
+          objects.push(object)
+        }
+      Err(_) => ()
     }
   }
   objects

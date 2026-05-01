@@ -217,7 +217,9 @@ MoonBit consequences for this project:
    offsets: it scans recoverable indirect objects, selects the latest trailer
    whose `/Root` points at a parsed dictionary, sets `first_xref` to zero, and
    keeps stricter xref errors on the strict classic reader path. Broader
-   malformed xref-table recovery remains deferred.
+   malformed xref-table recovery remains deferred. The reconstruction scan now
+   builds a temporary offset table before materializing objects, so recovered
+   streams can resolve plain indirect `/Length n 0 R` entries.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset. Reader

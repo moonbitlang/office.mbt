@@ -517,6 +517,30 @@ fn reader_malformed_pdf_with_bad_object_offset() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(
+    reader_push_indirect_object(
+      output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+    ),
+  )
+  ignore(reader_push_indirect_object(output, 2, 0, "5"))
+  ignore(
+    reader_push_indirect_object(
+      output, 3, 0, "<< /Type /Catalog /Payload 1 0 R >>",
+    ),
+  )
+  ignore(
+    reader_push_indirect_object(
+      output, 4, 0, "<< /Length 9 0 R >>\nstream\nIgnored\nendstream",
+    ),
+  )
+  reader_push_ascii(output, "trailer\n<< /Root 3 0 R /Size 5 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -1118,6 +1142,26 @@ test "pdf_read_document_from_bytes reconstructs bad object offsets" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs indirect stream lengths" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_indirect_stream_length(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 3)
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3])
+  guard parsed.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
 }
 
 ///|
