@@ -419,6 +419,125 @@ fn pdf_image_gray_4bpp_as_rgb24(
 }
 
 ///|
+fn pdf_image_indexed_lookup(
+  table : ArrayView[(Int, Array[Int])],
+  index : Int,
+  components : Int,
+) -> ArrayView[Int] raise PdfError {
+  for entry in table {
+    if entry.0 == index && entry.1.length() == components {
+      break entry.1[:]
+    }
+  } nobreak {
+    raise EndOfInput
+  }
+}
+
+///|
+fn pdf_image_rgb_indexed_value(
+  output : Array[Byte],
+  table : ArrayView[(Int, Array[Int])],
+  index : Int,
+) -> Unit raise PdfError {
+  let values = pdf_image_indexed_lookup(table, index, 3)
+  output.push(pdf_byte_of_int(values[0]))
+  output.push(pdf_byte_of_int(values[1]))
+  output.push(pdf_byte_of_int(values[2]))
+}
+
+///|
+fn pdf_image_cmyk_indexed_value(
+  output : Array[Byte],
+  table : ArrayView[(Int, Array[Int])],
+  index : Int,
+) -> Unit raise PdfError {
+  let values = pdf_image_indexed_lookup(table, index, 4)
+  let (red, green, blue) = pdf_image_rgb_of_cmyk(
+    values[0],
+    values[1],
+    values[2],
+    values[3],
+  )
+  output.push(pdf_byte_of_int(red))
+  output.push(pdf_byte_of_int(green))
+  output.push(pdf_byte_of_int(blue))
+}
+
+///|
+fn pdf_image_indexed_8bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let pixels = width * height
+  pdf_image_require_size(data, pixels)
+  let output : Array[Byte] = []
+  for index in 0..<pixels {
+    pdf_image_rgb_indexed_value(output, table, data[index].to_int())
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_cmyk_indexed_8bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let pixels = width * height
+  pdf_image_require_size(data, pixels)
+  let output : Array[Byte] = []
+  for index in 0..<pixels {
+    pdf_image_cmyk_indexed_value(output, table, data[index].to_int())
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_indexed_4bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = (width + 1) / 2
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let byte = data[row_offset + column / 2].to_int()
+      let index = if column % 2 == 0 { byte >> 4 } else { byte & 0x0F }
+      pdf_image_rgb_indexed_value(output, table, index)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_cmyk_indexed_4bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = (width + 1) / 2
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let byte = data[row_offset + column / 2].to_int()
+      let index = if column % 2 == 0 { byte >> 4 } else { byte & 0x0F }
+      pdf_image_cmyk_indexed_value(output, table, index)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
   self : PdfDocument,
   resources : PdfObject,
@@ -463,6 +582,42 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
         PdfBPP24,
         pdf_image_gray_4bpp_as_rgb24(width, height, data),
       )
+    (PdfIndexed(base, table), Some(8)) =>
+      match pdf_space_basic_table_colour_space(base) {
+        PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
+          PdfRawImage(
+            width,
+            height,
+            PdfBPP24,
+            pdf_image_indexed_8bpp_as_rgb24(width, height, table, data),
+          )
+        PdfDeviceCMYK =>
+          PdfRawImage(
+            width,
+            height,
+            PdfBPP24,
+            pdf_image_cmyk_indexed_8bpp_as_rgb24(width, height, table, data),
+          )
+        _ => raise FilterExpected
+      }
+    (PdfIndexed(base, table), Some(4)) =>
+      match pdf_space_basic_table_colour_space(base) {
+        PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
+          PdfRawImage(
+            width,
+            height,
+            PdfBPP24,
+            pdf_image_indexed_4bpp_as_rgb24(width, height, table, data),
+          )
+        PdfDeviceCMYK =>
+          PdfRawImage(
+            width,
+            height,
+            PdfBPP24,
+            pdf_image_cmyk_indexed_4bpp_as_rgb24(width, height, table, data),
+          )
+        _ => raise FilterExpected
+      }
     _ => raise FilterExpected
   }
 }

@@ -219,6 +219,55 @@ test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
 }
 
 ///|
+test "PdfDocument get_image_24bpp reads indexed image tables" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let indexed_rgb : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    PdfNameObject(image_name_for_test("/DeviceRGB")),
+    PdfInteger(1),
+    PdfString(image_bytes_for_test([10, 20, 30, 40, 50, 60])),
+  ])
+  let rgb8 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_rgb),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([0, 1])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb8),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([10, 20, 30, 40, 50, 60])),
+  )
+  let indexed_cmyk : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    PdfNameObject(image_name_for_test("/DeviceCMYK")),
+    PdfInteger(1),
+    PdfString(image_bytes_for_test([0, 0, 0, 0, 0, 255, 255, 0])),
+  ])
+  let cmyk4 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_cmyk),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(4)),
+    ]),
+    StreamGot(image_bytes_for_test([0x01])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, cmyk4),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([255, 255, 255, 255, 0, 0]),
+    ),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp reports malformed raw images" {
   let doc = @pdflite.pdf_document_empty()
   let short_rgb = @pdflite.pdf_stream(
