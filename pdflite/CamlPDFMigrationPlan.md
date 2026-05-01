@@ -270,9 +270,12 @@ MoonBit consequences for this project:
    `postpend_operators` helpers over `PdfContentOp` streams.
    Page replacement is now started with a `change_pages` slice that builds a
    replacement page tree in a copied document and can renumber same-count old
-   page indirect references to the new page objects. CamlPDF's matrix-aware
-   annotation and `/OpenAction` destination transforms remain deferred. A
-   minimal `pdf_of_pages` is started for 1-based page extraction
+   page indirect references to the new page objects. Matrix-aware destination
+   rewrites are now started for `change_pages` callers that supply page
+   matrices: bookmark targets, link annotation `/Dest` or GoTo `/A`
+   destinations, and catalog `/OpenAction` destinations are transformed after
+   page-reference renumbering. A minimal `pdf_of_pages` is started for 1-based
+   page extraction
    and reordering by composing `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
    to the new page objects, duplicated annotation references are copied to fresh
@@ -334,7 +337,8 @@ MoonBit consequences for this project:
    replacement are started with fresh outline object numbering, `/Parent`,
    `/First`, `/Last`, `/Next`, `/Prev`, and positive/negative `/Count` link
    generation, destination-vs-action field selection, and returned-copy catalog
-   replacement. `change_pages` integration remains deferred.
+   replacement. `change_pages` matrix integration is started for transformed
+   page destinations.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

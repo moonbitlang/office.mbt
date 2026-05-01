@@ -227,6 +227,18 @@ in the function declaration and call it as `name=value`. Do not write a default
 on an unlabelled positional parameter.
 
 ```sh
+moon run -c 'fn takes_view(xs : ArrayView[Int]) -> Int { xs.length() }
+fn sample(xs? : ArrayView[Int] = []) -> Int { takes_view(xs) }
+fn main { println(sample()); println(sample(xs=[1, 2, 3])) }'
+# 0
+# 3
+```
+
+Optional arguments with view types can use an empty array literal as the
+default. If a function parameter is optional-only, pass a non-default value with
+its label, for example `sample(xs=[1, 2, 3])`, not `sample([1, 2, 3])`.
+
+```sh
 moon run -c 'struct Item { value : Int; label : String } derive(Debug)
 fn main { let old = Item::{ value: 1, label: "a" }; let next = { ..old, value: 2 }; println(next.value); println(next.label) }'
 # 2
