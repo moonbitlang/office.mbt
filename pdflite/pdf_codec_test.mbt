@@ -231,6 +231,40 @@ test "pdf_decode_stream_onestage removes only first array filter" {
 }
 
 ///|
+test "pdf_decode_stream decodes all supported filter stages" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let ascii85 = @pdflite.pdf_ascii85_encode(codec_bytes_for_test([77, 97, 110]))
+  let encoded = @pdflite.pdf_ascii_hex_encode(ascii85)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (
+        filter,
+        PdfArray([
+          PdfNameObject(codec_name_for_test("/AHx")),
+          PdfNameObject(codec_name_for_test("/A85")),
+        ]),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([77, 97, 110])),
+  )
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(length),
+    Some(PdfInteger(3)),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+}
+
+///|
 test "pdf_encode_stream_with_filter adds filter and updates length" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

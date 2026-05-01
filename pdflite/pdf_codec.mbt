@@ -412,6 +412,29 @@ pub fn pdf_decode_stream_onestage(
 }
 
 ///|
+fn pdf_stream_has_filter(object : PdfObject) -> Bool raise PdfError {
+  match object {
+    PdfStreamObject(stream) =>
+      pdf_stream_first_filter(stream.dictionary) != None
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
+pub fn pdf_decode_stream(object : PdfObject) -> PdfObject raise PdfError {
+  let mut current = object
+  let mut stages = 0
+  while pdf_stream_has_filter(current) {
+    if stages >= 1024 {
+      raise FilterExpected
+    }
+    current = pdf_decode_stream_onestage(current)
+    stages += 1
+  }
+  pdf_decode_stream_onestage(current)
+}
+
+///|
 fn pdf_add_filter_to_dictionary(
   dictionary : PdfObject,
   filter : PdfName,

@@ -232,8 +232,10 @@ MoonBit consequences for this project:
    `FilterNotSupported`. Owned `StreamGot` stream dictionary integration is
    started for one-stage decode and explicit encode with direct `/Filter` or
    `/F` entries, first-filter array removal, `/DecodeParms` array advancement,
-   and `/Length` refresh. Predictors, indirect filter dictionaries, deferred
-   stream materialization, and other filters remain deferred.
+   and `/Length` refresh. A bounded full decode loop now removes all currently
+   supported filters from owned streams. Predictors, indirect filter
+   dictionaries, deferred stream materialization, and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
