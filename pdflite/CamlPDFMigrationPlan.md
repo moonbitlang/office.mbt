@@ -482,8 +482,9 @@ MoonBit consequences for this project:
    is started for 8-bit samples. CamlPDF-style `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. Separation image pixels are started for 8-bit
-   samples with Type 2 and Type 4 tint functions and DeviceCMYK alternates. Type 4
-   calculator bitshift-width edge parity and JPEG decoding remain deferred.
+   samples with Type 2 and Type 4 tint functions and DeviceCMYK alternates.
+   Type 4 calculator bitshift direction, logical right-shift behavior, and
+   masked-width behavior are covered. JPEG decoding remains deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics
@@ -664,8 +665,9 @@ MoonBit consequences for this project:
     ICCBased defaults and malformed dictionaries, Indexed table parsing and
     malformed table bounds, and Separation/DeviceN parsing fallbacks.
     Function coverage now directly exercises Type 4 trig, angle, conversion,
-    integer division, remainder, log, bitshift direction, integer wrapping,
-    float rejection for integer operators, comment, and malformed-number paths. The
+    integer division, remainder, log, bitshift direction, logical right shift,
+    masked shift counts, integer wrapping, float rejection for integer
+    operators, comment, and malformed-number paths. The
     remaining uncovered report is now the template executable `cmd/main`
     entrypoint plus defensive post-decode stream-shape branches in content and
     colour-space stream-table handling, which are unreachable with the current

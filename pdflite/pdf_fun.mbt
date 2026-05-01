@@ -1123,6 +1123,15 @@ fn pdf_fun_calculator_int_max() -> Int {
 }
 
 ///|
+fn pdf_fun_calculator_bitshift(value : Int, shift : Int) -> Int {
+  if shift >= 0 {
+    value << shift
+  } else {
+    (value.reinterpret_as_uint() >> -shift).reinterpret_as_int()
+  }
+}
+
+///|
 fn pdf_fun_degrees_to_radians(value : Double) -> Double {
   value * @math.PI / 180.0
 }
@@ -1172,8 +1181,7 @@ fn pdf_fun_calculator_eval_operations(
       PdfCalculatorBitshift => {
         let shift = pdf_fun_calculator_pop_int(stack)
         let value = pdf_fun_calculator_pop_int(stack)
-        let shifted = if shift >= 0 { value << shift } else { value >> -shift }
-        stack.push(PdfCalculatorInt(shifted))
+        stack.push(PdfCalculatorInt(pdf_fun_calculator_bitshift(value, shift)))
       }
       PdfCalculatorAtan => {
         let denominator = pdf_fun_calculator_pop_number(stack)

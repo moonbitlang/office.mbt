@@ -182,6 +182,16 @@ the OCaml source relied on `Int32.shift_*` preconditions or format-specific
 width rules.
 
 ```sh
+moon run -c 'fn main { let logical = ((-8).reinterpret_as_uint() >> 1).reinterpret_as_int(); println(logical); println((-8) >> 1) }'
+# 2147483644
+# -4
+```
+
+For OCaml `Int32.shift_right_logical`, reinterpret the signed value as `UInt`,
+shift, then reinterpret back to `Int`. Numeric conversion is not the same as
+bit reinterpretation.
+
+```sh
 moon run -c 'fn main { let max = 2147483647; println((max + 1).to_string()); println((-2147483648 - 1).to_string()); println((2147483647 * 2).to_string()); println((1 << 31).to_string()) }'
 # -2147483648
 # 2147483647
