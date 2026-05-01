@@ -207,6 +207,61 @@ pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
 }
 
 ///|
+fn pdf_filter_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_filter_is_name(filter : PdfName, text : String) -> Bool {
+  filter == pdf_filter_name(text)
+}
+
+///|
+fn pdf_filter_is_one_of(
+  filter : PdfName,
+  first : String,
+  second : String,
+) -> Bool {
+  pdf_filter_is_name(filter, first) || pdf_filter_is_name(filter, second)
+}
+
+///|
+pub fn pdf_decode_filter_bytes(
+  filter : PdfName,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  if pdf_filter_is_name(filter, "/Crypt") {
+    data
+  } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
+    pdf_ascii_hex_decode(data)
+  } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
+    pdf_ascii85_decode(data)
+  } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
+    pdf_run_length_decode(data)
+  } else {
+    raise FilterNotSupported(filter)
+  }
+}
+
+///|
+pub fn pdf_encode_filter_bytes(
+  filter : PdfName,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  if pdf_filter_is_name(filter, "/Crypt") {
+    data
+  } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
+    pdf_ascii_hex_encode(data)
+  } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
+    pdf_ascii85_encode(data)
+  } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
+    pdf_run_length_encode(data)
+  } else {
+    raise FilterNotSupported(filter)
+  }
+}
+
+///|
 fn pdf_run_length_flush_literal(
   output : Array[Byte],
   literal : ArrayView[Byte],

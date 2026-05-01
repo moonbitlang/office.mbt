@@ -226,7 +226,11 @@ MoonBit consequences for this project:
    partial final tuple handling, and structured malformed-data errors.
    Low-level RunLength encode/decode is also started, with literal chunks,
    repeat chunks, EOD marker handling, and tolerant missing-EOD decode
-   behavior. Stream dictionary integration and other filters remain deferred.
+   behavior. A first filter-name dispatch layer maps `/ASCIIHexDecode`/`/AHx`,
+   `/ASCII85Decode`/`/A85`, `/RunLengthDecode`/`/RL`, and identity `/Crypt` to
+   those byte codecs; unsupported filters such as `/FlateDecode` report
+   `FilterNotSupported`. Stream dictionary integration and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the

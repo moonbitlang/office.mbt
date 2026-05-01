@@ -9,6 +9,11 @@ fn codec_ascii_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn codec_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(codec_ascii_for_test(text))
+}
+
+///|
 test "pdf_ascii_hex_encode renders uppercase hex with terminator" {
   @test.assert_eq(
     @pdflite.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
@@ -95,6 +100,76 @@ test "pdf_ascii85_decode reports malformed data" {
   )
   guard bad_zero is Err(@pdflite.PdfError::InvalidASCII85Data) else {
     fail("expected InvalidASCII85Data")
+  }
+}
+
+///|
+test "pdf_decode_filter_bytes dispatches supported filter names" {
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_filter_bytes(
+      codec_name_for_test("/AHx"),
+      codec_ascii_for_test("4869>"),
+    ),
+    codec_ascii_for_test("Hi"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_filter_bytes(
+      codec_name_for_test("/A85"),
+      codec_ascii_for_test("9jqo~>"),
+    ),
+    codec_bytes_for_test([77, 97, 110]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_filter_bytes(
+      codec_name_for_test("/RL"),
+      codec_bytes_for_test([0, 65, 128]),
+    ),
+    codec_ascii_for_test("A"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_filter_bytes(
+      codec_name_for_test("/Crypt"),
+      codec_ascii_for_test("raw"),
+    ),
+    codec_ascii_for_test("raw"),
+  )
+}
+
+///|
+test "pdf_encode_filter_bytes dispatches supported filter names" {
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_filter_bytes(
+      codec_name_for_test("/ASCIIHexDecode"),
+      codec_ascii_for_test("Hi"),
+    ),
+    codec_ascii_for_test("4869>"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_filter_bytes(
+      codec_name_for_test("/ASCII85Decode"),
+      codec_bytes_for_test([77, 97, 110]),
+    ),
+    codec_ascii_for_test("9jqo~>"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_filter_bytes(
+      codec_name_for_test("/RunLengthDecode"),
+      codec_ascii_for_test("A"),
+    ),
+    codec_bytes_for_test([0, 65, 128]),
+  )
+}
+
+///|
+test "pdf filter dispatch reports unsupported filters" {
+  let flate = codec_name_for_test("/FlateDecode")
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_filter_bytes(
+    flate,
+    codec_ascii_for_test("data"),
+  )
+  guard result is Err(@pdflite.PdfError::FilterNotSupported(filter)) &&
+    filter == flate else {
+    fail("expected FilterNotSupported")
   }
 }
 

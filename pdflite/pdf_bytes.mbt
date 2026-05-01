@@ -14,6 +14,7 @@ pub(all) suberror PdfError {
   MatrixMalformed
   InvalidHexEscape
   InvalidASCII85Data
+  FilterNotSupported(PdfName)
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected
