@@ -2308,6 +2308,30 @@ test "PdfTextExtractor extracts MacRoman punctuation symbols" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacRoman sparse B-range glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([0xB1, 0xB4, 0xBB, 0xBC, 0xBE, 0xBF])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x00B1, 0x00A5, 0x00AA, 0x00BA, 0x00E6, 0x00F8,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/plusminus"),
+    text_name_for_test("/yen"),
+    text_name_for_test("/ordfeminine"),
+    text_name_for_test("/ordmasculine"),
+    text_name_for_test("/ae"),
+    text_name_for_test("/oslash"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00B1), Some(0xB1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00A5), Some(0xB4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00AA), Some(0xBB))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00F8), Some(0xBF))
+}
+
+///|
 test "PdfTextExtractor extracts WinAnsi glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),

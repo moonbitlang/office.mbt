@@ -2060,6 +2060,12 @@ fn pdf_text_macroman_glyphname(code : Int) -> PdfName? {
         0xAC => Some(pdf_text_name("/dieresis"))
         0xAE => Some(pdf_text_name("/AE"))
         0xAF => Some(pdf_text_name("/Oslash"))
+        0xB1 => Some(pdf_text_name("/plusminus"))
+        0xB4 => Some(pdf_text_name("/yen"))
+        0xBB => Some(pdf_text_name("/ordfeminine"))
+        0xBC => Some(pdf_text_name("/ordmasculine"))
+        0xBE => Some(pdf_text_name("/ae"))
+        0xBF => Some(pdf_text_name("/oslash"))
         _ => None
       }
   }

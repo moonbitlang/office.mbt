@@ -417,7 +417,9 @@ MoonBit consequences for this project:
    ligature/Latin glyph names.
    MacRoman high-byte fallback is started for common accented Latin letters,
    the contiguous lower-vowel accent block, and the `0xA0..0xAF`
-   punctuation/symbol block.
+   punctuation/symbol block, plus unambiguous sparse `0xB0..0xBF` entries.
+   MacRoman `/mu` is still deferred pending context-specific glyph-name
+   codepoint handling, since Symbol maps `/mu` differently.
    A practical WinAnsi high-byte subset is also started for common PDF text
    bytes such as Euro, smart quotes, dashes, copyright, Latin-1 accented
    letters, and common symbols.
