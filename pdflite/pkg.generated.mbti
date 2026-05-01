@@ -217,6 +217,10 @@ pub fn pdf_run_length_decode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode(Bytes) -> Bytes
 
+pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
+
+pub fn pdf_standard_font_of_pdf_name(PdfName) -> PdfStandardFont?
+
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
@@ -972,6 +976,28 @@ pub(all) struct PdfSampledFunction {
   bits_per_sample : Int
   samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfStandardFont {
+  PdfTimesRoman
+  PdfTimesBold
+  PdfTimesItalic
+  PdfTimesBoldItalic
+  PdfHelvetica
+  PdfHelveticaBold
+  PdfHelveticaOblique
+  PdfHelveticaBoldOblique
+  PdfCourier
+  PdfCourierBold
+  PdfCourierOblique
+  PdfCourierBoldOblique
+  PdfSymbol
+  PdfZapfDingbats
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
+pub fn PdfStandardFont::flags(Self) -> Int
+pub fn PdfStandardFont::name(Self) -> String
+pub fn PdfStandardFont::pdf_name(Self) -> PdfName
+pub fn PdfStandardFont::stemv(Self) -> Int
 
 pub(all) struct PdfStitchingFunction {
   functions : Array[PdfFunction]

@@ -287,6 +287,16 @@ Code files do not contain OCaml-style `open`. Add package imports in
 `moon.pkg`, then call imported packages with their `@alias`.
 
 ```sh
+moon run -c 'fn main { let alias = 1; println(alias) }'
+# Warning: [0035] reserved_keyword
+# 1
+```
+
+`alias` is reserved for possible future use. It still compiles today, but new
+MoonBit code should avoid it as a local name, loop binder, or helper name so
+warning-enabled checks stay clean.
+
+```sh
 moon run -c 'fn first_positive(xs : Array[Int]) -> Int? { let mut i = 0; while i < xs.length() { if xs[i] > 0 { break Some(xs[i]) }; i += 1 } nobreak { None } }
 fn main { println(first_positive([-2, 0, 7]).unwrap()); println(first_positive([-2, 0]) is None) }'
 # 7

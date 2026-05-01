@@ -366,8 +366,10 @@ MoonBit consequences for this project:
    decodable stream data, with RGB/CMYK component tables and recursive
    alternate-space handling. Separation and DeviceN parsing is started for
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
-   attributes. `pdffun` is started with Type 0 sampled, Type 2 interpolation,
-   Type 3 stitching, and Type 4 calculator function parsing/evaluation for
+   attributes. `pdftext`/`pdfstandard14` are started with the standard 14 font
+   enum, CamlPDF-compatible canonical names and aliases, PDF-name conversion,
+   and baseline/stem/flag helpers. `pdffun` is started with Type 0 sampled,
+   Type 2 interpolation, Type 3 stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
    nested `if`/`ifelse` procedures, comments, doubled-minus malformed numbers,
    and stack operators, stream decoding for sampled/calculator functions,
