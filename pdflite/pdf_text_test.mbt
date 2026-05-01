@@ -1939,7 +1939,30 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
   @test.assert_eq(extractor.charcode_of_codepoint(65), Some(65))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2019), Some(39))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2018), Some(96))
-  @test.assert_eq(extractor.charcode_of_codepoint(39), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(39), Some(0xA9))
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0xA9, 0xAE, 0xAF, 0xB1, 0xB7, 0xBC])[:],
+    ),
+    [39, 0xFB01, 0xFB02, 0x2013, 0x2022, 0x2026],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([0xA9, 0xAE, 0xAF, 0xB1, 0xB7, 0xBC])[:],
+    ),
+    [
+      text_name_for_test("/quotesingle"),
+      text_name_for_test("/fi"),
+      text_name_for_test("/fl"),
+      text_name_for_test("/endash"),
+      text_name_for_test("/bullet"),
+      text_name_for_test("/ellipsis"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB01), Some(0xAE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB02), Some(0xAF))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2022), Some(0xB7))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2026), Some(0xBC))
 }
 
 ///|

@@ -1718,6 +1718,45 @@ fn pdf_text_basic_latin_glyphname(
 }
 
 ///|
+fn pdf_text_standard_glyphname(code : Int) -> PdfName? {
+  match pdf_text_basic_latin_glyphname(code, true) {
+    Some(name) => Some(name)
+    None =>
+      match code {
+        0xA1 => Some(pdf_text_name("/exclamdown"))
+        0xA2 => Some(pdf_text_name("/cent"))
+        0xA3 => Some(pdf_text_name("/sterling"))
+        0xA4 => Some(pdf_text_name("/fraction"))
+        0xA5 => Some(pdf_text_name("/yen"))
+        0xA6 => Some(pdf_text_name("/florin"))
+        0xA7 => Some(pdf_text_name("/section"))
+        0xA8 => Some(pdf_text_name("/currency"))
+        0xA9 => Some(pdf_text_name("/quotesingle"))
+        0xAA => Some(pdf_text_name("/quotedblleft"))
+        0xAB => Some(pdf_text_name("/guillemotleft"))
+        0xAC => Some(pdf_text_name("/guilsinglleft"))
+        0xAD => Some(pdf_text_name("/guilsinglright"))
+        0xAE => Some(pdf_text_name("/fi"))
+        0xAF => Some(pdf_text_name("/fl"))
+        0xB1 => Some(pdf_text_name("/endash"))
+        0xB2 => Some(pdf_text_name("/dagger"))
+        0xB3 => Some(pdf_text_name("/daggerdbl"))
+        0xB4 => Some(pdf_text_name("/periodcentered"))
+        0xB6 => Some(pdf_text_name("/paragraph"))
+        0xB7 => Some(pdf_text_name("/bullet"))
+        0xB8 => Some(pdf_text_name("/quotesinglbase"))
+        0xB9 => Some(pdf_text_name("/quotedblbase"))
+        0xBA => Some(pdf_text_name("/quotedblright"))
+        0xBB => Some(pdf_text_name("/guillemotright"))
+        0xBC => Some(pdf_text_name("/ellipsis"))
+        0xBD => Some(pdf_text_name("/perthousand"))
+        0xBF => Some(pdf_text_name("/questiondown"))
+        _ => None
+      }
+  }
+}
+
+///|
 fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
   match pdf_text_basic_latin_glyphname(code, false) {
     Some(name) => Some(name)
@@ -1778,7 +1817,7 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
 ) -> PdfName? {
   match self {
     PdfImplicitInFontFile | PdfMacExpertEncoding => None
-    PdfStandardEncoding => pdf_text_basic_latin_glyphname(code, true)
+    PdfStandardEncoding => pdf_text_standard_glyphname(code)
     PdfMacRomanEncoding => pdf_text_basic_latin_glyphname(code, false)
     PdfWinAnsiEncoding => pdf_text_winansi_glyphname(code)
     PdfCustomEncoding(base, differences) =>
@@ -1850,6 +1889,20 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
     "/braceright" => Some(125)
     "/asciitilde" => Some(126)
     "/Euro" => Some(0x20AC)
+    "/exclamdown" => Some(0x00A1)
+    "/cent" => Some(0x00A2)
+    "/sterling" => Some(0x00A3)
+    "/fraction" => Some(0x2044)
+    "/yen" => Some(0x00A5)
+    "/section" => Some(0x00A7)
+    "/currency" => Some(0x00A4)
+    "/guillemotleft" => Some(0x00AB)
+    "/guillemotright" => Some(0x00BB)
+    "/fi" => Some(0xFB01)
+    "/fl" => Some(0xFB02)
+    "/periodcentered" => Some(0x00B7)
+    "/paragraph" => Some(0x00B6)
+    "/questiondown" => Some(0x00BF)
     "/quotesinglbase" => Some(0x201A)
     "/florin" => Some(0x0192)
     "/quotedblbase" => Some(0x201E)
@@ -1910,6 +1963,20 @@ fn pdf_text_codepoint_to_basic_glyphname(codepoint : Int) -> PdfName? {
       0x2018 => Some(pdf_text_name("/quoteleft"))
       0x2019 => Some(pdf_text_name("/quoteright"))
       0x20AC => Some(pdf_text_name("/Euro"))
+      0x00A1 => Some(pdf_text_name("/exclamdown"))
+      0x00A2 => Some(pdf_text_name("/cent"))
+      0x00A3 => Some(pdf_text_name("/sterling"))
+      0x2044 => Some(pdf_text_name("/fraction"))
+      0x00A5 => Some(pdf_text_name("/yen"))
+      0x00A7 => Some(pdf_text_name("/section"))
+      0x00A4 => Some(pdf_text_name("/currency"))
+      0x00AB => Some(pdf_text_name("/guillemotleft"))
+      0x00BB => Some(pdf_text_name("/guillemotright"))
+      0xFB01 => Some(pdf_text_name("/fi"))
+      0xFB02 => Some(pdf_text_name("/fl"))
+      0x00B7 => Some(pdf_text_name("/periodcentered"))
+      0x00B6 => Some(pdf_text_name("/paragraph"))
+      0x00BF => Some(pdf_text_name("/questiondown"))
       0x201A => Some(pdf_text_name("/quotesinglbase"))
       0x0192 => Some(pdf_text_name("/florin"))
       0x201E => Some(pdf_text_name("/quotedblbase"))
