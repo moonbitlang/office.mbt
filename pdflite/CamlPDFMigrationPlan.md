@@ -398,7 +398,10 @@ MoonBit consequences for this project:
     dedicated merge semantics. Duplicate-font removal is started with
     CamlPDF-style identical owned-stream coalescing: references to duplicate
     `StreamGot` objects are rewritten to the first matching stream, and
-    `pdf_merge_documents` can run this pass behind an explicit option.
+    `pdf_merge_documents` can run this pass behind an explicit option. Generic
+    name-dictionary merge support now retains non-destination `/Names` name
+    trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
+    destination-aware path so page-object targets are retargeted.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

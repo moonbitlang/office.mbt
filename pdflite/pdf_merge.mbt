@@ -89,6 +89,21 @@ fn pdf_merge_names_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_namedict_tree_keys() -> Array[PdfName] {
+  [
+    pdf_merge_name("/AP"),
+    pdf_merge_name("/JavaScript"),
+    pdf_merge_name("/Pages"),
+    pdf_merge_name("/Templates"),
+    pdf_merge_name("/IDS"),
+    pdf_merge_name("/URLS"),
+    pdf_merge_name("/EmbeddedFiles"),
+    pdf_merge_name("/AlternatePresentations"),
+    pdf_merge_name("/Renditions"),
+  ]
+}
+
+///|
 fn PdfDocument::pdf_merge_copy_objects_from(
   self : PdfDocument,
   source : PdfDocument,
@@ -224,6 +239,40 @@ fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
 }
 
 ///|
+fn PdfDocument::pdf_merge_name_tree_entries(
+  self : PdfDocument,
+  tree_key : PdfName,
+) -> Array[(PdfBytes, PdfObject)] raise PdfError {
+  match self.pdf_merge_catalog_entry(pdf_merge_names_key()) {
+    Some(names) =>
+      match self.lookup_direct(tree_key, names) {
+        Some(tree) => self.read_name_tree(tree)
+        None => []
+      }
+    None => []
+  }
+}
+
+///|
+fn pdf_merge_name_dictionary_entries(
+  documents : ArrayView[PdfDocument],
+) -> Array[(PdfName, Array[(PdfBytes, PdfObject)])] raise PdfError {
+  let output : Array[(PdfName, Array[(PdfBytes, PdfObject)])] = []
+  for tree_key in pdf_merge_namedict_tree_keys() {
+    let entries : Array[(PdfBytes, PdfObject)] = []
+    for document in documents {
+      for entry in document.pdf_merge_name_tree_entries(tree_key) {
+        entries.push(entry)
+      }
+    }
+    if entries.length() > 0 {
+      output.push((tree_key, entries))
+    }
+  }
+  output
+}
+
+///|
 fn PdfDocument::pdf_merge_oldstyle_destinations(
   self : PdfDocument,
   changes : ArrayView[(Int, Int)],
@@ -308,6 +357,7 @@ fn PdfDocument::pdf_merge_add_named_destinations(
   self : PdfDocument,
   oldstyle_destinations : ArrayView[(PdfName, PdfObject)],
   nametree_destinations : ArrayView[(PdfBytes, PdfObject)],
+  name_dictionary_entries : ArrayView[(PdfName, Array[(PdfBytes, PdfObject)])],
 ) -> PdfDocument raise PdfError {
   let pdf = if oldstyle_destinations.length() > 0 {
     self.pdf_merge_add_catalog_entry(
@@ -317,12 +367,20 @@ fn PdfDocument::pdf_merge_add_named_destinations(
   } else {
     self
   }
+  let names_entries : Array[(PdfName, PdfObject)] = []
   if nametree_destinations.length() > 0 {
+    names_entries.push(
+      (pdf_merge_dests_key(), pdf.build_name_tree(nametree_destinations)),
+    )
+  }
+  for entry in name_dictionary_entries {
+    let (tree_key, tree_entries) = entry
+    names_entries.push((tree_key, pdf.build_name_tree(tree_entries)))
+  }
+  if names_entries.length() > 0 {
     pdf.pdf_merge_add_catalog_entry(
       pdf_merge_names_key(),
-      PdfDictionary([
-        (pdf_merge_dests_key(), pdf.build_name_tree(nametree_destinations)),
-      ]),
+      PdfDictionary(names_entries),
     )
   } else {
     pdf
@@ -395,6 +453,7 @@ pub fn pdf_merge_documents(
   retain_optional_content? : Bool = true,
   retain_acroforms? : Bool = true,
   retain_named_destinations? : Bool = true,
+  retain_name_dictionary? : Bool = true,
   retain_info? : Bool = true,
   retain_catalog_entries? : Bool = true,
   remove_duplicate_fonts? : Bool = false,
@@ -426,6 +485,11 @@ pub fn pdf_merge_documents(
     None
   }
   let info = if retain_info { pdf_merge_info_dictionary(staged) } else { None }
+  let name_dictionary_entries = if retain_name_dictionary {
+    pdf_merge_name_dictionary_entries(staged)
+  } else {
+    []
+  }
   let catalog_entries = if retain_catalog_entries {
     pdf_merge_catalog_extra_entries(staged)
   } else {
@@ -489,9 +553,10 @@ pub fn pdf_merge_documents(
       )
     None => merged
   }
-  let merged = if retain_named_destinations {
+  let merged = if retain_named_destinations ||
+    name_dictionary_entries.length() > 0 {
     merged.pdf_merge_add_named_destinations(
-      oldstyle_destinations, nametree_destinations,
+      oldstyle_destinations, nametree_destinations, name_dictionary_entries,
     )
   } else {
     merged

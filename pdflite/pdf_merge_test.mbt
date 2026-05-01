@@ -99,6 +99,20 @@ fn merge_nametree_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
 }
 
 ///|
+fn merge_name_dictionary_doc_for_test(
+  tree_key : @pdflite.PdfName,
+  name : String,
+  value : String,
+) -> @pdflite.PdfDocument {
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let tree = doc.build_name_tree([
+    (@ascii.encode(name), PdfString(@ascii.encode(value))),
+  ])
+  let names : @pdflite.PdfObject = PdfDictionary([(tree_key, tree)])
+  merge_add_catalog_entry_for_test(doc, merge_name_for_test("/Names"), names)
+}
+
+///|
 fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
   let key_info = merge_name_for_test("/Info")
   let key_title = merge_name_for_test("/Title")
@@ -313,6 +327,43 @@ test "pdf_merge_documents retains and retargets named destinations" {
     ),
     DestString(@ascii.encode("second")),
   )
+}
+
+///|
+test "pdf_merge_documents retains non-destination name trees" {
+  let key_names = merge_name_for_test("/Names")
+  let key_embedded_files = merge_name_for_test("/EmbeddedFiles")
+  let key_javascript = merge_name_for_test("/JavaScript")
+  let first = merge_name_dictionary_doc_for_test(
+    key_embedded_files, "file-a", "payload-a",
+  )
+  let second = merge_name_dictionary_doc_for_test(
+    key_javascript, "script-b", "payload-b",
+  )
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let root = merged.lookup_object_or_null(merged.root())
+  guard root.lookup_immediate(key_names) is Some(names) else {
+    fail("expected Names dictionary")
+  }
+  guard merged.lookup_direct(key_embedded_files, names) is Some(embedded_tree) else {
+    fail("expected EmbeddedFiles tree")
+  }
+  guard merged.lookup_direct(key_javascript, names) is Some(javascript_tree) else {
+    fail("expected JavaScript tree")
+  }
+  @test.assert_eq(merged.read_name_tree(embedded_tree), [
+    (@ascii.encode("file-a"), PdfString(@ascii.encode("payload-a"))),
+  ])
+  @test.assert_eq(merged.read_name_tree(javascript_tree), [
+    (@ascii.encode("script-b"), PdfString(@ascii.encode("payload-b"))),
+  ])
+  let without_names = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_name_dictionary=false,
+  )
+  let root = without_names.lookup_object_or_null(without_names.root())
+  @test.assert_eq(root.lookup_immediate(key_names), None)
 }
 
 ///|
