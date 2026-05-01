@@ -19,6 +19,7 @@ pub(all) suberror PdfError {
   PredictorExpected
   PredictorNotSupported(Int)
   InvalidLZWData
+  InvalidFlateData
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected

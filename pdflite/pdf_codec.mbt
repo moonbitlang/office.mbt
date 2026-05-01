@@ -387,6 +387,8 @@ pub fn pdf_decode_filter_bytes(
     pdf_ascii85_decode(data)
   } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
     pdf_run_length_decode(data)
+  } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+    pdf_flate_decode(data)
   } else if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
     pdf_lzw_decode(data)
   } else {

@@ -195,6 +195,17 @@ MoonBit `while` loops may produce a value with `break value`; the branch used
 when the loop condition becomes false is `nobreak { ... }`. Older examples may
 spell this as `else`, but that form is deprecated.
 
+```sh
+moon run -c 'fn count_until(limit : Int) -> Int { let mut count = 0; let mut done = false; while !done { count += 1; if count >= limit { done = true } }; count }
+fn main { println(count_until(3)) }'
+# 3
+```
+
+Avoid the older functional `loop ... { ... }` form in new ports; MoonBit now
+warns on it. Use an explicit `while` loop with mutable state for simple
+translation of recursive OCaml loops, or a modern `for` loop with loop binders
+when carrying structured state.
+
 ## Core Porting Rules
 
 ### Strings and Bytes

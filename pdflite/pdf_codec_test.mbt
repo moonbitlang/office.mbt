@@ -168,6 +168,45 @@ test "pdf_lzw_decode reports malformed input codes" {
 }
 
 ///|
+test "pdf_flate_decode expands zlib stored and dynamic blocks" {
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(
+      codec_bytes_for_test([
+        120, 1, 1, 11, 0, 244, 255, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108,
+        100, 26, 11, 4, 93,
+      ]),
+    ),
+    codec_ascii_for_test("hello world"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(
+      codec_bytes_for_test([
+        120, 156, 237, 196, 57, 1, 0, 0, 8, 4, 160, 172, 231, 211, 191, 130, 41,
+        220, 96, 32, 213, 179, 145, 36, 73, 146, 36, 73, 146, 244, 217, 1, 198, 122,
+        142, 2,
+      ]),
+    ),
+    codec_ascii_for_test("abcde".repeat(1000)),
+  )
+}
+
+///|
+test "pdf_flate_decode reports malformed zlib data" {
+  let bad_header : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+    codec_bytes_for_test([120, 2, 1, 0, 0, 255, 255, 0, 0, 0, 1]),
+  )
+  guard bad_header is Err(@pdflite.PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_checksum : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_decode(
+    codec_bytes_for_test([120, 1, 1, 1, 0, 254, 255, 65, 0, 0, 0, 0]),
+  )
+  guard bad_checksum is Err(@pdflite.PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+}
+
+///|
 test "pdf_decode_filter_bytes dispatches supported filter names" {
   @test.assert_eq(
     try! @pdflite.pdf_decode_filter_bytes(
@@ -204,6 +243,13 @@ test "pdf_decode_filter_bytes dispatches supported filter names" {
     ),
     codec_ascii_for_test("A"),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_filter_bytes(
+      codec_name_for_test("/Fl"),
+      codec_bytes_for_test([120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    ),
+    codec_ascii_for_test("Hi"),
+  )
 }
 
 ///|
@@ -233,7 +279,7 @@ test "pdf_encode_filter_bytes dispatches supported filter names" {
 
 ///|
 test "pdf filter dispatch reports unsupported filters" {
-  let flate = codec_name_for_test("/FlateDecode")
+  let flate = codec_name_for_test("/DCTDecode")
   let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_decode_filter_bytes(
     flate,
     codec_ascii_for_test("data"),
