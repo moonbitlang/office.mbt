@@ -283,6 +283,9 @@ MoonBit consequences for this project:
    Inline images are started with a conservative unfiltered `BI ... ID ... EI`
    parse/render path that preserves image data as `Bytes`; ambiguous inline
    image terminators and filter-aware inline image compression remain deferred.
+   Resource-prefix support is started with `shortest_unused_prefix`, scanning
+   page and page-tree resource dictionaries with CamlPDF's lower-case prefix
+   sequence.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

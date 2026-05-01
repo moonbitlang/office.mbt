@@ -69,6 +69,19 @@ fn pdf_page_type_page() -> PdfName {
 }
 
 ///|
+fn pdf_page_resource_keys() -> Array[PdfName] {
+  [
+    pdf_page_name("/Font"),
+    pdf_page_name("/ExtGState"),
+    pdf_page_name("/ColorSpace"),
+    pdf_page_name("/Pattern"),
+    pdf_page_name("/Shading"),
+    pdf_page_name("/XObject"),
+    pdf_page_name("/Properties"),
+  ]
+}
+
+///|
 pub(all) enum PdfPageRotation {
   Rotate0
   Rotate90
@@ -917,6 +930,121 @@ pub fn PdfDocument::remove_unreferenced(
   for number in to_remove {
     self.remove_object(number)
   }
+}
+
+///|
+fn pdf_page_name_text_without_slash(name : PdfName) -> String {
+  let bytes = name.bytes()
+  let view = if bytes.length() > 0 && bytes[0].to_int() == 47 {
+    bytes[1:]
+  } else {
+    bytes[:]
+  }
+  @ascii.decode(view) catch {
+    _ => ""
+  }
+}
+
+///|
+fn pdf_page_string_has_prefix(text : String, prefix : String) -> Bool {
+  let text_bytes = @ascii.encode(text)
+  let prefix_bytes = @ascii.encode(prefix)
+  if prefix_bytes.length() > text_bytes.length() {
+    false
+  } else {
+    for i in 0..<prefix_bytes.length() {
+      if text_bytes[i] != prefix_bytes[i] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn pdf_page_next_prefix(prefix : String) -> String {
+  if prefix == "" {
+    "a"
+  } else {
+    let bytes = @ascii.encode(prefix)
+    if bytes[0].to_int() == 122 {
+      "a" + prefix
+    } else {
+      let output = bytes.to_array()
+      output[0] = (output[0].to_int() + 1).to_byte()
+      @ascii.decode(Bytes::from_array(output)[:]) catch {
+        _ => "a"
+      }
+    }
+  }
+}
+
+///|
+fn pdf_page_prefix_is_unused(
+  names : ArrayView[String],
+  prefix : String,
+) -> Bool {
+  for name in names {
+    if pdf_page_string_has_prefix(name, prefix) {
+      break false
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_resource_names(
+  self : PdfDocument,
+  resources : PdfObject,
+) -> Array[String] {
+  let names : Array[String] = []
+  for resource_key in pdf_page_resource_keys() {
+    match self.lookup_direct(resource_key, resources) {
+      Some(PdfDictionary(entries)) =>
+        for entry in entries {
+          let (name, _) = entry
+          names.push(pdf_page_name_text_without_slash(name))
+        }
+      _ => ()
+    }
+  }
+  names
+}
+
+///|
+fn PdfDocument::pdf_page_object_uses_page_resources(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Bool {
+  match self.lookup_direct(pdf_page_type_key(), object) {
+    Some(PdfNameObject(name)) =>
+      name == pdf_page_type_page() || name == pdf_page_type_pages()
+    _ => false
+  }
+}
+
+///|
+pub fn PdfDocument::shortest_unused_prefix(self : PdfDocument) -> String {
+  let names : Array[String] = []
+  for number in self.object_numbers() {
+    let object = self.lookup_object_or_null(number)
+    if self.pdf_page_object_uses_page_resources(object) {
+      match self.lookup_direct(pdf_page_resources_key(), object) {
+        Some(resources) =>
+          for name in self.pdf_page_resource_names(resources) {
+            names.push(name)
+          }
+        None => ()
+      }
+    }
+  }
+  let mut prefix = "a"
+  while !pdf_page_prefix_is_unused(names, prefix) {
+    prefix = pdf_page_next_prefix(prefix)
+  }
+  prefix
 }
 
 ///|

@@ -76,6 +76,33 @@ fn page_hello_resources_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn page_prefix_resources_for_test(
+  names : ArrayView[String],
+) -> @pdflite.PdfObject {
+  let font_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+  for name in names {
+    font_entries.push((page_name_for_test(name), PdfDictionary([])))
+  }
+  @pdflite.pdf_dictionary([
+    (page_name_for_test("/Font"), PdfDictionary(font_entries)),
+  ])
+}
+
+///|
+fn page_prefix_document_for_test(
+  names : ArrayView[String],
+) -> @pdflite.PdfDocument {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_prefix_resources_for_test(names),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -272,6 +299,30 @@ test "pdf_minimum_valid_pdf creates a writable one-page document" {
   @test.assert_eq(
     try! parsed.parse_rectangle(parsed_pages[0].mediabox),
     try! doc.parse_rectangle(pages[0].mediabox),
+  )
+}
+
+///|
+test "PdfDocument shortest_unused_prefix scans page resource names" {
+  @test.assert_eq(
+    (try! @pdflite.pdf_minimum_valid_pdf()).shortest_unused_prefix(),
+    "a",
+  )
+  @test.assert_eq(
+    page_prefix_document_for_test(["/aFont", "/bState"]).shortest_unused_prefix(),
+    "c",
+  )
+}
+
+///|
+test "PdfDocument shortest_unused_prefix preserves CamlPDF prefix sequence" {
+  let names = [
+    "/a", "/b", "/c", "/d", "/e", "/f", "/g", "/h", "/i", "/j", "/k", "/l", "/m",
+    "/n", "/o", "/p", "/q", "/r", "/s", "/t", "/u", "/v", "/w", "/x", "/y", "/z",
+  ]
+  @test.assert_eq(
+    page_prefix_document_for_test(names).shortest_unused_prefix(),
+    "az",
   )
 }
 

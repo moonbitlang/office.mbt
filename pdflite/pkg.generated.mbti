@@ -478,6 +478,7 @@ pub fn PdfDocument::set_root(Self, Int) -> Unit
 pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
 pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
+pub fn PdfDocument::shortest_unused_prefix(Self) -> String
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
