@@ -254,7 +254,10 @@ MoonBit consequences for this project:
    intermediate strings, expanding the rounded result back to PDF-compatible
    exponent-free decimal bytes.
    Writer-side lazy `StreamToGet` materialization now borrows the requested
-   cursor slice during stream serialization. Incremental update handling,
+   cursor slice during stream serialization. A separate
+   `pdf_write_document_with_xref_stream` path is now started for PDF 1.5-style
+   uncompressed xref stream output with `/W [1 4 2]`, free entries for object
+   gaps, and a public reader round-trip gate. Incremental update handling,
    compressed xref streams, and encrypted output remain deferred.
 
 7. Stream filters and predictors.

@@ -299,3 +299,46 @@ test "pdf_write_document serializes objects with xref and trailer" {
   @test.assert_eq(parsed.lookup_object_or_null(1), catalog)
   @test.assert_eq(parsed.lookup_object_or_null(2), pages)
 }
+
+///|
+test "pdf_write_document_with_xref_stream round trips through public reader" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  let type_name = writer_name_for_test([47, 84, 121, 112, 101])
+  let catalog_name = writer_name_for_test([47, 67, 97, 116, 97, 108, 111, 103])
+  let payload_name = writer_name_for_test([47, 80, 97, 121, 108, 111, 97, 100])
+  let catalog = @pdflite.pdf_dictionary([
+    (type_name, PdfNameObject(catalog_name)),
+    (payload_name, PdfIndirect(4)),
+  ])
+  let payload = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(writer_ascii_for_test("xref-stream payload")),
+  )
+  document.add_object_given_number(1, catalog)
+  document.add_object_given_number(4, payload)
+  let rendered = try! @pdflite.pdf_write_document_with_xref_stream(document)
+  @test.assert_eq(
+    writer_find_bytes(rendered, writer_ascii_for_test("/XRef")) > 0,
+    true,
+  )
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(parsed.version(), (1, 5))
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 4])
+  @test.assert_eq(parsed.lookup_object_or_null(1), catalog)
+  guard parsed.lookup_object_or_null(4) is PdfStreamObject(stream) else {
+    fail("expected stream payload")
+  }
+  @test.assert_eq(
+    stream.data,
+    StreamGot(writer_ascii_for_test("xref-stream payload")),
+  )
+
+  document.set_version(2, 0)
+  let rendered_v2 = try! @pdflite.pdf_write_document_with_xref_stream(document)
+  let parsed_v2 = try! @pdflite.pdf_read_document_from_bytes(rendered_v2)
+  @test.assert_eq(parsed_v2.version(), (2, 0))
+  @test.assert_eq(parsed_v2.object_numbers(), [1, 4])
+}

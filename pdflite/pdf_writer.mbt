@@ -488,6 +488,45 @@ fn pdf_writer_push_padded_decimal(
 }
 
 ///|
+fn pdf_writer_push_header(
+  output : Array[Byte],
+  major : Int,
+  minor : Int,
+) -> Unit {
+  pdf_writer_push_ascii(output, "%PDF-")
+  pdf_writer_push_ascii(output, major.to_string())
+  pdf_writer_push_byte(output, 46)
+  pdf_writer_push_ascii(output, minor.to_string())
+  pdf_writer_push_ascii(output, "\n%")
+  for value in [226, 227, 207, 211] {
+    pdf_writer_push_byte(output, value)
+  }
+  pdf_writer_push_byte(output, 10)
+}
+
+///|
+fn pdf_writer_write_document_objects(
+  output : Array[Byte],
+  document : PdfDocument,
+) -> Array[(Int, Int, Int)] raise PdfError {
+  let xrefs : Array[(Int, Int, Int)] = []
+  for number in document.object_numbers() {
+    match document.objects.get_entry(number).unwrap() {
+      { data: ObjectParsed(object), generation }
+      | { data: ObjectParsedAlreadyDecrypted(object), generation } => {
+        xrefs.push((number, output.length(), generation))
+        pdf_writer_push_view(
+          output,
+          pdf_write_indirect_object({ number, generation, object })[:],
+        )
+      }
+      _ => raise ParsedObjectExpected
+    }
+  }
+  xrefs
+}
+
+///|
 fn pdf_writer_root_name() -> PdfName {
   pdf_name_of_bytes(Bytes::from_array([47, 82, 111, 111, 116]))
 }
@@ -495,6 +534,21 @@ fn pdf_writer_root_name() -> PdfName {
 ///|
 fn pdf_writer_size_name() -> PdfName {
   pdf_name_of_bytes(Bytes::from_array([47, 83, 105, 122, 101]))
+}
+
+///|
+fn pdf_writer_type_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 84, 121, 112, 101]))
+}
+
+///|
+fn pdf_writer_xref_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 88, 82, 101, 102]))
+}
+
+///|
+fn pdf_writer_w_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 87]))
 }
 
 ///|
@@ -518,30 +572,9 @@ fn pdf_writer_trailer_dictionary(
 ///|
 pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
-  let xrefs : Array[(Int, Int, Int)] = []
   let (major, minor) = document.version()
-  pdf_writer_push_ascii(output, "%PDF-")
-  pdf_writer_push_ascii(output, major.to_string())
-  pdf_writer_push_byte(output, 46)
-  pdf_writer_push_ascii(output, minor.to_string())
-  pdf_writer_push_ascii(output, "\n%")
-  for value in [226, 227, 207, 211] {
-    pdf_writer_push_byte(output, value)
-  }
-  pdf_writer_push_byte(output, 10)
-  for number in document.object_numbers() {
-    match document.objects.get_entry(number).unwrap() {
-      { data: ObjectParsed(object), generation }
-      | { data: ObjectParsedAlreadyDecrypted(object), generation } => {
-        xrefs.push((number, output.length(), generation))
-        pdf_writer_push_view(
-          output,
-          pdf_write_indirect_object({ number, generation, object })[:],
-        )
-      }
-      _ => raise ParsedObjectExpected
-    }
-  }
+  pdf_writer_push_header(output, major, minor)
+  let xrefs = pdf_writer_write_document_objects(output, document)
   let xref_start = output.length()
   let size = document.objects.max_object_number() + 1
   pdf_writer_push_ascii(output, "xref\n0 ")
@@ -568,6 +601,129 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
   )
   pdf_writer_push_ascii(output, "\nstartxref\n")
   pdf_writer_push_ascii(output, xref_start.to_string())
+  pdf_writer_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_writer_xref_tuple_for_number(
+  xrefs : ArrayView[(Int, Int, Int)],
+  number : Int,
+) -> (Int, Int)? {
+  for xref in xrefs {
+    if xref.0 == number {
+      break Some((xref.1, xref.2))
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_writer_push_big_endian_field(
+  output : Array[Byte],
+  value : Int,
+  width : Int,
+) -> Unit {
+  let mut divisor = 1
+  if width > 1 {
+    for _ in 1..<width {
+      divisor *= 256
+    }
+  }
+  let mut remaining_divisor = divisor
+  while remaining_divisor > 0 {
+    pdf_writer_push_byte(output, value / remaining_divisor % 256)
+    remaining_divisor /= 256
+  }
+}
+
+///|
+fn pdf_writer_push_xref_stream_entry(
+  output : Array[Byte],
+  kind : Int,
+  field2 : Int,
+  field3 : Int,
+) -> Unit {
+  pdf_writer_push_big_endian_field(output, kind, 1)
+  pdf_writer_push_big_endian_field(output, field2, 4)
+  pdf_writer_push_big_endian_field(output, field3, 2)
+}
+
+///|
+fn pdf_writer_xref_stream_data(
+  xrefs : ArrayView[(Int, Int, Int)],
+  size : Int,
+  xref_stream_number : Int,
+  xref_stream_offset : Int,
+) -> PdfBytes {
+  let output : Array[Byte] = []
+  for number in 0..<size {
+    if number == 0 {
+      pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
+    } else if number == xref_stream_number {
+      pdf_writer_push_xref_stream_entry(output, 1, xref_stream_offset, 0)
+    } else {
+      match pdf_writer_xref_tuple_for_number(xrefs, number) {
+        Some((offset, generation)) =>
+          pdf_writer_push_xref_stream_entry(output, 1, offset, generation)
+        None => pdf_writer_push_xref_stream_entry(output, 0, 0, 65535)
+      }
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_writer_xref_stream_trailer(
+  document : PdfDocument,
+  size : Int,
+) -> PdfObject raise PdfError {
+  pdf_writer_trailer_dictionary(document)
+  .add_dict_entry(pdf_writer_type_name(), PdfNameObject(pdf_writer_xref_name()))
+  .add_dict_entry(pdf_writer_size_name(), PdfInteger(size))
+  .add_dict_entry(
+    pdf_writer_w_name(),
+    PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+  )
+}
+
+///|
+pub fn pdf_write_document_with_xref_stream(
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  let (major, minor) = document.version()
+  if major > 1 || (major == 1 && minor >= 5) {
+    pdf_writer_push_header(output, major, minor)
+  } else {
+    pdf_writer_push_header(output, 1, 5)
+  }
+  let xrefs = pdf_writer_write_document_objects(output, document)
+  let xref_stream_offset = output.length()
+  let xref_stream_number = document.objects.max_object_number() + 1
+  let size = xref_stream_number + 1
+  let stream = pdf_stream(
+    pdf_writer_xref_stream_trailer(document, size),
+    StreamGot(
+      pdf_writer_xref_stream_data(
+        xrefs[:],
+        size,
+        xref_stream_number,
+        xref_stream_offset,
+      ),
+    ),
+  )
+  pdf_writer_push_view(
+    output,
+    pdf_write_indirect_object({
+      number: xref_stream_number,
+      generation: 0,
+      object: stream,
+    })[:],
+  )
+  pdf_writer_push_ascii(output, "startxref\n")
+  pdf_writer_push_ascii(output, xref_stream_offset.to_string())
   pdf_writer_push_ascii(output, "\n%%EOF\n")
   Bytes::from_array(output)
 }
