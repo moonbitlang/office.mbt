@@ -154,3 +154,78 @@ pub fn PdfStandardFont::flags(self : PdfStandardFont) -> Int {
     _ => 32
   }
 }
+
+///|
+pub fn pdf_is_unicode_string(bytes : BytesView) -> Bool {
+  bytes.length() >= 2 && bytes[0].to_int() == 0xFE && bytes[1].to_int() == 0xFF
+}
+
+///|
+fn pdf_text_push_utf16be_unit(
+  output : Array[Byte],
+  value : Int,
+) -> Unit raise PdfError {
+  output.push(pdf_byte_of_int((value >> 8) & 0xFF))
+  output.push(pdf_byte_of_int(value & 0xFF))
+}
+
+///|
+fn pdf_text_push_utf16be_codepoint(
+  output : Array[Byte],
+  codepoint : Int,
+) -> Unit raise PdfError {
+  if codepoint < 0 ||
+    codepoint > 0x10FFFF ||
+    (codepoint >= 0xD800 && codepoint <= 0xDFFF) {
+    raise InvalidUnicodeCodepoint(codepoint)
+  }
+  if codepoint < 0x10000 {
+    pdf_text_push_utf16be_unit(output, codepoint)
+  } else {
+    let shifted = codepoint - 0x10000
+    pdf_text_push_utf16be_unit(output, 0xD800 | (shifted >> 10))
+    pdf_text_push_utf16be_unit(output, 0xDC00 | (shifted & 0x3FF))
+  }
+}
+
+///|
+pub fn pdf_utf16be_of_codepoints(
+  codepoints : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  output.push(pdf_byte_of_int(0xFE))
+  output.push(pdf_byte_of_int(0xFF))
+  for codepoint in codepoints {
+    pdf_text_push_utf16be_codepoint(output, codepoint)
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_text_utf16be_unit(bytes : BytesView, index : Int) -> Int raise PdfError {
+  guard index + 1 < bytes.length() else { raise InvalidUTF16BE }
+  (bytes[index].to_int() << 8) | bytes[index + 1].to_int()
+}
+
+///|
+pub fn pdf_codepoints_of_utf16be(
+  bytes : BytesView,
+) -> Array[Int] raise PdfError {
+  let codepoints : Array[Int] = []
+  let mut index = 0
+  while index < bytes.length() {
+    let w1 = pdf_text_utf16be_unit(bytes, index)
+    index += 2
+    if w1 >= 0xD800 && w1 <= 0xDBFF {
+      let w2 = pdf_text_utf16be_unit(bytes, index)
+      guard w2 >= 0xDC00 && w2 <= 0xDFFF else { raise InvalidUTF16BE }
+      index += 2
+      codepoints.push((((w1 & 0x3FF) << 10) | (w2 & 0x3FF)) + 0x10000)
+    } else if w1 >= 0xDC00 && w1 <= 0xDFFF {
+      raise InvalidUTF16BE
+    } else {
+      codepoints.push(w1)
+    }
+  }
+  codepoints
+}

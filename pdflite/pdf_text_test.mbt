@@ -4,6 +4,11 @@ fn text_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn text_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_bytes_of_int_array(values)
+}
+
+///|
 test "PdfStandardFont exposes CamlPDF standard font names" {
   let fonts : Array[(@pdflite.PdfStandardFont, String)] = [
     (PdfTimesRoman, "Times-Roman"),
@@ -24,6 +29,55 @@ test "PdfStandardFont exposes CamlPDF standard font names" {
   for entry in fonts {
     @test.assert_eq(entry.0.name(), entry.1)
     @test.assert_eq(entry.0.pdf_name(), text_name_for_test("/" + entry.1))
+  }
+}
+
+///|
+test "pdf_utf16be_of_codepoints writes PDF Unicode strings as bytes" {
+  let encoded = try! @pdflite.pdf_utf16be_of_codepoints([0x41, 0x20AC, 0x1D11E])
+  @test.assert_eq(
+    encoded,
+    text_bytes_for_test([
+      0xFE, 0xFF, 0x00, 0x41, 0x20, 0xAC, 0xD8, 0x34, 0xDD, 0x1E,
+    ]),
+  )
+  @test.assert_eq(@pdflite.pdf_is_unicode_string(encoded[:]), true)
+  @test.assert_eq(try! @pdflite.pdf_codepoints_of_utf16be(encoded[2:]), [
+    0x41, 0x20AC, 0x1D11E,
+  ])
+}
+
+///|
+test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
+  let odd = try? @pdflite.pdf_codepoints_of_utf16be(
+    text_bytes_for_test([0x00])[:],
+  )
+  guard odd is Err(InvalidUTF16BE) else {
+    fail("expected InvalidUTF16BE for odd byte length")
+  }
+  let unpaired_high = try? @pdflite.pdf_codepoints_of_utf16be(
+    text_bytes_for_test([0xD8, 0x34, 0x00, 0x41])[:],
+  )
+  guard unpaired_high is Err(InvalidUTF16BE) else {
+    fail("expected InvalidUTF16BE for unpaired high surrogate")
+  }
+  let isolated_low = try? @pdflite.pdf_codepoints_of_utf16be(
+    text_bytes_for_test([0xDD, 0x1E])[:],
+  )
+  guard isolated_low is Err(InvalidUTF16BE) else {
+    fail("expected InvalidUTF16BE for isolated low surrogate")
+  }
+}
+
+///|
+test "pdf_utf16be_of_codepoints rejects invalid Unicode scalar values" {
+  let surrogate = try? @pdflite.pdf_utf16be_of_codepoints([0xD800])
+  guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
+    fail("expected InvalidUnicodeCodepoint for surrogate scalar")
+  }
+  let too_large = try? @pdflite.pdf_utf16be_of_codepoints([0x110000])
+  guard too_large is Err(InvalidUnicodeCodepoint(0x110000)) else {
+    fail("expected InvalidUnicodeCodepoint for out-of-range scalar")
   }
 }
 

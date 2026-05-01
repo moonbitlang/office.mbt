@@ -368,15 +368,17 @@ MoonBit consequences for this project:
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
    attributes. `pdftext`/`pdfstandard14` are started with the standard 14 font
    enum, CamlPDF-compatible canonical names and aliases, PDF-name conversion,
-   and baseline/stem/flag helpers. `pdffun` is started with Type 0 sampled,
-   Type 2 interpolation, Type 3 stitching, and Type 4 calculator function parsing/evaluation for
+   baseline/stem/flag helpers, byte-oriented UTF-16BE PDF Unicode string
+   emission, BOM detection, and strict UTF-16BE codepoint parsing. `pdffun` is
+   started with Type 0 sampled, Type 2 interpolation, Type 3 stitching, and
+   Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
    nested `if`/`ifelse` procedures, comments, doubled-minus malformed numbers,
    and stack operators, stream decoding for sampled/calculator functions,
-   domain clamping, and range clamping. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG data through the
-   `FF D9` EOI marker while leaving following bytes unread, and content inline
-   image parsing now uses that path for `/DCT`, `/DCTDecode`, and single-item
-   filter arrays. `pdfimage` is
+   domain clamping, and range clamping. `pdfjpeg` is started with a byte-cursor
+   helper that extracts JPEG data through the `FF D9` EOI marker while leaving
+   following bytes unread, and content inline image parsing now uses that path
+   for `/DCT`, `/DCTDecode`, and single-item filter arrays. `pdfimage` is
    started with typed image result and pixel-layout enums plus image
    `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
    including image-mask defaults. `get_image_24bpp` is started for encoded

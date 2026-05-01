@@ -44,6 +44,8 @@ pub(all) suberror PdfError {
   RootExpected
   InvalidObjectNumber(Int)
   BadDate
+  InvalidUnicodeCodepoint(Int)
+  InvalidUTF16BE
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
