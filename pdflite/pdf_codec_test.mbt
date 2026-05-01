@@ -1082,6 +1082,20 @@ test "pdf_decode_stream_onestage reports malformed stream filters" {
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
     fail("expected PredictorExpected")
   }
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(5)),
+      (filter, PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+      (decodeparms, PdfInteger(1)),
+    ]),
+    StreamGot(codec_ascii_for_test("4869>")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::PredictorExpected) else {
+    fail("expected PredictorExpected")
+  }
 }
 
 ///|

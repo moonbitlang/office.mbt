@@ -193,3 +193,61 @@ test "private structure survival helpers cover direct cases" {
   @test.assert_eq(doc.pdf_structure_k_item_survives(PdfInteger(1), [2]), true)
   @test.assert_eq(doc.pdf_structure_filtered_k_value(PdfInteger(1), [2]), None)
 }
+
+///|
+test "private codec dictionary and predictor guards report malformed inputs" {
+  let empty = PdfDictionary([])
+  @test.assert_eq(pdf_remove_first_filter_entry(empty, pdf_filter_key()), empty)
+  let bad_filter = PdfDictionary([(pdf_filter_key(), PdfInteger(1))])
+  let bad_filter_result : Result[PdfObject, Error] = try? pdf_remove_first_filter_entry(
+    bad_filter,
+    pdf_filter_key(),
+  )
+  guard bad_filter_result is Err(PdfError::FilterExpected) else {
+    fail("expected FilterExpected")
+  }
+  let bad_decodeparms = PdfDictionary([(pdf_decodeparms_key(), PdfInteger(1))])
+  let bad_decodeparms_result : Result[PdfObject, Error] = try? pdf_remove_first_decodeparms_entry(
+    bad_decodeparms,
+    pdf_decodeparms_key(),
+  )
+  guard bad_decodeparms_result is Err(PdfError::FilterExpected) else {
+    fail("expected FilterExpected")
+  }
+  let bad_bpp : Result[Int, Error] = try? pdf_predictor_bytes_per_pixel(0, 8)
+  guard bad_bpp is Err(PdfError::PredictorExpected) else {
+    fail("expected PredictorExpected")
+  }
+}
+
+///|
+test "private LZW code expansion rejects malformed tables" {
+  let short_prefix = Array::make(4, 0)
+  let short_append = Array::make(4, 0)
+  let out_of_range : Result[Array[Int], Error] = try? pdf_lzw_decode_code(
+    4, short_prefix, short_append, 4,
+  )
+  guard out_of_range is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+
+  let looping_prefix = Array::make(300, 0)
+  let looping_append = Array::make(300, 0)
+  looping_prefix[256] = 300
+  let bad_chain : Result[Array[Int], Error] = try? pdf_lzw_decode_code(
+    256, looping_prefix, looping_append, 300,
+  )
+  guard bad_chain is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+
+  let negative_prefix = Array::make(300, 0)
+  let negative_append = Array::make(300, 0)
+  negative_prefix[256] = -1
+  let bad_terminal : Result[Array[Int], Error] = try? pdf_lzw_decode_code(
+    256, negative_prefix, negative_append, 300,
+  )
+  guard bad_terminal is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+}

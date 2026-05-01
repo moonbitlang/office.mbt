@@ -478,7 +478,9 @@ MoonBit consequences for this project:
     bookmark outline root guard. Structure trimming coverage now includes
     `/Obj`-based child pruning that removes now-empty parent `/K` arrays, plus
     private survival-helper checks for `/Pg`, direct non-indirect `/K` items,
-    and non-dictionary structure values.
+    and non-dictionary structure values. Codec coverage now includes malformed
+    decode-parameter dispatch during stream decode plus private filter-entry,
+    decode-parameter, predictor-byte-width, and LZW table-validation guards.
 
 ## Update Discipline
 
