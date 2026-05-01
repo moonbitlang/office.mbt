@@ -333,6 +333,8 @@ pub fn pdf_write_hex_string(BytesView) -> Bytes
 
 pub fn pdf_write_indirect_object(PdfParsedIndirectObject) -> Bytes raise PdfError
 
+pub fn pdf_write_literal_string(BytesView) -> Bytes
+
 pub fn pdf_write_object(PdfObject) -> Bytes raise PdfError
 
 pub fn point2(Double, Double) -> Point2

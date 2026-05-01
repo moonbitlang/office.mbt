@@ -123,6 +123,21 @@ test "pdf_write_hex_string renders byte strings as PDF hex strings" {
 }
 
 ///|
+test "pdf_write_literal_string renders byte strings as PDF literal strings" {
+  let string = writer_bytes_for_test([65, 10, 40, 41, 92, 0, 255])
+  @test.assert_eq(
+    @pdflite.pdf_write_literal_string(string[:]),
+    writer_bytes_for_test([
+      40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
+    ]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_write_literal_string(Bytes::new(0)[:]),
+    writer_ascii_for_test("()"),
+  )
+}
+
+///|
 test "pdf_write_object renders real numbers without exponent notation" {
   let tiny : Double = try! @strconv.from_str("1e-10")
   @test.assert_eq(
