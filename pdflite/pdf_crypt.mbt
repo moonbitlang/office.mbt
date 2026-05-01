@@ -574,14 +574,19 @@ fn PdfEncryptionValues::file_key_for_available_password(
     Some(password) =>
       match self.file_key_for_user_password(password, no_encrypt_metadata~) {
         Some(key) => return Some(key)
-        None => ()
+        None =>
+          match owner_password {
+            Some(password) =>
+              self.file_key_for_owner_password(password, no_encrypt_metadata~)
+            None => None
+          }
       }
-    None => ()
-  }
-  match owner_password {
-    Some(password) =>
-      self.file_key_for_owner_password(password, no_encrypt_metadata~)
-    None => self.file_key_for_user_password([], no_encrypt_metadata~)
+    None =>
+      match owner_password {
+        Some(password) =>
+          self.file_key_for_owner_password(password, no_encrypt_metadata~)
+        None => self.file_key_for_user_password([], no_encrypt_metadata~)
+      }
   }
 }
 
@@ -651,6 +656,30 @@ pub fn PdfDocument::decrypt_single_stream(
             no_encrypt_metadata~,
           ),
         )
+      None => None
+    }
+  }
+}
+
+///|
+pub fn PdfDocument::decrypt_with_passwords(
+  self : PdfDocument,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfDecryptionResult? raise PdfError {
+  if !self.is_encrypted() {
+    Some({ document: self.copy(), denied_permissions: [] })
+  } else {
+    let values = self.encryption_values()
+    match
+      values.file_key_for_available_password(
+        user_password,
+        owner_password,
+        no_encrypt_metadata~,
+      ) {
+      Some(file_key) =>
+        Some(self.decrypt_with_file_key(values, file_key, no_encrypt_metadata~))
       None => None
     }
   }

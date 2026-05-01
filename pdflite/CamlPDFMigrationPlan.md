@@ -200,6 +200,10 @@ MoonBit consequences for this project:
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.
+   A password-aware byte-reader wrapper is now started:
+   `pdf_read_document_from_bytes_with_passwords` preserves the existing
+   plain-reader API while returning a `PdfDecryptionResult?` for parsed classic
+   encrypted documents.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
@@ -537,6 +541,10 @@ MoonBit consequences for this project:
     Single-stream decryption is started for the reader path, authenticating
     optional user/owner passwords and decrypting ARC4, AESV2, and AESV3
     revision 5 stream objects without mutating the document.
+    A combined `decrypt_with_passwords` convenience path now tries supplied
+    user and owner passwords, falls back to an absent/blank user password when
+    no credentials are supplied, and returns permissions with the decrypted
+    document.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`

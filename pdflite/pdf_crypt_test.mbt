@@ -1602,6 +1602,101 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
   @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
   @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
+  let read_owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("bad")[:]),
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  @test.assert_eq(
+    read_owner_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+  @test.assert_eq(
+    read_owner_decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
+  @test.assert_eq(read_owner_decrypted.denied_permissions, [PdfNoPrint])
+  @test.assert_eq(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
+  )
+}
+
+///|
+test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and owner passwords" {
+  let key_title = crypt_name_for_test("/Title")
+  let plain_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("secret"))),
+  ])
+  let plain_doc = @pdflite.pdf_document_empty()
+  plain_doc.add_object_given_number(1, plain_object)
+  let plain_result = crypt_unwrap_decryption_result_for_test(
+    try! plain_doc.decrypt_with_passwords(),
+  )
+  @test.assert_eq(plain_result.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(plain_result.denied_permissions, [])
+
+  let blank_doc = @pdflite.pdf_document_empty()
+  blank_doc.add_object_given_number(1, plain_object)
+  let blank_encrypted = try! blank_doc.encrypt_40bit(
+    @ascii.encode("")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoCopy],
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let blank_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! blank_encrypted.decrypt_with_passwords(),
+  )
+  @test.assert_eq(
+    blank_decrypted.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(blank_decrypted.denied_permissions, [PdfNoCopy])
+  @test.assert_eq(
+    try! blank_encrypted.decrypt_with_passwords(
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
+  )
+
+  let encrypted = try! plain_doc.encrypt_128bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let user_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_passwords(
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  @test.assert_eq(
+    user_decrypted.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(user_decrypted.denied_permissions, [PdfNoPrint])
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_passwords(
+      user_password=Some(@ascii.encode("bad")[:]),
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  @test.assert_eq(
+    owner_decrypted.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(owner_decrypted.denied_permissions, [PdfNoPrint])
+  @test.assert_eq(
+    try! encrypted.decrypt_with_passwords(
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
+  )
 }
 
 ///|
@@ -1632,6 +1727,15 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
       1, 0, blank_password_stream,
     ),
     Some(plain_stream),
+  )
+  @test.assert_eq(
+    try! blank_password_encrypted.decrypt_single_stream(
+      1,
+      0,
+      blank_password_stream,
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
   )
 
   let owner_password_doc = @pdflite.pdf_document_empty()

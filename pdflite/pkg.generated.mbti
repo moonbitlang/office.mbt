@@ -287,6 +287,8 @@ pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
+pub fn pdf_read_document_from_bytes_with_passwords(Bytes, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
@@ -860,6 +862,7 @@ pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : 
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise PdfError
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
+pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError

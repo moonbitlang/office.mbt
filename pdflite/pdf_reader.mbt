@@ -479,6 +479,16 @@ pub fn pdf_read_document_from_bytes(
 }
 
 ///|
+pub fn pdf_read_document_from_bytes_with_passwords(
+  data : PdfBytes,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+) -> PdfDecryptionResult? raise PdfError {
+  let document = pdf_read_document_from_bytes(data)
+  document.decrypt_with_passwords(user_password~, owner_password~)
+}
+
+///|
 fn pdf_length_name() -> PdfName {
   pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
 }

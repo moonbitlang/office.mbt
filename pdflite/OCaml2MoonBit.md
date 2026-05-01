@@ -508,6 +508,18 @@ when porting OCaml `string option` parameters where an absent value and an
 explicit empty byte string must remain different cases.
 
 ```sh
+moon run -c 'fn f(x? : Int? = None) -> Int { match x { Some(v) => v; None => -1 } }
+fn g(x? : Int? = None) -> Int { f(x~) }
+fn main { println(g()); println(g(x=Some(7))) }'
+# -1
+# 7
+```
+
+The `label~` forwarding shorthand also works when the labelled argument's type
+is itself optional. Use it in wrappers so `None` remains "argument absent" and
+`Some(value)` remains an explicit supplied value.
+
+```sh
 moon run -c 'struct R { x : Int } derive(Debug, Eq)
 fn default_r() -> R { { x: 1 } }
 fn f(r? : R = default_r()) -> Int { r.x }
