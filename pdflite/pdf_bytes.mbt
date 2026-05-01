@@ -60,7 +60,16 @@ pub(all) suberror PdfError {
   FontWidthExpected
   FontCharProcsExpected
   FontTypeExpected
-  CompositeFontNotSupported
+  CIDSystemInfoExpected
+  CIDRegistryExpected
+  CIDOrderingExpected
+  CIDSupplementExpected
+  CIDBaseFontExpected
+  CIDFontDescriptorExpected
+  CIDWidthsExpected
+  CIDWidths2Expected
+  DescendantFontExpected
+  CMapEncodingExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

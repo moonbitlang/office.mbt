@@ -953,20 +953,8 @@ test "PdfDocument read_font dispatches standard14 and simple fonts" {
 }
 
 ///|
-test "PdfDocument read_font rejects unknown and deferred composite fonts" {
+test "PdfDocument read_font rejects unknown fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let composite = @pdflite.pdf_dictionary([
-    (
-      text_name_for_test("/Subtype"),
-      PdfNameObject(text_name_for_test("/Type0")),
-    ),
-  ])
-  @test.assert_eq(doc.is_cidkeyed_font(composite), true)
-  let composite_result = try? doc.read_font(composite)
-  guard composite_result is Err(CompositeFontNotSupported) else {
-    fail("expected CompositeFontNotSupported")
-  }
-
   let unknown = @pdflite.pdf_dictionary([
     (
       text_name_for_test("/Subtype"),
@@ -976,5 +964,317 @@ test "PdfDocument read_font rejects unknown and deferred composite fonts" {
   let unknown_result = try? doc.read_font(unknown)
   guard unknown_result is Err(FontTypeExpected) else {
     fail("expected FontTypeExpected")
+  }
+}
+
+///|
+test "PdfDocument read_font reads CID-keyed Type0 fonts" {
+  let doc = @pdflite.pdf_document_empty()
+  let descendant = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (
+          text_name_for_test("/Registry"),
+          PdfString(text_bytes_for_test([65, 100, 111, 98, 101])),
+        ),
+        (
+          text_name_for_test("/Ordering"),
+          PdfString(
+            text_bytes_for_test([73, 100, 101, 110, 116, 105, 116, 121]),
+          ),
+        ),
+        (text_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/DescendantFont")),
+    ),
+    (
+      text_name_for_test("/FontDescriptor"),
+      @pdflite.pdf_dictionary([(text_name_for_test("/Ascent"), PdfInteger(880))]),
+    ),
+    (
+      text_name_for_test("/W"),
+      PdfArray([
+        PdfInteger(1),
+        PdfArray([PdfInteger(500), PdfReal(501.5)]),
+        PdfInteger(10),
+        PdfInteger(12),
+        PdfInteger(600),
+      ]),
+    ),
+    (
+      text_name_for_test("/W2"),
+      PdfArray([
+        PdfInteger(20),
+        PdfArray([
+          PdfInteger(100),
+          PdfInteger(1),
+          PdfInteger(2),
+          PdfInteger(200),
+          PdfInteger(3),
+          PdfInteger(4),
+        ]),
+        PdfInteger(30),
+        PdfInteger(31),
+        PdfInteger(900),
+        PdfInteger(5),
+        PdfInteger(6),
+      ]),
+    ),
+    (text_name_for_test("/DW"), PdfInteger(1001)),
+    (text_name_for_test("/DW2"), PdfArray([PdfInteger(880), PdfReal(-1000.5)])),
+  ])
+  doc.add_object_given_number(33, descendant)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/TopFont")),
+    ),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(33)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  ])
+  @test.assert_eq(doc.is_cidkeyed_font(font), true)
+  guard (try! doc.read_font(font)) is PdfFontCIDKeyed(cid_font) else {
+    fail("expected CID-keyed font")
+  }
+  @test.assert_eq(cid_font.debug_name(), "CIDKeyedFont /TopFont")
+  @test.assert_eq(cid_font.basefont, text_name_for_test("/TopFont"))
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(text_name_for_test("/Identity-H")),
+  )
+  let composite = cid_font.composite
+  @test.assert_eq(composite.cid_basefont, text_name_for_test("/DescendantFont"))
+  @test.assert_eq(
+    composite.cid_system_info.registry,
+    text_bytes_for_test([65, 100, 111, 98, 101]),
+  )
+  @test.assert_eq(
+    composite.cid_system_info.ordering,
+    text_bytes_for_test([73, 100, 101, 110, 116, 105, 116, 121]),
+  )
+  @test.assert_eq(composite.cid_system_info.supplement, 0)
+  @test.assert_eq(composite.cid_fontdescriptor.ascent, 880.0)
+  @test.assert_eq(composite.cid_widths, [
+    (1, 500.0),
+    (2, 501.5),
+    (10, 600.0),
+    (11, 600.0),
+    (12, 600.0),
+  ])
+  @test.assert_eq(composite.cid_widths2, [
+    (20, { width: 100.0, vx: 1.0, vy: 2.0 }),
+    (21, { width: 200.0, vx: 3.0, vy: 4.0 }),
+    (30, { width: 900.0, vx: 5.0, vy: 6.0 }),
+    (31, { width: 900.0, vx: 5.0, vy: 6.0 }),
+  ])
+  @test.assert_eq(composite.cid_default_width, 1001.0)
+  @test.assert_eq(composite.cid_default_width2, [880.0, -1000.5])
+}
+
+///|
+test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
+  let doc = @pdflite.pdf_document_empty()
+  let descendant = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
+        (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+        (text_name_for_test("/Supplement"), PdfInteger(1)),
+      ]),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Descendant")),
+    ),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+  ])
+  let cmap = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(text_bytes_for_test([1, 2, 3])),
+  )
+  doc.add_object_given_number(4, descendant)
+  doc.add_object_given_number(5, cmap)
+  let font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/Top"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (text_name_for_test("/Encoding"), PdfIndirect(5)),
+  ])
+  @test.assert_eq(try! doc.read_cidkeyed_font(font), {
+    basefont: text_name_for_test("/Top"),
+    composite: {
+      cid_system_info: {
+        registry: text_bytes_for_test([82]),
+        ordering: text_bytes_for_test([79]),
+        supplement: 1,
+      },
+      cid_basefont: text_name_for_test("/Descendant"),
+      cid_fontdescriptor: {
+        ascent: 0.0,
+        descent: 0.0,
+        avgwidth: 0.0,
+        maxwidth: 0.0,
+        flags: 0,
+        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+        italicangle: 0.0,
+        capheight: 0.0,
+        xheight: 0.0,
+        stemv: 0.0,
+        fontfile: None,
+        charset: None,
+      },
+      cid_widths: [],
+      cid_widths2: [],
+      cid_default_width: 1000.0,
+      cid_default_width2: [880.0, -1000.0],
+    },
+    encoding: PdfCMap(5),
+  })
+}
+
+///|
+test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
+  let doc = @pdflite.pdf_document_empty()
+  let missing_descendant = try? doc.read_cidkeyed_font(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    ]),
+  )
+  guard missing_descendant is Err(DescendantFontExpected) else {
+    fail("expected DescendantFontExpected")
+  }
+
+  let bad_system_info = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+        (text_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Descendant")),
+    ),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+  ])
+  doc.add_object_given_number(6, bad_system_info)
+  let bad_system_font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(6)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  ])
+  let system_result = try? doc.read_cidkeyed_font(bad_system_font)
+  guard system_result is Err(CIDRegistryExpected) else {
+    fail("expected CIDRegistryExpected")
+  }
+
+  let bad_widths = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
+        (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+        (text_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Descendant")),
+    ),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (
+      text_name_for_test("/W"),
+      PdfArray([PdfInteger(5), PdfInteger(4), PdfInteger(100)]),
+    ),
+  ])
+  doc.add_object_given_number(7, bad_widths)
+  let bad_widths_font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(7)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  ])
+  let widths_result = try? doc.read_cidkeyed_font(bad_widths_font)
+  guard widths_result is Err(CIDWidthsExpected) else {
+    fail("expected CIDWidthsExpected")
+  }
+
+  let bad_widths2 = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
+        (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+        (text_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Descendant")),
+    ),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (
+      text_name_for_test("/W2"),
+      PdfArray([PdfInteger(5), PdfArray([PdfInteger(100), PdfInteger(1)])]),
+    ),
+  ])
+  doc.add_object_given_number(8, bad_widths2)
+  let bad_widths2_font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(8)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/Identity-H")),
+    ),
+  ])
+  let widths2_result = try? doc.read_cidkeyed_font(bad_widths2_font)
+  guard widths2_result is Err(CIDWidths2Expected) else {
+    fail("expected CIDWidths2Expected")
+  }
+
+  let valid_descendant = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
+        (text_name_for_test("/Ordering"), PdfString(text_bytes_for_test([79]))),
+        (text_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Descendant")),
+    ),
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+  ])
+  doc.add_object_given_number(9, valid_descendant)
+  let direct_cmap = @pdflite.pdf_dictionary([
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(9)])),
+    (
+      text_name_for_test("/Encoding"),
+      @pdflite.pdf_stream(@pdflite.pdf_dictionary([]), StreamGot([])),
+    ),
+  ])
+  let direct_cmap_result = try? doc.read_cidkeyed_font(direct_cmap)
+  guard direct_cmap_result is Err(CMapEncodingExpected) else {
+    fail("expected CMapEncodingExpected")
   }
 }

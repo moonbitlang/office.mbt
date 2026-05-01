@@ -355,7 +355,16 @@ pub(all) suberror PdfError {
   FontWidthExpected
   FontCharProcsExpected
   FontTypeExpected
-  CompositeFontNotSupported
+  CIDSystemInfoExpected
+  CIDRegistryExpected
+  CIDOrderingExpected
+  CIDSupplementExpected
+  CIDBaseFontExpected
+  CIDFontDescriptorExpected
+  CIDWidthsExpected
+  CIDWidths2Expected
+  DescendantFontExpected
+  CMapEncodingExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -529,6 +538,30 @@ pub(all) struct PdfBookmarkColour {
 
 type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfCIDKeyedFont {
+  basefont : PdfName
+  composite : PdfCompositeCIDFont
+  encoding : PdfCMapEncoding
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCIDKeyedFont::debug_name(Self) -> String
+
+pub(all) struct PdfCIDSystemInfo {
+  registry : Bytes
+  ordering : Bytes
+  supplement : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfCIDVerticalWidth {
+  width : Double
+  vx : Double
+  vy : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfCMapEncoding {
+  PdfPredefinedCMap(PdfName)
+  PdfCMap(Int)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfCalculatorFunction {
   operations : Array[PdfCalculatorOp]
 } derive(Eq, ToJson, @debug.Debug)
@@ -597,6 +630,16 @@ pub(all) enum PdfColourSpace {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfColourSpace::debug_name(Self) -> String
 pub fn PdfColourSpace::name(Self) -> PdfName?
+
+pub(all) struct PdfCompositeCIDFont {
+  cid_system_info : PdfCIDSystemInfo
+  cid_basefont : PdfName
+  cid_fontdescriptor : PdfFontDescriptor
+  cid_widths : Array[(Int, Double)]
+  cid_widths2 : Array[(Int, PdfCIDVerticalWidth)]
+  cid_default_width : Double
+  cid_default_width2 : Array[Double]
+} derive(Eq, ToJson, @debug.Debug)
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
 
@@ -756,6 +799,8 @@ pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], f
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::read_annotation(Self, PdfObject) -> PdfAnnotation raise PdfError
 pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise PdfError
+pub fn PdfDocument::read_cid_system_info(Self, PdfObject) -> PdfCIDSystemInfo raise PdfError
+pub fn PdfDocument::read_cidkeyed_font(Self, PdfObject) -> PdfCIDKeyedFont raise PdfError
 pub fn PdfDocument::read_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace? raise PdfError
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_encoding(Self, PdfObject) -> PdfEncoding raise PdfError
@@ -816,6 +861,7 @@ pub(all) struct PdfEncodingDifference {
 pub(all) enum PdfFont {
   PdfFontStandard(PdfStandardFontData)
   PdfFontSimple(PdfSimpleFont)
+  PdfFontCIDKeyed(PdfCIDKeyedFont)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFont::debug_name(Self) -> String
 
