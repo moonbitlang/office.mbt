@@ -2367,6 +2367,102 @@ test "PdfTextExtractor extracts MacRoman C-range glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacRoman D-range glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD,
+    0xDE, 0xDF,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2013, 0x2014, 0x201C, 0x201D, 0x2018, 0x2019, 0x00F7, 0x00FF, 0x0178, 0x2044,
+    0x00A4, 0x2039, 0x203A, 0xFB01, 0xFB02,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/endash"),
+    text_name_for_test("/emdash"),
+    text_name_for_test("/quotedblleft"),
+    text_name_for_test("/quotedblright"),
+    text_name_for_test("/quoteleft"),
+    text_name_for_test("/quoteright"),
+    text_name_for_test("/divide"),
+    text_name_for_test("/ydieresis"),
+    text_name_for_test("/Ydieresis"),
+    text_name_for_test("/fraction"),
+    text_name_for_test("/currency"),
+    text_name_for_test("/guilsinglleft"),
+    text_name_for_test("/guilsinglright"),
+    text_name_for_test("/fi"),
+    text_name_for_test("/fl"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2013), Some(0xD0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00F7), Some(0xD6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0178), Some(0xD9))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB01), Some(0xDE))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xFB02), Some(0xDF))
+}
+
+///|
+test "PdfTextExtractor extracts MacRoman EF-range glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC,
+    0xED, 0xEE, 0xEF, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA,
+    0xFB, 0xFC, 0xFD, 0xFE, 0xFF,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2021, 0x00B7, 0x201A, 0x201E, 0x2030, 0x00C2, 0x00CA, 0x00C1, 0x00CB, 0x00C8,
+    0x00CD, 0x00CE, 0x00CF, 0x00CC, 0x00D3, 0x00D4, 0x00D2, 0x00DA, 0x00DB, 0x00D9,
+    0x0131, 0x02C6, 0x02DC, 0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB,
+    0x02C7,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/daggerdbl"),
+    text_name_for_test("/periodcentered"),
+    text_name_for_test("/quotesinglbase"),
+    text_name_for_test("/quotedblbase"),
+    text_name_for_test("/perthousand"),
+    text_name_for_test("/Acircumflex"),
+    text_name_for_test("/Ecircumflex"),
+    text_name_for_test("/Aacute"),
+    text_name_for_test("/Edieresis"),
+    text_name_for_test("/Egrave"),
+    text_name_for_test("/Iacute"),
+    text_name_for_test("/Icircumflex"),
+    text_name_for_test("/Idieresis"),
+    text_name_for_test("/Igrave"),
+    text_name_for_test("/Oacute"),
+    text_name_for_test("/Ocircumflex"),
+    text_name_for_test("/Ograve"),
+    text_name_for_test("/Uacute"),
+    text_name_for_test("/Ucircumflex"),
+    text_name_for_test("/Ugrave"),
+    text_name_for_test("/dotlessi"),
+    text_name_for_test("/circumflex"),
+    text_name_for_test("/tilde"),
+    text_name_for_test("/macron"),
+    text_name_for_test("/breve"),
+    text_name_for_test("/dotaccent"),
+    text_name_for_test("/ring"),
+    text_name_for_test("/cedilla"),
+    text_name_for_test("/hungarumlaut"),
+    text_name_for_test("/ogonek"),
+    text_name_for_test("/caron"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2021), Some(0xE0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2030), Some(0xE4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C2), Some(0xE5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0131), Some(0xF5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02DD), Some(0xFD))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02C7), Some(0xFF))
+}
+
+///|
 test "PdfTextExtractor extracts WinAnsi glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),

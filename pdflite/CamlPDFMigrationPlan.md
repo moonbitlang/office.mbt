@@ -417,8 +417,10 @@ MoonBit consequences for this project:
    ligature/Latin glyph names.
    MacRoman high-byte fallback is started for common accented Latin letters,
    the contiguous lower-vowel accent block, and the `0xA0..0xAF`
-   punctuation/symbol block, plus unambiguous sparse `0xB0..0xBF` and
-   `0xC0..0xCF` entries.
+   punctuation/symbol block, plus unambiguous sparse `0xB0..0xBF` entries
+   and `0xC0..0xFF` entries. MacRoman byte `0xFD` is normalized to the AGL
+   glyph name `/hungarumlaut`; the CamlPDF source table spells this entry
+   `/hungrumlaut`, which is absent from the bundled Adobe glyph list and AFMs.
    MacRoman `/mu` is still deferred pending context-specific glyph-name
    codepoint handling, since Symbol maps `/mu` differently.
    A practical WinAnsi high-byte subset is also started for common PDF text
