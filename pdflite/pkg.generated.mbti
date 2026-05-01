@@ -313,6 +313,8 @@ pub fn pdf_standard_font_of_pdf_name(PdfName) -> PdfStandardFont?
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
+pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
+
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError

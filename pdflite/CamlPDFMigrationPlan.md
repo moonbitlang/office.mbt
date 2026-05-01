@@ -446,9 +446,11 @@ MoonBit consequences for this project:
    replacement are started with fresh outline object numbering, `/Parent`,
    `/First`, `/Last`, `/Next`, `/Prev`, and positive/negative `/Count` link
    generation, destination-vs-action field selection, and returned-copy catalog
-   replacement. `change_pages` matrix integration is started for transformed
-   page destinations, including named destination definitions retained in the
-   catalog or destination name tree.
+   replacement. The CamlPDF bookmark debug-line helper is also ported as
+   `pdf_string_of_bookmark`, returning `PdfBytes` so bookmark titles remain
+   byte-preserving. `change_pages` matrix integration is started for
+   transformed page destinations, including named destination definitions
+   retained in the catalog or destination name tree.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

@@ -9,6 +9,13 @@ fn bookmark_bytes_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn bookmark_bytes_from_ints_for_test(
+  values : ArrayView[Int],
+) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_bytes_of_int_array(values)
+}
+
+///|
 fn bookmark_colour_for_test(
   red : Double,
   green : Double,
@@ -112,6 +119,25 @@ fn bookmark_single_outline_doc_for_test(
   doc.add_object_given_number(2, PdfDictionary([(key_first, PdfIndirect(3))]))
   doc.add_object_given_number(3, outline)
   doc
+}
+
+///|
+test "pdf_string_of_bookmark renders CamlPDF debug line as bytes" {
+  let bookmark : @pdflite.PdfBookmark = {
+    level: 1,
+    text: bookmark_bytes_from_ints_for_test([65, 0xFF]),
+    target: DestFit(TargetPageObject(7)),
+    is_open: true,
+    colour: @pdflite.pdf_bookmark_black,
+    flags: 0,
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_bookmark(bookmark),
+    bookmark_bytes_from_ints_for_test([
+      49, 32, 65, 255, 32, 91, 55, 32, 48, 32, 82, 32, 47, 70, 105, 116, 93, 32,
+      116, 114, 117, 101, 10,
+    ]),
+  )
 }
 
 ///|
