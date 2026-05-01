@@ -381,6 +381,7 @@ pub(all) suberror PdfError {
   EncryptionDictionaryEntryExpected(PdfName)
   EncryptionDictionaryEntryTooShort(PdfName)
   EncryptionIDExpected
+  EncryptionAuthenticationUnsupported(PdfCryptType)
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported
@@ -921,6 +922,10 @@ pub(all) struct PdfEncryptionValues {
   user_encryption_key : Bytes?
   owner_encryption_key : Bytes?
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfEncryptionValues::authenticate_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> Bool raise PdfError
+pub fn PdfEncryptionValues::authenticate_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> Bool raise PdfError
+pub fn PdfEncryptionValues::file_key_for_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> Bytes? raise PdfError
+pub fn PdfEncryptionValues::file_key_for_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> Bytes? raise PdfError
 
 pub(all) enum PdfFont {
   PdfFontStandard(PdfStandardFontData)

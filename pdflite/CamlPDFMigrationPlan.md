@@ -523,9 +523,12 @@ MoonBit consequences for this project:
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
     handling. The parser now reports structured errors for unencrypted files,
     unsupported encryption methods, malformed required entries, short `/O` or
-    `/U` entries, and missing trailer IDs. AES, SHA-family helpers beyond the
-    available package surface, document decryption, and re-encryption remain
-    deferred.
+    `/U` entries, and missing trailer IDs. Typed password authentication and
+    file-key derivation are started on top of parsed encryption values for
+    ARC4 revisions 2/3 and AESV2 revision 4, while AESV3 authentication reports
+    a structured unsupported error until the SHA-256/384 algorithms are ported.
+    AES object/data crypt, SHA-family helpers beyond the available package
+    surface, document decryption, and re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

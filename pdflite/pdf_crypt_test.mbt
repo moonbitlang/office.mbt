@@ -22,20 +22,29 @@ fn crypt_standard_encrypt_dictionary_for_test(
   owner_length? : Int = 40,
   user_length? : Int = 40,
 ) -> @pdflite.PdfObject {
+  crypt_standard_encrypt_dictionary_values_for_test(
+    entries,
+    crypt_repeated_bytes_for_test(0x4f, owner_length),
+    crypt_repeated_bytes_for_test(0x55, user_length),
+    -4,
+  )
+}
+
+///|
+fn crypt_standard_encrypt_dictionary_values_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  owner_entry : @pdflite.PdfBytes,
+  user_entry : @pdflite.PdfBytes,
+  permissions : Int,
+) -> @pdflite.PdfObject {
   let output : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
     (
       crypt_name_for_test("/Filter"),
       PdfNameObject(crypt_name_for_test("/Standard")),
     ),
-    (
-      crypt_name_for_test("/O"),
-      PdfString(crypt_repeated_bytes_for_test(0x4f, owner_length)),
-    ),
-    (
-      crypt_name_for_test("/U"),
-      PdfString(crypt_repeated_bytes_for_test(0x55, user_length)),
-    ),
-    (crypt_name_for_test("/P"), PdfInteger(-4)),
+    (crypt_name_for_test("/O"), PdfString(owner_entry)),
+    (crypt_name_for_test("/U"), PdfString(user_entry)),
+    (crypt_name_for_test("/P"), PdfInteger(permissions)),
   ]
   for entry in entries {
     output.push(entry)
@@ -237,6 +246,156 @@ test "PdfDocument encryption_values parses crypt filter methods" {
   @test.assert_eq(
     aesv3_values.owner_encryption_key,
     Some(crypt_repeated_bytes_for_test(0x22, 32)),
+  )
+  let unsupported : Result[Bool, Error] = try? aesv3_values.authenticate_user_password(
+    @ascii.encode("user")[:],
+  )
+  guard unsupported
+    is Err(
+      @pdflite.PdfError::EncryptionAuthenticationUnsupported(
+        PdfCryptAESV3(true)
+      )
+    ) else {
+    fail("expected unsupported AESV3 authentication")
+  }
+}
+
+///|
+test "PdfEncryptionValues authenticates passwords and derives file keys" {
+  let file_id = @ascii.encode("doc-id")
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    3,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    128,
+  )
+  let user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user")[:],
+    3,
+    owner_entry[:],
+    -3904,
+    file_id[:],
+    128,
+  )
+  let doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(2)),
+        (crypt_name_for_test("/Length"), PdfInteger(128)),
+        (crypt_name_for_test("/R"), PdfInteger(3)),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let values = try! doc.encryption_values()
+  let expected_key = @pdflite.pdf_encryption_file_key(
+    false,
+    @ascii.encode("user")[:],
+    3,
+    owner_entry[:],
+    -3904,
+    file_id[:],
+    128,
+  )
+  @test.assert_eq(
+    try! values.authenticate_user_password(@ascii.encode("user")[:]),
+    true,
+  )
+  @test.assert_eq(
+    try! values.authenticate_user_password(@ascii.encode("bad")[:]),
+    false,
+  )
+  @test.assert_eq(
+    try! values.file_key_for_user_password(@ascii.encode("user")[:]),
+    Some(expected_key),
+  )
+  @test.assert_eq(
+    try! values.file_key_for_user_password(@ascii.encode("bad")[:]),
+    None,
+  )
+  @test.assert_eq(
+    try! values.authenticate_owner_password(@ascii.encode("owner")[:]),
+    true,
+  )
+  @test.assert_eq(
+    try! values.authenticate_owner_password(@ascii.encode("bad")[:]),
+    false,
+  )
+  @test.assert_eq(
+    try! values.file_key_for_owner_password(@ascii.encode("owner")[:]),
+    Some(expected_key),
+  )
+  @test.assert_eq(
+    try! values.file_key_for_owner_password(@ascii.encode("bad")[:]),
+    None,
+  )
+}
+
+///|
+test "PdfEncryptionValues treats AESV2 as revision 4 with 128-bit keys" {
+  let file_id = @ascii.encode("doc-id")
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    4,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    128,
+  )
+  let user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user")[:],
+    4,
+    owner_entry[:],
+    -3904,
+    file_id[:],
+    128,
+  )
+  let doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_values_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(4)),
+        (crypt_name_for_test("/R"), PdfInteger(4)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV2")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ],
+      owner_entry,
+      user_entry,
+      -3904,
+    ),
+  )
+  let values = try! doc.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptAESV2)
+  @test.assert_eq(
+    try! values.authenticate_user_password(@ascii.encode("user")[:]),
+    true,
+  )
+  @test.assert_eq(
+    try! values.file_key_for_user_password(@ascii.encode("user")[:]),
+    Some(
+      @pdflite.pdf_encryption_file_key(
+        false,
+        @ascii.encode("user")[:],
+        4,
+        owner_entry[:],
+        -3904,
+        file_id[:],
+        128,
+      ),
+    ),
   )
 }
 

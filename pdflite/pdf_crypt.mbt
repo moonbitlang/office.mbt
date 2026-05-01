@@ -241,6 +241,128 @@ pub fn PdfDocument::encryption_values(
 }
 
 ///|
+fn PdfEncryptionValues::password_settings(
+  self : PdfEncryptionValues,
+) -> (Int, Int) raise PdfError {
+  match self.crypt_type {
+    PdfCryptARC4(key_length_bits, revision) => (revision, key_length_bits)
+    PdfCryptAESV2 => (4, 128)
+    PdfCryptAESV3(_) =>
+      raise EncryptionAuthenticationUnsupported(self.crypt_type)
+  }
+}
+
+///|
+pub fn PdfEncryptionValues::authenticate_user_password(
+  self : PdfEncryptionValues,
+  password : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> Bool raise PdfError {
+  let (revision, key_length_bits) = self.password_settings()
+  pdf_authenticate_user_password(
+    no_encrypt_metadata,
+    password,
+    revision,
+    self.user_entry[:],
+    self.owner_entry[:],
+    self.permissions,
+    self.file_id[:],
+    key_length_bits,
+  )
+}
+
+///|
+pub fn PdfEncryptionValues::file_key_for_user_password(
+  self : PdfEncryptionValues,
+  password : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfBytes? raise PdfError {
+  let (revision, key_length_bits) = self.password_settings()
+  if pdf_authenticate_user_password(
+      no_encrypt_metadata,
+      password,
+      revision,
+      self.user_entry[:],
+      self.owner_entry[:],
+      self.permissions,
+      self.file_id[:],
+      key_length_bits,
+    ) {
+    Some(
+      pdf_encryption_file_key(
+        no_encrypt_metadata,
+        password,
+        revision,
+        self.owner_entry[:],
+        self.permissions,
+        self.file_id[:],
+        key_length_bits,
+      ),
+    )
+  } else {
+    None
+  }
+}
+
+///|
+pub fn PdfEncryptionValues::authenticate_owner_password(
+  self : PdfEncryptionValues,
+  password : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> Bool raise PdfError {
+  let (revision, key_length_bits) = self.password_settings()
+  pdf_authenticate_owner_password(
+    no_encrypt_metadata,
+    password,
+    revision,
+    self.user_entry[:],
+    self.owner_entry[:],
+    self.permissions,
+    self.file_id[:],
+    key_length_bits,
+  )
+}
+
+///|
+pub fn PdfEncryptionValues::file_key_for_owner_password(
+  self : PdfEncryptionValues,
+  password : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfBytes? raise PdfError {
+  let (revision, key_length_bits) = self.password_settings()
+  let user_password = pdf_user_password_from_owner_password(
+    revision,
+    password,
+    self.owner_entry[:],
+    key_length_bits,
+  )
+  if pdf_authenticate_user_password(
+      no_encrypt_metadata,
+      user_password[:],
+      revision,
+      self.user_entry[:],
+      self.owner_entry[:],
+      self.permissions,
+      self.file_id[:],
+      key_length_bits,
+    ) {
+    Some(
+      pdf_encryption_file_key(
+        no_encrypt_metadata,
+        user_password[:],
+        revision,
+        self.owner_entry[:],
+        self.permissions,
+        self.file_id[:],
+        key_length_bits,
+      ),
+    )
+  } else {
+    None
+  }
+}
+
+///|
 fn pdf_password_padding_fixed() -> FixedArray[Byte] {
   [
     0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff,
