@@ -354,12 +354,9 @@ fn PdfDocument::pdf_fun_stream_data(
   self : PdfDocument,
   object : PdfObject,
 ) -> PdfBytes raise PdfError {
-  match pdf_decode_stream(self.direct(object)) {
+  match self.direct(object) {
     PdfStreamObject(stream) =>
-      match stream.data {
-        StreamGot(data) => data
-        _ => raise StreamDataExpected
-      }
+      pdf_stream_data_bytes(pdf_decode_stream_value(stream).data)
     _ => raise ParseStreamExpected
   }
 }

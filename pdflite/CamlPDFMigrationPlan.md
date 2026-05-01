@@ -689,9 +689,13 @@ MoonBit consequences for this project:
     private raw/JPEG/JPX/JBIG2 stream enum, materializing deferred stream data
     at the owned-byte boundary, and testing malformed image metadata, decode
     arrays, encoded decode defaults, indexed-table edge cases, unsupported raw
-    spaces, JBIG2 globals, and private decode math. A refreshed coverage pass
-    reports 168 uncovered lines in 3 files: the template executable
-    `cmd/main`, plus remaining branches in function and text handling.
+    spaces, JBIG2 globals, and private decode math. Function coverage now
+    removes `pdf_fun.mbt` from the uncovered-line report by exercising sampled
+    function option/default/error paths, interpolation and stitching dictionary
+    validation, calculator parser errors, calculator evaluator stack/type
+    errors, and private sampled/stitching guard paths. A refreshed coverage
+    pass reports 83 uncovered lines in 2 files: the template executable
+    `cmd/main`, plus remaining branches in text handling.
 
 ## Update Discipline
 
