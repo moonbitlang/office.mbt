@@ -2365,6 +2365,45 @@ test "PdfTextExtractor extracts implicit Symbol punctuation and variant glyphs" 
 }
 
 ///|
+test "PdfTextExtractor extracts implicit Symbol special glyphs" {
+  let symbol_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfSymbol, PdfImplicitInFontFile),
+  )
+  let extractor = symbol_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xA2, 0xA4, 0xA6, 0xAF, 0xBD, 0xBE, 0xBF, 0xD2, 0xD3, 0xD4, 0xDD, 0xE1, 0xE2,
+    0xE3, 0xE4, 0xF1,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x2032, 0x2044, 0x0192, 0x2193, 0xF8E6, 0xF8E7, 0x21B5, 0xF6DA, 0xF6D9, 0xF6DB,
+    0x21D1, 0x2329, 0xF8E8, 0xF8E9, 0xF8EA, 0x232A,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/minute"),
+    text_name_for_test("/fraction"),
+    text_name_for_test("/florin"),
+    text_name_for_test("/arrowdown"),
+    text_name_for_test("/arrowvertex"),
+    text_name_for_test("/arrowhorizex"),
+    text_name_for_test("/carriagereturn"),
+    text_name_for_test("/registerserif"),
+    text_name_for_test("/copyrightserif"),
+    text_name_for_test("/trademarkserif"),
+    text_name_for_test("/arrowdblup"),
+    text_name_for_test("/angleleft"),
+    text_name_for_test("/registersans"),
+    text_name_for_test("/copyrightsans"),
+    text_name_for_test("/trademarksans"),
+    text_name_for_test("/angleright"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2032), Some(0xA2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2193), Some(0xAF))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF8E6), Some(0xBD))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x21D1), Some(0xDD))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x232A), Some(0xF1))
+}
+
+///|
 test "PdfTextExtractor extracts implicit ZapfDingbats glyphs" {
   let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),
