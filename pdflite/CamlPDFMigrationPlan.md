@@ -501,7 +501,10 @@ MoonBit consequences for this project:
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     deferred-stream guards and by replacing impossible map-key `None` arms with
-    explicit key-invariant unwraps.
+    explicit key-invariant unwraps. Parser and page-label coverage now remove
+    those files from the uncovered-line report by replacing impossible parser
+    progress checks and non-empty page-label no-break arms with simpler
+    invariant-preserving control flow.
 
 ## Update Discipline
 

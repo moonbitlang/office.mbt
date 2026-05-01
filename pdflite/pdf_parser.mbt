@@ -12,17 +12,17 @@ fn pdf_skip_comments(lexemes : ArrayView[PdfLexeme], index : Int) -> Int {
 }
 
 ///|
-fn pdf_lexemes_have_indirect_reference(
+fn pdf_lexeme_indirect_reference_number(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
-) -> Bool {
+) -> Int? {
   if index + 2 < lexemes.length() {
     match (lexemes[index], lexemes[index + 1], lexemes[index + 2]) {
-      (LexInt(_), LexInt(_), LexR) => true
-      _ => false
+      (LexInt(object_number), LexInt(_), LexR) => Some(object_number)
+      _ => None
     }
   } else {
-    false
+    None
   }
 }
 
@@ -46,9 +46,6 @@ fn pdf_parse_array_at(
         }
         _ => {
           let (value, next) = pdf_parse_value_at(lexemes, current)
-          if next <= current {
-            raise ParseArrayMalformed
-          }
           values.push(value)
           current = next
         }
@@ -150,23 +147,20 @@ fn pdf_parse_value_at(
   if current >= lexemes.length() {
     raise ParseObjectExpected
   }
-  if pdf_lexemes_have_indirect_reference(lexemes, current) {
-    match lexemes[current] {
-      LexInt(object_number) => (PdfIndirect(object_number), current + 3)
-      _ => raise ParseObjectExpected
-    }
-  } else {
-    match lexemes[current] {
-      LexNull => (PdfNull, current + 1)
-      LexBool(value) => (PdfBoolean(value), current + 1)
-      LexInt(value) => (PdfInteger(value), current + 1)
-      LexReal(value) => (PdfReal(value), current + 1)
-      LexString(value) => (PdfString(value), current + 1)
-      LexName(value) => (PdfNameObject(value), current + 1)
-      LexLeftSquare => pdf_parse_array_at(lexemes, current + 1)
-      LexLeftDict => pdf_parse_dictionary_at(lexemes, current + 1)
-      _ => raise ParseObjectExpected
-    }
+  match pdf_lexeme_indirect_reference_number(lexemes, current) {
+    Some(object_number) => (PdfIndirect(object_number), current + 3)
+    None =>
+      match lexemes[current] {
+        LexNull => (PdfNull, current + 1)
+        LexBool(value) => (PdfBoolean(value), current + 1)
+        LexInt(value) => (PdfInteger(value), current + 1)
+        LexReal(value) => (PdfReal(value), current + 1)
+        LexString(value) => (PdfString(value), current + 1)
+        LexName(value) => (PdfNameObject(value), current + 1)
+        LexLeftSquare => pdf_parse_array_at(lexemes, current + 1)
+        LexLeftDict => pdf_parse_dictionary_at(lexemes, current + 1)
+        _ => raise ParseObjectExpected
+      }
   }
 }
 
@@ -180,9 +174,6 @@ pub fn pdf_parse_lexemes(
     current = pdf_skip_comments(lexemes, current)
     if current < lexemes.length() {
       let (object, next) = pdf_parse_value_at(lexemes, current)
-      if next <= current {
-        raise ParseObjectExpected
-      }
       objects.push(object)
       current = next
     }
@@ -296,9 +287,6 @@ pub fn pdf_parse_indirect_objects(
     current = pdf_skip_comments(lexemes, current)
     if current < lexemes.length() {
       let (object, next) = pdf_parse_indirect_object_at(lexemes, current)
-      if next <= current {
-        raise ParseIndirectObjectExpected
-      }
       objects.push(object)
       current = next
     }
@@ -321,9 +309,6 @@ fn pdf_parse_indirect_object_segments(
         lexemes, current,
       )
       if complete {
-        if next <= current {
-          raise ParseIndirectObjectExpected
-        }
         objects.push(object)
         current = next
       } else {

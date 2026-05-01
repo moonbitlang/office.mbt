@@ -294,14 +294,15 @@ pub fn pdf_page_label_of_page_number(
   if labels.length() == 0 {
     None
   } else {
-    for index in 0..<labels.length() {
-      if index + 1 == labels.length() ||
-        page_number < labels[index + 1].start_page {
-        break Some(pdf_page_label_of_single(page_number, labels[index]))
+    let mut label = labels[0]
+    for index in 1..<labels.length() {
+      if page_number < labels[index].start_page {
+        break
+      } else {
+        label = labels[index]
       }
-    } nobreak {
-      None
     }
+    Some(pdf_page_label_of_single(page_number, label))
   }
 }
 
@@ -313,14 +314,15 @@ pub fn pdf_page_label_text_of_page_number(
   if labels.length() == 0 {
     None
   } else {
-    for index in 0..<labels.length() {
-      if index + 1 == labels.length() ||
-        page_number < labels[index + 1].start_page {
-        break Some(pdf_page_label_text_of_single(page_number, labels[index]))
+    let mut label = labels[0]
+    for index in 1..<labels.length() {
+      if page_number < labels[index].start_page {
+        break
+      } else {
+        label = labels[index]
       }
-    } nobreak {
-      None
     }
+    Some(pdf_page_label_text_of_single(page_number, label))
   }
 }
 
@@ -358,13 +360,9 @@ pub fn pdf_page_label_merge(
   for index in 0..<pdfs.length() {
     let source_labels = pdf_page_label_complete(pdfs[index].read_page_labels())
     for page_number in ranges[index] {
-      match pdf_page_label_of_page_number(page_number, source_labels) {
-        Some(label) => {
-          labels.push({ ..label, start_page: merged_page })
-          merged_page += 1
-        }
-        None => raise PageTreeExpected
-      }
+      let label = pdf_page_label_of_page_number(page_number, source_labels).unwrap()
+      labels.push({ ..label, start_page: merged_page })
+      merged_page += 1
     }
   }
   pdf_page_label_coalesce(labels)
