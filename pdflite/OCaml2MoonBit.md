@@ -75,6 +75,20 @@ Parentheses can work in a one-off snippet, but `moon fmt` may remove them in
 source files and reintroduce parser/name-resolution ambiguity.
 
 ```sh
+moon run -c 'priv enum Section { NoneSection; ActiveSection }
+fn choose(flag : Bool) -> Section { if flag { ActiveSection } else { NoneSection } }
+fn main { match choose(true) { ActiveSection => println("active"); NoneSection => println("none") } }'
+# active
+```
+
+Use `priv enum` for internal helper variants that should not appear in the
+package interface. This avoids visibility warnings when `moon check
+--warn-list +73` or the project warning profile complains that a helper type is
+not part of the public signature. In one-line probes, separate enum variants
+with semicolons; in source files, normal block-style variant lines work after
+`moon fmt`.
+
+```sh
 moon run -c 'fn main { let empty = Bytes::new(0); let zeros = Bytes::new(2); println(empty.length()); println(zeros.length()); println(zeros[0].to_int()) }'
 # 0
 # 2

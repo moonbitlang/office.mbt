@@ -398,8 +398,9 @@ MoonBit consequences for this project:
    optional object-number placement. Font descriptors now carry an optional
    typed ToUnicode map, and TrueType font writing can emit the same simple
    `/ToUnicode` CMap stream shape as CamlPDF when that map is present. Reading
-   that simple uncompressed single-code `beginbfrange` CMap shape is also
-   started and attaches the parsed map to simple or CID font descriptors.
+   simple uncompressed `beginbfchar` CMaps and sequential `beginbfrange` CMaps
+   is also started and attaches the parsed map to simple or CID font
+   descriptors.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
    and `/Identity-H` CID text, including decoded glyph records, glyph-name
    extraction, flattened codepoint extraction, and reverse ToUnicode charcode

@@ -1786,6 +1786,65 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
 }
 
 ///|
+test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
+  let doc = @pdflite.pdf_document_empty()
+  let tounicode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(
+      @ascii.encode(
+        "1 begincodespacerange\n" +
+        "<00><FF>\n" +
+        "endcodespacerange\n" +
+        "2 beginbfchar\n" +
+        "<21><0041>\n" +
+        "<25><20AC>\n" +
+        "endbfchar\n" +
+        "1 beginbfrange\n" +
+        "<22><24><0042>\n" +
+        "endbfrange\n",
+      ),
+    ),
+  )
+  doc.add_object_given_number(2, tounicode)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(2)),
+  ])
+  guard (try! doc.read_font(font)) is PdfFontSimple(read) else {
+    fail("expected simple font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (33, text_bytes_for_test([0x00, 0x41])),
+      (37, text_bytes_for_test([0x20, 0xAC])),
+      (34, text_bytes_for_test([0x00, 0x42])),
+      (35, text_bytes_for_test([0x00, 0x43])),
+      (36, text_bytes_for_test([0x00, 0x44])),
+    ]),
+  )
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([33, 34, 35, 36, 37, 38])[:],
+    ),
+    [0x41, 0x42, 0x43, 0x44, 0x20AC, 38],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(37))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x45), None)
+}
+
+///|
 test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
   let cid_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/Top"),
