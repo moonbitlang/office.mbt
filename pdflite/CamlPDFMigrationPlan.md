@@ -368,8 +368,10 @@ MoonBit consequences for this project:
    colourant names, alternate spaces, raw tint-transform objects, and DeviceN
    attributes. `pdfjpeg` is started with a byte-cursor helper that extracts JPEG
    data through the `FF D9` EOI marker while leaving following bytes unread.
-   Full `Pdffun` tint-transform evaluation, image extraction, and JPEG decoding
-   remain deferred.
+   `pdfimage` is started with typed image result and pixel-layout enums plus
+   image `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
+   including image-mask defaults. Full `Pdffun` tint-transform evaluation,
+   image pixel extraction, and JPEG decoding remain deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

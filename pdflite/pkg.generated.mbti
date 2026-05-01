@@ -627,6 +627,8 @@ pub fn PdfDocument::endpage_fast(Self) -> Int raise PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfDocument::first_xref(Self) -> Int
 pub fn PdfDocument::get_number(Self, PdfObject) -> Double raise PdfError
+pub fn PdfDocument::image_bits_per_component(Self, PdfObject) -> PdfObject?
+pub fn PdfDocument::image_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace raise PdfError
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> PdfObject?
@@ -678,6 +680,13 @@ pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise PdfError
+
+pub(all) enum PdfImage {
+  PdfJPEG(Bytes, Array[Double]?)
+  PdfJPEG2000(Bytes, Array[Double]?)
+  PdfJBIG2(Bytes, Array[Double]?, Int?)
+  PdfRawImage(Int, Int, PdfPixelLayout, Bytes)
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfLexeme {
   LexNull
@@ -864,6 +873,13 @@ pub(all) struct PdfParsedIndirectObject {
   number : Int
   generation : Int
   object : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPixelLayout {
+  PdfBPP1
+  PdfBPP8
+  PdfBPP24
+  PdfBPP48
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfRectangle {
