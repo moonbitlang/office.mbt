@@ -698,8 +698,9 @@ MoonBit consequences for this project:
     stream-returning decoder for ToUnicode streams, simplifying CMap marker
     extraction, and covering malformed encodings, font descriptors, CID widths,
     ToUnicode CMap parser guards, glyph fallback paths, and UTF-8 failure
-    modes. A refreshed coverage pass reports 1 uncovered line in 1 file: the
-    template executable `cmd/main`.
+    modes. The unused template `cmd/main` executable was removed rather than
+    testing placeholder `Hello` output. A refreshed coverage pass reports no
+    uncovered lines.
 
 ## Update Discipline
 

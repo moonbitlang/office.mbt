@@ -1,7 +1,0 @@
-// import {
-//   "bobzhang/pdflite" @lib,
-// }
-
-options(
-  "is-main": true,
-)
