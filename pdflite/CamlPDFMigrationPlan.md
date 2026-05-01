@@ -475,7 +475,10 @@ MoonBit consequences for this project:
     malformed annotation dictionaries, missing annotation arrays, bad existing
     annotation arrays, non-array quadpoint transform preservation, rect-only
     annotation transforms, private annotation rest validation, and the private
-    bookmark outline root guard.
+    bookmark outline root guard. Structure trimming coverage now includes
+    `/Obj`-based child pruning that removes now-empty parent `/K` arrays, plus
+    private survival-helper checks for `/Pg`, direct non-indirect `/K` items,
+    and non-dictionary structure values.
 
 ## Update Discipline
 

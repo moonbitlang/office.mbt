@@ -177,3 +177,19 @@ test "private annotation and bookmark guards report malformed roots" {
     fail("expected RootExpected")
   }
 }
+
+///|
+test "private structure survival helpers cover direct cases" {
+  let key_pg = pdf_structure_pg_key()
+  let doc = pdf_document_empty()
+  doc.add_object_given_number(
+    50,
+    PdfDictionary([
+      (key_pg, PdfIndirect(2)),
+      (pdf_structure_k_key(), PdfInteger(0)),
+    ]),
+  )
+  @test.assert_eq(doc.pdf_structure_indirect_survives(50, [2]), false)
+  @test.assert_eq(doc.pdf_structure_k_item_survives(PdfInteger(1), [2]), true)
+  @test.assert_eq(doc.pdf_structure_filtered_k_value(PdfInteger(1), [2]), None)
+}
