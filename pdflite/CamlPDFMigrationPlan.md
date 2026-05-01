@@ -385,7 +385,9 @@ MoonBit consequences for this project:
    CID system info, predefined and indirect CMap encodings, descendant font
    descriptors, horizontal `/W` widths, vertical `/W2` widths, and default CID
    widths. The `Identity-H` predicate is also started over the typed CMap
-   encoding model. ToUnicode CMap parsing remains deferred.
+   encoding model. Font-writing groundwork is started with custom encoding
+   dictionary emission and a Type1 font dictionary helper for predefined
+   encodings. ToUnicode CMap parsing remains deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

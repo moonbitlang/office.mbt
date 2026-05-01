@@ -1229,6 +1229,46 @@ pub fn PdfDocument::read_font(
 }
 
 ///|
+pub fn PdfDocument::write_encoding(
+  self : PdfDocument,
+  encoding : PdfEncoding,
+) -> Int raise PdfError {
+  match encoding {
+    PdfCustomEncoding(PdfImplicitInFontFile, differences) => {
+      let values : Array[PdfObject] = []
+      for difference in differences {
+        values.push(PdfInteger(difference.code))
+        values.push(PdfNameObject(difference.name))
+      }
+      self.add_object(
+        PdfDictionary([
+          (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Encoding"))),
+          (pdf_text_name("/Differences"), PdfArray(values)),
+        ]),
+      )
+    }
+    _ => raise EncodingWriteUnsupported
+  }
+}
+
+///|
+pub fn pdf_make_font(
+  fontname : PdfName,
+  encoding : PdfEncoding,
+) -> PdfObject raise PdfError {
+  match encoding.pdf_name() {
+    Some(encoding_name) =>
+      PdfDictionary([
+        (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
+        (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/Type1"))),
+        (pdf_text_name("/Encoding"), PdfNameObject(encoding_name)),
+        (pdf_text_name("/BaseFont"), PdfNameObject(fontname)),
+      ])
+    None => raise EncodingWriteUnsupported
+  }
+}
+
+///|
 pub fn pdf_is_unicode_string(bytes : BytesView) -> Bool {
   bytes.length() >= 2 && bytes[0].to_int() == 0xFE && bytes[1].to_int() == 0xFF
 }

@@ -1290,3 +1290,68 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected CMapEncodingExpected")
   }
 }
+
+///|
+test "PdfDocument write_encoding writes custom differences" {
+  let doc = @pdflite.pdf_document_empty()
+  let number = try! doc.write_encoding(
+    PdfCustomEncoding(PdfImplicitInFontFile, [
+      text_difference_for_test("/A", 65),
+      text_difference_for_test("/B", 66),
+    ]),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(number),
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Type"),
+        PdfNameObject(text_name_for_test("/Encoding")),
+      ),
+      (
+        text_name_for_test("/Differences"),
+        PdfArray([
+          PdfInteger(65),
+          PdfNameObject(text_name_for_test("/A")),
+          PdfInteger(66),
+          PdfNameObject(text_name_for_test("/B")),
+        ]),
+      ),
+    ]),
+  )
+  let unsupported = try? doc.write_encoding(PdfWinAnsiEncoding)
+  guard unsupported is Err(EncodingWriteUnsupported) else {
+    fail("expected EncodingWriteUnsupported")
+  }
+}
+
+///|
+test "pdf_make_font builds Type1 font dictionaries" {
+  @test.assert_eq(
+    try! @pdflite.pdf_make_font(
+      text_name_for_test("/Helvetica"),
+      PdfWinAnsiEncoding,
+    ),
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Type"), PdfNameObject(text_name_for_test("/Font"))),
+      (
+        text_name_for_test("/Subtype"),
+        PdfNameObject(text_name_for_test("/Type1")),
+      ),
+      (
+        text_name_for_test("/Encoding"),
+        PdfNameObject(text_name_for_test("/WinAnsiEncoding")),
+      ),
+      (
+        text_name_for_test("/BaseFont"),
+        PdfNameObject(text_name_for_test("/Helvetica")),
+      ),
+    ]),
+  )
+  let custom = try? @pdflite.pdf_make_font(
+    text_name_for_test("/Custom"),
+    PdfCustomEncoding(PdfImplicitInFontFile, []),
+  )
+  guard custom is Err(EncodingWriteUnsupported) else {
+    fail("expected EncodingWriteUnsupported")
+  }
+}

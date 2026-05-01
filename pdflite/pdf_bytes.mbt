@@ -50,6 +50,7 @@ pub(all) suberror PdfError {
   InvalidPDFDocEncoding(Int)
   EncodingExpected
   EncodingDifferencesMalformed
+  EncodingWriteUnsupported
   FontSubtypeExpected
   FontFlagsExpected
   StandardFontExpected
