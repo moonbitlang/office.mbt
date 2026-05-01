@@ -3889,6 +3889,37 @@ fn PdfFont::pdf_text_glyphname_has_single_codepoint(
 }
 
 ///|
+fn PdfEncoding::pdf_text_has_macexpert_base(self : PdfEncoding) -> Bool {
+  match self {
+    PdfMacExpertEncoding => true
+    PdfCustomEncoding(base, _) => base.pdf_text_has_macexpert_base()
+    PdfFillUndefinedWithStandard(base) => base.pdf_text_has_macexpert_base()
+    _ => false
+  }
+}
+
+///|
+fn PdfFont::pdf_text_has_macexpert_base(self : PdfFont) -> Bool {
+  match self {
+    PdfFontStandard(data) => data.encoding.pdf_text_has_macexpert_base()
+    PdfFontSimple(font) => font.encoding.pdf_text_has_macexpert_base()
+    PdfFontCIDKeyed(_) => false
+  }
+}
+
+///|
+fn PdfFont::pdf_text_macexpert_duplicate_charcode(
+  self : PdfFont,
+  codepoint : Int,
+) -> Int? {
+  if codepoint == 0xF6E6 && self.pdf_text_has_macexpert_base() {
+    Some(0x5F)
+  } else {
+    None
+  }
+}
+
+///|
 fn pdf_text_notdef_name() -> PdfName {
   pdf_text_name(".notdef")
 }
@@ -4013,7 +4044,7 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
           _ => ()
         }
       } nobreak {
-        None
+        self.font.pdf_text_macexpert_duplicate_charcode(codepoint)
       }
   }
 }

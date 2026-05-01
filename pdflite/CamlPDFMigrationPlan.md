@@ -524,9 +524,10 @@ MoonBit consequences for this project:
    the gapped final arrow tail, and the remaining bracket glyph names from
    CamlPDF's dingbat Unicode map.
    Broader predefined/general `pdfcmap` parsing and full Adobe Glyph List
-   coverage remain deferred. MacExpert byte coverage now matches CamlPDF's table except the
-   duplicate `/hyphensuperior` alias for byte `0x5F`; glyph-name decoding still
-   handles both `/hypheninferior` and `/hyphensuperior`.
+   coverage remain deferred. MacExpert byte coverage now matches CamlPDF's table
+   for forward extraction, and reverse charcode lookup also honors CamlPDF's
+   duplicate `/hyphensuperior` alias for byte `0x5F` while byte extraction keeps
+   `/hypheninferior` as the primary glyph name.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

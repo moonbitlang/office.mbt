@@ -2715,6 +2715,7 @@ test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
     [text_name_for_test(".notdef")],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), None)
   let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00])[:])
   guard odd is Err(BadText) else { fail("expected BadText") }
 }
@@ -3543,6 +3544,56 @@ test "PdfTextExtractor extracts MacExpert superior and inferior punctuation and 
 
 ///|
 test "PdfTextExtractor decodes MacExpert hyphensuperior glyph names" {
+  let base_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let base_extractor = base_font.text_extractor()
+  @test.assert_eq(
+    try! base_extractor.codepoints_of_text(text_bytes_for_test([0x5F])[:]),
+    [0xF6E5],
+  )
+  @test.assert_eq(base_extractor.charcode_of_codepoint(0xF6E6), Some(0x5F))
+  let standard_base_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfStandardEncoding),
+  )
+  @test.assert_eq(
+    standard_base_font.text_extractor().charcode_of_codepoint(0xF6E6),
+    None,
+  )
+  let custom_base_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfMacExpertEncoding, []),
+    ),
+  )
+  @test.assert_eq(
+    custom_base_font.text_extractor().charcode_of_codepoint(0xF6E6),
+    Some(0x5F),
+  )
+  let filled_base_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfFillUndefinedWithStandard(PdfMacExpertEncoding),
+    ),
+  )
+  @test.assert_eq(
+    filled_base_font.text_extractor().charcode_of_codepoint(0xF6E6),
+    Some(0x5F),
+  )
+  let simple_base_font : @pdflite.PdfFont = PdfFontSimple({
+    fonttype: PdfType1,
+    basefont: None,
+    firstchar: 0,
+    lastchar: 0,
+    widths: [],
+    fontdescriptor: None,
+    fontmetrics: None,
+    encoding: PdfMacExpertEncoding,
+  })
+  @test.assert_eq(
+    simple_base_font.text_extractor().charcode_of_codepoint(0xF6E6),
+    Some(0x5F),
+  )
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
       PdfHelvetica,
