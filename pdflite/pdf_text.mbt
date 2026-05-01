@@ -1757,6 +1757,35 @@ fn pdf_text_standard_glyphname(code : Int) -> PdfName? {
 }
 
 ///|
+fn pdf_text_macroman_glyphname(code : Int) -> PdfName? {
+  match pdf_text_basic_latin_glyphname(code, false) {
+    Some(name) => Some(name)
+    None =>
+      match code {
+        0x80 => Some(pdf_text_name("/Adieresis"))
+        0x81 => Some(pdf_text_name("/Aring"))
+        0x82 => Some(pdf_text_name("/Ccedilla"))
+        0x83 => Some(pdf_text_name("/Eacute"))
+        0x84 => Some(pdf_text_name("/Ntilde"))
+        0x85 => Some(pdf_text_name("/Odieresis"))
+        0x86 => Some(pdf_text_name("/Udieresis"))
+        0x87 => Some(pdf_text_name("/aacute"))
+        0x88 => Some(pdf_text_name("/agrave"))
+        0x89 => Some(pdf_text_name("/acircumflex"))
+        0x8A => Some(pdf_text_name("/adieresis"))
+        0x8B => Some(pdf_text_name("/atilde"))
+        0x8C => Some(pdf_text_name("/aring"))
+        0x8D => Some(pdf_text_name("/ccedilla"))
+        0x8E => Some(pdf_text_name("/eacute"))
+        0x8F => Some(pdf_text_name("/egrave"))
+        0x90 => Some(pdf_text_name("/ecircumflex"))
+        0x91 => Some(pdf_text_name("/edieresis"))
+        _ => None
+      }
+  }
+}
+
+///|
 fn pdf_text_winansi_glyphname(code : Int) -> PdfName? {
   match pdf_text_basic_latin_glyphname(code, false) {
     Some(name) => Some(name)
@@ -1818,7 +1847,7 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
   match self {
     PdfImplicitInFontFile | PdfMacExpertEncoding => None
     PdfStandardEncoding => pdf_text_standard_glyphname(code)
-    PdfMacRomanEncoding => pdf_text_basic_latin_glyphname(code, false)
+    PdfMacRomanEncoding => pdf_text_macroman_glyphname(code)
     PdfWinAnsiEncoding => pdf_text_winansi_glyphname(code)
     PdfCustomEncoding(base, differences) =>
       match pdf_text_difference_glyphname(differences, code) {
@@ -1903,6 +1932,23 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
     "/periodcentered" => Some(0x00B7)
     "/paragraph" => Some(0x00B6)
     "/questiondown" => Some(0x00BF)
+    "/Adieresis" => Some(0x00C4)
+    "/Aring" => Some(0x00C5)
+    "/Ccedilla" => Some(0x00C7)
+    "/Eacute" => Some(0x00C9)
+    "/Ntilde" => Some(0x00D1)
+    "/Odieresis" => Some(0x00D6)
+    "/Udieresis" => Some(0x00DC)
+    "/aacute" => Some(0x00E1)
+    "/agrave" => Some(0x00E0)
+    "/acircumflex" => Some(0x00E2)
+    "/adieresis" => Some(0x00E4)
+    "/atilde" => Some(0x00E3)
+    "/aring" => Some(0x00E5)
+    "/ccedilla" => Some(0x00E7)
+    "/egrave" => Some(0x00E8)
+    "/ecircumflex" => Some(0x00EA)
+    "/edieresis" => Some(0x00EB)
     "/quotesinglbase" => Some(0x201A)
     "/florin" => Some(0x0192)
     "/quotedblbase" => Some(0x201E)
@@ -1977,6 +2023,23 @@ fn pdf_text_codepoint_to_basic_glyphname(codepoint : Int) -> PdfName? {
       0x00B7 => Some(pdf_text_name("/periodcentered"))
       0x00B6 => Some(pdf_text_name("/paragraph"))
       0x00BF => Some(pdf_text_name("/questiondown"))
+      0x00C4 => Some(pdf_text_name("/Adieresis"))
+      0x00C5 => Some(pdf_text_name("/Aring"))
+      0x00C7 => Some(pdf_text_name("/Ccedilla"))
+      0x00C9 => Some(pdf_text_name("/Eacute"))
+      0x00D1 => Some(pdf_text_name("/Ntilde"))
+      0x00D6 => Some(pdf_text_name("/Odieresis"))
+      0x00DC => Some(pdf_text_name("/Udieresis"))
+      0x00E1 => Some(pdf_text_name("/aacute"))
+      0x00E0 => Some(pdf_text_name("/agrave"))
+      0x00E2 => Some(pdf_text_name("/acircumflex"))
+      0x00E4 => Some(pdf_text_name("/adieresis"))
+      0x00E3 => Some(pdf_text_name("/atilde"))
+      0x00E5 => Some(pdf_text_name("/aring"))
+      0x00E7 => Some(pdf_text_name("/ccedilla"))
+      0x00E8 => Some(pdf_text_name("/egrave"))
+      0x00EA => Some(pdf_text_name("/ecircumflex"))
+      0x00EB => Some(pdf_text_name("/edieresis"))
       0x201A => Some(pdf_text_name("/quotesinglbase"))
       0x0192 => Some(pdf_text_name("/florin"))
       0x201E => Some(pdf_text_name("/quotedblbase"))

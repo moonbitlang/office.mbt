@@ -1966,6 +1966,37 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacRoman accented glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([0x80, 0x81, 0x82, 0x83, 0x87, 0x8E])[:],
+    ),
+    [0x00C4, 0x00C5, 0x00C7, 0x00C9, 0x00E1, 0x00E9],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([0x80, 0x81, 0x82, 0x83, 0x87, 0x8E])[:],
+    ),
+    [
+      text_name_for_test("/Adieresis"),
+      text_name_for_test("/Aring"),
+      text_name_for_test("/Ccedilla"),
+      text_name_for_test("/Eacute"),
+      text_name_for_test("/aacute"),
+      text_name_for_test("/eacute"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C4), Some(0x80))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00C9), Some(0x83))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00E1), Some(0x87))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00E9), Some(0x8E))
+}
+
+///|
 test "PdfTextExtractor extracts WinAnsi glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
