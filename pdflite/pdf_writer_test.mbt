@@ -419,6 +419,50 @@ test "pdf_write_document_with_xref_stream round trips through public reader" {
 }
 
 ///|
+test "pdf_write_document_incremental_update_with_xref_stream appends xref streams" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 5)
+  document.set_root(1)
+  let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
+  document.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+  )
+  let original = try! @pdflite.pdf_write_document_with_xref_stream(document)
+  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+  let updated = original_parsed.copy()
+  let updated_catalog = @pdflite.pdf_dictionary([
+    (value_name, PdfInteger(2)),
+    (writer_name_for_test([47, 78, 101, 119]), PdfIndirect(2)),
+  ])
+  updated.add_object_given_number(1, updated_catalog)
+  updated.add_object_given_number(2, PdfInteger(42))
+  let rendered = try! @pdflite.pdf_write_document_incremental_update_with_xref_stream(
+    original, updated,
+  )
+  @test.assert_eq(rendered.length() > original.length(), true)
+  @test.assert_eq(writer_bytes_start_with_at(rendered, original, 0), true)
+  @test.assert_eq(
+    writer_find_bytes(
+      rendered,
+      writer_ascii_for_test("/Prev " + original_parsed.first_xref().to_string()),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    writer_find_bytes(rendered, writer_ascii_for_test("/XRef")) > 0,
+    true,
+  )
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(reparsed.version(), (1, 5))
+  @test.assert_eq(reparsed.first_xref() > original.length(), true)
+  @test.assert_eq(reparsed.object_numbers(), [1, 2])
+  @test.assert_eq(reparsed.lookup_object_or_null(1), updated_catalog)
+  @test.assert_eq(reparsed.lookup_object_or_null(2), PdfInteger(42))
+}
+
+///|
 test "pdf_write_document_with_compressed_xref_stream uses Flate and round trips" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)

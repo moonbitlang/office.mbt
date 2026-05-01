@@ -403,9 +403,14 @@ fn pdf_reader_short_decodeparms_name() -> PdfName {
 }
 
 ///|
-fn pdf_reader_int_array_contains(values : ArrayView[Int], value : Int) -> Bool {
+fn pdf_reader_xref_stream_refs_contain(
+  values : ArrayView[(Int, Int)],
+  object_number : Int,
+  offset : Int,
+) -> Bool {
   for item in values {
-    if item == value {
+    let (xref_object_number, xref_offset) = item
+    if xref_object_number == object_number && xref_offset == offset {
       break true
     }
   } nobreak {
@@ -1080,7 +1085,7 @@ pub fn pdf_read_classic_document_from_bytes(
   let xref_position = pdf_read_startxref_position(cursor.data)
   let xrefs : Array[PdfClassicXRefEntry] = []
   let mut trailer = PdfDictionary([])
-  let xref_stream_objects : Array[Int] = []
+  let xref_stream_refs : Array[(Int, Int)] = []
   let mut current_xref = xref_position
   let mut done = false
   let mut depth = 0
@@ -1092,7 +1097,7 @@ pub fn pdf_read_classic_document_from_bytes(
     let section = cursor.read_pdf_xref_section()
     pdf_classic_xrefs_add_newer_first(xrefs, section.entries)
     match section.stream_object_number {
-      Some(number) => xref_stream_objects.push(number)
+      Some(number) => xref_stream_refs.push((number, current_xref))
       None => ()
     }
     let current_trailer = section.trailer
@@ -1104,7 +1109,9 @@ pub fn pdf_read_classic_document_from_bytes(
         cursor.seek_pdf_absolute(xref_stream_position)
         let stream_section = cursor.read_pdf_xref_stream_section()
         pdf_classic_xrefs_add_newer_first(xrefs, stream_section.entries)
-        xref_stream_objects.push(stream_section.stream_object_number.unwrap())
+        xref_stream_refs.push(
+          (stream_section.stream_object_number.unwrap(), xref_stream_position),
+        )
       }
       None => ()
     }
@@ -1125,9 +1132,10 @@ pub fn pdf_read_classic_document_from_bytes(
       None =>
         if xref.in_use &&
           xref.object_number != 0 &&
-          !pdf_reader_int_array_contains(
-            xref_stream_objects[:],
+          !pdf_reader_xref_stream_refs_contain(
+            xref_stream_refs[:],
             xref.object_number,
+            xref.offset,
           ) {
           cursor.seek_pdf_absolute(xref.offset)
           let parsed = cursor.read_first_indirect_object_at_current(xrefs)

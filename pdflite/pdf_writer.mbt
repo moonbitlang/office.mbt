@@ -735,14 +735,23 @@ fn pdf_writer_xref_stream_data(
 fn pdf_writer_xref_stream_trailer(
   document : PdfDocument,
   size : Int,
+  previous_xref : Int?,
 ) -> PdfObject raise PdfError {
-  pdf_writer_trailer_dictionary(document)
-  .add_dict_entry(pdf_writer_type_name(), PdfNameObject(pdf_writer_xref_name()))
-  .add_dict_entry(pdf_writer_size_name(), PdfInteger(size))
-  .add_dict_entry(
-    pdf_writer_w_name(),
-    PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
-  )
+  let trailer = pdf_writer_trailer_dictionary(document)
+    .add_dict_entry(
+      pdf_writer_type_name(),
+      PdfNameObject(pdf_writer_xref_name()),
+    )
+    .add_dict_entry(pdf_writer_size_name(), PdfInteger(size))
+    .add_dict_entry(
+      pdf_writer_w_name(),
+      PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+    )
+  match previous_xref {
+    Some(previous) =>
+      trailer.add_dict_entry(pdf_writer_prev_name(), PdfInteger(previous))
+    None => trailer
+  }
 }
 
 ///|
@@ -768,7 +777,7 @@ fn pdf_write_document_with_xref_stream_filter(
     xref_stream_offset,
   )
   let stream = pdf_stream(
-    pdf_writer_xref_stream_trailer(document, size).add_dict_entry(
+    pdf_writer_xref_stream_trailer(document, size, None).add_dict_entry(
       pdf_writer_length_name(),
       PdfInteger(xref_data.length()),
     ),
@@ -797,6 +806,48 @@ pub fn pdf_write_document_with_xref_stream(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   pdf_write_document_with_xref_stream_filter(document, None)
+}
+
+///|
+pub fn pdf_write_document_incremental_update_with_xref_stream(
+  original : PdfBytes,
+  document : PdfDocument,
+) -> PdfBytes raise PdfError {
+  let previous_xref = pdf_read_startxref_position(original[:])
+  let output : Array[Byte] = []
+  for byte in original {
+    output.push(byte)
+  }
+  pdf_writer_push_byte(output, 10)
+  let xrefs = pdf_writer_write_document_objects(output, document)
+  let xref_stream_offset = output.length()
+  let xref_stream_number = document.objects.max_object_number() + 1
+  let size = xref_stream_number + 1
+  let xref_data = pdf_writer_xref_stream_data(
+    xrefs[:],
+    size,
+    xref_stream_number,
+    xref_stream_offset,
+  )
+  let xref_object = pdf_stream(
+    pdf_writer_xref_stream_trailer(document, size, Some(previous_xref)).add_dict_entry(
+      pdf_writer_length_name(),
+      PdfInteger(xref_data.length()),
+    ),
+    StreamGot(xref_data),
+  )
+  pdf_writer_push_view(
+    output,
+    pdf_write_indirect_object({
+      number: xref_stream_number,
+      generation: 0,
+      object: xref_object,
+    })[:],
+  )
+  pdf_writer_push_ascii(output, "startxref\n")
+  pdf_writer_push_ascii(output, xref_stream_offset.to_string())
+  pdf_writer_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
 }
 
 ///|
