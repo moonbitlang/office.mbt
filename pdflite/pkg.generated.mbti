@@ -943,6 +943,7 @@ pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[PdfName]) -> PdfObje
 pub fn PdfDocument::lookup_direct(Self, PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
+pub fn PdfDocument::merge_content_streams(Self) -> Unit raise PdfError
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
 pub fn PdfDocument::page_number_of_target(Self, PdfDestination) -> Int raise PdfError

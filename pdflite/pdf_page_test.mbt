@@ -70,6 +70,17 @@ fn page_hello_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn page_raw_stream_for_test(text : String) -> @pdflite.PdfObject {
+  let data = @ascii.encode(text)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (page_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
 fn page_hello_resources_for_test() -> @pdflite.PdfObject {
   let key_font = page_name_for_test("/Font")
   let key_type = page_name_for_test("/Type")
@@ -768,6 +779,137 @@ test "PdfDocument add_prefix rewrites shared content streams once" {
   try! doc.add_prefix("p")
   @test.assert_eq(try! doc.parse_content_ops([PdfIndirect(9)]), [
     Op_Tf(page_name_for_test("/pF0"), 12.0),
+  ])
+}
+
+///|
+test "PdfDocument merge_content_streams combines page content arrays" {
+  let key_type = page_name_for_test("/Type")
+  let key_contents = page_name_for_test("/Contents")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_contents, PdfArray([PdfIndirect(2), PdfIndirect(3)])),
+    ]),
+  )
+  doc.add_object_given_number(2, page_raw_stream_for_test("BT"))
+  doc.add_object_given_number(3, page_raw_stream_for_test("ET"))
+  try! doc.merge_content_streams()
+  guard doc.lookup_object_or_null(1).lookup_immediate(key_contents)
+    is Some(PdfIndirect(merged)) else {
+    fail("expected merged content stream")
+  }
+  @test.assert_eq(merged == 2 || merged == 3, false)
+  @test.assert_eq(try! doc.parse_content_ops([PdfIndirect(merged)]), [
+    Op_BT,
+    Op_ET,
+  ])
+}
+
+///|
+test "PdfDocument merge_content_streams leaves single content arrays unchanged" {
+  let key_type = page_name_for_test("/Type")
+  let key_contents = page_name_for_test("/Contents")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_contents, PdfArray([PdfIndirect(2)])),
+    ]),
+  )
+  doc.add_object_given_number(2, page_raw_stream_for_test("BT ET"))
+  try! doc.merge_content_streams()
+  @test.assert_eq(
+    doc.lookup_object_or_null(1).lookup_immediate(key_contents),
+    Some(PdfArray([PdfIndirect(2)])),
+  )
+}
+
+///|
+test "PdfDocument merge_content_streams rejects non-stream content arrays" {
+  let key_type = page_name_for_test("/Type")
+  let key_contents = page_name_for_test("/Contents")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_contents, PdfArray([PdfInteger(1), PdfIndirect(2)])),
+    ]),
+  )
+  doc.add_object_given_number(2, page_raw_stream_for_test("BT ET"))
+  let result : Result[Unit, Error] = try? doc.merge_content_streams()
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+}
+
+///|
+test "PdfDocument add_prefix keeps parseable content arrays split" {
+  let key_type = page_name_for_test("/Type")
+  let key_resources = page_name_for_test("/Resources")
+  let key_contents = page_name_for_test("/Contents")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_resources, page_prefix_resources_for_test(["/F0"])),
+      (key_contents, PdfArray([PdfIndirect(2), PdfIndirect(3)])),
+    ]),
+  )
+  doc.add_object_given_number(2, page_raw_stream_for_test("BT"))
+  doc.add_object_given_number(3, page_raw_stream_for_test("ET"))
+  try! doc.add_prefix("p")
+  let page = doc.lookup_object_or_null(1)
+  @test.assert_eq(
+    page.lookup_immediate(key_contents),
+    Some(PdfArray([PdfIndirect(2), PdfIndirect(3)])),
+  )
+  guard page.lookup_immediate(key_resources) is Some(resources) else {
+    fail("expected prefixed resources")
+  }
+  @test.assert_eq(
+    page_resource_value_for_test(resources, "/Font"),
+    Some(page_prefix_resource_entry_for_test("/pF0")),
+  )
+}
+
+///|
+test "PdfDocument add_prefix merges split content arrays before rewriting" {
+  let key_type = page_name_for_test("/Type")
+  let key_resources = page_name_for_test("/Resources")
+  let key_contents = page_name_for_test("/Contents")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_resources, page_prefix_resources_for_test(["/F0"])),
+      (key_contents, PdfArray([PdfIndirect(2), PdfIndirect(3)])),
+    ]),
+  )
+  doc.add_object_given_number(2, page_raw_stream_for_test("BT /F0"))
+  doc.add_object_given_number(3, page_raw_stream_for_test("12 Tf ET"))
+  try! doc.add_prefix("p")
+  let page = doc.lookup_object_or_null(1)
+  guard page.lookup_immediate(key_contents) is Some(PdfIndirect(merged)) else {
+    fail("expected merged content stream")
+  }
+  guard page.lookup_immediate(key_resources) is Some(resources) else {
+    fail("expected prefixed resources")
+  }
+  @test.assert_eq(
+    page_resource_value_for_test(resources, "/Font"),
+    Some(page_prefix_resource_entry_for_test("/pF0")),
+  )
+  @test.assert_eq(try! doc.parse_content_ops([PdfIndirect(merged)]), [
+    Op_BT,
+    Op_Tf(page_name_for_test("/pF0"), 12.0),
+    Op_ET,
   ])
 }
 
