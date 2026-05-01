@@ -99,6 +99,20 @@ fn merge_nametree_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
 }
 
 ///|
+fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
+  let key_info = merge_name_for_test("/Info")
+  let key_title = merge_name_for_test("/Title")
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let info_number = doc.add_object(
+    PdfDictionary([(key_title, PdfString(@ascii.encode(title)))]),
+  )
+  doc.set_trailer_dict(
+    try! doc.trailer_dict().add_dict_entry(key_info, PdfIndirect(info_number)),
+  )
+  doc
+}
+
+///|
 fn merge_acroform_doc_for_test(
   field_number : Int,
   label : String,
@@ -280,6 +294,31 @@ test "pdf_merge_documents retains and retargets named destinations" {
       PdfString(@ascii.encode("second")),
     ),
     DestString(@ascii.encode("second")),
+  )
+}
+
+///|
+test "pdf_merge_documents retains first document info dictionary" {
+  let key_info = merge_name_for_test("/Info")
+  let key_title = merge_name_for_test("/Title")
+  let first = merge_info_doc_for_test("first")
+  let second = merge_info_doc_for_test("second")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  guard merged.lookup_direct(key_info, merged.trailer_dict()) is Some(info) else {
+    fail("expected Info")
+  }
+  @test.assert_eq(
+    info.lookup_immediate(key_title),
+    Some(PdfString(@ascii.encode("first"))),
+  )
+  let without_info = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_info=false,
+  )
+  @test.assert_eq(
+    without_info.lookup_direct(key_info, without_info.trailer_dict()),
+    None,
   )
 }
 

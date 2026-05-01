@@ -391,7 +391,8 @@ MoonBit consequences for this project:
     preserving referenced field objects through the final cleanup. Named
     destination retention now merges old-style catalog `/Dests` and name-tree
     `/Names` `/Dests`, retargeting page-object destinations to the merged page
-    tree.
+    tree. Merge trailer info retention now preserves the first available
+    `/Info` dictionary through the merged trailer.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

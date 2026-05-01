@@ -44,6 +44,11 @@ fn pdf_merge_fields_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_info_key() -> PdfName {
+  pdf_merge_name("/Info")
+}
+
+///|
 fn pdf_merge_names_key() -> PdfName {
   pdf_merge_name("/Names")
 }
@@ -119,6 +124,19 @@ fn pdf_merge_acroforms(
         PdfArray(fields),
       ),
     )
+  }
+}
+
+///|
+fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
+  for document in documents {
+    match
+      document.lookup_direct(pdf_merge_info_key(), document.trailer_dict()) {
+      Some(info) => break Some(info)
+      None => ()
+    }
+  } nobreak {
+    None
   }
 }
 
@@ -294,6 +312,7 @@ pub fn pdf_merge_documents(
   retain_optional_content? : Bool = true,
   retain_acroforms? : Bool = true,
   retain_named_destinations? : Bool = true,
+  retain_info? : Bool = true,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
@@ -321,6 +340,7 @@ pub fn pdf_merge_documents(
   } else {
     None
   }
+  let info = if retain_info { pdf_merge_info_dictionary(staged) } else { None }
   let merged = pdf_document_empty()
   let (major, minor) = pdf_merge_max_version(staged)
   merged.set_version(major, minor)
@@ -376,6 +396,18 @@ pub fn pdf_merge_documents(
     )
   } else {
     merged
+  }
+  match info {
+    Some(info) =>
+      merged.set_trailer_dict(
+        merged
+        .trailer_dict()
+        .add_dict_entry(
+          pdf_merge_info_key(),
+          PdfIndirect(merged.add_object(info)),
+        ),
+      )
+    None => ()
   }
   merged.remove_unreferenced()
   let merged = if retain_bookmarks && bookmarks.length() > 0 {
