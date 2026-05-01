@@ -251,6 +251,8 @@ MoonBit consequences for this project:
    `startxref`, and `%%EOF` document serialization are also started, with a
    primitive writer-reader round-trip test for parsed objects. Owned stream
    serialization now writes a direct `/Length` entry from the byte payload.
+   CamlPDF-style PDF hex-string rendering is exposed for byte strings through
+   `pdf_write_hex_string`.
    Real number serialization now avoids exponent notation and includes the
    CamlPDF fixed-six formatting branch for tiny non-integer real numbers plus
    12-significant-digit rounding for ordinary plain-decimal and exponent-form

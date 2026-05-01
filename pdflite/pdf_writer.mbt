@@ -25,6 +25,15 @@ fn pdf_writer_hex_digit(value : Int) -> Byte {
 }
 
 ///|
+fn pdf_writer_lower_hex_digit(value : Int) -> Byte {
+  if value < 10 {
+    (48 + value).to_byte()
+  } else {
+    (87 + value).to_byte()
+  }
+}
+
+///|
 fn pdf_writer_push_hex_escape(output : Array[Byte], value : Int) -> Unit {
   pdf_writer_push_byte(output, 35)
   output.push(pdf_writer_hex_digit(value / 16))
@@ -89,6 +98,24 @@ fn pdf_write_string_to(output : Array[Byte], bytes : PdfBytes) -> Unit {
     }
   }
   pdf_writer_push_byte(output, 41)
+}
+
+///|
+fn pdf_write_hex_string_to(output : Array[Byte], bytes : BytesView) -> Unit {
+  pdf_writer_push_byte(output, 60)
+  for byte in bytes {
+    let value = byte.to_int()
+    output.push(pdf_writer_lower_hex_digit(value / 16))
+    output.push(pdf_writer_lower_hex_digit(value % 16))
+  }
+  pdf_writer_push_byte(output, 62)
+}
+
+///|
+pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
+  let output : Array[Byte] = []
+  pdf_write_hex_string_to(output, bytes)
+  Bytes::from_array(output)
 }
 
 ///|

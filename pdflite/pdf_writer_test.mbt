@@ -109,6 +109,20 @@ test "pdf_write_object renders primitive scalar objects" {
 }
 
 ///|
+test "pdf_write_hex_string renders byte strings as PDF hex strings" {
+  @test.assert_eq(
+    @pdflite.pdf_write_hex_string(
+      writer_bytes_for_test([0, 10, 15, 16, 255])[:],
+    ),
+    writer_ascii_for_test("<000a0f10ff>"),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_write_hex_string(Bytes::new(0)[:]),
+    writer_ascii_for_test("<>"),
+  )
+}
+
+///|
 test "pdf_write_object renders real numbers without exponent notation" {
   let tiny : Double = try! @strconv.from_str("1e-10")
   @test.assert_eq(
