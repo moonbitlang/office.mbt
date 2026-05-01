@@ -105,14 +105,8 @@ pub fn PdfObjectMap::object_numbers(self : PdfObjectMap) -> Array[Int] {
 fn PdfObjectMap::copy(self : PdfObjectMap) -> PdfObjectMap {
   let output = pdf_object_map_empty()
   for number in self.object_numbers() {
-    match self.get_entry(number) {
-      Some(entry) =>
-        output.set_entry(number, {
-          data: entry.data,
-          generation: entry.generation,
-        })
-      None => ()
-    }
+    let entry = self.get_entry(number).unwrap()
+    output.set_entry(number, { data: entry.data, generation: entry.generation })
   }
   output
 }
@@ -153,10 +147,7 @@ pub fn PdfObjects::object_numbers(self : PdfObjects) -> Array[Int] {
 fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
   let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
   for number in self.object_stream_ids.keys().to_array() {
-    match self.object_stream_ids.get(number) {
-      Some(id) => object_stream_ids[number] = id
-      None => ()
-    }
+    object_stream_ids[number] = self.object_stream_ids.get(number).unwrap()
   }
   {
     max_object_number: self.max_object_number,

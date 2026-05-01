@@ -130,6 +130,24 @@ test "pdf_write_document rejects deferred object states" {
 }
 
 ///|
+test "private writer stream dictionary rejects deferred data" {
+  let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
+  let stream = pdf_stream(
+    PdfDictionary([]),
+    StreamToGet(stream_to_get(cursor, 0, 1)),
+  )
+  guard stream is PdfStreamObject(stream_value) else {
+    fail("expected PdfStreamObject")
+  }
+  let result : Result[PdfObject, Error] = try? pdf_write_stream_dictionary(
+    stream_value,
+  )
+  guard result is Err(PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
+  }
+}
+
+///|
 test "parser prefix helper reports malformed indirect prefixes" {
   let too_short : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
@@ -232,6 +250,15 @@ test "page-label private helpers preserve non-uppercase bytes and root guards" {
   guard result is Err(PdfError::RootExpected) else {
     fail("expected RootExpected")
   }
+}
+
+///|
+test "private date two-digit parser rejects short input" {
+  let result : Result[Int, Error] = try? pdf_date_two_digits(
+    @ascii.encode("1"),
+    0,
+  )
+  guard result is Err(PdfError::BadDate) else { fail("expected BadDate") }
 }
 
 ///|

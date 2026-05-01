@@ -498,6 +498,10 @@ MoonBit consequences for this project:
     malformed-file behavior, private byte-view/xref helpers, indirect stream
     length resolution failures, and by deleting two unreachable defensive
     branches around xref blank-line parsing and post-loop trailer presence.
+    Date, document-copy, renumbering, and writer coverage now remove those
+    files from the uncovered-line report by covering private short-date and
+    deferred-stream guards and by replacing impossible map-key `None` arms with
+    explicit key-invariant unwraps.
 
 ## Update Discipline
 

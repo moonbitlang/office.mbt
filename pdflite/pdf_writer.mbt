@@ -255,12 +255,13 @@ fn pdf_write_object_to(
       pdf_writer_push_ascii(output, " >>")
     }
     PdfStreamObject(stream) => {
-      pdf_write_object_to(output, pdf_write_stream_dictionary(stream))
-      pdf_writer_push_ascii(output, "\nstream\n")
-      match stream.data {
-        StreamGot(bytes) => pdf_writer_push_view(output, bytes[:])
+      let bytes = match stream.data {
+        StreamGot(bytes) => bytes
         StreamToGet(_) => raise StreamDataExpected
       }
+      pdf_write_object_to(output, pdf_write_stream_dictionary(stream))
+      pdf_writer_push_ascii(output, "\nstream\n")
+      pdf_writer_push_view(output, bytes[:])
       pdf_writer_push_ascii(output, "\nendstream")
     }
     PdfIndirect(number) => {
@@ -349,17 +350,16 @@ pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
   }
   pdf_writer_push_byte(output, 10)
   for number in document.object_numbers() {
-    match document.objects.get_entry(number) {
-      Some({ data: ObjectParsed(object), generation })
-      | Some({ data: ObjectParsedAlreadyDecrypted(object), generation }) => {
+    match document.objects.get_entry(number).unwrap() {
+      { data: ObjectParsed(object), generation }
+      | { data: ObjectParsedAlreadyDecrypted(object), generation } => {
         xrefs.push((number, output.length(), generation))
         pdf_writer_push_view(
           output,
           pdf_write_indirect_object({ number, generation, object })[:],
         )
       }
-      Some(_) => raise ParsedObjectExpected
-      None => ()
+      _ => raise ParsedObjectExpected
     }
   }
   let xref_start = output.length()

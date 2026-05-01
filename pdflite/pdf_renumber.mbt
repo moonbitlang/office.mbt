@@ -16,13 +16,8 @@ pub fn PdfDocument::renumber_objects_by_offset(
     ]
     let updates : Array[(Int, PdfObjectEntry)] = []
     for number in old_numbers {
-      match pdf.objects.get_entry(number) {
-        Some(entry) =>
-          updates.push(
-            (number + offset, pdf_page_renumber_entry(entry, changes)),
-          )
-        None => ()
-      }
+      let entry = pdf.objects.get_entry(number).unwrap()
+      updates.push((number + offset, pdf_page_renumber_entry(entry, changes)))
     }
     for number in old_numbers {
       pdf.objects.object_map.remove(number)
