@@ -95,6 +95,10 @@ pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
 
+pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
+
+pub fn pdf_parse_indirect_object_lexemes(ArrayView[PdfLexeme]) -> PdfParsedIndirectObject raise PdfError
+
 pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise PdfError
 
 pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
@@ -155,6 +159,8 @@ pub(all) suberror PdfError {
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected
+  ParseIndirectObjectExpected
+  ParseEndObjectExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -372,6 +378,12 @@ pub fn PdfObjects::max_object_number(Self) -> Int
 pub fn PdfObjects::object_numbers(Self) -> Array[Int]
 pub fn PdfObjects::remove_object(Self, Int) -> Unit
 pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
+
+pub(all) struct PdfParsedIndirectObject {
+  number : Int
+  generation : Int
+  object : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfRectangle {
   min_x : Double

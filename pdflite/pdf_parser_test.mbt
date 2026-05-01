@@ -125,3 +125,45 @@ test "pdf_parse_object_from_bytes lexes and parses primitive PDF bytes" {
   ])
   @test.assert_eq(parsed, expected)
 }
+
+///|
+test "pdf_parse_indirect_object_from_bytes parses primitive indirect objects" {
+  let type_key = parser_name_for_test([47, 84, 121, 112, 101])
+  let parsed = try! @pdflite.pdf_parse_indirect_object_from_bytes(
+    parser_bytes_for_test([
+      55, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47,
+      80, 97, 103, 101, 32, 62, 62, 10, 101, 110, 100, 111, 98, 106,
+    ]),
+  )
+  @test.assert_eq(parsed.number, 7)
+  @test.assert_eq(parsed.generation, 0)
+  @test.assert_eq(
+    parsed.object,
+    @pdflite.pdf_dictionary([
+      (type_key, PdfNameObject(parser_name_for_test([47, 80, 97, 103, 101]))),
+    ]),
+  )
+}
+
+///|
+test "pdf_parse_indirect_object_lexemes reports malformed indirect objects" {
+  let missing_header : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
+      LexInt(7),
+      LexInt(0),
+      LexNull,
+    ],
+  )
+  guard missing_header is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected ParseIndirectObjectExpected")
+  }
+  let missing_end : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
+      LexInt(7),
+      LexInt(0),
+      LexObj,
+      LexNull,
+    ],
+  )
+  guard missing_end is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
+    fail("expected ParseEndObjectExpected")
+  }
+}

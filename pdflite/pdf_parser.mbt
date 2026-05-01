@@ -206,3 +206,40 @@ pub fn pdf_parse_single_lexeme_object(
 pub fn pdf_parse_object_from_bytes(data : PdfBytes) -> PdfObject raise PdfError {
   pdf_parse_single_lexeme_object(pdf_lex_bytes(data))
 }
+
+///|
+pub(all) struct PdfParsedIndirectObject {
+  number : Int
+  generation : Int
+  object : PdfObject
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn pdf_parse_indirect_object_lexemes(
+  lexemes : ArrayView[PdfLexeme],
+) -> PdfParsedIndirectObject raise PdfError {
+  let first = pdf_skip_comments(lexemes, 0)
+  if first + 2 >= lexemes.length() {
+    raise ParseIndirectObjectExpected
+  }
+  match (lexemes[first], lexemes[first + 1], lexemes[first + 2]) {
+    (LexInt(number), LexInt(generation), LexObj) => {
+      let object_start = pdf_skip_comments(lexemes, first + 3)
+      let (object, after_object) = pdf_parse_value_at(lexemes, object_start)
+      let end_position = pdf_skip_comments(lexemes, after_object)
+      if end_position < lexemes.length() && lexemes[end_position] == LexEndObj {
+        { number, generation, object }
+      } else {
+        raise ParseEndObjectExpected
+      }
+    }
+    _ => raise ParseIndirectObjectExpected
+  }
+}
+
+///|
+pub fn pdf_parse_indirect_object_from_bytes(
+  data : PdfBytes,
+) -> PdfParsedIndirectObject raise PdfError {
+  pdf_parse_indirect_object_lexemes(pdf_lex_bytes(data))
+}

@@ -16,6 +16,8 @@ pub(all) suberror PdfError {
   ParseObjectExpected
   ParseArrayMalformed
   ParseSingleObjectExpected
+  ParseIndirectObjectExpected
+  ParseEndObjectExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
