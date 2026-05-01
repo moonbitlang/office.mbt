@@ -149,6 +149,8 @@ pub fn pdf_objects_empty() -> PdfObjects
 
 pub fn pdf_ocg_default_config() -> PdfOcgConfig
 
+pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise PdfError
+
 pub fn pdf_page_blank(PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage

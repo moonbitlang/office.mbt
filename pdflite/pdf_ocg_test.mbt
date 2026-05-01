@@ -29,6 +29,38 @@ fn ocg_catalog_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn ocg_merge_content_for_test(
+  number : Int,
+  layer_name : String,
+  base_state : @pdflite.PdfOcgState,
+  on_numbers : Array[Int],
+  off_numbers : Array[Int],
+) -> @pdflite.PdfOptionalContent {
+  {
+    ocgs: [
+      (
+        number,
+        {
+          name: ocg_bytes_for_test(layer_name),
+          intent: [ocg_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+    ],
+    default_config: {
+      ..@pdflite.pdf_ocg_default_config(),
+      name: Some(ocg_bytes_for_test("Merged")),
+      base_state,
+      on: on_numbers,
+      off: off_numbers,
+      order: Some([(Some(ocg_bytes_for_test(layer_name)), [number])]),
+      radio_button_groups: Some([[number]]),
+    },
+    configs: [{ ..@pdflite.pdf_ocg_default_config(), locked: [number] }],
+  }
+}
+
+///|
 fn ocg_document_with_content_for_test() -> @pdflite.PdfDocument {
   let doc = ocg_catalog_document_for_test()
   let key_type = ocg_name_for_test("/Type")
@@ -295,6 +327,43 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
     fail("expected written optional content")
   }
   @test.assert_eq(read_back, content)
+}
+
+///|
+test "pdf_optional_content_merge combines already-renumbered OCG metadata" {
+  let first = try! ocg_catalog_document_for_test().write_optional_content_groups(
+    ocg_merge_content_for_test(7, "Layer A", OcgOn, [7], []),
+  )
+  let second = try! ocg_catalog_document_for_test().write_optional_content_groups(
+    ocg_merge_content_for_test(12, "Layer B", OcgOff, [], [12]),
+  )
+  guard (try! @pdflite.pdf_optional_content_merge([first, second]))
+    is Some(merged) else {
+    fail("expected merged optional content")
+  }
+  @test.assert_eq(merged.ocgs.length(), 2)
+  @test.assert_eq(merged.ocgs[0].0, 7)
+  @test.assert_eq(merged.ocgs[1].0, 12)
+  @test.assert_eq(merged.default_config.base_state, OcgOff)
+  @test.assert_eq(merged.default_config.on, [7])
+  @test.assert_eq(merged.default_config.off, [12])
+  @test.assert_eq(
+    merged.default_config.order,
+    Some([
+      (Some(ocg_bytes_for_test("Layer A")), [7]),
+      (Some(ocg_bytes_for_test("Layer B")), [12]),
+    ]),
+  )
+  @test.assert_eq(merged.default_config.radio_button_groups, Some([[7], [12]]))
+  @test.assert_eq(merged.configs.length(), 2)
+  let written = try! ocg_catalog_document_for_test().write_optional_content_groups(
+    merged,
+  )
+  @test.assert_eq(try! written.read_optional_content_groups(), Some(merged))
+  @test.assert_eq(
+    try! @pdflite.pdf_optional_content_merge([ocg_catalog_document_for_test()]),
+    None,
+  )
 }
 
 ///|

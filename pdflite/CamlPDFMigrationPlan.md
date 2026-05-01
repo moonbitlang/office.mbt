@@ -374,7 +374,9 @@ MoonBit consequences for this project:
     and PDF date string rendering. Optional content group support is started
     with typed OCG usage/configuration/application records, `/OCProperties`
     reading, returned-copy writing/removal, byte-preserving PDF strings, and
-    explicit `PdfName` fields for PDF name values.
+    explicit `PdfName` fields for PDF name values. OCG merge preparation is
+    started with a typed helper for combining already-renumbered optional
+    content metadata across documents.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

@@ -690,6 +690,203 @@ pub fn PdfDocument::read_optional_content_groups(
 }
 
 ///|
+fn pdf_ocg_copy_usage(usage : PdfOcgUsage) -> PdfOcgUsage {
+  {
+    creator_info: usage.creator_info,
+    language: usage.language,
+    export_state: usage.export_state,
+    zoom_min: usage.zoom_min,
+    zoom_max: usage.zoom_max,
+    print_subtype: usage.print_subtype,
+    print_state: usage.print_state,
+    view_state: usage.view_state,
+    user: match usage.user {
+      Some((user_type, names)) => Some((user_type, names.copy()))
+      None => None
+    },
+    page_element_subtype: usage.page_element_subtype,
+  }
+}
+
+///|
+fn pdf_ocg_copy_ocg(ocg : PdfOcg) -> PdfOcg {
+  {
+    name: ocg.name,
+    intent: ocg.intent.copy(),
+    usage: match ocg.usage {
+      Some(usage) => Some(pdf_ocg_copy_usage(usage))
+      None => None
+    },
+  }
+}
+
+///|
+fn pdf_ocg_copy_order(
+  order : ArrayView[(PdfBytes?, Array[Int])],
+) -> Array[(PdfBytes?, Array[Int])] {
+  [
+    for item in order => (item.0, item.1.copy())
+  ]
+}
+
+///|
+fn pdf_ocg_copy_groups(groups : ArrayView[Array[Int]]) -> Array[Array[Int]] {
+  [
+    for group in groups => group.copy()
+  ]
+}
+
+///|
+fn pdf_ocg_copy_appdict(appdict : PdfOcgAppDict) -> PdfOcgAppDict {
+  {
+    event: appdict.event,
+    ocgs: appdict.ocgs.copy(),
+    category: appdict.category.copy(),
+  }
+}
+
+///|
+fn pdf_ocg_copy_config(config : PdfOcgConfig) -> PdfOcgConfig {
+  {
+    name: config.name,
+    creator: config.creator,
+    base_state: config.base_state,
+    on: config.on.copy(),
+    off: config.off.copy(),
+    intent: config.intent.copy(),
+    usage_applications: [
+      for appdict in config.usage_applications => pdf_ocg_copy_appdict(appdict)
+    ],
+    order: match config.order {
+      Some(order) => Some(pdf_ocg_copy_order(order))
+      None => None
+    },
+    list_mode: config.list_mode,
+    radio_button_groups: match config.radio_button_groups {
+      Some(groups) => Some(pdf_ocg_copy_groups(groups))
+      None => None
+    },
+    locked: config.locked.copy(),
+  }
+}
+
+///|
+pub fn pdf_optional_content_merge(
+  documents : ArrayView[PdfDocument],
+) -> PdfOptionalContent? raise PdfError {
+  let contents : Array[PdfOptionalContent] = []
+  for document in documents {
+    match document.read_optional_content_groups() {
+      Some(content) => contents.push(content)
+      None => ()
+    }
+  }
+  if contents.length() == 0 {
+    None
+  } else {
+    let ocgs : Array[(Int, PdfOcg)] = []
+    let configs : Array[PdfOcgConfig] = []
+    let on : Array[Int] = []
+    let off : Array[Int] = []
+    let order : Array[(PdfBytes?, Array[Int])] = []
+    let radio_button_groups : Array[Array[Int]] = []
+    let mut has_order = false
+    let mut has_radio_button_groups = false
+    let mut name : PdfBytes? = None
+    let mut creator : PdfBytes? = None
+    let mut base_state = OcgOn
+    let mut intent : Array[PdfName] = []
+    let mut usage_applications : Array[PdfOcgAppDict] = []
+    let mut list_mode = OcgAllPages
+    let mut locked : Array[Int] = []
+    for content in contents {
+      for entry in content.ocgs {
+        ocgs.push((entry.0, pdf_ocg_copy_ocg(entry.1)))
+      }
+      for config in content.configs {
+        configs.push(pdf_ocg_copy_config(config))
+      }
+      let default_config = content.default_config
+      for number in default_config.on {
+        on.push(number)
+      }
+      for number in default_config.off {
+        off.push(number)
+      }
+      match default_config.order {
+        Some(items) => {
+          has_order = true
+          for item in pdf_ocg_copy_order(items) {
+            order.push(item)
+          }
+        }
+        None => ()
+      }
+      match default_config.radio_button_groups {
+        Some(groups) => {
+          has_radio_button_groups = true
+          for group in pdf_ocg_copy_groups(groups) {
+            radio_button_groups.push(group)
+          }
+        }
+        None => ()
+      }
+      if name is None {
+        name = default_config.name
+      }
+      if creator is None {
+        creator = default_config.creator
+      }
+      if base_state == OcgOn && default_config.base_state != OcgOn {
+        base_state = default_config.base_state
+      }
+      if intent.length() == 0 && default_config.intent.length() > 0 {
+        intent = default_config.intent.copy()
+      }
+      if usage_applications.length() == 0 &&
+        default_config.usage_applications.length() > 0 {
+        usage_applications = [
+          for appdict in default_config.usage_applications => {
+            pdf_ocg_copy_appdict(appdict)
+          }
+        ]
+      }
+      if list_mode == OcgAllPages && default_config.list_mode != OcgAllPages {
+        list_mode = default_config.list_mode
+      }
+      if locked.length() == 0 && default_config.locked.length() > 0 {
+        locked = default_config.locked.copy()
+      }
+    }
+    Some({
+      ocgs,
+      default_config: {
+        name,
+        creator,
+        base_state,
+        on,
+        off,
+        intent,
+        usage_applications,
+        order: if has_order {
+          Some(order)
+        } else {
+          None
+        },
+        list_mode,
+        radio_button_groups: if has_radio_button_groups {
+          Some(radio_button_groups)
+        } else {
+          None
+        },
+        locked,
+      },
+      configs,
+    })
+  }
+}
+
+///|
 fn pdf_ocg_name_array_object(names : ArrayView[PdfName]) -> PdfObject {
   PdfArray([ for name in names => PdfNameObject(name) ])
 }
