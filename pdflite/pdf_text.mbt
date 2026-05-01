@@ -507,3 +507,113 @@ pub fn pdf_codepoints_of_utf16be(
   }
   codepoints
 }
+
+///|
+fn pdf_text_check_unicode_codepoint(codepoint : Int) -> Unit raise PdfError {
+  if codepoint < 0 ||
+    codepoint > 0x10FFFF ||
+    (codepoint >= 0xD800 && codepoint <= 0xDFFF) {
+    raise InvalidUnicodeCodepoint(codepoint)
+  }
+}
+
+///|
+pub fn pdf_utf8_of_codepoints(
+  codepoints : ArrayView[Int],
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  for codepoint in codepoints {
+    pdf_text_check_unicode_codepoint(codepoint)
+    if codepoint <= 0x7F {
+      output.push(pdf_byte_of_int(codepoint))
+    } else if codepoint <= 0x7FF {
+      output.push(pdf_byte_of_int((codepoint >> 6) | 0xC0))
+      output.push(pdf_byte_of_int((codepoint & 0x3F) | 0x80))
+    } else if codepoint <= 0xFFFF {
+      output.push(pdf_byte_of_int((codepoint >> 12) | 0xE0))
+      output.push(pdf_byte_of_int(((codepoint >> 6) & 0x3F) | 0x80))
+      output.push(pdf_byte_of_int((codepoint & 0x3F) | 0x80))
+    } else {
+      output.push(pdf_byte_of_int((codepoint >> 18) | 0xF0))
+      output.push(pdf_byte_of_int(((codepoint >> 12) & 0x3F) | 0x80))
+      output.push(pdf_byte_of_int(((codepoint >> 6) & 0x3F) | 0x80))
+      output.push(pdf_byte_of_int((codepoint & 0x3F) | 0x80))
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_text_is_utf8_continuation(byte : Int) -> Bool {
+  byte >> 6 == 0b10
+}
+
+///|
+fn pdf_text_push_utf8_codepoint(
+  output : Array[Int],
+  codepoint : Int,
+  min_codepoint : Int,
+) -> Unit raise PdfError {
+  pdf_text_check_unicode_codepoint(codepoint)
+  guard codepoint >= min_codepoint else { raise InvalidUTF8 }
+  output.push(codepoint)
+}
+
+///|
+pub fn pdf_codepoints_of_utf8(bytes : BytesView) -> Array[Int] raise PdfError {
+  let output : Array[Int] = []
+  let mut index = 0
+  while index < bytes.length() {
+    let first = bytes[index].to_int()
+    if first >> 7 == 0 {
+      output.push(first)
+      index += 1
+    } else if first >> 5 == 0b110 {
+      guard index + 1 < bytes.length() else { raise InvalidUTF8 }
+      let b1 = bytes[index + 1].to_int()
+      guard pdf_text_is_utf8_continuation(b1) else { raise InvalidUTF8 }
+      pdf_text_push_utf8_codepoint(
+        output,
+        ((first & 0x1F) << 6) | (b1 & 0x3F),
+        0x80,
+      )
+      index += 2
+    } else if first >> 4 == 0b1110 {
+      guard index + 2 < bytes.length() else { raise InvalidUTF8 }
+      let b1 = bytes[index + 1].to_int()
+      let b2 = bytes[index + 2].to_int()
+      guard pdf_text_is_utf8_continuation(b1) &&
+        pdf_text_is_utf8_continuation(b2) else {
+        raise InvalidUTF8
+      }
+      pdf_text_push_utf8_codepoint(
+        output,
+        ((first & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F),
+        0x800,
+      )
+      index += 3
+    } else if first >> 3 == 0b11110 {
+      guard index + 3 < bytes.length() else { raise InvalidUTF8 }
+      let b1 = bytes[index + 1].to_int()
+      let b2 = bytes[index + 2].to_int()
+      let b3 = bytes[index + 3].to_int()
+      guard pdf_text_is_utf8_continuation(b1) &&
+        pdf_text_is_utf8_continuation(b2) &&
+        pdf_text_is_utf8_continuation(b3) else {
+        raise InvalidUTF8
+      }
+      pdf_text_push_utf8_codepoint(
+        output,
+        ((first & 0x07) << 18) |
+        ((b1 & 0x3F) << 12) |
+        ((b2 & 0x3F) << 6) |
+        (b3 & 0x3F),
+        0x10000,
+      )
+      index += 4
+    } else {
+      raise InvalidUTF8
+    }
+  }
+  output
+}

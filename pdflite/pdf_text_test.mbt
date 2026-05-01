@@ -98,6 +98,50 @@ test "pdf_utf16be_of_codepoints rejects invalid Unicode scalar values" {
 }
 
 ///|
+test "pdf_utf8_of_codepoints writes UTF8 bytes and roundtrips" {
+  let encoded = try! @pdflite.pdf_utf8_of_codepoints([
+    0x41, 0xA2, 0x20AC, 0x1D11E,
+  ])
+  @test.assert_eq(
+    encoded,
+    text_bytes_for_test([
+      0x41, 0xC2, 0xA2, 0xE2, 0x82, 0xAC, 0xF0, 0x9D, 0x84, 0x9E,
+    ]),
+  )
+  @test.assert_eq(try! @pdflite.pdf_codepoints_of_utf8(encoded[:]), [
+    0x41, 0xA2, 0x20AC, 0x1D11E,
+  ])
+}
+
+///|
+test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
+  let truncated = try? @pdflite.pdf_codepoints_of_utf8(
+    text_bytes_for_test([0xE2, 0x82])[:],
+  )
+  guard truncated is Err(InvalidUTF8) else {
+    fail("expected InvalidUTF8 for truncated sequence")
+  }
+  let bad_continuation = try? @pdflite.pdf_codepoints_of_utf8(
+    text_bytes_for_test([0xE2, 0x28, 0xAC])[:],
+  )
+  guard bad_continuation is Err(InvalidUTF8) else {
+    fail("expected InvalidUTF8 for bad continuation")
+  }
+  let overlong = try? @pdflite.pdf_codepoints_of_utf8(
+    text_bytes_for_test([0xC0, 0x80])[:],
+  )
+  guard overlong is Err(InvalidUTF8) else {
+    fail("expected InvalidUTF8 for overlong sequence")
+  }
+  let surrogate = try? @pdflite.pdf_codepoints_of_utf8(
+    text_bytes_for_test([0xED, 0xA0, 0x80])[:],
+  )
+  guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
+    fail("expected InvalidUnicodeCodepoint for decoded surrogate")
+  }
+}
+
+///|
 test "pdf_standard_font_of_name accepts CamlPDF aliases" {
   let aliases : Array[(String, @pdflite.PdfStandardFont)] = [
     ("/Times-Roman", PdfTimesRoman),

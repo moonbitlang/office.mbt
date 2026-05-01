@@ -79,6 +79,8 @@ pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
 pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise PdfError
 
+pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise PdfError
+
 pub fn pdf_colour_space_of_device_name(PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
@@ -233,6 +235,8 @@ pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
+pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
+
 pub fn pdf_write_document(PdfDocument) -> Bytes raise PdfError
 
 pub fn pdf_write_indirect_object(PdfParsedIndirectObject) -> Bytes raise PdfError
@@ -319,6 +323,7 @@ pub(all) suberror PdfError {
   BadDate
   InvalidUnicodeCodepoint(Int)
   InvalidUTF16BE
+  InvalidUTF8
   EncodingExpected
   EncodingDifferencesMalformed
   FontSubtypeExpected
