@@ -203,3 +203,128 @@ test "PdfDocument page label APIs require a root catalog" {
     fail("expected RootExpected from remove_page_labels")
   }
 }
+
+///|
+test "pdf_page_label_complete supplies a basic first range" {
+  let later : @pdflite.PdfPageLabel = {
+    label_style: PageLabelUppercaseRoman,
+    label_prefix: None,
+    start_page: 3,
+    start_value: 1,
+  }
+  @test.assert_eq(@pdflite.pdf_page_label_complete([]), [
+    @pdflite.pdf_page_label_basic,
+  ])
+  @test.assert_eq(@pdflite.pdf_page_label_complete([later]), [
+    @pdflite.pdf_page_label_basic, later,
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_page_label_complete([@pdflite.pdf_page_label_basic, later]),
+    [@pdflite.pdf_page_label_basic, later],
+  )
+}
+
+///|
+test "pdf_page_label_text_of_page_number renders label bytes" {
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(page_label_bytes_for_test("intro-")),
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 6,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelUppercaseLetters,
+      label_prefix: Some(page_label_bytes_for_test("A-")),
+      start_page: 10,
+      start_value: 27,
+    },
+    {
+      label_style: PageLabelNoLabelPrefixOnly,
+      label_prefix: Some(page_label_bytes_for_test("cover")),
+      start_page: 12,
+      start_value: 1,
+    },
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(4, labels),
+    Some(page_label_bytes_for_test("intro-iv")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(7, labels),
+    Some(page_label_bytes_for_test("2")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(10, labels),
+    Some(page_label_bytes_for_test("A-AA")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(12, labels),
+    Some(page_label_bytes_for_test("cover")),
+  )
+  @test.assert_eq(@pdflite.pdf_page_label_text_of_page_number(1, []), None)
+}
+
+///|
+test "pdf_page_label_of_page_number returns a single-page label" {
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("p.")),
+      start_page: 6,
+      start_value: 1,
+    },
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_page_label_of_page_number(7, labels),
+    Some({
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("p.")),
+      start_page: 2,
+      start_value: 2,
+    }),
+  )
+  @test.assert_eq(@pdflite.pdf_page_label_of_page_number(1, []), None)
+}
+
+///|
+test "pdf_page_label_coalesce removes redundant adjacent ranges" {
+  let first : @pdflite.PdfPageLabel = {
+    label_style: PageLabelDecimalArabic,
+    label_prefix: None,
+    start_page: 1,
+    start_value: 1,
+  }
+  let redundant : @pdflite.PdfPageLabel = {
+    ..first,
+    start_page: 3,
+    start_value: 3,
+  }
+  let kept_offset : @pdflite.PdfPageLabel = {
+    ..first,
+    start_page: 6,
+    start_value: 1,
+  }
+  let kept_prefix : @pdflite.PdfPageLabel = {
+    ..kept_offset,
+    label_prefix: Some(page_label_bytes_for_test("A")),
+  }
+  @test.assert_eq(
+    @pdflite.pdf_page_label_coalesce([
+      first, redundant, kept_offset, kept_prefix,
+    ]),
+    [first, kept_offset, kept_prefix],
+  )
+}

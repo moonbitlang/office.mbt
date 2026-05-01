@@ -149,6 +149,18 @@ pub fn pdf_page_int_of_rotation(PdfPageRotation) -> Int
 
 pub let pdf_page_label_basic : PdfPageLabel
 
+pub fn pdf_page_label_coalesce(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
+
+pub fn pdf_page_label_complete(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
+
+pub fn pdf_page_label_of_page_number(Int, ArrayView[PdfPageLabel]) -> PdfPageLabel?
+
+pub fn pdf_page_label_of_single(Int, PdfPageLabel) -> PdfPageLabel
+
+pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes?
+
+pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
+
 pub fn pdf_page_protect(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject

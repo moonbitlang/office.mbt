@@ -349,9 +349,10 @@ MoonBit consequences for this project:
     groups, merge, duplicate-font removal, date helpers, and remaining
     utilities. Use CamlPDF examples and regression fixtures as acceptance tests.
     Status: started with typed page label styles/records, `/PageLabels`
-    number-tree reading, replacement writing, empty-list removal, and returned
-    catalog-copy updates. Page-label text generation, range insertion,
-    coalescing, and merge helpers remain deferred.
+    number-tree reading, replacement writing, empty-list removal, returned
+    catalog-copy updates, basic completion, single-page label lookup, rendered
+    label bytes for decimal/roman/letter/prefix-only styles, and adjacent range
+    coalescing. Range insertion and merge helpers remain deferred.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

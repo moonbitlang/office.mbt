@@ -80,6 +80,210 @@ pub let pdf_page_label_basic : PdfPageLabel = {
 }
 
 ///|
+pub fn pdf_page_label_complete(
+  labels : ArrayView[PdfPageLabel],
+) -> Array[PdfPageLabel] {
+  if labels.length() == 0 {
+    [pdf_page_label_basic]
+  } else if labels[0].start_page > 1 {
+    let output : Array[PdfPageLabel] = [pdf_page_label_basic]
+    for label in labels {
+      output.push(label)
+    }
+    output
+  } else {
+    [
+      for label in labels => label
+    ]
+  }
+}
+
+///|
+fn pdf_page_label_push_bytes(output : Array[Byte], bytes : PdfBytes) -> Unit {
+  for byte in bytes {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_page_label_ascii_bytes(text : String) -> PdfBytes {
+  @ascii.encode(text)
+}
+
+///|
+fn pdf_page_label_roman_pair(value : Int) -> (Int, String) {
+  match value {
+    0 => (900, "CM")
+    1 => (500, "D")
+    2 => (400, "CD")
+    3 | 4 | 5 => (100, "C")
+    6 => (90, "XC")
+    7 => (50, "L")
+    8 => (40, "XL")
+    9 | 10 | 11 => (10, "X")
+    12 => (9, "IX")
+    13 => (5, "V")
+    14 => (4, "IV")
+    _ => (1, "I")
+  }
+}
+
+///|
+fn pdf_page_label_roman_upper(number : Int) -> PdfBytes {
+  let output : Array[Byte] = []
+  let mut remaining = number
+  if remaining >= 1000 {
+    for _ in 0..<(remaining / 1000) {
+      pdf_page_label_push_bytes(output, pdf_page_label_ascii_bytes("M"))
+    }
+    remaining = remaining % 1000
+  }
+  if remaining > 0 {
+    let mut pair_index = 0
+    while pair_index < 18 {
+      let (value, text) = pdf_page_label_roman_pair(pair_index)
+      if remaining >= value {
+        pdf_page_label_push_bytes(output, pdf_page_label_ascii_bytes(text))
+        remaining -= value
+      } else {
+        pair_index += 1
+      }
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_page_label_lowercase(bytes : PdfBytes) -> PdfBytes {
+  let output : Array[Byte] = []
+  for byte in bytes {
+    let value = byte.to_int()
+    if value >= 65 && value <= 90 {
+      output.push((value + 32).to_byte())
+    } else {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_page_label_letters(number : Int, lowercase : Bool) -> PdfBytes {
+  let output : Array[Byte] = []
+  if number > 0 {
+    let letter = (number - 1) % 26
+    let count = (number - 1) / 26 + 1
+    let base = if lowercase { 97 } else { 65 }
+    for _ in 0..<count {
+      output.push((base + letter).to_byte())
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_page_label_number_bytes(
+  number : Int,
+  style : PdfPageLabelStyle,
+) -> PdfBytes {
+  match style {
+    PageLabelNoLabelPrefixOnly => []
+    PageLabelDecimalArabic => pdf_page_label_ascii_bytes(number.to_string())
+    PageLabelUppercaseRoman => pdf_page_label_roman_upper(number)
+    PageLabelLowercaseRoman =>
+      pdf_page_label_lowercase(pdf_page_label_roman_upper(number))
+    PageLabelUppercaseLetters => pdf_page_label_letters(number, false)
+    PageLabelLowercaseLetters => pdf_page_label_letters(number, true)
+  }
+}
+
+///|
+pub fn pdf_page_label_text_of_single(
+  page_number : Int,
+  label : PdfPageLabel,
+) -> PdfBytes {
+  let real_number = page_number - (label.start_page - label.start_value)
+  let output : Array[Byte] = []
+  match label.label_prefix {
+    Some(prefix) => pdf_page_label_push_bytes(output, prefix)
+    None => ()
+  }
+  pdf_page_label_push_bytes(
+    output,
+    pdf_page_label_number_bytes(real_number, label.label_style),
+  )
+  Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_page_label_of_single(
+  page_number : Int,
+  label : PdfPageLabel,
+) -> PdfPageLabel {
+  let real_number = page_number - (label.start_page - label.start_value)
+  { ..label, start_page: real_number, start_value: real_number }
+}
+
+///|
+pub fn pdf_page_label_of_page_number(
+  page_number : Int,
+  labels : ArrayView[PdfPageLabel],
+) -> PdfPageLabel? {
+  if labels.length() == 0 {
+    None
+  } else {
+    for index in 0..<labels.length() {
+      if index + 1 == labels.length() ||
+        page_number < labels[index + 1].start_page {
+        break Some(pdf_page_label_of_single(page_number, labels[index]))
+      }
+    } nobreak {
+      None
+    }
+  }
+}
+
+///|
+pub fn pdf_page_label_text_of_page_number(
+  page_number : Int,
+  labels : ArrayView[PdfPageLabel],
+) -> PdfBytes? {
+  if labels.length() == 0 {
+    None
+  } else {
+    for index in 0..<labels.length() {
+      if index + 1 == labels.length() ||
+        page_number < labels[index + 1].start_page {
+        break Some(pdf_page_label_text_of_single(page_number, labels[index]))
+      }
+    } nobreak {
+      None
+    }
+  }
+}
+
+///|
+pub fn pdf_page_label_coalesce(
+  labels : ArrayView[PdfPageLabel],
+) -> Array[PdfPageLabel] {
+  let output : Array[PdfPageLabel] = []
+  let mut index = 0
+  while index < labels.length() {
+    let label = labels[index]
+    output.push(label)
+    index += 1
+    while index < labels.length() &&
+          labels[index].label_style == label.label_style &&
+          labels[index].label_prefix == label.label_prefix &&
+          labels[index].start_page - labels[index].start_value ==
+          label.start_page - label.start_value {
+      index += 1
+    }
+  }
+  output
+}
+
+///|
 fn pdf_page_label_style_of_object(object : PdfObject?) -> PdfPageLabelStyle {
   match object {
     Some(PdfNameObject(name)) if name == pdf_page_label_style_decimal_name() =>
