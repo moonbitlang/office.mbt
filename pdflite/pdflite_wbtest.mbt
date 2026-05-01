@@ -130,7 +130,7 @@ test "pdf_write_document rejects deferred object states" {
 }
 
 ///|
-test "private writer stream dictionary rejects deferred data" {
+test "private writer stream dictionary uses materialized deferred length" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
   let stream = pdf_stream(
     PdfDictionary([]),
@@ -139,12 +139,13 @@ test "private writer stream dictionary rejects deferred data" {
   guard stream is PdfStreamObject(stream_value) else {
     fail("expected PdfStreamObject")
   }
-  let result : Result[PdfObject, Error] = try? pdf_write_stream_dictionary(
-    stream_value,
+  @test.assert_eq(
+    pdf_write_stream_dictionary(
+      stream_value,
+      pdf_writer_stream_data_view(stream_value.data).length(),
+    ),
+    PdfDictionary([(pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(1))]),
   )
-  guard result is Err(PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
-  }
 }
 
 ///|

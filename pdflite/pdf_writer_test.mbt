@@ -4,6 +4,19 @@ fn writer_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn writer_concat_bytes_for_test(
+  parts : ArrayView[@pdflite.PdfBytes],
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for part in parts {
+    for byte in part {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn writer_name_for_test(values : ArrayView[Int]) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(writer_bytes_for_test(values))
 }
@@ -166,18 +179,32 @@ test "pdf_write_indirect_object adds owned stream length" {
 }
 
 ///|
-test "pdf_write_object rejects deferred stream data" {
-  let cursor = @pdflite.byte_cursor_of_bytes(writer_bytes_for_test([72, 105]))
+test "pdf_write_object materializes deferred stream data" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    writer_bytes_for_test([65, 72, 105, 90]),
+  )
   let object = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([]),
-    StreamToGet(@pdflite.stream_to_get(cursor, 0, 2)),
+    StreamToGet(@pdflite.stream_to_get(cursor, 1, 2)),
   )
-  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_write_object(
-    object,
+  let rendered = try! @pdflite.pdf_write_object(object)
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    writer_concat_bytes_for_test([
+      writer_bytes_for_test([49, 32, 48, 32, 111, 98, 106, 10]),
+      rendered,
+      writer_bytes_for_test([10, 101, 110, 100, 111, 98, 106]),
+    ]),
   )
-  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
-    fail("expected StreamDataExpected")
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
   }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      writer_name_for_test([47, 76, 101, 110, 103, 116, 104]),
+    ),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(stream.data, StreamGot(writer_bytes_for_test([72, 105])))
 }
 
 ///|
