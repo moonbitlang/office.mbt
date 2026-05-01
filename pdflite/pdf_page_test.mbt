@@ -366,12 +366,46 @@ fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
 ///|
 test "PdfDocument page_reference_numbers traverses page tree in order" {
   let doc = page_tree_document_for_test()
+  let key_s = page_name_for_test("/S")
+  let key_d = page_name_for_test("/D")
+  let type_goto = page_name_for_test("/GoTo")
+  let type_xyz = page_name_for_test("/XYZ")
   @test.assert_eq(try! doc.page_reference_numbers(), [3, 5])
   @test.assert_eq(try! doc.endpage(), 2)
   @test.assert_eq(try! doc.endpage_fast(), 2)
   @test.assert_eq(try! doc.page_object_number(1), Some(3))
   @test.assert_eq(try! doc.page_object_number(2), Some(5))
   @test.assert_eq(try! doc.page_object_number(3), None)
+  @test.assert_eq(
+    try! doc.page_number_of_target(DestFit(TargetPageObject(5))),
+    2,
+  )
+  @test.assert_eq(
+    try! doc.page_number_of_target(
+      DestAction(
+        @pdflite.pdf_dictionary([
+          (key_s, PdfNameObject(type_goto)),
+          (
+            key_d,
+            PdfArray([
+              PdfIndirect(3),
+              PdfNameObject(type_xyz),
+              PdfInteger(0),
+              PdfInteger(0),
+              PdfNull,
+            ]),
+          ),
+        ]),
+      ),
+    ),
+    1,
+  )
+  @test.assert_eq(try! doc.page_number_of_target(DestNull), 0)
+  @test.assert_eq(
+    try! doc.target_of_page_number(2),
+    DestFit(TargetPageObject(5)),
+  )
+  @test.assert_eq(try! doc.target_of_page_number(3), DestNull)
 }
 
 ///|

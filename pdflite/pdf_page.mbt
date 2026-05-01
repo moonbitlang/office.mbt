@@ -2332,6 +2332,25 @@ pub fn PdfDocument::page_object_number(
 }
 
 ///|
+pub fn PdfDocument::page_number_of_target(
+  self : PdfDocument,
+  destination : PdfDestination,
+) -> Int raise PdfError {
+  self.pdf_destination_page_number(destination, self.page_reference_numbers())
+}
+
+///|
+pub fn PdfDocument::target_of_page_number(
+  self : PdfDocument,
+  page_number : Int,
+) -> PdfDestination raise PdfError {
+  match self.page_object_number(page_number) {
+    Some(object_number) => DestFit(TargetPageObject(object_number))
+    None => DestNull
+  }
+}
+
+///|
 pub fn PdfDocument::endpage(self : PdfDocument) -> Int raise PdfError {
   self.page_reference_numbers().length()
 }

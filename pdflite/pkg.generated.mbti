@@ -518,6 +518,7 @@ pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> 
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::page_number_of_target(Self, PdfDestination) -> Int raise PdfError
 pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
 pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise PdfError
@@ -546,6 +547,7 @@ pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
 pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
 pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
 pub fn PdfDocument::shortest_unused_prefix(Self) -> String
+pub fn PdfDocument::target_of_page_number(Self, Int) -> PdfDestination raise PdfError
 pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_bookmark(Self, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
 pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination) -> PdfDestination raise PdfError

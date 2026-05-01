@@ -324,7 +324,8 @@ MoonBit consequences for this project:
    catalog `/Dests` lookup for named destinations, and `/Root/Names/Dests`
    name-tree lookup for string destinations. Matrix transformation is also
    started for page-object targets, with CamlPDF-style coordinate clipping and
-   `/GoTo` action `/D` rewriting.
+   `/GoTo` action `/D` rewriting. Page/destination convenience helpers are
+   started with `page_number_of_target` and `target_of_page_number`.
 
    Bookmark support is started with typed `PdfBookmarkColour` and
    `PdfBookmark` records, `/Root/Outlines` traversal, level reconstruction,
