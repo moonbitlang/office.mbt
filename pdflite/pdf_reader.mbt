@@ -832,6 +832,22 @@ fn pdf_trailer_xref_stream_position(trailer : PdfObject) -> Int? raise PdfError 
 }
 
 ///|
+fn pdf_reader_sanitize_trailer(
+  trailer : PdfObject,
+  size : Int,
+) -> PdfObject raise PdfError {
+  trailer
+  .add_dict_entry(pdf_reader_size_name(), PdfInteger(size))
+  .remove_dict_entry(pdf_reader_w_name())
+  .remove_dict_entry(pdf_reader_type_name())
+  .remove_dict_entry(pdf_reader_index_name())
+  .remove_dict_entry(pdf_reader_prev_name())
+  .remove_dict_entry(pdf_reader_xrefstm_name())
+  .remove_dict_entry(pdf_reader_filter_name())
+  .remove_dict_entry(pdf_reader_decodeparms_name())
+}
+
+///|
 fn PdfDocument::set_trailer_and_root(
   self : PdfDocument,
   trailer : PdfObject,
@@ -931,6 +947,12 @@ pub fn pdf_read_classic_document_from_bytes(
       None => ()
     }
   }
+  document.set_trailer_dict(
+    pdf_reader_sanitize_trailer(
+      document.trailer_dict(),
+      document.objects.max_object_number() + 1,
+    ),
+  )
   document
 }
 

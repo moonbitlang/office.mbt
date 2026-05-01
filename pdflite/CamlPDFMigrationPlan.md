@@ -207,10 +207,13 @@ MoonBit consequences for this project:
    Xref-stream `/Prev` chains are also covered, including newer updates and
    free entries hiding older objects. The reader now mirrors CamlPDF's
    non-fatal first-object `/Linearized` probe and records the result in
-   `PdfDocument::was_linearized`. Malformed-file reconstruction remains
-   deferred. `pdf_read_document_from_bytes` is now the public byte-backed reader
-   entry point and handles classic tables plus the started
-   xref-stream/object-stream subset. Reader
+   `PdfDocument::was_linearized`. Final trailer cleanup now mirrors CamlPDF's
+   removal of xref machinery keys such as `/Prev`, `/XRefStm`, `/W`, `/Index`,
+   `/Type`, `/Filter`, and `/DecodeParms`, while deriving `/Size` from the
+   loaded document object map. Malformed-file reconstruction remains deferred.
+   `pdf_read_document_from_bytes` is now the public byte-backed reader entry
+   point and handles classic tables plus the started xref-stream/object-stream
+   subset. Reader
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.

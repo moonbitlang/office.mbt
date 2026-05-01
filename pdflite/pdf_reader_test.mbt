@@ -889,13 +889,18 @@ test "pdf_read_document_from_bytes follows classic trailer XRefStm" {
   )
   @test.assert_eq(parsed.object_numbers(), [1, 2])
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(7))
-  guard parsed
+  @test.assert_eq(
+    parsed
     .trailer_dict()
-    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm")))
-    is Some(PdfInteger(xref_stream_position)) else {
-    fail("expected XRefStm")
-  }
-  @test.assert_eq(xref_stream_position > 0, true)
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/XRefStm"))),
+    None,
+  )
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
+    Some(PdfInteger(3)),
+  )
 }
 
 ///|
@@ -929,6 +934,12 @@ test "pdf_read_document_from_bytes follows xref stream Prev chains" {
   )
   @test.assert_eq(updated.object_numbers(), [1])
   @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(
+    updated
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
 
   let deleted = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_prev_deleted_object(),
@@ -1019,6 +1030,12 @@ test "pdf_read_classic_document_from_bytes follows trailer Prev xrefs" {
   @test.assert_eq(parsed.object_numbers(), [1, 2])
   @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(2))
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(3))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
 }
 
 ///|
