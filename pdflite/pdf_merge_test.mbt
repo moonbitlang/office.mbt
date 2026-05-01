@@ -136,6 +136,44 @@ fn merge_nametree_dest_callsite_doc_for_test(
 }
 
 ///|
+fn merge_oldstyle_dest_callsite_doc_for_test(
+  name : String,
+  label : String,
+) -> @pdflite.PdfDocument {
+  let key_annots = merge_name_for_test("/Annots")
+  let key_subtype = merge_name_for_test("/Subtype")
+  let key_dest = merge_name_for_test("/Dest")
+  let type_link = merge_name_for_test("/Link")
+  let annotation_number = 51
+  let doc = merge_oldstyle_dest_doc_for_test(name)
+  let destination_name = merge_name_for_test(name)
+  let page_refs = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    annotation_number,
+    PdfDictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (key_dest, PdfNameObject(destination_name)),
+    ]),
+  )
+  doc.add_object_given_number(
+    page_refs[0],
+    try! doc
+    .lookup_object_or_null(page_refs[0])
+    .add_dict_entry(key_annots, PdfArray([PdfIndirect(annotation_number)])),
+  )
+  try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode(label),
+      target: DestNamed(destination_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 fn merge_destination_name_entries_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
@@ -163,6 +201,28 @@ fn merge_first_annotation_dest_for_test(
       doc
       .lookup_object_or_null(annotation_number)
       .lookup_immediate(merge_name_for_test("/Dest"))
+    _ => None
+  }
+}
+
+///|
+fn merge_catalog_destination_for_test(
+  doc : @pdflite.PdfDocument,
+  name : @pdflite.PdfName,
+) -> @pdflite.PdfObject? {
+  match
+    doc
+    .lookup_object_or_null(doc.root())
+    .lookup_immediate(merge_name_for_test("/Dests")) {
+    Some(PdfDictionary(entries)) =>
+      for entry in entries {
+        let (key, value) = entry
+        if key == name {
+          break Some(value)
+        }
+      } nobreak {
+        None
+      }
     _ => None
   }
 }
@@ -541,6 +601,59 @@ test "pdf_merge_documents renames colliding string destinations" {
   @test.assert_eq(
     try! merged.page_number_of_target(
       try! merged.read_destination(PdfString(second_name)),
+    ),
+    2,
+  )
+}
+
+///|
+test "pdf_merge_documents renames colliding catalog destinations" {
+  let first = merge_oldstyle_dest_callsite_doc_for_test("/Shared", "First")
+  let second = merge_oldstyle_dest_callsite_doc_for_test("/Shared", "Second")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let first_name = merge_name_for_test("/Shared-f0")
+  let second_name = merge_name_for_test("/Shared-f1")
+  guard merge_catalog_destination_for_test(merged, first_name) is Some(_) else {
+    fail("expected first renamed catalog destination")
+  }
+  guard merge_catalog_destination_for_test(merged, second_name) is Some(_) else {
+    fail("expected second renamed catalog destination")
+  }
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(merged, 0),
+    Some(PdfNameObject(first_name)),
+  )
+  @test.assert_eq(
+    merge_first_annotation_dest_for_test(merged, 1),
+    Some(PdfNameObject(second_name)),
+  )
+  @test.assert_eq(try! merged.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: @ascii.encode("First"),
+      target: DestNamed(first_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("Second"),
+      target: DestNamed(second_name),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfNameObject(first_name)),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfNameObject(second_name)),
     ),
     2,
   )

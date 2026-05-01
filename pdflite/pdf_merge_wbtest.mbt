@@ -32,6 +32,7 @@ test "private merge destination-name rewrite covers action and stream callsites"
         (pdf_dest_d_key(), PdfString(old_name)),
       ]),
       changes,
+      [],
     ),
     PdfDictionary([
       (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
@@ -45,11 +46,37 @@ test "private merge destination-name rewrite covers action and stream callsites"
         StreamGot(@ascii.encode("data")),
       ),
       changes,
+      [],
     ),
     pdf_stream(
       PdfDictionary([(pdf_merge_dest_key(), PdfString(new_name))]),
       StreamGot(@ascii.encode("data")),
     ),
+  )
+  let old_catalog_name = pdf_merge_name("/Shared")
+  let new_catalog_name = pdf_merge_name("/Shared-f0")
+  let catalog_changes = [(old_catalog_name, new_catalog_name)]
+  @test.assert_eq(
+    try! pdf_merge_rewrite_destination_callsite_object(
+      PdfDictionary([
+        (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
+        (pdf_dest_d_key(), PdfNameObject(old_catalog_name)),
+      ]),
+      [],
+      catalog_changes,
+    ),
+    PdfDictionary([
+      (pdf_merge_s_key(), PdfNameObject(pdf_dest_goto_name())),
+      (pdf_dest_d_key(), PdfNameObject(new_catalog_name)),
+    ]),
+  )
+  @test.assert_eq(
+    try! pdf_merge_rewrite_destination_callsite_object(
+      PdfDictionary([(pdf_merge_dest_key(), PdfNameObject(old_catalog_name))]),
+      [],
+      catalog_changes,
+    ),
+    PdfDictionary([(pdf_merge_dest_key(), PdfNameObject(new_catalog_name))]),
   )
 }
 
