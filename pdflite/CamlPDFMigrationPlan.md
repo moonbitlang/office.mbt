@@ -674,12 +674,14 @@ MoonBit consequences for this project:
     Function coverage now directly exercises Type 4 trig, angle, conversion,
     integer division, remainder, log, bitshift direction, logical right shift,
     masked shift counts, integer wrapping, float rejection for integer
-    operators, comment, and malformed-number paths. The
-    remaining uncovered report is now the template executable `cmd/main`
-    entrypoint plus defensive post-decode stream-shape branches in content and
-    colour-space stream-table handling, which are unreachable with the current
-    decoder contract because non-stream and non-owned-stream inputs raise before
-    returning.
+    operators, comment, and malformed-number paths. Writer and core stream-data
+    coverage now removes `pdf_writer.mbt` and `pdf_object.mbt` from the
+    uncovered-line report by testing `%.12g`-style real formatting branches,
+    scientific exponent expansion, malformed private formatter inputs, and
+    invalid deferred stream slices. A refreshed coverage pass reports 216
+    uncovered lines in 6 files: the template executable `cmd/main`, plus
+    remaining branches in content, function, image, colour-space, and text
+    handling.
 
 ## Update Discipline
 

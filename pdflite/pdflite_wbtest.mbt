@@ -51,6 +51,10 @@ test "writer parses signed integer fragments for scientific reals" {
     12,
   )
   @test.assert_eq(
+    try! pdf_writer_parse_signed_int(@ascii.encode("-12")[:], 0),
+    -12,
+  )
+  @test.assert_eq(
     try! pdf_writer_parse_signed_int(@ascii.encode("12")[:], 0),
     12,
   )
@@ -72,6 +76,8 @@ test "writer parses signed integer fragments for scientific reals" {
 
 ///|
 test "writer expands scientific real edge forms" {
+  @test.assert_eq(pdf_writer_exponent_marker(@ascii.encode("1E2")[:]), 1)
+
   let plus_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
     plus_output,
@@ -104,6 +110,17 @@ test "writer expands scientific real edge forms" {
   )
   @test.assert_eq(Bytes::from_array(middle_output), @ascii.encode("12.5"))
 
+  let negative_exponent_output : Array[Byte] = []
+  try! pdf_writer_push_scientific_real(
+    negative_exponent_output,
+    @ascii.encode("1.25e-3")[:],
+    4,
+  )
+  @test.assert_eq(
+    Bytes::from_array(negative_exponent_output),
+    @ascii.encode("0.00125"),
+  )
+
   let zero_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(zero_output, @ascii.encode(".e1")[:], 1)
   @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
@@ -116,6 +133,87 @@ test "writer expands scientific real edge forms" {
   )
   guard malformed is Err(PdfError::NumberExpected) else {
     fail("expected NumberExpected")
+  }
+}
+
+///|
+test "writer rounds plain significant real helper edge forms" {
+  let plus_output : Array[Byte] = []
+  try! pdf_writer_push_plain_significant_real(
+    plus_output,
+    @ascii.encode("+1.23456789012345")[:],
+  )
+  @test.assert_eq(
+    Bytes::from_array(plus_output),
+    @ascii.encode("1.23456789012"),
+  )
+
+  let negative_output : Array[Byte] = []
+  try! pdf_writer_push_plain_significant_real(
+    negative_output,
+    @ascii.encode("-1.23456789012345")[:],
+  )
+  @test.assert_eq(
+    Bytes::from_array(negative_output),
+    @ascii.encode("-1.23456789012"),
+  )
+
+  let leading_decimal_output : Array[Byte] = []
+  try! pdf_writer_push_plain_significant_real(
+    leading_decimal_output,
+    @ascii.encode(".000123456789012345")[:],
+  )
+  @test.assert_eq(
+    Bytes::from_array(leading_decimal_output),
+    @ascii.encode("0.000123456789012"),
+  )
+
+  let zero_output : Array[Byte] = []
+  try! pdf_writer_push_plain_significant_real(
+    zero_output,
+    @ascii.encode("0.0")[:],
+  )
+  @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
+
+  let double_dot : Result[Unit, Error] = try? pdf_writer_push_plain_significant_real(
+    [],
+    @ascii.encode("1.2.3")[:],
+  )
+  guard double_dot is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+
+  let bad_digit : Result[Unit, Error] = try? pdf_writer_push_plain_significant_real(
+    [],
+    @ascii.encode("1a")[:],
+  )
+  guard bad_digit is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
+}
+
+///|
+test "private stream data materialization reports invalid deferred slices" {
+  let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
+  let bad_position : Result[BytesView, Error] = try? pdf_stream_data_view(
+    StreamToGet(stream_to_get(cursor, -1, 1)),
+  )
+  guard bad_position is Err(PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition")
+  }
+
+  let bad_length : Result[BytesView, Error] = try? pdf_stream_data_view(
+    StreamToGet(stream_to_get(cursor, 0, -1)),
+  )
+  guard bad_length is Err(PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength")
+  }
+
+  let too_long : Result[BytesView, Error] = try? pdf_stream_data_view(
+    StreamToGet(stream_to_get(cursor, 2, 2)),
+  )
+  guard too_long is Err(PdfError::EndOfInput) else {
+    fail("expected EndOfInput")
   }
 }
 

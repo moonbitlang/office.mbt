@@ -301,15 +301,9 @@ fn pdf_writer_push_plain_significant_real(
       }
       if decimal_position <= 0 {
         pdf_writer_push_ascii(output, "0.")
-        for _ in 0..<-decimal_position {
-          pdf_writer_push_byte(output, 48)
-        }
         pdf_writer_push_int_digits(output, rounded[:], 0, end)
       } else if decimal_position >= end {
         pdf_writer_push_int_digits(output, rounded[:], 0, end)
-        for _ in 0..<(decimal_position - end) {
-          pdf_writer_push_byte(output, 48)
-        }
       } else {
         pdf_writer_push_int_digits(output, rounded[:], 0, decimal_position)
         pdf_writer_push_byte(output, 46)

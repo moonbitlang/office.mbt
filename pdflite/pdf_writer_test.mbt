@@ -105,6 +105,11 @@ test "pdf_write_object renders real numbers without exponent notation" {
     try! @pdflite.pdf_write_object(PdfReal(large)),
     writer_bytes_for_test([49, 50, 53, 48, 48, 48, 48]),
   )
+  let large_exponent : Double = try! @strconv.from_str("1e21")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(large_exponent)),
+    writer_ascii_for_test("1000000000000000000000"),
+  )
   let precise : Double = try! @strconv.from_str("1.23456789012345")
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(precise)),
