@@ -7,6 +7,7 @@ import {
 import {
   "bobzhang/pdflite" @pdflite,
   "moonbitlang/core/test",
+  "moonbitlang/core/encoding/ascii",
   "moonbitlang/async",
   "moonbitlang/async/fs",
 } for "wbtest"
