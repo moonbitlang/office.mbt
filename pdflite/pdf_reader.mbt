@@ -1141,6 +1141,8 @@ pub fn pdf_read_document_from_bytes(
     RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
     ParseIndirectObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
+    StreamLengthExpected =>
+      pdf_read_reconstructed_or_raise(data, StreamLengthExpected)
     error => raise error
   }
 }
