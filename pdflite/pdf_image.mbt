@@ -329,34 +329,49 @@ fn PdfDocument::pdf_image_first_filter(
 }
 
 ///|
-fn pdf_image_is_encoded_stop_filter(name : PdfName) -> Bool {
-  name == pdf_image_dctdecode_name() ||
-  name == pdf_image_dct_name() ||
-  name == pdf_image_jbig2decode_name() ||
-  name == pdf_image_jpxdecode_name()
+priv enum PdfImageDecodedStream {
+  PdfImageRawStream(PdfStream)
+  PdfImageDctStream(PdfStream)
+  PdfImageJpxStream(PdfStream)
+  PdfImageJbig2Stream(PdfStream)
+}
+
+///|
+fn PdfDocument::pdf_image_decode_stream_stages(
+  self : PdfDocument,
+  current : PdfStream,
+  stages : Int,
+) -> PdfImageDecodedStream raise PdfError {
+  match self.pdf_image_first_filter(current.dictionary) {
+    Some(filter) if filter == pdf_image_dctdecode_name() ||
+      filter == pdf_image_dct_name() => PdfImageDctStream(current)
+    Some(filter) if filter == pdf_image_jpxdecode_name() =>
+      PdfImageJpxStream(current)
+    Some(filter) if filter == pdf_image_jbig2decode_name() =>
+      PdfImageJbig2Stream(current)
+    Some(_) => {
+      if stages >= 1024 {
+        raise FilterExpected
+      }
+      self.pdf_image_decode_stream_stages(
+        pdf_decode_stream_onestage_value(current),
+        stages + 1,
+      )
+    }
+    None => PdfImageRawStream(current)
+  }
 }
 
 ///|
 fn PdfDocument::pdf_image_decode_to_image(
   self : PdfDocument,
   image : PdfObject,
-) -> PdfObject raise PdfError {
-  let mut current = self.direct(image)
-  let mut stages = 0
-  let mut done = false
-  while !done {
-    match self.pdf_image_first_filter(current) {
-      Some(filter) if !pdf_image_is_encoded_stop_filter(filter) => {
-        if stages >= 1024 {
-          raise FilterExpected
-        }
-        current = pdf_decode_stream_onestage(current)
-        stages += 1
-      }
-      _ => done = true
-    }
+) -> PdfImageDecodedStream raise PdfError {
+  let current = match self.direct(image) {
+    PdfStreamObject(stream) => stream
+    _ => raise ParseStreamExpected
   }
-  current
+  self.pdf_image_decode_stream_stages(current, 0)
 }
 
 ///|
@@ -825,93 +840,40 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
   colour_space : PdfColourSpace,
   bpc : Int?,
   data : BytesView,
-) -> PdfImage raise PdfError {
+) -> PdfBytes raise PdfError {
   match (colour_space, bpc) {
     (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(8)) => {
       let required = width * height * 3
       pdf_image_require_size(data, required)
-      PdfRawImage(width, height, PdfBPP24, data[:required].to_owned())
+      data[:required].to_owned()
     }
     (PdfDeviceGray | PdfCalGray(_, _, _), Some(8)) =>
-      PdfRawImage(
-        width,
-        height,
-        PdfBPP24,
-        pdf_image_gray_8bpp_as_rgb24(width, height, data),
-      )
+      pdf_image_gray_8bpp_as_rgb24(width, height, data)
     (PdfDeviceCMYK, Some(8)) =>
-      PdfRawImage(
-        width,
-        height,
-        PdfBPP24,
-        pdf_image_cmyk_8bpp_as_rgb24(width, height, data),
-      )
-    (_, Some(1)) =>
-      PdfRawImage(
-        width,
-        height,
-        PdfBPP24,
-        pdf_image_1bpp_as_rgb24(width, height, data),
-      )
+      pdf_image_cmyk_8bpp_as_rgb24(width, height, data)
+    (_, Some(1)) => pdf_image_1bpp_as_rgb24(width, height, data)
     (PdfDeviceGray, Some(4)) =>
-      PdfRawImage(
-        width,
-        height,
-        PdfBPP24,
-        pdf_image_gray_4bpp_as_rgb24(width, height, data),
-      )
+      pdf_image_gray_4bpp_as_rgb24(width, height, data)
     (PdfIndexed(base, table), Some(8)) =>
       match pdf_space_basic_table_colour_space(base) {
         PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
-          PdfRawImage(
-            width,
-            height,
-            PdfBPP24,
-            pdf_image_indexed_8bpp_as_rgb24(width, height, table, data),
-          )
+          pdf_image_indexed_8bpp_as_rgb24(width, height, table, data)
         PdfDeviceCMYK =>
-          PdfRawImage(
-            width,
-            height,
-            PdfBPP24,
-            pdf_image_cmyk_indexed_8bpp_as_rgb24(width, height, table, data),
-          )
+          pdf_image_cmyk_indexed_8bpp_as_rgb24(width, height, table, data)
         PdfLab(white, _, _) =>
-          PdfRawImage(
-            width,
-            height,
-            PdfBPP24,
-            pdf_image_lab_indexed_8bpp_as_rgb24(
-              width, height, table, white, data,
-            ),
-          )
+          pdf_image_lab_indexed_8bpp_as_rgb24(width, height, table, white, data)
         _ => raise FilterExpected
       }
     (PdfIndexed(base, table), Some(4)) =>
       match pdf_space_basic_table_colour_space(base) {
         PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
-          PdfRawImage(
-            width,
-            height,
-            PdfBPP24,
-            pdf_image_indexed_4bpp_as_rgb24(width, height, table, data),
-          )
+          pdf_image_indexed_4bpp_as_rgb24(width, height, table, data)
         PdfDeviceCMYK =>
-          PdfRawImage(
-            width,
-            height,
-            PdfBPP24,
-            pdf_image_cmyk_indexed_4bpp_as_rgb24(width, height, table, data),
-          )
+          pdf_image_cmyk_indexed_4bpp_as_rgb24(width, height, table, data)
         _ => raise FilterExpected
       }
     (PdfSeparation(_, PdfDeviceCMYK, tint), Some(8)) =>
-      PdfRawImage(
-        width,
-        height,
-        PdfBPP24,
-        self.pdf_image_separation_cmyk_8bpp_as_rgb24(width, height, tint, data),
-      )
+      self.pdf_image_separation_cmyk_8bpp_as_rgb24(width, height, tint, data)
     (PdfICCBased(_, alternate, _, _, _), _) =>
       self.pdf_image_raw_colour_space_as_rgb24(
         width, height, alternate, bpc, data,
@@ -928,7 +890,7 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
   height : Int,
   dictionary : PdfObject,
   data : BytesView,
-) -> PdfImage raise PdfError {
+) -> PdfBytes raise PdfError {
   self.pdf_image_raw_colour_space_as_rgb24(
     width,
     height,
@@ -945,77 +907,68 @@ pub fn PdfDocument::get_image_24bpp(
   image : PdfObject,
 ) -> PdfImage raise PdfError {
   let decoded = self.pdf_image_decode_to_image(image)
+  let decoded_stream = match decoded {
+    PdfImageRawStream(stream)
+    | PdfImageDctStream(stream)
+    | PdfImageJpxStream(stream)
+    | PdfImageJbig2Stream(stream) => stream
+  }
+  let width = self.pdf_image_lookup_int_or_else(
+    pdf_image_width_key(),
+    pdf_image_w_key(),
+    decoded_stream.dictionary,
+  )
+  let height = self.pdf_image_lookup_int_or_else(
+    pdf_image_height_key(),
+    pdf_image_h_key(),
+    decoded_stream.dictionary,
+  )
+  let data = pdf_stream_data_bytes(decoded_stream.data)
   match decoded {
-    PdfStreamObject(stream) => {
-      let width = self.pdf_image_lookup_int_or_else(
-        pdf_image_width_key(),
-        pdf_image_w_key(),
-        stream.dictionary,
+    PdfImageDctStream(_) =>
+      PdfJPEG(
+        data,
+        self.pdf_image_decode_values_with_defaults(
+          resources,
+          decoded_stream.dictionary,
+        ),
       )
-      let height = self.pdf_image_lookup_int_or_else(
-        pdf_image_height_key(),
-        pdf_image_h_key(),
-        stream.dictionary,
+    PdfImageJpxStream(_) =>
+      PdfJPEG2000(
+        data,
+        self.pdf_image_decode_values_with_defaults(
+          resources,
+          decoded_stream.dictionary,
+        ),
       )
-      match stream.data {
-        StreamGot(data) =>
-          match self.pdf_image_first_filter(decoded) {
-            Some(filter) if filter == pdf_image_dctdecode_name() ||
-              filter == pdf_image_dct_name() =>
-              PdfJPEG(
-                data,
-                self.pdf_image_decode_values_with_defaults(
-                  resources,
-                  stream.dictionary,
-                ),
-              )
-            Some(filter) if filter == pdf_image_jpxdecode_name() =>
-              PdfJPEG2000(
-                data,
-                self.pdf_image_decode_values_with_defaults(
-                  resources,
-                  stream.dictionary,
-                ),
-              )
-            Some(filter) if filter == pdf_image_jbig2decode_name() =>
-              PdfJBIG2(
-                data,
-                self.pdf_image_decode_values_with_defaults(
-                  resources,
-                  stream.dictionary,
-                ),
-                self.pdf_image_jbig2_globals(stream.dictionary),
-              )
-            None =>
-              match
-                self.pdf_image_raw_8bpp_as_rgb24(
-                  resources,
-                  width,
-                  height,
-                  stream.dictionary,
-                  data[:],
-                ) {
-                PdfRawImage(width, height, layout, data) =>
-                  PdfRawImage(
-                    width,
-                    height,
-                    layout,
-                    pdf_image_apply_decode(
-                      data,
-                      self.pdf_image_bits_per_component_int(stream.dictionary),
-                      self.pdf_image_decode_values_with_defaults(
-                        resources,
-                        stream.dictionary,
-                      ),
-                    ),
-                  )
-                encoded => encoded
-              }
-            Some(filter) => raise FilterNotSupported(filter)
-          }
-        _ => raise StreamDataExpected
-      }
-    }
-    _ => raise ParseStreamExpected
+    PdfImageJbig2Stream(_) =>
+      PdfJBIG2(
+        data,
+        self.pdf_image_decode_values_with_defaults(
+          resources,
+          decoded_stream.dictionary,
+        ),
+        self.pdf_image_jbig2_globals(decoded_stream.dictionary),
+      )
+    PdfImageRawStream(_) =>
+      PdfRawImage(
+        width,
+        height,
+        PdfBPP24,
+        pdf_image_apply_decode(
+          self.pdf_image_raw_8bpp_as_rgb24(
+            resources,
+            width,
+            height,
+            decoded_stream.dictionary,
+            data[:],
+          ),
+          self.pdf_image_bits_per_component_int(decoded_stream.dictionary),
+          self.pdf_image_decode_values_with_defaults(
+            resources,
+            decoded_stream.dictionary,
+          ),
+        ),
+      )
   }
 }

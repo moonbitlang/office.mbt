@@ -88,6 +88,11 @@ not part of the public signature. In one-line probes, separate enum variants
 with semicolons; in source files, normal block-style variant lines work after
 `moon fmt`.
 
+When an OCaml function returns a broad variant and later code relies on an
+informal invariant, prefer a narrow private MoonBit enum for the post-checked
+state. This makes impossible fallback branches explicit at the type boundary
+instead of carrying broad `Object`-like values through the rest of the port.
+
 ```sh
 moon run -c 'fn main { let empty = Bytes::new(0); let zeros = Bytes::new(2); println(empty.length()); println(zeros.length()); println(zeros[0].to_int()) }'
 # 0

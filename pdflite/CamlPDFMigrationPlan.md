@@ -684,9 +684,14 @@ MoonBit consequences for this project:
     with a private stream-returning decoder helper. Colour-space stream-table
     coverage now removes `pdf_space.mbt` from the uncovered-line report by
     reusing that private stream-returning decoder at the indexed-table
-    ownership boundary. A refreshed coverage pass reports 210 uncovered lines
-    in 4 files: the template executable `cmd/main`, plus remaining branches in
-    function, image, and text handling.
+    ownership boundary. Image coverage now removes `pdf_image.mbt` from the
+    uncovered-line report by tightening the staged image decoder to return a
+    private raw/JPEG/JPX/JBIG2 stream enum, materializing deferred stream data
+    at the owned-byte boundary, and testing malformed image metadata, decode
+    arrays, encoded decode defaults, indexed-table edge cases, unsupported raw
+    spaces, JBIG2 globals, and private decode math. A refreshed coverage pass
+    reports 168 uncovered lines in 3 files: the template executable
+    `cmd/main`, plus remaining branches in function and text handling.
 
 ## Update Discipline
 
