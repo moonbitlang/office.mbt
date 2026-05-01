@@ -4,6 +4,412 @@ fn crypt_model_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn crypt_name_for_test(text : String) -> @pdflite.PdfName {
+  @pdflite.pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn crypt_repeated_bytes_for_test(
+  value : Int,
+  length : Int,
+) -> @pdflite.PdfBytes {
+  crypt_model_bytes_for_test([ for _ in 0..<length => value ])
+}
+
+///|
+fn crypt_standard_encrypt_dictionary_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  owner_length? : Int = 40,
+  user_length? : Int = 40,
+) -> @pdflite.PdfObject {
+  let output : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (
+      crypt_name_for_test("/Filter"),
+      PdfNameObject(crypt_name_for_test("/Standard")),
+    ),
+    (
+      crypt_name_for_test("/O"),
+      PdfString(crypt_repeated_bytes_for_test(0x4f, owner_length)),
+    ),
+    (
+      crypt_name_for_test("/U"),
+      PdfString(crypt_repeated_bytes_for_test(0x55, user_length)),
+    ),
+    (crypt_name_for_test("/P"), PdfInteger(-4)),
+  ]
+  for entry in entries {
+    output.push(entry)
+  }
+  PdfDictionary(output)
+}
+
+///|
+fn crypt_doc_with_encrypt_for_test(
+  encrypt_dictionary : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_name_for_test("/Encrypt"), encrypt_dictionary),
+      (
+        crypt_name_for_test("/ID"),
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+  doc
+}
+
+///|
+fn crypt_expect_encryption_method_error_for_test(
+  encrypt_dictionary : @pdflite.PdfObject,
+) -> Unit raise {
+  let doc = crypt_doc_with_encrypt_for_test(encrypt_dictionary)
+  let result : Result[@pdflite.PdfEncryptionValues, Error] = try? doc.encryption_values()
+  guard result is Err(@pdflite.PdfError::EncryptionMethodExpected) else {
+    fail("expected EncryptionMethodExpected")
+  }
+}
+
+///|
+test "PdfDocument encryption_values parses legacy ARC4 dictionary values" {
+  let doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(1)),
+      (crypt_name_for_test("/R"), PdfInteger(2)),
+    ]),
+  )
+  let values = try! doc.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptARC4(40, 2))
+  @test.assert_eq(values.owner_entry, crypt_repeated_bytes_for_test(0x4f, 32))
+  @test.assert_eq(values.user_entry, crypt_repeated_bytes_for_test(0x55, 32))
+  @test.assert_eq(values.permissions, -4)
+  @test.assert_eq(values.file_id, @ascii.encode("doc-id"))
+  @test.assert_eq(values.user_encryption_key, None)
+  @test.assert_eq(values.owner_encryption_key, None)
+
+  let r3_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(2)),
+      (crypt_name_for_test("/R"), PdfInteger(3)),
+    ]),
+  )
+  @test.assert_eq(
+    (try! r3_doc.encryption_values()).crypt_type,
+    PdfCryptARC4(40, 3),
+  )
+
+  let r3_length_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(2)),
+      (crypt_name_for_test("/Length"), PdfInteger(128)),
+      (crypt_name_for_test("/R"), PdfInteger(3)),
+    ]),
+  )
+  let r3_values = try! r3_length_doc.encryption_values()
+  @test.assert_eq(r3_values.crypt_type, PdfCryptARC4(128, 3))
+  @test.assert_eq(r3_values.owner_entry.length(), 32)
+  @test.assert_eq(r3_values.user_entry.length(), 32)
+}
+
+///|
+test "PdfDocument encryption_values parses crypt filter methods" {
+  let arc4_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (crypt_name_for_test("/Length"), PdfInteger(96)),
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    (try! arc4_doc.encryption_values()).crypt_type,
+    PdfCryptARC4(96, 4),
+  )
+
+  let arc4_length_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (crypt_name_for_test("/Length"), PdfInteger(128)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    (try! arc4_length_doc.encryption_values()).crypt_type,
+    PdfCryptARC4(128, 4),
+  )
+
+  let aesv2_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/AESV2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    (try! aesv2_doc.encryption_values()).crypt_type,
+    PdfCryptAESV2,
+  )
+
+  let aesv3_doc = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(5)),
+        (crypt_name_for_test("/R"), PdfInteger(6)),
+        (
+          crypt_name_for_test("/CF"),
+          PdfDictionary([
+            (
+              crypt_name_for_test("/StdCF"),
+              PdfDictionary([
+                (
+                  crypt_name_for_test("/CFM"),
+                  PdfNameObject(crypt_name_for_test("/AESV3")),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        (
+          crypt_name_for_test("/UE"),
+          PdfString(crypt_repeated_bytes_for_test(0x11, 32)),
+        ),
+        (
+          crypt_name_for_test("/OE"),
+          PdfString(crypt_repeated_bytes_for_test(0x22, 32)),
+        ),
+      ],
+      owner_length=56,
+      user_length=56,
+    ),
+  )
+  let aesv3_values = try! aesv3_doc.encryption_values()
+  @test.assert_eq(aesv3_values.crypt_type, PdfCryptAESV3(true))
+  @test.assert_eq(aesv3_values.owner_entry.length(), 48)
+  @test.assert_eq(aesv3_values.user_entry.length(), 48)
+  @test.assert_eq(
+    aesv3_values.user_encryption_key,
+    Some(crypt_repeated_bytes_for_test(0x11, 32)),
+  )
+  @test.assert_eq(
+    aesv3_values.owner_encryption_key,
+    Some(crypt_repeated_bytes_for_test(0x22, 32)),
+  )
+}
+
+///|
+test "PdfDocument encryption_values reports malformed encryption dictionaries" {
+  let no_encrypt : Result[@pdflite.PdfEncryptionValues, Error] = try? @pdflite.pdf_document_empty().encryption_values()
+  guard no_encrypt is Err(@pdflite.PdfError::EncryptionExpected) else {
+    fail("expected EncryptionExpected")
+  }
+
+  crypt_expect_encryption_method_error_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(99)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+    ]),
+  )
+
+  crypt_expect_encryption_method_error_for_test(
+    PdfDictionary([
+      (crypt_name_for_test("/Filter"), PdfInteger(1)),
+      (crypt_name_for_test("/V"), PdfInteger(1)),
+      (crypt_name_for_test("/R"), PdfInteger(2)),
+      (
+        crypt_name_for_test("/O"),
+        PdfString(crypt_repeated_bytes_for_test(0x4f, 32)),
+      ),
+      (
+        crypt_name_for_test("/U"),
+        PdfString(crypt_repeated_bytes_for_test(0x55, 32)),
+      ),
+      (crypt_name_for_test("/P"), PdfInteger(-4)),
+    ]),
+  )
+
+  crypt_expect_encryption_method_error_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+    ]),
+  )
+
+  crypt_expect_encryption_method_error_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (crypt_name_for_test("/CF"), PdfDictionary([])),
+    ]),
+  )
+
+  crypt_expect_encryption_method_error_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/Unknown")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+
+  crypt_expect_encryption_method_error_for_test(
+    crypt_standard_encrypt_dictionary_for_test([
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/V2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+
+  let missing_o = crypt_doc_with_encrypt_for_test(
+    PdfDictionary([
+      (
+        crypt_name_for_test("/Filter"),
+        PdfNameObject(crypt_name_for_test("/Standard")),
+      ),
+      (crypt_name_for_test("/V"), PdfInteger(1)),
+      (crypt_name_for_test("/R"), PdfInteger(2)),
+      (
+        crypt_name_for_test("/U"),
+        PdfString(crypt_repeated_bytes_for_test(0x55, 32)),
+      ),
+      (crypt_name_for_test("/P"), PdfInteger(-4)),
+    ]),
+  )
+  let missing_o_result : Result[@pdflite.PdfEncryptionValues, Error] = try? missing_o.encryption_values()
+  guard missing_o_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    name == crypt_name_for_test("/O") else {
+    fail("expected missing /O")
+  }
+
+  let missing_p = crypt_doc_with_encrypt_for_test(
+    PdfDictionary([
+      (
+        crypt_name_for_test("/Filter"),
+        PdfNameObject(crypt_name_for_test("/Standard")),
+      ),
+      (crypt_name_for_test("/V"), PdfInteger(1)),
+      (crypt_name_for_test("/R"), PdfInteger(2)),
+      (
+        crypt_name_for_test("/O"),
+        PdfString(crypt_repeated_bytes_for_test(0x4f, 32)),
+      ),
+      (
+        crypt_name_for_test("/U"),
+        PdfString(crypt_repeated_bytes_for_test(0x55, 32)),
+      ),
+    ]),
+  )
+  let missing_p_result : Result[@pdflite.PdfEncryptionValues, Error] = try? missing_p.encryption_values()
+  guard missing_p_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryExpected(name)) &&
+    name == crypt_name_for_test("/P") else {
+    fail("expected missing /P")
+  }
+
+  let short_u = crypt_doc_with_encrypt_for_test(
+    crypt_standard_encrypt_dictionary_for_test(
+      [
+        (crypt_name_for_test("/V"), PdfInteger(1)),
+        (crypt_name_for_test("/R"), PdfInteger(2)),
+      ],
+      user_length=31,
+    ),
+  )
+  let short_u_result : Result[@pdflite.PdfEncryptionValues, Error] = try? short_u.encryption_values()
+  guard short_u_result
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_name_for_test("/U") else {
+    fail("expected short /U")
+  }
+
+  let bad_id = @pdflite.pdf_document_empty()
+  bad_id.set_trailer_dict(
+    PdfDictionary([
+      (
+        crypt_name_for_test("/Encrypt"),
+        crypt_standard_encrypt_dictionary_for_test([
+          (crypt_name_for_test("/V"), PdfInteger(1)),
+          (crypt_name_for_test("/R"), PdfInteger(2)),
+        ]),
+      ),
+    ]),
+  )
+  let bad_id_result : Result[@pdflite.PdfEncryptionValues, Error] = try? bad_id.encryption_values()
+  guard bad_id_result is Err(@pdflite.PdfError::EncryptionIDExpected) else {
+    fail("expected EncryptionIDExpected")
+  }
+}
+
+///|
 test "pdf_pad_password truncates or pads with PDF password padding" {
   @test.assert_eq(@pdflite.pdf_password_padding().length(), 32)
   @test.assert_eq(@pdflite.pdf_password_padding()[0].to_int(), 0x28)

@@ -49,6 +49,11 @@ pub(all) suberror PdfError {
   InvalidUTF8
   InvalidPDFDocEncoding(Int)
   CryptoKeyExpected
+  EncryptionExpected
+  EncryptionMethodExpected
+  EncryptionDictionaryEntryExpected(PdfName)
+  EncryptionDictionaryEntryTooShort(PdfName)
+  EncryptionIDExpected
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported

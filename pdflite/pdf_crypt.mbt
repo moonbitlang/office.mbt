@@ -11,6 +11,236 @@ pub(all) enum PdfPermission {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfEncryptionValues {
+  crypt_type : PdfCryptType
+  user_entry : PdfBytes
+  owner_entry : PdfBytes
+  permissions : Int
+  file_id : PdfBytes
+  user_encryption_key : PdfBytes?
+  owner_encryption_key : PdfBytes?
+} derive(Debug, Eq, ToJson)
+
+///|
+fn pdf_crypt_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_crypt_lookup_name(
+  pdf : PdfDocument,
+  key : PdfName,
+  dictionary : PdfObject,
+) -> PdfName? {
+  match pdf.lookup_direct(key, dictionary) {
+    Some(PdfNameObject(name)) => Some(name)
+    _ => None
+  }
+}
+
+///|
+fn pdf_crypt_lookup_int(
+  pdf : PdfDocument,
+  key : PdfName,
+  dictionary : PdfObject,
+) -> Int? {
+  match pdf.lookup_direct(key, dictionary) {
+    Some(PdfInteger(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn pdf_crypt_lookup_string(
+  pdf : PdfDocument,
+  key : PdfName,
+  dictionary : PdfObject,
+) -> PdfBytes? {
+  match pdf.lookup_direct(key, dictionary) {
+    Some(PdfString(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn pdf_crypt_required_string(
+  pdf : PdfDocument,
+  key : PdfName,
+  dictionary : PdfObject,
+) -> PdfBytes raise PdfError {
+  match pdf_crypt_lookup_string(pdf, key, dictionary) {
+    Some(value) => value
+    None => raise EncryptionDictionaryEntryExpected(key)
+  }
+}
+
+///|
+fn pdf_crypt_required_int(
+  pdf : PdfDocument,
+  key : PdfName,
+  dictionary : PdfObject,
+) -> Int raise PdfError {
+  match pdf_crypt_lookup_int(pdf, key, dictionary) {
+    Some(value) => value
+    None => raise EncryptionDictionaryEntryExpected(key)
+  }
+}
+
+///|
+fn pdf_crypt_chop_string(
+  key : PdfName,
+  value : PdfBytes,
+  need : Int,
+) -> PdfBytes raise PdfError {
+  if value.length() < need {
+    raise EncryptionDictionaryEntryTooShort(key)
+  }
+  value[:need].to_owned()
+}
+
+///|
+fn pdf_crypt_arc4_v4_length(
+  pdf : PdfDocument,
+  encrypt_dictionary : PdfObject,
+  cf_dictionary : PdfObject,
+) -> Int? {
+  match
+    pdf_crypt_lookup_int(pdf, pdf_crypt_name("/Length"), encrypt_dictionary) {
+    Some(value) => Some(value)
+    None => pdf_crypt_lookup_int(pdf, pdf_crypt_name("/Length"), cf_dictionary)
+  }
+}
+
+///|
+fn pdf_crypt_type_from_encrypt_dictionary(
+  pdf : PdfDocument,
+  encrypt_dictionary : PdfObject,
+) -> PdfCryptType? {
+  let standard = pdf_crypt_name("/Standard")
+  let filter = pdf_crypt_lookup_name(
+    pdf,
+    pdf_crypt_name("/Filter"),
+    encrypt_dictionary,
+  )
+  let version = pdf_crypt_lookup_int(
+    pdf,
+    pdf_crypt_name("/V"),
+    encrypt_dictionary,
+  )
+  let length = pdf_crypt_lookup_int(
+    pdf,
+    pdf_crypt_name("/Length"),
+    encrypt_dictionary,
+  )
+  let revision = pdf_crypt_lookup_int(
+    pdf,
+    pdf_crypt_name("/R"),
+    encrypt_dictionary,
+  )
+  match (filter, version, length, revision) {
+    (Some(name), Some(1), _, Some(revision)) if name == standard =>
+      Some(PdfCryptARC4(40, revision))
+    (Some(name), Some(2), None, Some(revision)) if name == standard =>
+      Some(PdfCryptARC4(40, revision))
+    (Some(name), Some(2), Some(length), _) if name == standard &&
+      length % 8 == 0 &&
+      length >= 40 &&
+      length <= 128 => Some(PdfCryptARC4(length, 3))
+    (Some(name), Some(version), _, Some(revision)) if name == standard &&
+      (version == 4 || version == 5) =>
+      match pdf.lookup_direct(pdf_crypt_name("/CF"), encrypt_dictionary) {
+        Some(cf_dictionary) =>
+          match pdf.lookup_direct(pdf_crypt_name("/StdCF"), cf_dictionary) {
+            Some(std_cf_dictionary) =>
+              match
+                pdf_crypt_lookup_name(
+                  pdf,
+                  pdf_crypt_name("/CFM"),
+                  std_cf_dictionary,
+                ) {
+                Some(cfm) if cfm == pdf_crypt_name("/V2") =>
+                  match
+                    pdf_crypt_arc4_v4_length(
+                      pdf, encrypt_dictionary, cf_dictionary,
+                    ) {
+                    Some(length) => Some(PdfCryptARC4(length, 4))
+                    None => None
+                  }
+                Some(cfm) if cfm == pdf_crypt_name("/AESV2") =>
+                  Some(PdfCryptAESV2)
+                Some(cfm) if cfm == pdf_crypt_name("/AESV3") =>
+                  Some(PdfCryptAESV3(revision == 6))
+                _ => None
+              }
+            None => None
+          }
+        None => None
+      }
+    _ => None
+  }
+}
+
+///|
+pub fn PdfDocument::encryption_values(
+  self : PdfDocument,
+) -> PdfEncryptionValues raise PdfError {
+  let encrypt_key = pdf_crypt_name("/Encrypt")
+  let encrypt_dictionary = match
+    self.lookup_direct(encrypt_key, self.trailer_dict()) {
+    Some(value) => value
+    None => raise EncryptionExpected
+  }
+  let crypt_type = match
+    pdf_crypt_type_from_encrypt_dictionary(self, encrypt_dictionary) {
+    Some(value) => value
+    None => raise EncryptionMethodExpected
+  }
+  let user_owner_length = match crypt_type {
+    PdfCryptAESV3(_) => 48
+    _ => 32
+  }
+  let owner_key = pdf_crypt_name("/O")
+  let user_key = pdf_crypt_name("/U")
+  let id_key = pdf_crypt_name("/ID")
+  let owner_entry = pdf_crypt_chop_string(
+    owner_key,
+    pdf_crypt_required_string(self, owner_key, encrypt_dictionary),
+    user_owner_length,
+  )
+  let user_entry = pdf_crypt_chop_string(
+    user_key,
+    pdf_crypt_required_string(self, user_key, encrypt_dictionary),
+    user_owner_length,
+  )
+  let permissions = pdf_crypt_required_int(
+    self,
+    pdf_crypt_name("/P"),
+    encrypt_dictionary,
+  )
+  let file_id = match self.lookup_direct(id_key, self.trailer_dict()) {
+    Some(PdfArray([PdfString(file_id), _])) => file_id
+    _ => raise EncryptionIDExpected
+  }
+  {
+    crypt_type,
+    user_entry,
+    owner_entry,
+    permissions,
+    file_id,
+    user_encryption_key: pdf_crypt_lookup_string(
+      self,
+      pdf_crypt_name("/UE"),
+      encrypt_dictionary,
+    ),
+    owner_encryption_key: pdf_crypt_lookup_string(
+      self,
+      pdf_crypt_name("/OE"),
+      encrypt_dictionary,
+    ),
+  }
+}
+
+///|
 fn pdf_password_padding_fixed() -> FixedArray[Byte] {
   [
     0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff,

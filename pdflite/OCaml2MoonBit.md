@@ -115,6 +115,16 @@ then append binary payloads as `Bytes`/`BytesView`. Do not build binary file
 formats through `String` concatenation.
 
 ```sh
+moon run -c 'fn helper(flag : Bool) -> Unit raise { if flag { fail("x") } }
+fn main { try! helper(false); println("helper uses raise") }'
+# helper uses raise
+```
+
+Test helpers that can call `fail` must declare `raise`, even when they are only
+called from `test` blocks. Keep this on shared assertion helpers so pattern
+checks can be factored without losing checked-error correctness.
+
+```sh
 moon run -c $'fn push_ascii(output : Array[Byte], text : String) -> Unit { for byte in @ascii.encode(text)[:] { output.push(byte) } }\nfn main { let output : Array[Byte] = []; push_ascii(output, "PDF"); output.push(10); let bytes = Bytes::from_array(output); println(bytes.length()); println(bytes[0].to_int()); println(bytes[3].to_int()) }'
 # 4
 # 80

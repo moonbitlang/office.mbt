@@ -518,7 +518,12 @@ MoonBit consequences for this project:
     materialized at the crypt boundary and `/Length` refreshed. A copied
     document-level ARC4 pass is also started for parsed objects, preserving
     already-decrypted and deferred parser states and allowing the encryption
-    dictionary object to be skipped. AES, SHA-family helpers beyond the
+    dictionary object to be skipped. Typed standard-encryption dictionary
+    parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
+    `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
+    handling. The parser now reports structured errors for unencrypted files,
+    unsupported encryption methods, malformed required entries, short `/O` or
+    `/U` entries, and missing trailer IDs. AES, SHA-family helpers beyond the
     available package surface, document decryption, and re-encryption remain
     deferred.
 
