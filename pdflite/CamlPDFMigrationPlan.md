@@ -372,8 +372,10 @@ MoonBit consequences for this project:
    predefined encoding name conversion, simple-font `/Encoding` dictionary
    parsing, standard-14 font detection/reading, byte-oriented UTF-16BE PDF
    Unicode string emission, BOM detection, strict UTF-16BE codepoint parsing,
-   byte-oriented UTF-8 codepoint conversion, PDFDocEncoding conversion, and
-   PDF document string UTF-8/UTF-16BE simplification helpers.
+   byte-oriented UTF-8 codepoint conversion, PDFDocEncoding conversion,
+   PDF document string UTF-8/UTF-16BE simplification helpers, and
+   CamlPDF-style font descriptor reading for metric defaults, font-file
+   references, and `/CharSet` parsing.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

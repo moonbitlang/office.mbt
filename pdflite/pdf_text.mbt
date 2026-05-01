@@ -172,6 +172,29 @@ pub fn PdfStandardFontData::debug_name(self : PdfStandardFontData) -> String {
 }
 
 ///|
+pub(all) enum PdfFontFile {
+  PdfFontFile(Int)
+  PdfFontFile2(Int)
+  PdfFontFile3(Int)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) struct PdfFontDescriptor {
+  ascent : Double
+  descent : Double
+  avgwidth : Double
+  maxwidth : Double
+  flags : Int
+  fontbbox : PdfRectangle
+  italicangle : Double
+  capheight : Double
+  xheight : Double
+  stemv : Double
+  fontfile : PdfFontFile?
+  charset : Array[PdfName]?
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
@@ -253,6 +276,141 @@ fn pdf_text_dictionary_has_key(object : PdfObject, key : PdfName) -> Bool {
         false
       }
     None => false
+  }
+}
+
+///|
+fn pdf_text_find_immediate_indirect(object : PdfObject, key : PdfName) -> Int? {
+  match object.dictionary_view() {
+    Some(entries) =>
+      for entry in entries {
+        let (name, value) = entry
+        if name == key {
+          break match value {
+            PdfIndirect(number) => Some(number)
+            _ => None
+          }
+        }
+      } nobreak {
+        None
+      }
+    None => None
+  }
+}
+
+///|
+fn pdf_text_fontfile_of_descriptor(descriptor : PdfObject) -> PdfFontFile? {
+  match
+    pdf_text_find_immediate_indirect(descriptor, pdf_text_name("/FontFile")) {
+    Some(number) => Some(PdfFontFile(number))
+    None =>
+      match
+        pdf_text_find_immediate_indirect(
+          descriptor,
+          pdf_text_name("/FontFile2"),
+        ) {
+        Some(number) => Some(PdfFontFile2(number))
+        None =>
+          match
+            pdf_text_find_immediate_indirect(
+              descriptor,
+              pdf_text_name("/FontFile3"),
+            ) {
+            Some(number) => Some(PdfFontFile3(number))
+            None => None
+          }
+      }
+  }
+}
+
+///|
+fn pdf_text_zero_rectangle() -> PdfRectangle {
+  { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 }
+}
+
+///|
+fn PdfDocument::pdf_text_optional_number(
+  self : PdfDocument,
+  key : PdfName,
+  object : PdfObject,
+) -> Double raise PdfError {
+  match self.lookup_direct(key, object) {
+    Some(value) => self.get_number(value)
+    None => 0.0
+  }
+}
+
+///|
+fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
+  let cursor = byte_cursor_of_view(bytes)
+  let names : Array[PdfName] = []
+  let mut done = false
+  while !done {
+    cursor.drop_pdf_whitespace()
+    match cursor.lex_pdf_name() {
+      LexName(name) =>
+        if name == pdf_text_name("/") {
+          done = true
+        } else {
+          names.push(name)
+        }
+      _ => done = true
+    }
+  }
+  names
+}
+
+///|
+fn PdfDocument::pdf_text_font_charset(
+  self : PdfDocument,
+  descriptor : PdfObject,
+) -> Array[PdfName]? raise PdfError {
+  match self.lookup_direct(pdf_text_name("/CharSet"), descriptor) {
+    Some(PdfString(bytes)) => Some(pdf_text_parse_charset(bytes[:]))
+    _ => None
+  }
+}
+
+///|
+pub fn PdfDocument::read_font_descriptor(
+  self : PdfDocument,
+  font : PdfObject,
+) -> PdfFontDescriptor? raise PdfError {
+  match self.lookup_direct(pdf_text_name("/FontDescriptor"), font) {
+    None => None
+    Some(descriptor) => {
+      let fontbbox = match
+        self.lookup_direct(pdf_text_name("/FontBBox"), descriptor) {
+        Some(value) => self.parse_rectangle(value)
+        None => pdf_text_zero_rectangle()
+      }
+      Some({
+        ascent: self.pdf_text_optional_number(
+          pdf_text_name("/Ascent"),
+          descriptor,
+        ),
+        descent: self.pdf_text_optional_number(
+          pdf_text_name("/Descent"),
+          descriptor,
+        ),
+        avgwidth: self.pdf_text_optional_number(
+          pdf_text_name("/AvgWidth"),
+          descriptor,
+        ),
+        maxwidth: self.pdf_text_optional_number(
+          pdf_text_name("/MaxWidth"),
+          descriptor,
+        ),
+        flags: 0,
+        fontbbox,
+        italicangle: 0.0,
+        capheight: 0.0,
+        xheight: 0.0,
+        stemv: 0.0,
+        fontfile: pdf_text_fontfile_of_descriptor(descriptor),
+        charset: self.pdf_text_font_charset(descriptor),
+      })
+    }
   }
 }
 

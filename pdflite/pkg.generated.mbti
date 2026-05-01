@@ -750,6 +750,7 @@ pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfB
 pub fn PdfDocument::read_colour_space(Self, PdfObject, PdfObject) -> PdfColourSpace? raise PdfError
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_encoding(Self, PdfObject) -> PdfEncoding raise PdfError
+pub fn PdfDocument::read_font_descriptor(Self, PdfObject) -> PdfFontDescriptor? raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
 pub fn PdfDocument::read_optional_content_groups(Self) -> PdfOptionalContent? raise PdfError
@@ -798,6 +799,27 @@ pub fn PdfEncoding::pdf_name(Self) -> PdfName?
 pub(all) struct PdfEncodingDifference {
   name : PdfName
   code : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfFontDescriptor {
+  ascent : Double
+  descent : Double
+  avgwidth : Double
+  maxwidth : Double
+  flags : Int
+  fontbbox : PdfRectangle
+  italicangle : Double
+  capheight : Double
+  xheight : Double
+  stemv : Double
+  fontfile : PdfFontFile?
+  charset : Array[PdfName]?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfFontFile {
+  PdfFontFile(Int)
+  PdfFontFile2(Int)
+  PdfFontFile3(Int)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfFunction {

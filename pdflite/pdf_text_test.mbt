@@ -507,6 +507,89 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
 }
 
 ///|
+test "PdfDocument read_font_descriptor parses metrics font files and charset" {
+  let doc = @pdflite.pdf_document_empty()
+  let descriptor = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/FontBBox"),
+      PdfArray([
+        PdfInteger(500),
+        PdfInteger(-200),
+        PdfInteger(-10),
+        PdfInteger(700),
+      ]),
+    ),
+    (text_name_for_test("/Ascent"), PdfInteger(720)),
+    (text_name_for_test("/Descent"), PdfReal(-180.5)),
+    (text_name_for_test("/AvgWidth"), PdfInteger(501)),
+    (text_name_for_test("/MaxWidth"), PdfInteger(1000)),
+    (text_name_for_test("/Flags"), PdfInteger(4)),
+    (text_name_for_test("/FontFile2"), PdfIndirect(42)),
+    (
+      text_name_for_test("/CharSet"),
+      PdfString(
+        text_bytes_for_test([47, 65, 32, 47, 66, 32, 47, 67, 32, 47, 32, 47, 68]),
+      ),
+    ),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), descriptor),
+  ])
+  guard (try! doc.read_font_descriptor(font)) is Some(read_descriptor) else {
+    fail("expected font descriptor")
+  }
+  @test.assert_eq(read_descriptor.ascent, 720.0)
+  @test.assert_eq(read_descriptor.descent, -180.5)
+  @test.assert_eq(read_descriptor.avgwidth, 501.0)
+  @test.assert_eq(read_descriptor.maxwidth, 1000.0)
+  @test.assert_eq(read_descriptor.flags, 0)
+  @test.assert_eq(read_descriptor.fontbbox, {
+    min_x: -10.0,
+    min_y: -200.0,
+    max_x: 500.0,
+    max_y: 700.0,
+  })
+  @test.assert_eq(read_descriptor.fontfile, Some(PdfFontFile2(42)))
+  @test.assert_eq(
+    read_descriptor.charset,
+    Some([
+      text_name_for_test("/A"),
+      text_name_for_test("/B"),
+      text_name_for_test("/C"),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument read_font_descriptor uses CamlPDF defaults and fontfile priority" {
+  let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    try! doc.read_font_descriptor(@pdflite.pdf_dictionary([])),
+    None,
+  )
+  let descriptor = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontFile"), PdfIndirect(10)),
+    (text_name_for_test("/FontFile2"), PdfIndirect(11)),
+    (text_name_for_test("/CharSet"), PdfInteger(0)),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), descriptor),
+  ])
+  guard (try! doc.read_font_descriptor(font)) is Some(read_descriptor) else {
+    fail("expected font descriptor")
+  }
+  @test.assert_eq(read_descriptor.fontbbox, {
+    min_x: 0.0,
+    min_y: 0.0,
+    max_x: 0.0,
+    max_y: 0.0,
+  })
+  @test.assert_eq(read_descriptor.ascent, 0.0)
+  @test.assert_eq(read_descriptor.fontfile, Some(PdfFontFile(10)))
+  @test.assert_eq(read_descriptor.charset, None)
+}
+
+///|
 test "PdfDocument detects and reads standard14 fonts" {
   let doc = @pdflite.pdf_document_empty()
   let font = @pdflite.pdf_dictionary([
