@@ -91,6 +91,10 @@ pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
 
+pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise PdfError
+
+pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
+
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
 pub fn point2(Double, Double) -> Point2
@@ -140,6 +144,9 @@ pub(all) suberror PdfError {
   BadRectangle
   MatrixMalformed
   InvalidHexEscape
+  ParseObjectExpected
+  ParseArrayMalformed
+  ParseSingleObjectExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 

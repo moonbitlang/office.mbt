@@ -13,6 +13,9 @@ pub(all) suberror PdfError {
   BadRectangle
   MatrixMalformed
   InvalidHexEscape
+  ParseObjectExpected
+  ParseArrayMalformed
+  ParseSingleObjectExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
