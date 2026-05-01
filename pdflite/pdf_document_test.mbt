@@ -3,15 +3,20 @@ test "PdfObjectMap stores parsed and deferred object states" {
   let map = @pdflite.pdf_object_map_empty()
   map.set_entry(3, @pdflite.pdf_object_entry(ObjectParsed(PdfInteger(30))))
   map.set_entry(
+    4,
+    @pdflite.pdf_object_entry(ObjectParsedAlreadyDecrypted(PdfInteger(40))),
+  )
+  map.set_entry(
     9,
     @pdflite.pdf_object_entry(
       ObjectToParseFromObjectStream({ object_stream_number: 5, index: 1 }),
     ),
   )
-  @test.assert_eq(map.length(), 2)
+  @test.assert_eq(map.length(), 3)
   @test.assert_eq(map.contains(3), true)
-  @test.assert_eq(map.object_numbers(), [3, 9])
+  @test.assert_eq(map.object_numbers(), [3, 4, 9])
   @test.assert_eq(map.lookup_parsed_or_null(3), PdfInteger(30))
+  @test.assert_eq(map.lookup_parsed_or_null(4), PdfInteger(40))
   @test.assert_eq(map.lookup_parsed_or_null(9), PdfNull)
   @test.assert_eq(map.lookup_parsed_or_null(12), PdfNull)
 }

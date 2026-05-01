@@ -10,6 +10,9 @@ test "PdfDocument direct resolves parsed indirect objects" {
   doc.add_object_given_number(6, PdfInteger(42))
   @test.assert_eq(doc.direct(PdfIndirect(5)), PdfInteger(42))
   @test.assert_eq(doc.direct(PdfIndirect(9)), PdfNull)
+  let cyclic = @pdflite.pdf_document_empty()
+  cyclic.add_object_given_number(1, PdfIndirect(1))
+  @test.assert_eq(cyclic.direct(PdfIndirect(1)), PdfNull)
   let objects = @pdflite.pdf_objects_empty()
   objects.set_entry(9, @pdflite.pdf_object_entry(ObjectToParse))
   @test.assert_eq(objects.lookup_object_or_null(9), PdfNull)
@@ -31,6 +34,7 @@ test "PdfDocument lookup_direct follows dictionary indirections" {
     doc.lookup_direct_or_else(key_alt, key_type, dict),
     Some(PdfNameObject(key_type)),
   )
+  @test.assert_eq(doc.lookup_direct(key_type, PdfInteger(2)), None)
 }
 
 ///|
@@ -76,6 +80,12 @@ test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
   )
   guard bad_rect is Err(@pdflite.PdfError::RectangleExpected) else {
     fail("expected RectangleExpected")
+  }
+  let bad_number_rect : Result[@pdflite.PdfRectangle, Error] = try? doc.parse_rectangle(
+    PdfArray([PdfInteger(1), PdfNull, PdfInteger(3), PdfInteger(4)]),
+  )
+  guard bad_number_rect is Err(@pdflite.PdfError::BadRectangle) else {
+    fail("expected BadRectangle")
   }
 }
 

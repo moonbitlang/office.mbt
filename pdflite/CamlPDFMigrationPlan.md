@@ -456,7 +456,10 @@ MoonBit consequences for this project:
     supported direct destination variants, malformed destination targets,
     named/string lookup fallbacks, destination object rendering, page-number
     target variants, and coordinate transforms for `FitBH`, `FitBV`, and
-    partial `XYZ` targets.
+    partial `XYZ` targets. Lookup and transform coverage now includes recursive
+    indirect-reference depth guards, non-dictionary direct lookup, bad rectangle
+    contents, operation-to-matrix dispatch, overflow-scaled matrix inversion,
+    and parser-private already-decrypted object-state copying.
 
 ## Update Discipline
 

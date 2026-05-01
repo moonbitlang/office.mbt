@@ -126,6 +126,18 @@ formatter at the serialization boundary instead of writing `Double::to_string()`
 directly.
 
 ```sh
+moon run -c 'fn main { let divisor = 1.0e308 * 1.0e308; let scale = 1.0 / divisor; println(scale == 0.0); println(divisor); println(scale) }'
+# true
+# Infinity
+# 0
+```
+
+MoonBit `Double` overflow can produce `Infinity`, and division by that infinity
+can produce zero. When porting OCaml `float` code with defensive branches around
+overflow, infinity, or zero scales, validate the exact edge behavior with a
+small `moon run -c` probe and cover the branch directly.
+
+```sh
 moon run -c 'fn main { let r : Ref[Int] = Ref::{ val: 0 }; r.val += 1; let xs = [1, 2, 3]; xs[0] = 9; println(r.val); println(xs[0]) }'
 # 1
 # 9
