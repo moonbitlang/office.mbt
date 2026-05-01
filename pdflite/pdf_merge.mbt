@@ -1647,5 +1647,6 @@ pub fn pdf_merge_documents(
   if remove_duplicate_fonts {
     merged.remove_duplicate_fonts()
   }
+  let (merged, _) = merged.with_file_id()
   merged
 }

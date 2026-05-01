@@ -733,9 +733,9 @@ MoonBit consequences for this project:
     link annotation `/Dest` entries, GoTo action `/D` entries, and retained
     named/string-target bookmarks are rewritten to the renamed keys, including
     cross-document callsites that fall back to the first global renamed target.
-    Merge
-    trailer info retention now
-    preserves the first available `/Info` dictionary through the merged trailer.
+    Merge trailer info retention now preserves the first available `/Info`
+    dictionary through the merged trailer, and merged documents now install a
+    trailer `/ID` entry at the final merge boundary.
     Safe catalog-entry retention now carries first-seen non-page/non-handled
     catalog entries, such as viewer preferences. Catalog `/OpenAction`
     retention is now started behind the same flag: the merge keeps the first

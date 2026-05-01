@@ -830,6 +830,19 @@ test "pdf_merge_documents retains first document info dictionary" {
 }
 
 ///|
+test "pdf_merge_documents installs trailer file id" {
+  let key_id = merge_name_for_test("/ID")
+  let first = merge_one_page_doc_for_test(1, 4)
+  let second = merge_one_page_doc_for_test(2, 4)
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let expected = @pdflite.pdf_md5_digest(@ascii.encode("pdflite")[:])
+  @test.assert_eq(
+    merged.trailer_dict().lookup_immediate(key_id),
+    Some(PdfArray([PdfString(expected), PdfString(expected)])),
+  )
+}
+
+///|
 test "pdf_merge_documents retains safe catalog entries" {
   let key_page_mode = merge_name_for_test("/PageMode")
   let key_viewer_preferences = merge_name_for_test("/ViewerPreferences")
