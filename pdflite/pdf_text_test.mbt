@@ -2332,6 +2332,41 @@ test "PdfTextExtractor extracts MacRoman sparse B-range glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacRoman C-range glyphs" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacRomanEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0xC0, 0xC1, 0xC2, 0xC4, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0x00BF, 0x00A1, 0x00AC, 0x0192, 0x00AB, 0x00BB, 0x2026, 0x20, 0x00C0, 0x00C3,
+    0x00D5, 0x0152, 0x0153,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/questiondown"),
+    text_name_for_test("/exclamdown"),
+    text_name_for_test("/logicalnot"),
+    text_name_for_test("/florin"),
+    text_name_for_test("/guillemotleft"),
+    text_name_for_test("/guillemotright"),
+    text_name_for_test("/ellipsis"),
+    text_name_for_test("/space"),
+    text_name_for_test("/Agrave"),
+    text_name_for_test("/Atilde"),
+    text_name_for_test("/Otilde"),
+    text_name_for_test("/OE"),
+    text_name_for_test("/oe"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00BF), Some(0xC0))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0192), Some(0xC4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2026), Some(0xC9))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20), Some(0x20))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0153), Some(0xCF))
+}
+
+///|
 test "PdfTextExtractor extracts WinAnsi glyphs" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),

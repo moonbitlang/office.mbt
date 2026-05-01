@@ -2066,6 +2066,19 @@ fn pdf_text_macroman_glyphname(code : Int) -> PdfName? {
         0xBC => Some(pdf_text_name("/ordmasculine"))
         0xBE => Some(pdf_text_name("/ae"))
         0xBF => Some(pdf_text_name("/oslash"))
+        0xC0 => Some(pdf_text_name("/questiondown"))
+        0xC1 => Some(pdf_text_name("/exclamdown"))
+        0xC2 => Some(pdf_text_name("/logicalnot"))
+        0xC4 => Some(pdf_text_name("/florin"))
+        0xC7 => Some(pdf_text_name("/guillemotleft"))
+        0xC8 => Some(pdf_text_name("/guillemotright"))
+        0xC9 => Some(pdf_text_name("/ellipsis"))
+        0xCA => Some(pdf_text_name("/space"))
+        0xCB => Some(pdf_text_name("/Agrave"))
+        0xCC => Some(pdf_text_name("/Atilde"))
+        0xCD => Some(pdf_text_name("/Otilde"))
+        0xCE => Some(pdf_text_name("/OE"))
+        0xCF => Some(pdf_text_name("/oe"))
         _ => None
       }
   }
