@@ -789,16 +789,13 @@ fn pdf_image_cmyk_indexed_4bpp_as_rgb24(
 }
 
 ///|
-fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
-  self : PdfDocument,
-  resources : PdfObject,
+fn pdf_image_raw_colour_space_as_rgb24(
   width : Int,
   height : Int,
-  dictionary : PdfObject,
+  colour_space : PdfColourSpace,
+  bpc : Int?,
   data : BytesView,
 ) -> PdfImage raise PdfError {
-  let colour_space = self.image_colour_space(dictionary, resources)
-  let bpc = self.pdf_image_bits_per_component_int(dictionary)
   match (colour_space, bpc) {
     (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(8)) => {
       let required = width * height * 3
@@ -878,8 +875,28 @@ fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
           )
         _ => raise FilterExpected
       }
+    (PdfICCBased(_, alternate, _, _, _), _) =>
+      pdf_image_raw_colour_space_as_rgb24(width, height, alternate, bpc, data)
     _ => raise FilterExpected
   }
+}
+
+///|
+fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
+  self : PdfDocument,
+  resources : PdfObject,
+  width : Int,
+  height : Int,
+  dictionary : PdfObject,
+  data : BytesView,
+) -> PdfImage raise PdfError {
+  pdf_image_raw_colour_space_as_rgb24(
+    width,
+    height,
+    self.image_colour_space(dictionary, resources),
+    self.pdf_image_bits_per_component_int(dictionary),
+    data,
+  )
 }
 
 ///|

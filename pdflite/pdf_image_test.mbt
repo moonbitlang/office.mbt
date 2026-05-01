@@ -193,6 +193,31 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
 }
 
 ///|
+test "PdfDocument get_image_24bpp reads raw ICCBased images through alternate space" {
+  let doc = @pdflite.pdf_document_empty()
+  let icc_gray : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/ICCBased")),
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([(image_name_for_test("/N"), PdfInteger(1))]),
+      StreamGot(@ascii.encode("icc")),
+    ),
+  ])
+  let image = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), icc_gray),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([9, 10])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([9, 9, 9, 10, 10, 10])),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
   let doc = @pdflite.pdf_document_empty()
   let mask = @pdflite.pdf_stream(
