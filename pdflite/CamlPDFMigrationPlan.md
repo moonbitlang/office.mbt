@@ -369,7 +369,9 @@ MoonBit consequences for this project:
     started with typed subtypes, borders, colours, byte-preserving
     contents/subjects, page annotation reading with popup-parent filtering,
     page-record annotation insertion, and geometry transforms for `/Rect`,
-    `/QuadPoints`, and `/L`.
+    `/QuadPoints`, and `/L`. Date support is started with typed PDF dates,
+    CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
+    and PDF date string rendering.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

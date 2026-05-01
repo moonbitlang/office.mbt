@@ -85,6 +85,8 @@ pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise PdfError
 
+pub fn pdf_date_of_string(String) -> PdfDate raise PdfError
+
 pub fn pdf_decode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_decode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
@@ -205,6 +207,8 @@ pub fn pdf_run_length_encode(Bytes) -> Bytes
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
+pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
+
 pub fn pdf_write_document(PdfDocument) -> Bytes raise PdfError
 
 pub fn pdf_write_indirect_object(PdfParsedIndirectObject) -> Bytes raise PdfError
@@ -284,6 +288,7 @@ pub(all) suberror PdfError {
   XRefEntryExpected
   TrailerExpected
   RootExpected
+  BadDate
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -535,6 +540,17 @@ pub(all) enum PdfContentOp {
   Op_BX
   Op_EX
   Op_Unknown(Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDate {
+  year : Int
+  month : Int
+  day : Int
+  hour : Int
+  minute : Int
+  second : Int
+  hour_offset : Int
+  minute_offset : Int
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfDestination {
