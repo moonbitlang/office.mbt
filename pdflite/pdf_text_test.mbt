@@ -1876,7 +1876,7 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
     @pdflite.pdf_dictionary([]),
     StreamGot(
       @ascii.encode(
-        "2 beginbfrange\n" +
+        "3 beginbfrange\n" +
         "<30><32> [\n" +
         "<0061>\n" +
         "<0062>\n" +
@@ -1884,7 +1884,12 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
         "]\n" +
         "<33><35> [<0064>\n" +
         "<0065>\n" +
-        "<0066>] endbfrange\n",
+        "<0066>]\n" +
+        "<36><38>\n" +
+        "[\n" +
+        "<0067><0068>\n" +
+        "<0069>\n" +
+        "] endbfrange\n",
       ),
     ),
   )
@@ -1915,17 +1920,20 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
       (51, text_bytes_for_test([0x00, 0x64])),
       (52, text_bytes_for_test([0x00, 0x65])),
       (53, text_bytes_for_test([0x00, 0x66])),
+      (54, text_bytes_for_test([0x00, 0x67])),
+      (55, text_bytes_for_test([0x00, 0x68])),
+      (56, text_bytes_for_test([0x00, 0x69])),
     ]),
   )
   let extractor = try! doc.text_extractor_of_font(font)
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([48, 49, 50, 51, 52, 53])[:],
+      text_bytes_for_test([48, 49, 50, 51, 52, 53, 54, 55, 56])[:],
     ),
-    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66],
+    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(48))
-  @test.assert_eq(extractor.charcode_of_codepoint(0x66), Some(53))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x69), Some(56))
 }
 
 ///|

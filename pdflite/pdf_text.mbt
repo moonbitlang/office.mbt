@@ -1536,14 +1536,39 @@ fn pdf_text_cmap_bfrange_array_start(
 }
 
 ///|
+fn pdf_text_cmap_bfrange_array_header(
+  line : BytesView,
+) -> PdfTextCMapBFRangeArray? {
+  guard pdf_text_index_of_byte(line, 91, 0) == None else { return None }
+  match pdf_text_parse_cmap_hex_groups(line) {
+    Some([source, stop]) =>
+      match (pdf_text_bytes_to_int(source[:]), pdf_text_bytes_to_int(stop[:])) {
+        (Some(first), Some(last)) if first <= last =>
+          Some({ first, last, unicodes: [] })
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_cmap_bfrange_array_line(line : BytesView) -> BytesView {
+  match pdf_text_index_of_byte(line, 91, 0) {
+    Some(open) => line[open + 1:]
+    None => line
+  }
+}
+
+///|
 fn pdf_text_append_pending_bfrange_array(
   entries : Array[(Int, PdfBytes)],
   pending : PdfTextCMapBFRangeArray,
   line : BytesView,
 ) -> Bool {
-  match pdf_text_index_of_byte(line, 93, 0) {
+  let content = pdf_text_cmap_bfrange_array_line(line)
+  match pdf_text_index_of_byte(content, 93, 0) {
     Some(close) => {
-      pdf_text_extend_cmap_hex_groups(pending.unicodes, line[0:close])
+      pdf_text_extend_cmap_hex_groups(pending.unicodes, content[0:close])
       match
         pdf_text_tounicode_bfrange_array_entries(
           pending.first,
@@ -1559,7 +1584,7 @@ fn pdf_text_append_pending_bfrange_array(
       true
     }
     None => {
-      pdf_text_extend_cmap_hex_groups(pending.unicodes, line)
+      pdf_text_extend_cmap_hex_groups(pending.unicodes, content)
       false
     }
   }
@@ -1636,7 +1661,11 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
                       pending_bfrange_array = Some(pending)
                     }
                   }
-                  None => ()
+                  None =>
+                    match pdf_text_cmap_bfrange_array_header(line) {
+                      Some(pending) => pending_bfrange_array = Some(pending)
+                      None => ()
+                    }
                 }
             }
           PdfTextCMapNone => ()
