@@ -177,6 +177,8 @@ pub fn pdf_ocg_default_config() -> PdfOcgConfig
 
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> PdfOptionalContent? raise PdfError
 
+pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
+
 pub fn pdf_page_blank(PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
@@ -230,6 +232,8 @@ pub fn pdf_pdfdocencoding_of_codepoints(ArrayView[Int]) -> Bytes?
 pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise PdfError
 
 pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise PdfError
+
+pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
 
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
@@ -1114,6 +1118,17 @@ pub(all) struct PdfParsedIndirectObject {
   number : Int
   generation : Int
   object : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPermission {
+  PdfNoEdit
+  PdfNoPrint
+  PdfNoCopy
+  PdfNoAnnot
+  PdfNoForms
+  PdfNoExtract
+  PdfNoAssemble
+  PdfNoHqPrint
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfPixelLayout {

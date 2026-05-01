@@ -543,6 +543,19 @@ moon run -c 'fn main { println(0x50 ^ 0xeb); println((0xbb).to_byte().to_int()) 
 MoonBit integer bitwise XOR uses `^`. Keep algorithm state in `Int` when the
 OCaml code relies on arithmetic modulo 256, then freeze output as `Bytes`.
 
+```sh
+moon run -c 'fn main { println(1 << 31); println(((1 << 31) >> 31) & 1); println((-4 >> 2) & 1); println((-4).to_string()) }'
+# -2147483648
+# 1
+# 1
+# -4
+```
+
+MoonBit `Int` can represent OCaml `Int32`-style signed bitmasks directly when
+the format wants 32-bit wrapping behavior. Setting bit 32 produces a negative
+signed value, and arithmetic right shift followed by `& 1` still inspects
+individual permission bits correctly.
+
 ### Data Structures
 
 Map OCaml variants to MoonBit `enum` values. Derive `Debug`, `Eq`, and `ToJson`

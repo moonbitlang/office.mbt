@@ -499,9 +499,12 @@ MoonBit consequences for this project:
     Use small known-vector tests before document-level encrypted fixtures.
     Status: started with the pure ARC4 primitive from `pdfcryptprimitives`,
     exposed as `pdf_arc4_crypt` over `BytesView` inputs and covered with
-    standard ARC4 known vectors plus round-trip and empty-key tests. AES,
-    SHA-family helpers, MD5-backed Algorithm 3.1 object-key derivation,
-    permissions, document decryption, and re-encryption remain deferred.
+    standard ARC4 known vectors plus round-trip and empty-key tests. CamlPDF's
+    permission enum and signed PDF `/P` mask conversion are also started,
+    preserving the R2/R3 denied-permission bit order and signed `Int32`
+    values such as `-4`, `-8`, and `-3904`. AES, SHA-family helpers,
+    MD5-backed Algorithm 3.1 object-key derivation, document decryption, and
+    re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
