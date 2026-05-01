@@ -37,6 +37,18 @@ MoonBit `String::length()` counts UTF-16 code units, not bytes and not Unicode
 scalar values. `String::char_length()` counts Unicode characters.
 
 ```sh
+moon run -c 'fn main { let s = "--2.5"; println(s.has_prefix("--")); println(s.unsafe_substring(start=1, end=s.length())) }'
+# true
+# -2.5
+```
+
+MoonBit strings provide prefix helpers such as `String::has_prefix` and owned
+substring extraction with `String::unsafe_substring(start=..., end=...)`.
+Remember that string offsets are UTF-16 code-unit offsets. Use this only for
+validated ASCII grammar tokens or text-level parsing; use `BytesView` slices
+for byte-oriented formats.
+
+```sh
 moon run -c 'fn main { let raw : Array[Byte] = [65, 0, 255]; let b = Bytes::from_array(raw); println(b.length()); println(b[2].to_int()) }'
 # 3
 # 255
