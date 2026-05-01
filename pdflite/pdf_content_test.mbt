@@ -230,6 +230,20 @@ test "pdf_content_bytes_of_ops renders hello-style content bytes" {
 }
 
 ///|
+test "pdf_content_bytes_of_op renders one content operator" {
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_op(Op_Tj(content_bytes_for_test("One"))),
+    content_bytes_for_test("(One) Tj"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_op(
+      Op_Unknown(content_bytes_for_test("1 2 ZZ")),
+    ),
+    content_bytes_for_test("1 2 ZZ"),
+  )
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes parses hello-style content bytes" {
   @test.assert_eq(
     try! @pdflite.pdf_parse_content_ops_from_bytes(

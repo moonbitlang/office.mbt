@@ -456,6 +456,11 @@ pub fn pdf_content_bytes_of_ops(
 }
 
 ///|
+pub fn pdf_content_bytes_of_op(op : PdfContentOp) -> PdfBytes raise PdfError {
+  pdf_content_bytes_of_ops([op])
+}
+
+///|
 pub fn pdf_content_stream_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfObject raise PdfError {

@@ -411,7 +411,9 @@ MoonBit consequences for this project:
    codec pipeline and are flattened without stale filter metadata.
    The CamlPDF `concat_bytess` helper is exposed as
    `pdf_content_concat_streams`, preserving the whitespace inserted between
-   split content streams before parsing.
+   split content streams before parsing. The CamlPDF `string_of_op` helper is
+   exposed as `pdf_content_bytes_of_op`, preserving the port's byte-oriented
+   naming while delegating to the existing multi-operator renderer.
    Filter-aware binary inline image compression and broader resource-dependent
    inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

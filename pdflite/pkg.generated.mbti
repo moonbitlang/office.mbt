@@ -133,6 +133,8 @@ pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
 
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
+pub fn pdf_content_bytes_of_op(PdfContentOp) -> Bytes raise PdfError
+
 pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfError
 
 pub fn pdf_content_concat_streams(ArrayView[Bytes]) -> Bytes
