@@ -1,0 +1,14 @@
+import {
+  "bobzhang/pdflite" @pdflite,
+  "moonbitlang/async/fs",
+  "moonbitlang/async/io",
+}
+
+import {
+  "bobzhang/pdflite" @pdflite,
+  "moonbitlang/core/test",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+} for "wbtest"
+
+supported_targets = "+native"

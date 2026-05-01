@@ -424,6 +424,10 @@ MoonBit consequences for this project:
     pure `Bytes` APIs are stable. Async wrappers should load/store bytes and
     call the synchronous core. Add `moon test --target native` coverage for
     async file APIs.
+    Status: started with a native-only `async_io` package using
+    `moonbitlang/async/fs`. It exposes `pdf_read_document_from_file` and
+    `pdf_write_document_to_file` wrappers around the pure byte reader/writer,
+    with a native async round-trip test.
 
 13. Compatibility and coverage hardening.
     Add fixture suites as features land, update snapshots deliberately, and use

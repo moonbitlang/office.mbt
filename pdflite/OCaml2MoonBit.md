@@ -251,6 +251,14 @@ Default argument values can call local functions. This is useful when porting
 OCaml optional arguments whose defaults are structured records or arrays.
 
 ```sh
+moon run --target native -c 'async fn main { println("async ok") }'
+# Error: Cannot use `async fn main`: package moonbitlang/async is not imported.
+```
+
+Async entry points and async tests need the `moonbitlang/async` package in the
+relevant `moon.pkg` import set; syntax alone is not enough.
+
+```sh
 moon run -c 'struct Item { value : Int; label : String } derive(Debug)
 fn main { let old = Item::{ value: 1, label: "a" }; let next = { ..old, value: 2 }; println(next.value); println(next.label) }'
 # 2
@@ -368,6 +376,11 @@ Migration rule:
   synchronous core. This avoids making every recursive helper async.
 - Async tests require native target support and package imports for
   `moonbitlang/async` in the test section of `moon.pkg`.
+- If a port should keep its pure core available on non-native targets, put
+  async/file-system wrappers in a native-only package or native-targeted files
+  rather than importing async packages into the core package. MoonBit imports
+  are package-level, while `targets`/`supported_targets` control backend
+  inclusion.
 
 ## MoonBit Testing Model
 
