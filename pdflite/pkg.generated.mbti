@@ -131,6 +131,16 @@ pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
 
+pub fn pdf_page_blank(PaperSize) -> PdfPage
+
+pub fn pdf_page_custom(PdfObject) -> PdfPage
+
+pub fn pdf_page_int_of_rotation(PdfPageRotation) -> Int
+
+pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject
+
+pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise PdfError
+
 pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfError
 
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
@@ -232,6 +242,7 @@ pub(all) suberror PdfError {
   StreamDataExpected
   ParsedObjectExpected
   PageTreeExpected
+  PageRotationExpected(Int)
   ContentOperatorExpected
   ContentOperandExpected
   StartXRefExpected
@@ -392,6 +403,8 @@ pub struct PdfDocument {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
+pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
+pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise PdfError
@@ -404,6 +417,7 @@ pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> 
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
@@ -508,6 +522,21 @@ pub fn PdfObjects::max_object_number(Self) -> Int
 pub fn PdfObjects::object_numbers(Self) -> Array[Int]
 pub fn PdfObjects::remove_object(Self, Int) -> Unit
 pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
+
+pub(all) struct PdfPage {
+  content : Array[PdfObject]
+  mediabox : PdfObject
+  resources : PdfObject
+  rotate : PdfPageRotation
+  rest : PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPageRotation {
+  Rotate0
+  Rotate90
+  Rotate180
+  Rotate270
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfParsedIndirectObject {
   number : Int

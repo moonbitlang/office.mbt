@@ -31,6 +31,7 @@ pub(all) suberror PdfError {
   StreamDataExpected
   ParsedObjectExpected
   PageTreeExpected
+  PageRotationExpected(Int)
   ContentOperatorExpected
   ContentOperandExpected
   StartXRefExpected
