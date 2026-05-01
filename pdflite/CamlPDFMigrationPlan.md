@@ -376,7 +376,9 @@ MoonBit consequences for this project:
     reading, returned-copy writing/removal, byte-preserving PDF strings, and
     explicit `PdfName` fields for PDF name values. OCG merge preparation is
     started with a typed helper for combining already-renumbered optional
-    content metadata across documents.
+    content metadata across documents. Merge support code is started with
+    returned-copy object renumbering by positive offset, including root,
+    trailer, and nested indirect-reference rewriting.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

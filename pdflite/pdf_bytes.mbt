@@ -39,6 +39,7 @@ pub(all) suberror PdfError {
   XRefEntryExpected
   TrailerExpected
   RootExpected
+  InvalidObjectNumber(Int)
   BadDate
   EndOfInput
 } derive(Debug, Eq, ToJson)

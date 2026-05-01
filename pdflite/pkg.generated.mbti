@@ -292,6 +292,7 @@ pub(all) suberror PdfError {
   XRefEntryExpected
   TrailerExpected
   RootExpected
+  InvalidObjectNumber(Int)
   BadDate
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
@@ -628,6 +629,7 @@ pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise PdfError
+pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int

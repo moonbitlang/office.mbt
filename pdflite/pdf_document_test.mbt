@@ -114,3 +114,43 @@ test "PdfDocument copy preserves metadata and separates object map state" {
   @test.assert_eq(doc.object_numbers(), [4])
   @test.assert_eq(copied.object_numbers(), [9])
 }
+
+///|
+test "PdfDocument renumber_objects_by_offset moves objects and rewrites references" {
+  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_pages = @pdflite.pdf_name_of_bytes(@ascii.encode("/Pages"))
+  let key_parent = @pdflite.pdf_name_of_bytes(@ascii.encode("/Parent"))
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
+  doc.add_object_given_number(1, PdfDictionary([(key_pages, PdfIndirect(2))]))
+  doc.add_object_given_number(2, PdfDictionary([(key_parent, PdfIndirect(1))]))
+  let renumbered = try! doc.renumber_objects_by_offset(10)
+  @test.assert_eq(doc.object_numbers(), [1, 2])
+  @test.assert_eq(renumbered.object_numbers(), [11, 12])
+  @test.assert_eq(renumbered.root(), 11)
+  @test.assert_eq(
+    renumbered.trailer_dict().lookup_immediate(key_root),
+    Some(PdfIndirect(11)),
+  )
+  @test.assert_eq(
+    renumbered.lookup_object_or_null(11).lookup_immediate(key_pages),
+    Some(PdfIndirect(12)),
+  )
+  @test.assert_eq(
+    renumbered.lookup_object_or_null(12).lookup_immediate(key_parent),
+    Some(PdfIndirect(11)),
+  )
+  @test.assert_eq(renumbered.lookup_object_or_null(1), PdfNull)
+}
+
+///|
+test "PdfDocument renumber_objects_by_offset rejects negative offsets" {
+  let doc = @pdflite.pdf_document_empty()
+  let result : Result[@pdflite.PdfDocument, Error] = try? doc.renumber_objects_by_offset(
+    -1,
+  )
+  guard result is Err(@pdflite.PdfError::InvalidObjectNumber(-1)) else {
+    fail("expected InvalidObjectNumber")
+  }
+}
