@@ -1129,6 +1129,127 @@ test "PdfDocument change_pages transforms link annotations and open action" {
 }
 
 ///|
+test "PdfDocument change_pages transforms named destination definitions" {
+  let key_names = page_name_for_test("/Names")
+  let key_dests = page_name_for_test("/Dests")
+  let type_xyz = page_name_for_test("/XYZ")
+  let type_fith = page_name_for_test("/FitH")
+  let named_destination = page_name_for_test("/Chapter")
+  let string_destination = @ascii.encode("chapter")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  let dest_tree = doc.build_name_tree([
+    (
+      string_destination,
+      PdfArray([
+        PdfIndirect(old_numbers[0]),
+        PdfNameObject(type_xyz),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  ])
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_names, PdfDictionary([(key_dests, dest_tree)])),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_dests,
+      PdfDictionary([
+        (
+          named_destination,
+          PdfArray([
+            PdfIndirect(old_numbers[0]),
+            PdfNameObject(type_fith),
+            PdfInteger(5),
+          ]),
+        ),
+      ]),
+    ),
+  )
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode("Named"),
+      target: DestNamed(named_destination),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("String"),
+      target: DestString(string_destination),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  let changed = try! bookmarked.change_pages(
+    try! bookmarked.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  @test.assert_eq(page_destination_entries_for_test(changed), [
+    (
+      string_destination,
+      PdfArray([
+        PdfIndirect(new_numbers[0]),
+        PdfNameObject(type_xyz),
+        PdfReal(11.0),
+        PdfReal(22.0),
+        PdfNull,
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    page_catalog_destination_for_test(changed, "/Chapter"),
+    Some(
+      PdfArray([
+        PdfIndirect(new_numbers[0]),
+        PdfNameObject(type_fith),
+        PdfReal(25.0),
+      ]),
+    ),
+  )
+  @test.assert_eq(try! changed.read_bookmarks(), [
+    {
+      level: 0,
+      text: @ascii.encode("Named"),
+      target: DestFitH(TargetPageObject(new_numbers[0]), Some(25.0)),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+    {
+      level: 0,
+      text: @ascii.encode("String"),
+      target: DestXYZ(
+        TargetPageObject(new_numbers[0]),
+        Some(11.0),
+        Some(22.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 test "PdfDocument change_pages rejects reference renumbering when counts differ" {
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([

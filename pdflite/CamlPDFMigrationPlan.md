@@ -366,9 +366,12 @@ MoonBit consequences for this project:
    rewrites are now started for `change_pages` callers that supply page
    matrices: bookmark targets, link annotation `/Dest` or GoTo `/A`
    destinations, and catalog `/OpenAction` destinations are transformed after
-   page-reference renumbering. A minimal `pdf_of_pages` is started for 1-based
-   page extraction
-   and reordering by composing `pages_of_pagetree`, `change_pages`, and
+   page-reference renumbering. Named destination definitions in old-style
+   catalog `/Dests` dictionaries and `/Root/Names/Dests` name trees are also
+   transformed, so preserved named and string destinations resolve to the new
+   page-space coordinates after page matrix changes. A minimal `pdf_of_pages`
+   is started for 1-based page extraction and reordering by composing
+   `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
    to the new page objects, duplicated annotation references are copied to fresh
    object numbers, copied annotation `/Popup` and `/Parent` links are repaired
@@ -440,7 +443,8 @@ MoonBit consequences for this project:
    `/First`, `/Last`, `/Next`, `/Prev`, and positive/negative `/Count` link
    generation, destination-vs-action field selection, and returned-copy catalog
    replacement. `change_pages` matrix integration is started for transformed
-   page destinations.
+   page destinations, including named destination definitions retained in the
+   catalog or destination name tree.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

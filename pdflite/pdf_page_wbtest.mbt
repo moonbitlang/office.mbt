@@ -511,6 +511,267 @@ test "private page destination cleanup covers indirect containers" {
 }
 
 ///|
+test "private page named destination transforms cover indirect containers" {
+  let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  let page_numbers = try! doc.page_reference_numbers()
+  @test.assert_eq(
+    try! doc.pdf_page_transform_catalog_destinations_object(
+      PdfInteger(1),
+      [(1, transform_translate(10.0, 20.0))],
+      page_numbers,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_transform_catalog_destinations_object(
+      PdfDictionary([
+        (pdf_page_name("/Keep"), page_wb_fit_destination(page_numbers[0])),
+      ]),
+      [],
+      page_numbers,
+    ),
+    None,
+  )
+  doc.add_object_given_number(
+    70,
+    PdfDictionary([
+      (pdf_page_name("/Keep"), page_wb_xyz_destination(page_numbers[0], 1, 2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(pdf_page_dests_key(), PdfIndirect(70)),
+  )
+  try! doc.pdf_page_transform_catalog_destinations_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    page_numbers,
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(70),
+    PdfDictionary([
+      (
+        pdf_page_name("/Keep"),
+        PdfArray([
+          PdfIndirect(page_numbers[0]),
+          PdfNameObject(pdf_dest_type_xyz()),
+          PdfReal(11.0),
+          PdfReal(22.0),
+          PdfNull,
+        ]),
+      ),
+    ]),
+  )
+
+  let unchanged_indirect_doc = page_wb_document_with_pages([
+    pdf_page_blank(paper_a4),
+  ])
+  let unchanged_indirect_pages = try! unchanged_indirect_doc.page_reference_numbers()
+  unchanged_indirect_doc.add_object_given_number(
+    71,
+    PdfDictionary([
+      (
+        pdf_page_name("/Keep"),
+        page_wb_fit_destination(unchanged_indirect_pages[0]),
+      ),
+    ]),
+  )
+  unchanged_indirect_doc.add_object_given_number(
+    unchanged_indirect_doc.root(),
+    unchanged_indirect_doc
+    .lookup_object_or_null(unchanged_indirect_doc.root())
+    .add_dict_entry(pdf_page_dests_key(), PdfIndirect(71)),
+  )
+  try! unchanged_indirect_doc.pdf_page_transform_catalog_destinations_for_matrices(
+    [],
+    unchanged_indirect_pages,
+  )
+  @test.assert_eq(
+    unchanged_indirect_doc.lookup_object_or_null(71),
+    PdfDictionary([
+      (
+        pdf_page_name("/Keep"),
+        page_wb_fit_destination(unchanged_indirect_pages[0]),
+      ),
+    ]),
+  )
+
+  let unchanged_direct_doc = page_wb_document_with_pages([
+    pdf_page_blank(paper_a4),
+  ])
+  let unchanged_direct_pages = try! unchanged_direct_doc.page_reference_numbers()
+  unchanged_direct_doc.add_object_given_number(
+    unchanged_direct_doc.root(),
+    unchanged_direct_doc
+    .lookup_object_or_null(unchanged_direct_doc.root())
+    .add_dict_entry(
+      pdf_page_dests_key(),
+      PdfDictionary([
+        (
+          pdf_page_name("/Keep"),
+          page_wb_fit_destination(unchanged_direct_pages[0]),
+        ),
+      ]),
+    ),
+  )
+  try! unchanged_direct_doc.pdf_page_transform_catalog_destinations_for_matrices(
+    [],
+    unchanged_direct_pages,
+  )
+  @test.assert_eq(
+    unchanged_direct_doc
+    .lookup_object_or_null(unchanged_direct_doc.root())
+    .lookup_immediate(pdf_page_dests_key()),
+    Some(
+      PdfDictionary([
+        (
+          pdf_page_name("/Keep"),
+          page_wb_fit_destination(unchanged_direct_pages[0]),
+        ),
+      ]),
+    ),
+  )
+
+  let names_doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  let names_page_numbers = try! names_doc.page_reference_numbers()
+  let dest_tree = names_doc.build_name_tree([
+    (page_wb_text("keep"), page_wb_xyz_destination(names_page_numbers[0], 3, 4)),
+  ])
+  @test.assert_eq(
+    try! names_doc.pdf_page_transform_name_tree_destination_entries(
+      dest_tree,
+      [],
+      names_page_numbers,
+    ),
+    None,
+  )
+  names_doc.add_object_given_number(
+    80,
+    PdfDictionary([(pdf_page_dests_key(), dest_tree)]),
+  )
+  names_doc.add_object_given_number(
+    names_doc.root(),
+    names_doc
+    .lookup_object_or_null(names_doc.root())
+    .add_dict_entry(pdf_page_names_key(), PdfIndirect(80)),
+  )
+  try! names_doc.pdf_page_transform_destination_name_tree_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    names_page_numbers,
+  )
+  match
+    names_doc.lookup_object_or_null(80).lookup_immediate(pdf_page_dests_key()) {
+    Some(tree) =>
+      @test.assert_eq(names_doc.read_name_tree(tree), [
+        (
+          page_wb_text("keep"),
+          PdfArray([
+            PdfIndirect(names_page_numbers[0]),
+            PdfNameObject(pdf_dest_type_xyz()),
+            PdfReal(13.0),
+            PdfReal(24.0),
+            PdfNull,
+          ]),
+        ),
+      ])
+    None => fail("expected transformed destination tree")
+  }
+
+  let sparse_names_doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  sparse_names_doc.add_object_given_number(
+    sparse_names_doc.root(),
+    sparse_names_doc
+    .lookup_object_or_null(sparse_names_doc.root())
+    .add_dict_entry(pdf_page_names_key(), PdfDictionary([])),
+  )
+  try! sparse_names_doc.pdf_page_transform_destination_name_tree_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    try! sparse_names_doc.page_reference_numbers(),
+  )
+
+  let unchanged_indirect_names_doc = page_wb_document_with_pages([
+    pdf_page_blank(paper_a4),
+  ])
+  let unchanged_indirect_name_pages = try! unchanged_indirect_names_doc.page_reference_numbers()
+  let unchanged_indirect_tree = unchanged_indirect_names_doc.build_name_tree([
+    (
+      page_wb_text("keep"),
+      page_wb_fit_destination(unchanged_indirect_name_pages[0]),
+    ),
+  ])
+  unchanged_indirect_names_doc.add_object_given_number(
+    81,
+    PdfDictionary([(pdf_page_dests_key(), unchanged_indirect_tree)]),
+  )
+  unchanged_indirect_names_doc.add_object_given_number(
+    unchanged_indirect_names_doc.root(),
+    unchanged_indirect_names_doc
+    .lookup_object_or_null(unchanged_indirect_names_doc.root())
+    .add_dict_entry(pdf_page_names_key(), PdfIndirect(81)),
+  )
+  try! unchanged_indirect_names_doc.pdf_page_transform_destination_name_tree_for_matrices(
+    [],
+    unchanged_indirect_name_pages,
+  )
+  guard unchanged_indirect_names_doc
+    .lookup_object_or_null(81)
+    .lookup_immediate(pdf_page_dests_key())
+    is Some(_) else {
+    fail("expected unchanged indirect destination tree")
+  }
+
+  let sparse_indirect_names_doc = page_wb_document_with_pages([
+    pdf_page_blank(paper_a4),
+  ])
+  sparse_indirect_names_doc.add_object_given_number(82, PdfDictionary([]))
+  sparse_indirect_names_doc.add_object_given_number(
+    sparse_indirect_names_doc.root(),
+    sparse_indirect_names_doc
+    .lookup_object_or_null(sparse_indirect_names_doc.root())
+    .add_dict_entry(pdf_page_names_key(), PdfIndirect(82)),
+  )
+  try! sparse_indirect_names_doc.pdf_page_transform_destination_name_tree_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    try! sparse_indirect_names_doc.page_reference_numbers(),
+  )
+  @test.assert_eq(
+    sparse_indirect_names_doc.lookup_object_or_null(82),
+    PdfDictionary([]),
+  )
+
+  let unchanged_direct_names_doc = page_wb_document_with_pages([
+    pdf_page_blank(paper_a4),
+  ])
+  let unchanged_direct_name_pages = try! unchanged_direct_names_doc.page_reference_numbers()
+  let unchanged_direct_tree = unchanged_direct_names_doc.build_name_tree([
+    (
+      page_wb_text("keep"),
+      page_wb_fit_destination(unchanged_direct_name_pages[0]),
+    ),
+  ])
+  unchanged_direct_names_doc.add_object_given_number(
+    unchanged_direct_names_doc.root(),
+    unchanged_direct_names_doc
+    .lookup_object_or_null(unchanged_direct_names_doc.root())
+    .add_dict_entry(
+      pdf_page_names_key(),
+      PdfDictionary([(pdf_page_dests_key(), unchanged_direct_tree)]),
+    ),
+  )
+  try! unchanged_direct_names_doc.pdf_page_transform_destination_name_tree_for_matrices(
+    [],
+    unchanged_direct_name_pages,
+  )
+  guard unchanged_direct_names_doc
+    .lookup_object_or_null(unchanged_direct_names_doc.root())
+    .lookup_immediate(pdf_page_names_key())
+    is Some(_) else {
+    fail("expected unchanged direct destination tree")
+  }
+}
+
+///|
 test "private page prefix helpers cover direct and fallback operators" {
   @test.assert_eq(
     pdf_page_name_text_without_slash(pdf_name_of_bytes(page_wb_text("Plain"))),
