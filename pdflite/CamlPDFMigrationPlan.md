@@ -397,8 +397,10 @@ MoonBit consequences for this project:
    encodings, `FillUndefinedWithStandard` collapsed to its base encoding, and
    optional object-number placement. Font descriptors now carry an optional
    typed ToUnicode map, and TrueType font writing can emit the same simple
-   `/ToUnicode` CMap stream shape as CamlPDF when that map is present.
-   ToUnicode CMap parsing remains deferred.
+   `/ToUnicode` CMap stream shape as CamlPDF when that map is present. Reading
+   that simple uncompressed single-code `beginbfrange` CMap shape is also
+   started and attaches the parsed map to simple or CID font descriptors.
+   General `pdfcmap` parsing remains deferred.
    `pdffun` is started with Type 0 sampled, Type 2 interpolation, Type 3
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,

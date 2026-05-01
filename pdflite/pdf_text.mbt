@@ -470,6 +470,25 @@ fn pdf_text_zero_rectangle() -> PdfRectangle {
 }
 
 ///|
+fn pdf_text_empty_font_descriptor() -> PdfFontDescriptor {
+  {
+    ascent: 0.0,
+    descent: 0.0,
+    avgwidth: 0.0,
+    maxwidth: 0.0,
+    flags: 0,
+    fontbbox: pdf_text_zero_rectangle(),
+    italicangle: 0.0,
+    capheight: 0.0,
+    xheight: 0.0,
+    stemv: 0.0,
+    fontfile: None,
+    charset: None,
+    tounicode: None,
+  }
+}
+
+///|
 fn PdfDocument::pdf_text_optional_number(
   self : PdfDocument,
   key : PdfName,
@@ -526,6 +545,7 @@ pub fn PdfDocument::read_font_descriptor(
         None => pdf_text_zero_rectangle()
       }
       Some({
+        ..pdf_text_empty_font_descriptor(),
         ascent: self.pdf_text_optional_number(
           pdf_text_name("/Ascent"),
           descriptor,
@@ -542,15 +562,9 @@ pub fn PdfDocument::read_font_descriptor(
           pdf_text_name("/MaxWidth"),
           descriptor,
         ),
-        flags: 0,
         fontbbox,
-        italicangle: 0.0,
-        capheight: 0.0,
-        xheight: 0.0,
-        stemv: 0.0,
         fontfile: pdf_text_fontfile_of_descriptor(descriptor),
         charset: self.pdf_text_font_charset(descriptor),
-        tounicode: None,
       })
     }
   }
@@ -1199,6 +1213,170 @@ pub fn PdfDocument::read_cidkeyed_font(
 }
 
 ///|
+fn pdf_text_hex_digit_value(byte : Byte) -> Int? {
+  let value = byte.to_int()
+  if value >= 48 && value <= 57 {
+    Some(value - 48)
+  } else if value >= 65 && value <= 70 {
+    Some(value - 55)
+  } else if value >= 97 && value <= 102 {
+    Some(value - 87)
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_text_parse_hex_bytes(
+  line : BytesView,
+  start : Int,
+  stop : Int,
+) -> PdfBytes? {
+  guard stop >= start && (stop - start) % 2 == 0 else { return None }
+  let output : Array[Byte] = []
+  let mut index = start
+  while index < stop {
+    match
+      (
+        pdf_text_hex_digit_value(line[index]),
+        pdf_text_hex_digit_value(line[index + 1]),
+      ) {
+      (Some(high), Some(low)) => output.push((high * 16 + low).to_byte())
+      _ => break None
+    }
+    index += 2
+  } nobreak {
+    Some(Bytes::from_array(output))
+  }
+}
+
+///|
+fn pdf_text_skip_horizontal_space(line : BytesView, start : Int) -> Int {
+  let mut index = start
+  while index < line.length() &&
+        (line[index].to_int() == 32 || line[index].to_int() == 9) {
+    index += 1
+  }
+  index
+}
+
+///|
+fn pdf_text_parse_cmap_hex_groups(line : BytesView) -> Array[PdfBytes]? {
+  let groups : Array[PdfBytes] = []
+  let mut index = 0
+  while groups.length() < 3 {
+    index = pdf_text_skip_horizontal_space(line, index)
+    guard index < line.length() && line[index].to_int() == 60 else {
+      return None
+    }
+    let start = index + 1
+    let mut stop = start
+    while stop < line.length() && line[stop].to_int() != 62 {
+      stop += 1
+    }
+    guard stop < line.length() else { return None }
+    match pdf_text_parse_hex_bytes(line, start, stop) {
+      Some(bytes) => groups.push(bytes)
+      None => return None
+    }
+    index = stop + 1
+  }
+  Some(groups)
+}
+
+///|
+fn pdf_text_bytes_to_int(bytes : BytesView) -> Int? {
+  guard bytes.length() > 0 else { return None }
+  let mut value = 0
+  for byte in bytes {
+    value = (value << 8) | byte.to_int()
+  }
+  Some(value)
+}
+
+///|
+fn pdf_text_tounicode_entry_of_line(line : BytesView) -> (Int, PdfBytes)? {
+  match pdf_text_parse_cmap_hex_groups(line) {
+    Some([source, stop, unicode]) if source == stop =>
+      match pdf_text_bytes_to_int(source[:]) {
+        Some(code) => Some((code, unicode))
+        None => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
+  let cursor = byte_cursor_of_view(data)
+  let entries : Array[(Int, PdfBytes)] = []
+  for line in cursor.read_line_views() {
+    match pdf_text_tounicode_entry_of_line(line) {
+      Some(entry) => entries.push(entry)
+      None => ()
+    }
+  }
+  if entries.length() == 0 {
+    None
+  } else {
+    Some(entries)
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_tounicode_of_font(
+  self : PdfDocument,
+  font : PdfObject,
+) -> Array[(Int, PdfBytes)]? {
+  match self.lookup_direct(pdf_text_name("/ToUnicode"), font) {
+    Some(PdfStreamObject({ data: StreamGot(bytes), .. })) =>
+      pdf_text_parse_tounicode(bytes[:])
+    _ => None
+  }
+}
+
+///|
+fn PdfFontDescriptor::pdf_text_with_tounicode(
+  self : PdfFontDescriptor,
+  tounicode : Array[(Int, PdfBytes)],
+) -> PdfFontDescriptor {
+  { ..self, tounicode: Some(tounicode) }
+}
+
+///|
+fn PdfFont::pdf_text_with_tounicode(
+  self : PdfFont,
+  tounicode : Array[(Int, PdfBytes)]?,
+) -> PdfFont {
+  match tounicode {
+    None => self
+    Some(tounicode) =>
+      match self {
+        PdfFontSimple(simple) => {
+          let descriptor = match simple.fontdescriptor {
+            Some(descriptor) => descriptor
+            None => pdf_text_empty_font_descriptor()
+          }
+          PdfFontSimple({
+            ..simple,
+            fontdescriptor: Some(descriptor.pdf_text_with_tounicode(tounicode)),
+          })
+        }
+        PdfFontCIDKeyed(cid_font) => {
+          let composite = {
+            ..cid_font.composite,
+            cid_fontdescriptor: cid_font.composite.cid_fontdescriptor.pdf_text_with_tounicode(
+              tounicode,
+            ),
+          }
+          PdfFontCIDKeyed({ ..cid_font, composite, })
+        }
+        PdfFontStandard(_) => self
+      }
+  }
+}
+
+///|
 pub fn PdfDocument::read_standard14_font(
   self : PdfDocument,
   font : PdfObject,
@@ -1219,7 +1397,7 @@ pub fn PdfDocument::read_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> PdfFont raise PdfError {
-  if self.is_standard14_font(font) {
+  let read = if self.is_standard14_font(font) {
     PdfFontStandard(self.read_standard14_font(font))
   } else if self.is_simple_font(font) {
     PdfFontSimple(self.read_simple_font(font))
@@ -1228,6 +1406,7 @@ pub fn PdfDocument::read_font(
   } else {
     raise FontTypeExpected
   }
+  read.pdf_text_with_tounicode(self.pdf_text_tounicode_of_font(font))
 }
 
 ///|

@@ -1733,6 +1733,20 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
     "end\n" +
     "end\n",
   )
+  guard (try! doc.read_font(doc.lookup_object_or_null(number)))
+    is PdfFontSimple(read) else {
+    fail("expected simple TrueType font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected read descriptor")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (33, text_bytes_for_test([0x00, 0x41])),
+      (34, text_bytes_for_test([0x00, 0x42])),
+    ]),
+  )
 }
 
 ///|
