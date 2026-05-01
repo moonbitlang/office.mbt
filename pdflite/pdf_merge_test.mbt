@@ -507,6 +507,20 @@ test "pdf_merge_documents retains optional content groups before pruning" {
 }
 
 ///|
+test "pdf_merge_documents ignores malformed optional content merge data" {
+  let key_ocproperties = merge_name_for_test("/OCProperties")
+  let key_ocgs = merge_name_for_test("/OCGs")
+  let malformed = merge_add_catalog_entry_for_test(
+    merge_one_page_doc_for_test(1, 5),
+    key_ocproperties,
+    PdfDictionary([(key_ocgs, PdfArray([]))]),
+  )
+  let valid = merge_ocg_doc_for_test(20, "Layer A")
+  let merged = try! @pdflite.pdf_merge_documents([malformed, valid], [[1], [1]])
+  @test.assert_eq(try! merged.read_optional_content_groups(), None)
+}
+
+///|
 test "pdf_merge_documents merges AcroForm fields" {
   let key_acroform = merge_name_for_test("/AcroForm")
   let key_fields = merge_name_for_test("/Fields")

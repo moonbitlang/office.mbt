@@ -691,6 +691,15 @@ fn pdf_merge_acroforms(
 }
 
 ///|
+fn pdf_merge_optional_content(
+  documents : ArrayView[PdfDocument],
+) -> PdfOptionalContent? {
+  pdf_optional_content_merge(documents) catch {
+    _ => None
+  }
+}
+
+///|
 fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
   for document in documents {
     match
@@ -1480,7 +1489,7 @@ pub fn pdf_merge_documents(
     }
   }
   let optional_content = if retain_optional_content {
-    pdf_optional_content_merge(staged)
+    pdf_merge_optional_content(staged)
   } else {
     None
   }
