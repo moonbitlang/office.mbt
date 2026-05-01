@@ -732,9 +732,10 @@ MoonBit consequences for this project:
     `moonbitlang/async/fs`. It exposes `pdf_read_document_from_file` and
     `pdf_write_document_to_file` wrappers around the pure byte reader/writer,
     plus password-based encrypted reads, uncompressed and Flate-compressed
-    xref-stream file writes, and classic incremental-update file writes. Native
-    async tests cover plain round-trip, xref-stream round-trip, encrypted
-    password read, and incremental-update readback.
+    xref-stream file writes, and classic/xref-stream incremental-update file
+    writes. Native async tests cover plain round-trip, xref-stream round-trip,
+    encrypted password read, classic incremental readback, and uncompressed plus
+    compressed xref-stream incremental readback.
 
 13. Compatibility and coverage hardening.
     Add fixture suites as features land, update snapshots deliberately, and use

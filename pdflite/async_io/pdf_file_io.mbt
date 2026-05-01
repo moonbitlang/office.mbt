@@ -69,3 +69,37 @@ pub async fn pdf_write_document_incremental_update_to_file(
     create=permission,
   )
 }
+
+///|
+pub async fn pdf_write_document_incremental_update_with_xref_stream_to_file(
+  original_path : StringView,
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_document_incremental_update_with_xref_stream(
+      @fs.read_file(original_path).binary(),
+      document,
+    ),
+    create=permission,
+  )
+}
+
+///|
+pub async fn pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
+  original_path : StringView,
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_document_incremental_update_with_compressed_xref_stream(
+      @fs.read_file(original_path).binary(),
+      document,
+    ),
+    create=permission,
+  )
+}
