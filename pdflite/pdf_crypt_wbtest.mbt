@@ -1,6 +1,20 @@
 // Whitebox tests for private encryption guards.
 
 ///|
+fn crypt_wb_bytes_for_test(values : ArrayView[Int]) -> PdfBytes {
+  try! pdf_bytes_of_int_array(values)
+}
+
+///|
+fn crypt_wb_iv_for_test(index : Int) -> PdfBytes {
+  crypt_wb_bytes_for_test(
+    [
+      for offset in 0..<16 => 0x30 + index * 16 + offset
+    ],
+  )
+}
+
+///|
 test "private encryption password settings reject AESV3" {
   let values : PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(false),
@@ -21,8 +35,35 @@ test "private encryption password settings reject AESV3" {
 }
 
 ///|
+test "PdfDocument AESV2 encrypt preserves parser-private object states" {
+  let key = crypt_wb_bytes_for_test([ for value in 0..<16 => value ])
+  let doc = pdf_document_empty()
+  doc.objects.set_entry(
+    1,
+    pdf_object_entry(
+      ObjectParsedAlreadyDecrypted(PdfString(@ascii.encode("plain"))),
+    ),
+  )
+  doc.objects.set_entry(2, pdf_object_entry(ObjectToParse))
+  doc.objects.set_entry(
+    3,
+    pdf_object_entry(
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+    ),
+  )
+  let encrypted = try! doc.aesv2_encrypt_parsed_objects_with_iv_provider(
+    key[:],
+    128,
+    fn(_, _, index) { crypt_wb_iv_for_test(index) },
+  )
+  @test.assert_eq(encrypted.objects.get_entry(1), doc.objects.get_entry(1))
+  @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
+  @test.assert_eq(encrypted.objects.get_entry(3), doc.objects.get_entry(3))
+}
+
+///|
 test "PdfDocument AESV2 decrypt preserves parser-private object states" {
-  let key = try! pdf_bytes_of_int_array([ for value in 0..<16 => value ])
+  let key = crypt_wb_bytes_for_test([ for value in 0..<16 => value ])
   let doc = pdf_document_empty()
   doc.objects.set_entry(
     1,
@@ -44,8 +85,42 @@ test "PdfDocument AESV2 decrypt preserves parser-private object states" {
 }
 
 ///|
+test "PdfDocument AESV3 encrypt recurses and preserves parser-private object states" {
+  let key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
+  let doc = pdf_document_empty()
+  doc.add_object_given_number(1, PdfString(@ascii.encode("secret")))
+  doc.objects.set_entry(
+    2,
+    pdf_object_entry(
+      ObjectParsedAlreadyDecrypted(PdfString(@ascii.encode("plain"))),
+    ),
+  )
+  doc.objects.set_entry(3, pdf_object_entry(ObjectToParse))
+  doc.objects.set_entry(
+    4,
+    pdf_object_entry(
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+    ),
+  )
+  let encrypted = try! doc.aesv3_encrypt_parsed_objects_with_iv_provider(
+    key[:],
+    fn(_, _, index) { crypt_wb_iv_for_test(index) },
+  )
+  @test.assert_eq(
+    try! pdf_aesv3_decrypt_pdf_object(
+      key[:],
+      encrypted.lookup_object_or_null(1),
+    ),
+    PdfString(@ascii.encode("secret")),
+  )
+  @test.assert_eq(encrypted.objects.get_entry(2), doc.objects.get_entry(2))
+  @test.assert_eq(encrypted.objects.get_entry(3), doc.objects.get_entry(3))
+  @test.assert_eq(encrypted.objects.get_entry(4), doc.objects.get_entry(4))
+}
+
+///|
 test "PdfDocument AESV3 decrypt preserves parser-private object states" {
-  let key = try! pdf_bytes_of_int_array([ for value in 0..<32 => value ])
+  let key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   let doc = pdf_document_empty()
   doc.objects.set_entry(
     1,
@@ -79,7 +154,7 @@ test "private document decrypt reports unsupported ISO AESV3 object crypt" {
     user_encryption_key: None,
     owner_encryption_key: None,
   }
-  let file_key = try! pdf_bytes_of_int_array([ for value in 0..<32 => value ])
+  let file_key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   let result : Result[PdfDecryptionResult, Error] = try? pdf_document_empty().decrypt_with_file_key(
     values, file_key,
   )

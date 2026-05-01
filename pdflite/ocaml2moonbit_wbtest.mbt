@@ -78,6 +78,27 @@ test "BytesView provides read-only byte slices and pattern matching" {
 }
 
 ///|
+fn apply_callback_twice_for_test(f : (Int) -> Int, value : Int) -> Int {
+  f(f(value))
+}
+
+///|
+test "Callback parameters use function types and can capture refs" {
+  let delta : Ref[Int] = { val: 1 }
+  @test.assert_eq(
+    apply_callback_twice_for_test(
+      fn(value) {
+        delta.val += 1
+        value + delta.val
+      },
+      10,
+    ),
+    15,
+  )
+  @test.assert_eq(delta.val, 3)
+}
+
+///|
 test "Imported packages are used through package aliases" {
   let objects : @hashmap.HashMap[Int, String] = @hashmap.HashMap::new()
   objects[7] = "seven"

@@ -449,6 +449,16 @@ usually become `xs.sort_by(fn(a, b) { ...compare... })` after copying to an
 owned `Array` if the source is an `ArrayView` or other read-only view.
 
 ```sh
+moon run -c 'fn apply_twice(f : (Int) -> Int, value : Int) -> Int { f(f(value)) }
+fn main { println(apply_twice(fn(x) { x + 1 }, 40)) }'
+# 42
+```
+
+Callback parameters use function types such as `(Int) -> Int`, while callback
+values are usually written as `fn(x) { ... }`. Capturing mutable `Ref` state in a
+closure is useful when porting OCaml callbacks that close over refs.
+
+```sh
 moon run -c 'fn main { let xs = [1, 2, 3]; match xs { [_, .. rest] => { let owned = [ for x in rest => x ]; println(rest.length()); println(owned.length()); println(owned[0]) }; _ => () } }'
 # 2
 # 2

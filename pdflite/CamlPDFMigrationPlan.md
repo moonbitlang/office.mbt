@@ -282,8 +282,10 @@ MoonBit consequences for this project:
    object detection and emit sparse `/Index` ranges for changed/deleted objects
    plus the xref stream object. ARC4 encrypted output is now covered for full
    writes and incremental updates through the classic writer plus the
-   uncompressed and Flate-compressed xref-stream writer paths; AES encrypted
-   output remains deferred until an IV/randomness policy is selected.
+   uncompressed and Flate-compressed xref-stream writer paths. AESV2 encrypted
+   full-document output is started behind an explicit IV-provider API; a default
+   AES writer remains deferred until a project-level random-byte source is
+   selected.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -603,12 +605,12 @@ MoonBit consequences for this project:
     encryption/decryption is also started for IV-prefixed strings and stream
     payloads using derived AES object keys. AESV3 object data
     encryption/decryption is started with the unwrapped 32-byte file key. AES
-    encryption helpers require a caller-supplied IV until a project-level
-    random-byte source is selected. Recursive
-    ARC4, AESV2, and AESV3 revision 5 object walks are started for PDF strings,
-    arrays, dictionaries, and stream dictionaries/data, with stream data
-    materialized at the crypt boundary and `/Length` refreshed. Stream crypt
-    skipping now matches the CamlPDF cases for `/Type /Metadata` when
+    encryption helpers require caller-supplied IVs until a project-level
+    random-byte source is selected. Recursive ARC4 crypt plus AESV2/AESV3
+    encrypt/decrypt object walks are started for PDF strings, arrays,
+    dictionaries, and stream dictionaries/data, with stream data materialized at
+    the crypt boundary and `/Length` refreshed. Stream crypt skipping now matches
+    the CamlPDF cases for `/Type /Metadata` when
     `no_encrypt_metadata=true` and identity `/Crypt` filters with absent,
     explicit `/Identity`, or nameless first `/DecodeParms`; non-identity crypt
     filters still decrypt. `/EncryptMetadata false` is now parsed into
@@ -646,12 +648,13 @@ MoonBit consequences for this project:
     AESV3 `/Perms` parsing and validation is started for revision 5 file-key
     unwraps, including missing, short, corrupt marker, and `/P` mismatch errors.
     Parsed-object output encryption is started with CamlPDF-style 40-bit ARC4,
-    128-bit ARC4 revision 3, and 128-bit ARC4 revision 4 crypt filters: it
-    preserves or installs trailer `/ID`, derives `/O` and `/U`, encrypts parsed
-    objects in a copy, installs an indirect `/Encrypt` dictionary, applies the
-    revision 4 `/EncryptMetadata` file-key and metadata-stream rules, and
-    round-trips through the existing password decryption APIs. The revision 4
-    ARC4 path now also has classic-writer/classic-reader/decrypt,
+    128-bit ARC4 revision 3, 128-bit ARC4 revision 4 crypt filters, and an
+    explicit-IV-provider AESV2 revision 4 path: it preserves or installs trailer
+    `/ID`, derives `/O` and `/U`, encrypts parsed objects in a copy, installs an
+    indirect `/Encrypt` dictionary, applies the revision 4 `/EncryptMetadata`
+    file-key and metadata-stream rules, and round-trips through the existing
+    password decryption APIs. The revision 4 ARC4 path now also has
+    classic-writer/classic-reader/decrypt,
     xref-stream-writer/xref-stream-reader/decrypt, and encrypted incremental
     update integration gates.
     Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report

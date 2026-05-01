@@ -59,6 +59,30 @@ fn crypt_aesv3_encrypt_data_for_test(
 }
 
 ///|
+fn crypt_aes_iv_for_test(index : Int) -> @pdflite.PdfBytes {
+  crypt_model_bytes_for_test(
+    [
+      for offset in 0..<16 => 0x40 + index * 16 + offset
+    ],
+  )
+}
+
+///|
+fn crypt_aes_document_iv_for_test(
+  object_number : Int,
+  generation : Int,
+  index : Int,
+) -> @pdflite.PdfBytes {
+  crypt_model_bytes_for_test(
+    [
+      for offset in 0..<16 => {
+        (object_number * 17 + generation * 5 + index * 31 + offset) % 256
+      }
+    ],
+  )
+}
+
+///|
 fn crypt_aesv3_r5_user_entry_for_test() -> @pdflite.PdfBytes {
   crypt_model_bytes_for_test([
     0xad, 0x7c, 0x98, 0xe2, 0x51, 0xcb, 0x1c, 0x7b, 0x3e, 0x28, 0x30, 0xb6, 0xf0,
@@ -1971,6 +1995,113 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
 }
 
 ///|
+test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter" {
+  let key_catalog = crypt_name_for_test("/Catalog")
+  let key_pages = crypt_name_for_test("/Pages")
+  let key_kids = crypt_name_for_test("/Kids")
+  let key_count = crypt_name_for_test("/Count")
+  let key_title = crypt_name_for_test("/Title")
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let key_filter = crypt_name_for_test("/Filter")
+  let key_standard = crypt_name_for_test("/Standard")
+  let key_cf = crypt_name_for_test("/CF")
+  let key_stdcf = crypt_name_for_test("/StdCF")
+  let key_cfm = crypt_name_for_test("/CFM")
+  let key_aesv2 = crypt_name_for_test("/AESV2")
+  let key_encrypt_metadata = crypt_name_for_test("/EncryptMetadata")
+  let key_type = crypt_name_for_test("/Type")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_catalog)),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_pages)),
+      (key_kids, PdfArray([])),
+      (key_count, PdfInteger(0)),
+    ]),
+  )
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("secret"))),
+  ])
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  doc.add_object_given_number(5, secret_object)
+  doc.add_object_given_number(6, metadata_stream)
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  @test.assert_eq(encrypted.lookup_object_or_null(6), metadata_stream)
+  guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
+    is Some(PdfIndirect(encrypt_number)) else {
+    fail("expected indirect AES encryption dictionary")
+  }
+  let encrypt_dictionary = encrypted.lookup_object_or_null(encrypt_number)
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_filter),
+    Some(PdfNameObject(key_standard)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_encrypt_metadata),
+    Some(PdfBoolean(false)),
+  )
+  guard encrypt_dictionary.lookup_immediate(key_cf) is Some(cf_dictionary) else {
+    fail("expected AES crypt filter dictionary")
+  }
+  guard cf_dictionary.lookup_immediate(key_stdcf) is Some(std_cf_dictionary) else {
+    fail("expected standard AES crypt filter")
+  }
+  @test.assert_eq(
+    std_cf_dictionary.lookup_immediate(key_cfm),
+    Some(PdfNameObject(key_aesv2)),
+  )
+  let values = try! encrypted.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptAESV2)
+  @test.assert_eq(values.encrypt_metadata, false)
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
+
+  let rendered = try! @pdflite.pdf_write_document(encrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  let read_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
+}
+
+///|
 test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
   let key_type = crypt_name_for_test("/Type")
   let key_catalog = crypt_name_for_test("/Catalog")
@@ -3822,6 +3953,142 @@ test "pdf_aesv2_encrypt_object_data uses object key and IV prefix" {
 }
 
 ///|
+test "pdf_aesv2_encrypt_pdf_object_with_iv_provider recurses through object data" {
+  let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
+  let key_s = crypt_name_for_test("/S")
+  let key_a = crypt_name_for_test("/A")
+  let key_n = crypt_name_for_test("/N")
+  let key_stream = crypt_name_for_test("/Stream")
+  let key_length = crypt_name_for_test("/Length")
+  let key_title = crypt_name_for_test("/Title")
+  let object : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfString(@ascii.encode("hello"))),
+    (
+      key_a,
+      PdfArray([
+        PdfString(@ascii.encode("bye")),
+        PdfNameObject(key_n),
+        PdfIndirect(9),
+      ]),
+    ),
+    (
+      key_stream,
+      crypt_stream_for_test(
+        [
+          (key_length, PdfInteger(4)),
+          (key_title, PdfString(@ascii.encode("meta"))),
+        ],
+        @ascii.encode("data"),
+      ),
+    ),
+  ])
+  let encrypted_s = crypt_aesv2_encrypt_data_for_test(
+    12,
+    0,
+    file_key[:],
+    128,
+    @ascii.encode("hello")[:],
+    crypt_aes_iv_for_test(0)[:],
+  )
+  let encrypted_a = crypt_aesv2_encrypt_data_for_test(
+    12,
+    0,
+    file_key[:],
+    128,
+    @ascii.encode("bye")[:],
+    crypt_aes_iv_for_test(1)[:],
+  )
+  let encrypted_title = crypt_aesv2_encrypt_data_for_test(
+    12,
+    0,
+    file_key[:],
+    128,
+    @ascii.encode("meta")[:],
+    crypt_aes_iv_for_test(2)[:],
+  )
+  let encrypted_data = crypt_aesv2_encrypt_data_for_test(
+    12,
+    0,
+    file_key[:],
+    128,
+    @ascii.encode("data")[:],
+    crypt_aes_iv_for_test(3)[:],
+  )
+  let encrypted = try! @pdflite.pdf_aesv2_encrypt_pdf_object_with_iv_provider(
+    12,
+    0,
+    file_key[:],
+    128,
+    object,
+    fn(index) { crypt_aes_iv_for_test(index) },
+  )
+  @test.assert_eq(
+    encrypted,
+    PdfDictionary([
+      (key_s, PdfString(encrypted_s)),
+      (
+        key_a,
+        PdfArray([PdfString(encrypted_a), PdfNameObject(key_n), PdfIndirect(9)]),
+      ),
+      (
+        key_stream,
+        crypt_stream_for_test(
+          [
+            (key_length, PdfInteger(encrypted_data.length())),
+            (key_title, PdfString(encrypted_title)),
+          ],
+          encrypted_data,
+        ),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv2_decrypt_pdf_object(
+      12,
+      0,
+      file_key[:],
+      128,
+      encrypted,
+    ),
+    object,
+  )
+}
+
+///|
+test "pdf_aesv2_encrypt_pdf_object_with_iv_provider skips metadata streams" {
+  let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
+  let key_length = crypt_name_for_test("/Length")
+  let key_type = crypt_name_for_test("/Type")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let key_title = crypt_name_for_test("/Title")
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  let calls : Ref[Int] = { val: 0 }
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv2_encrypt_pdf_object_with_iv_provider(
+      12,
+      0,
+      file_key[:],
+      128,
+      metadata_stream,
+      fn(index) {
+        calls.val += 1
+        crypt_aes_iv_for_test(index)
+      },
+      no_encrypt_metadata=true,
+    ),
+    metadata_stream,
+  )
+  @test.assert_eq(calls.val, 0)
+}
+
+///|
 test "pdf_aesv2_decrypt_pdf_object recurses through strings arrays dictionaries and streams" {
   let file_key = crypt_model_bytes_for_test([ for value in 0..<16 => value ])
   let iv = crypt_model_bytes_for_test([
@@ -3970,6 +4237,33 @@ test "pdf_aesv3_encrypt_object_data uses file key and IV prefix" {
   @test.assert_eq(
     try! @pdflite.pdf_aesv3_decrypt_object_data(file_key[:], encrypted[:]),
     data,
+  )
+}
+
+///|
+test "pdf_aesv3_encrypt_pdf_object_with_iv_provider round trips object data" {
+  let file_key = crypt_aesv3_r5_file_key_for_test()
+  let key_s = crypt_name_for_test("/S")
+  let key_stream = crypt_name_for_test("/Stream")
+  let key_length = crypt_name_for_test("/Length")
+  let object : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfString(@ascii.encode("secret"))),
+    (
+      key_stream,
+      crypt_stream_for_test(
+        [(key_length, PdfInteger(7))],
+        @ascii.encode("payload"),
+      ),
+    ),
+  ])
+  let encrypted = try! @pdflite.pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+    file_key[:],
+    object,
+    fn(index) { crypt_aes_iv_for_test(index) },
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_aesv3_decrypt_pdf_object(file_key[:], encrypted),
+    object,
   )
 }
 
