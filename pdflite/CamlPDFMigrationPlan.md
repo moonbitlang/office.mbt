@@ -436,9 +436,12 @@ MoonBit consequences for this project:
    for page arrays: it assigns fresh `/rN` resource names per page and resource
    category, rewrites supported resource-backed content operators, preserves
    direct device color-space names, and emits a single uncompressed rewritten
-   content stream per returned page. CamlPDF's warning/log behavior for missing
-   optional marked-content properties is represented by preserving the original
-   name; broader destination/bookmark rewrites remain deferred to
+   content stream per returned page. CamlPDF's `combine_pdf_resources` helper is
+   started as `PdfDocument::combine_pdf_resources`, unioning standard resource
+   subdictionaries while preserving unknown top-level resource keys. CamlPDF's
+   warning/log behavior for missing optional marked-content properties is
+   represented by preserving the original name; broader destination/bookmark
+   rewrites remain deferred to
    `change_pages`.
 
    Destination support is started with typed `PdfTargetPage` and

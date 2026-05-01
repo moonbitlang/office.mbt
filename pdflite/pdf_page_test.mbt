@@ -631,6 +631,99 @@ test "PdfDocument shortest_unused_prefix preserves CamlPDF prefix sequence" {
 }
 
 ///|
+test "PdfDocument combine_pdf_resources unions known and unknown resource keys" {
+  let doc = @pdflite.pdf_document_empty()
+  let first = @pdflite.pdf_dictionary([
+    (
+      page_name_for_test("/ProcSet"),
+      PdfArray([PdfNameObject(page_name_for_test("/PDF"))]),
+    ),
+    (
+      page_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
+    ),
+    (
+      page_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (page_name_for_test("/CSA"), PdfNameObject(page_name_for_test("/RGB"))),
+      ]),
+    ),
+  ])
+  let second = @pdflite.pdf_dictionary([
+    (page_name_for_test("/Custom"), PdfBoolean(true)),
+    (
+      page_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([(page_name_for_test("/F1"), PdfInteger(2))]),
+    ),
+    (
+      page_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (page_name_for_test("/CSB"), PdfNameObject(page_name_for_test("/CMYK"))),
+      ]),
+    ),
+    (
+      page_name_for_test("/Pattern"),
+      @pdflite.pdf_dictionary([(page_name_for_test("/P1"), PdfNull)]),
+    ),
+  ])
+  @test.assert_eq(
+    doc.combine_pdf_resources(first, second),
+    @pdflite.pdf_dictionary([
+      (
+        page_name_for_test("/ProcSet"),
+        PdfArray([PdfNameObject(page_name_for_test("/PDF"))]),
+      ),
+      (page_name_for_test("/Custom"), PdfBoolean(true)),
+      (
+        page_name_for_test("/Font"),
+        @pdflite.pdf_dictionary([
+          (page_name_for_test("/F0"), PdfInteger(1)),
+          (page_name_for_test("/F1"), PdfInteger(2)),
+        ]),
+      ),
+      (
+        page_name_for_test("/ColorSpace"),
+        @pdflite.pdf_dictionary([
+          (
+            page_name_for_test("/CSA"),
+            PdfNameObject(page_name_for_test("/RGB")),
+          ),
+          (
+            page_name_for_test("/CSB"),
+            PdfNameObject(page_name_for_test("/CMYK")),
+          ),
+        ]),
+      ),
+      (
+        page_name_for_test("/Pattern"),
+        @pdflite.pdf_dictionary([(page_name_for_test("/P1"), PdfNull)]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "PdfDocument combine_pdf_resources resolves indirect subdictionaries" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    12,
+    @pdflite.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
+  )
+  @test.assert_eq(
+    doc.combine_pdf_resources(
+      @pdflite.pdf_dictionary([(page_name_for_test("/Font"), PdfIndirect(12))]),
+      PdfInteger(0),
+    ),
+    @pdflite.pdf_dictionary([
+      (
+        page_name_for_test("/Font"),
+        @pdflite.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
+      ),
+    ]),
+  )
+}
+
+///|
 test "PdfDocument add_prefix renames resources and content references" {
   let doc = @pdflite.pdf_document_empty()
   let page = {

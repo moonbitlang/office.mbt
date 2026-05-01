@@ -1896,6 +1896,72 @@ fn PdfDocument::pdf_page_resource_names(
 }
 
 ///|
+fn pdf_page_is_resource_key(key : PdfName) -> Bool {
+  for resource_key in pdf_page_resource_keys() {
+    if key == resource_key {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_page_unknown_resource_entries(
+  resources : PdfObject,
+) -> Array[(PdfName, PdfObject)] {
+  let output : Array[(PdfName, PdfObject)] = []
+  match resources {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        let (key, _) = entry
+        if !pdf_page_is_resource_key(key) {
+          output.push(entry)
+        }
+      }
+    _ => ()
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_resource_entries(
+  self : PdfDocument,
+  resources : PdfObject,
+  key : PdfName,
+) -> Array[(PdfName, PdfObject)] {
+  match self.lookup_direct(key, resources) {
+    Some(PdfDictionary(entries)) => [ for entry in entries => entry ]
+    _ => []
+  }
+}
+
+///|
+pub fn PdfDocument::combine_pdf_resources(
+  self : PdfDocument,
+  first : PdfObject,
+  second : PdfObject,
+) -> PdfObject {
+  let output : Array[(PdfName, PdfObject)] = []
+  for entry in pdf_page_unknown_resource_entries(first) {
+    output.push(entry)
+  }
+  for entry in pdf_page_unknown_resource_entries(second) {
+    output.push(entry)
+  }
+  for key in pdf_page_resource_keys() {
+    let entries = self.pdf_page_resource_entries(first, key)
+    for entry in self.pdf_page_resource_entries(second, key) {
+      entries.push(entry)
+    }
+    if entries.length() > 0 {
+      output.push((key, PdfDictionary(entries)))
+    }
+  }
+  PdfDictionary(output)
+}
+
+///|
 fn PdfDocument::pdf_page_object_uses_page_resources(
   self : PdfDocument,
   object : PdfObject,
