@@ -79,6 +79,21 @@ fn pdf_merge_fields_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_af_key() -> PdfName {
+  pdf_merge_name("/AF")
+}
+
+///|
+fn pdf_merge_class_map_key() -> PdfName {
+  pdf_merge_name("/ClassMap")
+}
+
+///|
+fn pdf_merge_id_tree_key() -> PdfName {
+  pdf_merge_name("/IDTree")
+}
+
+///|
 fn pdf_merge_info_key() -> PdfName {
   pdf_merge_name("/Info")
 }
@@ -99,8 +114,23 @@ fn pdf_merge_parent_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_pronunciation_lexicon_key() -> PdfName {
+  pdf_merge_name("/PronunciationLexicon")
+}
+
+///|
 fn pdf_merge_parent_tree_key() -> PdfName {
   pdf_merge_name("/ParentTree")
+}
+
+///|
+fn pdf_merge_role_map_key() -> PdfName {
+  pdf_merge_name("/RoleMap")
+}
+
+///|
+fn pdf_merge_namespaces_key() -> PdfName {
+  pdf_merge_name("/Namespaces")
 }
 
 ///|
@@ -230,6 +260,105 @@ fn PdfDocument::pdf_merge_structure_parent_tree_entries(
   match self.lookup_direct(pdf_merge_parent_tree_key(), root) {
     Some(parent_tree) => self.read_number_tree(parent_tree)
     None => []
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_structure_name_tree_entries(
+  self : PdfDocument,
+  structure_tree_roots : ArrayView[PdfObject],
+  key : PdfName,
+) -> Array[(PdfBytes, PdfObject)] {
+  let entries : Array[(PdfBytes, PdfObject)] = []
+  for root in structure_tree_roots {
+    match self.lookup_direct(key, root) {
+      Some(tree) =>
+        for entry in self.read_name_tree(tree) {
+          entries.push(entry)
+        }
+      None => ()
+    }
+  }
+  entries
+}
+
+///|
+fn pdf_merge_add_dictionary_entry(
+  entries : Array[(PdfName, PdfObject)],
+  key : PdfName,
+  value : PdfObject,
+) -> Unit {
+  for i in 0..<entries.length() {
+    let (existing_key, _) = entries[i]
+    if existing_key == key {
+      entries[i] = (key, value)
+      break ()
+    }
+  } nobreak {
+    entries.push((key, value))
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_structure_dictionary(
+  self : PdfDocument,
+  structure_tree_roots : ArrayView[PdfObject],
+  key : PdfName,
+) -> PdfObject? {
+  let entries : Array[(PdfName, PdfObject)] = []
+  for root in structure_tree_roots {
+    match self.lookup_direct(key, root) {
+      Some(PdfDictionary(root_entries)) =>
+        for entry in root_entries {
+          let (entry_key, value) = entry
+          pdf_merge_add_dictionary_entry(entries, entry_key, value)
+        }
+      _ => ()
+    }
+  }
+  if entries.length() > 0 {
+    Some(PdfDictionary(entries))
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_merge_object_member(
+  objects : ArrayView[PdfObject],
+  object : PdfObject,
+) -> Bool {
+  for existing in objects {
+    if existing == object {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_structure_array(
+  self : PdfDocument,
+  structure_tree_roots : ArrayView[PdfObject],
+  key : PdfName,
+) -> PdfObject? {
+  let values : Array[PdfObject] = []
+  for root in structure_tree_roots {
+    match self.lookup_direct(key, root) {
+      Some(PdfArray(items)) =>
+        for item in items {
+          if !pdf_merge_object_member(values, item) {
+            values.push(item)
+          }
+        }
+      _ => ()
+    }
+  }
+  if values.length() > 0 {
+    Some(PdfArray(values))
+  } else {
+    None
   }
 }
 
@@ -412,8 +541,14 @@ fn PdfDocument::pdf_merge_structure_tree_root(
     let entries : Array[(PdfName, PdfObject)] = [
       (pdf_merge_type_key(), PdfNameObject(pdf_merge_struct_tree_root_key())),
     ]
-    if kids.length() > 0 {
-      entries.push((pdf_merge_k_key(), pdf_structure_k_object(kids)))
+    let id_tree_entries = self.pdf_merge_structure_name_tree_entries(
+      structure_tree_roots,
+      pdf_merge_id_tree_key(),
+    )
+    if id_tree_entries.length() > 0 {
+      entries.push(
+        (pdf_merge_id_tree_key(), self.build_name_tree(id_tree_entries)),
+      )
     }
     if parent_tree_entries.length() > 0 {
       entries.push(
@@ -422,6 +557,47 @@ fn PdfDocument::pdf_merge_structure_tree_root(
           self.build_number_tree(parent_tree_entries),
         ),
       )
+    }
+    match
+      self.pdf_merge_structure_dictionary(
+        structure_tree_roots,
+        pdf_merge_role_map_key(),
+      ) {
+      Some(role_map) => entries.push((pdf_merge_role_map_key(), role_map))
+      None => ()
+    }
+    match
+      self.pdf_merge_structure_dictionary(
+        structure_tree_roots,
+        pdf_merge_class_map_key(),
+      ) {
+      Some(class_map) => entries.push((pdf_merge_class_map_key(), class_map))
+      None => ()
+    }
+    match
+      self.pdf_merge_structure_array(
+        structure_tree_roots,
+        pdf_merge_namespaces_key(),
+      ) {
+      Some(namespaces) => entries.push((pdf_merge_namespaces_key(), namespaces))
+      None => ()
+    }
+    match
+      self.pdf_merge_structure_array(
+        structure_tree_roots,
+        pdf_merge_pronunciation_lexicon_key(),
+      ) {
+      Some(lexicon) =>
+        entries.push((pdf_merge_pronunciation_lexicon_key(), lexicon))
+      None => ()
+    }
+    match
+      self.pdf_merge_structure_array(structure_tree_roots, pdf_merge_af_key()) {
+      Some(af) => entries.push((pdf_merge_af_key(), af))
+      None => ()
+    }
+    if kids.length() > 0 {
+      entries.push((pdf_merge_k_key(), pdf_structure_k_object(kids)))
     }
     self.add_object_given_number(root_number, PdfDictionary(entries))
     Some(PdfIndirect(root_number))

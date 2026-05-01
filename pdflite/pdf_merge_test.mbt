@@ -194,6 +194,20 @@ fn merge_parent_tree_doc_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn merge_add_object_entry_for_test(
+  doc : @pdflite.PdfDocument,
+  number : Int,
+  key : @pdflite.PdfName,
+  value : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  doc.add_object_given_number(
+    number,
+    try! doc.lookup_object_or_null(number).add_dict_entry(key, value),
+  )
+  doc
+}
+
+///|
 fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
   let key_info = merge_name_for_test("/Info")
   let key_title = merge_name_for_test("/Title")
@@ -648,6 +662,114 @@ test "pdf_merge_documents renumbers merged structure parent trees" {
     .lookup_immediate(key_struct_parents),
     Some(PdfInteger(1)),
   )
+}
+
+///|
+test "pdf_merge_documents merges structure root metadata" {
+  let key_af = merge_name_for_test("/AF")
+  let key_class_map = merge_name_for_test("/ClassMap")
+  let key_id_tree = merge_name_for_test("/IDTree")
+  let key_namespaces = merge_name_for_test("/Namespaces")
+  let key_role_map = merge_name_for_test("/RoleMap")
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let key_h1 = merge_name_for_test("/H1")
+  let key_figure = merge_name_for_test("/Figure")
+  let key_important = merge_name_for_test("/Important")
+  let first = merge_parent_tree_doc_for_test()
+  let first = merge_add_object_entry_for_test(
+    first,
+    30,
+    key_role_map,
+    PdfDictionary([(key_h1, PdfNameObject(merge_name_for_test("/Sect")))]),
+  )
+  let first = merge_add_object_entry_for_test(
+    first,
+    30,
+    key_namespaces,
+    PdfArray([PdfString(@ascii.encode("ns-a"))]),
+  )
+  let first = merge_add_object_entry_for_test(
+    first,
+    30,
+    key_id_tree,
+    first.build_name_tree([(@ascii.encode("id-a"), PdfIndirect(31))]),
+  )
+  let second = merge_parent_tree_doc_for_test()
+  let second = merge_add_object_entry_for_test(
+    second,
+    30,
+    key_role_map,
+    PdfDictionary([(key_figure, PdfNameObject(merge_name_for_test("/Figure")))]),
+  )
+  let second = merge_add_object_entry_for_test(
+    second,
+    30,
+    key_class_map,
+    PdfDictionary([(key_important, PdfString(@ascii.encode("class-b")))]),
+  )
+  let second = merge_add_object_entry_for_test(
+    second,
+    30,
+    key_namespaces,
+    PdfArray([PdfString(@ascii.encode("ns-b"))]),
+  )
+  let second = merge_add_object_entry_for_test(
+    second,
+    30,
+    key_af,
+    PdfArray([PdfString(@ascii.encode("af-b"))]),
+  )
+  let second = merge_add_object_entry_for_test(
+    second,
+    30,
+    key_id_tree,
+    second.build_name_tree([(@ascii.encode("id-b"), PdfIndirect(31))]),
+  )
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let root = merged.lookup_object_or_null(merged.root())
+  guard root.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(struct_root_number)) else {
+    fail("expected merged StructTreeRoot")
+  }
+  let struct_root = merged.lookup_object_or_null(struct_root_number)
+  guard merged.lookup_direct(key_role_map, struct_root) is Some(role_map) else {
+    fail("expected merged RoleMap")
+  }
+  @test.assert_eq(
+    role_map.lookup_immediate(key_h1),
+    Some(PdfNameObject(merge_name_for_test("/Sect"))),
+  )
+  @test.assert_eq(
+    role_map.lookup_immediate(key_figure),
+    Some(PdfNameObject(merge_name_for_test("/Figure"))),
+  )
+  guard merged.lookup_direct(key_class_map, struct_root) is Some(class_map) else {
+    fail("expected merged ClassMap")
+  }
+  @test.assert_eq(
+    class_map.lookup_immediate(key_important),
+    Some(PdfString(@ascii.encode("class-b"))),
+  )
+  @test.assert_eq(
+    merged.lookup_direct(key_namespaces, struct_root),
+    Some(
+      PdfArray([
+        PdfString(@ascii.encode("ns-a")),
+        PdfString(@ascii.encode("ns-b")),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    merged.lookup_direct(key_af, struct_root),
+    Some(PdfArray([PdfString(@ascii.encode("af-b"))])),
+  )
+  guard merged.lookup_direct(key_id_tree, struct_root) is Some(id_tree) else {
+    fail("expected merged IDTree")
+  }
+  @test.assert_eq([ for entry in merged.read_name_tree(id_tree) => entry.0 ], [
+    @ascii.encode("id-a"),
+    @ascii.encode("id-b"),
+  ])
 }
 
 ///|
