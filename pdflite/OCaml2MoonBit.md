@@ -169,6 +169,19 @@ the direct replacement for byte-codec and bitstream code that masks, packs,
 or inverts bytes.
 
 ```sh
+moon run -c 'fn main { println((-8) >> 1); println(1 << 31); println(1 << 32); println(1 >> 32) }'
+# -4
+# -2147483648
+# 1
+# 1
+```
+
+MoonBit `Int` shifts are arithmetic for signed right shift and mask the shift
+count to the 32-bit word width. Guard or normalize shift counts explicitly when
+the OCaml source relied on `Int32.shift_*` preconditions or format-specific
+width rules.
+
+```sh
 moon run -c 'fn main { let max = 2147483647; println((max + 1).to_string()); println((-2147483648 - 1).to_string()); println((2147483647 * 2).to_string()); println((1 << 31).to_string()) }'
 # -2147483648
 # 2147483647

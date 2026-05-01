@@ -316,6 +316,24 @@ test "PdfDocument parse_function evaluates integer calculator operators" {
 }
 
 ///|
+test "PdfDocument parse_function evaluates calculator bitshift directions" {
+  let doc = @pdflite.pdf_document_empty()
+  let calculator = @ascii.encode(
+    "{ 1 5 bitshift 32 -2 bitshift -8 -1 bitshift }",
+  )
+  let function_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([])),
+    ]),
+    StreamGot(calculator),
+  )
+  let function = try! doc.parse_function(function_object)
+  @test.assert_eq(try! function.eval([]), [32.0, 8.0, -4.0])
+}
+
+///|
 test "PdfDocument parse_function preserves calculator integer value semantics" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode(
