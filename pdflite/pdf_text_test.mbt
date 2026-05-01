@@ -590,6 +590,81 @@ test "PdfDocument read_font_descriptor uses CamlPDF defaults and fontfile priori
 }
 
 ///|
+test "PdfDocument read_font_metrics builds 256-entry width table" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(7, PdfInteger(620))
+  let descriptor = @pdflite.pdf_dictionary([
+    (text_name_for_test("/MissingWidth"), PdfInteger(250)),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), descriptor),
+    (text_name_for_test("/FirstChar"), PdfInteger(65)),
+    (text_name_for_test("/LastChar"), PdfInteger(67)),
+    (
+      text_name_for_test("/Widths"),
+      PdfArray([PdfInteger(600), PdfReal(610.5), PdfIndirect(7)]),
+    ),
+  ])
+  guard (try! doc.read_font_metrics(font)) is Some(metrics) else {
+    fail("expected font metrics")
+  }
+  @test.assert_eq(metrics.length(), 256)
+  @test.assert_eq(metrics[0], 250.0)
+  @test.assert_eq(metrics[64], 250.0)
+  @test.assert_eq(metrics[65], 600.0)
+  @test.assert_eq(metrics[66], 610.5)
+  @test.assert_eq(metrics[67], 620.0)
+  @test.assert_eq(metrics[68], 250.0)
+  @test.assert_eq(metrics[255], 250.0)
+}
+
+///|
+test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
+  let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(try! doc.read_font_metrics(@pdflite.pdf_dictionary([])), None)
+  let type3 = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type3")),
+    ),
+    (text_name_for_test("/MissingWidth"), PdfReal(5.5)),
+    (text_name_for_test("/FirstChar"), PdfInteger(0)),
+    (text_name_for_test("/LastChar"), PdfInteger(0)),
+    (text_name_for_test("/Widths"), PdfArray([PdfInteger(9)])),
+  ])
+  guard (try! doc.read_font_metrics(type3)) is Some(type3_metrics) else {
+    fail("expected type3 metrics")
+  }
+  @test.assert_eq(type3_metrics[0], 9.0)
+  @test.assert_eq(type3_metrics[1], 5.5)
+
+  let malformed = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (text_name_for_test("/FirstChar"), PdfInteger(65)),
+    (text_name_for_test("/LastChar"), PdfInteger(66)),
+    (text_name_for_test("/Widths"), PdfArray([PdfInteger(600)])),
+  ])
+  let malformed_result = try? doc.read_font_metrics(malformed)
+  guard malformed_result is Err(FontWidthsExpected) else {
+    fail("expected FontWidthsExpected")
+  }
+
+  let bad_width = @pdflite.pdf_dictionary([
+    (text_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (text_name_for_test("/FirstChar"), PdfInteger(65)),
+    (text_name_for_test("/LastChar"), PdfInteger(65)),
+    (
+      text_name_for_test("/Widths"),
+      PdfArray([PdfNameObject(text_name_for_test("/Bad"))]),
+    ),
+  ])
+  let bad_width_result = try? doc.read_font_metrics(bad_width)
+  guard bad_width_result is Err(FontWidthExpected) else {
+    fail("expected FontWidthExpected")
+  }
+}
+
+///|
 test "PdfDocument detects and reads standard14 fonts" {
   let doc = @pdflite.pdf_document_empty()
   let font = @pdflite.pdf_dictionary([

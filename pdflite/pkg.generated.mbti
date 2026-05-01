@@ -349,6 +349,10 @@ pub(all) suberror PdfError {
   FontFlagsExpected
   StandardFontExpected
   BaseFontExpected
+  FontFirstCharExpected
+  FontLastCharExpected
+  FontWidthsExpected
+  FontWidthExpected
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -751,6 +755,7 @@ pub fn PdfDocument::read_colour_space(Self, PdfObject, PdfObject) -> PdfColourSp
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_encoding(Self, PdfObject) -> PdfEncoding raise PdfError
 pub fn PdfDocument::read_font_descriptor(Self, PdfObject) -> PdfFontDescriptor? raise PdfError
+pub fn PdfDocument::read_font_metrics(Self, PdfObject) -> Array[Double]? raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
 pub fn PdfDocument::read_optional_content_groups(Self) -> PdfOptionalContent? raise PdfError

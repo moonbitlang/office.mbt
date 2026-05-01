@@ -54,6 +54,10 @@ pub(all) suberror PdfError {
   FontFlagsExpected
   StandardFontExpected
   BaseFontExpected
+  FontFirstCharExpected
+  FontLastCharExpected
+  FontWidthsExpected
+  FontWidthExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
