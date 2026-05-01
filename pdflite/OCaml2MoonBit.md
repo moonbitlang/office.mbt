@@ -407,10 +407,10 @@ expression. If you deliberately match the result of `try? expr`, wrap the
 not valid syntax.
 
 ```sh
-moon run -c 'suberror E { A; B }
-fn f(kind : Int) -> Int raise E { if kind == 1 { raise A }; if kind == 2 { raise B }; 1 }
-fn g(kind : Int) -> Int raise E { f(kind) catch { A => 2; error => raise error } }
-fn main { let r : Result[Int, Error] = try? f(1); match r { Err(E::A) => println("try?"); _ => println("other") }; println(g(0) catch { _ => -1 }); println(g(1) catch { _ => -1 }); println(g(2) catch { B => 3; _ => -1 }) }'
+moon run -c 'suberror E { A(Int); B }
+fn f(kind : Int) -> Int raise E { if kind == 1 { raise A(5) }; if kind == 2 { raise B }; 1 }
+fn g(kind : Int) -> Int raise E { f(kind) catch { A(_) => 2; error => raise error } }
+fn main { let r : Result[Int, Error] = try? f(1); match r { Err(E::A(_)) => println("try?"); _ => println("other") }; println(g(0) catch { _ => -1 }); println(g(1) catch { _ => -1 }); println(g(2) catch { B => 3; _ => -1 }) }'
 # try?
 # 1
 # 2
@@ -421,7 +421,8 @@ fn main { let r : Result[Int, Error] = try? f(1); match r { Err(E::A) => println
 tests and probes but loses the narrower suberror type for re-raising. In
 ordinary ported code that catches one constructor and propagates the rest, use
 `expr catch { SpecificError => fallback; error => raise error }` so the
-function can keep `raise ProjectError`.
+function can keep `raise ProjectError`. Payload-carrying suberror constructors
+match with ordinary enum payload syntax such as `SpecificError(_)`.
 
 ```sh
 moon run -c 'enum E { A(Int); B }

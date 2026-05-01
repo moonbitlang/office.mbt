@@ -1242,6 +1242,47 @@ pub fn PdfDocument::pdf_decode_stream(
 }
 
 ///|
+fn PdfDocument::pdf_decode_stream_until_unknown_value_direct(
+  self : PdfDocument,
+  stream : PdfStream,
+) -> PdfStream raise PdfError {
+  let mut current = stream
+  let mut stages = 0
+  let mut stopped = false
+  while !stopped && self.pdf_stream_has_filter_value_direct(current) {
+    if stages >= 1024 {
+      raise FilterExpected
+    }
+    try self.pdf_decode_stream_onestage_value_direct(current) catch {
+      FilterNotSupported(_) => stopped = true
+      error => raise error
+    } noraise {
+      decoded => {
+        current = decoded
+        stages += 1
+      }
+    }
+  }
+  if stopped {
+    current
+  } else {
+    self.pdf_decode_stream_onestage_value_direct(current)
+  }
+}
+
+///|
+pub fn PdfDocument::pdf_decode_stream_until_unknown(
+  self : PdfDocument,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match self.direct(object) {
+    PdfStreamObject(stream) =>
+      PdfStreamObject(self.pdf_decode_stream_until_unknown_value_direct(stream))
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
 fn pdf_stream_has_filter_value(stream : PdfStream) -> Bool raise PdfError {
   pdf_stream_first_filter(stream.dictionary) != None
 }

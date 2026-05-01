@@ -999,6 +999,120 @@ test "PdfDocument pdf_decode_stream bounds excessive filter stages" {
 }
 
 ///|
+test "PdfDocument pdf_decode_stream_until_unknown stops at unsupported filters" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let predictor = codec_name_for_test("/Predictor")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(8, PdfNameObject(codec_name_for_test("/AHx")))
+  doc.add_object_given_number(
+    9,
+    @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
+  )
+  let encoded = @pdflite.pdf_ascii_hex_encode(codec_ascii_for_test("Hi"))
+  let unsupported : @pdflite.PdfObject = PdfNameObject(
+    codec_name_for_test("/NoSuchFilter"),
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfArray([PdfIndirect(8), unsupported])),
+      (decodeparms, PdfArray([PdfIndirect(9), PdfNull])),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = try! doc.pdf_decode_stream_until_unknown(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(length),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfArray([unsupported])),
+  )
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(decodeparms),
+    Some(PdfArray([PdfNull])),
+  )
+}
+
+///|
+test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inputs" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let doc = @pdflite.pdf_document_empty()
+  let raw = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let decoded = try! doc.pdf_decode_stream_until_unknown(raw)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  let unsupported : @pdflite.PdfObject = PdfNameObject(
+    codec_name_for_test("/NoSuchFilter"),
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, unsupported)]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let decoded = try! doc.pdf_decode_stream_until_unknown(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    decoded_stream.dictionary.lookup_immediate(filter),
+    Some(unsupported),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
+    PdfNull,
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(3)),
+      (filter, PdfNameObject(codec_name_for_test("/AHx"))),
+    ]),
+    StreamGot(codec_ascii_for_test("6Z>")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
+    fail("expected InvalidHexEscape")
+  }
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(1)),
+      (
+        filter,
+        PdfArray(
+          [
+            for _ in 0..<1025 => PdfNameObject(codec_name_for_test("/Crypt"))
+          ],
+        ),
+      ),
+    ]),
+    StreamGot(codec_ascii_for_test("x")),
+  )
+  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
+    stream,
+  )
+  guard result is Err(@pdflite.PdfError::FilterExpected) else {
+    fail("expected FilterExpected")
+  }
+}
+
+///|
 test "pdf_decode_stream_onestage accepts DecodeParms arrays" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

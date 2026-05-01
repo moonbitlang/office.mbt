@@ -303,8 +303,10 @@ MoonBit consequences for this project:
    indirect `/Filter` and `/DecodeParms` entries, including array filters with
    indirect elements, short `/F` and `/DP` keys, predictor dictionaries reached
    through indirect references, and LZW `EarlyChange` reached through direct
-   document lookup. Flate compression heuristics and other filters remain
-   deferred.
+   document lookup. A document-aware `pdf_decode_stream_until_unknown` slice now
+   mirrors CamlPDF's stop-at-first-unsupported-filter behavior while preserving
+   the remaining filter metadata. Flate compression heuristics and other
+   filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
@@ -747,8 +749,9 @@ MoonBit consequences for this project:
     private survival-helper checks for `/Pg`, direct non-indirect `/K` items,
     and non-dictionary structure values. Codec coverage now includes malformed
     decode-parameter dispatch during stream decode, document-aware indirect
-    filter/decode-parameter resolution, plus private filter-entry,
-    decode-parameter, predictor-byte-width, and LZW table-validation guards.
+    filter/decode-parameter resolution, stop-at-unknown stream decode behavior,
+    plus private filter-entry, decode-parameter, predictor-byte-width, and LZW
+    table-validation guards.
     Name/number tree coverage now includes malformed key-type rejection,
     duplicate number-key replacement, large nested tree construction with child
     `/Limits`, and private grouping threshold checks. Flate coverage now
