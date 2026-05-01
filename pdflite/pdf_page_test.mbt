@@ -392,6 +392,7 @@ test "PdfDocument page_reference_numbers traverses page tree in order" {
   let type_goto = page_name_for_test("/GoTo")
   let type_xyz = page_name_for_test("/XYZ")
   @test.assert_eq(try! doc.page_reference_numbers(), [3, 5])
+  @test.assert_eq(try! doc.pages_of_pagetree_quick(), 2)
   @test.assert_eq(try! doc.endpage(), 2)
   @test.assert_eq(try! doc.endpage_fast(), 2)
   @test.assert_eq(try! doc.page_object_number(1), Some(3))
@@ -427,6 +428,79 @@ test "PdfDocument page_reference_numbers traverses page tree in order" {
     DestFit(TargetPageObject(5)),
   )
   @test.assert_eq(try! doc.target_of_page_number(3), DestNull)
+}
+
+///|
+test "PdfDocument pages_of_pagetree_quick allows direct page dictionaries" {
+  let key_type = page_name_for_test("/Type")
+  let key_pages = page_name_for_test("/Pages")
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (
+        key_kids,
+        PdfArray([
+          @pdflite.pdf_dictionary([
+            (key_type, PdfNameObject(page_name_for_test("/Page"))),
+          ]),
+          @pdflite.pdf_dictionary([
+            (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+            (
+              key_kids,
+              PdfArray([
+                @pdflite.pdf_dictionary([
+                  (key_type, PdfNameObject(page_name_for_test("/Page"))),
+                ]),
+              ]),
+            ),
+            (key_count, PdfInteger(1)),
+          ]),
+        ]),
+      ),
+      (key_count, PdfInteger(2)),
+    ]),
+  )
+  @test.assert_eq(try! doc.pages_of_pagetree_quick(), 2)
+  @test.assert_eq(try! doc.endpage(), 2)
+}
+
+///|
+test "PdfDocument pages_of_pagetree_quick rejects malformed kids" {
+  let key_type = page_name_for_test("/Type")
+  let key_pages = page_name_for_test("/Pages")
+  let key_kids = page_name_for_test("/Kids")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_kids, PdfArray([PdfInteger(1)])),
+    ]),
+  )
+  let result : Result[Int, Error] = try? doc.pages_of_pagetree_quick()
+  guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected")
+  }
 }
 
 ///|

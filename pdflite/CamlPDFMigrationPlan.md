@@ -351,8 +351,9 @@ MoonBit consequences for this project:
    contents, remove unreferenced objects, and write the result.
    Status: started with CamlPDF-style page tree reference-number traversal
    through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
-   top-level `/Count` based `endpage_fast`, `page_object_number`, page records,
-   blank/custom pages, page-tree construction, root installation, and
+   `pages_of_pagetree_quick` counting, top-level `/Count` based
+   `endpage_fast`, `page_object_number`, page records, blank/custom pages,
+   page-tree construction, root installation, and
    `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
    CamlPDF's `replace_inherit` helper is also started as

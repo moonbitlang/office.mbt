@@ -459,6 +459,17 @@ values are usually written as `fn(x) { ... }`. Capturing mutable `Ref` state in 
 closure is useful when porting OCaml callbacks that close over refs.
 
 ```sh
+moon run -c 'fn apply(f : (Int) -> Int raise, x : Int) -> Int raise { f(x) }
+fn main { println(try! apply(fn(x) raise { if x == 0 { fail("zero") }; x + 1 }, 1)) }'
+# 2
+```
+
+Callback parameters that may fail include `raise` in the function type, for
+example `(Int) -> Int raise`. Annotate anonymous raising callbacks with
+`fn(x) raise { ... }`; relying on inferred raising effects for `fn` literals is
+deprecated.
+
+```sh
 moon run -c 'fn main { let xs = [1, 2, 3]; match xs { [_, .. rest] => { let owned = [ for x in rest => x ]; println(rest.length()); println(owned.length()); println(owned[0]) }; _ => () } }'
 # 2
 # 2

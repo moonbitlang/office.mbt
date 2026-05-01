@@ -2747,6 +2747,49 @@ fn pdf_page_reference_numbers_inner(
 }
 
 ///|
+fn PdfDocument::pdf_pages_of_pagetree_quick_node(
+  self : PdfDocument,
+  node : PdfObject,
+  depth : Int,
+) -> Int raise PdfError {
+  if depth > 10000 {
+    raise PageTreeExpected
+  }
+  if node == PdfNull {
+    0
+  } else {
+    match self.lookup_direct(pdf_page_type_key(), node) {
+      Some(PdfNameObject(name)) if name != pdf_page_type_pages() => 1
+      _ =>
+        match self.lookup_direct(pdf_page_kids_key(), node) {
+          Some(PdfArray(kids)) => {
+            let mut count = 0
+            for kid in kids {
+              match kid {
+                PdfIndirect(number) => {
+                  let child = self.lookup_object_or_null(number)
+                  if child == PdfNull {
+                    raise PageTreeExpected
+                  }
+                  count += self.pdf_pages_of_pagetree_quick_node(
+                    child,
+                    depth + 1,
+                  )
+                }
+                PdfDictionary(_) =>
+                  count += self.pdf_pages_of_pagetree_quick_node(kid, depth + 1)
+                _ => raise PageTreeExpected
+              }
+            }
+            count
+          }
+          _ => raise PageTreeExpected
+        }
+    }
+  }
+}
+
+///|
 fn pdf_page_root_pages_node(pdf : PdfDocument) -> PdfObject raise PdfError {
   let root = pdf.lookup_object_or_null(pdf.root())
   if root == PdfNull {
@@ -2763,6 +2806,13 @@ pub fn PdfDocument::page_reference_numbers(
   self : PdfDocument,
 ) -> Array[Int] raise PdfError {
   pdf_page_reference_numbers_inner(self, pdf_page_root_pages_node(self), -1, 0)
+}
+
+///|
+pub fn PdfDocument::pages_of_pagetree_quick(
+  self : PdfDocument,
+) -> Int raise PdfError {
+  self.pdf_pages_of_pagetree_quick_node(pdf_page_root_pages_node(self), 0)
 }
 
 ///|
@@ -2799,7 +2849,7 @@ pub fn PdfDocument::target_of_page_number(
 
 ///|
 pub fn PdfDocument::endpage(self : PdfDocument) -> Int raise PdfError {
-  self.page_reference_numbers().length()
+  self.pages_of_pagetree_quick()
 }
 
 ///|

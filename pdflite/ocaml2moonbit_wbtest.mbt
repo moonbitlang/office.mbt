@@ -83,6 +83,14 @@ fn apply_callback_twice_for_test(f : (Int) -> Int, value : Int) -> Int {
 }
 
 ///|
+fn apply_raising_callback_for_test(
+  f : (Int) -> Int raise,
+  value : Int,
+) -> Int raise {
+  f(value)
+}
+
+///|
 test "Callback parameters use function types and can capture refs" {
   let delta : Ref[Int] = { val: 1 }
   @test.assert_eq(
@@ -96,6 +104,22 @@ test "Callback parameters use function types and can capture refs" {
     15,
   )
   @test.assert_eq(delta.val, 3)
+}
+
+///|
+test "Raising callback parameters use raising function types" {
+  @test.assert_eq(
+    try! apply_raising_callback_for_test(
+      fn(value) raise {
+        if value == 0 {
+          fail("zero")
+        }
+        value + 1
+      },
+      1,
+    ),
+    2,
+  )
 }
 
 ///|

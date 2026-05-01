@@ -101,6 +101,28 @@ test "private page tree readers cover guard branches" {
   guard inherited_too_deep is Err(PdfError::PageTreeExpected) else {
     fail("expected inherited attribute depth guard")
   }
+  @test.assert_eq(try! doc.pdf_pages_of_pagetree_quick_node(PdfNull, 0), 0)
+  let quick_too_deep : Result[Int, Error] = try? doc.pdf_pages_of_pagetree_quick_node(
+    PdfDictionary([]),
+    10001,
+  )
+  guard quick_too_deep is Err(PdfError::PageTreeExpected) else {
+    fail("expected quick page tree depth guard")
+  }
+  let quick_missing_kid : Result[Int, Error] = try? doc.pdf_pages_of_pagetree_quick_node(
+    PdfDictionary([(pdf_page_kids_key(), PdfArray([PdfIndirect(99)]))]),
+    0,
+  )
+  guard quick_missing_kid is Err(PdfError::PageTreeExpected) else {
+    fail("expected quick missing kid")
+  }
+  let quick_missing_kids : Result[Int, Error] = try? doc.pdf_pages_of_pagetree_quick_node(
+    PdfDictionary([]),
+    0,
+  )
+  guard quick_missing_kids is Err(PdfError::PageTreeExpected) else {
+    fail("expected quick missing kids")
+  }
 
   let last_mediabox : Ref[PdfObject] = { val: pdf_page_default_mediabox() }
   let branch_pages = try! doc.pdf_pages_of_node(
