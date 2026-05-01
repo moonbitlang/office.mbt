@@ -451,6 +451,8 @@ MoonBit consequences for this project:
     content references. Date coverage now includes short-year padding,
     positive timezone rendering, `Z` and trailing non-local timezone parsing,
     incomplete optional fields, non-digit failures, and Distiller Y2K recovery.
+    A focused whitebox check now covers the duplicate-stream comparison
+    fallback for non-stream objects.
 
 ## Update Discipline
 
