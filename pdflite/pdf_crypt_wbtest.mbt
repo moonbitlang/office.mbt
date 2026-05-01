@@ -165,6 +165,18 @@ test "private AESV3 saved dictionary requires permissions entry" {
 }
 
 ///|
+test "private AESV3 CBC no-padding encryption rejects partial blocks" {
+  let key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
+  let result : Result[PdfBytes, Error] = try? pdf_aesv3_cbc_encrypt_no_padding(
+    key[:],
+    @ascii.encode("x")[:],
+  )
+  guard result is Err(PdfError::InvalidCryptoDataLength(1)) else {
+    fail("expected invalid AESV3 CBC data length")
+  }
+}
+
+///|
 test "private document decrypt reports unsupported ISO AESV3 object crypt" {
   let values : PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(true),

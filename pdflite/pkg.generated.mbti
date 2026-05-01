@@ -558,6 +558,15 @@ pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
 
+pub(all) enum PdfAesV3RandomField {
+  PdfAesV3FileKey
+  PdfAesV3UserValidationSalt
+  PdfAesV3UserKeySalt
+  PdfAesV3OwnerValidationSalt
+  PdfAesV3OwnerKeySalt
+  PdfAesV3PermissionsPadding
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PdfAnnotation {
   subtype : PdfAnnotationSubtype
   contents : Bytes?
@@ -894,6 +903,7 @@ pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encryption_values(Self) -> PdfEncryptionValues raise PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError

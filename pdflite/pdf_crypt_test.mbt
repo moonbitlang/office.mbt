@@ -152,6 +152,33 @@ fn crypt_aesv3_r5_permissions_for_test(
 }
 
 ///|
+fn crypt_aesv3_r5_random_for_test(
+  field : @pdflite.PdfAesV3RandomField,
+  _length : Int,
+) -> @pdflite.PdfBytes {
+  match field {
+    PdfAesV3FileKey => crypt_aesv3_r5_file_key_for_test()
+    PdfAesV3UserValidationSalt =>
+      crypt_model_bytes_for_test([
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      ])
+    PdfAesV3UserKeySalt =>
+      crypt_model_bytes_for_test([
+        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+      ])
+    PdfAesV3OwnerValidationSalt =>
+      crypt_model_bytes_for_test([
+        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+      ])
+    PdfAesV3OwnerKeySalt =>
+      crypt_model_bytes_for_test([
+        0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+      ])
+    PdfAesV3PermissionsPadding => Bytes::new(4)
+  }
+}
+
+///|
 fn crypt_aesv3_r5_encrypt_dictionary_for_test(
   permissions? : Int = -3904,
   encrypt_metadata? : Bool = true,
@@ -2750,6 +2777,152 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
     read_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
+}
+
+///|
+test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 encryption" {
+  let key_type = crypt_name_for_test("/Type")
+  let key_title = crypt_name_for_test("/Title")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let key_cf = crypt_name_for_test("/CF")
+  let key_stdcf = crypt_name_for_test("/StdCF")
+  let key_cfm = crypt_name_for_test("/CFM")
+  let key_aesv3 = crypt_name_for_test("/AESV3")
+  let key_encrypt_metadata = crypt_name_for_test("/EncryptMetadata")
+  let key_oe = crypt_name_for_test("/OE")
+  let key_ue = crypt_name_for_test("/UE")
+  let key_perms = crypt_name_for_test("/Perms")
+  let doc = crypt_minimal_catalog_document_for_test(1, 7)
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3-secret"))),
+  ])
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  doc.add_object_given_number(5, secret_object)
+  doc.add_object_given_number(6, metadata_stream)
+  let denied_permissions = @pdflite.pdf_permissions_of_p(-3904)
+  let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    denied_permissions[:],
+    crypt_aesv3_r5_random_for_test,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  @test.assert_eq(encrypted.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(
+    try! encrypted.what_encryption(),
+    Some(PdfEncryptionAES256(false)),
+  )
+  guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
+    is Some(PdfIndirect(encrypt_number)) else {
+    fail("expected indirect AESV3 encryption dictionary")
+  }
+  let encrypt_dictionary = encrypted.lookup_object_or_null(encrypt_number)
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_encrypt_metadata),
+    Some(PdfBoolean(false)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_ue),
+    Some(PdfString(crypt_aesv3_r5_user_encryption_key_for_test())),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_oe),
+    Some(PdfString(crypt_aesv3_r5_owner_encryption_key_for_test())),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_perms),
+    Some(PdfString(crypt_aesv3_r5_permissions_for_test(encrypt_metadata=false))),
+  )
+  guard encrypt_dictionary.lookup_immediate(key_cf) is Some(cf_dictionary) else {
+    fail("expected AESV3 crypt filter dictionary")
+  }
+  guard cf_dictionary.lookup_immediate(key_stdcf) is Some(std_cf_dictionary) else {
+    fail("expected standard AESV3 crypt filter")
+  }
+  @test.assert_eq(
+    std_cf_dictionary.lookup_immediate(key_cfm),
+    Some(PdfNameObject(key_aesv3)),
+  )
+  let values = try! encrypted.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptAESV3(false))
+  @test.assert_eq(values.user_entry, crypt_aesv3_r5_user_entry_for_test())
+  @test.assert_eq(values.owner_entry, crypt_aesv3_r5_owner_entry_for_test())
+  @test.assert_eq(
+    values.user_encryption_key,
+    Some(crypt_aesv3_r5_user_encryption_key_for_test()),
+  )
+  @test.assert_eq(
+    values.owner_encryption_key,
+    Some(crypt_aesv3_r5_owner_encryption_key_for_test()),
+  )
+  @test.assert_eq(
+    values.permissions_entry,
+    Some(crypt_aesv3_r5_permissions_for_test(encrypt_metadata=false)),
+  )
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(decrypted.denied_permissions, denied_permissions)
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    owner_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+
+  let rendered = try! @pdflite.pdf_write_document(encrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  let read_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
+
+  let bad_random = fn(
+    field : @pdflite.PdfAesV3RandomField,
+    length : Int,
+  ) -> @pdflite.PdfBytes {
+    match field {
+      PdfAesV3UserKeySalt => Bytes::new(7)
+      _ => crypt_aesv3_r5_random_for_test(field, length)
+    }
+  }
+  let bad_provider : Result[@pdflite.PdfDocument, Error] = try? doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    denied_permissions[:],
+    bad_random,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  guard bad_provider
+    is Err(@pdflite.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
+    name == crypt_name_for_test("/UserKeySalt") else {
+    fail("expected short AESV3 random field")
+  }
 }
 
 ///|

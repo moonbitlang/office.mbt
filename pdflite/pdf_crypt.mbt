@@ -21,6 +21,16 @@ pub(all) enum PdfEncryptionMethod {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) enum PdfAesV3RandomField {
+  PdfAesV3FileKey
+  PdfAesV3UserValidationSalt
+  PdfAesV3UserKeySalt
+  PdfAesV3OwnerValidationSalt
+  PdfAesV3OwnerKeySalt
+  PdfAesV3PermissionsPadding
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) struct PdfEncryptionValues {
   crypt_type : PdfCryptType
   user_entry : PdfBytes
@@ -113,6 +123,15 @@ fn pdf_crypt_required_int(
 fn pdf_crypt_chop_string(
   key : PdfName,
   value : PdfBytes,
+  need : Int,
+) -> PdfBytes raise PdfError {
+  pdf_crypt_chop_view(key, value[:], need)
+}
+
+///|
+fn pdf_crypt_chop_view(
+  key : PdfName,
+  value : BytesView,
   need : Int,
 ) -> PdfBytes raise PdfError {
   if value.length() < need {
@@ -931,6 +950,103 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
 }
 
 ///|
+pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes,
+  encrypt_metadata? : Bool = true,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  let no_encrypt_metadata = !encrypt_metadata
+  let (document, id) = self.with_file_id(file_id~)
+  let permissions = pdf_p_of_permissions(denied_permissions)
+  let file_key = pdf_aesv3_random_bytes(random_provider, PdfAesV3FileKey, 32)
+  let user_validation_salt = pdf_aesv3_random_bytes(
+    random_provider,
+    PdfAesV3UserValidationSalt,
+    8,
+  )
+  let user_key_salt = pdf_aesv3_random_bytes(
+    random_provider,
+    PdfAesV3UserKeySalt,
+    8,
+  )
+  let owner_validation_salt = pdf_aesv3_random_bytes(
+    random_provider,
+    PdfAesV3OwnerValidationSalt,
+    8,
+  )
+  let owner_key_salt = pdf_aesv3_random_bytes(
+    random_provider,
+    PdfAesV3OwnerKeySalt,
+    8,
+  )
+  let permissions_padding = pdf_aesv3_random_bytes(
+    random_provider,
+    PdfAesV3PermissionsPadding,
+    4,
+  )
+  let user_entry = pdf_aesv3_entry(
+    false,
+    user_password,
+    user_validation_salt[:],
+    user_key_salt[:],
+  )
+  let owner_entry = pdf_aesv3_entry(
+    false,
+    owner_password,
+    owner_validation_salt[:],
+    owner_key_salt[:],
+    user_entry=user_entry[:],
+  )
+  let user_encryption_key = pdf_aesv3_wrap_file_key(
+    false,
+    user_password,
+    user_key_salt[:],
+    file_key[:],
+  )
+  let owner_encryption_key = pdf_aesv3_wrap_file_key(
+    false,
+    owner_password,
+    owner_key_salt[:],
+    file_key[:],
+    user_entry=user_entry[:],
+  )
+  let permissions_entry = pdf_aesv3_permissions_entry(
+    file_key[:],
+    permissions,
+    encrypt_metadata,
+    permissions_padding[:],
+  )
+  let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
+    file_key[:],
+    iv_provider,
+    no_encrypt_metadata~,
+  )
+  let encrypt_dictionary = pdf_crypt_saved_aesv3_dictionary({
+    crypt_type: PdfCryptAESV3(false),
+    user_entry,
+    owner_entry,
+    permissions,
+    file_id: id,
+    encrypt_metadata,
+    permissions_entry: Some(permissions_entry),
+    user_encryption_key: Some(user_encryption_key),
+    owner_encryption_key: Some(owner_encryption_key),
+  })
+  let encrypt_number = encrypted.add_object(encrypt_dictionary)
+  encrypted.set_trailer_dict(
+    encrypted
+    .trailer_dict()
+    .add_dict_entry(pdf_crypt_name("/Encrypt"), PdfIndirect(encrypt_number)),
+  )
+  encrypted
+}
+
+///|
 fn PdfDocument::encrypt_arc4_standard(
   self : PdfDocument,
   user_password : BytesView,
@@ -1393,6 +1509,113 @@ fn pdf_aesv3_password_hash(
     raise EncryptionAuthenticationUnsupported(PdfCryptAESV3(iso))
   }
   pdf_sha256_digest(password_data)
+}
+
+///|
+fn pdf_aesv3_random_field_key(field : PdfAesV3RandomField) -> PdfName {
+  match field {
+    PdfAesV3FileKey => pdf_crypt_name("/FileKey")
+    PdfAesV3UserValidationSalt => pdf_crypt_name("/UserValidationSalt")
+    PdfAesV3UserKeySalt => pdf_crypt_name("/UserKeySalt")
+    PdfAesV3OwnerValidationSalt => pdf_crypt_name("/OwnerValidationSalt")
+    PdfAesV3OwnerKeySalt => pdf_crypt_name("/OwnerKeySalt")
+    PdfAesV3PermissionsPadding => pdf_crypt_name("/PermsPadding")
+  }
+}
+
+///|
+fn pdf_aesv3_random_bytes(
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes,
+  field : PdfAesV3RandomField,
+  length : Int,
+) -> PdfBytes raise PdfError {
+  pdf_crypt_chop_string(
+    pdf_aesv3_random_field_key(field),
+    random_provider(field, length),
+    length,
+  )
+}
+
+///|
+fn pdf_aesv3_entry(
+  iso : Bool,
+  password : BytesView,
+  validation_salt : BytesView,
+  key_salt : BytesView,
+  user_entry? : BytesView = [],
+) -> PdfBytes raise PdfError {
+  let input = pdf_crypt_concat_bytes([password, validation_salt, user_entry])
+  let digest = pdf_aesv3_password_hash(iso, input[:])
+  pdf_crypt_concat_bytes([digest[:32], validation_salt, key_salt])
+}
+
+///|
+fn pdf_aesv3_cbc_encrypt_no_padding(
+  key : BytesView,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  guard data.length() % 16 == 0 else {
+    raise InvalidCryptoDataLength(data.length())
+  }
+  let output : Array[Byte] = []
+  let mut previous = Bytes::new(16)
+  let mut position = 0
+  while position < data.length() {
+    let block : Array[Byte] = []
+    for index in 0..<16 {
+      block.push(
+        (data[position + index].to_int() ^ previous[index].to_int()).to_byte(),
+      )
+    }
+    previous = pdf_aes_encrypt_block(key, Bytes::from_array(block)[:])
+    for byte in previous {
+      output.push(byte)
+    }
+    position += 16
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_aesv3_wrap_file_key(
+  iso : Bool,
+  password : BytesView,
+  key_salt : BytesView,
+  file_key : BytesView,
+  user_entry? : BytesView = [],
+) -> PdfBytes raise PdfError {
+  let input = pdf_crypt_concat_bytes([password, key_salt, user_entry])
+  let digest = pdf_aesv3_password_hash(iso, input[:])
+  pdf_aesv3_cbc_encrypt_no_padding(digest[:], file_key)
+}
+
+///|
+fn pdf_aesv3_permissions_entry(
+  file_key : BytesView,
+  permissions : Int,
+  encrypt_metadata : Bool,
+  padding : BytesView,
+) -> PdfBytes raise PdfError {
+  let block : Array[Byte] = []
+  for shift in [0, 8, 16, 24] {
+    block.push(pdf_crypt_low_byte(permissions, shift))
+  }
+  for _ in 0..<4 {
+    block.push((255).to_byte())
+  }
+  block.push(if encrypt_metadata { b'T' } else { b'F' })
+  block.push(b'a')
+  block.push(b'd')
+  block.push(b'b')
+  for
+    byte in pdf_crypt_chop_view(
+      pdf_aesv3_random_field_key(PdfAesV3PermissionsPadding),
+      padding,
+      4,
+    ) {
+    block.push(byte)
+  }
+  pdf_aes_encrypt_block(file_key, Bytes::from_array(block)[:])
 }
 
 ///|

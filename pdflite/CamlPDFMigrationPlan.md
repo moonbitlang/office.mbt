@@ -285,8 +285,10 @@ MoonBit consequences for this project:
    uncompressed and Flate-compressed xref-stream writer paths. AESV2 encrypted
    full-document output is started behind an explicit IV-provider API and now
    has classic-writer plus uncompressed and Flate-compressed xref-stream
-   round-trip gates; a default AES writer remains deferred until a project-level
-   random-byte source is selected.
+   round-trip gates. AESV3 revision 5 full-document output is started behind
+   explicit typed random-field and IV-provider callbacks, with a classic
+   writer/read/decrypt round-trip gate. Default AES writers remain deferred
+   until a project-level random-byte source is selected.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -660,7 +662,11 @@ MoonBit consequences for this project:
     `/ID`, derives `/O` and `/U`, encrypts parsed objects in a copy, installs an
     indirect `/Encrypt` dictionary, applies the revision 4 `/EncryptMetadata`
     file-key and metadata-stream rules, and round-trips through the existing
-    password decryption APIs. The revision 4 ARC4 path now also has
+    password decryption APIs. Provider-backed AESV3 revision 5 output is also
+    started: it accepts explicit file-key, salt, `/Perms` padding, and object-IV
+    providers, derives `/U`, `/O`, `/UE`, `/OE`, and `/Perms`, applies
+    `/EncryptMetadata` stream skipping, and round-trips through user and owner
+    password decryption. The revision 4 ARC4 path now also has
     classic-writer/classic-reader/decrypt,
     xref-stream-writer/xref-stream-reader/decrypt, and encrypted incremental
     update integration gates.
