@@ -903,6 +903,7 @@ pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfCo
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
+pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise PdfError
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise PdfError
 pub fn PdfDocument::permissions(Self) -> Array[PdfPermission] raise PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError

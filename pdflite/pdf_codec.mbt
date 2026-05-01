@@ -491,6 +491,50 @@ fn pdf_stream_first_filter(dictionary : PdfObject) -> PdfName? raise PdfError {
 }
 
 ///|
+fn PdfDocument::pdf_stream_filter_entry_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> (PdfName, PdfObject)? {
+  match self.lookup_direct(pdf_filter_key(), dictionary) {
+    Some(value) => Some((pdf_filter_key(), value))
+    None =>
+      match self.lookup_direct(pdf_short_filter_key(), dictionary) {
+        Some(value) => Some((pdf_short_filter_key(), value))
+        None => None
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_stream_first_filter_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> PdfName? raise PdfError {
+  match self.pdf_stream_first_filter_entry_direct(dictionary) {
+    Some((_, _, name)) => Some(name)
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_stream_first_filter_entry_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> (PdfName, PdfObject, PdfName)? raise PdfError {
+  match self.pdf_stream_filter_entry_direct(dictionary) {
+    None => None
+    Some((key, PdfNameObject(name) as value)) => Some((key, value, name))
+    Some((_, PdfArray([]))) => None
+    Some((key, PdfArray([first, ..]) as value)) =>
+      match self.direct(first) {
+        PdfNameObject(name) => Some((key, value, name))
+        _ => raise FilterExpected
+      }
+    _ => raise FilterExpected
+  }
+}
+
+///|
 fn pdf_remove_first_filter_entry(
   dictionary : PdfObject,
   key : PdfName,
@@ -545,6 +589,56 @@ fn pdf_remove_first_decoder(dictionary : PdfObject) -> PdfObject raise PdfError 
     )
   }
   without_decodeparms
+}
+
+///|
+fn pdf_remove_first_filter_entry_value(
+  dictionary : PdfObject,
+  key : PdfName,
+  value : PdfObject,
+) -> PdfObject raise PdfError {
+  match value {
+    PdfArray([]) | PdfArray([_]) => dictionary.remove_dict_entry(key)
+    PdfArray([_, .. rest]) =>
+      dictionary.replace_dict_entry(
+        key,
+        PdfArray([ for value in rest => value ]),
+      )
+    _ => dictionary.remove_dict_entry(key)
+  }
+}
+
+///|
+fn pdf_remove_first_decodeparms_entry_value(
+  dictionary : PdfObject,
+  key : PdfName,
+  value : PdfObject,
+) -> PdfObject raise PdfError {
+  match value {
+    PdfArray([_, .. rest]) =>
+      dictionary.replace_dict_entry(
+        key,
+        PdfArray([ for value in rest => value ]),
+      )
+    _ => dictionary.remove_dict_entry(key)
+  }
+}
+
+///|
+fn PdfDocument::pdf_remove_first_decoder_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  filter_key : PdfName,
+  filter_value : PdfObject,
+) -> PdfObject raise PdfError {
+  let without_filter = pdf_remove_first_filter_entry_value(
+    dictionary, filter_key, filter_value,
+  )
+  match self.pdf_decodeparms_entry_direct(without_filter) {
+    Some((key, value)) =>
+      pdf_remove_first_decodeparms_entry_value(without_filter, key, value)
+    None => without_filter
+  }
 }
 
 ///|
@@ -842,12 +936,70 @@ fn pdf_first_decodeparms(dictionary : PdfObject) -> PdfObject? raise PdfError {
 }
 
 ///|
+fn PdfDocument::pdf_decodeparms_value_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> PdfObject? {
+  match self.pdf_decodeparms_entry_direct(dictionary) {
+    Some((_, value)) => Some(value)
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_decodeparms_entry_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> (PdfName, PdfObject)? {
+  match self.lookup_direct(pdf_decodeparms_key(), dictionary) {
+    Some(value) => Some((pdf_decodeparms_key(), value))
+    None =>
+      match self.lookup_direct(pdf_short_decodeparms_key(), dictionary) {
+        Some(value) => Some((pdf_short_decodeparms_key(), value))
+        None => None
+      }
+  }
+}
+
+///|
+fn PdfDocument::pdf_first_decodeparms_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> PdfObject? raise PdfError {
+  match self.pdf_decodeparms_value_direct(dictionary) {
+    None | Some(PdfNull) | Some(PdfArray([])) => None
+    Some(PdfDictionary(_) as value) => Some(value)
+    Some(PdfArray([first, ..])) =>
+      match self.direct(first) {
+        PdfNull => None
+        PdfDictionary(_) as value => Some(value)
+        _ => raise PredictorExpected
+      }
+    _ => raise PredictorExpected
+  }
+}
+
+///|
 fn pdf_decodeparms_int(
   dictionary : PdfObject,
   key : PdfName,
   default : Int,
 ) -> Int raise PdfError {
   match dictionary.lookup_immediate(key) {
+    None => default
+    Some(PdfInteger(value)) => value
+    _ => raise PredictorExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_decodeparms_int_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  key : PdfName,
+  default : Int,
+) -> Int raise PdfError {
+  match self.lookup_direct(key, dictionary) {
     None => default
     Some(PdfInteger(value)) => value
     _ => raise PredictorExpected
@@ -879,11 +1031,56 @@ fn pdf_apply_first_predictor(
 }
 
 ///|
+fn PdfDocument::pdf_apply_first_predictor_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  match self.pdf_first_decodeparms_direct(dictionary) {
+    None => data
+    Some(decodeparms) => {
+      let predictor = self.pdf_decodeparms_int_direct(
+        decodeparms,
+        pdf_predictor_key(),
+        1,
+      )
+      if predictor == 1 {
+        data
+      } else {
+        pdf_decode_predictor(
+          predictor,
+          self.pdf_decodeparms_int_direct(decodeparms, pdf_colors_key(), 1),
+          self.pdf_decodeparms_int_direct(
+            decodeparms,
+            pdf_bits_per_component_key(),
+            8,
+          ),
+          self.pdf_decodeparms_int_direct(decodeparms, pdf_columns_key(), 1),
+          data,
+        )
+      }
+    }
+  }
+}
+
+///|
 fn pdf_lzw_early_change(dictionary : PdfObject) -> Int raise PdfError {
   match pdf_first_decodeparms(dictionary) {
     None => 1
     Some(decodeparms) =>
       pdf_decodeparms_int(decodeparms, pdf_early_change_key(), 1)
+  }
+}
+
+///|
+fn PdfDocument::pdf_lzw_early_change_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> Int raise PdfError {
+  match self.pdf_first_decodeparms_direct(dictionary) {
+    None => 1
+    Some(decodeparms) =>
+      self.pdf_decodeparms_int_direct(decodeparms, pdf_early_change_key(), 1)
   }
 }
 
@@ -895,6 +1092,23 @@ fn pdf_decode_stream_filter_bytes(
 ) -> PdfBytes raise PdfError {
   if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
     pdf_lzw_decode(data, early_change=pdf_lzw_early_change(dictionary))
+  } else {
+    pdf_decode_filter_bytes(filter, data)
+  }
+}
+
+///|
+fn PdfDocument::pdf_decode_stream_filter_bytes_direct(
+  self : PdfDocument,
+  filter : PdfName,
+  dictionary : PdfObject,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+    pdf_lzw_decode(
+      data,
+      early_change=self.pdf_lzw_early_change_direct(dictionary),
+    )
   } else {
     pdf_decode_filter_bytes(filter, data)
   }
@@ -931,12 +1145,98 @@ fn pdf_decode_stream_onestage_value(
 }
 
 ///|
+fn PdfDocument::pdf_stream_dictionary_length_direct(
+  self : PdfDocument,
+  dictionary : PdfObject,
+) -> Unit raise PdfError {
+  match self.lookup_direct(pdf_codec_length_key(), dictionary) {
+    Some(PdfInteger(_)) => ()
+    _ => raise StreamLengthExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_decode_stream_onestage_value_direct(
+  self : PdfDocument,
+  stream : PdfStream,
+) -> PdfStream raise PdfError {
+  self.pdf_stream_dictionary_length_direct(stream.dictionary)
+  let data = pdf_stream_data_bytes(stream.data)
+  match self.pdf_stream_first_filter_entry_direct(stream.dictionary) {
+    None => {
+      let dictionary = pdf_stream_replace_length(
+        stream.dictionary,
+        data.length(),
+      )
+      { dictionary, data: StreamGot(data) }
+    }
+    Some((filter_key, filter_value, filter)) => {
+      let decoded = self.pdf_decode_stream_filter_bytes_direct(
+        filter,
+        stream.dictionary,
+        data,
+      )
+      let unpredicted = self.pdf_apply_first_predictor_direct(
+        stream.dictionary,
+        decoded,
+      )
+      let dictionary = pdf_stream_replace_length(
+        self.pdf_remove_first_decoder_direct(
+          stream.dictionary,
+          filter_key,
+          filter_value,
+        ),
+        unpredicted.length(),
+      )
+      { dictionary, data: StreamGot(unpredicted) }
+    }
+  }
+}
+
+///|
 pub fn pdf_decode_stream_onestage(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) =>
       PdfStreamObject(pdf_decode_stream_onestage_value(stream))
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
+fn PdfDocument::pdf_stream_has_filter_value_direct(
+  self : PdfDocument,
+  stream : PdfStream,
+) -> Bool raise PdfError {
+  self.pdf_stream_first_filter_direct(stream.dictionary) != None
+}
+
+///|
+fn PdfDocument::pdf_decode_stream_value_direct(
+  self : PdfDocument,
+  stream : PdfStream,
+) -> PdfStream raise PdfError {
+  let mut current = stream
+  let mut stages = 0
+  while self.pdf_stream_has_filter_value_direct(current) {
+    if stages >= 1024 {
+      raise FilterExpected
+    }
+    current = self.pdf_decode_stream_onestage_value_direct(current)
+    stages += 1
+  }
+  self.pdf_decode_stream_onestage_value_direct(current)
+}
+
+///|
+pub fn PdfDocument::pdf_decode_stream(
+  self : PdfDocument,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match self.direct(object) {
+    PdfStreamObject(stream) =>
+      PdfStreamObject(self.pdf_decode_stream_value_direct(stream))
     _ => raise ParseStreamExpected
   }
 }

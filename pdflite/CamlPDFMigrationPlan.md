@@ -298,9 +298,13 @@ MoonBit consequences for this project:
    normalization to PDF byte range. Owned stream encode can now add a filter
    plus direct `/DecodeParms` predictor dictionary and round-trip through owned
    stream decode. Stream filter encode/decode now materializes `StreamToGet`
-   data only at the owned-byte boundary required by codec transforms. Flate
-   compression heuristics, indirect filter dictionaries, and other filters
-   remain deferred.
+   data only at the owned-byte boundary required by codec transforms. A
+   document-aware `PdfDocument::pdf_decode_stream` path is now started for
+   indirect `/Filter` and `/DecodeParms` entries, including array filters with
+   indirect elements, short `/F` and `/DP` keys, predictor dictionaries reached
+   through indirect references, and LZW `EarlyChange` reached through direct
+   document lookup. Flate compression heuristics and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
@@ -742,7 +746,8 @@ MoonBit consequences for this project:
     `/Obj`-based child pruning that removes now-empty parent `/K` arrays, plus
     private survival-helper checks for `/Pg`, direct non-indirect `/K` items,
     and non-dictionary structure values. Codec coverage now includes malformed
-    decode-parameter dispatch during stream decode plus private filter-entry,
+    decode-parameter dispatch during stream decode, document-aware indirect
+    filter/decode-parameter resolution, plus private filter-entry,
     decode-parameter, predictor-byte-width, and LZW table-validation guards.
     Name/number tree coverage now includes malformed key-type rejection,
     duplicate number-key replacement, large nested tree construction with child
