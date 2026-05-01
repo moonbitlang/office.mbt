@@ -528,21 +528,36 @@ fn pdf_fun_calculator_tokens(
 ) -> Array[PdfCalculatorToken] raise PdfError {
   let tokens : Array[PdfCalculatorToken] = []
   let mut token : Array[Byte] = []
-  for byte in data {
+  let mut index = 0
+  while index < data.length() {
+    let byte = data[index]
     let value = byte.to_int()
     if pdf_is_whitespace_byte(value) {
       pdf_fun_calculator_push_text_token(tokens, token)
       token = []
+      index += 1
     } else if value == 123 {
       pdf_fun_calculator_push_text_token(tokens, token)
       token = []
       tokens.push(PdfCalculatorTokenOpen)
+      index += 1
     } else if value == 125 {
       pdf_fun_calculator_push_text_token(tokens, token)
       token = []
       tokens.push(PdfCalculatorTokenClose)
+      index += 1
+    } else if value == 37 {
+      pdf_fun_calculator_push_text_token(tokens, token)
+      token = []
+      index += 1
+      while index < data.length() &&
+            data[index].to_int() != 10 &&
+            data[index].to_int() != 13 {
+        index += 1
+      }
     } else {
       token.push(byte)
+      index += 1
     }
   }
   pdf_fun_calculator_push_text_token(tokens, token)

@@ -369,8 +369,8 @@ MoonBit consequences for this project:
    attributes. `pdffun` is started with Type 0 sampled, Type 2 interpolation,
    Type 3 stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
-   nested `if`/`ifelse` procedures, and stack operators, stream decoding for
-   sampled/calculator functions, domain clamping, and range clamping. `pdfjpeg`
+   nested `if`/`ifelse` procedures, comments, and stack operators, stream
+   decoding for sampled/calculator functions, domain clamping, and range clamping. `pdfjpeg`
    is started with a byte-cursor helper that extracts JPEG data through the
    `FF D9` EOI marker while leaving following bytes unread. `pdfimage` is
    started with typed image result and pixel-layout enums plus image
