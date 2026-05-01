@@ -485,9 +485,12 @@ pub fn PdfDocument::parse_content_ops(
 ) -> Array[PdfContentOp] raise PdfError {
   let raw_streams : Array[PdfBytes] = []
   for stream_ref in streams {
-    match pdf_decode_stream(self.direct(stream_ref)) {
-      PdfStreamObject({ data: StreamGot(data), .. }) => raw_streams.push(data)
-      _ => raise ContentOperandExpected
+    match self.direct(stream_ref) {
+      PdfStreamObject(stream) =>
+        raw_streams.push(
+          pdf_stream_data_bytes(pdf_decode_stream_value(stream).data),
+        )
+      _ => raise ParseStreamExpected
     }
   }
   pdf_parse_content_ops_from_bytes(pdf_content_concat_streams(raw_streams))

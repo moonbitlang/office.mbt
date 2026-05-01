@@ -678,10 +678,12 @@ MoonBit consequences for this project:
     coverage now removes `pdf_writer.mbt` and `pdf_object.mbt` from the
     uncovered-line report by testing `%.12g`-style real formatting branches,
     scientific exponent expansion, malformed private formatter inputs, and
-    invalid deferred stream slices. A refreshed coverage pass reports 216
-    uncovered lines in 6 files: the template executable `cmd/main`, plus
-    remaining branches in content, function, image, colour-space, and text
-    handling.
+    invalid deferred stream slices. Content coverage now removes
+    `pdf_content.mbt` from the uncovered-line report by testing remaining
+    inline-image DCT branches and replacing an impossible post-decode fallback
+    with a private stream-returning decoder helper. A refreshed coverage pass
+    reports 212 uncovered lines in 5 files: the template executable `cmd/main`,
+    plus remaining branches in function, image, colour-space, and text handling.
 
 ## Update Discipline
 

@@ -901,64 +901,71 @@ fn pdf_decode_stream_filter_bytes(
 }
 
 ///|
+fn pdf_decode_stream_onestage_value(
+  stream : PdfStream,
+) -> PdfStream raise PdfError {
+  pdf_stream_dictionary_length(stream.dictionary)
+  let data = pdf_stream_data_bytes(stream.data)
+  match pdf_stream_first_filter(stream.dictionary) {
+    None => {
+      let dictionary = pdf_stream_replace_length(
+        stream.dictionary,
+        data.length(),
+      )
+      { dictionary, data: StreamGot(data) }
+    }
+    Some(filter) => {
+      let decoded = pdf_decode_stream_filter_bytes(
+        filter,
+        stream.dictionary,
+        data,
+      )
+      let unpredicted = pdf_apply_first_predictor(stream.dictionary, decoded)
+      let dictionary = pdf_stream_replace_length(
+        pdf_remove_first_decoder(stream.dictionary),
+        unpredicted.length(),
+      )
+      { dictionary, data: StreamGot(unpredicted) }
+    }
+  }
+}
+
+///|
 pub fn pdf_decode_stream_onestage(
   object : PdfObject,
 ) -> PdfObject raise PdfError {
   match object {
-    PdfStreamObject(stream) => {
-      pdf_stream_dictionary_length(stream.dictionary)
-      let data = pdf_stream_data_bytes(stream.data)
-      match pdf_stream_first_filter(stream.dictionary) {
-        None => {
-          let dictionary = pdf_stream_replace_length(
-            stream.dictionary,
-            data.length(),
-          )
-          pdf_stream(dictionary, StreamGot(data))
-        }
-        Some(filter) => {
-          let decoded = pdf_decode_stream_filter_bytes(
-            filter,
-            stream.dictionary,
-            data,
-          )
-          let unpredicted = pdf_apply_first_predictor(
-            stream.dictionary,
-            decoded,
-          )
-          let dictionary = pdf_stream_replace_length(
-            pdf_remove_first_decoder(stream.dictionary),
-            unpredicted.length(),
-          )
-          pdf_stream(dictionary, StreamGot(unpredicted))
-        }
-      }
-    }
+    PdfStreamObject(stream) =>
+      PdfStreamObject(pdf_decode_stream_onestage_value(stream))
     _ => raise ParseStreamExpected
   }
 }
 
 ///|
-fn pdf_stream_has_filter(object : PdfObject) -> Bool raise PdfError {
-  match object {
-    PdfStreamObject(stream) =>
-      pdf_stream_first_filter(stream.dictionary) != None
-    _ => raise ParseStreamExpected
+fn pdf_stream_has_filter_value(stream : PdfStream) -> Bool raise PdfError {
+  pdf_stream_first_filter(stream.dictionary) != None
+}
+
+///|
+fn pdf_decode_stream_value(stream : PdfStream) -> PdfStream raise PdfError {
+  let mut current = stream
+  let mut stages = 0
+  while pdf_stream_has_filter_value(current) {
+    if stages >= 1024 {
+      raise FilterExpected
+    }
+    current = pdf_decode_stream_onestage_value(current)
+    stages += 1
   }
+  pdf_decode_stream_onestage_value(current)
 }
 
 ///|
 pub fn pdf_decode_stream(object : PdfObject) -> PdfObject raise PdfError {
-  let mut current = object
-  let mut stages = 0
-  while pdf_stream_has_filter(current) {
-    if stages >= 1024 {
-      raise FilterExpected
-    }
-    current = pdf_decode_stream_onestage(current)
-    stages += 1
+  match object {
+    PdfStreamObject(stream) => PdfStreamObject(pdf_decode_stream_value(stream))
+    _ => raise ParseStreamExpected
   }
-  pdf_decode_stream_onestage(current)
 }
 
 ///|

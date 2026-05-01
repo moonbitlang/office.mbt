@@ -449,6 +449,24 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     Bytes::new(0),
   )
+  let jpeg_data = try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  @test.assert_eq(
+    try! pdf_content_read_dct_inline_image_data(
+      byte_cursor_of_bytes(
+        try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 69, 73]),
+      ),
+    ),
+    jpeg_data,
+  )
+  @test.assert_eq(pdf_content_filter_is_inline_dct(PdfInteger(1)), false)
+  let bad_dct_end : Result[PdfBytes, Error] = try? pdf_content_read_dct_inline_image_data(
+    byte_cursor_of_bytes(
+      try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 88, 88]),
+    ),
+  )
+  guard bad_dct_end is Err(PdfError::ParseEndStreamExpected) else {
+    fail("expected ParseEndStreamExpected")
+  }
   let bad_inline : Result[PdfContentOp, Error] = try? pdf_content_read_inline_image(
     byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
   )
