@@ -209,6 +209,28 @@ fn pdf_flate_fixed_distance_table() -> FlateHuffmanTable raise PdfError {
 }
 
 ///|
+fn pdf_flate_check_dynamic_length_symbol(symbol : Int) -> Unit raise PdfError {
+  if symbol < 0 || symbol > 18 {
+    raise InvalidFlateData
+  }
+}
+
+///|
+fn pdf_flate_push_repeated_lengths(
+  lengths : Array[Int],
+  total : Int,
+  repeat : Int,
+  value : Int,
+) -> Unit raise PdfError {
+  for _ in 0..<repeat {
+    if lengths.length() >= total {
+      raise InvalidFlateData
+    }
+    lengths.push(value)
+  }
+}
+
+///|
 fn pdf_flate_read_dynamic_tables(
   reader : FlateBitReader,
 ) -> (FlateHuffmanTable, FlateHuffmanTable) raise PdfError {
@@ -225,6 +247,7 @@ fn pdf_flate_read_dynamic_tables(
   let lengths : Array[Int] = []
   while lengths.length() < total {
     let symbol = pdf_flate_decode_symbol(reader, code_table)
+    pdf_flate_check_dynamic_length_symbol(symbol)
     if symbol <= 15 {
       lengths.push(symbol)
     } else if symbol == 16 {
@@ -233,30 +256,13 @@ fn pdf_flate_read_dynamic_tables(
       }
       let repeat = reader.read_bits(2).reinterpret_as_int() + 3
       let previous = lengths[lengths.length() - 1]
-      for _ in 0..<repeat {
-        if lengths.length() >= total {
-          raise InvalidFlateData
-        }
-        lengths.push(previous)
-      }
+      pdf_flate_push_repeated_lengths(lengths, total, repeat, previous)
     } else if symbol == 17 {
       let repeat = reader.read_bits(3).reinterpret_as_int() + 3
-      for _ in 0..<repeat {
-        if lengths.length() >= total {
-          raise InvalidFlateData
-        }
-        lengths.push(0)
-      }
-    } else if symbol == 18 {
-      let repeat = reader.read_bits(7).reinterpret_as_int() + 11
-      for _ in 0..<repeat {
-        if lengths.length() >= total {
-          raise InvalidFlateData
-        }
-        lengths.push(0)
-      }
+      pdf_flate_push_repeated_lengths(lengths, total, repeat, 0)
     } else {
-      raise InvalidFlateData
+      let repeat = reader.read_bits(7).reinterpret_as_int() + 11
+      pdf_flate_push_repeated_lengths(lengths, total, repeat, 0)
     }
   }
   let literal_lengths = lengths[:hlit]

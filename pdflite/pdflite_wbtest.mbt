@@ -377,6 +377,28 @@ test "private tree group count covers threshold branches" {
 }
 
 ///|
+fn wbtest_flate_bits(bits : ArrayView[Int]) -> Bytes {
+  let output : Array[Byte] = []
+  let mut current = 0
+  let mut count = 0
+  for bit in bits {
+    if bit != 0 {
+      current = current | (1 << count)
+    }
+    count += 1
+    if count == 8 {
+      output.push(current.to_byte())
+      current = 0
+      count = 0
+    }
+  }
+  if count > 0 {
+    output.push(current.to_byte())
+  }
+  Bytes::from_array(output)
+}
+
+///|
 test "private flate bit reader and huffman guards reject malformed inputs" {
   let reader = FlateBitReader::new(Bytes::new(0)[:])
   let negative_bits : Result[UInt, Error] = try? reader.read_bits(-1)
@@ -400,6 +422,88 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     ],
   )
   guard empty_table is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_dynamic_symbol : Result[Unit, Error] = try? pdf_flate_check_dynamic_length_symbol(
+    19,
+  )
+  guard bad_dynamic_symbol is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let repeated_lengths = [0]
+  let repeated_overflow : Result[Unit, Error] = try? pdf_flate_push_repeated_lengths(
+    repeated_lengths, 1, 1, 0,
+  )
+  guard repeated_overflow is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+
+  let dynamic_repeat_without_previous : Result[
+    (FlateHuffmanTable, FlateHuffmanTable),
+    Error,
+  ] = try? pdf_flate_read_dynamic_tables(
+    FlateBitReader::new(
+      wbtest_flate_bits([
+        0, 0, 0, 0, 0, // HLIT: 257
+         0, 0, 0, 0, 0, // HDIST: 1
+         0, 0, 0, 0, // HCLEN: 4
+         1, 0, 0, // code-length code 16 has bit length 1
+         0, 0, 0, // code-length code 17
+         0, 0, 0, // code-length code 18
+         0, 0, 0, // code-length code 0
+         0, // first decoded length symbol is 16
+      ])[:],
+    ),
+  )
+  guard dynamic_repeat_without_previous is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+
+  let distance_lengths = [1]
+  let distance_table = try! pdf_flate_build_huffman(distance_lengths)
+  let invalid_length_lengths = Array::make(287, 0)
+  invalid_length_lengths[286] = 1
+  let invalid_length_table = try! pdf_flate_build_huffman(
+    invalid_length_lengths,
+  )
+  let invalid_length_output : Array[Byte] = []
+  let invalid_length : Result[Unit, Error] = try? pdf_flate_decode_huffman_block(
+    FlateBitReader::new(wbtest_flate_bits([0])[:]),
+    invalid_length_table,
+    distance_table,
+    invalid_length_output,
+  )
+  guard invalid_length is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+
+  let copy_lengths = Array::make(258, 0)
+  copy_lengths[257] = 1
+  let copy_table = try! pdf_flate_build_huffman(copy_lengths)
+  let invalid_distance_lengths = Array::make(31, 0)
+  invalid_distance_lengths[30] = 1
+  let invalid_distance_table = try! pdf_flate_build_huffman(
+    invalid_distance_lengths,
+  )
+  let invalid_distance_output : Array[Byte] = [65]
+  let invalid_distance : Result[Unit, Error] = try? pdf_flate_decode_huffman_block(
+    FlateBitReader::new(wbtest_flate_bits([0, 0])[:]),
+    copy_table,
+    invalid_distance_table,
+    invalid_distance_output,
+  )
+  guard invalid_distance is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+
+  let past_output_output : Array[Byte] = []
+  let past_output : Result[Unit, Error] = try? pdf_flate_decode_huffman_block(
+    FlateBitReader::new(wbtest_flate_bits([0, 0])[:]),
+    copy_table,
+    distance_table,
+    past_output_output,
+  )
+  guard past_output is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
   }
 }

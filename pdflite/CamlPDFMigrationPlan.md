@@ -507,7 +507,11 @@ MoonBit consequences for this project:
     invariant-preserving control flow. Bookmark and codec coverage now remove
     those files from the uncovered-line report by covering the private bookmark
     traversal depth guard and LZW bit-reader error conversion, while removing an
-    impossible empty LZW expansion check.
+    impossible empty LZW expansion check. Flate coverage now removes
+    `pdf_flate.mbt` from the uncovered-line report with direct private tests for
+    dynamic-code-length symbol bounds, repeated-length overflow, malformed
+    dynamic repeats, invalid length symbols, invalid distance symbols, and
+    backwards copies past the available output.
 
 ## Update Discipline
 
