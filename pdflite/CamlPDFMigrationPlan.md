@@ -534,6 +534,9 @@ MoonBit consequences for this project:
     parsed objects, preserving already-decrypted and deferred parser states and
     allowing the encryption dictionary object to be skipped. CamlPDF-style
     `is_encrypted` detection now mirrors CamlPDF's direct `/Encrypt` lookup.
+    Single-stream decryption is started for the reader path, authenticating
+    optional user/owner passwords and decrypting ARC4, AESV2, and AESV3
+    revision 5 stream objects without mutating the document.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`

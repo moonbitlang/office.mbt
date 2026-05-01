@@ -564,6 +564,99 @@ fn PdfDocument::decrypt_with_file_key(
 }
 
 ///|
+fn PdfEncryptionValues::file_key_for_available_password(
+  self : PdfEncryptionValues,
+  user_password : BytesView?,
+  owner_password : BytesView?,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfBytes? raise PdfError {
+  match user_password {
+    Some(password) =>
+      match self.file_key_for_user_password(password, no_encrypt_metadata~) {
+        Some(key) => return Some(key)
+        None => ()
+      }
+    None => ()
+  }
+  match owner_password {
+    Some(password) =>
+      self.file_key_for_owner_password(password, no_encrypt_metadata~)
+    None => self.file_key_for_user_password([], no_encrypt_metadata~)
+  }
+}
+
+///|
+fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
+  self : PdfEncryptionValues,
+  object_number : Int,
+  generation : Int,
+  stream : PdfObject,
+  file_key : BytesView,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfObject raise PdfError {
+  let no_encrypt_metadata = self.effective_no_encrypt_metadata(
+    no_encrypt_metadata,
+  )
+  match self.crypt_type {
+    PdfCryptARC4(key_length_bits, _) =>
+      pdf_arc4_crypt_pdf_object(
+        object_number,
+        generation,
+        file_key,
+        key_length_bits,
+        stream,
+        no_encrypt_metadata~,
+      )
+    PdfCryptAESV2 =>
+      pdf_aesv2_decrypt_pdf_object(
+        object_number,
+        generation,
+        file_key,
+        128,
+        stream,
+        no_encrypt_metadata~,
+      )
+    PdfCryptAESV3(_) =>
+      pdf_aesv3_decrypt_pdf_object(file_key, stream, no_encrypt_metadata~)
+  }
+}
+
+///|
+pub fn PdfDocument::decrypt_single_stream(
+  self : PdfDocument,
+  object_number : Int,
+  generation : Int,
+  stream : PdfObject,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+  no_encrypt_metadata? : Bool = false,
+) -> PdfObject? raise PdfError {
+  if !self.is_encrypted() {
+    Some(stream)
+  } else {
+    let values = self.encryption_values()
+    match
+      values.file_key_for_available_password(
+        user_password,
+        owner_password,
+        no_encrypt_metadata~,
+      ) {
+      Some(file_key) =>
+        Some(
+          values.decrypt_single_stream_with_file_key(
+            object_number,
+            generation,
+            stream,
+            file_key[:],
+            no_encrypt_metadata~,
+          ),
+        )
+      None => None
+    }
+  }
+}
+
+///|
 pub fn PdfDocument::encrypt_40bit(
   self : PdfDocument,
   user_password : BytesView,

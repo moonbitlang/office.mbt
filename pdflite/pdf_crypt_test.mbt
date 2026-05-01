@@ -1605,6 +1605,255 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
 }
 
 ///|
+test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
+  let key_length = crypt_name_for_test("/Length")
+  let key_title = crypt_name_for_test("/Title")
+  let plain_stream = crypt_stream_for_test(
+    [(key_length, PdfInteger(4)), (key_title, PdfString(@ascii.encode("info")))],
+    @ascii.encode("data"),
+  )
+  let plain_doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    try! plain_doc.decrypt_single_stream(1, 0, plain_stream),
+    Some(plain_stream),
+  )
+
+  let blank_password_doc = @pdflite.pdf_document_empty()
+  blank_password_doc.add_object_given_number(1, plain_stream)
+  let blank_password_encrypted = try! blank_password_doc.encrypt_40bit(
+    @ascii.encode("")[:],
+    @ascii.encode("owner")[:],
+    [],
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let blank_password_stream = blank_password_encrypted.lookup_object_or_null(1)
+  @test.assert_eq(
+    try! blank_password_encrypted.decrypt_single_stream(
+      1, 0, blank_password_stream,
+    ),
+    Some(plain_stream),
+  )
+
+  let owner_password_doc = @pdflite.pdf_document_empty()
+  owner_password_doc.add_object_given_number(1, plain_stream)
+  let owner_password_encrypted = try! owner_password_doc.encrypt_128bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [],
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let owner_password_stream = owner_password_encrypted.lookup_object_or_null(1)
+  @test.assert_eq(
+    try! owner_password_encrypted.decrypt_single_stream(
+      1,
+      0,
+      owner_password_stream,
+      user_password=Some(@ascii.encode("bad")[:]),
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+    Some(plain_stream),
+  )
+  @test.assert_eq(
+    try! owner_password_encrypted.decrypt_single_stream(
+      1,
+      0,
+      owner_password_stream,
+      user_password=Some(@ascii.encode("bad")[:]),
+    ),
+    None,
+  )
+}
+
+///|
+test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
+  let key_length = crypt_name_for_test("/Length")
+  let key_title = crypt_name_for_test("/Title")
+  let plain_stream = crypt_stream_for_test(
+    [(key_length, PdfInteger(3)), (key_title, PdfString(@ascii.encode("aes")))],
+    @ascii.encode("raw"),
+  )
+
+  let aesv2_file_id = @ascii.encode("doc-id")
+  let aesv2_owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    4,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    128,
+  )
+  let aesv2_user_entry = try! @pdflite.pdf_make_user_password_entry(
+    false,
+    @ascii.encode("user")[:],
+    4,
+    aesv2_owner_entry[:],
+    -3904,
+    aesv2_file_id[:],
+    128,
+  )
+  let aesv2_encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
+    [
+      (crypt_name_for_test("/V"), PdfInteger(4)),
+      (crypt_name_for_test("/R"), PdfInteger(4)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/AESV2")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ],
+    aesv2_owner_entry,
+    aesv2_user_entry,
+    -3904,
+  )
+  let aesv2_file_key = @pdflite.pdf_encryption_file_key(
+    false,
+    @ascii.encode("user")[:],
+    4,
+    aesv2_owner_entry[:],
+    -3904,
+    aesv2_file_id[:],
+    128,
+  )
+  let aesv2_iv = crypt_model_bytes_for_test([
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
+    0x1d, 0x1e, 0x1f,
+  ])
+  let aesv2_encrypted_title = crypt_aesv2_encrypt_data_for_test(
+    1,
+    0,
+    aesv2_file_key[:],
+    128,
+    @ascii.encode("aes")[:],
+    aesv2_iv[:],
+  )
+  let aesv2_encrypted_data = crypt_aesv2_encrypt_data_for_test(
+    1,
+    0,
+    aesv2_file_key[:],
+    128,
+    @ascii.encode("raw")[:],
+    aesv2_iv[:],
+  )
+  let aesv2_encrypted_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(aesv2_encrypted_data.length())),
+      (key_title, PdfString(aesv2_encrypted_title)),
+    ],
+    aesv2_encrypted_data,
+  )
+  let aesv2_doc = @pdflite.pdf_document_empty()
+  aesv2_doc.add_object_given_number(2, aesv2_encrypt_dictionary)
+  aesv2_doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_name_for_test("/Encrypt"), PdfIndirect(2)),
+      (
+        crypt_name_for_test("/ID"),
+        PdfArray([PdfString(aesv2_file_id), PdfString(@ascii.encode("ignored"))]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! aesv2_doc.decrypt_single_stream(
+      1,
+      0,
+      aesv2_encrypted_stream,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+    Some(plain_stream),
+  )
+
+  let aesv3_user_entry = crypt_aesv3_r5_user_entry_for_test()
+  let aesv3_owner_entry = crypt_aesv3_r5_owner_entry_for_test()
+  let aesv3_file_key = crypt_aesv3_r5_file_key_for_test()
+  let aesv3_encrypt_dictionary = crypt_standard_encrypt_dictionary_values_for_test(
+    [
+      (crypt_name_for_test("/V"), PdfInteger(5)),
+      (crypt_name_for_test("/R"), PdfInteger(5)),
+      (
+        crypt_name_for_test("/CF"),
+        PdfDictionary([
+          (
+            crypt_name_for_test("/StdCF"),
+            PdfDictionary([
+              (
+                crypt_name_for_test("/CFM"),
+                PdfNameObject(crypt_name_for_test("/AESV3")),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+      (
+        crypt_name_for_test("/UE"),
+        PdfString(crypt_aesv3_r5_user_encryption_key_for_test()),
+      ),
+      (
+        crypt_name_for_test("/OE"),
+        PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
+      ),
+      (
+        crypt_name_for_test("/Perms"),
+        PdfString(crypt_aesv3_r5_permissions_for_test()),
+      ),
+    ],
+    aesv3_owner_entry,
+    aesv3_user_entry,
+    -3904,
+  )
+  let aesv3_iv = crypt_model_bytes_for_test([
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
+    0x2d, 0x2e, 0x2f,
+  ])
+  let aesv3_encrypted_title = crypt_aesv3_encrypt_data_for_test(
+    aesv3_file_key[:],
+    @ascii.encode("aes")[:],
+    aesv3_iv[:],
+  )
+  let aesv3_encrypted_data = crypt_aesv3_encrypt_data_for_test(
+    aesv3_file_key[:],
+    @ascii.encode("raw")[:],
+    aesv3_iv[:],
+  )
+  let aesv3_encrypted_stream = crypt_stream_for_test(
+    [
+      (key_length, PdfInteger(aesv3_encrypted_data.length())),
+      (key_title, PdfString(aesv3_encrypted_title)),
+    ],
+    aesv3_encrypted_data,
+  )
+  let aesv3_doc = @pdflite.pdf_document_empty()
+  aesv3_doc.add_object_given_number(2, aesv3_encrypt_dictionary)
+  aesv3_doc.set_trailer_dict(
+    PdfDictionary([
+      (crypt_name_for_test("/Encrypt"), PdfIndirect(2)),
+      (
+        crypt_name_for_test("/ID"),
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! aesv3_doc.decrypt_single_stream(
+      1,
+      0,
+      aesv3_encrypted_stream,
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+    Some(plain_stream),
+  )
+}
+
+///|
 test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
   let owner_entry = try! @pdflite.pdf_make_owner_password_entry(

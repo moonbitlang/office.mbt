@@ -497,6 +497,17 @@ good fit for OCaml APIs that grow additional optional flags beside an existing
 optional input slice.
 
 ```sh
+moon run -c 'fn f(x? : BytesView? = None) -> Int { match x { Some(v) => v.length(); None => -1 } }
+fn main { let b = @ascii.encode(""); println(f()); println(f(x=Some(b[:]))) }'
+# -1
+# 0
+```
+
+Optional labelled arguments can themselves have optional view types. Use this
+when porting OCaml `string option` parameters where an absent value and an
+explicit empty byte string must remain different cases.
+
+```sh
 moon run -c 'struct R { x : Int } derive(Debug, Eq)
 fn default_r() -> R { { x: 1 } }
 fn f(r? : R = default_r()) -> Int { r.x }
