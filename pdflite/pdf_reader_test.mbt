@@ -323,3 +323,12 @@ test "pdf_read_classic_document_from_bytes keeps newer deleted xref entries" {
   @test.assert_eq(parsed.object_numbers(), [])
   @test.assert_eq(parsed.lookup_object_or_null(1), PdfNull)
 }
+
+///|
+test "pdf_read_document_from_bytes is the public classic reader entry point" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(2))
+}

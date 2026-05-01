@@ -193,7 +193,8 @@ MoonBit consequences for this project:
    `/Prev` chains are started for classic xref tables, preserving newer entries
    over older ones, including newer free entries that hide older objects. Xref
    streams, object streams, encryption, and malformed-file reconstruction remain
-   deferred.
+   deferred. `pdf_read_document_from_bytes` is now the public byte-backed reader
+   entry point and currently delegates to the classic xref reader.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,

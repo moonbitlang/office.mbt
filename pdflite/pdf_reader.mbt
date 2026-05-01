@@ -479,6 +479,13 @@ pub fn pdf_read_classic_document_from_bytes(
 }
 
 ///|
+pub fn pdf_read_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  pdf_read_classic_document_from_bytes(data)
+}
+
+///|
 fn pdf_length_name() -> PdfName {
   pdf_name_of_bytes(Bytes::from_array([47, 76, 101, 110, 103, 116, 104]))
 }

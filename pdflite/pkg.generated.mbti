@@ -113,6 +113,8 @@ pub fn pdf_parse_stream_object_from_bytes(Bytes) -> PdfParsedIndirectObject rais
 
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
+pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
