@@ -1248,22 +1248,34 @@ fn pdf_text_parse_hex_bytes(
   start : Int,
   stop : Int,
 ) -> PdfBytes? {
-  guard stop >= start && (stop - start) % 2 == 0 else { return None }
+  guard stop >= start else { return None }
   let output : Array[Byte] = []
+  let mut high : Int? = None
   let mut index = start
   while index < stop {
-    match
-      (
-        pdf_text_hex_digit_value(line[index]),
-        pdf_text_hex_digit_value(line[index + 1]),
-      ) {
-      (Some(high), Some(low)) => output.push((high * 16 + low).to_byte())
-      _ => break None
+    let value = line[index].to_int()
+    if pdf_is_whitespace_byte(value) {
+      ()
+    } else {
+      match pdf_text_hex_digit_value(line[index]) {
+        Some(nibble) =>
+          match high {
+            Some(high_nibble) => {
+              output.push((high_nibble * 16 + nibble).to_byte())
+              high = None
+            }
+            None => high = Some(nibble)
+          }
+        None => return None
+      }
     }
-    index += 2
-  } nobreak {
-    Some(Bytes::from_array(output))
+    index += 1
   }
+  match high {
+    Some(high_nibble) => output.push((high_nibble * 16).to_byte())
+    None => ()
+  }
+  Some(Bytes::from_array(output))
 }
 
 ///|

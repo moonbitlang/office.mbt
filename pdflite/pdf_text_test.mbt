@@ -1929,6 +1929,57 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
 }
 
 ///|
+test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
+  let doc = @pdflite.pdf_document_empty()
+  let tounicode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(
+      @ascii.encode(
+        "3 beginbfchar\n" +
+        "<41><00 5A>\n" +
+        "<4><006>\n" +
+        "<43><D834 DD1E>\n" +
+        "endbfchar\n",
+      ),
+    ),
+  )
+  doc.add_object_given_number(2, tounicode)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(2)),
+  ])
+  guard (try! doc.read_font(font)) is PdfFontSimple(read) else {
+    fail("expected simple font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (65, text_bytes_for_test([0x00, 0x5A])),
+      (0x40, text_bytes_for_test([0x00, 0x60])),
+      (67, text_bytes_for_test([0xD8, 0x34, 0xDD, 0x1E])),
+    ]),
+  )
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([65, 0x40, 67, 68])[:],
+    ),
+    [0x5A, 0x60, 0x1D11E, 68],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1D11E), Some(67))
+}
+
+///|
 test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")
