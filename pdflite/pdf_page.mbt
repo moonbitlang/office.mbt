@@ -694,6 +694,19 @@ pub fn pdf_page_protect(ops : ArrayView[PdfContentOp]) -> Array[PdfContentOp] {
 }
 
 ///|
+fn PdfDocument::pdf_page_parse_content_ops(
+  self : PdfDocument,
+  resources : PdfObject,
+  content : ArrayView[PdfObject],
+) -> Array[PdfContentOp] raise PdfError {
+  self.parse_content_ops_with_resources(resources, content) catch {
+    DictionaryKeyNotFound(_) | ColourSpaceExpected =>
+      self.parse_content_ops(content)
+    error => raise error
+  }
+}
+
+///|
 pub fn PdfDocument::prepend_operators(
   self : PdfDocument,
   page : PdfPage,
@@ -703,7 +716,7 @@ pub fn PdfDocument::prepend_operators(
   if fast {
     { ..page, content: [pdf_content_stream_of_ops(ops), ..page.content] }
   } else {
-    let old_ops = self.parse_content_ops(page.content)
+    let old_ops = self.pdf_page_parse_content_ops(page.resources, page.content)
     {
       ..page,
       content: [pdf_content_stream_of_ops(pdf_page_concat_ops(ops, old_ops))],
@@ -727,7 +740,10 @@ pub fn PdfDocument::postpend_operators(
       ],
     }
   } else {
-    let existing_ops = self.parse_content_ops(page.content)
+    let existing_ops = self.pdf_page_parse_content_ops(
+      page.resources,
+      page.content,
+    )
     if existing_ops.length() == 0 {
       { ..page, content: [pdf_content_stream_of_ops(ops)] }
     } else {
@@ -2350,7 +2366,7 @@ pub fn PdfDocument::renumber_pages(
     for page_index in 0..<pages.length() {
       let page = pages[page_index]
       let page_number = page_index + 1
-      let ops = self.parse_content_ops(page.content)
+      let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
       let renamed_ops = self.pdf_page_renumber_content_ops(
         changes, page_number, ops,
       )
@@ -2375,13 +2391,18 @@ fn PdfDocument::pdf_page_prefix_content_streams(
   page_object : PdfObject,
   fixed_streams : @hashmap.HashMap[Int, Bool],
 ) -> Unit raise PdfError {
+  let resources = match
+    self.lookup_direct(pdf_page_resources_key(), page_object) {
+    Some(resources) => resources
+    None => PdfDictionary([])
+  }
   let contents = self.pdf_page_content_list(
     self.pdf_page_content_object(page_object),
   )
   for content in contents {
     match content {
       PdfIndirect(number) if !fixed_streams.contains(number) => {
-        let ops = self.parse_content_ops([content])
+        let ops = self.pdf_page_parse_content_ops(resources, [content])
         self.add_object_given_number(
           number,
           pdf_content_stream_of_ops(

@@ -857,6 +857,74 @@ test "PdfDocument prepend_operators merges content in non-fast mode" {
 }
 
 ///|
+test "PdfDocument prepend_operators parses inline image resource color spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([
+    (
+      page_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (page_name_for_test("/CS1"), PdfNameObject(page_name_for_test("/RGB"))),
+      ]),
+    ),
+  ])
+  let data = @ascii.encode("BI /W 2 /H 1 /BPC 8 /CS /CS1 ID A EI B EI Q")
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources,
+    content: [
+      @pdflite.pdf_stream(
+        @pdflite.pdf_dictionary([
+          (page_name_for_test("/Length"), PdfInteger(data.length())),
+        ]),
+        StreamGot(data),
+      ),
+    ],
+  }
+  let updated = try! doc.prepend_operators(page, [Op_q])
+  @test.assert_eq(
+    try! doc.parse_content_ops_with_resources(resources, updated.content),
+    [
+      Op_q,
+      Op_InlineImage(
+        @pdflite.pdf_dictionary([
+          (page_name_for_test("/W"), PdfInteger(2)),
+          (page_name_for_test("/H"), PdfInteger(1)),
+          (page_name_for_test("/BPC"), PdfInteger(8)),
+          (page_name_for_test("/CS"), PdfNameObject(page_name_for_test("/CS1"))),
+        ]),
+        None,
+        @ascii.encode("A EI B"),
+      ),
+      Op_Q,
+    ],
+  )
+}
+
+///|
+test "PdfDocument prepend_operators propagates non-colour parse errors" {
+  let doc = @pdflite.pdf_document_empty()
+  let data = @ascii.encode("1 2")
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_stream(
+        @pdflite.pdf_dictionary([
+          (page_name_for_test("/Length"), PdfInteger(data.length())),
+        ]),
+        StreamGot(data),
+      ),
+    ],
+  }
+  let result : Result[@pdflite.PdfPage, Error] = try? doc.prepend_operators(
+    page,
+    [Op_q],
+  )
+  guard result is Err(@pdflite.PdfError::ContentOperatorExpected) else {
+    fail("expected ContentOperatorExpected")
+  }
+}
+
+///|
 test "PdfDocument prepend_operators preserves split streams in fast mode" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
