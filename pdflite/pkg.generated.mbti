@@ -945,6 +945,7 @@ pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise PdfError
 pub fn PdfDocument::read_simple_font(Self, PdfObject) -> PdfSimpleFont raise PdfError
 pub fn PdfDocument::read_standard14_font(Self, PdfObject) -> PdfStandardFontData raise PdfError
 pub fn PdfDocument::recrypt_with_password(Self, BytesView) -> Self raise PdfError
+pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes) -> Self raise PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
 pub fn PdfDocument::remove_object(Self, Int) -> Unit

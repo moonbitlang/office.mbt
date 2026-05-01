@@ -1046,6 +1046,54 @@ fn pdf_crypt_saved_arc4_dictionary(
 }
 
 ///|
+fn pdf_crypt_saved_aesv2_dictionary(values : PdfEncryptionValues) -> PdfObject {
+  let std_cf = pdf_crypt_name("/StdCF")
+  PdfDictionary([
+    (pdf_crypt_name("/Filter"), PdfNameObject(pdf_crypt_name("/Standard"))),
+    (pdf_crypt_name("/V"), PdfInteger(4)),
+    (
+      pdf_crypt_name("/CF"),
+      PdfDictionary([
+        (
+          std_cf,
+          PdfDictionary([
+            (pdf_crypt_name("/Length"), PdfInteger(16)),
+            (
+              pdf_crypt_name("/AuthEvent"),
+              PdfNameObject(pdf_crypt_name("/DocOpen")),
+            ),
+            (pdf_crypt_name("/CFM"), PdfNameObject(pdf_crypt_name("/AESV2"))),
+          ]),
+        ),
+      ]),
+    ),
+    (pdf_crypt_name("/EncryptMetadata"), PdfBoolean(values.encrypt_metadata)),
+    (pdf_crypt_name("/Length"), PdfInteger(128)),
+    (pdf_crypt_name("/R"), PdfInteger(4)),
+    (pdf_crypt_name("/O"), PdfString(values.owner_entry)),
+    (pdf_crypt_name("/U"), PdfString(values.user_entry)),
+    (pdf_crypt_name("/P"), PdfInteger(values.permissions)),
+    (pdf_crypt_name("/StrF"), PdfNameObject(std_cf)),
+    (pdf_crypt_name("/StmF"), PdfNameObject(std_cf)),
+  ])
+}
+
+///|
+fn PdfEncryptionValues::file_key_for_recrypt_password(
+  self : PdfEncryptionValues,
+  password : BytesView,
+) -> PdfBytes raise PdfError {
+  match self.file_key_for_user_password(password) {
+    Some(key) => key
+    None =>
+      match self.file_key_for_owner_password(password) {
+        Some(key) => key
+        None => raise EncryptionRecryptFailed
+      }
+  }
+}
+
+///|
 fn PdfDocument::recrypt_arc4_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
@@ -1074,6 +1122,32 @@ fn PdfDocument::recrypt_arc4_with_file_key(
 }
 
 ///|
+fn PdfDocument::recrypt_aesv2_with_file_key(
+  self : PdfDocument,
+  values : PdfEncryptionValues,
+  file_key : BytesView,
+  iv_provider : (Int, Int, Int) -> PdfBytes,
+) -> PdfDocument raise PdfError {
+  let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  document.set_saved_encryption(None)
+  let encrypted = document.aesv2_encrypt_parsed_objects_with_iv_provider(
+    file_key,
+    128,
+    iv_provider,
+    no_encrypt_metadata=!values.encrypt_metadata,
+  )
+  encrypted.set_saved_encryption(None)
+  let encrypt_dictionary = pdf_crypt_saved_aesv2_dictionary(values)
+  let encrypt_number = encrypted.add_object(encrypt_dictionary)
+  encrypted.set_trailer_dict(
+    encrypted
+    .trailer_dict()
+    .add_dict_entry(pdf_crypt_name("/Encrypt"), PdfIndirect(encrypt_number)),
+  )
+  encrypted
+}
+
+///|
 pub fn PdfDocument::recrypt_with_password(
   self : PdfDocument,
   password : BytesView,
@@ -1088,20 +1162,33 @@ pub fn PdfDocument::recrypt_with_password(
         key_length_bits == 40 || key_length_bits == 128
       ) &&
       (revision == 2 || revision == 3 || revision == 4) => {
-      let file_key = match values.file_key_for_user_password(password) {
-        Some(key) => key
-        None =>
-          match values.file_key_for_owner_password(password) {
-            Some(key) => key
-            None => raise EncryptionRecryptFailed
-          }
-      }
+      let file_key = values.file_key_for_recrypt_password(password)
       self.recrypt_arc4_with_file_key(
         values,
         file_key[:],
         key_length_bits,
         revision,
       )
+    }
+    _ => raise EncryptionRecryptUnsupported(values.crypt_type)
+  }
+}
+
+///|
+pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
+  self : PdfDocument,
+  password : BytesView,
+  iv_provider : (Int, Int, Int) -> PdfBytes,
+) -> PdfDocument raise PdfError {
+  let saved = match self.saved_encryption() {
+    Some(saved) => saved
+    None => raise EncryptionSavedStateExpected
+  }
+  let values = saved.values
+  match values.crypt_type {
+    PdfCryptAESV2 => {
+      let file_key = values.file_key_for_recrypt_password(password)
+      self.recrypt_aesv2_with_file_key(values, file_key[:], iv_provider)
     }
     _ => raise EncryptionRecryptUnsupported(values.crypt_type)
   }

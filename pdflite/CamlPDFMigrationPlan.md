@@ -632,9 +632,9 @@ MoonBit consequences for this project:
     Decrypted document copies now preserve a `PdfSavedEncryption` snapshot of
     the original encryption values, matching CamlPDF's prerequisite state for
     future re-encryption after modification. Re-encryption is started for saved
-    40-bit ARC4, 128-bit ARC4 revision 3, and 128-bit ARC4 revision 4
-    documents; AES recrypt remains deferred until encrypted AES output has a
-    project-level IV/randomness policy.
+    40-bit ARC4, 128-bit ARC4 revision 3, 128-bit ARC4 revision 4, and
+    explicit-IV-provider AESV2 revision 4 documents; default AES recrypt remains
+    deferred until a project-level random-byte source is selected.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
@@ -663,8 +663,8 @@ MoonBit consequences for this project:
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, and return CamlPDF-style denied permissions.
     AESV3 revision 6 object/data crypt, SHA-family helpers beyond the
-    available package surface, deferred stream/object decryption, and
-    re-encryption remain deferred.
+    available package surface, deferred stream/object decryption, and default
+    random-IV AES re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

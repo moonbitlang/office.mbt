@@ -1594,6 +1594,140 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
 }
 
 ///|
+test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AESV2 encryption" {
+  let key_type = crypt_name_for_test("/Type")
+  let key_catalog = crypt_name_for_test("/Catalog")
+  let key_pages = crypt_name_for_test("/Pages")
+  let key_kids = crypt_name_for_test("/Kids")
+  let key_count = crypt_name_for_test("/Count")
+  let key_title = crypt_name_for_test("/Title")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_catalog)),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_type, PdfNameObject(key_pages)),
+      (key_kids, PdfArray([])),
+      (key_count, PdfInteger(0)),
+    ]),
+  )
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes-secret"))),
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("aes-added"))
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  doc.add_object_given_number(5, secret_object)
+  doc.add_object_given_number(6, metadata_stream)
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  decrypted.document.add_object_given_number(7, added_object)
+  let recrypted = try! decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("owner")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index + 4)
+    },
+  )
+  @test.assert_eq(recrypted.is_encrypted(), true)
+  @test.assert_eq(recrypted.saved_encryption(), None)
+  @test.assert_eq(
+    try! recrypted.what_encryption(),
+    Some(PdfEncryptionAES128(false)),
+  )
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! recrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(5), secret_object)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(6), metadata_stream)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(7), added_object)
+  @test.assert_eq(roundtrip.denied_permissions, [PdfNoPrint])
+
+  let rendered = try! @pdflite.pdf_write_document(recrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  let read_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(7),
+    added_object,
+  )
+
+  let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("bad")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+  )
+  guard bad_password is Err(@pdflite.PdfError::EncryptionRecryptFailed) else {
+    fail("expected failed AESV2 recrypt")
+  }
+
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+  )
+  guard no_saved is Err(@pdflite.PdfError::EncryptionSavedStateExpected) else {
+    fail("expected missing saved encryption")
+  }
+
+  let arc4 = try! doc.encrypt_40bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [],
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let arc4_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! arc4.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  let unsupported : Result[@pdflite.PdfDocument, Error] = try? arc4_decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+  )
+  guard unsupported
+    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptARC4(40, 2))) else {
+    fail("expected unsupported non-AESV2 recrypt")
+  }
+}
+
+///|
 test "PdfDocument recrypt_with_password supports classic incremental update" {
   let key_type = crypt_name_for_test("/Type")
   let key_catalog = crypt_name_for_test("/Catalog")
