@@ -410,7 +410,9 @@ MoonBit consequences for this project:
     rewriting retargets retained `/Pg` links. Multi-root structure-tree merging
     is now started by creating a merged `/StructTreeRoot`, adopting each
     retained root's `/K` children, and rewriting immediate child `/P` links to
-    the new root; parent-tree renumbering remains deferred.
+    the new root. Structure parent-tree renumbering is also started:
+    `/StructParent` and `/StructParents` integer keys are made globally unique
+    across merged inputs and the merged root receives a combined `/ParentTree`.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

@@ -99,6 +99,21 @@ fn pdf_merge_parent_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_parent_tree_key() -> PdfName {
+  pdf_merge_name("/ParentTree")
+}
+
+///|
+fn pdf_merge_struct_parent_key() -> PdfName {
+  pdf_merge_name("/StructParent")
+}
+
+///|
+fn pdf_merge_struct_parents_key() -> PdfName {
+  pdf_merge_name("/StructParents")
+}
+
+///|
 fn pdf_merge_namedict_tree_keys() -> Array[PdfName] {
   [
     pdf_merge_name("/AP"),
@@ -208,6 +223,147 @@ fn PdfDocument::pdf_merge_structure_tree_root_k_items(
 }
 
 ///|
+fn PdfDocument::pdf_merge_structure_parent_tree_entries(
+  self : PdfDocument,
+  root : PdfObject,
+) -> Array[(Int, PdfObject)] {
+  match self.lookup_direct(pdf_merge_parent_tree_key(), root) {
+    Some(parent_tree) => self.read_number_tree(parent_tree)
+    None => []
+  }
+}
+
+///|
+fn pdf_merge_changed_parent_tree_key(
+  changes : ArrayView[(Int, Int)],
+  old_key : Int,
+) -> Int? {
+  for change in changes {
+    let (old, replacement) = change
+    if old == old_key {
+      break Some(replacement)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_merge_renumber_struct_parent_object(
+  object : PdfObject,
+  changes : ArrayView[(Int, Int)],
+) -> PdfObject {
+  match object {
+    PdfDictionary(entries) => {
+      let output : Array[(PdfName, PdfObject)] = []
+      for entry in entries {
+        let (key, value) = entry
+        if key == pdf_merge_struct_parent_key() ||
+          key == pdf_merge_struct_parents_key() {
+          match value {
+            PdfInteger(old_key) =>
+              match pdf_merge_changed_parent_tree_key(changes, old_key) {
+                Some(new_key) => output.push((key, PdfInteger(new_key)))
+                None => output.push(entry)
+              }
+            _ =>
+              output.push(
+                (key, pdf_merge_renumber_struct_parent_object(value, changes)),
+              )
+          }
+        } else {
+          output.push(
+            (key, pdf_merge_renumber_struct_parent_object(value, changes)),
+          )
+        }
+      }
+      PdfDictionary(output)
+    }
+    PdfArray(items) =>
+      PdfArray(
+        [
+          for item in items => {
+            pdf_merge_renumber_struct_parent_object(item, changes)
+          }
+        ],
+      )
+    PdfStreamObject(stream) =>
+      PdfStreamObject({
+        dictionary: pdf_merge_renumber_struct_parent_object(
+          stream.dictionary,
+          changes,
+        ),
+        data: stream.data,
+      })
+    _ => object
+  }
+}
+
+///|
+fn pdf_merge_renumber_struct_parent_entry(
+  entry : PdfObjectEntry,
+  changes : ArrayView[(Int, Int)],
+) -> PdfObjectEntry {
+  match entry.data {
+    ObjectParsed(object) =>
+      {
+        data: ObjectParsed(
+          pdf_merge_renumber_struct_parent_object(object, changes),
+        ),
+        generation: entry.generation,
+      }
+    ObjectParsedAlreadyDecrypted(object) =>
+      {
+        data: ObjectParsedAlreadyDecrypted(
+          pdf_merge_renumber_struct_parent_object(object, changes),
+        ),
+        generation: entry.generation,
+      }
+    _ => { data: entry.data, generation: entry.generation }
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_renumber_struct_parent_entries(
+  self : PdfDocument,
+  changes : ArrayView[(Int, Int)],
+) -> Unit {
+  if changes.length() > 0 {
+    for number in self.object_numbers() {
+      match self.objects.get_entry(number) {
+        Some(entry) =>
+          self.objects.set_entry(
+            number,
+            pdf_merge_renumber_struct_parent_entry(entry, changes),
+          )
+        None => ()
+      }
+    }
+  }
+}
+
+///|
+fn pdf_merge_renumber_parent_trees(
+  documents : ArrayView[PdfDocument],
+) -> Array[(Int, PdfObject)] {
+  let merged_entries : Array[(Int, PdfObject)] = []
+  let mut next_key = 0
+  for document in documents {
+    let changes : Array[(Int, Int)] = []
+    for root in pdf_merge_structure_tree_roots([document]) {
+      for entry in document.pdf_merge_structure_parent_tree_entries(root) {
+        let (old_key, value) = entry
+        changes.push((old_key, next_key))
+        merged_entries.push((next_key, value))
+        next_key += 1
+      }
+    }
+    document.pdf_merge_renumber_struct_parent_entries(changes)
+  }
+  merged_entries
+}
+
+///|
 fn PdfDocument::pdf_merge_structure_parented_item(
   self : PdfDocument,
   item : PdfObject,
@@ -239,6 +395,7 @@ fn PdfDocument::pdf_merge_structure_parented_item(
 fn PdfDocument::pdf_merge_structure_tree_root(
   self : PdfDocument,
   structure_tree_roots : ArrayView[PdfObject],
+  parent_tree_entries : ArrayView[(Int, PdfObject)],
 ) -> PdfObject? raise PdfError {
   if structure_tree_roots.length() == 0 {
     None
@@ -257,6 +414,14 @@ fn PdfDocument::pdf_merge_structure_tree_root(
     ]
     if kids.length() > 0 {
       entries.push((pdf_merge_k_key(), pdf_structure_k_object(kids)))
+    }
+    if parent_tree_entries.length() > 0 {
+      entries.push(
+        (
+          pdf_merge_parent_tree_key(),
+          self.build_number_tree(parent_tree_entries),
+        ),
+      )
     }
     self.add_object_given_number(root_number, PdfDictionary(entries))
     Some(PdfIndirect(root_number))
@@ -594,6 +759,12 @@ pub fn pdf_merge_documents(
   } else {
     []
   }
+  let parent_tree_entries = if retain_structure_tree &&
+    structure_tree_roots.length() > 1 {
+    pdf_merge_renumber_parent_trees(staged)
+  } else {
+    []
+  }
   let catalog_entries = if retain_catalog_entries {
     pdf_merge_catalog_extra_entries(staged)
   } else {
@@ -634,7 +805,9 @@ pub fn pdf_merge_documents(
     merged
   }
   let merged = match
-    merged.pdf_merge_structure_tree_root(structure_tree_roots) {
+    merged.pdf_merge_structure_tree_root(
+      structure_tree_roots, parent_tree_entries,
+    ) {
     Some(structure_tree_root) =>
       merged.pdf_merge_add_catalog_entry(
         pdf_merge_struct_tree_root_key(),

@@ -155,6 +155,45 @@ fn merge_structure_tree_doc_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn merge_parent_tree_doc_for_test() -> @pdflite.PdfDocument {
+  let key_parent_tree = merge_name_for_test("/ParentTree")
+  let key_struct_parents = merge_name_for_test("/StructParents")
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let key_k = merge_name_for_test("/K")
+  let key_pg = merge_name_for_test("/Pg")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let page_refs = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    page_refs[0],
+    try! doc
+    .lookup_object_or_null(page_refs[0])
+    .add_dict_entry(key_struct_parents, PdfInteger(0)),
+  )
+  doc.add_object_given_number(
+    30,
+    PdfDictionary([
+      (key_k, PdfIndirect(31)),
+      (key_parent_tree, doc.build_number_tree([(0, PdfIndirect(31))])),
+    ]),
+  )
+  doc.add_object_given_number(
+    31,
+    PdfDictionary([(key_pg, PdfIndirect(page_refs[0])), (key_k, PdfInteger(0))]),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_struct_tree_root, PdfIndirect(30)),
+  )
+  doc
+}
+
+///|
 fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
   let key_info = merge_name_for_test("/Info")
   let key_title = merge_name_for_test("/Title")
@@ -570,6 +609,44 @@ test "pdf_merge_documents merges multiple structure tree roots" {
   @test.assert_eq(
     merged.lookup_object_or_null(second_child).lookup_immediate(key_pg),
     Some(PdfIndirect(page_refs[1])),
+  )
+}
+
+///|
+test "pdf_merge_documents renumbers merged structure parent trees" {
+  let key_parent_tree = merge_name_for_test("/ParentTree")
+  let key_struct_parents = merge_name_for_test("/StructParents")
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let first = merge_parent_tree_doc_for_test()
+  let second = merge_parent_tree_doc_for_test()
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let root = merged.lookup_object_or_null(merged.root())
+  guard root.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(struct_root_number)) else {
+    fail("expected merged StructTreeRoot")
+  }
+  guard merged.lookup_direct(
+      key_parent_tree,
+      merged.lookup_object_or_null(struct_root_number),
+    )
+    is Some(parent_tree) else {
+    fail("expected merged ParentTree")
+  }
+  let parent_entries = merged.read_number_tree(parent_tree)
+  @test.assert_eq(parent_entries.length(), 2)
+  @test.assert_eq([ for entry in parent_entries => entry.0 ], [0, 1])
+  let page_refs = try! merged.page_reference_numbers()
+  @test.assert_eq(
+    merged
+    .lookup_object_or_null(page_refs[0])
+    .lookup_immediate(key_struct_parents),
+    Some(PdfInteger(0)),
+  )
+  @test.assert_eq(
+    merged
+    .lookup_object_or_null(page_refs[1])
+    .lookup_immediate(key_struct_parents),
+    Some(PdfInteger(1)),
   )
 }
 
