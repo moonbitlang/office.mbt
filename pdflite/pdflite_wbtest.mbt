@@ -843,6 +843,10 @@ test "private content helpers cover malformed operand fallbacks" {
     jpeg_data,
   )
   @test.assert_eq(pdf_content_filter_is_inline_dct(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_filter_is_inline_text_encoded(PdfInteger(1)),
+    false,
+  )
   let bad_dct_end : Result[PdfBytes, Error] = try? pdf_content_read_dct_inline_image_data(
     byte_cursor_of_bytes(
       try! pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 88, 88]),

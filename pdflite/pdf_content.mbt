@@ -597,6 +597,26 @@ fn pdf_content_inline_dct_name() -> PdfName {
 }
 
 ///|
+fn pdf_content_inline_ascii_hexdecode_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/ASCIIHexDecode"))
+}
+
+///|
+fn pdf_content_inline_ahx_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/AHx"))
+}
+
+///|
+fn pdf_content_inline_ascii85decode_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/ASCII85Decode"))
+}
+
+///|
+fn pdf_content_inline_a85_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/A85"))
+}
+
+///|
 fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
   match dictionary.lookup_immediate(pdf_content_inline_f_name()) {
     Some(value) => Some(value)
@@ -742,9 +762,31 @@ fn pdf_content_filter_is_inline_dct(filter : PdfObject) -> Bool {
 }
 
 ///|
+fn pdf_content_filter_is_inline_text_encoded(filter : PdfObject) -> Bool {
+  match filter {
+    PdfNameObject(name) =>
+      name == pdf_content_inline_ascii_hexdecode_name() ||
+      name == pdf_content_inline_ahx_name() ||
+      name == pdf_content_inline_ascii85decode_name() ||
+      name == pdf_content_inline_a85_name()
+    _ => false
+  }
+}
+
+///|
 fn pdf_content_inline_image_uses_dct(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_dct(filter)
+    None => false
+  }
+}
+
+///|
+fn pdf_content_inline_image_uses_text_filter(dictionary : PdfObject) -> Bool {
+  match pdf_content_inline_filter_value(dictionary) {
+    Some(PdfArray(filters)) if filters.length() > 0 =>
+      pdf_content_filter_is_inline_text_encoded(filters[0])
+    Some(filter) => pdf_content_filter_is_inline_text_encoded(filter)
     None => false
   }
 }
@@ -791,6 +833,35 @@ fn pdf_content_read_inline_image_data(
   }
   ignore(cursor.read_view(2))
   data
+}
+
+///|
+fn pdf_content_decode_inline_image_data(
+  dictionary : PdfObject,
+  decode_parms : PdfObject?,
+  encoded : PdfBytes,
+) -> (PdfObject, PdfBytes) raise PdfError {
+  let with_decode_parms = match decode_parms {
+    Some(value) =>
+      dictionary.add_dict_entry(pdf_content_inline_dp_name(), value)
+    None => dictionary
+  }
+  let stream_dictionary = with_decode_parms.add_dict_entry(
+    pdf_content_length_name(),
+    PdfInteger(encoded.length()),
+  )
+  let decoded = pdf_decode_stream_value({
+    dictionary: stream_dictionary,
+    data: StreamGot(encoded),
+  })
+  (
+    dictionary
+    .remove_dict_entry(pdf_content_inline_filter_name())
+    .remove_dict_entry(pdf_content_inline_f_name())
+    .remove_dict_entry(pdf_content_inline_decode_parms_name())
+    .remove_dict_entry(pdf_content_inline_dp_name()),
+    pdf_stream_data_bytes(decoded.data),
+  )
 }
 
 ///|
@@ -869,18 +940,28 @@ fn pdf_content_read_inline_image(
     }
   }
   let dictionary = PdfDictionary(entries)
-  Op_InlineImage(
-    dictionary,
-    decode_parms,
-    if pdf_content_inline_image_uses_dct(dictionary) {
-      pdf_content_read_dct_inline_image_data(cursor)
-    } else {
+  if pdf_content_inline_image_uses_dct(dictionary) {
+    Op_InlineImage(
+      dictionary,
+      decode_parms,
+      pdf_content_read_dct_inline_image_data(cursor),
+    )
+  } else if pdf_content_inline_image_uses_text_filter(dictionary) {
+    let encoded = pdf_content_read_inline_image_data(cursor)
+    let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
+      dictionary, decode_parms, encoded,
+    )
+    Op_InlineImage(decoded_dictionary, None, decoded)
+  } else {
+    Op_InlineImage(
+      dictionary,
+      decode_parms,
       match pdf_content_inline_image_data_length(dictionary) {
         Some(length) => pdf_content_read_sized_inline_image_data(cursor, length)
         None => pdf_content_read_inline_image_data(cursor)
-      }
-    },
-  )
+      },
+    )
+  }
 }
 
 ///|

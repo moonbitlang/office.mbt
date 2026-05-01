@@ -311,6 +311,58 @@ test "pdf_parse_content_ops_from_bytes preserves image mask EI bytes" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes decodes ASCIIHex inline images" {
+  let data = content_bytes_for_test(
+    "BI /W 3 /H 1 /CS /G /BPC 8 /F /AHx /DP << /Predictor 1 >> ID 616263>\nEI",
+  )
+  let parsed = try! @pdflite.pdf_parse_content_ops_from_bytes(data)
+  @test.assert_eq(parsed, [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(3)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("abc"),
+    ),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(parsed),
+    content_bytes_for_test("BI /W 3 /H 1 /CS /G /BPC 8 ID abc EI"),
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes decodes ASCII85 inline image arrays" {
+  let encoded = @pdflite.pdf_ascii85_encode(content_bytes_for_test("abc"))
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 1 /H 1 /CS /RGB /BPC 8 /Filter [ /A85 ] ID "),
+    encoded,
+    content_bytes_for_test("\nEI"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/RGB")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("abc"),
+    ),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes parses inline image comments" {
   let data = content_bytes_for_test(
     "BI % ignored\n/W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc\nEI",

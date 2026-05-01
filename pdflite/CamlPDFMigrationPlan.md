@@ -375,8 +375,11 @@ MoonBit consequences for this project:
    parse/render path that preserves image data as `Bytes`; known-size
    unfiltered inline images now read exact byte counts from direct
    width/height/colour-space/bits metadata or image-mask metadata, preserving
-   `EI` byte sequences inside payloads. Filter-aware inline image compression
-   and broader resource-dependent inline image sizing remain deferred.
+   `EI` byte sequences inside payloads. Text-delimited inline image filters
+   whose first filter is ASCIIHex or ASCII85 now decode through the stream
+   codec pipeline and are flattened without stale filter metadata.
+   Filter-aware binary inline image compression and broader resource-dependent
+   inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
    page and page-tree resource dictionaries with CamlPDF's lower-case prefix
    sequence. `add_prefix` is also started for page/page-tree resources and
