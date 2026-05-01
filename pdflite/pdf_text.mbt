@@ -1278,23 +1278,7 @@ fn pdf_text_skip_horizontal_space(line : BytesView, start : Int) -> Int {
 
 ///|
 fn pdf_text_line_contains_ascii(line : BytesView, word : String) -> Bool {
-  let needle = @ascii.encode(word)
-  guard needle.length() > 0 && line.length() >= needle.length() else {
-    return false
-  }
-  for index in 0..<=(line.length() - needle.length()) {
-    let mut matched = true
-    for offset in 0..<needle.length() {
-      if line[index + offset] != needle[offset] {
-        matched = false
-      }
-    }
-    if matched {
-      break true
-    }
-  } nobreak {
-    false
-  }
+  pdf_text_index_of_ascii(line, word) != None
 }
 
 ///|
@@ -1416,15 +1400,22 @@ fn pdf_text_add_to_big_endian_bytes(
 }
 
 ///|
-fn pdf_text_tounicode_bfchar_entry_of_line(
+fn pdf_text_tounicode_bfchar_entries_of_line(
   line : BytesView,
-) -> (Int, PdfBytes)? {
+) -> Array[(Int, PdfBytes)]? {
   match pdf_text_parse_cmap_hex_groups(line) {
-    Some([source, unicode]) =>
-      match pdf_text_bytes_to_int(source[:]) {
-        Some(code) => Some((code, unicode))
-        None => None
+    Some(groups) if groups.length() % 2 == 0 => {
+      let entries : Array[(Int, PdfBytes)] = []
+      let mut index = 0
+      while index < groups.length() {
+        match pdf_text_bytes_to_int(groups[index][:]) {
+          Some(code) => entries.push((code, groups[index + 1]))
+          None => return None
+        }
+        index += 2
       }
+      Some(entries)
+    }
     _ => None
   }
 }
@@ -1500,8 +1491,11 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
     let end_bfrange = pdf_text_line_contains_ascii(line, "endbfrange")
     match section {
       PdfTextCMapBFChar =>
-        match pdf_text_tounicode_bfchar_entry_of_line(line) {
-          Some(entry) => entries.push(entry)
+        match pdf_text_tounicode_bfchar_entries_of_line(line) {
+          Some(line_entries) =>
+            for entry in line_entries {
+              entries.push(entry)
+            }
           None => ()
         }
       PdfTextCMapBFRange =>

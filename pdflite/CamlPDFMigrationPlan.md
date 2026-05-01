@@ -403,7 +403,8 @@ MoonBit consequences for this project:
    data is decoded through the supported filter pipeline before parsing, and
    parsed maps are attached to simple or CID font descriptors. Compact
    one-line `beginbfchar`/`beginbfrange` sections with entries before the end
-   marker are also accepted.
+   marker are also accepted, and `beginbfchar` lines can contain repeated
+   source-to-Unicode pairs.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
    and `/Identity-H` CID text, including decoded glyph records, glyph-name
    extraction, flattened codepoint extraction, and reverse ToUnicode charcode
