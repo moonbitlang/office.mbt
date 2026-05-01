@@ -191,8 +191,9 @@ MoonBit consequences for this project:
    can resolve direct stream `/Length n` and plain indirect stream
    `/Length n 0 R` entries through that xref table. Incremental trailer
    `/Prev` chains are started for classic xref tables, preserving newer entries
-   over older ones. Xref streams, object streams, encryption, and
-   malformed-file reconstruction remain deferred.
+   over older ones, including newer free entries that hide older objects. Xref
+   streams, object streams, encryption, and malformed-file reconstruction remain
+   deferred.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
