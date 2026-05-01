@@ -1089,6 +1089,8 @@ pub fn pdf_read_document_from_bytes(
       pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
     TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
     RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
+    ParseIndirectObjectExpected =>
+      pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
     error => raise error
   }
 }

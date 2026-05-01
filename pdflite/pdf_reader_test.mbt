@@ -501,6 +501,22 @@ fn reader_malformed_pdf_with_missing_root_trailer() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_bad_object_offset() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let junk_offset = output.length()
+  reader_push_ascii(output, "notobject\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, junk_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_prev_update() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -1085,6 +1101,23 @@ test "pdf_read_document_from_bytes reconstructs malformed trailers" {
   @test.assert_eq(missing_root.first_xref(), 0)
   @test.assert_eq(missing_root.root(), 1)
   @test.assert_eq(missing_root.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs bad object offsets" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_bad_object_offset(),
+  )
+  guard strict is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
+    fail("expected strict ParseIndirectObjectExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_bad_object_offset(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
 }
 
 ///|

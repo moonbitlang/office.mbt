@@ -213,11 +213,11 @@ MoonBit consequences for this project:
    loaded document object map. A first malformed-file reconstruction path is
    started for public reads with missing `startxref`, a `startxref` pointer
    that is not an xref section, malformed xref rows, malformed trailer syntax,
-   or a strict-read trailer missing `/Root`: it scans recoverable indirect
-   objects, selects the latest trailer whose `/Root` points at a parsed
-   dictionary, sets `first_xref` to zero, and keeps stricter xref errors on the
-   strict classic reader path. Broader malformed xref-table recovery remains
-   deferred.
+   a strict-read trailer missing `/Root`, or xref rows pointing at junk object
+   offsets: it scans recoverable indirect objects, selects the latest trailer
+   whose `/Root` points at a parsed dictionary, sets `first_xref` to zero, and
+   keeps stricter xref errors on the strict classic reader path. Broader
+   malformed xref-table recovery remains deferred.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset. Reader
