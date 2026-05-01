@@ -189,6 +189,16 @@ moon run -c 'fn main { let pairs = [(1, 2), (3, 4)]; let firsts = [ for pair in 
 ```
 
 ```sh
+moon run -c $'fn parse(s : String) -> Int raise { @strconv.from_str(s) }\nfn main { let _ = [ for s in ["1"] => parse(s) ]; println("done") }'
+# Error: calling function with error is not allowed inside list comprehension.
+```
+
+Comprehension bodies cannot call error-raising functions. When porting OCaml
+`List.map`/`Array.map` code whose mapper may raise, write an explicit loop in a
+raising function, push each checked result into an output array, and let the
+error propagate from the loop body.
+
+```sh
 moon run -c 'fn main { let xs = [(2, "b"), (1, "a")]; xs.sort_by(fn(a, b) { a.0.compare(b.0) }); println(xs[0].0) }'
 # 1
 ```

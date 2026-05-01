@@ -122,6 +122,21 @@ fn pdf_space_colorspace_key() -> PdfName {
 }
 
 ///|
+fn pdf_space_n_key() -> PdfName {
+  pdf_space_name("/N")
+}
+
+///|
+fn pdf_space_alternate_key() -> PdfName {
+  pdf_space_name("/Alternate")
+}
+
+///|
+fn pdf_space_metadata_key() -> PdfName {
+  pdf_space_name("/Metadata")
+}
+
+///|
 fn pdf_space_empty_point() -> PdfTristimulusPoint {
   { x: 0.0, y: 0.0, z: 0.0 }
 }
@@ -169,6 +184,75 @@ fn PdfDocument::pdf_space_read_number(
   match self.lookup_direct(key, dictionary) {
     Some(value) => self.get_number(value)
     None => default
+  }
+}
+
+///|
+fn pdf_space_default_icc_alternate(n : Int) -> PdfColourSpace? {
+  match n {
+    1 => Some(PdfDeviceGray)
+    3 => Some(PdfDeviceRGB)
+    4 => Some(PdfDeviceCMYK)
+    _ => None
+  }
+}
+
+///|
+fn pdf_space_default_icc_range(n : Int) -> Array[Double] {
+  let output : Array[Double] = []
+  for _ in 0..<n {
+    output.push(0.0)
+    output.push(1.0)
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_space_read_icc_based(
+  self : PdfDocument,
+  resources : PdfObject,
+  stream_object : PdfObject,
+) -> PdfColourSpace? raise PdfError {
+  match self.direct(stream_object) {
+    PdfStreamObject(stream) =>
+      match self.lookup_direct(pdf_space_n_key(), stream.dictionary) {
+        Some(PdfInteger(n)) =>
+          match pdf_space_default_icc_alternate(n) {
+            Some(default_alternate) => {
+              let alternate = match
+                self.lookup_direct(pdf_space_alternate_key(), stream.dictionary) {
+                Some(alternate) => self.read_colour_space(resources, alternate)
+                None => Some(default_alternate)
+              }
+              match alternate {
+                Some(alternate) => {
+                  let range = self.pdf_space_read_number_array(
+                    stream.dictionary,
+                    pdf_space_range_key(),
+                    n * 2,
+                    pdf_space_default_icc_range(n),
+                  )
+                  Some(
+                    PdfICCBased(
+                      n,
+                      alternate,
+                      range,
+                      self.lookup_direct(
+                        pdf_space_metadata_key(),
+                        stream.dictionary,
+                      ),
+                      stream_object,
+                    ),
+                  )
+                }
+                None => None
+              }
+            }
+            None => None
+          }
+        _ => None
+      }
+    _ => None
   }
 }
 
@@ -240,6 +324,9 @@ pub fn PdfDocument::read_colour_space(
           ),
         ),
       )
+    PdfArray([PdfNameObject(name), stream_object]) if name ==
+      pdf_space_name("/ICCBased") =>
+      self.pdf_space_read_icc_based(resources, stream_object)
     PdfArray([single]) => self.read_colour_space(resources, single)
     _ => None
   }

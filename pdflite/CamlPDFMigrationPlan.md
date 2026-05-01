@@ -359,8 +359,11 @@ MoonBit consequences for this project:
    `read_colour_space` entry point now resolves `/ColorSpace` resources and
    nested single-item arrays, and parses CalGray, CalRGB, and Lab dictionaries
    with CamlPDF-compatible defaults for missing optional BlackPoint, Gamma,
-   Matrix, and Range entries. ICCBased, Indexed table parsing,
-   Separation/DeviceN functions, and image/JPEG support remain deferred.
+   Matrix, and Range entries. ICCBased stream parsing is started for direct and
+   indirect stream objects, including `/N`, default alternates, explicit
+   `/Alternate`, default or explicit `/Range`, and `/Metadata`. Indexed table
+   parsing, Separation/DeviceN functions, and image/JPEG support remain
+   deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics

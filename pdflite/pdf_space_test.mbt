@@ -248,6 +248,128 @@ test "PdfDocument read_colour_space reports malformed calibrated numbers" {
 }
 
 ///|
+test "PdfDocument read_colour_space parses ICCBased streams" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let default_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), default_stream]),
+    ),
+    Some(
+      PdfICCBased(
+        3,
+        PdfDeviceRGB,
+        [0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+        None,
+        default_stream,
+      ),
+    ),
+  )
+  let metadata : @pdflite.PdfObject = PdfString(@ascii.encode("meta"))
+  let explicit_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (space_name_for_test("/N"), PdfInteger(1)),
+      (
+        space_name_for_test("/Alternate"),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+      ),
+      (space_name_for_test("/Range"), PdfArray([PdfReal(0.1), PdfReal(0.9)])),
+      (space_name_for_test("/Metadata"), metadata),
+    ]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/ICCBased")),
+        explicit_stream,
+      ]),
+    ),
+    Some(
+      PdfICCBased(1, PdfDeviceCMYK, [0.1, 0.9], Some(metadata), explicit_stream),
+    ),
+  )
+}
+
+///|
+test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let bad_n_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(2))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), bad_n_stream]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/ICCBased")),
+        @pdflite.pdf_dictionary([]),
+      ]),
+    ),
+    None,
+  )
+  let unsupported_alternate_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (space_name_for_test("/N"), PdfInteger(3)),
+      (
+        space_name_for_test("/Alternate"),
+        PdfNameObject(space_name_for_test("/Missing")),
+      ),
+    ]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.read_colour_space(
+      empty_resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/ICCBased")),
+        unsupported_alternate_stream,
+      ]),
+    ),
+    None,
+  )
+}
+
+///|
+test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
+  let doc = @pdflite.pdf_document_empty()
+  let malformed_range_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (space_name_for_test("/N"), PdfInteger(1)),
+      (
+        space_name_for_test("/Range"),
+        PdfArray([PdfNameObject(space_name_for_test("/Bad")), PdfInteger(1)]),
+      ),
+    ]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  let result : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
+    @pdflite.pdf_dictionary([]),
+    PdfArray([
+      PdfNameObject(space_name_for_test("/ICCBased")),
+      malformed_range_stream,
+    ]),
+  )
+  guard result is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected malformed ICCBased range number")
+  }
+}
+
+///|
 test "pdf_object_of_colour_space writes supported direct colour spaces" {
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(PdfDeviceGray),
