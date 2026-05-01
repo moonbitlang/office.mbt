@@ -29,6 +29,11 @@ pub fn pdf_is_whitespace_byte(value : Int) -> Bool {
 }
 
 ///|
+pub fn pdf_is_newline_byte(value : Int) -> Bool {
+  value == 10 || value == 13
+}
+
+///|
 pub fn pdf_is_not_whitespace_byte(value : Int) -> Bool {
   !pdf_is_whitespace_byte(value)
 }
@@ -117,6 +122,11 @@ fn pdf_hex_value(value : Int) -> Int? {
   } else {
     None
   }
+}
+
+///|
+fn pdf_is_octal_digit_byte(value : Int) -> Bool {
+  value >= 48 && value <= 55
 }
 
 ///|
@@ -212,5 +222,223 @@ pub fn ByteCursor::lex_pdf_name(self : ByteCursor) -> PdfLexeme raise PdfError {
       }
     }
     LexName(pdf_name_of_bytes(Bytes::from_array(bytes)))
+  }
+}
+
+///|
+pub fn ByteCursor::lex_pdf_comment(self : ByteCursor) -> PdfLexeme {
+  if self.peek_byte() != 37 {
+    LexNone
+  } else {
+    let empty : Array[Byte] = []
+    let mut done = false
+    while !done {
+      let value = self.peek_byte()
+      if value == pdf_no_more || pdf_is_newline_byte(value) {
+        done = true
+      } else {
+        self.nudge()
+      }
+    }
+    LexComment(Bytes::from_array(empty))
+  }
+}
+
+///|
+fn ByteCursor::read_pdf_octal_escape(
+  self : ByteCursor,
+  first : Int,
+) -> Byte raise PdfError {
+  let mut value = first - 48
+  let second = self.input_byte()
+  if pdf_is_octal_digit_byte(second) {
+    value = value * 8 + second - 48
+    let third = self.input_byte()
+    if pdf_is_octal_digit_byte(third) {
+      value = value * 8 + third - 48
+    } else if third != pdf_no_more {
+      self.rewind()
+    }
+  } else if second != pdf_no_more {
+    self.rewind()
+  }
+  pdf_byte_of_int(value)
+}
+
+///|
+fn ByteCursor::read_pdf_string_escape_into(
+  self : ByteCursor,
+  bytes : Array[Byte],
+) -> Unit raise PdfError {
+  let escaped = self.input_byte()
+  match escaped {
+    110 => bytes.push((10).to_byte())
+    114 => bytes.push((13).to_byte())
+    116 => bytes.push((9).to_byte())
+    98 => bytes.push((8).to_byte())
+    102 => bytes.push((12).to_byte())
+    13 => {
+      let next = self.input_byte()
+      if next != 10 && next != pdf_no_more {
+        self.rewind()
+      }
+    }
+    10 => ()
+    value if pdf_is_octal_digit_byte(value) =>
+      bytes.push(self.read_pdf_octal_escape(value))
+    value if value == pdf_no_more => raise EndOfInput
+    value => bytes.push(value.to_byte())
+  }
+}
+
+///|
+pub fn ByteCursor::lex_pdf_literal_string(
+  self : ByteCursor,
+) -> PdfLexeme raise PdfError {
+  if self.peek_byte() != 40 {
+    LexNone
+  } else {
+    self.nudge()
+    let bytes : Array[Byte] = []
+    let mut depth = 1
+    while depth > 0 {
+      let value = self.input_byte()
+      match value {
+        40 => {
+          depth += 1
+          bytes.push((40).to_byte())
+        }
+        41 => {
+          depth -= 1
+          if depth > 0 {
+            bytes.push((41).to_byte())
+          }
+        }
+        92 => self.read_pdf_string_escape_into(bytes)
+        value if value == pdf_no_more => raise EndOfInput
+        value => bytes.push(value.to_byte())
+      }
+    }
+    LexString(Bytes::from_array(bytes))
+  }
+}
+
+///|
+fn ByteCursor::input_next_pdf_hex_byte(self : ByteCursor) -> Int {
+  let mut result = pdf_no_more
+  let mut done = false
+  while !done {
+    let value = self.input_byte()
+    if value == pdf_no_more || pdf_is_not_whitespace_byte(value) {
+      result = value
+      done = true
+    }
+  }
+  result
+}
+
+///|
+pub fn ByteCursor::lex_pdf_hex_string(
+  self : ByteCursor,
+) -> PdfLexeme raise PdfError {
+  let position = self.absolute_position()
+  if self.peek_byte() != 60 ||
+    (
+      position + 1 < self.data.length() &&
+      self.data[position + 1].to_int() == 60
+    ) {
+    LexNone
+  } else {
+    self.nudge()
+    let bytes : Array[Byte] = []
+    let mut done = false
+    while !done {
+      let high = self.input_next_pdf_hex_byte()
+      if high == pdf_no_more || high == 62 {
+        done = true
+      } else {
+        let low = self.input_next_pdf_hex_byte()
+        if low == pdf_no_more {
+          done = true
+        } else {
+          match (pdf_hex_value(high), low) {
+            (Some(high), 62) => {
+              bytes.push((high * 16).to_byte())
+              done = true
+            }
+            (Some(high), low) =>
+              match pdf_hex_value(low) {
+                Some(low) => bytes.push((high * 16 + low).to_byte())
+                None => raise InvalidHexEscape
+              }
+            _ => raise InvalidHexEscape
+          }
+        }
+      }
+    }
+    LexString(Bytes::from_array(bytes))
+  }
+}
+
+///|
+fn pdf_view_starts_with_endobj(view : BytesView) -> Bool {
+  view.length() > 6 &&
+  view[0].to_int() == 101 &&
+  view[1].to_int() == 110 &&
+  view[2].to_int() == 100 &&
+  view[3].to_int() == 111 &&
+  view[4].to_int() == 98 &&
+  view[5].to_int() == 106
+}
+
+///|
+pub fn ByteCursor::lex_pdf_keyword(
+  self : ByteCursor,
+) -> PdfLexeme raise PdfError {
+  self.drop_pdf_whitespace()
+  let start = self.position()
+  let view = self.read_until_pdf_whitespace_or_delimiter()
+  match view {
+    [111, 98, 106] => LexObj
+    [101, 110, 100, 111, 98, 106] => LexEndObj
+    [82] => LexR
+    [110, 117, 108, 108] => LexNull
+    [101, 110, 100, 115, 116, 114, 101, 97, 109] => LexEndStream
+    view if pdf_view_starts_with_endobj(view) => {
+      self.seek(start + 6)
+      LexEndObj
+    }
+    _ => LexNone
+  }
+}
+
+///|
+pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
+  self.drop_pdf_whitespace()
+  let position = self.absolute_position()
+  match self.peek_byte() {
+    91 => {
+      self.nudge()
+      LexLeftSquare
+    }
+    93 => {
+      self.nudge()
+      LexRightSquare
+    }
+    value if value == 60 &&
+      position + 1 < self.data.length() &&
+      self.data[position + 1].to_int() == 60 => {
+      self.nudge()
+      self.nudge()
+      LexLeftDict
+    }
+    value if value == 62 &&
+      position + 1 < self.data.length() &&
+      self.data[position + 1].to_int() == 62 => {
+      self.nudge()
+      self.nudge()
+      LexRightDict
+    }
+    _ => LexNone
   }
 }

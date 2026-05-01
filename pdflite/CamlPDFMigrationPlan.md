@@ -160,7 +160,9 @@ MoonBit consequences for this project:
    delimiter predicates, whitespace dropping, regular-token `BytesView`
    scanning over `ByteCursor`, boolean and number lexing, CamlPDF-compatible
    double-minus number salvage, and name lexing with byte-preserving `#xx` hex
-   escapes.
+   escapes. Comments, literal strings, hex strings, array/dictionary delimiter
+   tokens, and primitive keyword tokens are also started, with byte-preserving
+   `LexString` outputs and regression tests for escape handling.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only

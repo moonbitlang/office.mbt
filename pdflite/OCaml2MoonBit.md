@@ -44,6 +44,9 @@ moon run -c 'fn main { let raw : Array[Byte] = [65, 0, 255]; let b = Bytes::from
 
 Use `Bytes`/`Byte` for byte-addressed data. Integer literals can be
 disambiguated by type context, so `Array[Byte] = [65, 0, 255]` is valid.
+When calling a method directly on an integer literal, parenthesize the literal:
+use `(65).to_byte()`, not `65.to_byte()`, because `65.` is parsed as the start
+of a floating-point literal.
 
 ```sh
 moon run -c 'fn main { let (b, u16, i64, u64) : (Byte, UInt16, Int64, UInt64) = (255, 65535, 42, 42); println(b.to_int()); println(u16.to_int()); println(i64.to_string()); println(u64.to_string()) }'

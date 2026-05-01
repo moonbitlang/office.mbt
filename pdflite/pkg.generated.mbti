@@ -69,6 +69,8 @@ pub fn pdf_document_empty() -> PdfDocument
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
+pub fn pdf_is_newline_byte(Int) -> Bool
+
 pub fn pdf_is_not_whitespace_byte(Int) -> Bool
 
 pub fn pdf_is_whitespace_byte(Int) -> Bool
@@ -185,6 +187,11 @@ pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::length(Self) -> Int
 pub fn ByteCursor::lex_pdf_bool(Self) -> PdfLexeme
+pub fn ByteCursor::lex_pdf_comment(Self) -> PdfLexeme
+pub fn ByteCursor::lex_pdf_delimiter(Self) -> PdfLexeme
+pub fn ByteCursor::lex_pdf_hex_string(Self) -> PdfLexeme raise PdfError
+pub fn ByteCursor::lex_pdf_keyword(Self) -> PdfLexeme raise PdfError
+pub fn ByteCursor::lex_pdf_literal_string(Self) -> PdfLexeme raise PdfError
 pub fn ByteCursor::lex_pdf_name(Self) -> PdfLexeme raise PdfError
 pub fn ByteCursor::lex_pdf_number(Self) -> PdfLexeme
 pub fn ByteCursor::nudge(Self) -> Unit
