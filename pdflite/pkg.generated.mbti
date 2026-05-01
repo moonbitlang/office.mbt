@@ -77,6 +77,10 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_colour_space_of_device_name(PdfName) -> PdfColourSpace?
+
+pub fn pdf_colour_space_of_object(PdfObject) -> PdfColourSpace?
+
 pub fn pdf_content_begin_artifact() -> PdfContentOp
 
 pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfError
@@ -142,6 +146,8 @@ pub let pdf_no_more : Int
 pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
 
 pub fn pdf_object_map_empty() -> PdfObjectMap
+
+pub fn pdf_object_of_colour_space(PdfColourSpace) -> PdfObject?
 
 pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
 
@@ -469,6 +475,23 @@ pub(all) struct PdfBookmarkColour {
 type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
 
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfColourSpace {
+  PdfDeviceGray
+  PdfDeviceRGB
+  PdfDeviceCMYK
+  PdfCalGray(PdfTristimulusPoint, PdfTristimulusPoint, Double)
+  PdfCalRGB(PdfTristimulusPoint, PdfTristimulusPoint, Array[Double], Array[Double])
+  PdfLab(PdfTristimulusPoint, PdfTristimulusPoint, Array[Double])
+  PdfICCBased(Int, PdfColourSpace, Array[Double], PdfObject?, PdfObject)
+  PdfIndexed(PdfColourSpace, Array[(Int, Array[Int])])
+  PdfPattern
+  PdfPatternWithBaseColourSpace(PdfColourSpace)
+  PdfSeparation(PdfName, PdfColourSpace, PdfObject)
+  PdfDeviceN(Array[PdfName], PdfColourSpace, PdfObject, PdfObject)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfColourSpace::debug_name(Self) -> String
+pub fn PdfColourSpace::name(Self) -> PdfName?
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
 
@@ -861,6 +884,12 @@ pub(all) enum PdfStreamData {
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int)
   TargetOtherDocPageNumber(Int)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTristimulusPoint {
+  x : Double
+  y : Double
+  z : Double
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfUnit {

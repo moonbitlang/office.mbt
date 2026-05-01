@@ -352,6 +352,12 @@ MoonBit consequences for this project:
    `pdfspace`, `pdfimage`, and `pdfjpeg` in that order. Treat encoding
    conversion as byte-sensitive: PDF strings remain `Bytes`, decoded human text
    becomes `String` only through named encoding helpers.
+   Status: started with a `pdf_space` foundation for typed colour spaces,
+   CamlPDF-compatible debug names, separation colourant names, direct device
+   colour-space alias parsing, pattern-with-base parsing, and object rendering
+   for the currently supported direct colour spaces. ICCBased, Indexed table
+   parsing, Separation/DeviceN functions, and image/JPEG support remain
+   deferred.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics
