@@ -428,7 +428,8 @@ MoonBit consequences for this project:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
    subset now includes common set, logic, double-arrow, and math glyphs from
-   CamlPDF's Symbol encoding table.
+   CamlPDF's Symbol encoding table. The ZapfDingbats subset now includes the
+   cross/star glyph block before the existing filled-star coverage.
    General `pdfcmap` parsing, full Adobe Glyph List coverage, broader
    MacExpert coverage, and broader Symbol/ZapfDingbats coverage remain
    deferred.
