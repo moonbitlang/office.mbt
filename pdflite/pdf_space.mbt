@@ -255,25 +255,14 @@ fn pdf_space_read_indexed_table(
 }
 
 ///|
-fn pdf_space_stream_data(object : PdfObject) -> BytesView raise PdfError {
-  match pdf_decode_stream(object) {
-    PdfStreamObject(stream) =>
-      match stream.data {
-        StreamGot(data) => data[:]
-        _ => raise StreamDataExpected
-      }
-    _ => raise ParseStreamExpected
-  }
-}
-
-///|
 fn PdfDocument::pdf_space_indexed_lookup_data(
   self : PdfDocument,
   lookup_data : PdfObject,
 ) -> BytesView? raise PdfError {
   match self.direct(lookup_data) {
     PdfString(data) => Some(data[:])
-    PdfStreamObject(_) as stream => Some(pdf_space_stream_data(stream))
+    PdfStreamObject(stream) =>
+      Some(pdf_stream_data_view(pdf_decode_stream_value(stream).data))
     _ => None
   }
 }

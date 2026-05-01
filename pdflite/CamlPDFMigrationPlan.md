@@ -681,9 +681,12 @@ MoonBit consequences for this project:
     invalid deferred stream slices. Content coverage now removes
     `pdf_content.mbt` from the uncovered-line report by testing remaining
     inline-image DCT branches and replacing an impossible post-decode fallback
-    with a private stream-returning decoder helper. A refreshed coverage pass
-    reports 212 uncovered lines in 5 files: the template executable `cmd/main`,
-    plus remaining branches in function, image, colour-space, and text handling.
+    with a private stream-returning decoder helper. Colour-space stream-table
+    coverage now removes `pdf_space.mbt` from the uncovered-line report by
+    reusing that private stream-returning decoder at the indexed-table
+    ownership boundary. A refreshed coverage pass reports 210 uncovered lines
+    in 4 files: the template executable `cmd/main`, plus remaining branches in
+    function, image, and text handling.
 
 ## Update Discipline
 
