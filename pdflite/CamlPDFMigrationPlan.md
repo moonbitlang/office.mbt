@@ -395,7 +395,10 @@ MoonBit consequences for this project:
     `/Info` dictionary through the merged trailer. Safe catalog-entry retention
     now carries first-seen non-page/non-handled catalog entries, such as viewer
     preferences, while dropping `/OpenAction` and other entries that require
-    dedicated merge semantics.
+    dedicated merge semantics. Duplicate-font removal is started with
+    CamlPDF-style identical owned-stream coalescing: references to duplicate
+    `StreamGot` objects are rewritten to the first matching stream, and
+    `pdf_merge_documents` can run this pass behind an explicit option.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

@@ -397,6 +397,7 @@ pub fn pdf_merge_documents(
   retain_named_destinations? : Bool = true,
   retain_info? : Bool = true,
   retain_catalog_entries? : Bool = true,
+  remove_duplicate_fonts? : Bool = false,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
@@ -519,9 +520,13 @@ pub fn pdf_merge_documents(
   } else {
     merged
   }
-  if retain_numbering && page_labels.length() > 0 {
+  let merged = if retain_numbering && page_labels.length() > 0 {
     merged.write_page_labels(page_labels)
   } else {
     merged
   }
+  if remove_duplicate_fonts {
+    merged.remove_duplicate_fonts()
+  }
+  merged
 }
