@@ -409,6 +409,9 @@ MoonBit consequences for this project:
    `EI` byte sequences inside payloads. Text-delimited inline image filters
    whose first filter is ASCIIHex or ASCII85 now decode through the stream
    codec pipeline and are flattened without stale filter metadata.
+   The CamlPDF `concat_bytess` helper is exposed as
+   `pdf_content_concat_streams`, preserving the whitespace inserted between
+   split content streams before parsing.
    Filter-aware binary inline image compression and broader resource-dependent
    inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

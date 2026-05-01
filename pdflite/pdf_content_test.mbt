@@ -641,6 +641,19 @@ test "PdfDocument parse_content_ops inserts whitespace between split streams" {
 }
 
 ///|
+test "pdf_content_concat_streams inserts whitespace between split bytes" {
+  @test.assert_eq(
+    @pdflite.pdf_content_concat_streams([
+      content_bytes_for_test("q"),
+      content_bytes_for_test("Q"),
+      content_bytes_for_test("BT"),
+    ]),
+    content_bytes_for_test("q Q BT"),
+  )
+  @test.assert_eq(@pdflite.pdf_content_concat_streams([]), Bytes::new(0))
+}
+
+///|
 test "PdfDocument parse_content_ops reports non-stream content objects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(10, PdfInteger(42))

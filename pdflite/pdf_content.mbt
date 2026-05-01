@@ -467,7 +467,7 @@ pub fn pdf_content_stream_of_ops(
 }
 
 ///|
-fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
+pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
   let output : Array[Byte] = []
   for stream in streams {
     if output.length() > 0 {
