@@ -104,6 +104,36 @@ test "pdf_ascii85_decode reports malformed data" {
 }
 
 ///|
+test "pdf_lzw_decode expands clear literal dictionary and eod codes" {
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 32])),
+    codec_ascii_for_test("A"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 72, 80, 40, 8])),
+    codec_ascii_for_test("ABAB"),
+  )
+}
+
+///|
+test "pdf_lzw_decode handles the repeated previous-code case" {
+  @test.assert_eq(
+    try! @pdflite.pdf_lzw_decode(codec_bytes_for_test([128, 16, 96, 80, 16])),
+    codec_ascii_for_test("AAA"),
+  )
+}
+
+///|
+test "pdf_lzw_decode reports malformed input codes" {
+  let result : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_lzw_decode(
+    codec_bytes_for_test([128, 75, 32, 32]),
+  )
+  guard result is Err(@pdflite.PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+}
+
+///|
 test "pdf_decode_filter_bytes dispatches supported filter names" {
   @test.assert_eq(
     try! @pdflite.pdf_decode_filter_bytes(
@@ -132,6 +162,13 @@ test "pdf_decode_filter_bytes dispatches supported filter names" {
       codec_ascii_for_test("raw"),
     ),
     codec_ascii_for_test("raw"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_filter_bytes(
+      codec_name_for_test("/LZW"),
+      codec_bytes_for_test([128, 16, 96, 32]),
+    ),
+    codec_ascii_for_test("A"),
   )
 }
 

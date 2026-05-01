@@ -207,6 +207,155 @@ pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
 }
 
 ///|
+fn pdf_lzw_next_code(
+  bits : BitStream,
+  code_length : Int,
+) -> Int? raise PdfError {
+  try bits.get_value_int(code_length) catch {
+    EndOfInput => None
+    _ => raise InvalidLZWData
+  } noraise {
+    value => Some(value)
+  }
+}
+
+///|
+fn pdf_lzw_decode_code(
+  code : Int,
+  prefix_code : Array[Int],
+  append_character : Array[Int],
+  next_code : Int,
+) -> Array[Int] raise PdfError {
+  if code < 0 || code >= next_code || code >= prefix_code.length() {
+    raise InvalidLZWData
+  }
+  let stack : Array[Int] = []
+  let mut current = code
+  let mut depth = 0
+  while current > 255 {
+    if current >= next_code || current >= prefix_code.length() || depth > 8192 {
+      raise InvalidLZWData
+    }
+    stack.push(append_character[current])
+    current = prefix_code[current]
+    depth += 1
+  }
+  if current < 0 || current > 255 {
+    raise InvalidLZWData
+  }
+  let output : Array[Int] = [current]
+  if stack.length() > 0 {
+    for i = stack.length() - 1; i >= 0; i = i - 1 {
+      output.push(stack[i])
+    }
+  }
+  output
+}
+
+///|
+fn pdf_lzw_read_non_clear_code(
+  bits : BitStream,
+  code_length : Int,
+) -> Int? raise PdfError {
+  let mut code = 256
+  while code == 256 {
+    match pdf_lzw_next_code(bits, code_length) {
+      None => break None
+      Some(value) => code = value
+    }
+  } nobreak {
+    Some(code)
+  }
+}
+
+///|
+fn pdf_lzw_output_literal(
+  output : Array[Byte],
+  code : Int,
+) -> Unit raise PdfError {
+  if code < 0 || code > 255 {
+    raise InvalidLZWData
+  }
+  output.push(code.to_byte())
+}
+
+///|
+pub fn pdf_lzw_decode(
+  data : PdfBytes,
+  early_change? : Int = 1,
+) -> PdfBytes raise PdfError {
+  let prefix_code = Array::make(8192, 0)
+  let append_character = Array::make(8192, 0)
+  let bits = bitstream_of_bytes(data)
+  let output : Array[Byte] = []
+  let mut code_length = 9
+  let mut next_code = 258
+  let mut old_code = 256
+  let mut character = 0
+  match pdf_lzw_read_non_clear_code(bits, code_length) {
+    None | Some(257) => Bytes::from_array(output)
+    Some(first_code) => {
+      pdf_lzw_output_literal(output, first_code)
+      old_code = first_code
+      character = first_code
+      let mut finished = false
+      while !finished {
+        match pdf_lzw_next_code(bits, code_length) {
+          None => finished = true
+          Some(257) => finished = true
+          Some(256) => {
+            code_length = 9
+            next_code = 258
+            old_code = 256
+            match pdf_lzw_read_non_clear_code(bits, code_length) {
+              None | Some(257) => finished = true
+              Some(code) => {
+                pdf_lzw_output_literal(output, code)
+                old_code = code
+                character = code
+              }
+            }
+          }
+          Some(new_code) => {
+            let chars = if new_code == next_code {
+              let expanded = pdf_lzw_decode_code(
+                old_code, prefix_code, append_character, next_code,
+              )
+              expanded.push(character)
+              expanded
+            } else if new_code < next_code {
+              pdf_lzw_decode_code(
+                new_code, prefix_code, append_character, next_code,
+              )
+            } else {
+              raise InvalidLZWData
+            }
+            if chars.length() == 0 {
+              raise InvalidLZWData
+            }
+            character = chars[0]
+            for value in chars {
+              pdf_lzw_output_literal(output, value)
+            }
+            if next_code < prefix_code.length() {
+              prefix_code[next_code] = old_code
+              append_character[next_code] = character
+              next_code += 1
+              match next_code + early_change {
+                512 | 1024 | 2048 => code_length += 1
+                _ => ()
+              }
+            }
+            old_code = new_code
+          }
+        }
+      }
+      Bytes::from_array(output)
+    }
+  }
+}
+
+///|
 fn pdf_filter_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -238,6 +387,8 @@ pub fn pdf_decode_filter_bytes(
     pdf_ascii85_decode(data)
   } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
     pdf_run_length_decode(data)
+  } else if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+    pdf_lzw_decode(data)
   } else {
     raise FilterNotSupported(filter)
   }

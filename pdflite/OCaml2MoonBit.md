@@ -184,6 +184,17 @@ moon run -c 'fn main { let m : @hashmap.HashMap[Int, String] = @hashmap.HashMap:
 Code files do not contain OCaml-style `open`. Add package imports in
 `moon.pkg`, then call imported packages with their `@alias`.
 
+```sh
+moon run -c 'fn first_positive(xs : Array[Int]) -> Int? { let mut i = 0; while i < xs.length() { if xs[i] > 0 { break Some(xs[i]) }; i += 1 } nobreak { None } }
+fn main { println(first_positive([-2, 0, 7]).unwrap()); println(first_positive([-2, 0]) is None) }'
+# 7
+# true
+```
+
+MoonBit `while` loops may produce a value with `break value`; the branch used
+when the loop condition becomes false is `nobreak { ... }`. Older examples may
+spell this as `else`, but that form is deprecated.
+
 ## Core Porting Rules
 
 ### Strings and Bytes

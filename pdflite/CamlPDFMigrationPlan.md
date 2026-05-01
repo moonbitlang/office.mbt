@@ -227,19 +227,21 @@ MoonBit consequences for this project:
    Low-level RunLength encode/decode is also started, with literal chunks,
    repeat chunks, EOD marker handling, and tolerant missing-EOD decode
    behavior. A first filter-name dispatch layer maps `/ASCIIHexDecode`/`/AHx`,
-   `/ASCII85Decode`/`/A85`, `/RunLengthDecode`/`/RL`, and identity `/Crypt` to
-   those byte codecs; unsupported filters such as `/FlateDecode` report
-   `FilterNotSupported`. Owned `StreamGot` stream dictionary integration is
-   started for one-stage decode and explicit encode with direct `/Filter` or
-   `/F` entries, first-filter array removal, `/DecodeParms` array advancement,
-   and `/Length` refresh. A bounded full decode loop now removes all currently
-   supported filters from owned streams. Predictor decoding is started for
-   TIFF predictor 2 at 8 bpc and PNG row predictors, and owned stream decode now
-   applies the first direct `/DecodeParms` or `/DP` predictor. Predictor
-   encoding is started for PNG Sub (`11`) and PNG Up (`12`) rows, including
-   explicit negative-delta normalization to PDF byte range. Owned stream encode
-   can now add a filter plus direct `/DecodeParms` predictor dictionary and
-   round-trip through owned stream decode. Indirect filter dictionaries,
+   `/ASCII85Decode`/`/A85`, `/RunLengthDecode`/`/RL`, `/LZWDecode`/`/LZW`,
+   and identity `/Crypt` to those byte codecs; unsupported filters such as
+   `/FlateDecode` report `FilterNotSupported`. Low-level LZW decode is started
+   with clear/EOD handling and default EarlyChange 1. Owned `StreamGot` stream
+   dictionary integration is started for one-stage decode and explicit encode
+   with direct `/Filter` or `/F` entries, first-filter array removal,
+   `/DecodeParms` array advancement, and `/Length` refresh. A bounded full
+   decode loop now removes all currently supported filters from owned streams.
+   Predictor decoding is started for TIFF predictor 2 at 8 bpc and PNG row
+   predictors, and owned stream decode now applies the first direct
+   `/DecodeParms` or `/DP` predictor. Predictor encoding is started for PNG Sub
+   (`11`) and PNG Up (`12`) rows, including explicit negative-delta
+   normalization to PDF byte range. Owned stream encode can now add a filter
+   plus direct `/DecodeParms` predictor dictionary and round-trip through owned
+   stream decode. Indirect filter dictionaries, stream-level LZW `/EarlyChange`,
    deferred stream materialization, and other filters remain deferred.
 
 8. Page tree and content streams.
