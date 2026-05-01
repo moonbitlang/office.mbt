@@ -30,6 +30,31 @@ fn merge_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn merge_add_catalog_entry_for_test(
+  doc : @pdflite.PdfDocument,
+  key : @pdflite.PdfName,
+  value : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument {
+  let root = doc.lookup_object_or_null(doc.root())
+  let new_root = doc.add_object(try! root.add_dict_entry(key, value))
+  doc.set_root(new_root)
+  doc.set_trailer_dict(
+    try! doc
+    .trailer_dict()
+    .add_dict_entry(merge_name_for_test("/Root"), PdfIndirect(new_root)),
+  )
+  doc
+}
+
+///|
+fn merge_destination_object_for_test(
+  doc : @pdflite.PdfDocument,
+) -> @pdflite.PdfObject {
+  let page_refs = try! doc.page_reference_numbers()
+  @pdflite.pdf_object_of_destination(DestFit(TargetPageObject(page_refs[0])))
+}
+
+///|
 fn merge_ocg_doc_for_test(number : Int, label : String) -> @pdflite.PdfDocument {
   let doc = merge_one_page_doc_for_test(1, 5)
   try! doc.write_optional_content_groups({
@@ -53,6 +78,27 @@ fn merge_ocg_doc_for_test(number : Int, label : String) -> @pdflite.PdfDocument 
 }
 
 ///|
+fn merge_oldstyle_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let dests : @pdflite.PdfObject = PdfDictionary([
+    (merge_name_for_test(name), merge_destination_object_for_test(doc)),
+  ])
+  merge_add_catalog_entry_for_test(doc, merge_name_for_test("/Dests"), dests)
+}
+
+///|
+fn merge_nametree_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let tree = doc.build_name_tree([
+    (@ascii.encode(name), merge_destination_object_for_test(doc)),
+  ])
+  let names : @pdflite.PdfObject = PdfDictionary([
+    (merge_name_for_test("/Dests"), tree),
+  ])
+  merge_add_catalog_entry_for_test(doc, merge_name_for_test("/Names"), names)
+}
+
+///|
 fn merge_acroform_doc_for_test(
   field_number : Int,
   label : String,
@@ -68,15 +114,7 @@ fn merge_acroform_doc_for_test(
   let form : @pdflite.PdfObject = PdfDictionary([
     (key_fields, PdfArray([PdfIndirect(field_number)])),
   ])
-  let root = doc.lookup_object_or_null(doc.root())
-  let new_root = doc.add_object(try! root.add_dict_entry(key_acroform, form))
-  doc.set_root(new_root)
-  doc.set_trailer_dict(
-    try! doc
-    .trailer_dict()
-    .add_dict_entry(merge_name_for_test("/Root"), PdfIndirect(new_root)),
-  )
-  doc
+  merge_add_catalog_entry_for_test(doc, key_acroform, form)
 }
 
 ///|
@@ -207,6 +245,41 @@ test "pdf_merge_documents merges AcroForm fields" {
       without_acroform.lookup_object_or_null(without_acroform.root()),
     ),
     None,
+  )
+}
+
+///|
+test "pdf_merge_documents retains and retargets named destinations" {
+  let oldstyle_name = merge_name_for_test("/First")
+  let first = merge_oldstyle_dest_doc_for_test("/First")
+  let second = merge_nametree_dest_doc_for_test("second")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfNameObject(oldstyle_name)),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! merged.page_number_of_target(
+      try! merged.read_destination(PdfString(@ascii.encode("second"))),
+    ),
+    2,
+  )
+  let without_destinations = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_named_destinations=false,
+  )
+  @test.assert_eq(
+    try! without_destinations.read_destination(PdfNameObject(oldstyle_name)),
+    DestNamed(oldstyle_name),
+  )
+  @test.assert_eq(
+    try! without_destinations.read_destination(
+      PdfString(@ascii.encode("second")),
+    ),
+    DestString(@ascii.encode("second")),
   )
 }
 

@@ -34,8 +34,18 @@ fn pdf_merge_acroform_key() -> PdfName {
 }
 
 ///|
+fn pdf_merge_dests_key() -> PdfName {
+  pdf_merge_name("/Dests")
+}
+
+///|
 fn pdf_merge_fields_key() -> PdfName {
   pdf_merge_name("/Fields")
+}
+
+///|
+fn pdf_merge_names_key() -> PdfName {
+  pdf_merge_name("/Names")
 }
 
 ///|
@@ -113,6 +123,66 @@ fn pdf_merge_acroforms(
 }
 
 ///|
+fn PdfDocument::pdf_merge_oldstyle_destinations(
+  self : PdfDocument,
+  changes : ArrayView[(Int, Int)],
+) -> Array[(PdfName, PdfObject)] raise PdfError {
+  match self.pdf_merge_catalog_entry(pdf_merge_dests_key()) {
+    Some(PdfDictionary(entries)) => {
+      let output : Array[(PdfName, PdfObject)] = []
+      for entry in entries {
+        let (key, destination) = entry
+        output.push(
+          (
+            key,
+            pdf_object_of_destination(
+              pdf_merge_renumber_destination(
+                self.read_destination(destination, shallow=true),
+                changes,
+              ),
+            ),
+          ),
+        )
+      }
+      output
+    }
+    _ => []
+  }
+}
+
+///|
+fn PdfDocument::pdf_merge_nametree_destinations(
+  self : PdfDocument,
+  changes : ArrayView[(Int, Int)],
+) -> Array[(PdfBytes, PdfObject)] raise PdfError {
+  match self.pdf_merge_catalog_entry(pdf_merge_names_key()) {
+    Some(names) =>
+      match self.lookup_direct(pdf_merge_dests_key(), names) {
+        Some(dests_tree) => {
+          let output : Array[(PdfBytes, PdfObject)] = []
+          for entry in self.read_name_tree(dests_tree) {
+            let (key, destination) = entry
+            output.push(
+              (
+                key,
+                pdf_object_of_destination(
+                  pdf_merge_renumber_destination(
+                    self.read_destination(destination, shallow=true),
+                    changes,
+                  ),
+                ),
+              ),
+            )
+          }
+          output
+        }
+        None => []
+      }
+    None => []
+  }
+}
+
+///|
 fn PdfDocument::pdf_merge_add_catalog_entry(
   self : PdfDocument,
   key : PdfName,
@@ -130,6 +200,32 @@ fn PdfDocument::pdf_merge_add_catalog_entry(
     .add_dict_entry(pdf_merge_root_key(), PdfIndirect(new_root)),
   )
   self
+}
+
+///|
+fn PdfDocument::pdf_merge_add_named_destinations(
+  self : PdfDocument,
+  oldstyle_destinations : ArrayView[(PdfName, PdfObject)],
+  nametree_destinations : ArrayView[(PdfBytes, PdfObject)],
+) -> PdfDocument raise PdfError {
+  let pdf = if oldstyle_destinations.length() > 0 {
+    self.pdf_merge_add_catalog_entry(
+      pdf_merge_dests_key(),
+      PdfDictionary([ for entry in oldstyle_destinations => entry ]),
+    )
+  } else {
+    self
+  }
+  if nametree_destinations.length() > 0 {
+    pdf.pdf_merge_add_catalog_entry(
+      pdf_merge_names_key(),
+      PdfDictionary([
+        (pdf_merge_dests_key(), pdf.build_name_tree(nametree_destinations)),
+      ]),
+    )
+  } else {
+    pdf
+  }
 }
 
 ///|
@@ -197,6 +293,7 @@ pub fn pdf_merge_documents(
   retain_bookmarks? : Bool = true,
   retain_optional_content? : Bool = true,
   retain_acroforms? : Bool = true,
+  retain_named_destinations? : Bool = true,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
@@ -230,9 +327,12 @@ pub fn pdf_merge_documents(
   let pages : Array[PdfPage] = []
   let old_page_numbers : Array[Int] = []
   let bookmarks : Array[PdfBookmark] = []
+  let oldstyle_destinations : Array[(PdfName, PdfObject)] = []
+  let nametree_destinations : Array[(PdfBytes, PdfObject)] = []
   for document in staged {
     merged.pdf_merge_copy_objects_from(document)
-    for page_number in document.page_reference_numbers() {
+    let old_page_numbers_for_document = document.page_reference_numbers()
+    for page_number in old_page_numbers_for_document {
       old_page_numbers.push(page_number)
     }
     if retain_bookmarks {
@@ -246,6 +346,18 @@ pub fn pdf_merge_documents(
   }
   let page_root_number = merged.add_pagetree(pages)
   ignore(merged.add_root(page_root_number, []))
+  let new_page_numbers = merged.page_reference_numbers()
+  let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
+  if retain_named_destinations {
+    for document in staged {
+      for entry in document.pdf_merge_oldstyle_destinations(changes) {
+        oldstyle_destinations.push(entry)
+      }
+      for entry in document.pdf_merge_nametree_destinations(changes) {
+        nametree_destinations.push(entry)
+      }
+    }
+  }
   let merged = match optional_content {
     Some(content) => merged.write_optional_content_groups(content)
     None => merged
@@ -258,10 +370,15 @@ pub fn pdf_merge_documents(
       )
     None => merged
   }
-  let new_page_numbers = merged.page_reference_numbers()
+  let merged = if retain_named_destinations {
+    merged.pdf_merge_add_named_destinations(
+      oldstyle_destinations, nametree_destinations,
+    )
+  } else {
+    merged
+  }
   merged.remove_unreferenced()
   let merged = if retain_bookmarks && bookmarks.length() > 0 {
-    let changes = pdf_page_reference_changes(old_page_numbers, new_page_numbers)
     merged.add_bookmarks(
       [
         for bookmark in bookmarks => {

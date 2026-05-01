@@ -388,7 +388,10 @@ MoonBit consequences for this project:
     page tree. Merge optional-content retention now combines already-renumbered
     OCG metadata before unreferenced imported OCG objects are pruned. Basic
     AcroForm merge support now flattens retained `/Fields` arrays while
-    preserving referenced field objects through the final cleanup.
+    preserving referenced field objects through the final cleanup. Named
+    destination retention now merges old-style catalog `/Dests` and name-tree
+    `/Names` `/Dests`, retargeting page-object destinations to the merged page
+    tree.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the
