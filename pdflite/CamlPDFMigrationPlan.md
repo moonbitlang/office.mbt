@@ -221,7 +221,9 @@ MoonBit consequences for this project:
    builds a temporary offset table before materializing objects, so recovered
    streams can resolve plain indirect `/Length n 0 R` entries, and the public
    reader can now recover around unreadable stream lengths when another
-   reconstructed object supplies the trailer root.
+   reconstructed object supplies the trailer root. Public reconstruction also
+   skips stream objects with malformed `stream`, `endstream`, or `endobj`
+   markers when a later reconstructed catalog remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset. Reader
