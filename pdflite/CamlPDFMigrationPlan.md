@@ -144,7 +144,9 @@ MoonBit consequences for this project:
    parameters, and `FixedArray` for fixed OCaml-array semantics.
    Status: started with `PdfObject`, `PdfStream`, `ToGet`, ordered dictionary
    construction, immediate lookup, add/replace/remove helpers, stream
-   dictionary mutation, and tests preserving CamlPDF's new-key dictionary order.
+   dictionary mutation, object map entries, parsed/deferred object states,
+   document defaults, add/remove object logging, and tests preserving CamlPDF's
+   new-key dictionary order.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:

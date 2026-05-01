@@ -1,0 +1,88 @@
+///|
+test "PdfObjectMap stores parsed and deferred object states" {
+  let map = @pdflite.pdf_object_map_empty()
+  map.set_entry(3, @pdflite.pdf_object_entry(ObjectParsed(PdfInteger(30))))
+  map.set_entry(
+    9,
+    @pdflite.pdf_object_entry(
+      ObjectToParseFromObjectStream({ object_stream_number: 5, index: 1 }),
+    ),
+  )
+  @test.assert_eq(map.length(), 2)
+  @test.assert_eq(map.contains(3), true)
+  @test.assert_eq(map.object_numbers(), [3, 9])
+  @test.assert_eq(map.lookup_parsed_or_null(3), PdfInteger(30))
+  @test.assert_eq(map.lookup_parsed_or_null(9), PdfNull)
+  @test.assert_eq(map.lookup_parsed_or_null(12), PdfNull)
+}
+
+///|
+test "PdfObjects add and remove objects with CamlPDF-style event log" {
+  let objects = @pdflite.pdf_objects_empty()
+  let first = objects.add_object(PdfInteger(10))
+  @test.assert_eq(first, 1)
+  objects.add_object_given_number(7, PdfBoolean(true))
+  @test.assert_eq(objects.max_object_number(), 7)
+  @test.assert_eq(objects.object_numbers(), [1, 7])
+  @test.assert_eq(objects.lookup_object_or_null(1), PdfInteger(10))
+  @test.assert_eq(objects.lookup_object_or_null(7), PdfBoolean(true))
+  objects.remove_object(1)
+  @test.assert_eq(objects.object_numbers(), [7])
+  @test.assert_eq(objects.lookup_object_or_null(1), PdfNull)
+  @test.assert_eq(objects.log(), [
+    (1, ObjectAltered),
+    (7, ObjectAltered),
+    (1, ObjectDeleted),
+  ])
+}
+
+///|
+test "PdfDocument empty document mirrors CamlPDF defaults" {
+  let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(doc.version(), (1, 0))
+  @test.assert_eq(doc.root(), 0)
+  @test.assert_eq(doc.object_count(), 0)
+  @test.assert_eq(doc.trailer_dict(), PdfDictionary([]))
+  @test.assert_eq(doc.was_linearized(), false)
+  @test.assert_eq(doc.first_xref(), 0)
+  @test.assert_eq(doc.revision_read(), 1)
+  doc.set_version(1, 7)
+  doc.set_root(4)
+  doc.set_was_linearized(true)
+  doc.set_first_xref(128)
+  doc.set_revision_read(2)
+  doc.set_trailer_dict(
+    @pdflite.pdf_dictionary([
+      (
+        @pdflite.pdf_name_of_bytes(
+          try! @pdflite.pdf_bytes_of_int_array([47, 82, 111, 111, 116]),
+        ),
+        PdfIndirect(4),
+      ),
+    ]),
+  )
+  @test.assert_eq(doc.version(), (1, 7))
+  @test.assert_eq(doc.root(), 4)
+  @test.assert_eq(doc.was_linearized(), true)
+  @test.assert_eq(doc.first_xref(), 128)
+  @test.assert_eq(doc.revision_read(), 2)
+  @test.assert_eq(doc.add_object_given_number(4, PdfDictionary([])), ())
+  @test.assert_eq(doc.lookup_object_or_null(4), PdfDictionary([]))
+}
+
+///|
+test "PdfDocument object helpers delegate to document object state" {
+  let doc = @pdflite.pdf_document_empty()
+  let first = doc.add_object(PdfInteger(1))
+  let second = doc.add_object(PdfInteger(2), generation=3)
+  @test.assert_eq((first, second), (1, 2))
+  @test.assert_eq(doc.object_numbers(), [1, 2])
+  @test.assert_eq(doc.lookup_object_or_null(2), PdfInteger(2))
+  doc.remove_object(first)
+  @test.assert_eq(doc.object_numbers(), [2])
+  @test.assert_eq(doc.event_log(), [
+    (1, ObjectAltered),
+    (2, ObjectAltered),
+    (1, ObjectDeleted),
+  ])
+}

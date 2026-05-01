@@ -3,6 +3,7 @@ package "bobzhang/pdflite"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
 }
 
 // Values
@@ -64,9 +65,17 @@ pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
 pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
 
+pub fn pdf_document_empty() -> PdfDocument
+
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
 pub let pdf_no_more : Int
+
+pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
+
+pub fn pdf_object_map_empty() -> PdfObjectMap
+
+pub fn pdf_objects_empty() -> PdfObjects
 
 pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
@@ -176,6 +185,11 @@ pub fn ByteCursor::seek(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::source(Self) -> String
 
+pub(all) struct ObjectStreamReference {
+  object_stream_number : Int
+  index : Int
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct PaperSize {
   unit : PdfUnit
   width : Double
@@ -185,6 +199,36 @@ pub fn PaperSize::height(Self) -> Double
 pub fn PaperSize::landscape(Self) -> Self
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
+
+pub struct PdfDocument {
+  mut major : Int
+  mut minor : Int
+  mut root : Int
+  objects : PdfObjects
+  mut trailer_dict : PdfObject
+  mut was_linearized : Bool
+  mut first_xref : Int
+  mut revision_read : Int
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
+pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
+pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
+pub fn PdfDocument::first_xref(Self) -> Int
+pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
+pub fn PdfDocument::object_count(Self) -> Int
+pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::remove_object(Self, Int) -> Unit
+pub fn PdfDocument::revision_read(Self) -> Int
+pub fn PdfDocument::root(Self) -> Int
+pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
+pub fn PdfDocument::set_revision_read(Self, Int) -> Unit
+pub fn PdfDocument::set_root(Self, Int) -> Unit
+pub fn PdfDocument::set_trailer_dict(Self, PdfObject) -> Unit
+pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
+pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
+pub fn PdfDocument::trailer_dict(Self) -> PdfObject
+pub fn PdfDocument::version(Self) -> (Int, Int)
+pub fn PdfDocument::was_linearized(Self) -> Bool
 
 pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
@@ -207,6 +251,51 @@ pub fn PdfObject::dictionary_view(Self) -> ArrayView[(PdfName, Self)]?
 pub fn PdfObject::lookup_immediate(Self, PdfName) -> Self?
 pub fn PdfObject::remove_dict_entry(Self, PdfName) -> Self raise PdfError
 pub fn PdfObject::replace_dict_entry(Self, PdfName, Self) -> Self raise PdfError
+
+pub(all) enum PdfObjectData {
+  ObjectParsed(PdfObject)
+  ObjectParsedAlreadyDecrypted(PdfObject)
+  ObjectToParse
+  ObjectToParseFromObjectStream(ObjectStreamReference)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfObjectEntry {
+  mut data : PdfObjectData
+  generation : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfObjectEvent {
+  ObjectAltered
+  ObjectDeleted
+} derive(Eq, ToJson, @debug.Debug)
+
+pub struct PdfObjectMap {
+  entries : @hashmap.HashMap[Int, PdfObjectEntry]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfObjectMap::contains(Self, Int) -> Bool
+pub fn PdfObjectMap::get_entry(Self, Int) -> PdfObjectEntry?
+pub fn PdfObjectMap::length(Self) -> Int
+pub fn PdfObjectMap::lookup_parsed_or_null(Self, Int) -> PdfObject
+pub fn PdfObjectMap::object_numbers(Self) -> Array[Int]
+pub fn PdfObjectMap::remove(Self, Int) -> Unit
+pub fn PdfObjectMap::set_entry(Self, Int, PdfObjectEntry) -> Unit
+
+pub struct PdfObjects {
+  mut max_object_number : Int
+  object_map : PdfObjectMap
+  object_stream_ids : @hashmap.HashMap[Int, Int]
+  log : Array[(Int, PdfObjectEvent)]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfObjects::add_object(Self, PdfObject, generation? : Int) -> Int
+pub fn PdfObjects::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
+pub fn PdfObjects::get_entry(Self, Int) -> PdfObjectEntry?
+pub fn PdfObjects::length(Self) -> Int
+pub fn PdfObjects::log(Self) -> Array[(Int, PdfObjectEvent)]
+pub fn PdfObjects::lookup_object_or_null(Self, Int) -> PdfObject
+pub fn PdfObjects::max_object_number(Self) -> Int
+pub fn PdfObjects::object_numbers(Self) -> Array[Int]
+pub fn PdfObjects::remove_object(Self, Int) -> Unit
+pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
 
 pub(all) struct PdfStream {
   mut dictionary : PdfObject
