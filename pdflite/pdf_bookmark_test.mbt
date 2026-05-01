@@ -187,6 +187,30 @@ test "PdfDocument read_bookmarks returns empty without outlines" {
 }
 
 ///|
+test "PdfDocument remove_bookmarks installs a catalog without outlines" {
+  let key_root = bookmark_name_for_test("/Root")
+  let doc = bookmark_document_for_test()
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(doc.root()))]))
+  let stripped = try! doc.remove_bookmarks()
+  @test.assert_eq((try! doc.read_bookmarks()).length(), 3)
+  @test.assert_eq(try! stripped.read_bookmarks(), [])
+  @test.assert_eq(stripped.root(), 6)
+  @test.assert_eq(
+    stripped.trailer_dict().lookup_immediate(key_root),
+    Some(PdfIndirect(6)),
+  )
+}
+
+///|
+test "PdfDocument remove_bookmarks requires a root catalog" {
+  let doc = @pdflite.pdf_document_empty()
+  let result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_bookmarks()
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}
+
+///|
 test "PdfDocument transform_bookmark transforms bookmark target" {
   let doc = @pdflite.pdf_document_empty()
   let bookmark : @pdflite.PdfBookmark = {

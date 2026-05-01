@@ -324,9 +324,10 @@ MoonBit consequences for this project:
    byte-preserving titles, direct destination and GoTo action target reading,
    `preserve_actions` behavior matching CamlPDF's shallow read path, `/Count`
    open-state handling, colour/flag extraction, root/no-outline behavior, and
-   bookmark target transformation through `PdfDestination`. Bookmark removal,
-   bookmark tree construction/replacement, and `change_pages` integration
-   remain deferred.
+   bookmark target transformation through `PdfDestination`. Bookmark removal
+   is also started as a returned-copy catalog replacement that drops
+   `/Outlines` and updates the trailer `/Root`. Bookmark tree
+   construction/replacement and `change_pages` integration remain deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

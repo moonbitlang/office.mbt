@@ -510,6 +510,7 @@ pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfB
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
+pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError

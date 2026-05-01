@@ -9,6 +9,11 @@ fn pdf_bookmark_outlines_key() -> PdfName {
 }
 
 ///|
+fn pdf_bookmark_root_key() -> PdfName {
+  pdf_bookmark_name("/Root")
+}
+
+///|
 fn pdf_bookmark_first_key() -> PdfName {
   pdf_bookmark_name("/First")
 }
@@ -262,6 +267,28 @@ pub fn PdfDocument::read_bookmarks(
     None => ()
   }
   output
+}
+
+///|
+pub fn PdfDocument::remove_bookmarks(
+  self : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  let pdf = self.copy()
+  let root_without_outlines = root.remove_dict_entry(
+    pdf_bookmark_outlines_key(),
+  )
+  let new_root = pdf.add_object(root_without_outlines)
+  pdf.set_root(new_root)
+  pdf.set_trailer_dict(
+    pdf
+    .trailer_dict()
+    .add_dict_entry(pdf_bookmark_root_key(), PdfIndirect(new_root)),
+  )
+  pdf
 }
 
 ///|
