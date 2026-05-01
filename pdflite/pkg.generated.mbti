@@ -79,6 +79,8 @@ pub fn pdf_is_whitespace_byte(Int) -> Bool
 
 pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
 
+pub fn pdf_lex_bytes(Bytes) -> Array[PdfLexeme] raise PdfError
+
 pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
@@ -94,6 +96,8 @@ pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 pub fn pdf_objects_empty() -> PdfObjects
 
 pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise PdfError
+
+pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
 
@@ -205,6 +209,8 @@ pub fn ByteCursor::lex_pdf_keyword(Self) -> PdfLexeme raise PdfError
 pub fn ByteCursor::lex_pdf_literal_string(Self) -> PdfLexeme raise PdfError
 pub fn ByteCursor::lex_pdf_name(Self) -> PdfLexeme raise PdfError
 pub fn ByteCursor::lex_pdf_number(Self) -> PdfLexeme
+pub fn ByteCursor::lex_pdf_token(Self) -> PdfLexeme raise PdfError
+pub fn ByteCursor::lex_pdf_tokens(Self) -> Array[PdfLexeme] raise PdfError
 pub fn ByteCursor::nudge(Self) -> Unit
 pub fn ByteCursor::peek(Self) -> Byte?
 pub fn ByteCursor::peek_byte(Self) -> Int

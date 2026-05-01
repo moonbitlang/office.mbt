@@ -392,6 +392,25 @@ fn pdf_view_starts_with_endobj(view : BytesView) -> Bool {
 }
 
 ///|
+fn ByteCursor::matches_pdf_ascii_at(
+  self : ByteCursor,
+  position : Int,
+  values : ArrayView[Int],
+) -> Bool {
+  if position < 0 || position + values.length() > self.data.length() {
+    false
+  } else {
+    for i = 0; i < values.length(); i = i + 1 {
+      if self.data[position + i].to_int() != values[i] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
 pub fn ByteCursor::lex_pdf_keyword(
   self : ByteCursor,
 ) -> PdfLexeme raise PdfError {
@@ -410,6 +429,16 @@ pub fn ByteCursor::lex_pdf_keyword(
     }
     _ => LexNone
   }
+}
+
+///|
+fn pdf_is_number_start_byte(value : Int) -> Bool {
+  (value >= 48 && value <= 57) || value == 43 || value == 45 || value == 46
+}
+
+///|
+fn pdf_is_lowercase_keyword_start_byte(value : Int) -> Bool {
+  value >= 97 && value <= 122
 }
 
 ///|
@@ -441,4 +470,64 @@ pub fn ByteCursor::lex_pdf_delimiter(self : ByteCursor) -> PdfLexeme {
     }
     _ => LexNone
   }
+}
+
+///|
+pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError {
+  self.drop_pdf_whitespace()
+  let position = self.absolute_position()
+  let value = self.peek_byte()
+  match value {
+    value if value == pdf_no_more => StopLexing
+    37 => self.lex_pdf_comment()
+    116 | 102 => self.lex_pdf_bool()
+    47 => self.lex_pdf_name()
+    value if pdf_is_number_start_byte(value) => self.lex_pdf_number()
+    91 | 93 => self.lex_pdf_delimiter()
+    40 => self.lex_pdf_literal_string()
+    60 =>
+      if self.matches_pdf_ascii_at(position, [60, 60]) {
+        self.lex_pdf_delimiter()
+      } else {
+        self.lex_pdf_hex_string()
+      }
+    62 => self.lex_pdf_delimiter()
+    82 => {
+      self.nudge()
+      LexR
+    }
+    115 =>
+      if self.matches_pdf_ascii_at(position, [
+          115, 116, 97, 114, 116, 120, 114, 101, 102,
+        ]) ||
+        self.matches_pdf_ascii_at(position, [115, 116, 114, 101, 97, 109]) {
+        StopLexing
+      } else {
+        self.lex_pdf_keyword()
+      }
+    73 => StopLexing
+    value if pdf_is_lowercase_keyword_start_byte(value) =>
+      self.lex_pdf_keyword()
+    _ => LexNone
+  }
+}
+
+///|
+pub fn ByteCursor::lex_pdf_tokens(
+  self : ByteCursor,
+) -> Array[PdfLexeme] raise PdfError {
+  let tokens : Array[PdfLexeme] = []
+  let mut done = false
+  while !done {
+    match self.lex_pdf_token() {
+      StopLexing | LexNone => done = true
+      token => tokens.push(token)
+    }
+  }
+  tokens
+}
+
+///|
+pub fn pdf_lex_bytes(data : PdfBytes) -> Array[PdfLexeme] raise PdfError {
+  byte_cursor_of_bytes(data).lex_pdf_tokens()
 }

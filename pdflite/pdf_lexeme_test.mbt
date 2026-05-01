@@ -197,3 +197,20 @@ test "ByteCursor lexes PDF keywords and rewinds malformed endobj suffixes" {
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexR)
   @test.assert_eq(try! cursor.lex_pdf_keyword(), LexEndStream)
 }
+
+///|
+test "ByteCursor lex_pdf_tokens scans primitive PDF object syntax" {
+  let tokens = try! @pdflite.pdf_lex_bytes(
+    lexeme_bytes_for_test([
+      37, 99, 10, 60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 80, 97, 103, 101, 32,
+      47, 65, 32, 91, 49, 32, 50, 32, 51, 32, 48, 32, 82, 93, 32, 47, 83, 32, 40,
+      65, 92, 110, 66, 41, 32, 62, 62, 32, 115, 116, 97, 114, 116, 120, 114, 101,
+      102,
+    ]),
+  )
+  @test.assert_eq(tokens.map(@pdflite.pdf_lexeme_debug_name), [
+    "LexComment", "LexLeftDict", "LexName", "LexName", "LexName", "LexLeftSquare",
+    "LexInt", "LexInt", "LexInt", "LexInt", "LexR", "LexRightSquare", "LexName",
+    "LexString", "LexRightDict",
+  ])
+}

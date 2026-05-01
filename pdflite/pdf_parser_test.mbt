@@ -92,3 +92,36 @@ test "pdf_parse_single_lexeme_object reports non-single and malformed inputs" {
     fail("expected ParseObjectExpected")
   }
 }
+
+///|
+test "pdf_parse_object_from_bytes lexes and parses primitive PDF bytes" {
+  let type_key = parser_name_for_test([47, 84, 121, 112, 101])
+  let media_box_key = parser_name_for_test([
+    47, 77, 101, 100, 105, 97, 66, 111, 120,
+  ])
+  let contents_key = parser_name_for_test([
+    47, 67, 111, 110, 116, 101, 110, 116, 115,
+  ])
+  let parsed = try! @pdflite.pdf_parse_object_from_bytes(
+    parser_bytes_for_test([
+      60, 60, 32, 47, 84, 121, 112, 101, 32, 47, 80, 97, 103, 101, 32, 47, 77, 101,
+      100, 105, 97, 66, 111, 120, 32, 91, 48, 32, 48, 32, 54, 49, 50, 32, 55, 57,
+      50, 93, 32, 47, 67, 111, 110, 116, 101, 110, 116, 115, 32, 53, 32, 48, 32,
+      82, 32, 62, 62,
+    ]),
+  )
+  let expected = @pdflite.pdf_dictionary([
+    (type_key, PdfNameObject(parser_name_for_test([47, 80, 97, 103, 101]))),
+    (
+      media_box_key,
+      @pdflite.pdf_array([
+        PdfInteger(0),
+        PdfInteger(0),
+        PdfInteger(612),
+        PdfInteger(792),
+      ]),
+    ),
+    (contents_key, PdfIndirect(5)),
+  ])
+  @test.assert_eq(parsed, expected)
+}

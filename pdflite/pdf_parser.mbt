@@ -201,3 +201,8 @@ pub fn pdf_parse_single_lexeme_object(
     raise ParseSingleObjectExpected
   }
 }
+
+///|
+pub fn pdf_parse_object_from_bytes(data : PdfBytes) -> PdfObject raise PdfError {
+  pdf_parse_single_lexeme_object(pdf_lex_bytes(data))
+}

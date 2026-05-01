@@ -165,7 +165,10 @@ MoonBit consequences for this project:
    `LexString` outputs and regression tests for escape handling. A primitive
    lexeme-to-object parser now covers comments, scalar objects, indirect
    references, arrays, dictionaries, and CamlPDF-style empty-dictionary recovery
-   for malformed dictionary contents.
+   for malformed dictionary contents. The primitive scanner can now lex object
+   syntax from `Bytes` into token arrays and parse a single object from bytes,
+   stopping before `stream`, `startxref`, and inline-image `ID` data until
+   stream-aware reading is implemented.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only
