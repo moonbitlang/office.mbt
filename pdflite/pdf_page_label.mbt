@@ -346,6 +346,31 @@ pub fn pdf_page_label_coalesce(
 }
 
 ///|
+pub fn pdf_page_label_merge(
+  pdfs : ArrayView[PdfDocument],
+  ranges : ArrayView[Array[Int]],
+) -> Array[PdfPageLabel] raise PdfError {
+  if pdfs.length() != ranges.length() {
+    raise PageTreeExpected
+  }
+  let labels : Array[PdfPageLabel] = []
+  let mut merged_page = 1
+  for index in 0..<pdfs.length() {
+    let source_labels = pdf_page_label_complete(pdfs[index].read_page_labels())
+    for page_number in ranges[index] {
+      match pdf_page_label_of_page_number(page_number, source_labels) {
+        Some(label) => {
+          labels.push({ ..label, start_page: merged_page })
+          merged_page += 1
+        }
+        None => raise PageTreeExpected
+      }
+    }
+  }
+  pdf_page_label_coalesce(labels)
+}
+
+///|
 fn pdf_page_label_style_of_object(object : PdfObject?) -> PdfPageLabelStyle {
   match object {
     Some(PdfNameObject(name)) if name == pdf_page_label_style_decimal_name() =>

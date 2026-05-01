@@ -155,6 +155,8 @@ pub fn pdf_page_label_coalesce(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
 
 pub fn pdf_page_label_complete(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
 
+pub fn pdf_page_label_merge(ArrayView[PdfDocument], ArrayView[Array[Int]]) -> Array[PdfPageLabel] raise PdfError
+
 pub fn pdf_page_label_of_page_number(Int, ArrayView[PdfPageLabel]) -> PdfPageLabel?
 
 pub fn pdf_page_label_of_single(Int, PdfPageLabel) -> PdfPageLabel

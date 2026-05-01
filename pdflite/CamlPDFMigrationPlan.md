@@ -352,8 +352,8 @@ MoonBit consequences for this project:
     number-tree reading, replacement writing, empty-list removal, returned
     catalog-copy updates, basic completion, bounded range insertion,
     single-page label lookup, rendered label bytes for
-    decimal/roman/letter/prefix-only styles, and adjacent range coalescing.
-    Merge helpers remain deferred.
+    decimal/roman/letter/prefix-only styles, adjacent range coalescing, and
+    merge-label construction for selected page ranges.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

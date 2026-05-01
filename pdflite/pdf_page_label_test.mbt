@@ -426,3 +426,94 @@ test "pdf_page_label_coalesce removes redundant adjacent ranges" {
     [first, kept_offset, kept_prefix],
   )
 }
+
+///|
+test "pdf_page_label_merge retargets selected page labels" {
+  let first_doc = page_label_catalog_document_for_test()
+  let first_labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(page_label_bytes_for_test("intro-")),
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 3,
+      start_value: 1,
+    },
+  ]
+  let first_doc = try! first_doc.write_page_labels(first_labels)
+  let second_doc = page_label_catalog_document_for_test()
+  let second_labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("sec-")),
+      start_page: 1,
+      start_value: 10,
+    },
+  ]
+  let second_doc = try! second_doc.write_page_labels(second_labels)
+  let merged = try! @pdflite.pdf_page_label_merge([first_doc, second_doc], [
+    [2, 3],
+    [1, 2],
+  ])
+  @test.assert_eq(merged, [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(page_label_bytes_for_test("intro-")),
+      start_page: 1,
+      start_value: 2,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 2,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("sec-")),
+      start_page: 3,
+      start_value: 10,
+    },
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(1, merged),
+    Some(page_label_bytes_for_test("intro-ii")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(2, merged),
+    Some(page_label_bytes_for_test("1")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(4, merged),
+    Some(page_label_bytes_for_test("sec-11")),
+  )
+}
+
+///|
+test "pdf_page_label_merge uses basic labels for unlabeled source PDFs" {
+  let doc = page_label_catalog_document_for_test()
+  let merged = try! @pdflite.pdf_page_label_merge([doc], [[2, 3]])
+  @test.assert_eq(merged, [
+    { ..@pdflite.pdf_page_label_basic, start_page: 1, start_value: 2 },
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(2, merged),
+    Some(page_label_bytes_for_test("3")),
+  )
+}
+
+///|
+test "pdf_page_label_merge rejects mismatched inputs" {
+  let doc = page_label_catalog_document_for_test()
+  let result : Result[Array[@pdflite.PdfPageLabel], Error] = try? @pdflite.pdf_page_label_merge(
+    [doc],
+    [],
+  )
+  guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected")
+  }
+}
