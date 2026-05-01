@@ -225,6 +225,17 @@ formatter at the serialization boundary instead of writing `Double::to_string()`
 directly.
 
 ```sh
+moon run -c 'fn main { println((1.23456789012345).to_string()); println((999999.9999999).to_string()) }'
+# 1.23456789012345
+# 999999.9999999
+```
+
+`Double::to_string()` is not a drop-in replacement for OCaml code that used an
+explicit `format_float` precision such as `"%.12g"`. If the OCaml program used a
+specific float formatter for serialized data, port that formatter as an
+explicit boundary function and test rounding/carry cases.
+
+```sh
 moon run -c 'fn main { let divisor = 1.0e308 * 1.0e308; let scale = 1.0 / divisor; println(scale == 0.0); println(divisor); println(scale) }'
 # true
 # Infinity

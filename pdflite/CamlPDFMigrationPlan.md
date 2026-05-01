@@ -213,8 +213,10 @@ MoonBit consequences for this project:
    primitive writer-reader round-trip test for parsed objects. Owned stream
    serialization now writes a direct `/Length` entry from the byte payload.
    Real number serialization now avoids exponent notation and includes the
-   CamlPDF fixed-six formatting branch for tiny non-integer real numbers.
-   Complete CamlPDF `format_real` `%.12g` precision parity remains deferred.
+   CamlPDF fixed-six formatting branch for tiny non-integer real numbers plus
+   12-significant-digit rounding for ordinary plain-decimal real numbers.
+   Remaining CamlPDF `format_real` precision parity for exponent-form
+   intermediate strings remains deferred.
    Writer-side lazy `StreamToGet` materialization now borrows the requested
    cursor slice during stream serialization. Incremental update handling,
    compressed xref streams, and encrypted output remain deferred.

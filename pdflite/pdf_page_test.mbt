@@ -4,6 +4,16 @@ fn page_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn page_rect_for_test(
+  min_x : Double,
+  min_y : Double,
+  max_x : Double,
+  max_y : Double,
+) -> @pdflite.PdfRectangle {
+  { min_x, min_y, max_x, max_y }
+}
+
+///|
 fn page_tree_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -552,7 +562,7 @@ test "pdf_minimum_valid_pdf creates a writable one-page document" {
   @test.assert_eq(parsed_pages[0].rotate, Rotate0)
   @test.assert_eq(
     try! parsed.parse_rectangle(parsed_pages[0].mediabox),
-    try! doc.parse_rectangle(pages[0].mediabox),
+    page_rect_for_test(0.0, 0.0, 595.2765, 841.89105),
   )
 }
 

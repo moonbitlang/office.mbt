@@ -4,6 +4,11 @@ fn writer_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn writer_ascii_for_test(text : String) -> @pdflite.PdfBytes {
+  @ascii.encode(text)
+}
+
+///|
 fn writer_concat_bytes_for_test(
   parts : ArrayView[@pdflite.PdfBytes],
 ) -> @pdflite.PdfBytes {
@@ -99,6 +104,21 @@ test "pdf_write_object renders real numbers without exponent notation" {
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfReal(large)),
     writer_bytes_for_test([49, 50, 53, 48, 48, 48, 48]),
+  )
+  let precise : Double = try! @strconv.from_str("1.23456789012345")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(precise)),
+    writer_ascii_for_test("1.23456789012"),
+  )
+  let carry : Double = try! @strconv.from_str("999999.9999999")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(carry)),
+    writer_ascii_for_test("1000000"),
+  )
+  let fractional : Double = try! @strconv.from_str("0.000123456789012345")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_object(PdfReal(fractional)),
+    writer_ascii_for_test("0.000123456789012"),
   )
 }
 
