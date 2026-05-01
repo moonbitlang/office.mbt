@@ -1370,6 +1370,154 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
 }
 
 ///|
+test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag" {
+  let key_title = crypt_name_for_test("/Title")
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let key_filter = crypt_name_for_test("/Filter")
+  let key_standard = crypt_name_for_test("/Standard")
+  let key_v = crypt_name_for_test("/V")
+  let key_r = crypt_name_for_test("/R")
+  let key_length = crypt_name_for_test("/Length")
+  let key_p = crypt_name_for_test("/P")
+  let key_cf = crypt_name_for_test("/CF")
+  let key_stdcf = crypt_name_for_test("/StdCF")
+  let key_auth_event = crypt_name_for_test("/AuthEvent")
+  let key_doc_open = crypt_name_for_test("/DocOpen")
+  let key_cfm = crypt_name_for_test("/CFM")
+  let key_v2 = crypt_name_for_test("/V2")
+  let key_encrypt_metadata = crypt_name_for_test("/EncryptMetadata")
+  let key_strf = crypt_name_for_test("/StrF")
+  let key_stmf = crypt_name_for_test("/StmF")
+  let key_type = crypt_name_for_test("/Type")
+  let key_metadata = crypt_name_for_test("/Metadata")
+  let doc = @pdflite.pdf_document_empty()
+  let plain_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("hello"))),
+  ])
+  let metadata_stream = crypt_stream_for_test(
+    [
+      (crypt_name_for_test("/Length"), PdfInteger(4)),
+      (key_type, PdfNameObject(key_metadata)),
+      (key_title, PdfString(@ascii.encode("meta"))),
+    ],
+    @ascii.encode("data"),
+  )
+  doc.add_object_given_number(1, plain_object)
+  doc.add_object_given_number(3, metadata_stream)
+  let encrypted = try! doc.encrypt_128bit_r4(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoExtract],
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    4,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    128,
+  )
+  let permissions = @pdflite.pdf_p_of_permissions([PdfNoExtract])
+  let file_key = @pdflite.pdf_encryption_file_key(
+    true,
+    @ascii.encode("user")[:],
+    4,
+    owner_entry[:],
+    permissions,
+    @ascii.encode("doc-id")[:],
+    128,
+  )
+  @test.assert_eq(
+    encrypted.lookup_object_or_null(1),
+    try! @pdflite.pdf_arc4_crypt_pdf_object(
+      1,
+      0,
+      file_key[:],
+      128,
+      plain_object,
+      no_encrypt_metadata=true,
+    ),
+  )
+  @test.assert_eq(encrypted.lookup_object_or_null(3), metadata_stream)
+  guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
+    is Some(PdfIndirect(encrypt_number)) else {
+    fail("expected indirect encryption dictionary")
+  }
+  let encrypt_dictionary = encrypted.lookup_object_or_null(encrypt_number)
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_filter),
+    Some(PdfNameObject(key_standard)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_v),
+    Some(PdfInteger(4)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_r),
+    Some(PdfInteger(4)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_length),
+    Some(PdfInteger(128)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_p),
+    Some(PdfInteger(permissions)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_encrypt_metadata),
+    Some(PdfBoolean(false)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_strf),
+    Some(PdfNameObject(key_stdcf)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_stmf),
+    Some(PdfNameObject(key_stdcf)),
+  )
+  guard encrypt_dictionary.lookup_immediate(key_cf) is Some(cf_dictionary) else {
+    fail("expected crypt filter dictionary")
+  }
+  guard cf_dictionary.lookup_immediate(key_stdcf) is Some(std_cf_dictionary) else {
+    fail("expected standard crypt filter")
+  }
+  @test.assert_eq(
+    std_cf_dictionary.lookup_immediate(key_length),
+    Some(PdfInteger(16)),
+  )
+  @test.assert_eq(
+    std_cf_dictionary.lookup_immediate(key_auth_event),
+    Some(PdfNameObject(key_doc_open)),
+  )
+  @test.assert_eq(
+    std_cf_dictionary.lookup_immediate(key_cfm),
+    Some(PdfNameObject(key_v2)),
+  )
+  let values = try! encrypted.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptARC4(128, 4))
+  @test.assert_eq(values.encrypt_metadata, false)
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(3), metadata_stream)
+  @test.assert_eq(
+    decrypted.denied_permissions,
+    @pdflite.pdf_permissions_of_p(permissions),
+  )
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    owner_decrypted.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(doc.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(doc.lookup_object_or_null(3), metadata_stream)
+}
+
+///|
 test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
   let owner_entry = try! @pdflite.pdf_make_owner_password_entry(

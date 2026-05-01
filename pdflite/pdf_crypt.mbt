@@ -599,6 +599,82 @@ pub fn PdfDocument::encrypt_128bit(
 }
 
 ///|
+pub fn PdfDocument::encrypt_128bit_r4(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  encrypt_metadata? : Bool = true,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  let no_encrypt_metadata = !encrypt_metadata
+  let (document, id) = self.with_file_id(file_id~)
+  let permissions = pdf_p_of_permissions(denied_permissions)
+  let owner_entry = pdf_make_owner_password_entry(
+    4, owner_password, user_password, 128,
+  )
+  let user_entry = pdf_make_user_password_entry(
+    no_encrypt_metadata,
+    user_password,
+    4,
+    owner_entry[:],
+    permissions,
+    id[:],
+    128,
+  )
+  let file_key = pdf_encryption_file_key(
+    no_encrypt_metadata,
+    user_password,
+    4,
+    owner_entry[:],
+    permissions,
+    id[:],
+    128,
+  )
+  let encrypted = document.arc4_crypt_parsed_objects(
+    file_key[:],
+    128,
+    no_encrypt_metadata~,
+  )
+  let std_cf = pdf_crypt_name("/StdCF")
+  let encrypt_dictionary : PdfObject = PdfDictionary([
+    (pdf_crypt_name("/Filter"), PdfNameObject(pdf_crypt_name("/Standard"))),
+    (pdf_crypt_name("/V"), PdfInteger(4)),
+    (
+      pdf_crypt_name("/CF"),
+      PdfDictionary([
+        (
+          std_cf,
+          PdfDictionary([
+            (pdf_crypt_name("/Length"), PdfInteger(16)),
+            (
+              pdf_crypt_name("/AuthEvent"),
+              PdfNameObject(pdf_crypt_name("/DocOpen")),
+            ),
+            (pdf_crypt_name("/CFM"), PdfNameObject(pdf_crypt_name("/V2"))),
+          ]),
+        ),
+      ]),
+    ),
+    (pdf_crypt_name("/EncryptMetadata"), PdfBoolean(encrypt_metadata)),
+    (pdf_crypt_name("/Length"), PdfInteger(128)),
+    (pdf_crypt_name("/R"), PdfInteger(4)),
+    (pdf_crypt_name("/O"), PdfString(owner_entry)),
+    (pdf_crypt_name("/U"), PdfString(user_entry)),
+    (pdf_crypt_name("/P"), PdfInteger(permissions)),
+    (pdf_crypt_name("/StrF"), PdfNameObject(std_cf)),
+    (pdf_crypt_name("/StmF"), PdfNameObject(std_cf)),
+  ])
+  let encrypt_number = encrypted.add_object(encrypt_dictionary)
+  encrypted.set_trailer_dict(
+    encrypted
+    .trailer_dict()
+    .add_dict_entry(pdf_crypt_name("/Encrypt"), PdfIndirect(encrypt_number)),
+  )
+  encrypted
+}
+
+///|
 fn PdfDocument::encrypt_arc4_standard(
   self : PdfDocument,
   user_password : BytesView,

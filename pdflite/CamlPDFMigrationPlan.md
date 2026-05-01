@@ -543,10 +543,12 @@ MoonBit consequences for this project:
     `/UE` and `/OE` file-key unwrap through AES-256-CBC with no padding.
     AESV3 `/Perms` parsing and validation is started for revision 5 file-key
     unwraps, including missing, short, corrupt marker, and `/P` mismatch errors.
-    Parsed-object output encryption is started with CamlPDF-style 40-bit and
-    128-bit ARC4: it preserves or installs trailer `/ID`, derives `/O` and
-    `/U`, encrypts parsed objects in a copy, installs an indirect `/Encrypt`
-    dictionary, and round-trips through the existing password decryption APIs.
+    Parsed-object output encryption is started with CamlPDF-style 40-bit ARC4,
+    128-bit ARC4 revision 3, and 128-bit ARC4 revision 4 crypt filters: it
+    preserves or installs trailer `/ID`, derives `/O` and `/U`, encrypts parsed
+    objects in a copy, installs an indirect `/Encrypt` dictionary, applies the
+    revision 4 `/EncryptMetadata` file-key and metadata-stream rules, and
+    round-trips through the existing password decryption APIs.
     Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
     structured unsupported errors until the remaining primitives are available.
     The document-level decryption entry points for parsed ARC4 and AESV2

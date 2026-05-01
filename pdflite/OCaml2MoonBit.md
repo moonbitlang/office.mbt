@@ -484,6 +484,19 @@ default. If a function parameter is optional-only, pass a non-default value with
 its label, for example `sample(xs=[1, 2, 3])`, not `sample([1, 2, 3])`.
 
 ```sh
+moon run -c 'fn f(a : Int, flag? : Bool = true, xs? : ArrayView[Int] = []) -> Int { if flag { a + xs.length() } else { a - xs.length() } }
+fn main { println(f(3, xs=[1, 2], flag=false)); println(f(3, flag=true)); println(f(3)) }'
+# 1
+# 3
+# 3
+```
+
+After required positional arguments, multiple optional arguments can be supplied
+by label in call-site order independent of their declaration order. This is a
+good fit for OCaml APIs that grow additional optional flags beside an existing
+optional input slice.
+
+```sh
 moon run -c 'struct R { x : Int } derive(Debug, Eq)
 fn default_r() -> R { { x: 1 } }
 fn f(r? : R = default_r()) -> Int { r.x }
