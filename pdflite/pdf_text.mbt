@@ -2035,6 +2035,32 @@ fn pdf_text_macexpert_glyphname(code : Int) -> PdfName? {
     0x58 => Some(pdf_text_name("/fl"))
     0x59 => Some(pdf_text_name("/ffi"))
     0x5A => Some(pdf_text_name("/ffl"))
+    0x61 => Some(pdf_text_name("/Asmall"))
+    0x62 => Some(pdf_text_name("/Bsmall"))
+    0x63 => Some(pdf_text_name("/Csmall"))
+    0x64 => Some(pdf_text_name("/Dsmall"))
+    0x65 => Some(pdf_text_name("/Esmall"))
+    0x66 => Some(pdf_text_name("/Fsmall"))
+    0x67 => Some(pdf_text_name("/Gsmall"))
+    0x68 => Some(pdf_text_name("/Hsmall"))
+    0x69 => Some(pdf_text_name("/Ismall"))
+    0x6A => Some(pdf_text_name("/Jsmall"))
+    0x6B => Some(pdf_text_name("/Ksmall"))
+    0x6C => Some(pdf_text_name("/Lsmall"))
+    0x6D => Some(pdf_text_name("/Msmall"))
+    0x6E => Some(pdf_text_name("/Nsmall"))
+    0x6F => Some(pdf_text_name("/Osmall"))
+    0x70 => Some(pdf_text_name("/Psmall"))
+    0x71 => Some(pdf_text_name("/Qsmall"))
+    0x72 => Some(pdf_text_name("/Rsmall"))
+    0x73 => Some(pdf_text_name("/Ssmall"))
+    0x74 => Some(pdf_text_name("/Tsmall"))
+    0x75 => Some(pdf_text_name("/Usmall"))
+    0x76 => Some(pdf_text_name("/Vsmall"))
+    0x77 => Some(pdf_text_name("/Wsmall"))
+    0x78 => Some(pdf_text_name("/Xsmall"))
+    0x79 => Some(pdf_text_name("/Ysmall"))
+    0x7A => Some(pdf_text_name("/Zsmall"))
     0xA1 => Some(pdf_text_name("/eightsuperior"))
     0xA2 => Some(pdf_text_name("/fourinferior"))
     0xA3 => Some(pdf_text_name("/threeinferior"))
@@ -2743,6 +2769,39 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_expert_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Asmall" => Some(0xF761)
+    "/Bsmall" => Some(0xF762)
+    "/Csmall" => Some(0xF763)
+    "/Dsmall" => Some(0xF764)
+    "/Esmall" => Some(0xF765)
+    "/Fsmall" => Some(0xF766)
+    "/Gsmall" => Some(0xF767)
+    "/Hsmall" => Some(0xF768)
+    "/Ismall" => Some(0xF769)
+    "/Jsmall" => Some(0xF76A)
+    "/Ksmall" => Some(0xF76B)
+    "/Lsmall" => Some(0xF76C)
+    "/Msmall" => Some(0xF76D)
+    "/Nsmall" => Some(0xF76E)
+    "/Osmall" => Some(0xF76F)
+    "/Psmall" => Some(0xF770)
+    "/Qsmall" => Some(0xF771)
+    "/Rsmall" => Some(0xF772)
+    "/Ssmall" => Some(0xF773)
+    "/Tsmall" => Some(0xF774)
+    "/Usmall" => Some(0xF775)
+    "/Vsmall" => Some(0xF776)
+    "/Wsmall" => Some(0xF777)
+    "/Xsmall" => Some(0xF778)
+    "/Ysmall" => Some(0xF779)
+    "/Zsmall" => Some(0xF77A)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_symbol_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Alpha" => Some(0x0391)
@@ -3219,13 +3278,18 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                 match pdf_text_codepoint_of_punctuation_glyphname(base_name) {
                   Some(codepoint) => Some([codepoint])
                   None =>
-                    match pdf_text_codepoint_of_symbol_glyphname(base_name) {
+                    match pdf_text_codepoint_of_expert_glyphname(base_name) {
                       Some(codepoint) => Some([codepoint])
                       None =>
                         match
-                          pdf_text_codepoint_of_dingbat_glyphname(base_name) {
+                          pdf_text_codepoint_of_symbol_glyphname(base_name) {
                           Some(codepoint) => Some([codepoint])
-                          None => None
+                          None =>
+                            match
+                              pdf_text_codepoint_of_dingbat_glyphname(base_name) {
+                              Some(codepoint) => Some([codepoint])
+                              None => None
+                            }
                         }
                     }
                 }

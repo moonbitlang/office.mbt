@@ -2328,6 +2328,54 @@ test "PdfTextExtractor extracts MacExpert fractions" {
 }
 
 ///|
+test "PdfTextExtractor extracts MacExpert small capitals" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfHelvetica, PdfMacExpertEncoding),
+  )
+  let extractor = standard_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D,
+    0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    0xF761, 0xF762, 0xF763, 0xF764, 0xF765, 0xF766, 0xF767, 0xF768, 0xF769, 0xF76A,
+    0xF76B, 0xF76C, 0xF76D, 0xF76E, 0xF76F, 0xF770, 0xF771, 0xF772, 0xF773, 0xF774,
+    0xF775, 0xF776, 0xF777, 0xF778, 0xF779, 0xF77A,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/Asmall"),
+    text_name_for_test("/Bsmall"),
+    text_name_for_test("/Csmall"),
+    text_name_for_test("/Dsmall"),
+    text_name_for_test("/Esmall"),
+    text_name_for_test("/Fsmall"),
+    text_name_for_test("/Gsmall"),
+    text_name_for_test("/Hsmall"),
+    text_name_for_test("/Ismall"),
+    text_name_for_test("/Jsmall"),
+    text_name_for_test("/Ksmall"),
+    text_name_for_test("/Lsmall"),
+    text_name_for_test("/Msmall"),
+    text_name_for_test("/Nsmall"),
+    text_name_for_test("/Osmall"),
+    text_name_for_test("/Psmall"),
+    text_name_for_test("/Qsmall"),
+    text_name_for_test("/Rsmall"),
+    text_name_for_test("/Ssmall"),
+    text_name_for_test("/Tsmall"),
+    text_name_for_test("/Usmall"),
+    text_name_for_test("/Vsmall"),
+    text_name_for_test("/Wsmall"),
+    text_name_for_test("/Xsmall"),
+    text_name_for_test("/Ysmall"),
+    text_name_for_test("/Zsmall"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF761), Some(0x61))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF76D), Some(0x6D))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF77A), Some(0x7A))
+}
+
+///|
 test "PdfTextExtractor uses built-in Standard14 encodings when implicit" {
   let helvetica : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfImplicitInFontFile),
