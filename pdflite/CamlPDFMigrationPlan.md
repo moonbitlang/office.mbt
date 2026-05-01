@@ -444,7 +444,11 @@ MoonBit consequences for this project:
     Codec coverage now includes ASCII85 malformed inputs, LZW EOF/reset/error
     boundaries, predictor identity/Paeth/short-row/error paths, stream
     filter/decode-parameter composition, excessive filter-stage bounds, and
-    RunLength long-literal/truncated-input behavior.
+    RunLength long-literal/truncated-input behavior. Content-stream coverage
+    now includes broad operator render/parse round trips, unknown operator
+    preservation, inline-image comments and malformed dictionaries, nested
+    content objects, and parse errors for malformed arrays and non-stream
+    content references.
 
 ## Update Discipline
 

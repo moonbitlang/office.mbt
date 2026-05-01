@@ -60,6 +60,47 @@ fn extended_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn comprehensive_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_w(2.0),
+    Op_J(1),
+    Op_j(2),
+    Op_M(10.0),
+    Op_l(3.0, 4.0),
+    Op_h,
+    Op_re(0.0, 0.0, 20.0, 30.0),
+    Op_S,
+    Op_s,
+    Op_f,
+    Op_F,
+    Op_fstar,
+    Op_B,
+    Op_Bstar,
+    Op_b,
+    Op_bstar,
+    Op_n,
+    Op_W,
+    Op_Wstar,
+    Op_Td(5.0, 6.0),
+    Op_TD(7.0, 8.0),
+    Op_Tm(@pdflite.transform_translate(9.0, 10.0)),
+    Op_Tstar,
+    Op_G(0.5),
+    Op_g(0.25),
+    Op_RG(1.0, 0.5, 0.0),
+    Op_rg(0.0, 0.5, 1.0),
+    Op_K(0.1, 0.2, 0.3, 0.4),
+    Op_k(0.5, 0.6, 0.7, 0.8),
+    Op_gs(content_name_for_test("/GS1")),
+    Op_sc([0.1, 0.2]),
+    Op_SCN([0.3]),
+    Op_scn([0.4, 0.5]),
+    Op_Do(content_name_for_test("/Im1")),
+    Op_Unknown(content_bytes_for_test("1 2 ZZ")),
+  ]
+}
+
+///|
 fn marked_text_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
   [
     Op_quote(content_bytes_for_test("Next")),
@@ -231,6 +272,16 @@ test "pdf_parse_content_ops_from_bytes parses simple inline images" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes parses inline image comments" {
+  let data = content_bytes_for_test(
+    "BI % ignored\n/W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc\nEI",
+  )
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    inline_image_content_op_for_test(),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W 1 ID abc"),
@@ -297,6 +348,34 @@ test "pdf_parse_content_ops_from_bytes parses extended graphics and text operato
   @test.assert_eq(
     try! @pdflite.pdf_parse_content_ops_from_bytes(data),
     extended_content_ops_for_test(),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(
+      try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    ),
+    data,
+  )
+}
+
+///|
+test "pdf_content_bytes_of_ops renders comprehensive operator coverage" {
+  let data = content_bytes_for_test(
+    "2 w 1 J 2 j 10 M 3 4 l h 0 0 20 30 re S s f F f* B B* b b* n W W* 5 6 Td 7 8 TD 1 0 0 1 9 10 Tm T* 0.5 G 0.25 g 1 0.5 0 RG 0 0.5 1 rg 0.1 0.2 0.3 0.4 K 0.5 0.6 0.7 0.8 k /GS1 gs 0.1 0.2 sc 0.3 SCN 0.4 0.5 scn /Im1 Do 1 2 ZZ",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(comprehensive_content_ops_for_test()),
+    data,
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes parses comprehensive operator coverage" {
+  let data = content_bytes_for_test(
+    "2 w 1 J 2 j 10 M 3 4 l h 0 0 20 30 re S s f F f* B B* b b* n W W* 5 6 Td 7 8 TD 1 0 0 1 9 10 Tm T* 0.5 G 0.25 g 1 0.5 0 RG 0 0.5 1 rg 0.1 0.2 0.3 0.4 K 0.5 0.6 0.7 0.8 k /GS1 gs 0.1 0.2 sc 0.3 SCN 0.4 0.5 scn /Im1 Do 1 2 ZZ",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    comprehensive_content_ops_for_test(),
   )
   @test.assert_eq(
     try! @pdflite.pdf_content_bytes_of_ops(
@@ -380,12 +459,35 @@ test "PdfDocument parse_content_ops inserts whitespace between split streams" {
 }
 
 ///|
+test "PdfDocument parse_content_ops reports non-stream content objects" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(10, PdfInteger(42))
+  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? doc.parse_content_ops([
+      PdfIndirect(10),
+    ],
+  )
+  guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes ignores comments and preserves unknown operators" {
   @test.assert_eq(
     try! @pdflite.pdf_parse_content_ops_from_bytes(
       content_bytes_for_test("q % ignored\n1 2 ZZ Q"),
     ),
     [Op_q, Op_Unknown(content_bytes_for_test("1 2 ZZ")), Op_Q],
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes handles literal operands before unknown operators" {
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(
+      content_bytes_for_test("true false null XX"),
+    ),
+    [Op_Unknown(content_bytes_for_test("true false null XX"))],
   )
 }
 
@@ -410,11 +512,67 @@ test "pdf_parse_content_ops_from_bytes parses text array operators" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes parses nested text array objects" {
+  let data = content_bytes_for_test("[(A) [1] << /K 2 >>] TJ")
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_TJ(
+      PdfArray([
+        PdfString(content_bytes_for_test("A")),
+        PdfArray([PdfInteger(1)]),
+        PdfDictionary([(content_name_for_test("/K"), PdfInteger(2))]),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_content_bytes_of_ops(
+      try! @pdflite.pdf_parse_content_ops_from_bytes(data),
+    ),
+    data,
+  )
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes preserves invalid known-operator operands" {
+  let data = content_bytes_for_test("true w /Bad J 1 ri /Bad Tj 1 Do")
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_Unknown(content_bytes_for_test("true w")),
+    Op_Unknown(content_bytes_for_test("/Bad J")),
+    Op_Unknown(content_bytes_for_test("1 ri")),
+    Op_Unknown(content_bytes_for_test("/Bad Tj")),
+    Op_Unknown(content_bytes_for_test("1 Do")),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes reports trailing operands" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("1 2"),
   )
   guard result is Err(@pdflite.PdfError::ContentOperatorExpected) else {
     fail("expected ContentOperatorExpected")
+  }
+}
+
+///|
+test "pdf content parser reports malformed complex and inline-image operands" {
+  let malformed_array : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    content_bytes_for_test("[(A) 1 TJ"),
+  )
+  guard malformed_array is Err(@pdflite.PdfError::ParseObjectExpected) else {
+    fail("expected ParseObjectExpected")
+  }
+  let malformed_inline_image : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    content_bytes_for_test("BI /W ID abc EI"),
+  )
+  guard malformed_inline_image is Err(@pdflite.PdfError::ContentOperandExpected) else {
+    fail("expected ContentOperandExpected")
+  }
+  let malformed_inline_dictionary : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_content_bytes_of_ops([
+      Op_InlineImage(PdfInteger(1), None, content_bytes_for_test("abc")),
+    ],
+  )
+  guard malformed_inline_dictionary
+    is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
   }
 }
