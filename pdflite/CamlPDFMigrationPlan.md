@@ -285,7 +285,9 @@ MoonBit consequences for this project:
    image terminators and filter-aware inline image compression remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
    page and page-tree resource dictionaries with CamlPDF's lower-case prefix
-   sequence.
+   sequence. `add_prefix` is also started for page/page-tree resources and
+   indirect content streams, including shared stream protection and resource
+   names inside supported content operators.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

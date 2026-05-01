@@ -445,6 +445,7 @@ pub struct PdfDocument {
 pub fn PdfDocument::add_object(Self, PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, PdfObject, generation? : Int) -> Unit
 pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
+pub fn PdfDocument::add_prefix(Self, String) -> Unit raise PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool) -> Self raise PdfError
 pub fn PdfDocument::copy(Self) -> Self

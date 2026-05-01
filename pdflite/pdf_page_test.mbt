@@ -103,6 +103,82 @@ fn page_prefix_document_for_test(
 }
 
 ///|
+fn page_prefix_resource_entry_for_test(name : String) -> @pdflite.PdfObject {
+  PdfDictionary([(page_name_for_test(name), PdfDictionary([]))])
+}
+
+///|
+fn page_prefix_full_resources_for_test(
+  prefix? : String = "",
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      page_name_for_test("/Font"),
+      page_prefix_resource_entry_for_test("/" + prefix + "F0"),
+    ),
+    (
+      page_name_for_test("/ExtGState"),
+      page_prefix_resource_entry_for_test("/" + prefix + "GS1"),
+    ),
+    (
+      page_name_for_test("/ColorSpace"),
+      page_prefix_resource_entry_for_test("/" + prefix + "CS1"),
+    ),
+    (
+      page_name_for_test("/Pattern"),
+      page_prefix_resource_entry_for_test("/" + prefix + "P1"),
+    ),
+    (
+      page_name_for_test("/Shading"),
+      page_prefix_resource_entry_for_test("/" + prefix + "Sh1"),
+    ),
+    (
+      page_name_for_test("/XObject"),
+      page_prefix_resource_entry_for_test("/" + prefix + "Im1"),
+    ),
+    (
+      page_name_for_test("/Properties"),
+      page_prefix_resource_entry_for_test("/" + prefix + "Prop1"),
+    ),
+  ])
+}
+
+///|
+fn page_prefix_content_ops_for_test(
+  prefix? : String = "",
+) -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_Tf(page_name_for_test("/" + prefix + "F0"), 12.0),
+    Op_gs(page_name_for_test("/" + prefix + "GS1")),
+    Op_CS(page_name_for_test("/DeviceRGB")),
+    Op_cs(page_name_for_test("/" + prefix + "CS1")),
+    Op_SCNName(page_name_for_test("/" + prefix + "P1"), [0.2]),
+    Op_scnName(page_name_for_test("/" + prefix + "P1"), [0.3]),
+    Op_sh(page_name_for_test("/" + prefix + "Sh1")),
+    Op_Do(page_name_for_test("/" + prefix + "Im1")),
+    Op_DP(
+      page_name_for_test("/Span"),
+      PdfNameObject(page_name_for_test("/" + prefix + "Prop1")),
+    ),
+    Op_BDC(
+      page_name_for_test("/Span"),
+      PdfNameObject(page_name_for_test("/" + prefix + "Prop1")),
+    ),
+    Op_InlineImage(
+      PdfDictionary([
+        (
+          page_name_for_test("/CS"),
+          PdfNameObject(page_name_for_test("/" + prefix + "CS1")),
+        ),
+        (page_name_for_test("/W"), PdfInteger(1)),
+      ]),
+      None,
+      @ascii.encode("x"),
+    ),
+  ]
+}
+
+///|
 fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   let key_type = page_name_for_test("/Type")
   let key_pages = page_name_for_test("/Pages")
@@ -324,6 +400,54 @@ test "PdfDocument shortest_unused_prefix preserves CamlPDF prefix sequence" {
     page_prefix_document_for_test(names).shortest_unused_prefix(),
     "az",
   )
+}
+
+///|
+test "PdfDocument add_prefix renames resources and content references" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_prefix_full_resources_for_test(),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops(
+        page_prefix_content_ops_for_test(),
+      ),
+    ],
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  try! doc.add_prefix("p")
+  let pages = try! doc.pages_of_pagetree()
+  @test.assert_eq(
+    pages[0].resources,
+    page_prefix_full_resources_for_test(prefix="p"),
+  )
+  @test.assert_eq(
+    try! doc.parse_content_ops(pages[0].content),
+    page_prefix_content_ops_for_test(prefix="p"),
+  )
+}
+
+///|
+test "PdfDocument add_prefix rewrites shared content streams once" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    9,
+    try! @pdflite.pdf_content_stream_of_ops([
+      Op_Tf(page_name_for_test("/F0"), 12.0),
+    ]),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_prefix_resources_for_test(["/F0"]),
+    content: [PdfIndirect(9)],
+  }
+  let page_root = try! doc.add_pagetree([page, page])
+  ignore(try! doc.add_root(page_root, []))
+  try! doc.add_prefix("p")
+  @test.assert_eq(try! doc.parse_content_ops([PdfIndirect(9)]), [
+    Op_Tf(page_name_for_test("/pF0"), 12.0),
+  ])
 }
 
 ///|

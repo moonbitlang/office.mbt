@@ -1048,6 +1048,217 @@ pub fn PdfDocument::shortest_unused_prefix(self : PdfDocument) -> String {
 }
 
 ///|
+fn pdf_page_prefixed_name(prefix : String, name : PdfName) -> PdfName {
+  let output : Array[Byte] = [47]
+  for byte in @ascii.encode(prefix) {
+    output.push(byte)
+  }
+  let bytes = name.bytes()
+  let start = if bytes.length() > 0 && bytes[0].to_int() == 47 { 1 } else { 0 }
+  for i in start..<bytes.length() {
+    output.push(bytes[i])
+  }
+  pdf_name_of_bytes(Bytes::from_array(output))
+}
+
+///|
+fn pdf_page_name_member(names : ArrayView[PdfName], name : PdfName) -> Bool {
+  for candidate in names {
+    if candidate == name {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_page_direct_color_names() -> Array[PdfName] {
+  [
+    pdf_page_name("/DeviceGray"),
+    pdf_page_name("/DeviceRGB"),
+    pdf_page_name("/DeviceCMYK"),
+    pdf_page_name("/Pattern"),
+  ]
+}
+
+///|
+fn pdf_page_direct_inline_color_names() -> Array[PdfName] {
+  [
+    pdf_page_name("/DeviceGray"),
+    pdf_page_name("/DeviceRGB"),
+    pdf_page_name("/DeviceCMYK"),
+    pdf_page_name("/G"),
+    pdf_page_name("/RGB"),
+    pdf_page_name("/CMYK"),
+  ]
+}
+
+///|
+fn PdfDocument::pdf_page_prefix_inline_image_dictionary(
+  self : PdfDocument,
+  prefix : String,
+  dictionary : PdfObject,
+) -> PdfObject raise PdfError {
+  match
+    self.lookup_direct_or_else(
+      pdf_page_name("/CS"),
+      pdf_page_name("/ColorSpace"),
+      dictionary,
+    ) {
+    Some(PdfNameObject(name)) if !pdf_page_name_member(
+        pdf_page_direct_inline_color_names(),
+        name,
+      ) =>
+      dictionary
+      .remove_dict_entry(pdf_page_name("/ColorSpace"))
+      .remove_dict_entry(pdf_page_name("/CS"))
+      .add_dict_entry(
+        pdf_page_name("/CS"),
+        PdfNameObject(pdf_page_prefixed_name(prefix, name)),
+      )
+    _ => dictionary
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_prefix_content_op(
+  self : PdfDocument,
+  prefix : String,
+  op : PdfContentOp,
+) -> PdfContentOp raise PdfError {
+  match op {
+    Op_Tf(font, size) => Op_Tf(pdf_page_prefixed_name(prefix, font), size)
+    Op_gs(name) => Op_gs(pdf_page_prefixed_name(prefix, name))
+    Op_CS(name) =>
+      if pdf_page_name_member(pdf_page_direct_color_names(), name) {
+        op
+      } else {
+        Op_CS(pdf_page_prefixed_name(prefix, name))
+      }
+    Op_cs(name) =>
+      if pdf_page_name_member(pdf_page_direct_color_names(), name) {
+        op
+      } else {
+        Op_cs(pdf_page_prefixed_name(prefix, name))
+      }
+    Op_SCNName(name, values) =>
+      Op_SCNName(pdf_page_prefixed_name(prefix, name), values)
+    Op_scnName(name, values) =>
+      Op_scnName(pdf_page_prefixed_name(prefix, name), values)
+    Op_sh(name) => Op_sh(pdf_page_prefixed_name(prefix, name))
+    Op_Do(name) => Op_Do(pdf_page_prefixed_name(prefix, name))
+    Op_DP(tag, PdfNameObject(name)) =>
+      Op_DP(tag, PdfNameObject(pdf_page_prefixed_name(prefix, name)))
+    Op_BDC(tag, PdfNameObject(name)) =>
+      Op_BDC(tag, PdfNameObject(pdf_page_prefixed_name(prefix, name)))
+    Op_InlineImage(dictionary, decode_parms, data) =>
+      Op_InlineImage(
+        self.pdf_page_prefix_inline_image_dictionary(prefix, dictionary),
+        decode_parms,
+        data,
+      )
+    _ => op
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_prefix_content_ops(
+  self : PdfDocument,
+  prefix : String,
+  ops : ArrayView[PdfContentOp],
+) -> Array[PdfContentOp] raise PdfError {
+  let output : Array[PdfContentOp] = []
+  for op in ops {
+    output.push(self.pdf_page_prefix_content_op(prefix, op))
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_prefix_resource_dictionary(
+  self : PdfDocument,
+  prefix : String,
+  resources : PdfObject,
+) -> PdfObject raise PdfError {
+  let mut output = resources
+  for resource_key in pdf_page_resource_keys() {
+    let new_entries : Array[(PdfName, PdfObject)] = []
+    match self.lookup_direct(resource_key, resources) {
+      Some(PdfDictionary(entries)) =>
+        for entry in entries {
+          let (name, value) = entry
+          new_entries.push((pdf_page_prefixed_name(prefix, name), value))
+        }
+      _ => ()
+    }
+    output = output.add_dict_entry(resource_key, PdfDictionary(new_entries))
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_prefix_content_streams(
+  self : PdfDocument,
+  prefix : String,
+  page_object : PdfObject,
+  fixed_streams : @hashmap.HashMap[Int, Bool],
+) -> Unit raise PdfError {
+  let contents = self.pdf_page_content_list(
+    self.pdf_page_content_object(page_object),
+  )
+  for content in contents {
+    match content {
+      PdfIndirect(number) if !fixed_streams.contains(number) => {
+        let ops = self.parse_content_ops([content])
+        self.add_object_given_number(
+          number,
+          pdf_content_stream_of_ops(
+            self.pdf_page_prefix_content_ops(prefix, ops),
+          ),
+        )
+        fixed_streams[number] = true
+      }
+      _ => ()
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_prefix_object(
+  self : PdfDocument,
+  prefix : String,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  match self.lookup_direct(pdf_page_resources_key(), object) {
+    Some(resources) =>
+      object.add_dict_entry(
+        pdf_page_resources_key(),
+        self.pdf_page_prefix_resource_dictionary(prefix, resources),
+      )
+    None => object
+  }
+}
+
+///|
+pub fn PdfDocument::add_prefix(
+  self : PdfDocument,
+  prefix : String,
+) -> Unit raise PdfError {
+  let fixed_streams : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
+  for number in self.object_numbers() {
+    let object = self.lookup_object_or_null(number)
+    if self.pdf_page_object_uses_page_resources(object) {
+      self.pdf_page_prefix_content_streams(prefix, object, fixed_streams)
+      self.add_object_given_number(
+        number,
+        self.pdf_page_prefix_object(prefix, object),
+      )
+    }
+  }
+}
+
+///|
 fn pdf_page_reference_numbers_inner(
   pdf : PdfDocument,
   pages_node : PdfObject,

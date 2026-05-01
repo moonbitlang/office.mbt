@@ -206,6 +206,16 @@ warns on it. Use an explicit `while` loop with mutable state for simple
 translation of recursive OCaml loops, or a modern `for` loop with loop binders
 when carrying structured state.
 
+```sh
+moon run -c $'fn greet(name? : String = "pdf") -> String { name }\nfn main { println(greet()); println(greet(name="moon")) }'
+# pdf
+# moon
+```
+
+MoonBit default arguments are labelled arguments. Write `name? : T = default`
+in the function declaration and call it as `name=value`. Do not write a default
+on an unlabelled positional parameter.
+
 ## Core Porting Rules
 
 ### Strings and Bytes
