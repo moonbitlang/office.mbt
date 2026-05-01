@@ -211,6 +211,18 @@ test "pdf_parse_content_ops_from_bytes parses marked content and text quote oper
 }
 
 ///|
+test "pdf_content artifact helpers mirror CamlPDF artifact markers" {
+  let ops = [
+    @pdflite.pdf_content_begin_artifact(),
+    Op_Tj(content_bytes_for_test("artifact")),
+    @pdflite.pdf_content_end_artifact(),
+  ]
+  let data = content_bytes_for_test("/Artifact BMC (artifact) Tj EMC")
+  @test.assert_eq(try! @pdflite.pdf_content_bytes_of_ops(ops), data)
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), ops)
+}
+
+///|
 test "pdf_content_bytes_of_ops renders extended graphics and text operators" {
   @test.assert_eq(
     try! @pdflite.pdf_content_bytes_of_ops(extended_content_ops_for_test()),

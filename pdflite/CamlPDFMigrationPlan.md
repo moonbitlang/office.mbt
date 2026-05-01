@@ -279,7 +279,8 @@ MoonBit consequences for this project:
    also includes dash patterns, rendering intent, flatness, Bezier curves, text
    state operators, color-space/color setters including named SCN/scn patterns,
    shadings, text quote operators, Type 3 glyph metrics, marked-content
-   operators, and compatibility-section markers. Inline images remain deferred.
+   operators, compatibility-section markers, and artifact marker helpers.
+   Inline images remain deferred.
 
 9. Text, fonts, color spaces, and images.
    Port `pdftext`, `pdfstandard14`, `pdfglyphlist`, `pdfcmap`, `pdfafm`,

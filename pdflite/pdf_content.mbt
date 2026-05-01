@@ -94,6 +94,16 @@ fn pdf_content_length_name() -> PdfName {
 }
 
 ///|
+pub fn pdf_content_begin_artifact() -> PdfContentOp {
+  Op_BMC(pdf_name_of_bytes(pdf_content_ascii("/Artifact")))
+}
+
+///|
+pub fn pdf_content_end_artifact() -> PdfContentOp {
+  Op_EMC
+}
+
+///|
 fn pdf_content_push_view(output : Array[Byte], view : BytesView) -> Unit {
   for byte in view {
     output.push(byte)

@@ -71,7 +71,11 @@ pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
 
+pub fn pdf_content_begin_artifact() -> PdfContentOp
+
 pub fn pdf_content_bytes_of_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfError
+
+pub fn pdf_content_end_artifact() -> PdfContentOp
 
 pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise PdfError
 
