@@ -464,6 +464,7 @@ pub(all) suberror PdfError {
   FontTypeExpected
   FontWriteUnsupported
   AfmExpected
+  ColourSpaceExpected
   BadText
   CIDSystemInfoExpected
   CIDRegistryExpected
@@ -912,6 +913,7 @@ pub fn PdfDocument::arc4_crypt_parsed_objects(Self, BytesView, Int, no_encrypt_m
 pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, PdfObject)]) -> PdfObject
 pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, PdfObject)]) -> PdfObject
 pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, TransformMatrix)]) -> Self raise PdfError
+pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise PdfError
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise PdfError
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError

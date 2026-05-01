@@ -414,6 +414,10 @@ MoonBit consequences for this project:
    split content streams before parsing. The CamlPDF `string_of_op` helper is
    exposed as `pdf_content_bytes_of_op`, preserving the port's byte-oriented
    naming while delegating to the existing multi-operator renderer.
+   The CamlPDF resource-aware `components` helper is started as
+   `PdfDocument::colour_space_components`, covering device, calibrated,
+   resource-named, ICCBased, Indexed, Separation, Pattern-with-base, and DeviceN
+   spaces for inline-image and image-data sizing callers.
    Filter-aware binary inline image compression and broader resource-dependent
    inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

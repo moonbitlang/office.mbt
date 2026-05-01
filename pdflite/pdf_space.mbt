@@ -229,6 +229,73 @@ fn pdf_space_indexed_component_count(space : PdfColourSpace) -> Int? {
 }
 
 ///|
+fn PdfDocument::pdf_space_named_components(
+  self : PdfDocument,
+  resources : PdfObject,
+  name : PdfName,
+) -> Int raise PdfError {
+  if name == pdf_space_name("/CalGray") ||
+    name == pdf_space_name("/DeviceGray") ||
+    name == pdf_space_name("/G") {
+    1
+  } else if name == pdf_space_name("/CalRGB") ||
+    name == pdf_space_name("/DeviceRGB") ||
+    name == pdf_space_name("/RGB") {
+    3
+  } else if name == pdf_space_name("/CalCMYK") ||
+    name == pdf_space_name("/DeviceCMYK") ||
+    name == pdf_space_name("/CMYK") {
+    4
+  } else if name == pdf_space_name("/Pattern") {
+    raise ColourSpaceExpected
+  } else {
+    match self.lookup_direct(pdf_space_colorspace_key(), resources) {
+      Some(colour_spaces) =>
+        match self.lookup_direct(name, colour_spaces) {
+          Some(resolved) => self.colour_space_components(resources, resolved)
+          None => raise DictionaryKeyNotFound(name)
+        }
+      None => raise DictionaryKeyNotFound(pdf_space_colorspace_key())
+    }
+  }
+}
+
+///|
+pub fn PdfDocument::colour_space_components(
+  self : PdfDocument,
+  resources : PdfObject,
+  object : PdfObject,
+) -> Int raise PdfError {
+  match self.direct(object) {
+    PdfNameObject(name) => self.pdf_space_named_components(resources, name)
+    PdfArray([PdfNameObject(kind), alternate]) if kind ==
+      pdf_space_name("/Pattern") =>
+      self.colour_space_components(resources, alternate)
+    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_name("/Lab") ||
+      kind == pdf_space_name("/CalRGB") => 3
+    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_name("/CalCMYK") =>
+      4
+    PdfArray([PdfNameObject(kind), _]) if kind == pdf_space_name("/CalGray") =>
+      1
+    PdfArray([PdfNameObject(kind), stream_object]) if kind ==
+      pdf_space_name("/ICCBased") =>
+      match self.lookup_direct(pdf_space_n_key(), stream_object) {
+        Some(PdfInteger(components)) => components
+        _ => raise ColourSpaceExpected
+      }
+    PdfArray([PdfNameObject(kind), _, _, _]) if kind ==
+      pdf_space_name("/Separation") => 1
+    PdfArray([PdfNameObject(kind), _, _, ..]) if kind ==
+      pdf_space_name("/Indexed") ||
+      kind == pdf_space_name("/I") => 1
+    PdfArray([PdfNameObject(kind), PdfArray(names), _, ..]) if kind ==
+      pdf_space_name("/DeviceN") => names.length()
+    PdfArray([single]) => self.colour_space_components(resources, single)
+    _ => raise ColourSpaceExpected
+  }
+}
+
+///|
 fn pdf_space_read_indexed_table(
   data : BytesView,
   hival : Int,

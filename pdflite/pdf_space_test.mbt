@@ -191,6 +191,226 @@ test "PdfDocument read_colour_space resolves resources and nested arrays" {
 }
 
 ///|
+test "PdfDocument colour_space_components counts direct and resource spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([
+    (
+      space_name_for_test("/ColorSpace"),
+      @pdflite.pdf_dictionary([
+        (
+          space_name_for_test("/CSRGB"),
+          PdfNameObject(space_name_for_test("/RGB")),
+        ),
+        (
+          space_name_for_test("/CSNested"),
+          PdfArray([PdfNameObject(space_name_for_test("/CSRGB"))]),
+        ),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfNameObject(space_name_for_test("/DeviceGray")),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfNameObject(space_name_for_test("/DeviceRGB")),
+    ),
+    3,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfNameObject(space_name_for_test("/DeviceCMYK")),
+    ),
+    4,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfNameObject(space_name_for_test("/CSNested")),
+    ),
+    3,
+  )
+  let missing_resource : Result[Int, Error] = try? doc.colour_space_components(
+    @pdflite.pdf_dictionary([]),
+    PdfNameObject(space_name_for_test("/CSMissingDict")),
+  )
+  guard missing_resource is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+    name == space_name_for_test("/ColorSpace") else {
+    fail("expected missing ColorSpace resource dictionary")
+  }
+  let missing_space : Result[Int, Error] = try? doc.colour_space_components(
+    resources,
+    PdfNameObject(space_name_for_test("/CSMissing")),
+  )
+  guard missing_space is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
+    name == space_name_for_test("/CSMissing") else {
+    fail("expected missing named color space")
+  }
+}
+
+///|
+test "PdfDocument colour_space_components counts array spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([])
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Pattern")),
+        PdfNameObject(space_name_for_test("/RGB")),
+      ]),
+    ),
+    3,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalRGB")),
+        @pdflite.pdf_dictionary([]),
+      ]),
+    ),
+    3,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Lab")),
+        @pdflite.pdf_dictionary([]),
+      ]),
+    ),
+    3,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalCMYK")),
+        @pdflite.pdf_dictionary([]),
+      ]),
+    ),
+    4,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalGray")),
+        @pdflite.pdf_dictionary([]),
+      ]),
+    ),
+    1,
+  )
+}
+
+///|
+test "PdfDocument colour_space_components counts special spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([])
+  let icc = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), icc]),
+    ),
+    4,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Separation")),
+        PdfNameObject(space_name_for_test("/Spot")),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        PdfNull,
+      ]),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
+        PdfNameObject(space_name_for_test("/DeviceRGB")),
+        PdfInteger(1),
+      ]),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/I")),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        PdfInteger(1),
+      ]),
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! doc.colour_space_components(
+      resources,
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([
+          PdfNameObject(space_name_for_test("/Cyan")),
+          PdfNameObject(space_name_for_test("/Magenta")),
+          PdfNameObject(space_name_for_test("/Yellow")),
+        ]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        PdfNull,
+      ]),
+    ),
+    3,
+  )
+}
+
+///|
+test "PdfDocument colour_space_components rejects malformed spaces" {
+  let doc = @pdflite.pdf_document_empty()
+  let resources = @pdflite.pdf_dictionary([])
+  let pattern : Result[Int, Error] = try? doc.colour_space_components(
+    resources,
+    PdfNameObject(space_name_for_test("/Pattern")),
+  )
+  guard pattern is Err(@pdflite.PdfError::ColourSpaceExpected) else {
+    fail("expected ColourSpaceExpected for pattern")
+  }
+  let bad_icc : Result[Int, Error] = try? doc.colour_space_components(
+    resources,
+    PdfArray([
+      PdfNameObject(space_name_for_test("/ICCBased")),
+      @pdflite.pdf_stream(
+        @pdflite.pdf_dictionary([]),
+        StreamGot(@ascii.encode("icc")),
+      ),
+    ]),
+  )
+  guard bad_icc is Err(@pdflite.PdfError::ColourSpaceExpected) else {
+    fail("expected ColourSpaceExpected for bad ICCBased")
+  }
+  let malformed : Result[Int, Error] = try? doc.colour_space_components(
+    resources,
+    PdfArray([PdfInteger(1), PdfInteger(2)]),
+  )
+  guard malformed is Err(@pdflite.PdfError::ColourSpaceExpected) else {
+    fail("expected ColourSpaceExpected for malformed color space")
+  }
+}
+
+///|
 test "PdfDocument read_colour_space parses calibrated dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   let empty_resources = @pdflite.pdf_dictionary([])
