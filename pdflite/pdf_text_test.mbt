@@ -1754,6 +1754,35 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
     try! extractor.codepoints_of_text(text_bytes_for_test([33, 34, 35])[:]),
     [0x41, 0x42, 35],
   )
+  @test.assert_eq(
+    try! extractor.glyphnames_and_codepoints_of_text(
+      text_bytes_for_test([33, 34, 35])[:],
+    ),
+    [
+      {
+        glyphname: @pdflite.pdf_name_of_bytes(
+          text_bytes_for_test([47, 0x00, 0x41]),
+        ),
+        codepoints: [0x41],
+      },
+      {
+        glyphname: @pdflite.pdf_name_of_bytes(
+          text_bytes_for_test([47, 0x00, 0x42]),
+        ),
+        codepoints: [0x42],
+      },
+      { glyphname: text_name_for_test(".notdef"), codepoints: [35] },
+    ],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([33, 35])[:]),
+    [
+      @pdflite.pdf_name_of_bytes(text_bytes_for_test([47, 0x00, 0x41])),
+      text_name_for_test(".notdef"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x42), Some(34))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x43), None)
 }
 
 ///|
@@ -1782,6 +1811,11 @@ test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
     ),
     [0x41, 0x20AC],
   )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([0x00, 0x41])[:]),
+    [text_name_for_test(".notdef")],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
   let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00])[:])
   guard odd is Err(BadText) else { fail("expected BadText") }
 }

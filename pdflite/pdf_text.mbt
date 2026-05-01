@@ -341,6 +341,12 @@ pub(all) struct PdfTextExtractor {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfTextGlyph {
+  glyphname : PdfName
+  codepoints : Array[Int]
+} derive(Debug, Eq, ToJson)
+
+///|
 pub fn PdfFont::debug_name(self : PdfFont) -> String {
   match self {
     PdfFontStandard(font) => font.debug_name()
@@ -1461,18 +1467,60 @@ fn pdf_text_lookup_tounicode(
 }
 
 ///|
-fn PdfTextExtractor::pdf_text_codepoints_of_charcode(
+fn pdf_text_notdef_name() -> PdfName {
+  pdf_text_name(".notdef")
+}
+
+///|
+fn pdf_text_tounicode_glyphname(bytes : PdfBytes) -> PdfName {
+  let output : Array[Byte] = [47]
+  for byte in bytes {
+    output.push(byte)
+  }
+  pdf_name_of_bytes(Bytes::from_array(output))
+}
+
+///|
+fn PdfTextExtractor::pdf_text_glyph_of_charcode(
   self : PdfTextExtractor,
   code : Int,
-) -> Array[Int] {
+) -> PdfTextGlyph {
   match self.font.pdf_text_tounicode() {
     Some(tounicode) =>
       match pdf_text_lookup_tounicode(tounicode, code) {
-        Some(bytes) => pdf_codepoints_of_utf16be(bytes[:]) catch { _ => [code] }
-        None => [code]
+        Some(bytes) =>
+          try pdf_codepoints_of_utf16be(bytes[:]) catch {
+            _ => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
+          } noraise {
+            codepoints =>
+              { glyphname: pdf_text_tounicode_glyphname(bytes), codepoints }
+          }
+        None => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
       }
-    None => [code]
+    None => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
   }
+}
+
+///|
+pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(
+  self : PdfTextExtractor,
+  text : BytesView,
+) -> Array[PdfTextGlyph] raise PdfError {
+  let output : Array[PdfTextGlyph] = []
+  if self.font.is_identity_h() {
+    guard text.length() % 2 == 0 else { raise BadText }
+    let mut index = 0
+    while index < text.length() {
+      let code = (text[index].to_int() << 8) | text[index + 1].to_int()
+      output.push(self.pdf_text_glyph_of_charcode(code))
+      index += 2
+    }
+  } else {
+    for byte in text {
+      output.push(self.pdf_text_glyph_of_charcode(byte.to_int()))
+    }
+  }
+  output
 }
 
 ///|
@@ -1481,24 +1529,43 @@ pub fn PdfTextExtractor::codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise PdfError {
   let output : Array[Int] = []
-  if self.font.is_identity_h() {
-    guard text.length() % 2 == 0 else { raise BadText }
-    let mut index = 0
-    while index < text.length() {
-      let code = (text[index].to_int() << 8) | text[index + 1].to_int()
-      for codepoint in self.pdf_text_codepoints_of_charcode(code) {
-        output.push(codepoint)
-      }
-      index += 2
-    }
-  } else {
-    for byte in text {
-      for codepoint in self.pdf_text_codepoints_of_charcode(byte.to_int()) {
-        output.push(codepoint)
-      }
+  for glyph in self.glyphnames_and_codepoints_of_text(text) {
+    for codepoint in glyph.codepoints {
+      output.push(codepoint)
     }
   }
   output
+}
+
+///|
+pub fn PdfTextExtractor::glyphnames_of_text(
+  self : PdfTextExtractor,
+  text : BytesView,
+) -> Array[PdfName] raise PdfError {
+  [
+    for glyph in self.glyphnames_and_codepoints_of_text(text) => glyph.glyphname
+  ]
+}
+
+///|
+pub fn PdfTextExtractor::charcode_of_codepoint(
+  self : PdfTextExtractor,
+  codepoint : Int,
+) -> Int? {
+  match self.font.pdf_text_tounicode() {
+    Some(tounicode) =>
+      for entry in tounicode {
+        try pdf_codepoints_of_utf16be(entry.1[:]) catch {
+          _ => ()
+        } noraise {
+          [single] if single == codepoint => break Some(entry.0)
+          _ => ()
+        }
+      } nobreak {
+        None
+      }
+    None => None
+  }
 }
 
 ///|

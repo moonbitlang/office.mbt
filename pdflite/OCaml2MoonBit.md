@@ -272,6 +272,17 @@ raising function, push each checked result into an output array, and let the
 error propagate from the loop body.
 
 ```sh
+moon run -c $'fn parse(s : String) -> Int raise { @strconv.from_str(s) }\nfn main {\n  try parse("7") catch {\n    _ => println(0)\n  } noraise {\n    value => println(value)\n  }\n}'
+# 7
+```
+
+Use `try expr catch { ... } noraise { value => ... }` when porting OCaml
+`try ... with ...` code that needs both success and error branches as an
+expression. If you deliberately match the result of `try? expr`, wrap the
+`try?` expression in parentheses before `match`; `match try? expr { ... }` is
+not valid syntax.
+
+```sh
 moon run -c 'fn main { let xs = [(2, "b"), (1, "a")]; xs.sort_by(fn(a, b) { a.0.compare(b.0) }); println(xs[0].0) }'
 # 1
 ```

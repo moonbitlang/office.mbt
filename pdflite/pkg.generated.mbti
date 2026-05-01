@@ -1208,7 +1208,15 @@ pub(all) enum PdfTargetPage {
 pub(all) struct PdfTextExtractor {
   font : PdfFont
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfTextExtractor::charcode_of_codepoint(Self, Int) -> Int?
 pub fn PdfTextExtractor::codepoints_of_text(Self, BytesView) -> Array[Int] raise PdfError
+pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(Self, BytesView) -> Array[PdfTextGlyph] raise PdfError
+pub fn PdfTextExtractor::glyphnames_of_text(Self, BytesView) -> Array[PdfName] raise PdfError
+
+pub(all) struct PdfTextGlyph {
+  glyphname : PdfName
+  codepoints : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfTristimulusPoint {
   x : Double
