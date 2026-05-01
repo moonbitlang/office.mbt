@@ -717,13 +717,41 @@ fn PdfDocument::pdf_merge_open_action_destination(
 }
 
 ///|
+fn PdfDocument::pdf_merge_open_action_target(
+  self : PdfDocument,
+  open_action : PdfObject,
+) -> PdfDestination raise PdfError {
+  match self.direct(open_action) {
+    PdfArray(_) as destination =>
+      self.read_destination(destination, shallow=true)
+    PdfDictionary(_) as action => self.read_destination(action, shallow=true)
+    _ => DestNull
+  }
+}
+
+///|
+fn pdf_merge_destination_needs_named_retention(
+  destination : PdfDestination,
+) -> Bool {
+  match destination {
+    DestNamed(_) | DestString(_) => true
+    _ => false
+  }
+}
+
+///|
 fn PdfDocument::pdf_merge_open_action(
   self : PdfDocument,
+  retain_named_destinations : Bool,
 ) -> PdfObject? raise PdfError {
   match self.pdf_merge_catalog_entry(pdf_merge_open_action_key()) {
     Some(open_action) => {
+      let target = self.pdf_merge_open_action_target(open_action)
       let destination = self.pdf_merge_open_action_destination(open_action)
-      if self.page_number_of_target(destination) > 0 {
+      if !retain_named_destinations &&
+        pdf_merge_destination_needs_named_retention(target) {
+        None
+      } else if self.page_number_of_target(destination) > 0 {
         Some(open_action)
       } else {
         None
@@ -736,10 +764,21 @@ fn PdfDocument::pdf_merge_open_action(
 ///|
 fn pdf_merge_open_action(
   documents : ArrayView[PdfDocument],
+  retain_named_destinations : Bool,
+  destination_name_changes : ArrayView[Array[(PdfBytes, PdfBytes)]],
+  catalog_destination_name_changes : ArrayView[Array[(PdfName, PdfName)]],
 ) -> PdfObject? raise PdfError {
-  for document in documents {
-    match document.pdf_merge_open_action() {
-      Some(open_action) => break Some(open_action)
+  for i in 0..<documents.length() {
+    let document = documents[i]
+    match document.pdf_merge_open_action(retain_named_destinations) {
+      Some(open_action) =>
+        break Some(
+          pdf_merge_rewrite_destination_callsite_object(
+            open_action,
+            destination_name_changes[i],
+            catalog_destination_name_changes[i],
+          ),
+        )
       None => ()
     }
   } nobreak {
@@ -1339,6 +1378,13 @@ pub fn pdf_merge_documents(
       for _ in staged => []
     ]
   }
+  let open_action = if retain_catalog_entries {
+    pdf_merge_open_action(
+      staged, retain_named_destinations, destination_name_changes, catalog_destination_name_changes,
+    )
+  } else {
+    None
+  }
   if retain_named_destinations {
     for i in 0..<staged.length() {
       staged[i].pdf_merge_rewrite_destination_callsite_names(
@@ -1378,11 +1424,6 @@ pub fn pdf_merge_documents(
     pdf_merge_catalog_extra_entries(staged)
   } else {
     []
-  }
-  let open_action = if retain_catalog_entries {
-    pdf_merge_open_action(staged)
-  } else {
-    None
   }
   let merged = pdf_document_empty()
   let (major, minor) = pdf_merge_max_version(staged)

@@ -8,6 +8,10 @@ test "private merge helpers cover guards and membership branches" {
   let key = pdf_merge_name("/ViewerPreferences")
   @test.assert_eq(pdf_merge_name_member([key], key), true)
   @test.assert_eq(pdf_merge_object_member([PdfInteger(1)], PdfInteger(1)), true)
+  @test.assert_eq(
+    pdf_merge_destination_needs_named_retention(DestFit(TargetPageObject(1))),
+    false,
+  )
   @test.assert_eq(pdf_merge_changed_parent_tree_key([(1, 2)], 3), None)
 
   let entries = [(key, PdfInteger(1))]

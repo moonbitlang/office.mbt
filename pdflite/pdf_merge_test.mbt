@@ -788,6 +788,21 @@ test "pdf_merge_documents retains and retargets OpenAction destinations" {
     root.lookup_immediate(key_open_action),
     Some(PdfArray([PdfIndirect(merged_page_refs[0]), PdfNameObject(type_fit)])),
   )
+  let without_named_destinations = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_named_destinations=false,
+  )
+  let retained_page_refs = try! without_named_destinations.page_reference_numbers()
+  let root = without_named_destinations.lookup_object_or_null(
+    without_named_destinations.root(),
+  )
+  @test.assert_eq(
+    root.lookup_immediate(key_open_action),
+    Some(
+      PdfArray([PdfIndirect(retained_page_refs[0]), PdfNameObject(type_fit)]),
+    ),
+  )
   let without_open_action = try! @pdflite.pdf_merge_documents(
     [first, second],
     [[1], [1]],
@@ -845,6 +860,52 @@ test "pdf_merge_documents keeps first valid OpenAction action" {
     try! merged.page_number_of_target(try! merged.read_destination(action)),
     2,
   )
+}
+
+///|
+test "pdf_merge_documents rewrites named OpenAction destinations" {
+  let key_open_action = merge_name_for_test("/OpenAction")
+  let key_s = merge_name_for_test("/S")
+  let key_d = merge_name_for_test("/D")
+  let type_goto = merge_name_for_test("/GoTo")
+  let first_name = @ascii.encode("shared-f0")
+  let first_action : @pdflite.PdfObject = PdfDictionary([
+    (key_s, PdfNameObject(type_goto)),
+    (key_d, PdfString(@ascii.encode("shared"))),
+  ])
+  let first = merge_add_catalog_entry_for_test(
+    merge_nametree_dest_doc_for_test("shared"),
+    key_open_action,
+    first_action,
+  )
+  let second = merge_nametree_dest_doc_for_test("shared")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_open_action),
+    Some(
+      PdfDictionary([
+        (key_s, PdfNameObject(type_goto)),
+        (key_d, PdfString(first_name)),
+      ]),
+    ),
+  )
+  guard root.lookup_immediate(key_open_action) is Some(action) else {
+    fail("expected OpenAction")
+  }
+  @test.assert_eq(
+    try! merged.page_number_of_target(try! merged.read_destination(action)),
+    1,
+  )
+  let without_destinations = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_named_destinations=false,
+  )
+  let root = without_destinations.lookup_object_or_null(
+    without_destinations.root(),
+  )
+  @test.assert_eq(root.lookup_immediate(key_open_action), None)
 }
 
 ///|
