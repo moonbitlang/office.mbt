@@ -404,7 +404,10 @@ MoonBit consequences for this project:
     destination-aware path so page-object targets are retargeted. The merge
     path now also rewrites retained object references from selected source page
     objects to the newly built merged page objects, matching CamlPDF's
-    post-page-tree renumbering pass more closely.
+    post-page-tree renumbering pass more closely. Structure-tree retention is
+    started for the single-root case: extraction trims removed page nodes, the
+    merged catalog keeps that `/StructTreeRoot`, and global page-reference
+    rewriting retargets retained `/Pg` links.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the

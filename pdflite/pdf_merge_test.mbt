@@ -122,6 +122,39 @@ fn merge_page_reference_catalog_doc_for_test(
 }
 
 ///|
+fn merge_structure_tree_doc_for_test() -> @pdflite.PdfDocument {
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let key_k = merge_name_for_test("/K")
+  let key_pg = merge_name_for_test("/Pg")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let page_refs = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    30,
+    PdfDictionary([(key_k, PdfArray([PdfIndirect(31), PdfIndirect(32)]))]),
+  )
+  doc.add_object_given_number(
+    31,
+    PdfDictionary([(key_pg, PdfIndirect(page_refs[0])), (key_k, PdfInteger(0))]),
+  )
+  doc.add_object_given_number(
+    32,
+    PdfDictionary([(key_pg, PdfIndirect(page_refs[1])), (key_k, PdfInteger(0))]),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_struct_tree_root, PdfIndirect(30)),
+  )
+  doc
+}
+
+///|
 fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
   let key_info = merge_name_for_test("/Info")
   let key_title = merge_name_for_test("/Title")
@@ -463,6 +496,37 @@ test "pdf_merge_documents rewrites retained page references to merged pages" {
     root.lookup_immediate(key_second_reference),
     Some(PdfIndirect(page_refs[1])),
   )
+}
+
+///|
+test "pdf_merge_documents retains a single trimmed structure tree" {
+  let key_struct_tree_root = merge_name_for_test("/StructTreeRoot")
+  let key_k = merge_name_for_test("/K")
+  let key_pg = merge_name_for_test("/Pg")
+  let document = merge_structure_tree_doc_for_test()
+  let merged = try! @pdflite.pdf_merge_documents([document], [[1]])
+  let page_refs = try! merged.page_reference_numbers()
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_struct_tree_root),
+    Some(PdfIndirect(30)),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(30).lookup_immediate(key_k),
+    Some(PdfIndirect(31)),
+  )
+  @test.assert_eq(
+    merged.lookup_object_or_null(31).lookup_immediate(key_pg),
+    Some(PdfIndirect(page_refs[0])),
+  )
+  @test.assert_eq(merged.lookup_object_or_null(32), PdfNull)
+  let without_structure = try! @pdflite.pdf_merge_documents(
+    [document],
+    [[1]],
+    retain_structure_tree=false,
+  )
+  let root = without_structure.lookup_object_or_null(without_structure.root())
+  @test.assert_eq(root.lookup_immediate(key_struct_tree_root), None)
 }
 
 ///|

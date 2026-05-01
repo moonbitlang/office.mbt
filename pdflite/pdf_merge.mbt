@@ -169,6 +169,23 @@ fn pdf_merge_catalog_extra_entries(
 }
 
 ///|
+fn pdf_merge_structure_tree_roots(
+  documents : ArrayView[PdfDocument],
+) -> Array[PdfObject] {
+  let roots : Array[PdfObject] = []
+  for document in documents {
+    match
+      document
+      .lookup_object_or_null(document.root())
+      .lookup_immediate(pdf_merge_struct_tree_root_key()) {
+      Some(root) => roots.push(root)
+      None => ()
+    }
+  }
+  roots
+}
+
+///|
 fn PdfDocument::pdf_merge_catalog_entry(
   self : PdfDocument,
   key : PdfName,
@@ -454,6 +471,7 @@ pub fn pdf_merge_documents(
   retain_acroforms? : Bool = true,
   retain_named_destinations? : Bool = true,
   retain_name_dictionary? : Bool = true,
+  retain_structure_tree? : Bool = true,
   retain_info? : Bool = true,
   retain_catalog_entries? : Bool = true,
   remove_duplicate_fonts? : Bool = false,
@@ -469,7 +487,10 @@ pub fn pdf_merge_documents(
   let staged : Array[PdfDocument] = []
   let mut offset = 0
   for i in 0..<documents.length() {
-    let extracted = documents[i].pdf_of_pages(ranges[i])
+    let extracted = documents[i].pdf_of_pages(
+      ranges[i],
+      process_struct_tree=retain_structure_tree,
+    )
     let renumbered = extracted.renumber_objects_by_offset(offset)
     offset = renumbered.objects.max_object_number()
     staged.push(renumbered)
@@ -487,6 +508,11 @@ pub fn pdf_merge_documents(
   let info = if retain_info { pdf_merge_info_dictionary(staged) } else { None }
   let name_dictionary_entries = if retain_name_dictionary {
     pdf_merge_name_dictionary_entries(staged)
+  } else {
+    []
+  }
+  let structure_tree_roots = if retain_structure_tree {
+    pdf_merge_structure_tree_roots(staged)
   } else {
     []
   }
@@ -526,6 +552,14 @@ pub fn pdf_merge_documents(
       ignore(merged.pdf_merge_add_catalog_entry(key, value))
     }
     merged
+  } else {
+    merged
+  }
+  let merged = if structure_tree_roots.length() == 1 {
+    merged.pdf_merge_add_catalog_entry(
+      pdf_merge_struct_tree_root_key(),
+      structure_tree_roots[0],
+    )
   } else {
     merged
   }
