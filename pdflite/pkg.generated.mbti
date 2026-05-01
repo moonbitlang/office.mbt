@@ -147,6 +147,8 @@ pub fn pdf_object_of_matrix(TransformMatrix) -> PdfObject
 
 pub fn pdf_objects_empty() -> PdfObjects
 
+pub fn pdf_ocg_default_config() -> PdfOcgConfig
+
 pub fn pdf_page_blank(PaperSize) -> PdfPage
 
 pub fn pdf_page_custom(PdfObject) -> PdfPage
@@ -617,9 +619,11 @@ pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfB
 pub fn PdfDocument::read_destination(Self, PdfObject, shallow? : Bool) -> PdfDestination raise PdfError
 pub fn PdfDocument::read_name_tree(Self, PdfObject) -> Array[(Bytes, PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, PdfObject) -> Array[(Int, PdfObject)]
+pub fn PdfDocument::read_optional_content_groups(Self) -> PdfOptionalContent? raise PdfError
 pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise PdfError
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_object(Self, Int) -> Unit
+pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError
@@ -640,6 +644,7 @@ pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination)
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
+pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise PdfError
 pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise PdfError
 
 pub(all) enum PdfLexeme {
@@ -729,6 +734,68 @@ pub fn PdfObjects::max_object_number(Self) -> Int
 pub fn PdfObjects::object_numbers(Self) -> Array[Int]
 pub fn PdfObjects::remove_object(Self, Int) -> Unit
 pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
+
+pub(all) struct PdfOcg {
+  name : Bytes
+  intent : Array[PdfName]
+  usage : PdfOcgUsage?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOcgAppDict {
+  event : PdfOcgEvent
+  ocgs : Array[Int]
+  category : Array[PdfName]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOcgConfig {
+  name : Bytes?
+  creator : Bytes?
+  base_state : PdfOcgState
+  on : Array[Int]
+  off : Array[Int]
+  intent : Array[PdfName]
+  usage_applications : Array[PdfOcgAppDict]
+  order : Array[(Bytes?, Array[Int])]?
+  list_mode : PdfOcgListMode
+  radio_button_groups : Array[Array[Int]]?
+  locked : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfOcgEvent {
+  OcgView
+  OcgPrint
+  OcgExport
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfOcgListMode {
+  OcgAllPages
+  OcgVisiblePages
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfOcgState {
+  OcgOn
+  OcgOff
+  OcgUnchanged
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOcgUsage {
+  creator_info : (Bytes, PdfName)?
+  language : (Bytes, PdfName?)?
+  export_state : PdfName?
+  zoom_min : Double?
+  zoom_max : Double?
+  print_subtype : PdfName?
+  print_state : PdfName?
+  view_state : PdfName?
+  user : (PdfName, Array[Bytes])?
+  page_element_subtype : PdfName?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOptionalContent {
+  ocgs : Array[(Int, PdfOcg)]
+  default_config : PdfOcgConfig
+  configs : Array[PdfOcgConfig]
+} derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfPage {
   content : Array[PdfObject]

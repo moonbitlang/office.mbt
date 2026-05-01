@@ -283,6 +283,10 @@ Default rule:
   or unchecked debug output.
 - MoonBit `Bytes` is immutable. Build mutable byte data with
   `FixedArray[Byte]`, `Array[Byte]`, or a buffer, then freeze it into `Bytes`.
+- Classify OCaml `string` fields independently, even within the same source
+  record. It is common for one OCaml record to use `string` for byte-preserving
+  payloads, human text, and symbolic format names; port those fields to
+  `Bytes`, `String`, or a small name/newtype according to their meaning.
 
 ### Numbers
 

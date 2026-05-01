@@ -371,7 +371,10 @@ MoonBit consequences for this project:
     page-record annotation insertion, and geometry transforms for `/Rect`,
     `/QuadPoints`, and `/L`. Date support is started with typed PDF dates,
     CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
-    and PDF date string rendering.
+    and PDF date string rendering. Optional content group support is started
+    with typed OCG usage/configuration/application records, `/OCProperties`
+    reading, returned-copy writing/removal, byte-preserving PDF strings, and
+    explicit `PdfName` fields for PDF name values.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the
