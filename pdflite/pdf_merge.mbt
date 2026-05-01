@@ -39,9 +39,15 @@ fn PdfDocument::pdf_merge_copy_objects_from(
 pub fn pdf_merge_documents(
   documents : ArrayView[PdfDocument],
   ranges : ArrayView[Array[Int]],
+  retain_numbering? : Bool = false,
 ) -> PdfDocument raise PdfError {
   if documents.length() == 0 || documents.length() != ranges.length() {
     raise PageTreeExpected
+  }
+  let page_labels = if retain_numbering {
+    pdf_page_label_merge(documents, ranges)
+  } else {
+    []
   }
   let staged : Array[PdfDocument] = []
   let mut offset = 0
@@ -64,5 +70,9 @@ pub fn pdf_merge_documents(
   let page_root_number = merged.add_pagetree(pages)
   ignore(merged.add_root(page_root_number, []))
   merged.remove_unreferenced()
-  merged
+  if retain_numbering && page_labels.length() > 0 {
+    merged.write_page_labels(page_labels)
+  } else {
+    merged
+  }
 }

@@ -381,7 +381,8 @@ MoonBit consequences for this project:
     trailer, and nested indirect-reference rewriting. A first minimal document
     merge helper now extracts requested page ranges, offsets object numbers,
     concatenates pages, preserves the maximum input version, and removes
-    unreferenced imported roots/catalogs.
+    unreferenced imported roots/catalogs. Merge page-label retention is wired
+    through the existing page-label merge helper behind an explicit option.
 
 12. Async I/O and command-facing APIs.
     Add async native-target wrappers for reading and writing files after the
