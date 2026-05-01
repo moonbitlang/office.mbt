@@ -279,9 +279,11 @@ MoonBit consequences for this project:
    object numbers, copied annotation `/Popup` and `/Parent` links are repaired
    within each extracted page, and `/Root/Names/Dests` name-tree entries whose
    page targets were nulled are pruned. Old-style catalog `/Dests` dictionary
-   entries are also pruned after selected page references are rewritten. Page
-   labels, bookmarks, structure-tree trimming, and retained-numbering mode
-   remain deferred.
+   entries are also pruned after selected page references are rewritten.
+   Page-label handling is started: extracted documents drop stale source
+   `/PageLabels` by default and can retain selected-page numbering with
+   `retain_numbering=true`. Bookmarks, structure-tree trimming, and broader
+   retained-numbering behavior remain deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a
    `remove_unreferenced` pass that follows indirect references from the catalog

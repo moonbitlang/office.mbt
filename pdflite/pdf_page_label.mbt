@@ -468,6 +468,17 @@ pub fn PdfDocument::read_page_labels(
 }
 
 ///|
+fn PdfDocument::pdf_page_label_has_labels(
+  self : PdfDocument,
+) -> Bool raise PdfError {
+  let root = self.lookup_object_or_null(self.root())
+  if root == PdfNull {
+    raise RootExpected
+  }
+  self.lookup_direct(pdf_page_label_page_labels_key(), root) is Some(_)
+}
+
+///|
 pub fn PdfDocument::remove_page_labels(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {

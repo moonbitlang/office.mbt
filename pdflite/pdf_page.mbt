@@ -1127,7 +1127,18 @@ fn PdfDocument::pdf_page_fixup_destination_name_tree(
 pub fn PdfDocument::pdf_of_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
+  retain_numbering? : Bool = false,
 ) -> PdfDocument raise PdfError {
+  let has_page_labels = self.pdf_page_label_has_labels()
+  let retained_page_labels = if retain_numbering && has_page_labels {
+    pdf_page_label_merge([self], [
+      [
+        for page_number in page_numbers => page_number
+      ],
+    ])
+  } else {
+    []
+  }
   let selected = pdf_page_select_pages(self.pages_of_pagetree(), page_numbers)
   let old_page_numbers = pdf_page_select_numbers(
     self.page_reference_numbers(),
@@ -1141,6 +1152,15 @@ pub fn PdfDocument::pdf_of_pages(
   pdf.remove_unreferenced()
   pdf.pdf_page_fixup_destination_name_tree()
   pdf.pdf_page_fixup_catalog_destinations()
+  let pdf = if has_page_labels {
+    if retain_numbering {
+      pdf.write_page_labels(retained_page_labels)
+    } else {
+      pdf.remove_page_labels()
+    }
+  } else {
+    pdf
+  }
   pdf.remove_unreferenced()
   pdf
 }

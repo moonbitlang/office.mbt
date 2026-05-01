@@ -942,6 +942,55 @@ test "PdfDocument pdf_of_pages extracts pages in requested order" {
 }
 
 ///|
+test "PdfDocument pdf_of_pages handles page labels" {
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+    page_indexed_blank_for_test(2),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let labelled = try! doc.write_page_labels([
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(@ascii.encode("intro-")),
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 3,
+      start_value: 1,
+    },
+  ])
+  let extracted = try! labelled.pdf_of_pages([3, 1])
+  @test.assert_eq(try! extracted.read_page_labels(), [])
+  let retained = try! labelled.pdf_of_pages([3, 1], retain_numbering=true)
+  @test.assert_eq(try! retained.read_page_labels(), [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: None,
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(@ascii.encode("intro-")),
+      start_page: 2,
+      start_value: 1,
+    },
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_page_label_text_of_page_number(
+      2,
+      try! retained.read_page_labels(),
+    ),
+    Some(@ascii.encode("intro-i")),
+  )
+}
+
+///|
 test "PdfDocument pdf_of_pages duplicates reused annotations" {
   let key_annots = page_name_for_test("/Annots")
   let key_subtype = page_name_for_test("/Subtype")

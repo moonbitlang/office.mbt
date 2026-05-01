@@ -524,7 +524,7 @@ pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
-pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int]) -> Self raise PdfError
+pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool) -> Self raise PdfError
 pub fn PdfDocument::postpend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::prepend_operators(Self, PdfPage, ArrayView[PdfContentOp], fast? : Bool) -> PdfPage raise PdfError
 pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[PdfBookmark] raise PdfError
