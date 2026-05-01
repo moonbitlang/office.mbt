@@ -258,7 +258,9 @@ MoonBit consequences for this project:
    Status: started with CamlPDF-style page tree reference-number traversal
    through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
    top-level `/Count` based `endpage_fast`, `page_object_number`, page records,
-   blank/custom pages, flat page-tree construction, and root installation.
+   blank/custom pages, flat page-tree construction, root installation, and
+   `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
+   `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and

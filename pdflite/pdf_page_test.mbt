@@ -76,6 +76,84 @@ fn page_hello_resources_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
+  let key_type = page_name_for_test("/Type")
+  let key_pages = page_name_for_test("/Pages")
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let key_resources = page_name_for_test("/Resources")
+  let key_mediabox = page_name_for_test("/MediaBox")
+  let key_rotate = page_name_for_test("/Rotate")
+  let key_contents = page_name_for_test("/Contents")
+  let key_annots = page_name_for_test("/Annots")
+  let type_catalog = page_name_for_test("/Catalog")
+  let type_pages = page_name_for_test("/Pages")
+  let type_page = page_name_for_test("/Page")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(type_pages)),
+      (key_kids, PdfArray([PdfIndirect(3), PdfIndirect(4)])),
+      (key_count, PdfInteger(2)),
+      (key_resources, page_hello_resources_for_test()),
+      (
+        key_mediabox,
+        PdfArray([
+          PdfInteger(0),
+          PdfInteger(0),
+          PdfInteger(100),
+          PdfInteger(200),
+        ]),
+      ),
+      (key_rotate, PdfInteger(90)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(type_page)),
+      (key_contents, PdfIndirect(6)),
+      (key_annots, PdfArray([])),
+    ]),
+  )
+  doc.add_object_given_number(
+    4,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(type_page)),
+      (
+        key_mediabox,
+        PdfArray([
+          PdfInteger(10),
+          PdfInteger(20),
+          PdfInteger(30),
+          PdfInteger(40),
+        ]),
+      ),
+      (key_rotate, PdfInteger(-90)),
+      (key_contents, PdfArray([PdfIndirect(999), PdfIndirect(7)])),
+    ]),
+  )
+  doc.add_object_given_number(
+    6,
+    try! @pdflite.pdf_content_stream_of_ops(page_hello_ops_for_test()),
+  )
+  doc.add_object_given_number(
+    7,
+    try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET]),
+  )
+  doc
+}
+
+///|
 test "PdfDocument page_reference_numbers traverses page tree in order" {
   let doc = page_tree_document_for_test()
   @test.assert_eq(try! doc.page_reference_numbers(), [3, 5])
@@ -156,6 +234,10 @@ test "PdfDocument add_pagetree and add_root build a writable page document" {
   @test.assert_eq(try! parsed.endpage(), 1)
   let page_numbers = try! parsed.page_reference_numbers()
   @test.assert_eq(page_numbers.length(), 1)
+  let pages = try! parsed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].resources, page_hello_resources_for_test())
+  @test.assert_eq(pages[0].content.length(), 1)
   let page_object = parsed.lookup_object_or_null(page_numbers[0])
   let contents = match
     page_object.lookup_immediate(page_name_for_test("/Contents")) {
@@ -166,6 +248,83 @@ test "PdfDocument add_pagetree and add_root build a writable page document" {
     try! parsed.parse_content_ops(contents),
     page_hello_ops_for_test(),
   )
+  @test.assert_eq(
+    try! parsed.parse_content_ops(pages[0].content),
+    page_hello_ops_for_test(),
+  )
+}
+
+///|
+test "PdfDocument pages_of_pagetree extracts inherited page properties" {
+  let doc = page_manual_extract_document_for_test()
+  let pages = try! doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 2)
+  @test.assert_eq(pages[0].resources, page_hello_resources_for_test())
+  @test.assert_eq(
+    pages[0].mediabox,
+    PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(100), PdfInteger(200)]),
+  )
+  @test.assert_eq(pages[0].rotate, Rotate90)
+  @test.assert_eq(pages[0].content, [PdfIndirect(6)])
+  @test.assert_eq(
+    pages[0].rest,
+    @pdflite.pdf_dictionary([(page_name_for_test("/Annots"), PdfArray([]))]),
+  )
+  @test.assert_eq(pages[1].resources, page_hello_resources_for_test())
+  @test.assert_eq(
+    pages[1].mediabox,
+    PdfArray([PdfInteger(10), PdfInteger(20), PdfInteger(30), PdfInteger(40)]),
+  )
+  @test.assert_eq(pages[1].rotate, Rotate270)
+  @test.assert_eq(pages[1].content, [PdfIndirect(7)])
+}
+
+///|
+test "PdfDocument pages_of_pagetree falls back to last seen mediabox" {
+  let key_type = page_name_for_test("/Type")
+  let key_pages = page_name_for_test("/Pages")
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let key_mediabox = page_name_for_test("/MediaBox")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_kids, PdfArray([PdfIndirect(3), PdfIndirect(4)])),
+      (key_count, PdfInteger(2)),
+    ]),
+  )
+  let first_box : @pdflite.PdfObject = PdfArray([
+    PdfInteger(1),
+    PdfInteger(2),
+    PdfInteger(300),
+    PdfInteger(400),
+  ])
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_mediabox, first_box),
+    ]),
+  )
+  doc.add_object_given_number(
+    4,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+    ]),
+  )
+  let pages = try! doc.pages_of_pagetree()
+  @test.assert_eq(pages[0].mediabox, first_box)
+  @test.assert_eq(pages[1].mediabox, first_box)
 }
 
 ///|
