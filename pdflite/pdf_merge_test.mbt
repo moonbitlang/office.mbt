@@ -9,6 +9,22 @@ fn merge_one_page_doc_for_test(
 }
 
 ///|
+fn merge_bookmarked_doc_for_test(label : String) -> @pdflite.PdfDocument {
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let page_refs = try! doc.page_reference_numbers()
+  try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode(label),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
   let first = merge_one_page_doc_for_test(1, 4)
   let second = merge_one_page_doc_for_test(1, 7)
@@ -53,6 +69,26 @@ test "pdf_merge_documents optionally retains merged page labels" {
     try! retained.read_page_labels(),
     try! @pdflite.pdf_page_label_merge([first, second], [[1], [1]]),
   )
+}
+
+///|
+test "pdf_merge_documents retargets retained bookmarks to merged pages" {
+  let first = merge_bookmarked_doc_for_test("A")
+  let second = merge_bookmarked_doc_for_test("B")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let bookmarks = try! merged.read_bookmarks()
+  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [
+    @ascii.encode("A"),
+    @ascii.encode("B"),
+  ])
+  @test.assert_eq(try! merged.page_number_of_target(bookmarks[0].target), 1)
+  @test.assert_eq(try! merged.page_number_of_target(bookmarks[1].target), 2)
+  let without_bookmarks = try! @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_bookmarks=false,
+  )
+  @test.assert_eq(try! without_bookmarks.read_bookmarks(), [])
 }
 
 ///|
