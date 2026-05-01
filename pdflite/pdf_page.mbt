@@ -94,6 +94,16 @@ fn pdf_page_subtype_key() -> PdfName {
 }
 
 ///|
+fn pdf_page_xobject_key() -> PdfName {
+  pdf_page_name("/XObject")
+}
+
+///|
+fn pdf_page_filter_key() -> PdfName {
+  pdf_page_name("/Filter")
+}
+
+///|
 fn pdf_page_popup_key() -> PdfName {
   pdf_page_name("/Popup")
 }
@@ -116,6 +126,11 @@ fn pdf_page_type_page() -> PdfName {
 ///|
 fn pdf_page_type_link() -> PdfName {
   pdf_page_name("/Link")
+}
+
+///|
+fn pdf_page_type_form() -> PdfName {
+  pdf_page_name("/Form")
 }
 
 ///|
@@ -2038,6 +2053,80 @@ fn PdfDocument::pdf_page_object_uses_page_resources(
     Some(PdfNameObject(name)) =>
       name == pdf_page_type_page() || name == pdf_page_type_pages()
     _ => false
+  }
+}
+
+///|
+fn pdf_page_merge_dictionary_objects(
+  first : PdfObject,
+  second : PdfObject,
+) -> PdfObject raise PdfError {
+  let mut output = first
+  match second {
+    PdfDictionary(entries) =>
+      for entry in entries {
+        let (key, value) = entry
+        output = output.add_dict_entry(key, value)
+      }
+    _ => raise DictionaryExpected
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_process_form_xobject(
+  self : PdfDocument,
+  resources : PdfObject,
+  object_number : Int,
+  process : (PdfDocument, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise PdfError,
+) -> Unit raise PdfError {
+  let xobject = self.lookup_object_or_null(object_number)
+  match self.lookup_direct(pdf_page_subtype_key(), xobject) {
+    Some(PdfNameObject(name)) if name == pdf_page_type_form() =>
+      match self.direct(PdfIndirect(object_number)) {
+        PdfStreamObject(stream) => {
+          let processed = process(self, resources, [PdfStreamObject(stream)])
+          if processed.length() != 1 {
+            raise ParseStreamExpected
+          }
+          match processed[0] {
+            PdfStreamObject(processed_stream) => {
+              let dictionary = pdf_page_merge_dictionary_objects(
+                stream.dictionary,
+                processed_stream.dictionary,
+              ).remove_dict_entry(pdf_page_filter_key())
+              self.add_object_given_number(
+                object_number,
+                PdfStreamObject({ dictionary, data: processed_stream.data }),
+              )
+            }
+            _ => raise ParseStreamExpected
+          }
+        }
+        _ => raise ParseStreamExpected
+      }
+    Some(_) => ()
+    None => raise DictionaryKeyNotFound(pdf_page_subtype_key())
+  }
+}
+
+///|
+pub fn PdfDocument::process_xobjects(
+  self : PdfDocument,
+  page : PdfPage,
+  process : (PdfDocument, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise PdfError,
+) -> Unit raise PdfError {
+  match self.lookup_direct(pdf_page_xobject_key(), page.resources) {
+    Some(PdfDictionary(entries)) =>
+      for entry in entries {
+        let (_, value) = entry
+        match value {
+          PdfIndirect(number) =>
+            self.pdf_page_process_form_xobject(page.resources, number, process)
+          _ => raise DictionaryExpected
+        }
+      }
+    _ => ()
   }
 }
 

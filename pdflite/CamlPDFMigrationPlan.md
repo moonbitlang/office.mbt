@@ -440,11 +440,15 @@ MoonBit consequences for this project:
    names inside supported content operators. CamlPDF's `merge_content_streams`
    helper is now started as `PdfDocument::merge_content_streams`, and
    `add_prefix` pre-merges split content arrays when individual streams cannot
-   be parsed on their own. `renumber_pages` is now started for page arrays: it
-   assigns fresh `/rN` resource names per page and resource category, rewrites
-   supported resource-backed content operators, preserves direct device
-   color-space names, and emits a single uncompressed rewritten content stream
-   per returned page. CamlPDF's `combine_pdf_resources` helper is started as
+   be parsed on their own. Form XObject processing is started with
+   `PdfDocument::process_xobjects`, applying a raising callback to indirect
+   `/Form` XObject streams while preserving original stream dictionary entries
+   and dropping stale `/Filter` metadata after replacement. `renumber_pages` is
+   now started for page arrays: it assigns fresh `/rN` resource names per page
+   and resource category, rewrites supported resource-backed content operators,
+   preserves direct device color-space names, and emits a single uncompressed
+   rewritten content stream per returned page. CamlPDF's
+   `combine_pdf_resources` helper is started as
    `PdfDocument::combine_pdf_resources`, unioning standard resource
    subdictionaries while preserving unknown top-level resource keys. CamlPDF's
    warning/log behavior for missing optional marked-content properties is

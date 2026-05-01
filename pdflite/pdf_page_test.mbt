@@ -183,6 +183,15 @@ fn page_prefix_full_resources_for_test(
 }
 
 ///|
+fn page_xobject_resources_for_test(
+  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (page_name_for_test("/XObject"), @pdflite.pdf_dictionary(entries)),
+  ])
+}
+
+///|
 fn page_prefix_content_ops_for_test(
   prefix? : String = "",
 ) -> Array[@pdflite.PdfContentOp] {
@@ -806,6 +815,240 @@ test "PdfDocument combine_pdf_resources resolves indirect subdictionaries" {
       ),
     ]),
   )
+}
+
+///|
+test "PdfDocument process_xobjects rewrites form xobject streams" {
+  let key_subtype = page_name_for_test("/Subtype")
+  let key_filter = page_name_for_test("/Filter")
+  let key_length = page_name_for_test("/Length")
+  let key_keep = page_name_for_test("/Keep")
+  let key_extra = page_name_for_test("/Extra")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
+        (key_filter, PdfNameObject(page_name_for_test("/FlateDecode"))),
+        (key_length, PdfInteger(3)),
+        (key_keep, PdfInteger(1)),
+      ]),
+      StreamGot(@ascii.encode("old")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/Fm1"), PdfIndirect(20)),
+    ]),
+  }
+  try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
+    if streams.length() < 0 {
+      raise ParseStreamExpected
+    }
+    [
+      @pdflite.pdf_stream(
+        @pdflite.pdf_dictionary([
+          (key_filter, PdfNameObject(page_name_for_test("/ASCIIHexDecode"))),
+          (key_length, PdfInteger(2)),
+          (key_extra, PdfInteger(7)),
+        ]),
+        StreamGot(@ascii.encode("BT")),
+      ),
+    ]
+  })
+  guard doc.lookup_object_or_null(20) is PdfStreamObject(stream) else {
+    fail("expected form xobject stream")
+  }
+  @test.assert_eq(stream.data, StreamGot(@ascii.encode("BT")))
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(key_subtype),
+    Some(PdfNameObject(page_name_for_test("/Form"))),
+  )
+  @test.assert_eq(stream.dictionary.lookup_immediate(key_filter), None)
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(key_length),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(key_keep),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(key_extra),
+    Some(PdfInteger(7)),
+  )
+}
+
+///|
+test "PdfDocument process_xobjects skips non-form xobjects" {
+  let key_subtype = page_name_for_test("/Subtype")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    21,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
+      ]),
+      StreamGot(@ascii.encode("image")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/Im1"), PdfIndirect(21)),
+    ]),
+  }
+  let calls : Ref[Int] = { val: 0 }
+  try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
+    if streams.length() < 0 {
+      raise ParseStreamExpected
+    }
+    calls.val += 1
+    []
+  })
+  @test.assert_eq(calls.val, 0)
+  @test.assert_eq(
+    doc.lookup_object_or_null(21),
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
+      ]),
+      StreamGot(@ascii.encode("image")),
+    ),
+  )
+}
+
+///|
+test "PdfDocument process_xobjects validates xobject resources" {
+  let key_subtype = page_name_for_test("/Subtype")
+  let doc = @pdflite.pdf_document_empty()
+  let non_indirect_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/Inline"), PdfDictionary([])),
+    ]),
+  }
+  let non_indirect : Result[Unit, Error] = try? doc.process_xobjects(
+    non_indirect_page,
+    fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() < 0 {
+        raise ParseStreamExpected
+      }
+      []
+    },
+  )
+  guard non_indirect is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
+  doc.add_object_given_number(22, @pdflite.pdf_dictionary([]))
+  let missing_subtype_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/MissingSubtype"), PdfIndirect(22)),
+    ]),
+  }
+  let missing_subtype : Result[Unit, Error] = try? doc.process_xobjects(
+    missing_subtype_page,
+    fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() < 0 {
+        raise ParseStreamExpected
+      }
+      []
+    },
+  )
+  guard missing_subtype is Err(@pdflite.PdfError::DictionaryKeyNotFound(_)) else {
+    fail("expected DictionaryKeyNotFound")
+  }
+  doc.add_object_given_number(
+    23,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
+      ]),
+      StreamGot(@ascii.encode("form")),
+    ),
+  )
+  let bad_result_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/Bad"), PdfIndirect(23)),
+    ]),
+  }
+  let bad_result : Result[Unit, Error] = try? doc.process_xobjects(
+    bad_result_page,
+    fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() < 0 {
+        raise ParseStreamExpected
+      }
+      [PdfDictionary([])]
+    },
+  )
+  guard bad_result is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+  let bad_length : Result[Unit, Error] = try? doc.process_xobjects(
+    bad_result_page,
+    fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() < 0 {
+        raise ParseStreamExpected
+      }
+      []
+    },
+  )
+  guard bad_length is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected for bad callback length")
+  }
+  let bad_dictionary : Result[Unit, Error] = try? doc.process_xobjects(
+    bad_result_page,
+    fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() < 0 {
+        raise ParseStreamExpected
+      }
+      [@pdflite.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("bad")))]
+    },
+  )
+  guard bad_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for bad stream dictionary")
+  }
+  doc.add_object_given_number(
+    24,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
+    ]),
+  )
+  let non_stream_page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/NonStream"), PdfIndirect(24)),
+    ]),
+  }
+  let non_stream : Result[Unit, Error] = try? doc.process_xobjects(
+    non_stream_page,
+    fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() < 0 {
+        raise ParseStreamExpected
+      }
+      []
+    },
+  )
+  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected for non-stream form")
+  }
+  let calls : Ref[Int] = { val: 0 }
+  try! doc.process_xobjects(@pdflite.pdf_page_blank(@pdflite.paper_a4), fn(
+    _,
+    _,
+    streams,
+  ) raise @pdflite.PdfError {
+    if streams.length() < 0 {
+      raise ParseStreamExpected
+    }
+    calls.val += 1
+    []
+  })
+  @test.assert_eq(calls.val, 0)
 }
 
 ///|

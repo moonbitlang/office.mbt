@@ -467,7 +467,8 @@ fn main { println(try! apply(fn(x) raise { if x == 0 { fail("zero") }; x + 1 }, 
 Callback parameters that may fail include `raise` in the function type, for
 example `(Int) -> Int raise`. Annotate anonymous raising callbacks with
 `fn(x) raise { ... }`; relying on inferred raising effects for `fn` literals is
-deprecated.
+deprecated. If the callback slot expects a narrower project error type, annotate
+the literal with that type, for example `fn(x) raise ProjectError { ... }`.
 
 ```sh
 moon run -c 'fn main { let xs = [1, 2, 3]; match xs { [_, .. rest] => { let owned = [ for x in rest => x ]; println(rest.length()); println(owned.length()); println(owned[0]) }; _ => () } }'
