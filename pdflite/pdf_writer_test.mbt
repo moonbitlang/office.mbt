@@ -9,6 +9,43 @@ fn writer_name_for_test(values : ArrayView[Int]) -> @pdflite.PdfName {
 }
 
 ///|
+fn writer_bytes_start_with_at(
+  haystack : @pdflite.PdfBytes,
+  needle : @pdflite.PdfBytes,
+  start : Int,
+) -> Bool {
+  for i = 0; i < needle.length(); i = i + 1 {
+    if haystack[start + i] != needle[i] {
+      break false
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+fn writer_find_bytes(
+  haystack : @pdflite.PdfBytes,
+  needle : @pdflite.PdfBytes,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = 0
+        start <= haystack.length() - needle.length()
+        start = start + 1 {
+      if writer_bytes_start_with_at(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
 test "pdf_write_object renders primitive scalar objects" {
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfNull),
@@ -73,4 +110,58 @@ test "pdf_write_indirect_object renders direct stream data" {
   let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(rendered)
   @test.assert_eq(parsed.number, 7)
   @test.assert_eq(parsed.object, object)
+}
+
+///|
+test "pdf_write_document serializes objects with xref and trailer" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  let type_name = writer_name_for_test([47, 84, 121, 112, 101])
+  let pages_name = writer_name_for_test([47, 80, 97, 103, 101, 115])
+  let catalog = @pdflite.pdf_dictionary([
+    (
+      type_name,
+      PdfNameObject(writer_name_for_test([47, 67, 97, 116, 97, 108, 111, 103])),
+    ),
+    (pages_name, PdfIndirect(2)),
+  ])
+  let kids_name = writer_name_for_test([47, 75, 105, 100, 115])
+  let count_name = writer_name_for_test([47, 67, 111, 117, 110, 116])
+  let pages = @pdflite.pdf_dictionary([
+    (
+      type_name,
+      PdfNameObject(writer_name_for_test([47, 80, 97, 103, 101, 115])),
+    ),
+    (kids_name, @pdflite.pdf_array([])),
+    (count_name, PdfInteger(0)),
+  ])
+  document.add_object_given_number(1, catalog)
+  document.add_object_given_number(2, pages)
+  let rendered = try! @pdflite.pdf_write_document(document)
+  let xref_at = writer_find_bytes(
+    rendered,
+    writer_bytes_for_test([120, 114, 101, 102]),
+  )
+  let trailer_at = writer_find_bytes(
+    rendered,
+    writer_bytes_for_test([116, 114, 97, 105, 108, 101, 114]),
+  )
+  let startxref_at = writer_find_bytes(
+    rendered,
+    writer_bytes_for_test([115, 116, 97, 114, 116, 120, 114, 101, 102]),
+  )
+  let eof_at = writer_find_bytes(
+    rendered,
+    writer_bytes_for_test([37, 37, 69, 79, 70]),
+  )
+  @test.assert_eq(xref_at > 0, true)
+  @test.assert_eq(trailer_at > xref_at, true)
+  @test.assert_eq(startxref_at > trailer_at, true)
+  @test.assert_eq(eof_at > startxref_at, true)
+  let parsed = try! @pdflite.pdf_read_primitive_document_from_bytes(rendered)
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(1), catalog)
+  @test.assert_eq(parsed.lookup_object_or_null(2), pages)
 }

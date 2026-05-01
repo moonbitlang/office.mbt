@@ -148,3 +148,104 @@ pub fn pdf_write_indirect_object(
   pdf_writer_push_ascii(output, "\nendobj\n")
   Bytes::from_array(output)
 }
+
+///|
+fn pdf_writer_push_padded_decimal(
+  output : Array[Byte],
+  value : Int,
+  width : Int,
+) -> Unit {
+  let text = value.to_string()
+  if text.length() < width {
+    for _ in 0..<(width - text.length()) {
+      pdf_writer_push_byte(output, 48)
+    }
+  }
+  pdf_writer_push_ascii(output, text)
+}
+
+///|
+fn pdf_writer_root_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 82, 111, 111, 116]))
+}
+
+///|
+fn pdf_writer_size_name() -> PdfName {
+  pdf_name_of_bytes(Bytes::from_array([47, 83, 105, 122, 101]))
+}
+
+///|
+fn pdf_writer_trailer_dictionary(
+  document : PdfDocument,
+) -> PdfObject raise PdfError {
+  let mut trailer = document.trailer_dict()
+  trailer = trailer.add_dict_entry(
+    pdf_writer_size_name(),
+    PdfInteger(document.objects.max_object_number() + 1),
+  )
+  if document.root() != 0 {
+    trailer = trailer.add_dict_entry(
+      pdf_writer_root_name(),
+      PdfIndirect(document.root()),
+    )
+  }
+  trailer
+}
+
+///|
+pub fn pdf_write_document(document : PdfDocument) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  let xrefs : Array[(Int, Int, Int)] = []
+  let (major, minor) = document.version()
+  pdf_writer_push_ascii(output, "%PDF-")
+  pdf_writer_push_ascii(output, major.to_string())
+  pdf_writer_push_byte(output, 46)
+  pdf_writer_push_ascii(output, minor.to_string())
+  pdf_writer_push_ascii(output, "\n%")
+  for value in [226, 227, 207, 211] {
+    pdf_writer_push_byte(output, value)
+  }
+  pdf_writer_push_byte(output, 10)
+  for number in document.object_numbers() {
+    match document.objects.get_entry(number) {
+      Some({ data: ObjectParsed(object), generation })
+      | Some({ data: ObjectParsedAlreadyDecrypted(object), generation }) => {
+        xrefs.push((number, output.length(), generation))
+        pdf_writer_push_view(
+          output,
+          pdf_write_indirect_object({ number, generation, object })[:],
+        )
+      }
+      Some(_) => raise ParsedObjectExpected
+      None => ()
+    }
+  }
+  let xref_start = output.length()
+  let size = document.objects.max_object_number() + 1
+  pdf_writer_push_ascii(output, "xref\n0 ")
+  pdf_writer_push_ascii(output, size.to_string())
+  pdf_writer_push_byte(output, 10)
+  pdf_writer_push_ascii(output, "0000000000 65535 f \n")
+  let mut xref_index = 0
+  for number = 1; number < size; number = number + 1 {
+    if xref_index < xrefs.length() && xrefs[xref_index].0 == number {
+      let (_, offset, generation) = xrefs[xref_index]
+      pdf_writer_push_padded_decimal(output, offset, 10)
+      pdf_writer_push_byte(output, 32)
+      pdf_writer_push_padded_decimal(output, generation, 5)
+      pdf_writer_push_ascii(output, " n \n")
+      xref_index += 1
+    } else {
+      pdf_writer_push_ascii(output, "0000000000 65535 f \n")
+    }
+  }
+  pdf_writer_push_ascii(output, "trailer\n")
+  pdf_writer_push_view(
+    output,
+    pdf_write_object(pdf_writer_trailer_dictionary(document))[:],
+  )
+  pdf_writer_push_ascii(output, "\nstartxref\n")
+  pdf_writer_push_ascii(output, xref_start.to_string())
+  pdf_writer_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}

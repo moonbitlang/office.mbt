@@ -193,8 +193,11 @@ MoonBit consequences for this project:
    and compare stable structure. This becomes the first round-trip gate.
    Status: started with byte-oriented primitive object rendering, PDF name and
    literal string escaping, indirect object rendering, and direct `StreamGot`
-   stream rendering. Xref, trailer, complete real formatting parity, and full
-   document serialization remain deferred.
+   stream rendering. Minimal classic xref-table, trailer dictionary, header,
+   `startxref`, and `%%EOF` document serialization are also started, with a
+   primitive writer-reader round-trip test for parsed objects. Complete real
+   formatting parity, incremental update handling, compressed xref streams,
+   encrypted output, and lazy `StreamToGet` materialization remain deferred.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus

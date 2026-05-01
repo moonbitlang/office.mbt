@@ -59,6 +59,19 @@ then append binary payloads as `Bytes`/`BytesView`. Do not build binary file
 formats through `String` concatenation.
 
 ```sh
+moon run -c $'fn push_ascii(output : Array[Byte], text : String) -> Unit { for byte in @ascii.encode(text)[:] { output.push(byte) } }\nfn main { let output : Array[Byte] = []; push_ascii(output, "PDF"); output.push(10); let bytes = Bytes::from_array(output); println(bytes.length()); println(bytes[0].to_int()); println(bytes[3].to_int()) }'
+# 4
+# 80
+# 10
+```
+
+For binary writers, use `Array[Byte]` as the mutable output builder. Append
+ASCII format syntax by iterating over `@ascii.encode(text)[:]`, append binary
+payloads from `BytesView`, and call `Bytes::from_array` once at the ownership
+boundary. This is the usual MoonBit replacement for OCaml code that used
+`Buffer`, `Bytes`, or byte-oriented `string` concatenation to construct output.
+
+```sh
 moon run -c 'fn main { let (b, u16, i64, u64) : (Byte, UInt16, Int64, UInt64) = (255, 65535, 42, 42); println(b.to_int()); println(u16.to_int()); println(i64.to_string()); println(u64.to_string()) }'
 # 255
 # 65535

@@ -22,6 +22,7 @@ pub(all) suberror PdfError {
   ParseEndStreamExpected
   StreamLengthExpected
   StreamDataExpected
+  ParsedObjectExpected
   EndOfInput
 } derive(Debug, Eq, ToJson)
 
