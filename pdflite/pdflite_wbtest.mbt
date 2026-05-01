@@ -348,7 +348,158 @@ test "private xref stream helpers cover malformed and deferred entries" {
   @test.assert_eq(deferred_entries[0].object_number, 3)
   @test.assert_eq(deferred_entries[0].offset, 7)
   @test.assert_eq(deferred_entries[0].generation, 0)
-  @test.assert_eq(deferred_entries[0].in_use, false)
+  @test.assert_eq(deferred_entries[0].in_use, true)
+  @test.assert_eq(
+    deferred_entries[0].object_stream,
+    Some({ object_stream_number: 7, index: 0 }),
+  )
+}
+
+///|
+test "private object stream helpers cover malformed object streams" {
+  let key_type = pdf_reader_name("/Type")
+  let key_n = pdf_reader_name("/N")
+  let key_first = pdf_reader_name("/First")
+  let key_length = pdf_reader_name("/Length")
+
+  let missing_required : Result[Int, Error] = try? pdf_object_stream_required_int(
+    PdfDictionary([]),
+    key_n,
+  )
+  guard missing_required is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let bad_first : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
+    @ascii.encode("1 0")[:],
+    4,
+    1,
+  )
+  guard bad_first is Err(PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
+  }
+
+  let short_header : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
+    @ascii.encode("2 ")[:],
+    2,
+    1,
+  )
+  guard short_header is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let malformed_pair : Result[Array[(Int, Int)], Error] = try? pdf_object_stream_number_offsets(
+    @ascii.encode("/Name 0 ")[:],
+    8,
+    1,
+  )
+  guard malformed_pair is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let bad_index : Result[Int, Error] = try? pdf_object_stream_next_offset(
+    [][:],
+    0,
+    0,
+    0,
+  )
+  guard bad_index is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  @test.assert_eq(
+    try! pdf_object_stream_next_offset([(2, 0), (3, 4)][:], 0, 12, 8),
+    4,
+  )
+
+  let doc = pdf_document_empty()
+  let valid_stream = pdf_stream(
+    PdfDictionary([
+      (key_type, PdfNameObject(pdf_reader_name("/ObjStm"))),
+      (key_n, PdfInteger(2)),
+      (key_first, PdfInteger(8)),
+      (key_length, PdfInteger(17)),
+    ]),
+    StreamGot(@ascii.encode("2 0 3 4 truefalse")),
+  )
+  doc.add_object_given_number(7, valid_stream)
+  @test.assert_eq(
+    try! doc.read_object_stream_reference({ object_stream_number: 7, index: 0 }),
+    (2, PdfBoolean(true)),
+  )
+
+  let no_type_doc = pdf_document_empty()
+  no_type_doc.add_object_given_number(
+    10,
+    pdf_stream(
+      PdfDictionary([
+        (key_n, PdfInteger(1)),
+        (key_first, PdfInteger(4)),
+        (key_length, PdfInteger(8)),
+      ]),
+      StreamGot(@ascii.encode("2 0 true")),
+    ),
+  )
+  @test.assert_eq(
+    try! no_type_doc.read_object_stream_reference({
+      object_stream_number: 10,
+      index: 0,
+    }),
+    (2, PdfBoolean(true)),
+  )
+
+  let wrong_type_doc = pdf_document_empty()
+  wrong_type_doc.add_object_given_number(
+    8,
+    pdf_stream(
+      PdfDictionary([
+        (key_type, PdfNameObject(pdf_reader_name("/Page"))),
+        (key_n, PdfInteger(1)),
+        (key_first, PdfInteger(4)),
+        (key_length, PdfInteger(8)),
+      ]),
+      StreamGot(@ascii.encode("2 0 true")),
+    ),
+  )
+  let wrong_type : Result[(Int, PdfObject), Error] = try? wrong_type_doc.read_object_stream_reference({
+      object_stream_number: 8,
+      index: 0,
+    },
+  )
+  guard wrong_type is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let missing_stream : Result[(Int, PdfObject), Error] = try? doc.read_object_stream_reference({
+      object_stream_number: 99,
+      index: 0,
+    },
+  )
+  guard missing_stream is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
+  let bad_offset_doc = pdf_document_empty()
+  bad_offset_doc.add_object_given_number(
+    9,
+    pdf_stream(
+      PdfDictionary([
+        (key_type, PdfNameObject(pdf_reader_name("/ObjStm"))),
+        (key_n, PdfInteger(1)),
+        (key_first, PdfInteger(5)),
+        (key_length, PdfInteger(9)),
+      ]),
+      StreamGot(@ascii.encode("2 99 true")),
+    ),
+  )
+  let bad_offset : Result[(Int, PdfObject), Error] = try? bad_offset_doc.read_object_stream_reference({
+      object_stream_number: 9,
+      index: 0,
+    },
+  )
+  guard bad_offset is Err(PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
+  }
 }
 
 ///|

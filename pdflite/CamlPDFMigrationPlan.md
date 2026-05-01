@@ -197,11 +197,14 @@ MoonBit consequences for this project:
    stream reading is now started for direct/filter-decodable stream data,
    default `/Size` ranges, explicit `/Index` ranges, and ordinary type-1
    entries; xref stream objects are omitted from the loaded object map, and
-   type-2 object-stream entries currently hide older entries until object
-   stream extraction is ported. Object streams and malformed-file
-   reconstruction remain deferred. `pdf_read_document_from_bytes` is now the
-   public byte-backed reader entry point and handles classic tables and the
-   started xref-stream subset. Reader
+   type-2 object-stream entries are now resolved after their containing
+   `/ObjStm` object has been loaded. Object stream extraction is started for
+   direct/filter-decodable stream data with direct `/N` and `/First`
+   dictionaries, including malformed header, offset, index, and object-number
+   mismatch checks. Malformed-file reconstruction remains deferred.
+   `pdf_read_document_from_bytes` is now the public byte-backed reader entry
+   point and handles classic tables plus the started xref-stream/object-stream
+   subset. Reader
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.

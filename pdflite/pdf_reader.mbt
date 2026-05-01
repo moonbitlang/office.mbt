@@ -120,6 +120,7 @@ struct PdfClassicXRefEntry {
   offset : Int
   generation : Int
   in_use : Bool
+  object_stream : ObjectStreamReference?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -303,6 +304,7 @@ fn ByteCursor::read_pdf_classic_xref_entries(
           offset: pdf_parse_ascii_int_view(tokens[0]),
           generation: pdf_parse_ascii_int_view(tokens[1]),
           in_use: pdf_xref_token_in_use(tokens[2]),
+          object_stream: None,
         })
         object_number += 1
       } else {
@@ -329,6 +331,11 @@ fn pdf_reader_xref_name() -> PdfName {
 }
 
 ///|
+fn pdf_reader_objstm_name() -> PdfName {
+  pdf_reader_name("/ObjStm")
+}
+
+///|
 fn pdf_reader_w_name() -> PdfName {
   pdf_reader_name("/W")
 }
@@ -341,6 +348,16 @@ fn pdf_reader_index_name() -> PdfName {
 ///|
 fn pdf_reader_size_name() -> PdfName {
   pdf_reader_name("/Size")
+}
+
+///|
+fn pdf_reader_n_name() -> PdfName {
+  pdf_reader_name("/N")
+}
+
+///|
+fn pdf_reader_first_name() -> PdfName {
+  pdf_reader_name("/First")
 }
 
 ///|
@@ -509,6 +526,7 @@ fn pdf_xref_stream_entries(
             offset: field2,
             generation: field3,
             in_use: false,
+            object_stream: None,
           })
         1 =>
           entries.push({
@@ -516,21 +534,121 @@ fn pdf_xref_stream_entries(
             offset: field2,
             generation: field3,
             in_use: true,
+            object_stream: None,
           })
-        // Object-stream entries are intentionally kept as non-loadable entries
-        // until object stream extraction is ported. They still hide older xrefs.
+        // Object-stream entries hide older xrefs and are loaded after their
+        // containing object stream has been parsed as a plain entry.
         2 =>
           entries.push({
             object_number,
             offset: field2,
             generation: field3,
-            in_use: false,
+            in_use: true,
+            object_stream: Some({ object_stream_number: field2, index: field3 }),
           })
         _ => ()
       }
     }
   }
   entries
+}
+
+///|
+fn pdf_object_stream_required_int(
+  dictionary : PdfObject,
+  key : PdfName,
+) -> Int raise PdfError {
+  match dictionary.lookup_immediate(key) {
+    Some(PdfInteger(value)) if value >= 0 => value
+    _ => raise XRefEntryExpected
+  }
+}
+
+///|
+fn pdf_object_stream_number_offsets(
+  data : BytesView,
+  first : Int,
+  count : Int,
+) -> Array[(Int, Int)] raise PdfError {
+  if first < 0 || first > data.length() || count < 0 {
+    raise StreamDataExpected
+  }
+  let header = data[0:first].to_owned()
+  let values = pdf_parse_lexemes(pdf_lex_bytes(header))
+  if values.length() < count * 2 {
+    raise XRefEntryExpected
+  }
+  let pairs : Array[(Int, Int)] = []
+  for i in 0..<count {
+    match (values[i * 2], values[i * 2 + 1]) {
+      (PdfInteger(object_number), PdfInteger(offset)) if object_number > 0 &&
+        offset >= 0 => pairs.push((object_number, offset))
+      _ => raise XRefEntryExpected
+    }
+  }
+  pairs
+}
+
+///|
+fn pdf_object_stream_next_offset(
+  pairs : ArrayView[(Int, Int)],
+  index : Int,
+  data_length : Int,
+  first : Int,
+) -> Int raise PdfError {
+  if index < 0 || index >= pairs.length() {
+    raise XRefEntryExpected
+  }
+  let (_, offset) = pairs[index]
+  let mut next = data_length - first
+  for pair in pairs {
+    let (_, other_offset) = pair
+    if other_offset > offset && other_offset < next {
+      next = other_offset
+    }
+  }
+  next
+}
+
+///|
+fn PdfDocument::read_object_stream_reference(
+  self : PdfDocument,
+  reference : ObjectStreamReference,
+) -> (Int, PdfObject) raise PdfError {
+  match self.lookup_object_or_null(reference.object_stream_number) {
+    PdfStreamObject(stream) => {
+      match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
+        Some(PdfNameObject(name)) if name == pdf_reader_objstm_name() => ()
+        Some(_) => raise XRefEntryExpected
+        None => ()
+      }
+      let decoded_stream = pdf_decode_stream_value(stream)
+      let count = pdf_object_stream_required_int(
+        decoded_stream.dictionary,
+        pdf_reader_n_name(),
+      )
+      let first = pdf_object_stream_required_int(
+        decoded_stream.dictionary,
+        pdf_reader_first_name(),
+      )
+      let data = pdf_stream_data_bytes(decoded_stream.data)
+      let pairs = pdf_object_stream_number_offsets(data[:], first, count)
+      let next_offset = pdf_object_stream_next_offset(
+        pairs[:],
+        reference.index,
+        data.length(),
+        first,
+      )
+      let (object_number, offset) = pairs[reference.index]
+      let start = first + offset
+      let end = first + next_offset
+      if start < first || start > end || end > data.length() {
+        raise StreamDataExpected
+      }
+      (object_number, pdf_parse_object_from_bytes(data[start:end].to_owned()))
+    }
+    _ => raise XRefEntryExpected
+  }
 }
 
 ///|
@@ -724,20 +842,42 @@ pub fn pdf_read_classic_document_from_bytes(
   document.set_first_xref(xref_position)
   document.set_trailer_and_root(trailer)
   for xref in xrefs {
-    if xref.in_use &&
-      xref.object_number != 0 &&
-      !pdf_reader_int_array_contains(xref_stream_objects[:], xref.object_number) {
-      cursor.seek_pdf_absolute(xref.offset)
-      let parsed = cursor.read_first_indirect_object_at_current(xrefs)
-      if parsed.number != xref.object_number ||
-        parsed.generation != xref.generation {
-        raise XRefEntryExpected
-      }
-      document.add_object_given_number(
-        parsed.number,
-        parsed.object,
-        generation=parsed.generation,
-      )
+    match xref.object_stream {
+      Some(_) => ()
+      None =>
+        if xref.in_use &&
+          xref.object_number != 0 &&
+          !pdf_reader_int_array_contains(
+            xref_stream_objects[:],
+            xref.object_number,
+          ) {
+          cursor.seek_pdf_absolute(xref.offset)
+          let parsed = cursor.read_first_indirect_object_at_current(xrefs)
+          if parsed.number != xref.object_number ||
+            parsed.generation != xref.generation {
+            raise XRefEntryExpected
+          }
+          document.add_object_given_number(
+            parsed.number,
+            parsed.object,
+            generation=parsed.generation,
+          )
+        }
+    }
+  }
+  for xref in xrefs {
+    match xref.object_stream {
+      Some(reference) =>
+        if xref.in_use && xref.object_number != 0 {
+          let (object_number, object) = document.read_object_stream_reference(
+            reference,
+          )
+          if object_number != xref.object_number {
+            raise XRefEntryExpected
+          }
+          document.add_object_given_number(xref.object_number, object)
+        }
+      None => ()
     }
   }
   document
