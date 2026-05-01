@@ -637,9 +637,11 @@ MoonBit consequences for this project:
     explicit-IV-provider AESV2 revision 4 and AESV3 revision 5 documents.
     AESV2 recrypt also has classic plus uncompressed and Flate-compressed
     xref-stream incremental update gates; AESV3 revision 5 recrypt has a
-    classic writer/read/decrypt round-trip gate, including
-    `/EncryptMetadata false` metadata-stream skipping. Default AES recrypt
-    remains deferred until a project-level random-byte source is selected.
+    classic writer/read/decrypt round-trip gate plus classic, uncompressed
+    xref-stream, and Flate-compressed xref-stream incremental update gates,
+    including `/EncryptMetadata false` metadata-stream skipping. Default AES
+    recrypt remains deferred until a project-level random-byte source is
+    selected.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
