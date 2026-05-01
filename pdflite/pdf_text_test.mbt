@@ -2324,6 +2324,47 @@ test "PdfTextExtractor extracts implicit Symbol set and logic glyphs" {
 }
 
 ///|
+test "PdfTextExtractor extracts implicit Symbol punctuation and variant glyphs" {
+  let symbol_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(PdfSymbol, PdfImplicitInFontFile),
+  )
+  let extractor = symbol_font.text_extractor()
+  let text = text_bytes_for_test([
+    0x3A, 0x3B, 0x3C, 0x3E, 0x3F, 0x4A, 0x56, 0x5B, 0x5D, 0x5F, 0x60, 0x6A, 0x76,
+    0x7B, 0x7C, 0x7D, 0xA1,
+  ])
+  @test.assert_eq(try! extractor.codepoints_of_text(text[:]), [
+    58, 59, 60, 62, 63, 0x03D1, 0x03C2, 91, 93, 95, 0xF8E5, 0x03D5, 0x03D6, 123,
+    124, 125, 0x03D2,
+  ])
+  @test.assert_eq(try! extractor.glyphnames_of_text(text[:]), [
+    text_name_for_test("/colon"),
+    text_name_for_test("/semicolon"),
+    text_name_for_test("/less"),
+    text_name_for_test("/greater"),
+    text_name_for_test("/question"),
+    text_name_for_test("/theta1"),
+    text_name_for_test("/sigma1"),
+    text_name_for_test("/bracketleft"),
+    text_name_for_test("/bracketright"),
+    text_name_for_test("/underscore"),
+    text_name_for_test("/radicalex"),
+    text_name_for_test("/phi1"),
+    text_name_for_test("/omega1"),
+    text_name_for_test("/braceleft"),
+    text_name_for_test("/bar"),
+    text_name_for_test("/braceright"),
+    text_name_for_test("/Upsilon1"),
+  ])
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03D1), Some(0x4A))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03C2), Some(0x56))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF8E5), Some(0x60))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03D5), Some(0x6A))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03D6), Some(0x76))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03D2), Some(0xA1))
+}
+
+///|
 test "PdfTextExtractor extracts implicit ZapfDingbats glyphs" {
   let dingbat_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfZapfDingbats, PdfImplicitInFontFile),

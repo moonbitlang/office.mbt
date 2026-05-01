@@ -427,8 +427,9 @@ MoonBit consequences for this project:
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
-   subset now includes common set, logic, double-arrow, and math glyphs from
-   CamlPDF's Symbol encoding table. The ZapfDingbats subset now includes the
+   subset now includes common set, logic, double-arrow, math, ASCII
+   punctuation, and Greek variant glyphs from the Symbol AFM/CamlPDF table.
+   The ZapfDingbats subset now includes the
    cross/star, starburst, sparkle, geometric, quote-style, high-byte card
    suit, circled-digit, filled-circled-digit, circled-sans-serif-digit,
    negative-circled-sans-serif-digit, high-byte arrow glyph blocks including
