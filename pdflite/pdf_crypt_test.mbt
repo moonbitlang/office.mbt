@@ -1143,6 +1143,151 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
 }
 
 ///|
+test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary" {
+  let key_title = crypt_name_for_test("/Title")
+  let key_id = crypt_name_for_test("/ID")
+  let key_encrypt = crypt_name_for_test("/Encrypt")
+  let key_filter = crypt_name_for_test("/Filter")
+  let key_standard = crypt_name_for_test("/Standard")
+  let key_v = crypt_name_for_test("/V")
+  let key_r = crypt_name_for_test("/R")
+  let key_p = crypt_name_for_test("/P")
+  let key_o = crypt_name_for_test("/O")
+  let key_u = crypt_name_for_test("/U")
+  let doc = @pdflite.pdf_document_empty()
+  let plain_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("hello"))),
+  ])
+  doc.add_object_given_number(1, plain_object)
+  doc.set_trailer_dict(
+    PdfDictionary([
+      (
+        key_id,
+        PdfArray([
+          PdfString(@ascii.encode("doc-id")),
+          PdfString(@ascii.encode("ignored")),
+        ]),
+      ),
+    ]),
+  )
+  let encrypted = try! doc.encrypt_40bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+  )
+  let owner_entry = try! @pdflite.pdf_make_owner_password_entry(
+    2,
+    @ascii.encode("owner")[:],
+    @ascii.encode("user")[:],
+    40,
+  )
+  let permissions = @pdflite.pdf_p_of_permissions([PdfNoPrint])
+  let file_key = @pdflite.pdf_encryption_file_key(
+    false,
+    @ascii.encode("user")[:],
+    2,
+    owner_entry[:],
+    permissions,
+    @ascii.encode("doc-id")[:],
+    40,
+  )
+  @test.assert_eq(
+    encrypted.lookup_object_or_null(1),
+    try! @pdflite.pdf_arc4_crypt_pdf_object(1, 0, file_key[:], 40, plain_object),
+  )
+  guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
+    is Some(PdfIndirect(encrypt_number)) else {
+    fail("expected indirect encryption dictionary")
+  }
+  let encrypt_dictionary = encrypted.lookup_object_or_null(encrypt_number)
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_filter),
+    Some(PdfNameObject(key_standard)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_v),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_r),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_p),
+    Some(PdfInteger(permissions)),
+  )
+  @test.assert_eq(
+    encrypt_dictionary.lookup_immediate(key_o),
+    Some(PdfString(owner_entry)),
+  )
+  guard encrypt_dictionary.lookup_immediate(key_u)
+    is Some(PdfString(user_entry)) else {
+    fail("expected user entry")
+  }
+  @test.assert_eq(user_entry.length(), 32)
+  let values = try! encrypted.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptARC4(40, 2))
+  @test.assert_eq(values.permissions, permissions)
+  @test.assert_eq(values.file_id, @ascii.encode("doc-id"))
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
+  @test.assert_eq(
+    decrypted.document.trailer_dict().lookup_immediate(key_encrypt),
+    None,
+  )
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    owner_decrypted.document.lookup_object_or_null(1),
+    plain_object,
+  )
+  @test.assert_eq(doc.lookup_object_or_null(1), plain_object)
+  @test.assert_eq(doc.trailer_dict().lookup_immediate(key_encrypt), None)
+}
+
+///|
+test "PdfDocument encrypt_40bit adds a file id when missing" {
+  let key_id = crypt_name_for_test("/ID")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, PdfString(@ascii.encode("plain")))
+  let generated = try! doc.encrypt_40bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [],
+  )
+  let generated_id = @pdflite.pdf_md5_digest(@ascii.encode("pdflite")[:])
+  @test.assert_eq(
+    generated.trailer_dict().lookup_immediate(key_id),
+    Some(PdfArray([PdfString(generated_id), PdfString(generated_id)])),
+  )
+
+  let encrypted = try! doc.encrypt_40bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [],
+    file_id=@ascii.encode("chosen-id")[:],
+  )
+  @test.assert_eq(
+    encrypted.trailer_dict().lookup_immediate(key_id),
+    Some(
+      PdfArray([
+        PdfString(@ascii.encode("chosen-id")),
+        PdfString(@ascii.encode("chosen-id")),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    (try! encrypted.encryption_values()).file_id,
+    @ascii.encode("chosen-id"),
+  )
+  @test.assert_eq(doc.trailer_dict().lookup_immediate(key_id), None)
+}
+
+///|
 test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
   let owner_entry = try! @pdflite.pdf_make_owner_password_entry(

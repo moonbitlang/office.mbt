@@ -464,6 +464,41 @@ fn PdfDocument::encryption_object_number(self : PdfDocument) -> Int {
 }
 
 ///|
+fn pdf_crypt_generated_id() -> PdfBytes {
+  pdf_md5_digest(@ascii.encode("pdflite")[:])
+}
+
+///|
+fn pdf_crypt_file_id_object(file_id : BytesView) -> PdfObject {
+  let owned = file_id.to_owned()
+  PdfArray([PdfString(owned), PdfString(owned)])
+}
+
+///|
+fn PdfDocument::with_file_id(
+  self : PdfDocument,
+  file_id? : BytesView = [],
+) -> (PdfDocument, PdfBytes) raise PdfError {
+  match self.lookup_direct(pdf_crypt_name("/ID"), self.trailer_dict()) {
+    Some(PdfArray([PdfString(existing), _])) => (self.copy(), existing)
+    _ => {
+      let id = if file_id.length() > 0 {
+        file_id.to_owned()
+      } else {
+        pdf_crypt_generated_id()
+      }
+      let output = self.copy()
+      output.set_trailer_dict(
+        output
+        .trailer_dict()
+        .add_dict_entry(pdf_crypt_name("/ID"), pdf_crypt_file_id_object(id[:])),
+      )
+      (output, id)
+    }
+  }
+}
+
+///|
 fn PdfDocument::decrypt_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
@@ -521,6 +556,55 @@ fn PdfDocument::decrypt_with_file_key(
     PdfCryptAESV3(true) =>
       raise EncryptionObjectCryptUnsupported(values.crypt_type)
   }
+}
+
+///|
+pub fn PdfDocument::encrypt_40bit(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  let (document, id) = self.with_file_id(file_id~)
+  let permissions = pdf_p_of_permissions(denied_permissions)
+  let owner_entry = pdf_make_owner_password_entry(
+    2, owner_password, user_password, 40,
+  )
+  let user_entry = pdf_make_user_password_entry(
+    false,
+    user_password,
+    2,
+    owner_entry[:],
+    permissions,
+    id[:],
+    40,
+  )
+  let file_key = pdf_encryption_file_key(
+    false,
+    user_password,
+    2,
+    owner_entry[:],
+    permissions,
+    id[:],
+    40,
+  )
+  let encrypted = document.arc4_crypt_parsed_objects(file_key[:], 40)
+  let encrypt_dictionary : PdfObject = PdfDictionary([
+    (pdf_crypt_name("/Filter"), PdfNameObject(pdf_crypt_name("/Standard"))),
+    (pdf_crypt_name("/V"), PdfInteger(1)),
+    (pdf_crypt_name("/R"), PdfInteger(2)),
+    (pdf_crypt_name("/O"), PdfString(owner_entry)),
+    (pdf_crypt_name("/U"), PdfString(user_entry)),
+    (pdf_crypt_name("/P"), PdfInteger(permissions)),
+  ])
+  let encrypt_number = encrypted.add_object(encrypt_dictionary)
+  encrypted.set_trailer_dict(
+    encrypted
+    .trailer_dict()
+    .add_dict_entry(pdf_crypt_name("/Encrypt"), PdfIndirect(encrypt_number)),
+  )
+  encrypted
 }
 
 ///|
