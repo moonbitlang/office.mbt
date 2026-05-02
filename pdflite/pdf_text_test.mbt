@@ -5624,6 +5624,124 @@ test "PdfTextExtractor decodes Devanagari AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Thai AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/angkhankhuthai", 0x0E5A),
+    ("/bahtthai", 0x0E3F),
+    ("/bobaimaithai", 0x0E1A),
+    ("/chochangthai", 0x0E0A),
+    ("/chochanthai", 0x0E08),
+    ("/chochingthai", 0x0E09),
+    ("/chochoethai", 0x0E0C),
+    ("/dochadathai", 0x0E0E),
+    ("/dodekthai", 0x0E14),
+    ("/eightthai", 0x0E58),
+    ("/fivethai", 0x0E55),
+    ("/fofanthai", 0x0E1F),
+    ("/fofathai", 0x0E1D),
+    ("/fongmanthai", 0x0E4F),
+    ("/fourthai", 0x0E54),
+    ("/hohipthai", 0x0E2B),
+    ("/honokhukthai", 0x0E2E),
+    ("/khokhaithai", 0x0E02),
+    ("/khokhonthai", 0x0E05),
+    ("/khokhuatthai", 0x0E03),
+    ("/khokhwaithai", 0x0E04),
+    ("/khomutthai", 0x0E5B),
+    ("/khorakhangthai", 0x0E06),
+    ("/kokaithai", 0x0E01),
+    ("/lakkhangyaothai", 0x0E45),
+    ("/lochulathai", 0x0E2C),
+    ("/lolingthai", 0x0E25),
+    ("/luthai", 0x0E26),
+    ("/maichattawathai", 0x0E4B),
+    ("/maiekthai", 0x0E48),
+    ("/maihanakatthai", 0x0E31),
+    ("/maitaikhuthai", 0x0E47),
+    ("/maithothai", 0x0E49),
+    ("/maitrithai", 0x0E4A),
+    ("/maiyamokthai", 0x0E46),
+    ("/momathai", 0x0E21),
+    ("/ngonguthai", 0x0E07),
+    ("/nikhahitthai", 0x0E4D),
+    ("/ninethai", 0x0E59),
+    ("/nonenthai", 0x0E13),
+    ("/nonuthai", 0x0E19),
+    ("/oangthai", 0x0E2D),
+    ("/onethai", 0x0E51),
+    ("/paiyannoithai", 0x0E2F),
+    ("/phinthuthai", 0x0E3A),
+    ("/phophanthai", 0x0E1E),
+    ("/phophungthai", 0x0E1C),
+    ("/phosamphaothai", 0x0E20),
+    ("/poplathai", 0x0E1B),
+    ("/roruathai", 0x0E23),
+    ("/ruthai", 0x0E24),
+    ("/saraaathai", 0x0E32),
+    ("/saraaethai", 0x0E41),
+    ("/saraaimaimalaithai", 0x0E44),
+    ("/saraaimaimuanthai", 0x0E43),
+    ("/saraamthai", 0x0E33),
+    ("/saraathai", 0x0E30),
+    ("/saraethai", 0x0E40),
+    ("/saraiithai", 0x0E35),
+    ("/saraithai", 0x0E34),
+    ("/saraothai", 0x0E42),
+    ("/saraueethai", 0x0E37),
+    ("/sarauethai", 0x0E36),
+    ("/sarauthai", 0x0E38),
+    ("/sarauuthai", 0x0E39),
+    ("/seventhai", 0x0E57),
+    ("/sixthai", 0x0E56),
+    ("/sorusithai", 0x0E29),
+    ("/sosalathai", 0x0E28),
+    ("/sosothai", 0x0E0B),
+    ("/sosuathai", 0x0E2A),
+    ("/thanthakhatthai", 0x0E4C),
+    ("/thonangmonthothai", 0x0E11),
+    ("/thophuthaothai", 0x0E12),
+    ("/thothahanthai", 0x0E17),
+    ("/thothanthai", 0x0E10),
+    ("/thothongthai", 0x0E18),
+    ("/thothungthai", 0x0E16),
+    ("/threethai", 0x0E53),
+    ("/topatakthai", 0x0E0F),
+    ("/totaothai", 0x0E15),
+    ("/twothai", 0x0E52),
+    ("/wowaenthai", 0x0E27),
+    ("/yamakkanthai", 0x0E4E),
+    ("/yoyakthai", 0x0E22),
+    ("/yoyingthai", 0x0E0D),
+    ("/zerothai", 0x0E50),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0E5A), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0E01), Some(24))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0E40), Some(58))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0E50), Some(87))
+}
+
+///|
 test "PdfTextExtractor decodes math operator AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/allequal", 0x224C),

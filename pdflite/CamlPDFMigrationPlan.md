@@ -741,7 +741,7 @@ MoonBit consequences for this project:
    also covered for common simple-font encoding differences. Basic Latin,
    general-punctuation, Latin-1 spacing aliases, IPA-extension,
   spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
-  Armenian, Devanagari, math-operator, Roman-numeral, technical,
+  Armenian, Devanagari, Thai, math-operator, Roman-numeral, technical,
   enclosed-alphanumeric, CJK-symbol/Hangzhou, Bopomofo, private-use,
   box-drawing, block-element, geometric-shape,
   miscellaneous-symbol, and dingbat alias AGL names missing from the base
