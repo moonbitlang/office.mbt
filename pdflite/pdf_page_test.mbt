@@ -2657,6 +2657,103 @@ test "PdfDocument remove_unreferenced drops detached objects" {
   )
   @test.assert_eq(doc.lookup_object_or_null(removed), PdfNull)
   @test.assert_eq(try! doc.endpage(), 1)
+
+  let fallback = @pdflite.pdf_document_empty()
+  fallback.set_root(1)
+  fallback.add_object_given_number(
+    1,
+    PdfDictionary([
+      (
+        page_name_for_test("/Type"),
+        PdfNameObject(page_name_for_test("/Catalog")),
+      ),
+      (page_name_for_test("/Pages"), PdfIndirect(2)),
+      (key_metadata, PdfIndirect(4)),
+    ]),
+  )
+  fallback.add_object_given_number(
+    2,
+    PdfDictionary([
+      (page_name_for_test("/Type"), PdfNameObject(page_name_for_test("/Pages"))),
+      (page_name_for_test("/Kids"), PdfArray([])),
+      (page_name_for_test("/Count"), PdfInteger(0)),
+    ]),
+  )
+  fallback.add_object_given_number(4, PdfString(@ascii.encode("fallback-kept")))
+  fallback.add_object_given_number(
+    5,
+    PdfString(@ascii.encode("fallback-removed")),
+  )
+  try! fallback.remove_unreferenced()
+  @test.assert_eq(
+    fallback.lookup_object_or_null(4),
+    PdfString(@ascii.encode("fallback-kept")),
+  )
+  @test.assert_eq(fallback.lookup_object_or_null(5), PdfNull)
+}
+
+///|
+test "PdfDocument remove_unreferenced uses trailer root as reachability root" {
+  let key_root = page_name_for_test("/Root")
+  let key_type = page_name_for_test("/Type")
+  let key_pages = page_name_for_test("/Pages")
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let key_parent = page_name_for_test("/Parent")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_kids, PdfArray([PdfIndirect(3)])),
+      (key_count, PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    PdfDictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_parent, PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
+      (key_pages, PdfIndirect(20)),
+    ]),
+  )
+  doc.add_object_given_number(
+    20,
+    PdfDictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Pages"))),
+      (key_kids, PdfArray([PdfIndirect(21)])),
+      (key_count, PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    21,
+    PdfDictionary([
+      (key_type, PdfNameObject(page_name_for_test("/Page"))),
+      (key_parent, PdfIndirect(20)),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+
+  try! doc.remove_unreferenced()
+
+  @test.assert_eq(doc.lookup_object_or_null(1), PdfNull)
+  @test.assert_eq(doc.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(doc.lookup_object_or_null(3), PdfNull)
+  @test.assert_eq(try! doc.page_reference_numbers(), [21])
 }
 
 ///|

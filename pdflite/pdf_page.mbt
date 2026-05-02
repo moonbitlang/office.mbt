@@ -2208,7 +2208,8 @@ pub fn PdfDocument::remove_unreferenced(
 ) -> Unit raise PdfError {
   self.pdf_page_nullify_deleted_page_references()
   let found : @hashmap.HashMap[Int, Bool] = @hashmap.HashMap::new()
-  if self.root() > 0 {
+  if self.trailer_dict().lookup_immediate(pdf_page_root_key()) is None &&
+    self.root() > 0 {
     found[self.root()] = true
     self.pdf_referenced_from_object(
       found,

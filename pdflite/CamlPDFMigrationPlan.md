@@ -479,9 +479,10 @@ MoonBit consequences for this project:
    deferred.
    `minimum_valid_pdf` is also ported as a writable one-page A4 document
    constructor. Unreferenced-object pruning is started with a
-   `remove_unreferenced` pass that follows indirect references from the catalog
-   and trailer, removes unreachable parsed objects, and nullifies references to
-   page objects no longer present in the active page tree before pruning.
+   `remove_unreferenced` pass that follows indirect references from the active
+   trailer-root catalog and trailer, removes unreachable parsed objects, and
+   nullifies references to page objects no longer present in the active page
+   tree before pruning.
    Content stream support is now started with a byte-preserving `PdfContentOp`
    subset, uncompressed content stream construction, indirect stream parsing
    through `PdfDocument`, and parsing for the core path, color, XObject, and
