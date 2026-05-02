@@ -417,6 +417,8 @@ pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
 
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
+pub fn pdf_string_of_function(PdfFunction) -> String
+
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 
 pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise PdfError
@@ -1246,6 +1248,7 @@ pub(all) struct PdfFunction {
   domain : Array[Double]
   range : Array[Double]?
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFunction::debug_string(Self) -> String
 pub fn PdfFunction::eval(Self, ArrayView[Double]) -> Array[Double] raise PdfError
 
 pub(all) enum PdfFunctionKind {

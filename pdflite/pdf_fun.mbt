@@ -234,6 +234,75 @@ pub fn pdf_string_of_calculator(ops : ArrayView[PdfCalculatorOp]) -> String {
 }
 
 ///|
+fn pdf_fun_debug_doubles(values : ArrayView[Double]) -> String {
+  pdf_fun_join_strings([ for value in values => value.to_string() ], " ")
+}
+
+///|
+fn pdf_fun_debug_ints(values : ArrayView[Int]) -> String {
+  pdf_fun_join_strings([ for value in values => value.to_string() ], " ")
+}
+
+///|
+pub fn PdfFunction::debug_string(self : PdfFunction) -> String {
+  let range_text = match self.range {
+    Some(values) => pdf_fun_debug_doubles(values)
+    None => "null range"
+  }
+  let prefix = "Domain...\n" +
+    pdf_fun_debug_doubles(self.domain) +
+    "\n" +
+    range_text +
+    "\n"
+  match self.func {
+    PdfFunctionSampled(sampled) =>
+      prefix +
+      "Sampled\n" +
+      "size: " +
+      pdf_fun_debug_ints(sampled.size) +
+      "\norder: " +
+      sampled.order.to_string() +
+      "\nencode:\n" +
+      pdf_fun_debug_doubles(sampled.encode) +
+      "\ndecode:\n" +
+      pdf_fun_debug_doubles(sampled.decode) +
+      "\noriginal bits per sample..\n" +
+      sampled.bits_per_sample.to_string() +
+      "\ndata:\n" +
+      pdf_fun_debug_ints(sampled.samples)
+    PdfFunctionInterpolation(interpolation) =>
+      prefix +
+      "Interpolation\n" +
+      "C0:\n" +
+      pdf_fun_debug_doubles(interpolation.c0) +
+      "\nC1:\n" +
+      pdf_fun_debug_doubles(interpolation.c1) +
+      "\nn = " +
+      interpolation.n.to_string()
+    PdfFunctionStitching(stitching) =>
+      prefix +
+      "Stitching\n" +
+      pdf_fun_join_strings(
+        [
+          for child in stitching.functions => child.debug_string()
+        ],
+        "\n",
+      ) +
+      "\nBounds:\n" +
+      pdf_fun_debug_doubles(stitching.bounds) +
+      "\nEncode:\n" +
+      pdf_fun_debug_doubles(stitching.stitch_encode)
+    PdfFunctionCalculator(calculator) =>
+      prefix + "Calculator:\n" + pdf_string_of_calculator(calculator.operations)
+  }
+}
+
+///|
+pub fn pdf_string_of_function(function : PdfFunction) -> String {
+  function.debug_string()
+}
+
+///|
 fn PdfDocument::pdf_fun_number_array(
   self : PdfDocument,
   object : PdfObject,

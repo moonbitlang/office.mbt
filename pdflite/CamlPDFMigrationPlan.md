@@ -718,9 +718,10 @@ MoonBit consequences for this project:
    stitching, and Type 4 calculator function parsing/evaluation for
    numeric and boolean literals, named numeric/comparison/logic operators,
    nested `if`/`ifelse` procedures, comments, doubled-minus malformed numbers,
-   stack operators, and CamlPDF-style calculator debug string rendering, with
-   stream decoding for sampled/calculator functions, domain clamping, and
-   range clamping. Type 4 calculator integer and float
+  stack operators, CamlPDF-style calculator debug string rendering, and
+  deterministic whole-function debug string rendering in place of CamlPDF's
+  stdout-only `print_function`, with stream decoding for sampled/calculator
+  functions, domain clamping, and range clamping. Type 4 calculator integer and float
    stack values now stay distinct, preserving CamlPDF-style integer-only
    operator checks and 32-bit wrapping arithmetic for integer add/sub/mul.
    CamlPDF's `pdfobject_of_function` helper is started as

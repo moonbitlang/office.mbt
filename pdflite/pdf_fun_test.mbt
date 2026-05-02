@@ -76,6 +76,63 @@ test "PdfCalculatorOp debug strings preserve CamlPDF calculator syntax" {
 }
 
 ///|
+test "PdfFunction debug strings cover all CamlPDF function kinds" {
+  let interpolation : @pdflite.PdfFunction = {
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [1.0], n: 2.0 }),
+    domain: [0.0, 1.0],
+    range: Some([0.0, 1.0]),
+  }
+  @test.assert_eq(
+    @pdflite.pdf_string_of_function(interpolation),
+    "Domain...\n0 1\n0 1\nInterpolation\nC0:\n0\nC1:\n1\nn = 2",
+  )
+  @test.assert_eq(
+    interpolation.debug_string(),
+    @pdflite.pdf_string_of_function(interpolation),
+  )
+  let sampled : @pdflite.PdfFunction = {
+    func: PdfFunctionSampled({
+      size: [2],
+      order: 1,
+      encode: [0.0, 1.0],
+      decode: [0.0, 255.0],
+      bits_per_sample: 8,
+      samples: [0, 255],
+    }),
+    domain: [0.0, 1.0],
+    range: None,
+  }
+  @test.assert_eq(
+    sampled.debug_string(),
+    "Domain...\n0 1\nnull range\nSampled\nsize: 2\norder: 1\nencode:\n0 1\ndecode:\n0 255\noriginal bits per sample..\n8\ndata:\n0 255",
+  )
+  let calculator : @pdflite.PdfFunction = {
+    func: PdfFunctionCalculator({
+      operations: [PdfCalculatorInt(1), PdfCalculatorAdd],
+    }),
+    domain: [],
+    range: Some([]),
+  }
+  @test.assert_eq(
+    calculator.debug_string(),
+    "Domain...\n\n\nCalculator:\n{1 add}",
+  )
+  let stitching : @pdflite.PdfFunction = {
+    func: PdfFunctionStitching({
+      functions: [interpolation, calculator],
+      bounds: [0.5],
+      stitch_encode: [0.0, 1.0, 1.0, 0.0],
+    }),
+    domain: [0.0, 1.0],
+    range: Some([0.0, 1.0]),
+  }
+  @test.assert_eq(
+    stitching.debug_string(),
+    "Domain...\n0 1\n0 1\nStitching\nDomain...\n0 1\n0 1\nInterpolation\nC0:\n0\nC1:\n1\nn = 2\nDomain...\n\n\nCalculator:\n{1 add}\nBounds:\n0.5\nEncode:\n0 1 1 0",
+  )
+}
+
+///|
 test "PdfDocument parse_function reads and evaluates Type 0 sampled functions" {
   let doc = @pdflite.pdf_document_empty()
   let samples = fun_bytes_for_test([0x0F])
