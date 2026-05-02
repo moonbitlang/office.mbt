@@ -420,6 +420,37 @@ fn merge_catalog_stream_doc_for_test(
 }
 
 ///|
+fn merge_pdfmergeexample_workflow_for_test(
+  documents : ArrayView[@pdflite.PdfDocument],
+) -> @pdflite.PdfDocument {
+  let renumbered = try! @pdflite.pdf_renumber_documents(documents)
+  let merged = @pdflite.pdf_document_empty()
+  let pages : Array[@pdflite.PdfPage] = []
+  let mut max_minor = 0
+  for document in renumbered {
+    let (_, minor) = document.version()
+    if minor > max_minor {
+      max_minor = minor
+    }
+    for number in document.object_numbers() {
+      merged.add_object_given_number(
+        number,
+        document.lookup_object_or_null(number),
+      )
+    }
+    let document_pages = try! document.pages_of_pagetree()
+    for page in document_pages {
+      pages.push(page)
+    }
+  }
+  let page_root = try! merged.add_pagetree(pages)
+  ignore(try! merged.add_root(page_root, []))
+  merged.set_version(1, max_minor)
+  try! merged.remove_unreferenced()
+  merged
+}
+
+///|
 test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
   let first = merge_one_page_doc_for_test(1, 4)
   let second = merge_one_page_doc_for_test(1, 7)
@@ -430,6 +461,31 @@ test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
   @test.assert_eq(parsed.version(), (1, 7))
   @test.assert_eq(try! parsed.endpage(), 2)
+}
+
+///|
+test "pdfmergeexample-style workflow renumbers copies and roundtrips" {
+  let detached : @pdflite.PdfObject = PdfString(@ascii.encode("detached"))
+  let first = merge_one_page_doc_for_test(1, 4)
+  first.add_object_given_number(99, detached)
+  let second = merge_one_page_doc_for_test(1, 7)
+  let merged = merge_pdfmergeexample_workflow_for_test([first, second])
+  @test.assert_eq(merged.version(), (1, 7))
+  @test.assert_eq(try! merged.endpage(), 2)
+  let mut retained_detached = false
+  for number in merged.object_numbers() {
+    if merged.lookup_object_or_null(number) == detached {
+      retained_detached = true
+    }
+  }
+  @test.assert_eq(retained_detached, false)
+  let rendered = try! @pdflite.pdf_write_document(merged)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(parsed.version(), (1, 7))
+  @test.assert_eq(try! parsed.endpage(), 2)
+  let page_refs = try! parsed.page_reference_numbers()
+  @test.assert_eq(page_refs.length(), 2)
+  @test.assert_eq(page_refs[0] != page_refs[1], true)
 }
 
 ///|

@@ -66,8 +66,8 @@ work changes.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
    helpers in page/text modules.
    Status: merge, optional content groups, dates, page labels, bookmarks,
-   duplicate-font paths, and the `pdfdecomp.ml` stream-decompression workflow
-   are started.
+   duplicate-font paths, the `pdfdecomp.ml` stream-decompression workflow, and
+   a `pdfmergeexample.ml`-style public workflow fixture are started.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 
