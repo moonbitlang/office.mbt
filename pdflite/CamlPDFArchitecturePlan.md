@@ -37,7 +37,8 @@ work changes.
    `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
    bookmarks, annotations, page labels, duplicate annotation fixups, and
    destination pruning are started with direct tests. Direct annotation
-   dictionaries in `/Annots` arrays now participate in geometry transforms.
+   dictionaries in `/Annots` arrays now participate in geometry transforms and
+   `change_pages` link-destination matrix transforms.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

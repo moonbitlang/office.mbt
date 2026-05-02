@@ -1859,21 +1859,55 @@ test "PdfDocument change_pages transforms link annotations and open action" {
   let direct_annotation_number = 20
   let action_annotation_number = 21
   let doc = @pdflite.pdf_document_empty()
-  let page = {
-    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
-    rest: @pdflite.pdf_dictionary([
-      (
-        key_annots,
-        PdfArray([
-          PdfIndirect(direct_annotation_number),
-          PdfIndirect(action_annotation_number),
-        ]),
-      ),
-    ]),
-  }
-  let page_root = try! doc.add_pagetree([page])
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    old_numbers[0],
+    try! doc
+    .lookup_object_or_null(old_numbers[0])
+    .add_dict_entry(
+      key_annots,
+      PdfArray([
+        PdfIndirect(direct_annotation_number),
+        PdfIndirect(action_annotation_number),
+        @pdflite.pdf_dictionary([
+          (key_subtype, PdfNameObject(type_link)),
+          (
+            key_dest,
+            PdfArray([
+              PdfIndirect(old_numbers[0]),
+              PdfNameObject(type_xyz),
+              PdfInteger(7),
+              PdfInteger(8),
+              PdfNull,
+            ]),
+          ),
+        ]),
+        @pdflite.pdf_dictionary([
+          (key_subtype, PdfNameObject(type_link)),
+          (
+            key_action,
+            @pdflite.pdf_dictionary([
+              (key_s, PdfNameObject(type_goto)),
+              (
+                key_d,
+                PdfArray([
+                  PdfIndirect(old_numbers[0]),
+                  PdfNameObject(type_xyz),
+                  PdfInteger(9),
+                  PdfInteger(10),
+                  PdfNull,
+                ]),
+              ),
+            ]),
+          ),
+        ]),
+      ]),
+    ),
+  )
   doc.add_object_given_number(
     direct_annotation_number,
     @pdflite.pdf_dictionary([
@@ -1965,6 +1999,49 @@ test "PdfDocument change_pages transforms link annotations and open action" {
         ),
       )
     _ => fail("expected transformed link action")
+  }
+  match
+    changed.lookup_object_or_null(new_numbers[0]).lookup_immediate(key_annots) {
+    Some(
+      PdfArray(
+        [
+          PdfIndirect(_),
+          PdfIndirect(_),
+          PdfDictionary(_) as direct_dest_annotation,
+          PdfDictionary(_) as direct_action_annotation,
+        ]
+      )
+    ) => {
+      @test.assert_eq(
+        direct_dest_annotation.lookup_immediate(key_dest),
+        Some(
+          PdfArray([
+            PdfIndirect(new_numbers[0]),
+            PdfNameObject(type_xyz),
+            PdfReal(17.0),
+            PdfReal(28.0),
+            PdfNull,
+          ]),
+        ),
+      )
+      match direct_action_annotation.lookup_immediate(key_action) {
+        Some(PdfDictionary(_) as action) =>
+          @test.assert_eq(
+            action.lookup_immediate(key_d),
+            Some(
+              PdfArray([
+                PdfIndirect(new_numbers[0]),
+                PdfNameObject(type_xyz),
+                PdfReal(19.0),
+                PdfReal(30.0),
+                PdfNull,
+              ]),
+            ),
+          )
+        _ => fail("expected transformed direct link action")
+      }
+    }
+    _ => fail("expected direct link annotations in changed page")
   }
   @test.assert_eq(
     changed

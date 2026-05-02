@@ -480,10 +480,11 @@ MoonBit consequences for this project:
    parameter now ports CamlPDF's explicit 1-based old/new page serial mapping
    for count-changing replacements. Matrix-aware destination rewrites are now
    started for `change_pages` callers that supply page matrices: bookmark
-   targets, link annotation `/Dest` or GoTo `/A` destinations, and catalog
-   `/OpenAction` destinations are transformed after page-reference
-   renumbering. Named destination definitions in old-style catalog `/Dests`
-   dictionaries and `/Root/Names/Dests` name trees are also transformed, so
+   targets, indirect and direct link annotation `/Dest` or GoTo `/A`
+   destinations, and catalog `/OpenAction` destinations are transformed after
+   page-reference renumbering. Named destination definitions in old-style
+   catalog `/Dests` dictionaries and `/Root/Names/Dests` name trees are also
+   transformed, so
    preserved named and string destinations resolve to the new page-space
    coordinates after page matrix changes. These catalog destination transform
    paths, including `/OpenAction`, now prefer the active catalog through

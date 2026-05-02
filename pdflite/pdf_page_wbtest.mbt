@@ -380,6 +380,7 @@ test "private page link and open-action transforms cover fallback branches" {
             PdfIndirect(21),
             PdfIndirect(22),
             PdfIndirect(23),
+            PdfDictionary([(key_subtype, PdfNameObject(pdf_page_type_link()))]),
             PdfInteger(1),
           ]),
         ),

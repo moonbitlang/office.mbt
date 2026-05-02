@@ -1290,6 +1290,22 @@ fn PdfDocument::pdf_page_transform_link_annotation_for_matrices(
   page_reference_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
   let annotation = self.lookup_object_or_null(annotation_number)
+  match
+    self.pdf_page_transform_link_annotation_object_for_matrices(
+      annotation, matrices, page_reference_numbers,
+    ) {
+    Some(updated) => self.add_object_given_number(annotation_number, updated)
+    None => ()
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_transform_link_annotation_object_for_matrices(
+  self : PdfDocument,
+  annotation : PdfObject,
+  matrices : ArrayView[(Int, TransformMatrix)],
+  page_reference_numbers : ArrayView[Int],
+) -> PdfObject? raise PdfError {
   match self.lookup_direct(pdf_page_subtype_key(), annotation) {
     Some(PdfNameObject(kind)) if kind == pdf_page_type_link() =>
       match annotation.lookup_immediate(pdf_page_dest_key()) {
@@ -1299,11 +1315,8 @@ fn PdfDocument::pdf_page_transform_link_annotation_for_matrices(
               raw_destination, matrices, page_reference_numbers,
             ) {
             Some(destination) =>
-              self.add_object_given_number(
-                annotation_number,
-                annotation.add_dict_entry(pdf_page_dest_key(), destination),
-              )
-            None => ()
+              Some(annotation.add_dict_entry(pdf_page_dest_key(), destination))
+            None => None
           }
         None =>
           match annotation.lookup_immediate(pdf_page_action_key()) {
@@ -1313,16 +1326,13 @@ fn PdfDocument::pdf_page_transform_link_annotation_for_matrices(
                   raw_action, matrices, page_reference_numbers,
                 ) {
                 Some(action) =>
-                  self.add_object_given_number(
-                    annotation_number,
-                    annotation.add_dict_entry(pdf_page_action_key(), action),
-                  )
-                None => ()
+                  Some(annotation.add_dict_entry(pdf_page_action_key(), action))
+                None => None
               }
-            None => ()
+            None => None
           }
       }
-    _ => ()
+    _ => None
   }
 }
 
@@ -1336,12 +1346,20 @@ fn PdfDocument::pdf_page_transform_link_annotations_for_matrices(
     let page_object = self.lookup_object_or_null(page_number)
     match self.lookup_direct(pdf_page_annots_key(), page_object) {
       Some(PdfArray(annotations)) =>
-        for annotation in annotations {
-          match annotation {
+        for index in 0..<annotations.length() {
+          match annotations[index] {
             PdfIndirect(annotation_number) =>
               self.pdf_page_transform_link_annotation_for_matrices(
                 annotation_number, matrices, page_reference_numbers,
               )
+            PdfDictionary(_) as annotation =>
+              match
+                self.pdf_page_transform_link_annotation_object_for_matrices(
+                  annotation, matrices, page_reference_numbers,
+                ) {
+                Some(updated) => annotations[index] = updated
+                None => ()
+              }
             _ => ()
           }
         }
