@@ -619,6 +619,11 @@ MoonBit consequences for this project:
    domain clamping, and range clamping. Type 4 calculator integer and float
    stack values now stay distinct, preserving CamlPDF-style integer-only
    operator checks and 32-bit wrapping arithmetic for integer add/sub/mul.
+   CamlPDF's `pdfobject_of_function` helper is started as
+   `PdfDocument::pdf_object_of_function`, writing Type 2 interpolation
+   dictionaries and Type 3 stitching dictionaries with child functions placed
+   into the document object map. As in CamlPDF, sampled and calculator function
+   serialization currently emits only the common dictionary entries.
    `pdfjpeg` is started with a byte-cursor
    helper that extracts JPEG data through the `FF D9` EOI marker while leaving
    following bytes unread, and content inline image parsing now uses that path

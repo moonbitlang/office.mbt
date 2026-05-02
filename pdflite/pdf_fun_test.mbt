@@ -119,6 +119,135 @@ test "PdfDocument parse_function reads and evaluates Type 3 stitching functions"
 }
 
 ///|
+test "PdfDocument pdf_object_of_function writes interpolation functions" {
+  let doc = @pdflite.pdf_document_empty()
+  let function : @pdflite.PdfFunction = {
+    domain: [0.0, 1.0],
+    range: Some([0.0, 2.0]),
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [2.0], n: 1.0 }),
+  }
+  let object = doc.pdf_object_of_function(function)
+  @test.assert_eq(
+    object,
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(2.0)])),
+      (fun_name_for_test("/C0"), PdfArray([PdfReal(0.0)])),
+      (fun_name_for_test("/C1"), PdfArray([PdfReal(2.0)])),
+      (fun_name_for_test("/N"), PdfReal(1.0)),
+    ]),
+  )
+  let parsed = try! doc.parse_function(object)
+  @test.assert_eq(parsed, function)
+  @test.assert_eq(try! parsed.eval([0.5]), [1.0])
+}
+
+///|
+test "PdfDocument pdf_object_of_function writes stitching child objects" {
+  let doc = @pdflite.pdf_document_empty()
+  let first : @pdflite.PdfFunction = {
+    domain: [0.0, 1.0],
+    range: None,
+    func: PdfFunctionInterpolation({ c0: [0.0], c1: [0.0], n: 1.0 }),
+  }
+  let second : @pdflite.PdfFunction = {
+    domain: [0.0, 1.0],
+    range: None,
+    func: PdfFunctionInterpolation({ c0: [1.0], c1: [1.0], n: 1.0 }),
+  }
+  let function : @pdflite.PdfFunction = {
+    domain: [0.0, 1.0],
+    range: Some([0.0, 1.0]),
+    func: PdfFunctionStitching({
+      functions: [first, second],
+      bounds: [0.5],
+      stitch_encode: [0.0, 1.0, 0.0, 1.0],
+    }),
+  }
+  let object = doc.pdf_object_of_function(function)
+  @test.assert_eq(
+    object,
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (
+        fun_name_for_test("/Functions"),
+        PdfArray([PdfIndirect(1), PdfIndirect(2)]),
+      ),
+      (fun_name_for_test("/Bounds"), PdfArray([PdfReal(0.5)])),
+      (
+        fun_name_for_test("/Encode"),
+        PdfArray([PdfReal(0.0), PdfReal(1.0), PdfReal(0.0), PdfReal(1.0)]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(1),
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (fun_name_for_test("/C0"), PdfArray([PdfReal(0.0)])),
+      (fun_name_for_test("/C1"), PdfArray([PdfReal(0.0)])),
+      (fun_name_for_test("/N"), PdfReal(1.0)),
+    ]),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(2),
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (fun_name_for_test("/C0"), PdfArray([PdfReal(1.0)])),
+      (fun_name_for_test("/C1"), PdfArray([PdfReal(1.0)])),
+      (fun_name_for_test("/N"), PdfReal(1.0)),
+    ]),
+  )
+  let parsed = try! doc.parse_function(object)
+  @test.assert_eq(try! parsed.eval([0.25]), [0.0])
+  @test.assert_eq(try! parsed.eval([0.75]), [1.0])
+}
+
+///|
+test "PdfDocument pdf_object_of_function writes sampled and calculator common entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let sampled : @pdflite.PdfFunction = {
+    domain: [0.0, 1.0],
+    range: Some([0.0, 1.0]),
+    func: PdfFunctionSampled({
+      size: [2],
+      order: 1,
+      encode: [0.0, 1.0],
+      decode: [0.0, 1.0],
+      bits_per_sample: 8,
+      samples: [0, 255],
+    }),
+  }
+  @test.assert_eq(
+    doc.pdf_object_of_function(sampled),
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+      (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+      (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
+    ]),
+  )
+  let calculator : @pdflite.PdfFunction = {
+    domain: [],
+    range: None,
+    func: PdfFunctionCalculator({
+      operations: [PdfCalculatorInt(1), PdfCalculatorAdd],
+    }),
+  }
+  @test.assert_eq(
+    doc.pdf_object_of_function(calculator),
+    @pdflite.pdf_dictionary([
+      (fun_name_for_test("/FunctionType"), PdfInteger(4)),
+      (fun_name_for_test("/Domain"), PdfArray([])),
+    ]),
+  )
+}
+
+///|
 test "PdfDocument parse_function reads simple Type 4 calculator functions" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ 2 mul 1 add }")
