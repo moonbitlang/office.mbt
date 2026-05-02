@@ -171,6 +171,8 @@ pub fn pdf_content_stream_of_ops(ArrayView[PdfContentOp]) -> PdfObject raise Pdf
 
 pub fn pdf_date_of_bytes(Bytes) -> PdfDate raise PdfError
 
+pub fn pdf_date_of_object(PdfObject) -> PdfDate raise PdfError
+
 pub fn pdf_date_of_string(String) -> PdfDate raise PdfError
 
 pub fn pdf_date_of_view(BytesView) -> PdfDate raise PdfError
@@ -282,6 +284,8 @@ pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
 pub fn pdf_object_map_empty() -> PdfObjectMap
 
 pub fn pdf_object_of_colour_space(PdfColourSpace) -> PdfObject?
+
+pub fn pdf_object_of_date(PdfDate) -> PdfObject raise PdfError
 
 pub fn pdf_object_of_destination(PdfDestination) -> PdfObject
 

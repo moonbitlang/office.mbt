@@ -889,8 +889,8 @@ MoonBit consequences for this project:
     page-record annotation insertion, and geometry transforms for `/Rect`,
     `/QuadPoints`, and `/L`. Date support is started with typed PDF dates,
     CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
-    borrowed `BytesView`/owned `Bytes` parsing, and PDF date string/byte
-    rendering. Optional content group support is started
+    borrowed `BytesView`/owned `Bytes` parsing, PDF date string/byte rendering,
+    and `PdfString` object conversion helpers. Optional content group support is started
     with typed OCG usage/configuration/application records, `/OCProperties`
     reading, returned-copy writing/removal, byte-preserving PDF strings, and
     explicit `PdfName` fields for PDF name values. OCG merge preparation is
