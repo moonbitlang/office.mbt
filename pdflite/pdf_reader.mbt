@@ -195,6 +195,16 @@ fn pdf_find_last_ascii(view : BytesView, values : ArrayView[Int]) -> Int {
 }
 
 ///|
+fn pdf_startxref_search_view(data : BytesView) -> BytesView {
+  let eof = pdf_find_last_ascii(data, [37, 37, 69, 79, 70])
+  if eof < 0 {
+    data
+  } else {
+    data[:eof]
+  }
+}
+
+///|
 fn pdf_find_ascii_from(
   view : BytesView,
   start : Int,
@@ -262,13 +272,14 @@ fn pdf_xref_marker_token(token : BytesView) -> Bool {
 
 ///|
 fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
-  let start = pdf_find_last_ascii(data, [
+  let search = pdf_startxref_search_view(data)
+  let start = pdf_find_last_ascii(search, [
     115, 116, 97, 114, 116, 120, 114, 101, 102,
   ])
   if start < 0 {
     raise StartXRefExpected
   }
-  let cursor = byte_cursor_of_view(data[start + 9:])
+  let cursor = byte_cursor_of_view(search[start + 9:])
   cursor.drop_pdf_whitespace()
   pdf_parse_ascii_int_view(cursor.read_pdf_regular_token_view())
 }

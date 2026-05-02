@@ -142,6 +142,19 @@ fn reader_classic_pdf_with_xref_body(
 }
 
 ///|
+fn reader_classic_pdf_with_trailing_startxref_junk() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for
+    byte in reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    )[:] {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nstartxref\nnot-a-number\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_without_trailer_after_xref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -1351,6 +1364,16 @@ test "pdf_revisions_from_bytes counts classic Prev chain revisions" {
 }
 
 ///|
+test "pdf_revisions_from_bytes ignores trailing startxref junk after EOF" {
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_classic_pdf_with_trailing_startxref_junk()[:],
+    ),
+    1,
+  )
+}
+
+///|
 test "pdf_revisions_from_view reads borrowed revision metadata slices" {
   let payload = reader_classic_pdf_with_prev_xref()
   let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
@@ -1889,6 +1912,16 @@ test "pdf_read_classic_document_from_bytes accepts repeated xref section markers
       "xref\nxref 0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
     ),
   )
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [])
+}
+
+///|
+test "pdf_read_classic_document_from_bytes ignores trailing startxref junk after EOF" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_trailing_startxref_junk(),
+  )
+  @test.assert_eq(parsed.first_xref() > 0, true)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [])
 }
