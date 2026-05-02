@@ -112,6 +112,13 @@ test "ByteCursor offset mirrors shifted input positions" {
 test "ByteCursor exposes read-only views without copying" {
   let bytes = pdf_bytes_for_cursor_test([65, 66, 67])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  @test.assert_eq(bytes_view_to_ints_for_cursor_test(cursor.view()), [
+    65, 66, 67,
+  ])
+  @test.assert_eq(pdf_bytes_to_ints_for_cursor_test(cursor.to_bytes()), [
+    65, 66, 67,
+  ])
+  @test.assert_eq(cursor.position(), 0)
   let view = try! cursor.read_view(2)
   @test.assert_eq(bytes_view_to_ints_for_cursor_test(view), [65, 66])
   @test.assert_eq(cursor.position(), 2)
@@ -120,6 +127,23 @@ test "ByteCursor exposes read-only views without copying" {
   ])
   let owned = @pdflite.pdf_bytes_of_view(view)
   @test.assert_eq(pdf_bytes_to_ints_for_cursor_test(owned), [65, 66])
+}
+
+///|
+test "ByteCursor read_remaining_bytes consumes only unread bytes" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    pdf_bytes_for_cursor_test([65, 66, 67]),
+  )
+  cursor.nudge()
+  @test.assert_eq(
+    pdf_bytes_to_ints_for_cursor_test(cursor.read_remaining_bytes()),
+    [66, 67],
+  )
+  @test.assert_eq(cursor.position(), cursor.length())
+  @test.assert_eq(
+    pdf_bytes_to_ints_for_cursor_test(cursor.read_remaining_bytes()),
+    [],
+  )
 }
 
 ///|

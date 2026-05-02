@@ -48,6 +48,16 @@ pub fn ByteCursor::length(self : ByteCursor) -> Int {
 }
 
 ///|
+pub fn ByteCursor::view(self : ByteCursor) -> BytesView {
+  self.data
+}
+
+///|
+pub fn ByteCursor::to_bytes(self : ByteCursor) -> PdfBytes {
+  self.data.to_owned()
+}
+
+///|
 pub fn ByteCursor::position(self : ByteCursor) -> Int {
   self.position - self.offset
 }
@@ -247,6 +257,13 @@ pub fn ByteCursor::read_bytes(
   length : Int,
 ) -> PdfBytes raise PdfError {
   self.read_view(length).to_owned()
+}
+
+///|
+pub fn ByteCursor::read_remaining_bytes(self : ByteCursor) -> PdfBytes {
+  let view = self.remaining_view()
+  self.position = self.data.length()
+  view.to_owned()
 }
 
 ///|

@@ -687,6 +687,7 @@ pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
 pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
 pub fn ByteCursor::read_pdf_header(Self) -> PdfVersion raise PdfError
 pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
+pub fn ByteCursor::read_remaining_bytes(Self) -> Bytes
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView
 pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise PdfError
 pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
@@ -697,6 +698,8 @@ pub fn ByteCursor::rewind(Self) -> Unit raise PdfError
 pub fn ByteCursor::seek(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::source(Self) -> String
+pub fn ByteCursor::to_bytes(Self) -> Bytes
+pub fn ByteCursor::view(Self) -> BytesView
 
 pub struct ByteOutput {
   data : Array[Byte]
