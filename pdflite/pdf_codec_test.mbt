@@ -658,6 +658,38 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
 }
 
 ///|
+test "pdf predictor view APIs read borrowed slices" {
+  let decoded_input = codec_bytes_for_test([1, 10, 10, 10])
+  let wrapped_decoded_input = codec_wrap_view_for_test(
+    "xx",
+    decoded_input[:],
+    "yy",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor_view(
+      11,
+      1,
+      8,
+      3,
+      wrapped_decoded_input[2:wrapped_decoded_input.length() - 2],
+    ),
+    codec_bytes_for_test([10, 20, 30]),
+  )
+  let plain = codec_bytes_for_test([10, 20, 30])
+  let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_predictor_view(
+      11,
+      1,
+      8,
+      3,
+      wrapped_plain[2:wrapped_plain.length() - 2],
+    ),
+    decoded_input,
+  )
+}
+
+///|
 test "pdf_encode_predictor emits png sub and up rows" {
   let sub = try! @pdflite.pdf_encode_predictor(
     11,

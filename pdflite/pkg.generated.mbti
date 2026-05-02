@@ -163,6 +163,8 @@ pub fn pdf_decode_filter_view(PdfName, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_decode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
+pub fn pdf_decode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise PdfError
+
 pub fn pdf_decode_stream(PdfObject) -> PdfObject raise PdfError
 
 pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise PdfError
@@ -180,6 +182,8 @@ pub fn pdf_encode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 pub fn pdf_encode_filter_view(PdfName, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
+
+pub fn pdf_encode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise PdfError
 
 pub fn pdf_encode_stream_with_filter(PdfName, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
 

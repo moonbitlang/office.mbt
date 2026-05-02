@@ -755,7 +755,7 @@ fn pdf_decode_tiff_predictor(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-  data : PdfBytes,
+  data : BytesView,
 ) -> PdfBytes raise PdfError {
   if bits_per_component != 8 {
     raise PredictorNotSupported(2)
@@ -763,7 +763,7 @@ fn pdf_decode_tiff_predictor(
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
   )
-  let output = data.to_array()
+  let output : Array[Byte] = [ for byte in data => byte ]
   for line in 0..<(data.length() / scanline_width) {
     let line_start = line * scanline_width
     let mut position = colors
@@ -829,7 +829,7 @@ fn pdf_decode_png_predictor(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-  data : PdfBytes,
+  data : BytesView,
 ) -> PdfBytes raise PdfError {
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
@@ -868,15 +868,15 @@ fn pdf_decode_png_predictor(
 }
 
 ///|
-pub fn pdf_decode_predictor(
+pub fn pdf_decode_predictor_view(
   predictor : Int,
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-  data : PdfBytes,
+  data : BytesView,
 ) -> PdfBytes raise PdfError {
   match predictor {
-    1 => data
+    1 => data.to_owned()
     2 => pdf_decode_tiff_predictor(colors, bits_per_component, columns, data)
     value if value >= 10 && value <= 15 =>
       pdf_decode_png_predictor(colors, bits_per_component, columns, data)
@@ -885,11 +885,28 @@ pub fn pdf_decode_predictor(
 }
 
 ///|
-fn pdf_encode_png_sub_predictor(
+pub fn pdf_decode_predictor(
+  predictor : Int,
   colors : Int,
   bits_per_component : Int,
   columns : Int,
   data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  pdf_decode_predictor_view(
+    predictor,
+    colors,
+    bits_per_component,
+    columns,
+    data[:],
+  )
+}
+
+///|
+fn pdf_encode_png_sub_predictor(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : BytesView,
 ) -> PdfBytes raise PdfError {
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
@@ -920,7 +937,7 @@ fn pdf_encode_png_up_predictor(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-  data : PdfBytes,
+  data : BytesView,
 ) -> PdfBytes raise PdfError {
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
@@ -944,6 +961,23 @@ fn pdf_encode_png_up_predictor(
 }
 
 ///|
+pub fn pdf_encode_predictor_view(
+  predictor : Int,
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  match predictor {
+    1 => data.to_owned()
+    11 =>
+      pdf_encode_png_sub_predictor(colors, bits_per_component, columns, data)
+    12 => pdf_encode_png_up_predictor(colors, bits_per_component, columns, data)
+    _ => raise PredictorNotSupported(predictor)
+  }
+}
+
+///|
 pub fn pdf_encode_predictor(
   predictor : Int,
   colors : Int,
@@ -951,13 +985,13 @@ pub fn pdf_encode_predictor(
   columns : Int,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  match predictor {
-    1 => data
-    11 =>
-      pdf_encode_png_sub_predictor(colors, bits_per_component, columns, data)
-    12 => pdf_encode_png_up_predictor(colors, bits_per_component, columns, data)
-    _ => raise PredictorNotSupported(predictor)
-  }
+  pdf_encode_predictor_view(
+    predictor,
+    colors,
+    bits_per_component,
+    columns,
+    data[:],
+  )
 }
 
 ///|
