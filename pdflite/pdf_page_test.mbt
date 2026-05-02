@@ -2250,6 +2250,86 @@ test "PdfDocument change_pages accepts explicit serial reference changes" {
 }
 
 ///|
+test "PdfDocument change_pages skips bookmark matrices when page count changes" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_xyz = page_name_for_test("/XYZ")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfIndirect(old_numbers[1]),
+        PdfNameObject(type_xyz),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  )
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: @ascii.encode("Second"),
+      target: DestXYZ(
+        TargetPageObject(old_numbers[1]),
+        Some(5.0),
+        Some(6.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  let changed = try! bookmarked.change_pages(
+    [page_indexed_blank_for_test(9)],
+    change_references=true,
+    changes=[(2, 1)],
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  @test.assert_eq(new_numbers.length(), 1)
+  @test.assert_eq(try! changed.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: @ascii.encode("Second"),
+      target: DestXYZ(
+        TargetPageObject(new_numbers[0]),
+        Some(5.0),
+        Some(6.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(
+      PdfArray([
+        PdfIndirect(new_numbers[0]),
+        PdfNameObject(type_xyz),
+        PdfReal(11.0),
+        PdfReal(22.0),
+        PdfNull,
+      ]),
+    ),
+  )
+}
+
+///|
 test "PdfDocument pdf_of_pages extracts pages in requested order" {
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([

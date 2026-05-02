@@ -38,7 +38,8 @@ work changes.
    bookmarks, annotations, page labels, duplicate annotation fixups, and
    destination pruning are started with direct tests. Direct annotation
    dictionaries in `/Annots` arrays now participate in geometry transforms and
-   `change_pages` link-destination matrix transforms.
+   `change_pages` link-destination matrix transforms; count-changing
+   `change_pages` replacements keep CamlPDF's bookmark matrix guard.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

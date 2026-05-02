@@ -1420,10 +1420,15 @@ fn PdfDocument::pdf_page_transform_matrix_destinations(
   self : PdfDocument,
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
+  transform_bookmarks : Bool,
 ) -> PdfDocument raise PdfError {
-  let pdf = self.pdf_page_transform_bookmarks_for_matrices(
-    matrices, page_reference_numbers,
-  )
+  let pdf = if transform_bookmarks {
+    self.pdf_page_transform_bookmarks_for_matrices(
+      matrices, page_reference_numbers,
+    )
+  } else {
+    self
+  }
   pdf.pdf_page_transform_link_annotations_for_matrices(
     matrices, page_reference_numbers,
   )
@@ -1462,7 +1467,11 @@ pub fn PdfDocument::change_pages(
     }
     pdf.pdf_page_renumber_references(reference_changes)
     if matrices.length() > 0 {
-      pdf.pdf_page_transform_matrix_destinations(matrices, new_page_numbers)
+      pdf.pdf_page_transform_matrix_destinations(
+        matrices,
+        new_page_numbers,
+        old_page_numbers.length() == new_page_numbers.length(),
+      )
     } else {
       pdf
     }

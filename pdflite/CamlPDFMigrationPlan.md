@@ -489,7 +489,12 @@ MoonBit consequences for this project:
    coordinates after page matrix changes. These catalog destination transform
    paths, including `/OpenAction`, now prefer the active catalog through
    trailer `/Root`, matching CamlPDF's parsed-PDF lookup path while retaining
-   the document-root fallback for synthetic fixtures. A minimal `pdf_of_pages`
+   the document-root fallback for synthetic fixtures. Bookmark matrix rewrites
+   now keep CamlPDF's count-changing guard: when explicit serial `changes`
+   replace a different number of pages, bookmark page references are renumbered
+   but bookmark coordinates are not matrix-transformed, while catalog
+   `/OpenAction` and annotation destinations still run through the matrix
+   pass. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
