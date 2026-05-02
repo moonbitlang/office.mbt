@@ -2971,9 +2971,26 @@ test "PdfTextExtractor extracts StandardEncoding Basic Latin glyphs" {
       text_name_for_test("/quoteleft"),
     ],
   )
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([9, 10, 12, 13])[:]),
+    [9, 10, 12, 13],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([9, 10, 12, 13])[:]),
+    [
+      text_name_for_test("/controlHT"),
+      text_name_for_test("/controlLF"),
+      text_name_for_test("/controlFF"),
+      text_name_for_test("/controlCR"),
+    ],
+  )
   @test.assert_eq(extractor.charcode_of_codepoint(65), Some(65))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2019), Some(39))
   @test.assert_eq(extractor.charcode_of_codepoint(0x2018), Some(96))
+  @test.assert_eq(extractor.charcode_of_codepoint(9), Some(9))
+  @test.assert_eq(extractor.charcode_of_codepoint(10), Some(10))
+  @test.assert_eq(extractor.charcode_of_codepoint(12), Some(12))
+  @test.assert_eq(extractor.charcode_of_codepoint(13), Some(13))
   @test.assert_eq(extractor.charcode_of_codepoint(39), Some(0xA9))
   @test.assert_eq(
     try! extractor.codepoints_of_text(

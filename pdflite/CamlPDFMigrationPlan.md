@@ -711,9 +711,9 @@ MoonBit consequences for this project:
    is also started for StandardEncoding, MacRomanEncoding, WinAnsiEncoding,
    custom encoding differences, effective encoding-table/reverse-table export,
    and reverse charcode lookup over that subset.
-   StandardEncoding high-byte fallback is started for common punctuation,
-   ligatures, bullets, text marks, Adobe Standard accent marks, and common
-   ligature/Latin glyph names.
+   StandardEncoding fallback is started for CamlPDF's annotation-text control
+   bytes plus common high-byte punctuation, ligatures, bullets, text marks,
+   Adobe Standard accent marks, and common ligature/Latin glyph names.
    MacRoman high-byte fallback is started for common accented Latin letters,
    the contiguous lower-vowel accent block, and the `0xA0..0xAF`
    punctuation/symbol block, plus unambiguous sparse `0xB0..0xBF` entries
