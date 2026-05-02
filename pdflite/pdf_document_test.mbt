@@ -286,6 +286,29 @@ test "PdfDocument stream_object_entries delegates stream entries" {
 }
 
 ///|
+test "PdfDocument iter_stream visits stream objects with raising callback" {
+  let doc = @pdflite.pdf_document_empty()
+  let first = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  let second = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66])),
+  )
+  doc.add_object_given_number(5, first)
+  doc.add_object_given_number(2, second)
+  doc.add_object_given_number(3, PdfInteger(3))
+  let seen : Array[@pdflite.PdfObject] = []
+  try! doc.iter_stream(fn(object) { seen.push(object) })
+  @test.assert_eq(seen, [second, first])
+  let failed : Result[Unit, Error] = try? doc.iter_stream(fn(_) raise {
+    fail("stop")
+  })
+  guard failed is Err(_) else { fail("expected callback failure") }
+}
+
+///|
 test "PdfDocument copy preserves metadata and separates object map state" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 6)

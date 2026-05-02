@@ -426,6 +426,19 @@ pub fn PdfDocument::stream_object_entries(
 }
 
 ///|
+pub fn PdfDocument::iter_stream(
+  self : PdfDocument,
+  callback : (PdfObject) -> Unit raise,
+) -> Unit raise {
+  for entry in self.parsed_object_entries() {
+    match entry.2 {
+      PdfStreamObject(_) as stream => callback(stream)
+      _ => ()
+    }
+  }
+}
+
+///|
 pub fn PdfDocument::add_object(
   self : PdfDocument,
   object : PdfObject,

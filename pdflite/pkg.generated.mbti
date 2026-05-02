@@ -954,6 +954,7 @@ pub fn PdfDocument::is_cidkeyed_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_encrypted(Self) -> Bool
 pub fn PdfDocument::is_simple_font(Self, PdfObject) -> Bool
 pub fn PdfDocument::is_standard14_font(Self, PdfObject) -> Bool
+pub fn PdfDocument::iter_stream(Self, (PdfObject) -> Unit raise) -> Unit raise
 pub fn PdfDocument::lookup_chain(Self, PdfObject, ArrayView[PdfName]) -> PdfObject?
 pub fn PdfDocument::lookup_direct(Self, PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_direct_or_array(Self, PdfName, PdfObject) -> PdfObject?
