@@ -122,8 +122,9 @@ MoonBit consequences for this project:
    Status: started with `ByteCursor` backed by `BytesView`, byte/line reads,
    offset handling, checked cursor errors, CamlPDF-style input error context
    formatting, CamlPDF-style byte-predicate `getuntil`/`ignoreuntil` helpers,
-   MSB-first bitstream read/write, Int64-backed 32-bit bit values, aligned
-   write-bitstream append, and black-box tests.
+   one-allocation `BytesView` concatenation, MSB-first bitstream read/write,
+   Int64-backed 32-bit bit values, aligned write-bitstream append, and
+   black-box tests.
 
 2. Small pure support modules.
    Port `.repos/pdftransform`, `.repos/pdfunits`, `.repos/pdfpaper`, and the

@@ -117,6 +117,17 @@ pub fn pdf_bytes_of_view(values : BytesView) -> PdfBytes {
 }
 
 ///|
+pub fn pdf_bytes_concat_views(parts : ArrayView[BytesView]) -> PdfBytes {
+  let output : Array[Byte] = []
+  for part in parts {
+    for byte in part {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 pub fn pdf_bytes_of_int_array(
   values : ArrayView[Int],
 ) -> PdfBytes raise PdfError {

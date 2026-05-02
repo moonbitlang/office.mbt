@@ -20,6 +20,19 @@ test "PdfBytes preserve byte-oriented PDF data" {
 }
 
 ///|
+test "PdfBytes concatenate read-only byte views at ownership boundary" {
+  let first = try! @pdflite.pdf_bytes_of_int_array([0x25, 0x50])
+  let second = try! @pdflite.pdf_bytes_of_int_array([0x44, 0x46, 0xFF])
+  let parts : Array[BytesView] = [first[:], second[1:]]
+  let combined = @pdflite.pdf_bytes_concat_views(parts)
+  @test.assert_eq(
+    @pdflite.pdf_bytes_to_array(combined).map(byte => byte.to_int()),
+    [0x25, 0x50, 0x46, 0xFF],
+  )
+  @test.assert_eq(@pdflite.pdf_bytes_concat_views([]), Bytes::new(0))
+}
+
+///|
 test "PdfBytes reject out-of-range integers" {
   let too_large : Result[Byte, Error] = try? @pdflite.pdf_byte_of_int(256)
   guard too_large is Err(@pdflite.PdfError::InvalidByte(256)) else {
