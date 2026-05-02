@@ -6496,6 +6496,131 @@ test "PdfTextExtractor decodes Bopomofo AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Hangul compatibility jamo AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/aekorean", 0x3150),
+    ("/akorean", 0x314F),
+    ("/araeaekorean", 0x318E),
+    ("/araeakorean", 0x318D),
+    ("/chieuchkorean", 0x314A),
+    ("/cieuckorean", 0x3148),
+    ("/ekorean", 0x3154),
+    ("/eokorean", 0x3153),
+    ("/eukorean", 0x3161),
+    ("/hangulfiller", 0x3164),
+    ("/hieuhkorean", 0x314E),
+    ("/ieungkorean", 0x3147),
+    ("/ikorean", 0x3163),
+    ("/kapyeounmieumkorean", 0x3171),
+    ("/kapyeounphieuphkorean", 0x3184),
+    ("/kapyeounpieupkorean", 0x3178),
+    ("/kapyeounssangpieupkorean", 0x3179),
+    ("/khieukhkorean", 0x314B),
+    ("/kiyeokkorean", 0x3131),
+    ("/kiyeoksioskorean", 0x3133),
+    ("/mieumkorean", 0x3141),
+    ("/mieumpansioskorean", 0x3170),
+    ("/mieumpieupkorean", 0x316E),
+    ("/mieumsioskorean", 0x316F),
+    ("/nieuncieuckorean", 0x3135),
+    ("/nieunhieuhkorean", 0x3136),
+    ("/nieunkorean", 0x3134),
+    ("/nieunpansioskorean", 0x3168),
+    ("/nieunsioskorean", 0x3167),
+    ("/nieuntikeutkorean", 0x3166),
+    ("/oekorean", 0x315A),
+    ("/okorean", 0x3157),
+    ("/pansioskorean", 0x317F),
+    ("/phieuphkorean", 0x314D),
+    ("/pieupcieuckorean", 0x3176),
+    ("/pieupkiyeokkorean", 0x3172),
+    ("/pieupkorean", 0x3142),
+    ("/pieupsioskiyeokkorean", 0x3174),
+    ("/pieupsioskorean", 0x3144),
+    ("/pieupsiostikeutkorean", 0x3175),
+    ("/pieupthieuthkorean", 0x3177),
+    ("/pieuptikeutkorean", 0x3173),
+    ("/rieulhieuhkorean", 0x3140),
+    ("/rieulkiyeokkorean", 0x313A),
+    ("/rieulkiyeoksioskorean", 0x3169),
+    ("/rieulkorean", 0x3139),
+    ("/rieulmieumkorean", 0x313B),
+    ("/rieulpansioskorean", 0x316C),
+    ("/rieulphieuphkorean", 0x313F),
+    ("/rieulpieupkorean", 0x313C),
+    ("/rieulpieupsioskorean", 0x316B),
+    ("/rieulsioskorean", 0x313D),
+    ("/rieulthieuthkorean", 0x313E),
+    ("/rieultikeutkorean", 0x316A),
+    ("/rieulyeorinhieuhkorean", 0x316D),
+    ("/sioscieuckorean", 0x317E),
+    ("/sioskiyeokkorean", 0x317A),
+    ("/sioskorean", 0x3145),
+    ("/siosnieunkorean", 0x317B),
+    ("/siospieupkorean", 0x317D),
+    ("/siostikeutkorean", 0x317C),
+    ("/ssangcieuckorean", 0x3149),
+    ("/ssanghieuhkorean", 0x3185),
+    ("/ssangieungkorean", 0x3180),
+    ("/ssangkiyeokkorean", 0x3132),
+    ("/ssangnieunkorean", 0x3165),
+    ("/ssangpieupkorean", 0x3143),
+    ("/ssangsioskorean", 0x3146),
+    ("/ssangtikeutkorean", 0x3138),
+    ("/thieuthkorean", 0x314C),
+    ("/tikeutkorean", 0x3137),
+    ("/ukorean", 0x315C),
+    ("/waekorean", 0x3159),
+    ("/wakorean", 0x3158),
+    ("/wekorean", 0x315E),
+    ("/weokorean", 0x315D),
+    ("/wikorean", 0x315F),
+    ("/yaekorean", 0x3152),
+    ("/yakorean", 0x3151),
+    ("/yekorean", 0x3156),
+    ("/yeokorean", 0x3155),
+    ("/yeorinhieuhkorean", 0x3186),
+    ("/yesieungkorean", 0x3181),
+    ("/yesieungpansioskorean", 0x3183),
+    ("/yesieungsioskorean", 0x3182),
+    ("/yikorean", 0x3162),
+    ("/yoikorean", 0x3189),
+    ("/yokorean", 0x315B),
+    ("/yoyaekorean", 0x3188),
+    ("/yoyakorean", 0x3187),
+    ("/yuikorean", 0x318C),
+    ("/yukorean", 0x3160),
+    ("/yuyekorean", 0x318B),
+    ("/yuyeokorean", 0x318A),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3150), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3164), Some(10))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3131), Some(19))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x318A), Some(94))
+}
+
+///|
 test "PdfTextExtractor decodes box drawing AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/SF010000", 0x250C),
