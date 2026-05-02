@@ -683,6 +683,35 @@ test "private reader xref helpers report malformed inputs" {
     fail("expected ParseIndirectObjectExpected")
   }
 
+  @test.assert_eq(
+    pdf_reader_stream_data_end_before_marker(
+      @ascii.encode("A\r\nendstream")[:],
+      3,
+    ),
+    1,
+  )
+  @test.assert_eq(
+    pdf_reader_stream_data_end_before_marker(
+      @ascii.encode("A\rendstream")[:],
+      2,
+    ),
+    1,
+  )
+  @test.assert_eq(
+    pdf_reader_stream_data_end_before_marker(@ascii.encode("Aendstream")[:], 1),
+    1,
+  )
+  let malformed_stream = byte_cursor_of_bytes(@ascii.encode("stream\nabc"))
+  let malformed_stream_result : Result[PdfParsedIndirectObject, Error] = try? malformed_stream.finish_pdf_malformed_stream_object({
+      number: 1,
+      generation: 0,
+      object: PdfDictionary([]),
+    },
+  )
+  guard malformed_stream_result is Err(PdfError::ParseEndStreamExpected) else {
+    fail("expected ParseEndStreamExpected")
+  }
+
   let mismatch = byte_cursor_of_bytes(@ascii.encode("abc"))
   let mismatch_result : Result[Unit, Error] = try? mismatch.consume_pdf_ascii(
     [120],

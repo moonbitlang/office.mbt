@@ -263,18 +263,18 @@ MoonBit consequences for this project:
    `pdf_is_linearized`. Final trailer cleanup now mirrors CamlPDF's removal of
    xref machinery keys such as `/Prev`, `/XRefStm`, `/W`, `/Index`, `/Type`,
    `/Filter`, and `/DecodeParms`, while deriving `/Size` from the loaded
-  document object map. A first malformed-file reconstruction path is
-  started for public reads with missing `startxref`, malformed startxref
-  numbers, startxref pointers that are not xref sections or are past EOF,
-  malformed xref rows, malformed trailer syntax, a strict-read trailer missing
-  `/Root`, or xref rows pointing at junk object offsets: it scans recoverable
-  indirect objects, selects the latest trailer whose `/Root` points at a parsed
-  dictionary, sets `first_xref` to zero, and keeps stricter xref errors on the
-  strict classic reader path. Xref-stream trailer reconstruction is now started
-  for missing
-   or unusable `startxref` pointers, using `/Type /XRef` stream dictionaries as
-   trailer candidates while stripping stream/xref-only keys; object-stream
-   integrity errors still propagate instead of being hidden by this recovery.
+   document object map. A first malformed-file reconstruction path is
+   started for public reads with missing `startxref`, malformed startxref
+   numbers, startxref pointers that are not xref sections or are past EOF,
+   malformed xref rows, malformed trailer syntax, a strict-read trailer missing
+   `/Root`, or xref rows pointing at junk object offsets: it scans recoverable
+   indirect objects, selects the latest trailer whose `/Root` points at a
+   parsed dictionary, sets `first_xref` to zero, and keeps stricter xref errors
+   on the strict classic reader path. Xref-stream trailer reconstruction is now
+   started for missing or unusable `startxref` pointers, using `/Type /XRef`
+   stream dictionaries as trailer candidates while stripping stream/xref-only
+   keys; object-stream integrity errors still propagate instead of being hidden
+   by this recovery.
    Startxref discovery now mirrors CamlPDF's EOF-centered lookup by ignoring
    trailing junk after the final `%%EOF` marker.
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
@@ -284,12 +284,13 @@ MoonBit consequences for this project:
    Broader malformed xref-table recovery remains deferred. The
    reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered
-   streams can resolve plain indirect `/Length n 0 R` entries, and the public
-   reader can now recover around unreadable stream lengths when another
-   reconstructed object supplies the trailer root. Public reconstruction also
-   skips stream objects with malformed `stream`, `endstream`, or `endobj`
-   markers, truncated stream data, malformed object bodies, and invalid PDF name
-   hex escapes when a later reconstructed catalog remains valid.
+   streams can resolve plain indirect `/Length n 0 R` entries. Public
+   reconstruction can now also recover stream objects with missing or unreadable
+   `/Length` values by scanning through the following `endstream` marker and
+   correcting `/Length`, while still skipping stream objects with malformed
+   `stream`, `endstream`, or `endobj` markers, truncated stream data, malformed
+   object bodies, and invalid PDF name hex escapes when a later reconstructed
+   catalog remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset; borrowed `BytesView` entry points are now

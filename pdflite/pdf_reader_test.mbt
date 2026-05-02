@@ -1683,7 +1683,7 @@ test "pdf_read_document_from_bytes reconstructs indirect stream lengths" {
   )
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 3)
-  @test.assert_eq(parsed.object_numbers(), [1, 2, 3])
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3, 4])
   guard parsed.lookup_object_or_null(1) is PdfStreamObject(stream) else {
     fail("expected stream object")
   }
@@ -1694,6 +1694,16 @@ test "pdf_read_document_from_bytes reconstructs indirect stream lengths" {
     Some(PdfIndirect(2)),
   )
   @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+  guard parsed.lookup_object_or_null(4) is PdfStreamObject(reconstructed) else {
+    fail("expected reconstructed stream object")
+  }
+  @test.assert_eq(
+    reconstructed.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(7)),
+  )
+  @test.assert_eq(reconstructed.data, StreamGot(reader_pdf_ascii("Ignored")))
 }
 
 ///|
@@ -1710,7 +1720,7 @@ test "pdf_read_document_from_bytes reconstructs around unreadable stream lengths
   )
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 2)
-  @test.assert_eq(parsed.object_numbers(), [2])
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
   @test.assert_eq(
     parsed.lookup_object_or_null(2),
     @pdflite.pdf_dictionary([
@@ -1721,6 +1731,16 @@ test "pdf_read_document_from_bytes reconstructs around unreadable stream lengths
       (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Payload")), PdfIndirect(1)),
     ]),
   )
+  guard parsed.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected reconstructed stream")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(5)),
+  )
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
 }
 
 ///|

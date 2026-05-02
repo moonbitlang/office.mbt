@@ -1005,8 +1005,14 @@ fn ByteCursor::read_reconstructed_indirect_object_at_current(
   if complete {
     object
   } else {
-    let length = self.resolve_classic_stream_length(object.object, xrefs)
-    self.finish_pdf_stream_object_with_length(object, length)
+    let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
+      object.object,
+      xrefs,
+    )
+    match length_result {
+      Ok(length) => self.finish_pdf_stream_object_with_length(object, length)
+      Err(_) => self.finish_pdf_malformed_stream_object(object)
+    }
   }
 }
 
@@ -1449,6 +1455,61 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
     number: prefix.number,
     generation: prefix.generation,
     object: pdf_stream(prefix.object, StreamGot(stream_data)),
+  }
+}
+
+///|
+fn pdf_reader_stream_data_end_before_marker(
+  data : BytesView,
+  marker_position : Int,
+) -> Int {
+  if marker_position > 1 &&
+    data[marker_position - 1].to_int() == 10 &&
+    data[marker_position - 2].to_int() == 13 {
+    marker_position - 2
+  } else if marker_position > 0 &&
+    (
+      data[marker_position - 1].to_int() == 10 ||
+      data[marker_position - 1].to_int() == 13
+    ) {
+    marker_position - 1
+  } else {
+    marker_position
+  }
+}
+
+///|
+fn ByteCursor::finish_pdf_malformed_stream_object(
+  self : ByteCursor,
+  prefix : PdfParsedIndirectObject,
+) -> PdfParsedIndirectObject raise PdfError {
+  self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
+  self.consume_pdf_stream_line_break()
+  let data_start = self.absolute_position()
+  let endstream = pdf_find_ascii_from(self.data, data_start, [
+    101, 110, 100, 115, 116, 114, 101, 97, 109,
+  ])
+  if endstream < 0 {
+    raise ParseEndStreamExpected
+  }
+  let data_end = pdf_reader_stream_data_end_before_marker(
+    self.data[:],
+    endstream,
+  )
+  let stream_data = self.data[data_start:data_end].to_owned()
+  self.seek_pdf_absolute(endstream + 9)
+  self.drop_pdf_whitespace()
+  self.consume_pdf_ascii([101, 110, 100, 111, 98, 106], ParseEndObjectExpected)
+  {
+    number: prefix.number,
+    generation: prefix.generation,
+    object: pdf_stream(
+      prefix.object.add_dict_entry(
+        pdf_length_name(),
+        PdfInteger(stream_data.length()),
+      ),
+      StreamGot(stream_data),
+    ),
   }
 }
 
