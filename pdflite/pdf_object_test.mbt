@@ -64,6 +64,28 @@ test "PdfObject dictionary add follows CamlPDF replacement order" {
 }
 
 ///|
+test "PdfObject find_indirect reads immediate dictionary references" {
+  let name_a = object_name_for_test([47, 65])
+  let name_b = object_name_for_test([47, 66])
+  let name_c = object_name_for_test([47, 67])
+  let dict = @pdflite.pdf_dictionary([
+    (name_a, PdfIndirect(8)),
+    (name_b, PdfInteger(2)),
+  ])
+  @test.assert_eq(try! dict.find_indirect(name_a), Some(8))
+  @test.assert_eq(try! dict.find_indirect(name_b), None)
+  @test.assert_eq(try! dict.find_indirect(name_c), None)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(name_a, PdfIndirect(9))]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  let stream_result : Result[Int?, Error] = try? stream.find_indirect(name_a)
+  guard stream_result is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for non-dictionary object")
+  }
+}
+
+///|
 test "PdfObject unique_key scans dictionary names in CamlPDF order" {
   let name_gs0 = object_name_for_test([47, 103, 115, 48])
   let name_gs1 = object_name_for_test([47, 103, 115, 49])

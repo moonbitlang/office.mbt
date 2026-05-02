@@ -132,6 +132,21 @@ pub fn PdfObject::lookup_immediate(
 }
 
 ///|
+pub fn PdfObject::find_indirect(
+  self : PdfObject,
+  key : PdfName,
+) -> Int? raise PdfError {
+  match self {
+    PdfDictionary(_) =>
+      match self.lookup_immediate(key) {
+        Some(PdfIndirect(number)) => Some(number)
+        _ => None
+      }
+    _ => raise DictionaryExpected
+  }
+}
+
+///|
 fn dict_add_entries(
   entries : ArrayView[(PdfName, PdfObject)],
   key : PdfName,
