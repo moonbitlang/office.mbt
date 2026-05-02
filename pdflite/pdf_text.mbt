@@ -3396,6 +3396,43 @@ fn pdf_text_codepoint_of_currency_letterlike_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_arrow_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/arrowdashdown" => Some(0x21E3)
+    "/arrowdashleft" => Some(0x21E0)
+    "/arrowdashright" => Some(0x21E2)
+    "/arrowdashup" => Some(0x21E1)
+    "/arrowdownleft" => Some(0x2199)
+    "/arrowdownright" => Some(0x2198)
+    "/arrowdownwhite" => Some(0x21E9)
+    "/arrowleftdbl" => Some(0x21D0)
+    "/arrowleftdblstroke" => Some(0x21CD)
+    "/arrowleftoverright" => Some(0x21C6)
+    "/arrowleftwhite" => Some(0x21E6)
+    "/arrowrightdblstroke" => Some(0x21CF)
+    "/arrowrightoverleft" => Some(0x21C4)
+    "/arrowrightwhite" => Some(0x21E8)
+    "/arrowtableft" => Some(0x21E4)
+    "/arrowtabright" => Some(0x21E5)
+    "/arrowupdn" => Some(0x2195)
+    "/arrowupdnbse" => Some(0x21A8)
+    "/arrowupdownbase" => Some(0x21A8)
+    "/arrowupleft" => Some(0x2196)
+    "/arrowupleftofdown" => Some(0x21C5)
+    "/arrowupright" => Some(0x2197)
+    "/arrowupwhite" => Some(0x21E7)
+    "/capslock" => Some(0x21EA)
+    "/dblarrowleft" => Some(0x21D4)
+    "/dblarrowright" => Some(0x21D2)
+    "/harpoonleftbarbup" => Some(0x21BC)
+    "/harpoonrightbarbup" => Some(0x21C0)
+    "/pagedown" => Some(0x21DF)
+    "/pageup" => Some(0x21DE)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4399,29 +4436,35 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                           Some(codepoint) => Some([codepoint])
                           None =>
                             match
-                              pdf_text_codepoint_of_latin_extended_glyphname(
-                                base_name,
-                              ) {
+                              pdf_text_codepoint_of_arrow_glyphname(base_name) {
                               Some(codepoint) => Some([codepoint])
                               None =>
                                 match
-                                  pdf_text_codepoint_of_expert_glyphname(
+                                  pdf_text_codepoint_of_latin_extended_glyphname(
                                     base_name,
                                   ) {
                                   Some(codepoint) => Some([codepoint])
                                   None =>
                                     match
-                                      pdf_text_codepoint_of_symbol_glyphname(
+                                      pdf_text_codepoint_of_expert_glyphname(
                                         base_name,
                                       ) {
                                       Some(codepoint) => Some([codepoint])
                                       None =>
                                         match
-                                          pdf_text_codepoint_of_dingbat_glyphname(
+                                          pdf_text_codepoint_of_symbol_glyphname(
                                             base_name,
                                           ) {
                                           Some(codepoint) => Some([codepoint])
-                                          None => None
+                                          None =>
+                                            match
+                                              pdf_text_codepoint_of_dingbat_glyphname(
+                                                base_name,
+                                              ) {
+                                              Some(codepoint) =>
+                                                Some([codepoint])
+                                              None => None
+                                            }
                                         }
                                     }
                                 }
