@@ -358,14 +358,24 @@ Do not convert an iterable to an `Array` just to loop over it. Reserve
 indexing, or mutation.
 
 ```sh
-moon run -c 'fn main { @env.set_env_var("MOONBIT_PORTING_PROBE", "ok"); println(@env.get_env_var("MOONBIT_PORTING_PROBE").unwrap()); @env.unset_env_var("MOONBIT_PORTING_PROBE"); println(@env.get_env_var("MOONBIT_PORTING_PROBE") == None) }'
+moon run -c 'fn main { @env.set_env_var("MOONBIT_PORTING_PROBE", "ok"); println(@env.get_env_var("MOONBIT_PORTING_PROBE").unwrap()); @env.unset_env_var("MOONBIT_PORTING_PROBE"); println(@env.get_env_var("MOONBIT_PORTING_PROBE") == None); println(@env.args().length() >= 0); println(@env.current_dir() is Some(_)); println(@env.now().to_string().length() > 0) }'
 # ok
+# true
+# true
+# true
 # true
 ```
 
 Use core `@env` for process environment and command-line APIs:
 `@env.get_env_var`, `@env.get_env_vars`, `@env.set_env_var`,
 `@env.unset_env_var`, `@env.args`, `@env.current_dir`, and `@env.now`.
+The current API is:
+`args() -> Array[String]`, `current_dir() -> String?`,
+`get_env_var(String) -> String?`, `get_env_vars() -> Map[String, String]`,
+`now() -> UInt64`, `set_env_var(String, String) -> Unit`, and
+`unset_env_var(String) -> Unit`. In particular, `current_dir()` is optional
+because some platforms cannot always determine it. Prefer `x is Some(_)` or
+pattern matching to test options; `Option::is_some` is deprecated.
 
 ```sh
 moon run -c 'fn has_ab(view : BytesView) -> Bool { match view { [65, 66, ..] => true; _ => false } }

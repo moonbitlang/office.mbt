@@ -485,6 +485,68 @@ test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
 }
 
 ///|
+test "PdfDocument transform_rect and transform_quadpoints update geometry" {
+  let doc = @pdflite.pdf_document_empty()
+  let matrix = @pdflite.transform_translate(1.0, 2.0)
+  @test.assert_eq(
+    try! doc.transform_rect(
+      matrix,
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(20)]),
+    ),
+    PdfArray([PdfReal(1.0), PdfReal(2.0), PdfReal(11.0), PdfReal(22.0)]),
+  )
+  @test.assert_eq(
+    doc.transform_quadpoints(
+      matrix,
+      PdfArray([
+        PdfInteger(0),
+        PdfInteger(0),
+        PdfInteger(10),
+        PdfInteger(0),
+        PdfInteger(10),
+        PdfInteger(10),
+        PdfInteger(0),
+        PdfInteger(10),
+        PdfInteger(99),
+      ]),
+    ),
+    PdfArray([
+      PdfReal(1.0),
+      PdfReal(2.0),
+      PdfReal(11.0),
+      PdfReal(2.0),
+      PdfReal(11.0),
+      PdfReal(12.0),
+      PdfReal(1.0),
+      PdfReal(12.0),
+      PdfInteger(99),
+    ]),
+  )
+  let malformed : @pdflite.PdfObject = PdfArray([
+    PdfInteger(0),
+    PdfNameObject(lookup_name_for_test([47, 66, 97, 100])),
+    PdfInteger(10),
+    PdfInteger(0),
+    PdfInteger(10),
+    PdfInteger(10),
+    PdfInteger(0),
+    PdfInteger(10),
+  ])
+  @test.assert_eq(doc.transform_quadpoints(matrix, malformed), malformed)
+  @test.assert_eq(
+    doc.transform_quadpoints(matrix, PdfInteger(1)),
+    PdfInteger(1),
+  )
+  let bad_rect : Result[@pdflite.PdfObject, Error] = try? doc.transform_rect(
+    matrix,
+    PdfInteger(1),
+  )
+  guard bad_rect is Err(@pdflite.PdfError::RectangleExpected) else {
+    fail("expected RectangleExpected")
+  }
+}
+
+///|
 test "PdfDocument parse_matrix and pdf_object_of_matrix round trip matrices" {
   let doc = @pdflite.pdf_document_empty()
   let key_matrix = lookup_name_for_test([47, 77, 97, 116, 114, 105, 120])

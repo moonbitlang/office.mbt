@@ -1032,6 +1032,8 @@ pub fn PdfDocument::trailer_dict(Self) -> PdfObject
 pub fn PdfDocument::transform_annotations(Self, TransformMatrix, PdfObject) -> Unit raise PdfError
 pub fn PdfDocument::transform_bookmark(Self, TransformMatrix, PdfBookmark) -> PdfBookmark raise PdfError
 pub fn PdfDocument::transform_destination(Self, TransformMatrix, PdfDestination) -> PdfDestination raise PdfError
+pub fn PdfDocument::transform_quadpoints(Self, TransformMatrix, PdfObject) -> PdfObject
+pub fn PdfDocument::transform_rect(Self, TransformMatrix, PdfObject) -> PdfObject raise PdfError
 pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise PdfError
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool

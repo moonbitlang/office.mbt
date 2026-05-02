@@ -467,6 +467,97 @@ pub fn PdfDocument::parse_rectangle(
 }
 
 ///|
+pub fn PdfDocument::transform_rect(
+  self : PdfDocument,
+  matrix : TransformMatrix,
+  object : PdfObject,
+) -> PdfObject raise PdfError {
+  let rectangle = self.parse_rectangle(object)
+  let p0 = matrix.apply(point2(rectangle.min_x, rectangle.min_y))
+  let p1 = matrix.apply(point2(rectangle.max_x, rectangle.max_y))
+  let p2 = matrix.apply(point2(rectangle.min_x, rectangle.max_y))
+  let p3 = matrix.apply(point2(rectangle.max_x, rectangle.min_y))
+  PdfArray([
+    PdfReal(double_min(double_min(p0.x, p1.x), double_min(p2.x, p3.x))),
+    PdfReal(double_min(double_min(p0.y, p1.y), double_min(p2.y, p3.y))),
+    PdfReal(double_max(double_max(p0.x, p1.x), double_max(p2.x, p3.x))),
+    PdfReal(double_max(double_max(p0.y, p1.y), double_max(p2.y, p3.y))),
+  ])
+}
+
+///|
+fn PdfDocument::pdf_transform_number_or_none(
+  self : PdfDocument,
+  object : PdfObject,
+) -> Double? {
+  try self.get_number(object) catch {
+    _ => None
+  } noraise {
+    value => Some(value)
+  }
+}
+
+///|
+fn PdfDocument::pdf_transform_quadpoint_chunk(
+  self : PdfDocument,
+  matrix : TransformMatrix,
+  values : ArrayView[PdfObject],
+  start : Int,
+) -> Array[PdfObject] {
+  let numbers : Array[Double] = []
+  let mut valid = true
+  for index in start..<(start + 8) {
+    match self.pdf_transform_number_or_none(values[index]) {
+      Some(value) => numbers.push(value)
+      None => valid = false
+    }
+  }
+  if valid {
+    let output : Array[PdfObject] = []
+    for index in 0..<4 {
+      let point = matrix.apply(
+        point2(numbers[index * 2], numbers[index * 2 + 1]),
+      )
+      output.push(PdfReal(point.x))
+      output.push(PdfReal(point.y))
+    }
+    output
+  } else {
+    [
+      for index in start..<(start + 8) => values[index]
+    ]
+  }
+}
+
+///|
+pub fn PdfDocument::transform_quadpoints(
+  self : PdfDocument,
+  matrix : TransformMatrix,
+  object : PdfObject,
+) -> PdfObject {
+  match self.direct(object) {
+    PdfArray(values) => {
+      let output : Array[PdfObject] = []
+      let mut start = 0
+      while start < values.length() {
+        if start + 8 <= values.length() {
+          for value in self.pdf_transform_quadpoint_chunk(matrix, values, start) {
+            output.push(value)
+          }
+        } else {
+          for index in start..<values.length() {
+            output.push(values[index])
+          }
+        }
+        start += 8
+      }
+      PdfArray(output)
+    }
+    _ => object
+  }
+}
+
+///|
 pub fn PdfDocument::parse_matrix(
   self : PdfDocument,
   key : PdfName,
