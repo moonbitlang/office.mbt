@@ -334,6 +334,16 @@ test "ByteCursor lex_pdf_tokens scans primitive PDF object syntax" {
 }
 
 ///|
+test "pdf_lex_view and pdf_lex_single_view lex borrowed byte slices" {
+  let data = lexeme_bytes_for_test([90, 32, 91, 49, 32, 50, 93, 32, 90])
+  @test.assert_eq(try! @pdflite.pdf_lex_single_view(data[2:7]), LexLeftSquare)
+  let tokens = try! @pdflite.pdf_lex_view(data[2:7])
+  @test.assert_eq(tokens.map(@pdflite.pdf_lexeme_debug_name), [
+    "LexLeftSquare", "LexInt", "LexInt", "LexRightSquare",
+  ])
+}
+
+///|
 test "ByteCursor lex_pdf_token dispatches booleans hex strings and stop markers" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     lexeme_bytes_for_test([

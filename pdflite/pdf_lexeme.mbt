@@ -518,6 +518,16 @@ pub fn ByteCursor::lex_pdf_tokens(
 }
 
 ///|
+pub fn pdf_lex_single_view(data : BytesView) -> PdfLexeme raise PdfError {
+  byte_cursor_of_view(data).lex_pdf_token()
+}
+
+///|
+pub fn pdf_lex_view(data : BytesView) -> Array[PdfLexeme] raise PdfError {
+  byte_cursor_of_view(data).lex_pdf_tokens()
+}
+
+///|
 pub fn pdf_lex_bytes(data : PdfBytes) -> Array[PdfLexeme] raise PdfError {
-  byte_cursor_of_bytes(data).lex_pdf_tokens()
+  pdf_lex_view(data[:])
 }

@@ -190,13 +190,15 @@ MoonBit consequences for this project:
    double-minus number salvage, and name lexing with byte-preserving `#xx` hex
    escapes. Comments, literal strings, hex strings, array/dictionary delimiter
    tokens, and primitive keyword tokens are also started, with byte-preserving
-   `LexString` outputs and regression tests for escape handling. A primitive
-   lexeme-to-object parser now covers comments, scalar objects, indirect
-   references, arrays, dictionaries, and CamlPDF-style empty-dictionary recovery
-   for malformed dictionary contents. The primitive scanner can now lex object
-   syntax from `Bytes` into token arrays and parse a single object from bytes,
-   stopping before `stream`, `startxref`, and inline-image `ID` data until
-   stream-aware reading is implemented.
+   `LexString` outputs and regression tests for escape handling. Top-level
+   single-token and token-array lexing over `BytesView` are exposed so callers
+   can lex borrowed slices without allocating. A primitive lexeme-to-object
+   parser now covers comments, scalar objects, indirect references, arrays,
+   dictionaries, and CamlPDF-style empty-dictionary recovery for malformed
+   dictionary contents. The primitive scanner can now lex object syntax from
+   `Bytes` into token arrays and parse a single object from bytes, stopping
+   before `stream`, `startxref`, and inline-image `ID` data until stream-aware
+   reading is implemented.
 
 5. Minimal PDF reader.
    Implement header, xref, trailer, indirect object parsing, object streams only
