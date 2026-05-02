@@ -1008,18 +1008,14 @@ fn pdf_encode_png_sub_predictor(
   )
   let output : Array[Byte] = []
   for row in 0..<(data.length() / scanline_width) {
-    output.push(1)
-    let row_start = row * scanline_width
-    for i in 0..<scanline_width {
-      let left = if i < bytes_per_pixel {
-        0
-      } else {
-        data[row_start + i - bytes_per_pixel].to_int()
-      }
-      output.push(
-        pdf_predictor_wrapping_byte(data[row_start + i].to_int() - left),
-      )
-    }
+    pdf_encode_png_push_scanline(
+      output,
+      1,
+      data,
+      row * scanline_width,
+      scanline_width,
+      bytes_per_pixel,
+    )
   }
   Bytes::from_array(output)
 }
@@ -1034,19 +1030,164 @@ fn pdf_encode_png_up_predictor(
   let scanline_width = pdf_predictor_scanline_width(
     colors, bits_per_component, columns,
   )
+  let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
+    colors, bits_per_component,
+  )
   let output : Array[Byte] = []
   for row in 0..<(data.length() / scanline_width) {
-    output.push(2)
+    pdf_encode_png_push_scanline(
+      output,
+      2,
+      data,
+      row * scanline_width,
+      scanline_width,
+      bytes_per_pixel,
+    )
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_encode_png_predictor_value(
+  predictor : Int,
+  data : BytesView,
+  row_start : Int,
+  index : Int,
+  scanline_width : Int,
+  bytes_per_pixel : Int,
+) -> Int raise PdfError {
+  let left = if index < bytes_per_pixel {
+    0
+  } else {
+    data[row_start + index - bytes_per_pixel].to_int()
+  }
+  let up = if row_start < scanline_width {
+    0
+  } else {
+    data[row_start - scanline_width + index].to_int()
+  }
+  let up_left = if row_start < scanline_width || index < bytes_per_pixel {
+    0
+  } else {
+    data[row_start - scanline_width + index - bytes_per_pixel].to_int()
+  }
+  match predictor {
+    0 => 0
+    1 => left
+    2 => up
+    3 => (left + up) / 2
+    4 => pdf_paeth_predictor(left, up, up_left)
+    _ => raise PredictorNotSupported(predictor)
+  }
+}
+
+///|
+fn pdf_encode_png_scanline(
+  predictor : Int,
+  data : BytesView,
+  row_start : Int,
+  scanline_width : Int,
+  bytes_per_pixel : Int,
+) -> Array[Byte] raise PdfError {
+  let output : Array[Byte] = [predictor.to_byte()]
+  for i in 0..<scanline_width {
+    let predicted = pdf_encode_png_predictor_value(
+      predictor, data, row_start, i, scanline_width, bytes_per_pixel,
+    )
+    output.push(
+      pdf_predictor_wrapping_byte(data[row_start + i].to_int() - predicted),
+    )
+  }
+  output
+}
+
+///|
+fn pdf_encode_png_push_scanline(
+  output : Array[Byte],
+  predictor : Int,
+  data : BytesView,
+  row_start : Int,
+  scanline_width : Int,
+  bytes_per_pixel : Int,
+) -> Unit raise PdfError {
+  for
+    byte in pdf_encode_png_scanline(
+      predictor, data, row_start, scanline_width, bytes_per_pixel,
+    ) {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_encode_png_tagged_predictor(
+  predictor : Int,
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let scanline_width = pdf_predictor_scanline_width(
+    colors, bits_per_component, columns,
+  )
+  let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
+    colors, bits_per_component,
+  )
+  let output : Array[Byte] = []
+  for row in 0..<(data.length() / scanline_width) {
+    pdf_encode_png_push_scanline(
+      output,
+      predictor,
+      data,
+      row * scanline_width,
+      scanline_width,
+      bytes_per_pixel,
+    )
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_encode_png_score_scanline(encoded : ArrayView[Byte]) -> Int {
+  let mut score = 0
+  for i in 1..<encoded.length() {
+    let value = encoded[i].to_int()
+    score += if value > 127 { 256 - value } else { value }
+  }
+  score
+}
+
+///|
+fn pdf_encode_png_optimum_predictor(
+  colors : Int,
+  bits_per_component : Int,
+  columns : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let scanline_width = pdf_predictor_scanline_width(
+    colors, bits_per_component, columns,
+  )
+  let bytes_per_pixel = pdf_predictor_bytes_per_pixel(
+    colors, bits_per_component,
+  )
+  let output : Array[Byte] = []
+  for row in 0..<(data.length() / scanline_width) {
     let row_start = row * scanline_width
-    for i in 0..<scanline_width {
-      let up = if row == 0 {
-        0
-      } else {
-        data[row_start - scanline_width + i].to_int()
-      }
-      output.push(
-        pdf_predictor_wrapping_byte(data[row_start + i].to_int() - up),
+    let mut best = pdf_encode_png_scanline(
+      0, data, row_start, scanline_width, bytes_per_pixel,
+    )
+    let mut best_score = pdf_encode_png_score_scanline(best[:])
+    for predictor in 1..<=4 {
+      let candidate = pdf_encode_png_scanline(
+        predictor, data, row_start, scanline_width, bytes_per_pixel,
       )
+      let score = pdf_encode_png_score_scanline(candidate[:])
+      if score < best_score {
+        best = candidate
+        best_score = score
+      }
+    }
+    for byte in best {
+      output.push(byte)
     }
   }
   Bytes::from_array(output)
@@ -1062,9 +1203,25 @@ pub fn pdf_encode_predictor_view(
 ) -> PdfBytes raise PdfError {
   match predictor {
     1 => data.to_owned()
+    10 =>
+      pdf_encode_png_tagged_predictor(
+        0, colors, bits_per_component, columns, data,
+      )
     11 =>
       pdf_encode_png_sub_predictor(colors, bits_per_component, columns, data)
     12 => pdf_encode_png_up_predictor(colors, bits_per_component, columns, data)
+    13 =>
+      pdf_encode_png_tagged_predictor(
+        3, colors, bits_per_component, columns, data,
+      )
+    14 =>
+      pdf_encode_png_tagged_predictor(
+        4, colors, bits_per_component, columns, data,
+      )
+    15 =>
+      pdf_encode_png_optimum_predictor(
+        colors, bits_per_component, columns, data,
+      )
     _ => raise PredictorNotSupported(predictor)
   }
 }

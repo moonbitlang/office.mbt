@@ -647,13 +647,13 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
     codec_ascii_for_test("raw"),
   )
   let unsupported : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
-    13,
+    9,
     1,
     8,
     1,
     codec_ascii_for_test("raw"),
   )
-  guard unsupported is Err(@pdflite.PdfError::PredictorNotSupported(13)) else {
+  guard unsupported is Err(@pdflite.PdfError::PredictorNotSupported(9)) else {
     fail("expected PredictorNotSupported")
   }
   let bad_dimensions : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
@@ -702,6 +702,18 @@ test "pdf predictor view APIs read borrowed slices" {
 
 ///|
 test "pdf_encode_predictor emits png sub and up rows" {
+  let none = try! @pdflite.pdf_encode_predictor(
+    10,
+    1,
+    8,
+    3,
+    codec_bytes_for_test([10, 20, 30, 13, 25, 35]),
+  )
+  @test.assert_eq(none, codec_bytes_for_test([0, 10, 20, 30, 0, 13, 25, 35]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(10, 1, 8, 3, none),
+    codec_bytes_for_test([10, 20, 30, 13, 25, 35]),
+  )
   let sub = try! @pdflite.pdf_encode_predictor(
     11,
     1,
@@ -725,6 +737,42 @@ test "pdf_encode_predictor emits png sub and up rows" {
   @test.assert_eq(
     try! @pdflite.pdf_decode_predictor(12, 1, 8, 3, up),
     codec_bytes_for_test([10, 20, 30, 11, 25, 35]),
+  )
+  let average = try! @pdflite.pdf_encode_predictor(
+    13,
+    1,
+    8,
+    3,
+    codec_bytes_for_test([10, 20, 30, 13, 25, 35]),
+  )
+  @test.assert_eq(average, codec_bytes_for_test([3, 10, 15, 20, 3, 8, 9, 8]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(13, 1, 8, 3, average),
+    codec_bytes_for_test([10, 20, 30, 13, 25, 35]),
+  )
+  let paeth = try! @pdflite.pdf_encode_predictor(
+    14,
+    1,
+    8,
+    3,
+    codec_bytes_for_test([10, 20, 30, 13, 25, 35]),
+  )
+  @test.assert_eq(paeth, codec_bytes_for_test([4, 10, 10, 10, 4, 3, 5, 5]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(14, 1, 8, 3, paeth),
+    codec_bytes_for_test([10, 20, 30, 13, 25, 35]),
+  )
+  let optimum = try! @pdflite.pdf_encode_predictor(
+    15,
+    1,
+    8,
+    3,
+    codec_bytes_for_test([10, 20, 30]),
+  )
+  @test.assert_eq(optimum, codec_bytes_for_test([1, 10, 10, 10]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(15, 1, 8, 3, optimum),
+    codec_bytes_for_test([10, 20, 30]),
   )
 }
 

@@ -1188,6 +1188,17 @@ test "private codec dictionary and predictor guards report malformed inputs" {
   guard bad_bpp is Err(PdfError::PredictorExpected) else {
     fail("expected PredictorExpected")
   }
+  let bad_png_predictor : Result[Int, Error] = try? pdf_encode_png_predictor_value(
+    5,
+    @ascii.encode("x")[:],
+    0,
+    0,
+    1,
+    1,
+  )
+  guard bad_png_predictor is Err(PdfError::PredictorNotSupported(5)) else {
+    fail("expected PredictorNotSupported")
+  }
 }
 
 ///|
