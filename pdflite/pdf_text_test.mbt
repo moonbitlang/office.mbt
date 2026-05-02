@@ -614,6 +614,7 @@ test "PdfEncoding exposes effective encoding tables" {
 test "Pdf font debug names cover non-Type1 variants" {
   let external_cmap : @pdflite.PdfCMapEncoding = PdfCMap(7)
   @test.assert_eq(external_cmap.is_identity_h(), false)
+  @test.assert_eq(external_cmap.uses_two_byte_codes(), false)
   let mm_type1_type : @pdflite.PdfSimpleFontType = PdfMMType1
   let true_type_type : @pdflite.PdfSimpleFontType = PdfTrueType
   @test.assert_eq(mm_type1_type.debug_name(), "MM Type 1")
@@ -1543,17 +1544,22 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
     PdfPredefinedCMap(text_name_for_test("/Identity-H")),
   )
   @test.assert_eq(cid_font.encoding.is_identity_h(), true)
+  @test.assert_eq(cid_font.encoding.uses_two_byte_codes(), true)
   @test.assert_eq(cid_font.is_identity_h(), true)
+  @test.assert_eq(cid_font.uses_two_byte_codes(), true)
   let cid_font_value : @pdflite.PdfFont = PdfFontCIDKeyed(cid_font)
   @test.assert_eq(cid_font_value.is_identity_h(), true)
+  @test.assert_eq(cid_font_value.uses_two_byte_codes(), true)
   let identity_v : @pdflite.PdfCMapEncoding = PdfPredefinedCMap(
     text_name_for_test("/Identity-V"),
   )
   @test.assert_eq(identity_v.is_identity_h(), false)
+  @test.assert_eq(identity_v.uses_two_byte_codes(), true)
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
   )
   @test.assert_eq(standard_font.is_identity_h(), false)
+  @test.assert_eq(standard_font.uses_two_byte_codes(), false)
   let composite = cid_font.composite
   @test.assert_eq(composite.cid_basefont, text_name_for_test("/DescendantFont"))
   @test.assert_eq(
@@ -2952,12 +2958,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), None)
   let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00])[:])
   guard odd is Err(BadText) else { fail("expected BadText") }
-  let cid_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+  let cid_font_v_data : @pdflite.PdfCIDKeyedFont = {
     basefont: text_name_for_test("/TopVertical"),
     composite,
     encoding: PdfPredefinedCMap(text_name_for_test("/Identity-V")),
-  })
+  }
+  @test.assert_eq(cid_font_v_data.uses_two_byte_codes(), true)
+  let cid_font_v : @pdflite.PdfFont = PdfFontCIDKeyed(cid_font_v_data)
   @test.assert_eq(cid_font_v.is_identity_h(), false)
+  @test.assert_eq(cid_font_v.uses_two_byte_codes(), true)
   let vertical_extractor = cid_font_v.text_extractor()
   @test.assert_eq(
     try! vertical_extractor.codepoints_of_text(

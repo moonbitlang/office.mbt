@@ -689,7 +689,10 @@ MoonBit consequences for this project:
    CID system info, predefined and indirect CMap encodings, descendant font
    descriptors, horizontal `/W` widths, vertical `/W2` widths, and default CID
    widths. The `Identity-H` predicate is also started over the typed CMap
-   encoding model. Font-writing groundwork is started with custom encoding
+   encoding model, with a separate public two-byte-code predicate for
+   `/Identity-H` and `/Identity-V` CID text so callers do not have to treat
+   vertical writing as horizontal identity encoding. Font-writing groundwork is
+   started with custom encoding
    dictionary emission and a Type1 font dictionary helper for predefined
    encodings. Standard-14 font writing is started through `write_font`, with
    optional object-number placement. Type3 font writing is also started for
