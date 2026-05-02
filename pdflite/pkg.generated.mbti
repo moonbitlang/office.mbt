@@ -994,6 +994,7 @@ pub fn PdfDocument::read_standard14_font(Self, PdfObject) -> PdfStandardFontData
 pub fn PdfDocument::recrypt_with_password(Self, BytesView) -> Self raise PdfError
 pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes) -> Self raise PdfError
 pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes) -> Self raise PdfError
+pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries? : ArrayView[PdfName], no_follow_contains? : ArrayView[(PdfName, PdfObject)]) -> Array[Int]
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[PdfName]) -> Bool raise PdfError
 pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
