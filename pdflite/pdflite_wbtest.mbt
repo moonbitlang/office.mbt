@@ -45,6 +45,40 @@ test "PdfDocument copy preserves parser-private object states" {
 }
 
 ///|
+test "PdfDocument stream decompression preserves already-decrypted state" {
+  let length = pdf_name_of_bytes(@ascii.encode("/Length"))
+  let filter = pdf_name_of_bytes(@ascii.encode("/Filter"))
+  let encoded = pdf_ascii_hex_encode(@ascii.encode("Hi"))
+  let stream = pdf_stream(
+    pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(pdf_name_of_bytes(@ascii.encode("/AHx")))),
+    ]),
+    StreamGot(encoded),
+  )
+  let doc = pdf_document_empty()
+  doc.objects.set_entry(
+    6,
+    pdf_object_entry(ObjectParsedAlreadyDecrypted(stream), generation=3),
+  )
+  try! doc.pdf_decode_streams_until_unknown()
+  guard doc.objects.get_entry(6)
+    is Some(
+      {
+        data: ObjectParsedAlreadyDecrypted(PdfStreamObject(decoded)),
+        generation: 3,
+      }
+    ) else {
+    fail("expected already-decrypted stream")
+  }
+  @test.assert_eq(decoded.data, StreamGot(@ascii.encode("Hi")))
+  @test.assert_eq(
+    decoded.dictionary.lookup_immediate(length),
+    Some(PdfInteger(2)),
+  )
+}
+
+///|
 test "PdfDocument renumbering preserves parser object-stream hints" {
   let doc = pdf_document_empty()
   doc.objects.set_entry(8, pdf_object_entry(ObjectParsed(PdfInteger(8))))

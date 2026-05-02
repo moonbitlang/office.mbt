@@ -24,8 +24,8 @@ work changes.
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
    Status: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode,
-   predictors, filter arrays, document-aware stream decoding, and JPEG data
-   extraction are started.
+   predictors, filter arrays, document-aware stream decoding, document-wide
+   stop-at-unknown stream decompression, and JPEG data extraction are started.
    Remaining focus: higher-ratio dynamic-Huffman Flate output, CCITT/JBIG2
    external-style decode parity, and actual JPEG pixel decoding.
 
@@ -59,8 +59,9 @@ work changes.
 7. Document-level features.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
    helpers in page/text modules.
-   Status: merge, optional content groups, dates, page labels, bookmarks, and
-   duplicate-font paths are started.
+   Status: merge, optional content groups, dates, page labels, bookmarks,
+   duplicate-font paths, and the `pdfdecomp.ml` stream-decompression workflow
+   are started.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

@@ -1685,6 +1685,34 @@ pub fn PdfDocument::pdf_decode_stream_until_unknown(
 }
 
 ///|
+pub fn PdfDocument::pdf_decode_streams_until_unknown(
+  self : PdfDocument,
+) -> Unit raise PdfError {
+  for number in self.objects.object_numbers() {
+    let entry = self.objects.get_entry(number).unwrap()
+    match entry.data {
+      ObjectParsed(PdfStreamObject(stream)) => {
+        let decoded = self.pdf_decode_stream_until_unknown_value_direct(stream)
+        self.objects.set_entry(number, {
+          data: ObjectParsed(PdfStreamObject(decoded)),
+          generation: entry.generation,
+        })
+        self.objects.log.push((number, ObjectAltered))
+      }
+      ObjectParsedAlreadyDecrypted(PdfStreamObject(stream)) => {
+        let decoded = self.pdf_decode_stream_until_unknown_value_direct(stream)
+        self.objects.set_entry(number, {
+          data: ObjectParsedAlreadyDecrypted(PdfStreamObject(decoded)),
+          generation: entry.generation,
+        })
+        self.objects.log.push((number, ObjectAltered))
+      }
+      _ => ()
+    }
+  }
+}
+
+///|
 fn pdf_stream_has_filter_value(stream : PdfStream) -> Bool raise PdfError {
   pdf_stream_first_filter(stream.dictionary) != None
 }

@@ -1311,6 +1311,69 @@ test "PdfDocument pdf_decode_stream_until_unknown stops at unsupported filters" 
 }
 
 ///|
+test "PdfDocument pdf_decode_streams_until_unknown mutates document streams" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let predictor = codec_name_for_test("/Predictor")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(8, PdfNameObject(codec_name_for_test("/AHx")))
+  doc.add_object_given_number(
+    9,
+    @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
+  )
+  let encoded = @pdflite.pdf_ascii_hex_encode(codec_ascii_for_test("Hi"))
+  let unsupported : @pdflite.PdfObject = PdfNameObject(
+    codec_name_for_test("/NoSuchFilter"),
+  )
+  let filtered = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfArray([PdfIndirect(8), unsupported])),
+      (decodeparms, PdfArray([PdfIndirect(9), PdfNull])),
+    ]),
+    StreamGot(encoded),
+  )
+  let raw = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(99))]),
+    StreamGot(codec_ascii_for_test("raw")),
+  )
+  doc.add_object_given_number(3, filtered, generation=2)
+  doc.add_object_given_number(4, raw, generation=5)
+  doc.add_object_given_number(5, PdfInteger(5))
+  try! doc.pdf_decode_streams_until_unknown()
+  guard doc.lookup_object_or_null(3) is PdfStreamObject(filtered_decoded) else {
+    fail("expected filtered stream")
+  }
+  @test.assert_eq(filtered_decoded.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    filtered_decoded.dictionary.lookup_immediate(length),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    filtered_decoded.dictionary.lookup_immediate(filter),
+    Some(PdfArray([unsupported])),
+  )
+  @test.assert_eq(
+    filtered_decoded.dictionary.lookup_immediate(decodeparms),
+    Some(PdfArray([PdfNull])),
+  )
+  guard doc.lookup_object_or_null(4) is PdfStreamObject(raw_decoded) else {
+    fail("expected raw stream")
+  }
+  @test.assert_eq(raw_decoded.data, StreamGot(codec_ascii_for_test("raw")))
+  @test.assert_eq(
+    raw_decoded.dictionary.lookup_immediate(length),
+    Some(PdfInteger(3)),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(5), PdfInteger(5))
+  @test.assert_eq(doc.stream_object_entries(), [
+    (3, 2, filtered_decoded),
+    (4, 5, raw_decoded),
+  ])
+}
+
+///|
 test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inputs" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

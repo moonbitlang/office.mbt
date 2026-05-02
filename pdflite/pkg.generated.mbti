@@ -1165,6 +1165,7 @@ pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfEr
 pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise PdfError
 pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, PdfObject) -> PdfObject raise PdfError
+pub fn PdfDocument::pdf_decode_streams_until_unknown(Self) -> Unit raise PdfError
 pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> PdfObject
 pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise PdfError
 pub fn PdfDocument::permissions(Self) -> Array[PdfPermission] raise PdfError
