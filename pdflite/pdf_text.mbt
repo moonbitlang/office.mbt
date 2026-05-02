@@ -6465,9 +6465,13 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                 }
               } else {
                 let base_name = pdf_text_glyphname_base_name(name, base)
-                match pdf_text_codepoint_of_agl_base_glyphname(base_name) {
-                  Some(codepoint) => Some([codepoint])
-                  None => None
+                match pdf_text_codepoints_of_agl_sequence_glyphname(base_name) {
+                  Some(codepoints) => Some(codepoints)
+                  None =>
+                    match pdf_text_codepoint_of_agl_base_glyphname(base_name) {
+                      Some(codepoint) => Some([codepoint])
+                      None => None
+                    }
                 }
               }
           }

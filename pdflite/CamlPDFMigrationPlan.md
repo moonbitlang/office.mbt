@@ -752,6 +752,9 @@ MoonBit consequences for this project:
    Latin Extended Additional, private-use, Halfwidth/Fullwidth, box-drawing,
    block-element, geometric-shape, miscellaneous-symbol, and dingbat alias AGL
    names missing from the base encoding tables are covered as well.
+   Multi-codepoint AGL sequence names are decoded to their full Unicode
+   scalar sequence and deliberately remain excluded from single-codepoint
+   reverse charcode lookup.
    Reverse charcode lookup scans the effective encoding for single-codepoint
    glyphs.
    ToUnicode CMap parsing now
