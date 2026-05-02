@@ -543,6 +543,10 @@ MoonBit consequences for this project:
    inline images with crossed-box path operators, drops image XObject resource
    entries, Flate-encodes the rewritten content stream, prunes the removed image
    object, and verifies writer/reader round-trip behavior.
+   A `pdfhello.ml`-style public workflow fixture now builds an A4 page with
+   Times-Italic `/F0` resources, writes and reads the document, parses the
+   rendered content operators back, and verifies standard-font text extraction
+   for the `"Hello, World!"` PDF bytes.
    Inline images are started with a conservative unfiltered `BI ... ID ... EI`
    parse/render path that preserves image data as `Bytes`; known-size
    unfiltered inline images now read exact byte counts from direct

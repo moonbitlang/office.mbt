@@ -36,6 +36,7 @@ work changes.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
    `pdf_bookmark.mbt`, `pdf_annot.mbt`, `pdf_page_label.mbt`.
    Status: page tree read/write/change/extract flows, content operators,
+   `pdfhello.ml`-style standard-font document round-trip fixtures,
    `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
    bookmarks, annotations, page labels, duplicate annotation fixups, and
    destination pruning are started with direct tests. Direct annotation

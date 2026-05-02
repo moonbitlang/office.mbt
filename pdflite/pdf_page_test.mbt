@@ -773,6 +773,56 @@ test "PdfDocument add_pagetree and add_root build a writable page document" {
 }
 
 ///|
+test "pdfhello-style standard font document roundtrips" {
+  let doc = @pdflite.pdf_document_empty()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops(page_hello_ops_for_test()),
+    ],
+    resources: page_hello_resources_for_test(),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let rendered = try! @pdflite.pdf_write_document(doc)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(try! parsed.endpage(), 1)
+
+  let pages = try! parsed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    try! parsed.parse_rectangle(pages[0].mediabox),
+    page_rect_for_test(0.0, 0.0, 595.2765, 841.89105),
+  )
+  @test.assert_eq(pages[0].resources, page_hello_resources_for_test())
+  @test.assert_eq(
+    try! parsed.parse_content_ops(pages[0].content),
+    page_hello_ops_for_test(),
+  )
+
+  let font_resources = match
+    page_resource_value_for_test(pages[0].resources, "/Font") {
+    Some(font_resources) => font_resources
+    None => fail("expected font resources")
+  }
+  let font_object = match
+    font_resources.lookup_immediate(page_name_for_test("/F0")) {
+    Some(font_object) => font_object
+    None => fail("expected F0 font")
+  }
+  @test.assert_eq(
+    try! parsed.read_font(font_object),
+    PdfFontStandard({ font: PdfTimesItalic, encoding: PdfImplicitInFontFile }),
+  )
+
+  let hello = @ascii.encode("Hello, World!")
+  let extractor = try! parsed.text_extractor_of_font(font_object)
+  @test.assert_eq(try! extractor.codepoints_of_text(hello[:]), [
+    72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33,
+  ])
+}
+
+///|
 test "PdfDocument add_pagetree balances larger page arrays" {
   let key_kids = page_name_for_test("/Kids")
   let key_count = page_name_for_test("/Count")
