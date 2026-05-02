@@ -413,6 +413,8 @@ pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 
 pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
 
+pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
+
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
@@ -855,6 +857,7 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorTruncate
   PdfCalculatorXor
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCalculatorOp::debug_name(Self) -> String
 
 type PdfClassicXRefEntry derive(Eq, ToJson, @debug.Debug)
 

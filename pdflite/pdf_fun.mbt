@@ -160,6 +160,80 @@ pub(all) struct PdfFunction {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_fun_join_strings(
+  parts : ArrayView[String],
+  separator : String,
+) -> String {
+  let mut text = ""
+  for index in 0..<parts.length() {
+    if index > 0 {
+      text = text + separator
+    }
+    text = text + parts[index]
+  }
+  text
+}
+
+///|
+pub fn PdfCalculatorOp::debug_name(self : PdfCalculatorOp) -> String {
+  match self {
+    PdfCalculatorIf(ops) => pdf_string_of_calculator(ops) + " if"
+    PdfCalculatorIfElse(true_ops, false_ops) =>
+      pdf_string_of_calculator(true_ops) +
+      " " +
+      pdf_string_of_calculator(false_ops) +
+      " ifelse"
+    PdfCalculatorBool(true) => "true"
+    PdfCalculatorBool(false) => "false"
+    PdfCalculatorFloat(value) => value.to_string()
+    PdfCalculatorInt(value) => value.to_string()
+    PdfCalculatorAbs => "abs"
+    PdfCalculatorAdd => "add"
+    PdfCalculatorAtan => "atan"
+    PdfCalculatorCeiling => "ceiling"
+    PdfCalculatorCos => "cos"
+    PdfCalculatorCvi => "cvi"
+    PdfCalculatorCvr => "cvr"
+    PdfCalculatorDiv => "div"
+    PdfCalculatorExp => "exp"
+    PdfCalculatorFloor => "floor"
+    PdfCalculatorIdiv => "idiv"
+    PdfCalculatorLn => "ln"
+    PdfCalculatorLog => "log"
+    PdfCalculatorMod => "mod"
+    PdfCalculatorMul => "mul"
+    PdfCalculatorNeg => "neg"
+    PdfCalculatorRound => "round"
+    PdfCalculatorSin => "sin"
+    PdfCalculatorSqrt => "sqrt"
+    PdfCalculatorSub => "sub"
+    PdfCalculatorTruncate => "truncate"
+    PdfCalculatorAnd => "and"
+    PdfCalculatorBitshift => "bitshift"
+    PdfCalculatorEq => "eq"
+    PdfCalculatorGe => "ge"
+    PdfCalculatorGt => "gt"
+    PdfCalculatorLe => "le"
+    PdfCalculatorLt => "lt"
+    PdfCalculatorNe => "ne"
+    PdfCalculatorNot => "not"
+    PdfCalculatorOr => "or"
+    PdfCalculatorXor => "xor"
+    PdfCalculatorCopy => "copy"
+    PdfCalculatorExch => "exch"
+    PdfCalculatorPop => "pop"
+    PdfCalculatorDup => "dup"
+    PdfCalculatorIndex => "index"
+    PdfCalculatorRoll => "roll"
+  }
+}
+
+///|
+pub fn pdf_string_of_calculator(ops : ArrayView[PdfCalculatorOp]) -> String {
+  "{" + pdf_fun_join_strings([ for op in ops => op.debug_name() ], " ") + "}"
+}
+
+///|
 fn PdfDocument::pdf_fun_number_array(
   self : PdfDocument,
   object : PdfObject,

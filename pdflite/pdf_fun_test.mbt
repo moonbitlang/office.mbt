@@ -21,6 +21,61 @@ fn fun_type4_for_test(calculator : @pdflite.PdfBytes) -> @pdflite.PdfObject {
 }
 
 ///|
+test "PdfCalculatorOp debug strings preserve CamlPDF calculator syntax" {
+  @test.assert_eq(
+    @pdflite.pdf_string_of_calculator([
+      PdfCalculatorIf([PdfCalculatorInt(1), PdfCalculatorAdd]),
+      PdfCalculatorIfElse([PdfCalculatorBool(true)], [PdfCalculatorFloat(2.5)]),
+      PdfCalculatorBool(false),
+      PdfCalculatorFloat(1.5),
+      PdfCalculatorInt(-7),
+      PdfCalculatorAbs,
+      PdfCalculatorAdd,
+      PdfCalculatorAtan,
+      PdfCalculatorCeiling,
+      PdfCalculatorCos,
+      PdfCalculatorCvi,
+      PdfCalculatorCvr,
+      PdfCalculatorDiv,
+      PdfCalculatorExp,
+      PdfCalculatorFloor,
+      PdfCalculatorIdiv,
+      PdfCalculatorLn,
+      PdfCalculatorLog,
+      PdfCalculatorMod,
+      PdfCalculatorMul,
+      PdfCalculatorNeg,
+      PdfCalculatorRound,
+      PdfCalculatorSin,
+      PdfCalculatorSqrt,
+      PdfCalculatorSub,
+      PdfCalculatorTruncate,
+      PdfCalculatorAnd,
+      PdfCalculatorBitshift,
+      PdfCalculatorEq,
+      PdfCalculatorGe,
+      PdfCalculatorGt,
+      PdfCalculatorLe,
+      PdfCalculatorLt,
+      PdfCalculatorNe,
+      PdfCalculatorNot,
+      PdfCalculatorOr,
+      PdfCalculatorXor,
+      PdfCalculatorCopy,
+      PdfCalculatorExch,
+      PdfCalculatorPop,
+      PdfCalculatorDup,
+      PdfCalculatorIndex,
+      PdfCalculatorRoll,
+    ]),
+    "{{1 add} if {true} {2.5} ifelse false 1.5 -7 abs add atan ceiling cos cvi cvr div exp floor idiv ln log mod mul neg round sin sqrt sub truncate and bitshift eq ge gt le lt ne not or xor copy exch pop dup index roll}",
+  )
+  let sqrt_op : @pdflite.PdfCalculatorOp = PdfCalculatorSqrt
+  @test.assert_eq(sqrt_op.debug_name(), "sqrt")
+  @test.assert_eq(@pdflite.pdf_string_of_calculator([]), "{}")
+}
+
+///|
 test "PdfDocument parse_function reads and evaluates Type 0 sampled functions" {
   let doc = @pdflite.pdf_document_empty()
   let samples = fun_bytes_for_test([0x0F])
