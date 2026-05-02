@@ -151,6 +151,7 @@ MoonBit consequences for this project:
    dictionaries, using ASCII-prefixed PDF names. Direct indirection resolution
    and direct dictionary lookup, `/[n` array-index lookup inside lookup chains,
    immediate indirect number extraction, trailer-rooted chain replacement with
+   indirect-object preservation, trailer-rooted chain removal with
    indirect-object preservation, PDF numeric extraction, rectangle parsing,
    matrix parsing, and matrix object rendering are also started. Name-tree and
    number-tree helpers are started with sorted/deduplicated readers and

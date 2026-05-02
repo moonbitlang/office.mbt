@@ -255,6 +255,156 @@ test "PdfDocument replace_chain reports malformed chains" {
 }
 
 ///|
+test "PdfDocument remove_chain removes direct dictionary entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
+  let key_names = lookup_name_for_test([47, 78, 97, 109, 101, 115])
+  let key_javascript = lookup_name_for_test([
+    47, 74, 97, 118, 97, 83, 99, 114, 105, 112, 116,
+  ])
+  let key_dests = lookup_name_for_test([47, 68, 101, 115, 116, 115])
+  doc.set_trailer_dict(
+    @pdflite.pdf_dictionary([
+      (
+        key_root,
+        @pdflite.pdf_dictionary([
+          (
+            key_names,
+            @pdflite.pdf_dictionary([
+              (key_javascript, PdfInteger(1)),
+              (key_dests, PdfInteger(2)),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! doc.remove_chain([key_root, key_names, key_javascript]),
+    true,
+  )
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_root, key_names, key_javascript]),
+    None,
+  )
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_root, key_names, key_dests]),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    try! doc.remove_chain([key_root, key_names, key_javascript]),
+    false,
+  )
+  @test.assert_eq(
+    try! doc.remove_chain([key_root, key_javascript, key_dests]),
+    false,
+  )
+}
+
+///|
+test "PdfDocument remove_chain preserves indirect dictionary structure" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
+  let key_names = lookup_name_for_test([47, 78, 97, 109, 101, 115])
+  let key_javascript = lookup_name_for_test([
+    47, 74, 97, 118, 97, 83, 99, 114, 105, 112, 116,
+  ])
+  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(1))]))
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_names, @pdflite.pdf_dictionary([(key_javascript, PdfInteger(1))])),
+    ]),
+  )
+  @test.assert_eq(
+    try! doc.remove_chain([key_root, key_names, key_javascript]),
+    true,
+  )
+  @test.assert_eq(
+    doc.trailer_dict().lookup_immediate(key_root),
+    Some(PdfIndirect(1)),
+  )
+  @test.assert_eq(
+    doc.lookup_chain(doc.lookup_object_or_null(1), [key_names, key_javascript]),
+    None,
+  )
+}
+
+///|
+test "PdfDocument remove_chain updates array chain entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_items = lookup_name_for_test([47, 73, 116, 101, 109, 115])
+  let key_value = lookup_name_for_test([47, 86, 97, 108, 117, 101])
+  let index_0 = lookup_name_for_test([47, 91, 48])
+  let index_1 = lookup_name_for_test([47, 91, 49])
+  let index_2 = lookup_name_for_test([47, 91, 50])
+  let bad_index = lookup_name_for_test([47, 91, 120])
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([(key_value, PdfInteger(1))]),
+  )
+  doc.set_trailer_dict(
+    @pdflite.pdf_dictionary([
+      (
+        key_items,
+        PdfArray([
+          PdfIndirect(7),
+          @pdflite.pdf_dictionary([(key_value, PdfInteger(2))]),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(try! doc.remove_chain([key_items, index_0, key_value]), true)
+  @test.assert_eq(try! doc.remove_chain([key_items, index_1, key_value]), true)
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_items, index_0, key_value]),
+    None,
+  )
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_items, index_1, key_value]),
+    None,
+  )
+  @test.assert_eq(try! doc.remove_chain([key_items, index_1, key_value]), false)
+  @test.assert_eq(try! doc.remove_chain([key_items, index_2, key_value]), false)
+  let remove_array_slot : Result[Bool, Error] = try? doc.remove_chain([
+    key_items, index_1,
+  ])
+  guard remove_array_slot is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for array slot removal")
+  }
+  let malformed : Result[Bool, Error] = try? doc.remove_chain([
+    key_items, bad_index, key_value,
+  ])
+  guard malformed is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
+    missing == bad_index else {
+    fail("expected DictionaryKeyNotFound for malformed array chain")
+  }
+}
+
+///|
+test "PdfDocument remove_chain reports malformed short chains" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
+  let key_child = lookup_name_for_test([47, 67, 104, 105, 108, 100])
+  let empty : Result[Bool, Error] = try? doc.remove_chain([])
+  guard empty is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for empty chain")
+  }
+  @test.assert_eq(try! doc.remove_chain([key_root]), false)
+  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfInteger(1))]))
+  let existing_single : Result[Bool, Error] = try? doc.remove_chain([key_root])
+  guard existing_single is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for existing single-entry chain")
+  }
+  let non_dictionary : Result[Bool, Error] = try? doc.remove_chain([
+    key_root, key_child,
+  ])
+  guard non_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for non-dictionary chain parent")
+  }
+}
+
+///|
 test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(3, PdfReal(2.5))
