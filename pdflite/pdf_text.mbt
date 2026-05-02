@@ -4620,6 +4620,62 @@ fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_private_use_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Acute" => Some(0xF6C9)
+    "/Caron" => Some(0xF6CA)
+    "/Dieresis" => Some(0xF6CB)
+    "/DieresisAcute" => Some(0xF6CC)
+    "/DieresisGrave" => Some(0xF6CD)
+    "/Grave" => Some(0xF6CE)
+    "/Hungarumlaut" => Some(0xF6CF)
+    "/LL" => Some(0xF6BF)
+    "/Macron" => Some(0xF6D0)
+    "/afii10063" => Some(0xF6C4)
+    "/afii10064" => Some(0xF6C5)
+    "/afii10192" => Some(0xF6C6)
+    "/afii10831" => Some(0xF6C7)
+    "/afii10832" => Some(0xF6C8)
+    "/apple" => Some(0xF8FF)
+    "/commaaccent" => Some(0xF6C3)
+    "/cyrBreve" => Some(0xF6D1)
+    "/cyrFlex" => Some(0xF6D2)
+    "/cyrbreve" => Some(0xF6D4)
+    "/cyrflex" => Some(0xF6D5)
+    "/dblGrave" => Some(0xF6D3)
+    "/dblgrave" => Some(0xF6D6)
+    "/dieresisacute" => Some(0xF6D7)
+    "/dieresisgrave" => Some(0xF6D8)
+    "/dollarsuperior" => Some(0xF6E4)
+    "/dotlessj" => Some(0xF6BE)
+    "/ll" => Some(0xF6C0)
+    "/maichattawalowleftthai" => Some(0xF895)
+    "/maichattawalowrightthai" => Some(0xF894)
+    "/maichattawaupperleftthai" => Some(0xF893)
+    "/maieklowleftthai" => Some(0xF88C)
+    "/maieklowrightthai" => Some(0xF88B)
+    "/maiekupperleftthai" => Some(0xF88A)
+    "/maihanakatleftthai" => Some(0xF884)
+    "/maitaikhuleftthai" => Some(0xF889)
+    "/maitholowleftthai" => Some(0xF88F)
+    "/maitholowrightthai" => Some(0xF88E)
+    "/maithoupperleftthai" => Some(0xF88D)
+    "/maitrilowleftthai" => Some(0xF892)
+    "/maitrilowrightthai" => Some(0xF891)
+    "/maitriupperleftthai" => Some(0xF890)
+    "/nikhahitleftthai" => Some(0xF899)
+    "/saraiileftthai" => Some(0xF886)
+    "/saraileftthai" => Some(0xF885)
+    "/saraueeleftthai" => Some(0xF888)
+    "/saraueleftthai" => Some(0xF887)
+    "/thanthakhatlowleftthai" => Some(0xF898)
+    "/thanthakhatlowrightthai" => Some(0xF897)
+    "/thanthakhatupperleftthai" => Some(0xF896)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_expert_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/AEsmall" => Some(0xF7E6)
@@ -5367,6 +5423,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     None => ()
   }
   match pdf_text_codepoint_of_latin_extended_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_private_use_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }

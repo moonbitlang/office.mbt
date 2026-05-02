@@ -6499,6 +6499,86 @@ test "PdfTextExtractor decodes Latin Extended-B AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes private-use AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Acute", 0xF6C9),
+    ("/Caron", 0xF6CA),
+    ("/Dieresis", 0xF6CB),
+    ("/DieresisAcute", 0xF6CC),
+    ("/DieresisGrave", 0xF6CD),
+    ("/Grave", 0xF6CE),
+    ("/Hungarumlaut", 0xF6CF),
+    ("/LL", 0xF6BF),
+    ("/Macron", 0xF6D0),
+    ("/afii10063", 0xF6C4),
+    ("/afii10064", 0xF6C5),
+    ("/afii10192", 0xF6C6),
+    ("/afii10831", 0xF6C7),
+    ("/afii10832", 0xF6C8),
+    ("/apple", 0xF8FF),
+    ("/commaaccent", 0xF6C3),
+    ("/cyrBreve", 0xF6D1),
+    ("/cyrFlex", 0xF6D2),
+    ("/cyrbreve", 0xF6D4),
+    ("/cyrflex", 0xF6D5),
+    ("/dblGrave", 0xF6D3),
+    ("/dblgrave", 0xF6D6),
+    ("/dieresisacute", 0xF6D7),
+    ("/dieresisgrave", 0xF6D8),
+    ("/dollarsuperior", 0xF6E4),
+    ("/dotlessj", 0xF6BE),
+    ("/ll", 0xF6C0),
+    ("/maichattawalowleftthai", 0xF895),
+    ("/maichattawalowrightthai", 0xF894),
+    ("/maichattawaupperleftthai", 0xF893),
+    ("/maieklowleftthai", 0xF88C),
+    ("/maieklowrightthai", 0xF88B),
+    ("/maiekupperleftthai", 0xF88A),
+    ("/maihanakatleftthai", 0xF884),
+    ("/maitaikhuleftthai", 0xF889),
+    ("/maitholowleftthai", 0xF88F),
+    ("/maitholowrightthai", 0xF88E),
+    ("/maithoupperleftthai", 0xF88D),
+    ("/maitrilowleftthai", 0xF892),
+    ("/maitrilowrightthai", 0xF891),
+    ("/maitriupperleftthai", 0xF890),
+    ("/nikhahitleftthai", 0xF899),
+    ("/saraiileftthai", 0xF886),
+    ("/saraileftthai", 0xF885),
+    ("/saraueeleftthai", 0xF888),
+    ("/saraueleftthai", 0xF887),
+    ("/thanthakhatlowleftthai", 0xF898),
+    ("/thanthakhatlowrightthai", 0xF897),
+    ("/thanthakhatupperleftthai", 0xF896),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6C9), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF8FF), Some(15))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF6BE), Some(26))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xF896), Some(49))
+}
+
+///|
 test "PdfTextExtractor decodes TrueType Gxx glyph names" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(

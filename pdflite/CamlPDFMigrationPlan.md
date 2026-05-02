@@ -742,9 +742,9 @@ MoonBit consequences for this project:
    general-punctuation, Latin-1 spacing aliases, IPA-extension,
    spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
   math-operator, Roman-numeral, technical, enclosed-alphanumeric, Bopomofo,
-  box-drawing, block-element, geometric-shape, miscellaneous-symbol, and
-  dingbat alias AGL names missing from the base encoding tables are covered as
-  well.
+  private-use, box-drawing, block-element, geometric-shape,
+  miscellaneous-symbol, and dingbat alias AGL names missing from the base
+  encoding tables are covered as well.
    Reverse charcode lookup scans the effective encoding for single-codepoint
    glyphs.
    ToUnicode CMap parsing now
