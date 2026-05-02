@@ -989,13 +989,57 @@ fn PdfDocument::pdf_page_matrix_for_destination(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> TransformMatrix? raise PdfError {
-  let page_number = self.pdf_destination_page_number(
+  let page_number = self.pdf_page_matrix_page_number_for_destination(
     destination, page_reference_numbers,
   )
   if page_number == 0 {
     None
   } else {
     pdf_page_matrix_for_page_number(matrices, page_number)
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_matrix_page_number_for_destination(
+  self : PdfDocument,
+  destination : PdfDestination,
+  page_reference_numbers : ArrayView[Int],
+) -> Int raise PdfError {
+  match destination {
+    DestNamed(_) | DestString(_) => {
+      let resolved = self.read_destination(
+        pdf_object_of_destination(destination),
+      )
+      if resolved == destination {
+        0
+      } else {
+        self.pdf_page_matrix_page_number_for_destination(
+          resolved, page_reference_numbers,
+        )
+      }
+    }
+    DestAction(action) =>
+      match
+        (
+          self.lookup_direct(pdf_dest_s_key(), action),
+          self.lookup_direct(pdf_dest_d_key(), action),
+        ) {
+        (Some(PdfNameObject(name)), Some(raw_destination)) if name ==
+          pdf_dest_goto_name() =>
+          self.pdf_page_matrix_page_number_for_destination(
+            self.read_destination(raw_destination),
+            page_reference_numbers,
+          )
+        _ => 0
+      }
+    DestXYZ(target, _, _, _)
+    | DestFitH(target, _)
+    | DestFitV(target, _)
+    | DestFitR(target, _, _, _, _)
+    | DestFitBH(target, _)
+    | DestFitBV(target, _) =>
+      pdf_destination_page_number_of_target(page_reference_numbers, target)
+    _ => 0
   }
 }
 

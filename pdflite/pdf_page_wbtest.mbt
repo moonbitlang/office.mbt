@@ -349,6 +349,15 @@ test "private page destination transforms cover unchanged branches" {
     ),
     None,
   )
+  let translation = transform_translate(10.0, 20.0)
+  @test.assert_eq(
+    try! doc.pdf_page_matrix_for_destination(
+      DestNamed(pdf_name_of_bytes(page_wb_text("/Missing"))),
+      [(1, translation)],
+      page_numbers,
+    ),
+    None,
+  )
   @test.assert_eq(
     try! doc.pdf_page_transform_destination_object(
       destination,
@@ -357,12 +366,59 @@ test "private page destination transforms cover unchanged branches" {
     ),
     None,
   )
+  @test.assert_eq(
+    try! doc.pdf_page_transform_destination_object(
+      destination,
+      [(1, transform_translate(10.0, 20.0))],
+      page_numbers,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_transform_destination_object(
+      PdfArray([
+        PdfIndirect(page_numbers[0]),
+        PdfNameObject(pdf_dest_type_fitb()),
+      ]),
+      [(1, transform_translate(10.0, 20.0))],
+      page_numbers,
+    ),
+    None,
+  )
   let action = PdfDictionary([
     (pdf_dest_s_key(), PdfNameObject(pdf_dest_goto_name())),
     (pdf_dest_d_key(), destination),
   ])
+  let coordinate_action = PdfDictionary([
+    (pdf_dest_s_key(), PdfNameObject(pdf_dest_goto_name())),
+    (pdf_dest_d_key(), page_wb_xyz_destination(page_numbers[0], 1, 2)),
+  ])
+  @test.assert_eq(
+    try! doc.pdf_page_matrix_for_destination(
+      DestAction(coordinate_action),
+      [(1, translation)],
+      page_numbers,
+    ),
+    Some(translation),
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_matrix_for_destination(
+      DestAction(PdfDictionary([])),
+      [(1, translation)],
+      page_numbers,
+    ),
+    None,
+  )
   @test.assert_eq(
     try! doc.pdf_page_transform_action_object(action, [], page_numbers),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_transform_action_object(
+      action,
+      [(1, transform_translate(10.0, 20.0))],
+      page_numbers,
+    ),
     None,
   )
   @test.assert_eq(

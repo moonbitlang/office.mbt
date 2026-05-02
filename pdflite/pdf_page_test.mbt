@@ -2405,6 +2405,105 @@ test "PdfDocument change_pages transforms link annotations and open action" {
 }
 
 ///|
+test "PdfDocument change_pages leaves full-page fit destinations untransformed" {
+  let key_annots = page_name_for_test("/Annots")
+  let key_subtype = page_name_for_test("/Subtype")
+  let key_dest = page_name_for_test("/Dest")
+  let key_action = page_name_for_test("/A")
+  let key_open_action = page_name_for_test("/OpenAction")
+  let key_s = page_name_for_test("/S")
+  let key_d = page_name_for_test("/D")
+  let type_link = page_name_for_test("/Link")
+  let type_goto = page_name_for_test("/GoTo")
+  let type_fit = page_name_for_test("/Fit")
+  let type_fitb = page_name_for_test("/FitB")
+  let direct_annotation_number = 20
+  let action_annotation_number = 21
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    old_numbers[0],
+    try! doc
+    .lookup_object_or_null(old_numbers[0])
+    .add_dict_entry(
+      key_annots,
+      PdfArray([
+        PdfIndirect(direct_annotation_number),
+        PdfIndirect(action_annotation_number),
+      ]),
+    ),
+  )
+  doc.add_object_given_number(
+    direct_annotation_number,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (
+        key_dest,
+        PdfArray([PdfIndirect(old_numbers[0]), PdfNameObject(type_fit)]),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    action_annotation_number,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (
+        key_action,
+        @pdflite.pdf_dictionary([
+          (key_s, PdfNameObject(type_goto)),
+          (
+            key_d,
+            PdfArray([PdfIndirect(old_numbers[0]), PdfNameObject(type_fitb)]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([PdfIndirect(old_numbers[0]), PdfNameObject(type_fitb)]),
+    ),
+  )
+  let changed = try! doc.change_pages(
+    try! doc.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(direct_annotation_number)
+    .lookup_immediate(key_dest),
+    Some(PdfArray([PdfIndirect(new_numbers[0]), PdfNameObject(type_fit)])),
+  )
+  match
+    changed
+    .lookup_object_or_null(action_annotation_number)
+    .lookup_immediate(key_action) {
+    Some(PdfDictionary(_) as action) =>
+      @test.assert_eq(
+        action.lookup_immediate(key_d),
+        Some(PdfArray([PdfIndirect(new_numbers[0]), PdfNameObject(type_fitb)])),
+      )
+    _ => fail("expected direct link action")
+  }
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(PdfArray([PdfIndirect(new_numbers[0]), PdfNameObject(type_fitb)])),
+  )
+}
+
+///|
 test "PdfDocument change_pages transforms named destination definitions" {
   let key_names = page_name_for_test("/Names")
   let key_dests = page_name_for_test("/Dests")

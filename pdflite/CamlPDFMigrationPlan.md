@@ -519,7 +519,8 @@ MoonBit consequences for this project:
    are now written as freshly allocated indirect destination objects, matching
    CamlPDF's `rewrite_dest` path, while direct annotation dictionaries in
    annotation arrays still participate in the MoonBit port's broader transform
-   coverage. A minimal `pdf_of_pages`
+   coverage. Matrix rewrites also now skip full-page `/Fit` and `/FitB`
+   destinations, matching CamlPDF's coordinate-bearing destination filter. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten

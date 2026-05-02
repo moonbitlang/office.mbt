@@ -46,7 +46,8 @@ work changes.
    dictionaries in `/Annots` arrays now participate in geometry transforms and
    `change_pages` link-destination matrix transforms; transformed annotation,
    GoTo action, and `/OpenAction` destinations are allocated as indirect
-   destination objects like CamlPDF. Count-changing
+   destination objects like CamlPDF, while full-page `/Fit` and `/FitB`
+   destinations are left untransformed by matrix passes. Count-changing
    `change_pages` replacements keep CamlPDF's no-mapping behavior and bookmark
    matrix guard, while replacement preserves document metadata, trailer extras,
    and object-stream bookkeeping.
