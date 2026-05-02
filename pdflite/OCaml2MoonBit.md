@@ -991,6 +991,10 @@ Assertion style:
 
 - Use `@test.assert_eq` for stable scalar or structural results; it has a
   `Debug` bound and avoids the deprecated `Show`-based assertion path.
+- Boolean assertions can use the same API, for example
+  `@test.assert_eq(condition, true)`, instead of assuming an
+  `@test.assert_true` helper exists. Verified with
+  `moon run -c 'fn helper() -> Unit raise Error { @test.assert_eq(true, true); @test.assert_eq([1, 2], [1, 2]) }\nfn main { try! helper() }'`.
 - Shared test helpers that call `@test.assert_eq` or `try!` on fallible APIs
   should declare `-> Unit raise Error` unless they use a narrower project
   error type. Verified with

@@ -20,7 +20,9 @@ work changes.
    reading, writing, strict/reconstructed xrefs, object streams, name trees, and
    renumbering. Strict classic xref parsing now includes CamlPDF's fixed-width
    malformed-separator tolerance for independently bad separator columns,
-   CR/CRLF line terminators, and glued reconstructed trailer dictionaries.
+   CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
+   revision-specific reads where revision `1` is newest and larger numbers
+   follow older `/Prev` state.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 
@@ -83,7 +85,8 @@ work changes.
 - Done: byte foundation, object model, writer, major reader paths, page tree,
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
-  page labels, OCG, merge, and image extraction basics.
+  page labels, OCG, merge, strict revision-specific reads, and image extraction
+  basics.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, malformed-reader recovery, and example-level integration fixtures.
 - Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, default AES

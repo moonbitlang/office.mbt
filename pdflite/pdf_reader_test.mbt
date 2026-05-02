@@ -2142,6 +2142,74 @@ test "pdf_read_classic_document_from_bytes follows trailer Prev xrefs" {
 }
 
 ///|
+test "pdf_read_classic_document_revision_from_bytes reads latest revision" {
+  let parsed = try! @pdflite.pdf_read_classic_document_revision_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+    1,
+  )
+  @test.assert_eq(parsed.revision_read(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(2))
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(3))
+}
+
+///|
+test "pdf_read_document_revision_from_bytes wraps strict revision reader" {
+  let parsed = try! @pdflite.pdf_read_document_revision_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+    1,
+  )
+  @test.assert_eq(parsed.revision_read(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(2))
+}
+
+///|
+test "pdf_read_classic_document_revision_from_bytes reads older Prev revision" {
+  let parsed = try! @pdflite.pdf_read_classic_document_revision_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+    2,
+  )
+  @test.assert_eq(parsed.revision_read(), 2)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(1))
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(parsed.first_xref() > 0, true)
+}
+
+///|
+test "pdf_read_document_revision_from_view reads borrowed older revision" {
+  let payload = reader_classic_pdf_with_prev_xref()
+  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let parsed = try! @pdflite.pdf_read_document_revision_from_view(
+    wrapped[3:wrapped.length() - 3],
+    2,
+  )
+  @test.assert_eq(parsed.revision_read(), 2)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(1))
+}
+
+///|
+test "pdf_read_classic_document_revision_from_bytes reports bad revisions" {
+  let invalid : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+    0,
+  )
+  guard invalid is Err(@pdflite.PdfError::BadRevision) else {
+    fail("expected BadRevision")
+  }
+
+  let missing : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
+    reader_classic_pdf_with_prev_xref(),
+    3,
+  )
+  guard missing is Err(@pdflite.PdfError::BadRevision) else {
+    fail("expected BadRevision")
+  }
+}
+
+///|
 test "pdf_read_classic_document_from_bytes keeps newer deleted xref entries" {
   let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_prev_deleted_object(),

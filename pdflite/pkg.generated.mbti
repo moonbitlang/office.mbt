@@ -387,6 +387,10 @@ pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_classic_document_from_view(BytesView) -> PdfDocument raise PdfError
 
+pub fn pdf_read_classic_document_revision_from_bytes(Bytes, Int) -> PdfDocument raise PdfError
+
+pub fn pdf_read_classic_document_revision_from_view(BytesView, Int) -> PdfDocument raise PdfError
+
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_bytes_with_passwords(Bytes, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
@@ -394,6 +398,10 @@ pub fn pdf_read_document_from_bytes_with_passwords(Bytes, user_password? : Bytes
 pub fn pdf_read_document_from_view(BytesView) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_view_with_passwords(BytesView, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
+
+pub fn pdf_read_document_revision_from_bytes(Bytes, Int) -> PdfDocument raise PdfError
+
+pub fn pdf_read_document_revision_from_view(BytesView, Int) -> PdfDocument raise PdfError
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
@@ -587,6 +595,7 @@ pub(all) suberror PdfError {
   XRefEntryExpected
   TrailerExpected
   RootExpected
+  BadRevision
   InvalidObjectNumber(Int)
   BadDate
   InvalidUnicodeCodepoint(Int)

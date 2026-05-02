@@ -42,6 +42,7 @@ pub(all) suberror PdfError {
   XRefEntryExpected
   TrailerExpected
   RootExpected
+  BadRevision
   InvalidObjectNumber(Int)
   BadDate
   InvalidUnicodeCodepoint(Int)

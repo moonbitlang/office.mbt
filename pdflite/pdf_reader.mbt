@@ -1281,9 +1281,42 @@ fn pdf_read_reconstructed_or_raise(
 }
 
 ///|
-pub fn pdf_read_classic_document_from_view(
+fn pdf_read_reader_revision_target(revision : Int?) -> Int? raise PdfError {
+  match revision {
+    Some(value) if value < 1 => raise BadRevision
+    _ => revision
+  }
+}
+
+///|
+fn pdf_reader_revision_reads_section(
+  revision : Int?,
+  current_revision : Int,
+) -> Bool {
+  match revision {
+    Some(target) => target <= current_revision
+    None => true
+  }
+}
+
+///|
+fn pdf_reader_revision_selects_trailer(
+  revision : Int?,
+  current_revision : Int,
+  depth : Int,
+) -> Bool {
+  match revision {
+    Some(target) => target == current_revision
+    None => depth == 0
+  }
+}
+
+///|
+fn pdf_read_classic_document_from_view_at_revision(
   data : BytesView,
+  revision? : Int? = None,
 ) -> PdfDocument raise PdfError {
+  let revision = pdf_read_reader_revision_target(revision)
   let was_linearized = pdf_read_was_linearized(data)
   let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
@@ -1300,29 +1333,37 @@ pub fn pdf_read_classic_document_from_view(
     }
     cursor.seek_pdf_absolute(current_xref)
     let section = cursor.read_pdf_xref_section()
-    pdf_classic_xrefs_add_newer_first(xrefs, section.entries)
-    match section.stream_object_number {
-      Some(number) => xref_stream_refs.push((number, current_xref))
-      None => ()
+    let current_revision = depth + 1
+    let read_section = pdf_reader_revision_reads_section(
+      revision, current_revision,
+    )
+    if read_section {
+      pdf_classic_xrefs_add_newer_first(xrefs, section.entries)
+      match section.stream_object_number {
+        Some(number) => xref_stream_refs.push((number, current_xref))
+        None => ()
+      }
     }
     let current_trailer = section.trailer
-    if depth == 0 {
+    if pdf_reader_revision_selects_trailer(revision, current_revision, depth) {
       trailer = current_trailer
     }
-    match pdf_trailer_xref_stream_position(current_trailer) {
-      Some(xref_stream_position) => {
-        cursor.seek_pdf_absolute(xref_stream_position)
-        let stream_section = cursor.read_pdf_xref_stream_section()
-        pdf_classic_xrefs_add_newer_first(xrefs, stream_section.entries)
-        xref_stream_refs.push(
-          (stream_section.stream_object_number.unwrap(), xref_stream_position),
-        )
+    if read_section {
+      match pdf_trailer_xref_stream_position(current_trailer) {
+        Some(xref_stream_position) => {
+          cursor.seek_pdf_absolute(xref_stream_position)
+          let stream_section = cursor.read_pdf_xref_stream_section()
+          pdf_classic_xrefs_add_newer_first(xrefs, stream_section.entries)
+          xref_stream_refs.push(
+            (stream_section.stream_object_number.unwrap(), xref_stream_position),
+          )
+        }
+        None => ()
       }
-      None => ()
     }
     match pdf_trailer_prev_position(current_trailer) {
       Some(previous) => current_xref = previous
-      None => done = true
+      None => if read_section { done = true } else { raise BadRevision }
     }
     depth += 1
   }
@@ -1330,6 +1371,10 @@ pub fn pdf_read_classic_document_from_view(
   document.set_version(version.major, version.minor)
   document.set_first_xref(xref_position)
   document.set_was_linearized(was_linearized)
+  match revision {
+    Some(value) => document.set_revision_read(value)
+    None => ()
+  }
   document.set_trailer_and_root(trailer)
   for xref in xrefs {
     match xref.object_stream {
@@ -1381,10 +1426,33 @@ pub fn pdf_read_classic_document_from_view(
 }
 
 ///|
+pub fn pdf_read_classic_document_from_view(
+  data : BytesView,
+) -> PdfDocument raise PdfError {
+  pdf_read_classic_document_from_view_at_revision(data)
+}
+
+///|
 pub fn pdf_read_classic_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
   pdf_read_classic_document_from_view(data[:])
+}
+
+///|
+pub fn pdf_read_classic_document_revision_from_view(
+  data : BytesView,
+  revision : Int,
+) -> PdfDocument raise PdfError {
+  pdf_read_classic_document_from_view_at_revision(data, revision=Some(revision))
+}
+
+///|
+pub fn pdf_read_classic_document_revision_from_bytes(
+  data : PdfBytes,
+  revision : Int,
+) -> PdfDocument raise PdfError {
+  pdf_read_classic_document_revision_from_view(data[:], revision)
 }
 
 ///|
@@ -1426,6 +1494,22 @@ pub fn pdf_read_document_from_view(
       )
     error => raise error
   }
+}
+
+///|
+pub fn pdf_read_document_revision_from_view(
+  data : BytesView,
+  revision : Int,
+) -> PdfDocument raise PdfError {
+  pdf_read_classic_document_revision_from_view(data, revision)
+}
+
+///|
+pub fn pdf_read_document_revision_from_bytes(
+  data : PdfBytes,
+  revision : Int,
+) -> PdfDocument raise PdfError {
+  pdf_read_document_revision_from_view(data[:], revision)
 }
 
 ///|
