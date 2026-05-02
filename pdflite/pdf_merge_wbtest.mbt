@@ -207,7 +207,10 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
 
   let conflict = pdf_document_empty()
   conflict.set_root(1)
-  conflict.add_object_given_number(1, PdfDictionary([]))
+  conflict.add_object_given_number(
+    1,
+    PdfDictionary([(key, PdfString(@ascii.encode("root")))]),
+  )
   conflict.add_object_given_number(
     10,
     PdfDictionary([(key, PdfString(@ascii.encode("trailer")))]),
@@ -222,6 +225,20 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   @test.assert_eq(try! pdf_merge_catalog_extra_entries([conflict]), [
     (key, PdfString(@ascii.encode("trailer"))),
   ])
+  let added_key = pdf_merge_name("/PageMode")
+  let updated = try! conflict.pdf_merge_add_catalog_entry(
+    added_key,
+    PdfNameObject(pdf_merge_name("/UseOutlines")),
+  )
+  let updated_root = updated.lookup_object_or_null(updated.root())
+  @test.assert_eq(
+    updated_root.lookup_immediate(key),
+    Some(PdfString(@ascii.encode("trailer"))),
+  )
+  @test.assert_eq(
+    updated_root.lookup_immediate(added_key),
+    Some(PdfNameObject(pdf_merge_name("/UseOutlines"))),
+  )
 
   let structure_conflict = pdf_document_empty()
   structure_conflict.set_root(1)

@@ -916,10 +916,11 @@ MoonBit consequences for this project:
     reads for AcroForm, OpenAction, named destinations, and name dictionaries
     now resolve the active catalog through trailer `/Root`, with a
     document-root fallback for synthetic fixtures. Merge catalog-extra scans
-    and structure-root scans use the same active catalog path. A first minimal document
-    merge helper now extracts requested page ranges, offsets object numbers,
-    concatenates pages, preserves the maximum input version, and removes
-    unreferenced imported roots/catalogs. Merge page-label retention is wired
+    and structure-root scans use the same active catalog path, and merge
+    catalog-entry additions are based on that active catalog. A first minimal
+    document merge helper now extracts requested page ranges, offsets object
+    numbers, concatenates pages, preserves the maximum input version, and
+    removes unreferenced imported roots/catalogs. Merge page-label retention is wired
     through the existing page-label merge helper behind an explicit option.
     Merge bookmark retention now reuses per-document page extraction to filter
     bookmarks, then retargets retained page-object destinations to the merged

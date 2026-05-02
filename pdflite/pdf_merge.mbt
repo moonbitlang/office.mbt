@@ -1325,10 +1325,7 @@ fn PdfDocument::pdf_merge_add_catalog_entry(
   key : PdfName,
   value : PdfObject,
 ) -> PdfDocument raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_merge_catalog()
   let new_root = self.add_object(root.add_dict_entry(key, value))
   self.set_root(new_root)
   self.set_trailer_dict(
