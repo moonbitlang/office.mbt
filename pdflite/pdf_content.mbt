@@ -703,6 +703,16 @@ fn pdf_content_inline_fl_name() -> PdfName {
 }
 
 ///|
+fn pdf_content_inline_lzwdecode_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/LZWDecode"))
+}
+
+///|
+fn pdf_content_inline_lzw_name() -> PdfName {
+  pdf_name_of_bytes(pdf_content_ascii("/LZW"))
+}
+
+///|
 fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
   match dictionary.lookup_immediate(pdf_content_inline_f_name()) {
     Some(value) => Some(value)
@@ -927,6 +937,22 @@ fn pdf_content_filter_is_inline_flate(filter : PdfObject) -> Bool {
 }
 
 ///|
+fn pdf_content_filter_name_is_inline_lzw(name : PdfName) -> Bool {
+  name == pdf_content_inline_lzwdecode_name() ||
+  name == pdf_content_inline_lzw_name()
+}
+
+///|
+fn pdf_content_filter_is_inline_lzw(filter : PdfObject) -> Bool {
+  match filter {
+    PdfNameObject(name) => pdf_content_filter_name_is_inline_lzw(name)
+    PdfArray([PdfNameObject(name), ..]) =>
+      pdf_content_filter_name_is_inline_lzw(name)
+    _ => false
+  }
+}
+
+///|
 fn pdf_content_inline_image_uses_dct(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_dct(filter)
@@ -956,6 +982,14 @@ fn pdf_content_inline_image_uses_run_length(dictionary : PdfObject) -> Bool {
 fn pdf_content_inline_image_uses_flate(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_flate(filter)
+    None => false
+  }
+}
+
+///|
+fn pdf_content_inline_image_uses_lzw(dictionary : PdfObject) -> Bool {
+  match pdf_content_inline_filter_value(dictionary) {
+    Some(filter) => pdf_content_filter_is_inline_lzw(filter)
     None => false
   }
 }
@@ -1086,6 +1120,30 @@ fn pdf_content_read_flate_inline_image_data(
     _ => ()
   }
   let (_, length) = pdf_flate_decode_view_prefix(cursor.remaining_view())
+  let data = cursor.read_view(length).to_owned()
+  pdf_content_read_inline_image_end(cursor)
+  data
+}
+
+///|
+fn pdf_content_read_lzw_inline_image_data(
+  cursor : ByteCursor,
+  dictionary : PdfObject,
+  decode_parms : PdfObject?,
+) -> PdfBytes raise PdfError {
+  match cursor.peek_byte() {
+    value if pdf_is_whitespace_byte(value) => cursor.nudge()
+    _ => ()
+  }
+  let with_decode_parms = match decode_parms {
+    Some(value) =>
+      dictionary.add_dict_entry(pdf_content_inline_dp_name(), value)
+    None => dictionary
+  }
+  let (_, length) = pdf_lzw_decode_view_prefix(
+    cursor.remaining_view(),
+    early_change=pdf_lzw_early_change(with_decode_parms),
+  )
   let data = cursor.read_view(length).to_owned()
   pdf_content_read_inline_image_end(cursor)
   data
@@ -1242,6 +1300,15 @@ fn pdf_content_read_inline_image(
       }
       None if pdf_content_inline_image_uses_flate(dictionary) => {
         let encoded = pdf_content_read_flate_inline_image_data(cursor)
+        let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
+          dictionary, decode_parms, encoded,
+        )
+        Op_InlineImage(decoded_dictionary, None, decoded)
+      }
+      None if pdf_content_inline_image_uses_lzw(dictionary) => {
+        let encoded = pdf_content_read_lzw_inline_image_data(
+          cursor, dictionary, decode_parms,
+        )
         let (decoded_dictionary, decoded) = pdf_content_decode_inline_image_data(
           dictionary, decode_parms, encoded,
         )

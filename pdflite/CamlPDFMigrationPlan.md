@@ -496,7 +496,10 @@ MoonBit consequences for this project:
    early. Flate inline image filters are also started by validating and
    consuming the zlib stream prefix before reading the following inline-image
    `EI` marker, covering stored-block payloads that contain `EI` byte
-   sequences. Decoded inline images are flattened without stale filter metadata.
+   sequences. LZW inline image filters now consume through the LZW EOD code
+   before reading `EI`, while ordinary stream decoding still keeps its tolerant
+   missing-EOD behavior. Decoded inline images are flattened without stale
+   filter metadata.
    Broader binary inline image filter handling and resource-dependent inline
    image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

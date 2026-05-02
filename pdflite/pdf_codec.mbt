@@ -300,6 +300,98 @@ fn pdf_lzw_output_literal(
 }
 
 ///|
+fn pdf_lzw_consumed_bytes(bits : BitStream) -> Int {
+  let count = bits.bits_read()
+  if count % 8 == 0 {
+    count / 8
+  } else {
+    count / 8 + 1
+  }
+}
+
+///|
+fn pdf_lzw_decode_view_prefix(
+  data : BytesView,
+  early_change? : Int = 1,
+) -> (PdfBytes, Int) raise PdfError {
+  let prefix_code = Array::make(8192, 0)
+  let append_character = Array::make(8192, 0)
+  let bits = bitstream_of_view(data)
+  let output : Array[Byte] = []
+  let mut code_length = 9
+  let mut next_code = 258
+  let mut old_code = 256
+  let mut character = 0
+  match pdf_lzw_read_non_clear_code(bits, code_length) {
+    None => raise InvalidLZWData
+    Some(257) => (Bytes::from_array(output), pdf_lzw_consumed_bytes(bits))
+    Some(first_code) => {
+      pdf_lzw_output_literal(output, first_code)
+      old_code = first_code
+      character = first_code
+      let mut consumed = 0
+      let mut finished = false
+      while !finished {
+        match pdf_lzw_next_code(bits, code_length) {
+          None => raise InvalidLZWData
+          Some(257) => {
+            consumed = pdf_lzw_consumed_bytes(bits)
+            finished = true
+          }
+          Some(256) => {
+            code_length = 9
+            next_code = 258
+            old_code = 256
+            match pdf_lzw_read_non_clear_code(bits, code_length) {
+              None => raise InvalidLZWData
+              Some(257) => {
+                consumed = pdf_lzw_consumed_bytes(bits)
+                finished = true
+              }
+              Some(code) => {
+                pdf_lzw_output_literal(output, code)
+                old_code = code
+                character = code
+              }
+            }
+          }
+          Some(new_code) => {
+            let chars = if new_code == next_code {
+              let expanded = pdf_lzw_decode_code(
+                old_code, prefix_code, append_character, next_code,
+              )
+              expanded.push(character)
+              expanded
+            } else if new_code < next_code {
+              pdf_lzw_decode_code(
+                new_code, prefix_code, append_character, next_code,
+              )
+            } else {
+              raise InvalidLZWData
+            }
+            character = chars[0]
+            for value in chars {
+              pdf_lzw_output_literal(output, value)
+            }
+            if next_code < prefix_code.length() {
+              prefix_code[next_code] = old_code
+              append_character[next_code] = character
+              next_code += 1
+              match next_code + early_change {
+                512 | 1024 | 2048 => code_length += 1
+                _ => ()
+              }
+            }
+            old_code = new_code
+          }
+        }
+      }
+      (Bytes::from_array(output), consumed)
+    }
+  }
+}
+
+///|
 pub fn pdf_lzw_decode_view(
   data : BytesView,
   early_change? : Int = 1,

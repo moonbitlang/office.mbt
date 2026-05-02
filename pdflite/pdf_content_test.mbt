@@ -22,6 +22,40 @@ fn content_concat_for_test(
 }
 
 ///|
+fn content_lzw_codes_for_test(
+  codes : ArrayView[Int],
+  early_change : Int,
+) -> @pdflite.PdfBytes {
+  let writer = @pdflite.bit_writer_new()
+  let mut code_length = 9
+  let mut next_code = 258
+  let mut old_code = 256
+  for code in codes {
+    try! writer.put_value_int(code_length, code)
+    match code {
+      256 => {
+        code_length = 9
+        next_code = 258
+        old_code = 256
+      }
+      257 => ()
+      _ =>
+        if old_code == 256 {
+          old_code = code
+        } else {
+          next_code += 1
+          match next_code + early_change {
+            512 | 1024 | 2048 => code_length += 1
+            _ => ()
+          }
+          old_code = code
+        }
+    }
+  }
+  writer.to_bytes()
+}
+
+///|
 fn hello_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
   [
     Op_cm(@pdflite.transform_translate(50.0, 770.0)),
@@ -513,6 +547,56 @@ test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib 
   let array_data = content_concat_for_test([
     content_bytes_for_test(
       "BI /W 3 /H 1 /CS /G /BPC 8 /Filter [ /FlateDecode ] ID ",
+    ),
+    array_encoded,
+    content_bytes_for_test("\nEI"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(array_data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(3)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("xyz"),
+    ),
+  ])
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes decodes LZW inline images through EOD" {
+  let encoded = content_lzw_codes_for_test([65, 32, 69, 73, 32, 66, 257], 1)
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 6 /H 1 /CS /G /BPC 8 /F /LZW ID "),
+    encoded,
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(6)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("A EI B"),
+    ),
+    Op_Q,
+  ])
+
+  let array_encoded = content_lzw_codes_for_test([256, 120, 121, 122, 257], 1)
+  let array_data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 3 /H 1 /CS /G /BPC 8 /Filter [ /LZWDecode ] ID ",
     ),
     array_encoded,
     content_bytes_for_test("\nEI"),

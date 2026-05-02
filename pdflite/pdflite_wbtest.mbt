@@ -774,6 +774,37 @@ fn wbtest_assert_known_content_none(
 }
 
 ///|
+fn wbtest_lzw_codes(codes : ArrayView[Int], early_change : Int) -> PdfBytes {
+  let writer = bit_writer_new()
+  let mut code_length = 9
+  let mut next_code = 258
+  let mut old_code = 256
+  for code in codes {
+    try! writer.put_value_int(code_length, code)
+    match code {
+      256 => {
+        code_length = 9
+        next_code = 258
+        old_code = 256
+      }
+      257 => ()
+      _ =>
+        if old_code == 256 {
+          old_code = code
+        } else {
+          next_code += 1
+          match next_code + early_change {
+            512 | 1024 | 2048 => code_length += 1
+            _ => ()
+          }
+          old_code = code
+        }
+    }
+  }
+  writer.to_bytes()
+}
+
+///|
 test "private content helpers cover malformed operand fallbacks" {
   let name = wbtest_content_name("/N")
   @test.assert_eq(
@@ -917,6 +948,13 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     true,
   )
+  @test.assert_eq(pdf_content_filter_is_inline_lzw(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_filter_is_inline_lzw(
+      PdfArray([PdfNameObject(wbtest_content_name("/LZWDecode"))]),
+    ),
+    true,
+  )
   let flate_inline = pdf_flate_encode(@ascii.encode("AB"))
   @test.assert_eq(
     try! pdf_content_read_flate_inline_image_data(
@@ -925,6 +963,29 @@ test "private content helpers cover malformed operand fallbacks" {
       ),
     ),
     flate_inline,
+  )
+  let lzw_inline = wbtest_lzw_codes([256, 65, 257], 1)
+  @test.assert_eq(
+    try! pdf_content_read_lzw_inline_image_data(
+      byte_cursor_of_bytes(
+        pdf_bytes_concat_views([lzw_inline[:], @ascii.encode(" EI")[:]]),
+      ),
+      PdfDictionary([]),
+      None,
+    ),
+    lzw_inline,
+  )
+  @test.assert_eq(
+    try! pdf_content_read_lzw_inline_image_data(
+      byte_cursor_of_bytes(
+        pdf_bytes_concat_views([lzw_inline[:], @ascii.encode(" EI")[:]]),
+      ),
+      PdfDictionary([]),
+      Some(
+        PdfDictionary([(wbtest_content_name("/EarlyChange"), PdfInteger(1))]),
+      ),
+    ),
+    lzw_inline,
   )
   @test.assert_eq(
     try! pdf_content_read_run_length_inline_image_data(
@@ -1156,6 +1217,81 @@ test "private LZW code expansion rejects malformed tables" {
     256, negative_prefix, negative_append, 300,
   )
   guard bad_terminal is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+
+  let prefix_encoded = wbtest_lzw_codes([65, 257], 1)
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(prefix_encoded[:]),
+    (@ascii.encode("A"), prefix_encoded.length()),
+  )
+  let eod_encoded = wbtest_lzw_codes([257], 1)
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(eod_encoded[:]),
+    (Bytes::new(0), eod_encoded.length()),
+  )
+  let clear_eod_encoded = wbtest_lzw_codes([256, 257], 1)
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(clear_eod_encoded[:]),
+    (Bytes::new(0), clear_eod_encoded.length()),
+  )
+  let exact_byte_encoded = wbtest_lzw_codes(
+    [65, 66, 67, 68, 69, 70, 71, 257],
+    1,
+  )
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(exact_byte_encoded[:]),
+    (@ascii.encode("ABCDEFG"), exact_byte_encoded.length()),
+  )
+  let clear_restart_encoded = wbtest_lzw_codes([65, 256, 66, 257], 1)
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(clear_restart_encoded[:]),
+    (@ascii.encode("AB"), clear_restart_encoded.length()),
+  )
+  let clear_then_eod_encoded = wbtest_lzw_codes([65, 256, 257], 1)
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(clear_then_eod_encoded[:]),
+    (@ascii.encode("A"), clear_then_eod_encoded.length()),
+  )
+  let clear_then_eof : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
+    wbtest_lzw_codes([65, 256], 1)[:],
+  )
+  guard clear_then_eof is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+  let repeated_previous_encoded = wbtest_lzw_codes([65, 258, 257], 1)
+  @test.assert_eq(
+    try! pdf_lzw_decode_view_prefix(repeated_previous_encoded[:]),
+    (@ascii.encode("AAA"), repeated_previous_encoded.length()),
+  )
+  let bump_codes : Array[Int] = [256]
+  for _ in 0..<255 {
+    bump_codes.push(65)
+  }
+  bump_codes.push(257)
+  let bump_encoded = wbtest_lzw_codes(bump_codes[:], 0)
+  let bump_result : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
+    bump_encoded[:],
+  )
+  guard bump_result is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+  let bad_forward_code : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
+    wbtest_lzw_codes([65, 300], 1)[:],
+  )
+  guard bad_forward_code is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+  let missing_eod : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
+    wbtest_lzw_codes([65], 1)[:],
+  )
+  guard missing_eod is Err(PdfError::InvalidLZWData) else {
+    fail("expected InvalidLZWData")
+  }
+  let empty_prefix : Result[(PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
+    Bytes::new(0)[:],
+  )
+  guard empty_prefix is Err(PdfError::InvalidLZWData) else {
     fail("expected InvalidLZWData")
   }
 }
