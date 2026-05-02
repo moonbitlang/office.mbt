@@ -257,10 +257,28 @@ moon run -c 'fn main { println((1.23456789012345).to_string()); println((999999.
 # 999999.9999999
 ```
 
-`Double::to_string()` is not a drop-in replacement for OCaml code that used an
-explicit `format_float` precision such as `"%.12g"`. If the OCaml program used a
-specific float formatter for serialized data, port that formatter as an
-explicit boundary function and test rounding/carry cases.
+OCaml `string_of_float` and MoonBit `Double::to_string()` differ for some
+values: OCaml renders whole finite floats with a trailing dot, and infinities
+as `inf`/`-inf`, while MoonBit renders `2.0` as `2` and infinities as
+`Infinity`/`-Infinity`. Preserve the OCaml spelling explicitly when a digest,
+file format, or snapshot depends on the exact string.
+
+```sh
+ocaml -noprompt -noinit <<'EOF'
+print_endline (string_of_float 2.);;
+print_endline (string_of_float infinity);;
+EOF
+# 2.
+# inf
+moon run -c 'fn main { println((2.0).to_string()); println((1.0 / 0.0).to_string()) }'
+# 2
+# Infinity
+```
+
+`Double::to_string()` is also not a drop-in replacement for OCaml code that
+used an explicit `format_float` precision such as `"%.12g"`. If the OCaml
+program used a specific float formatter for serialized data, port that
+formatter as an explicit boundary function and test rounding/carry cases.
 
 ```sh
 moon run -c 'fn main { let a : Double = try! @strconv.from_str("1.23456789012345e20"); let b : Double = try! @strconv.from_str("1.23456789012345e21"); println(a.to_string()); println(b.to_string()) }'
@@ -338,6 +356,16 @@ MoonBit `for x in xs` works for any iterable value, not only arrays and views.
 Do not convert an iterable to an `Array` just to loop over it. Reserve
 `.to_array()`/`.to_owned()` for cases that need an owned snapshot, sorting,
 indexing, or mutation.
+
+```sh
+moon run -c 'fn main { @env.set_env_var("MOONBIT_PORTING_PROBE", "ok"); println(@env.get_env_var("MOONBIT_PORTING_PROBE").unwrap()); @env.unset_env_var("MOONBIT_PORTING_PROBE"); println(@env.get_env_var("MOONBIT_PORTING_PROBE") == None) }'
+# ok
+# true
+```
+
+Use core `@env` for process environment and command-line APIs:
+`@env.get_env_var`, `@env.get_env_vars`, `@env.set_env_var`,
+`@env.unset_env_var`, `@env.args`, `@env.current_dir`, and `@env.now`.
 
 ```sh
 moon run -c 'fn has_ab(view : BytesView) -> Bool { match view { [65, 66, ..] => true; _ => false } }
