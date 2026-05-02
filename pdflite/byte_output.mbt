@@ -76,6 +76,29 @@ pub fn ByteOutput::write_view(
 }
 
 ///|
+pub fn ByteOutput::write_view_slice(
+  self : ByteOutput,
+  bytes : BytesView,
+  offset : Int,
+  length : Int,
+) -> Unit raise PdfError {
+  if offset < 0 {
+    raise InvalidCursorPosition(offset)
+  }
+  if length < 0 {
+    raise InvalidReadLength(length)
+  }
+  let end = offset + length
+  if end < offset {
+    raise InvalidReadLength(length)
+  }
+  if end > bytes.length() {
+    raise EndOfInput
+  }
+  self.write_view(bytes[offset:end])
+}
+
+///|
 pub fn ByteOutput::write_ascii(
   self : ByteOutput,
   text : String,

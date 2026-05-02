@@ -719,6 +719,7 @@ pub fn ByteOutput::to_bytes(Self) -> Bytes
 pub fn ByteOutput::write_ascii(Self, String) -> Unit raise PdfError
 pub fn ByteOutput::write_byte(Self, Int) -> Unit raise PdfError
 pub fn ByteOutput::write_view(Self, BytesView) -> Unit raise PdfError
+pub fn ByteOutput::write_view_slice(Self, BytesView, Int, Int) -> Unit raise PdfError
 
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int

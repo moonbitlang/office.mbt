@@ -25,6 +25,49 @@ test "ByteOutput seek overwrites bytes and frozen output stays owned" {
 }
 
 ///|
+test "ByteOutput writes checked byte slices" {
+  let output = try! @pdflite.byte_output_new()
+  let source = @ascii.encode("012345")
+  try! output.write_view_slice(source[:], 2, 3)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(output.to_bytes()[:]), [
+    50, 51, 52,
+  ])
+  @test.assert_eq(output.position(), 3)
+  let bad_offset : Result[Unit, Error] = try? output.write_view_slice(
+    source[:],
+    -1,
+    1,
+  )
+  guard bad_offset is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition for byte output slice")
+  }
+  let bad_length : Result[Unit, Error] = try? output.write_view_slice(
+    source[:],
+    0,
+    -1,
+  )
+  guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength for byte output slice")
+  }
+  let too_long : Result[Unit, Error] = try? output.write_view_slice(
+    source[:],
+    4,
+    3,
+  )
+  guard too_long is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput for byte output slice")
+  }
+  let overflow : Result[Unit, Error] = try? output.write_view_slice(
+    source[:],
+    2147483647,
+    1,
+  )
+  guard overflow is Err(@pdflite.PdfError::InvalidReadLength(1)) else {
+    fail("expected InvalidReadLength for byte output slice overflow")
+  }
+}
+
+///|
 test "ByteOutput sparse writes zero-fill skipped positions" {
   let output = try! @pdflite.byte_output_new(initial_size=1)
   try! output.seek(4)
