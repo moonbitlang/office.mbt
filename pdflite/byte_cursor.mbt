@@ -31,6 +31,18 @@ pub fn ByteCursor::source(self : ByteCursor) -> String {
 }
 
 ///|
+pub fn ByteCursor::input_pdf_error(
+  self : ByteCursor,
+  message : String,
+) -> String {
+  message +
+  " whilst reading file " +
+  self.source +
+  " at position " +
+  self.position().to_string()
+}
+
+///|
 pub fn ByteCursor::length(self : ByteCursor) -> Int {
   self.data.length()
 }

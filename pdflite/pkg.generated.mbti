@@ -533,6 +533,7 @@ pub struct ByteCursor {
 pub fn ByteCursor::absolute_position(Self) -> Int
 pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
 pub fn ByteCursor::input_byte(Self) -> Int
+pub fn ByteCursor::input_pdf_error(Self, String) -> String
 pub fn ByteCursor::length(Self) -> Int
 pub fn ByteCursor::lex_pdf_bool(Self) -> PdfLexeme
 pub fn ByteCursor::lex_pdf_comment(Self) -> PdfLexeme

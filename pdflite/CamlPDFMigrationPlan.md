@@ -120,8 +120,8 @@ MoonBit consequences for this project:
    return values for slices and call `.to_owned()` only for explicit ownership
    boundaries.
    Status: started with `ByteCursor` backed by `BytesView`, byte/line reads,
-   offset handling, checked cursor errors, MSB-first bitstream read/write, and
-   black-box tests.
+   offset handling, checked cursor errors, CamlPDF-style input error context
+   formatting, MSB-first bitstream read/write, and black-box tests.
 
 2. Small pure support modules.
    Port `.repos/pdftransform`, `.repos/pdfunits`, `.repos/pdfpaper`, and the

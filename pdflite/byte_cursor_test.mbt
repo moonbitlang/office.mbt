@@ -33,6 +33,25 @@ test "ByteCursor reads bytes and preserves peek position" {
 }
 
 ///|
+test "ByteCursor formats CamlPDF-style input error context" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    pdf_bytes_for_cursor_test([65, 66, 67]),
+    source="sample.pdf",
+  )
+  cursor.nudge()
+  @test.assert_eq(
+    cursor.input_pdf_error("bad token"),
+    "bad token whilst reading file sample.pdf at position 1",
+  )
+  cursor.set_offset(1)
+  cursor.seek(0)
+  @test.assert_eq(
+    cursor.input_pdf_error("inside object"),
+    "inside object whilst reading file sample.pdf at position 0",
+  )
+}
+
+///|
 test "ByteCursor reports remaining length and peek at boundaries" {
   let bytes = pdf_bytes_for_cursor_test([65, 66])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)
