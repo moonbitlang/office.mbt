@@ -33,6 +33,30 @@ test "PdfBytes concatenate read-only byte views at ownership boundary" {
 }
 
 ///|
+test "PdfBytes make immutable filled byte data" {
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(
+      try! @pdflite.pdf_bytes_make(4, value=0x7E)[:],
+    ),
+    [0x7E, 0x7E, 0x7E, 0x7E],
+  )
+  @test.assert_eq(try! @pdflite.pdf_bytes_make(0), Bytes::new(0))
+  let bad_length : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_bytes_make(
+    -1,
+  )
+  guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength for negative byte allocation")
+  }
+  let bad_value : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_bytes_make(
+    1,
+    value=256,
+  )
+  guard bad_value is Err(@pdflite.PdfError::InvalidByte(256)) else {
+    fail("expected InvalidByte for filled byte allocation")
+  }
+}
+
+///|
 test "PdfBytes expose CamlPDF int-array compatibility conversions" {
   let first : FixedArray[Int] = [65, 0xFF]
   let second : Array[Int] = [0, 66]

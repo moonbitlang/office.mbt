@@ -118,6 +118,18 @@ pub fn pdf_bytes_of_view(values : BytesView) -> PdfBytes {
 }
 
 ///|
+pub fn pdf_bytes_make(
+  length : Int,
+  value? : Int = 0,
+) -> PdfBytes raise PdfError {
+  if length < 0 {
+    raise InvalidReadLength(length)
+  }
+  let byte = pdf_byte_of_int(value)
+  Bytes::makei(length, _ => byte)
+}
+
+///|
 pub fn pdf_bytes_concat_views(parts : ArrayView[BytesView]) -> PdfBytes {
   let output : Array[Byte] = []
   for part in parts {
