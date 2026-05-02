@@ -274,6 +274,9 @@ MoonBit consequences for this project:
    or unusable `startxref` pointers, using `/Type /XRef` stream dictionaries as
    trailer candidates while stripping stream/xref-only keys; object-stream
    integrity errors still propagate instead of being hidden by this recovery.
+   The strict classic xref reader now also mirrors CamlPDF's malformed-row
+   workaround that treats `0000000000 _____ n` rows as free entries instead of
+   failing the table.
    Broader malformed xref-table recovery remains deferred. The
    reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered
@@ -1079,12 +1082,13 @@ MoonBit consequences for this project:
     bit-reader/Huffman-table guards. Lexeme coverage now includes all debug-name
     variants, uppercase/lowercase hex escapes in names, false and malformed
     booleans, malformed/oversized numbers, literal-string escape edge cases,
-    hex-string EOF/error cases, and token dispatch for booleans, hex strings,
-    non-special `s` keywords, and inline-image stop markers. Reader coverage now
-    removes `pdf_reader.mbt` from the uncovered-line report by testing public
-    malformed-file behavior, private byte-view/xref helpers, indirect stream
-    length resolution failures, and by deleting two unreachable defensive
-    branches around xref blank-line parsing and post-loop trailer presence.
+   hex-string EOF/error cases, and token dispatch for booleans, hex strings,
+   non-special `s` keywords, and inline-image stop markers. Reader coverage now
+   removes `pdf_reader.mbt` from the uncovered-line report by testing public
+   malformed-file behavior, private byte-view/xref helpers, indirect stream
+   length resolution failures, CamlPDF-compatible malformed zero-offset xref row
+   handling, and by deleting two unreachable defensive branches around xref
+   blank-line parsing and post-loop trailer presence.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     stream materialization guards and by replacing impossible map-key `None`

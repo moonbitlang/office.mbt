@@ -173,6 +173,11 @@ fn pdf_view_matches_ascii_at(
 }
 
 ///|
+fn pdf_view_equals_ascii(view : BytesView, values : ArrayView[Int]) -> Bool {
+  view.length() == values.length() && pdf_view_matches_ascii_at(view, 0, values)
+}
+
+///|
 fn pdf_find_last_ascii(view : BytesView, values : ArrayView[Int]) -> Int {
   if values.length() == 0 {
     view.length()
@@ -239,6 +244,15 @@ fn pdf_split_whitespace_tokens(view : BytesView) -> Array[BytesView] {
     }
   }
   tokens
+}
+
+///|
+fn pdf_xref_malformed_zero_offset_in_use_free(
+  tokens : ArrayView[BytesView],
+) -> Bool {
+  tokens.length() >= 3 &&
+  pdf_view_equals_ascii(tokens[0], [48, 48, 48, 48, 48, 48, 48, 48, 48, 48]) &&
+  pdf_view_equals_ascii(tokens[2], [110])
 }
 
 ///|
@@ -331,8 +345,16 @@ fn ByteCursor::read_pdf_classic_xref_entries(
         entries.push({
           object_number,
           offset: pdf_parse_ascii_int_view(tokens[0]),
-          generation: pdf_parse_ascii_int_view(tokens[1]),
-          in_use: pdf_xref_token_in_use(tokens[2]),
+          generation: if pdf_xref_malformed_zero_offset_in_use_free(tokens) {
+            0
+          } else {
+            pdf_parse_ascii_int_view(tokens[1])
+          },
+          in_use: if pdf_xref_malformed_zero_offset_in_use_free(tokens) {
+            false
+          } else {
+            pdf_xref_token_in_use(tokens[2])
+          },
           object_stream: None,
         })
         object_number += 1
