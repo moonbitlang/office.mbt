@@ -307,11 +307,20 @@ pub fn pdf_ocg_default_config() -> PdfOcgConfig {
 
 ///|
 fn PdfDocument::pdf_ocg_root(self : PdfDocument) -> PdfObject raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
+  match self.trailer_dict().lookup_immediate(pdf_ocg_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => raise RootExpected
+        catalog => catalog
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        raise RootExpected
+      }
+      root
+    }
   }
-  root
 }
 
 ///|

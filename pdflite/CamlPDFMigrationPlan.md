@@ -894,10 +894,13 @@ MoonBit consequences for this project:
     `/QuadPoints`, and `/L`. Date support is started with typed PDF dates,
     CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
     borrowed `BytesView`/owned `Bytes` parsing, PDF date string/byte rendering,
-    and `PdfString` object conversion helpers. Optional content group support is started
-    with typed OCG usage/configuration/application records, `/OCProperties`
-    reading, returned-copy writing/removal, byte-preserving PDF strings, and
-    explicit `PdfName` fields for PDF name values. OCG merge preparation is
+    and `PdfString` object conversion helpers. Optional content group support
+    is started with typed OCG usage/configuration/application records,
+    `/OCProperties` reading, returned-copy writing/removal, byte-preserving
+    PDF strings, and explicit `PdfName` fields for PDF name values. OCG
+    read/write/remove now resolve the active catalog through trailer `/Root`,
+    matching CamlPDF for parsed documents while preserving the document-root
+    fallback for synthetic fixtures. OCG merge preparation is
     started with a typed helper for combining already-renumbered optional
     content metadata across documents. Merge support code is started with
     returned-copy object renumbering by positive offset, including root,

@@ -29,6 +29,40 @@ fn ocg_catalog_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
+fn ocg_conflicting_root_document_for_test(
+  with_ocproperties : Bool,
+) -> @pdflite.PdfDocument {
+  let key_root = ocg_name_for_test("/Root")
+  let key_type = ocg_name_for_test("/Type")
+  let key_lang = ocg_name_for_test("/Lang")
+  let key_page_mode = ocg_name_for_test("/PageMode")
+  let key_ocproperties = ocg_name_for_test("/OCProperties")
+  let key_d = ocg_name_for_test("/D")
+  let type_catalog = ocg_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_lang, PdfString(ocg_bytes_for_test("stale"))),
+    ]),
+  )
+  let active_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (key_type, PdfNameObject(type_catalog)),
+    (key_page_mode, ocg_name_object_for_test("/UseOC")),
+  ]
+  if with_ocproperties {
+    active_entries.push(
+      (key_ocproperties, PdfDictionary([(key_d, PdfDictionary([]))])),
+    )
+  }
+  doc.add_object_given_number(10, PdfDictionary(active_entries))
+  doc
+}
+
+///|
 fn ocg_merge_content_for_test(
   number : Int,
   layer_name : String,
@@ -274,6 +308,37 @@ test "PdfDocument read_optional_content_groups decodes OCG dictionaries" {
 }
 
 ///|
+test "PdfDocument read_optional_content_groups prefers trailer root" {
+  let doc = ocg_conflicting_root_document_for_test(true)
+  @test.assert_eq(
+    try! doc.read_optional_content_groups(),
+    Some({
+      ocgs: [],
+      default_config: @pdflite.pdf_ocg_default_config(),
+      configs: [],
+    }),
+  )
+}
+
+///|
+test "PdfDocument read_optional_content_groups rejects unresolved trailer root" {
+  let key_root = ocg_name_for_test("/Root")
+  let key_type = ocg_name_for_test("/Type")
+  let type_catalog = ocg_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
+  )
+  let result : Result[@pdflite.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}
+
+///|
 test "PdfDocument write_optional_content_groups builds readable OCG data" {
   let doc = ocg_catalog_document_for_test()
   let usage : @pdflite.PdfOcgUsage = {
@@ -330,6 +395,33 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
 }
 
 ///|
+test "PdfDocument write_optional_content_groups preserves trailer-root catalog entries" {
+  let key_lang = ocg_name_for_test("/Lang")
+  let key_page_mode = ocg_name_for_test("/PageMode")
+  let key_ocproperties = ocg_name_for_test("/OCProperties")
+  let doc = ocg_conflicting_root_document_for_test(false)
+  let content : @pdflite.PdfOptionalContent = {
+    ocgs: [],
+    default_config: {
+      ..@pdflite.pdf_ocg_default_config(),
+      name: Some(ocg_bytes_for_test("Default")),
+    },
+    configs: [],
+  }
+  let updated = try! doc.write_optional_content_groups(content)
+  @test.assert_eq(try! updated.read_optional_content_groups(), Some(content))
+  let catalog = updated.lookup_object_or_null(updated.root())
+  @test.assert_eq(catalog.lookup_immediate(key_lang), None)
+  @test.assert_eq(
+    catalog.lookup_immediate(key_page_mode),
+    Some(ocg_name_object_for_test("/UseOC")),
+  )
+  guard catalog.lookup_immediate(key_ocproperties) is Some(_) else {
+    fail("expected OCProperties")
+  }
+}
+
+///|
 test "pdf_optional_content_merge combines already-renumbered OCG metadata" {
   let first = try! ocg_catalog_document_for_test().write_optional_content_groups(
     ocg_merge_content_for_test(7, "Layer A", OcgOn, [7], []),
@@ -378,6 +470,23 @@ test "PdfDocument remove_optional_content_groups removes catalog entry" {
     .lookup_object_or_null(updated.root())
     .lookup_immediate(key_ocproperties),
     None,
+  )
+}
+
+///|
+test "PdfDocument remove_optional_content_groups preserves trailer-root catalog entries" {
+  let key_lang = ocg_name_for_test("/Lang")
+  let key_page_mode = ocg_name_for_test("/PageMode")
+  let key_ocproperties = ocg_name_for_test("/OCProperties")
+  let doc = ocg_conflicting_root_document_for_test(true)
+  let updated = try! doc.remove_optional_content_groups()
+  @test.assert_eq(try! updated.read_optional_content_groups(), None)
+  let catalog = updated.lookup_object_or_null(updated.root())
+  @test.assert_eq(catalog.lookup_immediate(key_lang), None)
+  @test.assert_eq(catalog.lookup_immediate(key_ocproperties), None)
+  @test.assert_eq(
+    catalog.lookup_immediate(key_page_mode),
+    Some(ocg_name_object_for_test("/UseOC")),
   )
 }
 
