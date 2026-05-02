@@ -159,6 +159,51 @@ fn dict_add_entries(
 }
 
 ///|
+fn pdf_object_unique_key_candidate(prefix : String, index : Int) -> PdfName {
+  let output : Array[Byte] = [47]
+  for byte in @ascii.encode(prefix) {
+    output.push(byte)
+  }
+  for byte in @ascii.encode(index.to_string()) {
+    output.push(byte)
+  }
+  pdf_name_of_bytes(Bytes::from_array(output))
+}
+
+///|
+fn pdf_object_dictionary_has_key(
+  entries : ArrayView[(PdfName, PdfObject)],
+  key : PdfName,
+) -> Bool {
+  for entry in entries {
+    if entry.0 == key {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+pub fn PdfObject::unique_key(
+  self : PdfObject,
+  prefix : String,
+) -> PdfName raise PdfError {
+  match self.dictionary_view() {
+    Some(entries) => {
+      let mut index = 0
+      let mut candidate = pdf_object_unique_key_candidate(prefix, index)
+      while pdf_object_dictionary_has_key(entries, candidate) {
+        index += 1
+        candidate = pdf_object_unique_key_candidate(prefix, index)
+      }
+      candidate
+    }
+    None => raise DictionaryExpected
+  }
+}
+
+///|
 fn dict_replace_entries(
   entries : ArrayView[(PdfName, PdfObject)],
   key : PdfName,

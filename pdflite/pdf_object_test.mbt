@@ -64,6 +64,49 @@ test "PdfObject dictionary add follows CamlPDF replacement order" {
 }
 
 ///|
+test "PdfObject unique_key scans dictionary names in CamlPDF order" {
+  let name_gs0 = object_name_for_test([47, 103, 115, 48])
+  let name_gs1 = object_name_for_test([47, 103, 115, 49])
+  let name_gs2 = object_name_for_test([47, 103, 115, 50])
+  let name_other = object_name_for_test([47, 111, 116, 104, 101, 114])
+  let dict = @pdflite.pdf_dictionary([
+    (name_gs1, PdfInteger(1)),
+    (name_other, PdfInteger(2)),
+    (name_gs0, PdfInteger(3)),
+  ])
+  @test.assert_eq(try! dict.unique_key("gs"), name_gs2)
+}
+
+///|
+test "PdfObject unique_key supports empty prefixes" {
+  let name_0 = object_name_for_test([47, 48])
+  let name_1 = object_name_for_test([47, 49])
+  let dict = @pdflite.pdf_dictionary([(name_0, PdfInteger(1))])
+  @test.assert_eq(try! dict.unique_key(""), name_1)
+}
+
+///|
+test "PdfObject unique_key reads stream dictionaries" {
+  let name_im0 = object_name_for_test([47, 73, 109, 48])
+  let name_im1 = object_name_for_test([47, 73, 109, 49])
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(name_im0, PdfInteger(1))]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  @test.assert_eq(try! stream.unique_key("Im"), name_im1)
+}
+
+///|
+test "PdfObject unique_key reports non-dictionary objects" {
+  let result : Result[@pdflite.PdfName, Error] = try? @pdflite.PdfInteger(1).unique_key(
+    "gs",
+  )
+  guard result is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
+}
+
+///|
 test "PdfObject dictionary replace and remove report checked errors" {
   let name_a = object_name_for_test([47, 65])
   let name_b = object_name_for_test([47, 66])
