@@ -5488,6 +5488,142 @@ test "PdfTextExtractor decodes Armenian AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Devanagari AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/aadeva", 0x0906),
+    ("/aavowelsigndeva", 0x093E),
+    ("/abbreviationsigndeva", 0x0970),
+    ("/acutedeva", 0x0954),
+    ("/adeva", 0x0905),
+    ("/aideva", 0x0910),
+    ("/aivowelsigndeva", 0x0948),
+    ("/anudattadeva", 0x0952),
+    ("/anusvaradeva", 0x0902),
+    ("/audeva", 0x0914),
+    ("/auvowelsigndeva", 0x094C),
+    ("/avagrahadeva", 0x093D),
+    ("/badeva", 0x092C),
+    ("/bhadeva", 0x092D),
+    ("/cadeva", 0x091A),
+    ("/candrabindudeva", 0x0901),
+    ("/chadeva", 0x091B),
+    ("/dadeva", 0x0926),
+    ("/danda", 0x0964),
+    ("/dbldanda", 0x0965),
+    ("/ddadeva", 0x0921),
+    ("/dddhadeva", 0x095C),
+    ("/ddhadeva", 0x0922),
+    ("/dhadeva", 0x0927),
+    ("/ecandradeva", 0x090D),
+    ("/ecandravowelsigndeva", 0x0945),
+    ("/edeva", 0x090F),
+    ("/eightdeva", 0x096E),
+    ("/eshortdeva", 0x090E),
+    ("/eshortvowelsigndeva", 0x0946),
+    ("/evowelsigndeva", 0x0947),
+    ("/fadeva", 0x095E),
+    ("/fivedeva", 0x096B),
+    ("/fourdeva", 0x096A),
+    ("/gadeva", 0x0917),
+    ("/ghadeva", 0x0918),
+    ("/ghhadeva", 0x095A),
+    ("/gravedeva", 0x0953),
+    ("/hadeva", 0x0939),
+    ("/ideva", 0x0907),
+    ("/iideva", 0x0908),
+    ("/iivowelsigndeva", 0x0940),
+    ("/ivowelsigndeva", 0x093F),
+    ("/jadeva", 0x091C),
+    ("/jhadeva", 0x091D),
+    ("/kadeva", 0x0915),
+    ("/khadeva", 0x0916),
+    ("/khhadeva", 0x0959),
+    ("/ladeva", 0x0932),
+    ("/lladeva", 0x0933),
+    ("/llladeva", 0x0934),
+    ("/llvocalicdeva", 0x0961),
+    ("/llvocalicvowelsigndeva", 0x0963),
+    ("/lvocalicdeva", 0x090C),
+    ("/lvocalicvowelsigndeva", 0x0962),
+    ("/madeva", 0x092E),
+    ("/nadeva", 0x0928),
+    ("/ngadeva", 0x0919),
+    ("/ninedeva", 0x096F),
+    ("/nnadeva", 0x0923),
+    ("/nnnadeva", 0x0929),
+    ("/nuktadeva", 0x093C),
+    ("/nyadeva", 0x091E),
+    ("/ocandradeva", 0x0911),
+    ("/ocandravowelsigndeva", 0x0949),
+    ("/odeva", 0x0913),
+    ("/omdeva", 0x0950),
+    ("/onedeva", 0x0967),
+    ("/oshortdeva", 0x0912),
+    ("/oshortvowelsigndeva", 0x094A),
+    ("/ovowelsigndeva", 0x094B),
+    ("/padeva", 0x092A),
+    ("/phadeva", 0x092B),
+    ("/qadeva", 0x0958),
+    ("/radeva", 0x0930),
+    ("/rhadeva", 0x095D),
+    ("/rradeva", 0x0931),
+    ("/rrvocalicdeva", 0x0960),
+    ("/rrvocalicvowelsigndeva", 0x0944),
+    ("/rvocalicdeva", 0x090B),
+    ("/rvocalicvowelsigndeva", 0x0943),
+    ("/sadeva", 0x0938),
+    ("/sevendeva", 0x096D),
+    ("/shadeva", 0x0936),
+    ("/sixdeva", 0x096C),
+    ("/ssadeva", 0x0937),
+    ("/tadeva", 0x0924),
+    ("/thadeva", 0x0925),
+    ("/threedeva", 0x0969),
+    ("/ttadeva", 0x091F),
+    ("/tthadeva", 0x0920),
+    ("/twodeva", 0x0968),
+    ("/udattadeva", 0x0951),
+    ("/udeva", 0x0909),
+    ("/uudeva", 0x090A),
+    ("/uuvowelsigndeva", 0x0942),
+    ("/uvowelsigndeva", 0x0941),
+    ("/vadeva", 0x0935),
+    ("/viramadeva", 0x094D),
+    ("/visargadeva", 0x0903),
+    ("/yadeva", 0x092F),
+    ("/yyadeva", 0x095F),
+    ("/zadeva", 0x095B),
+    ("/zerodeva", 0x0966),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0906), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0970), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0964), Some(19))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0950), Some(67))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0966), Some(104))
+}
+
+///|
 test "PdfTextExtractor decodes math operator AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/allequal", 0x224C),
