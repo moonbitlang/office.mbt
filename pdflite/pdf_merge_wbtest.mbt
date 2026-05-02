@@ -205,6 +205,37 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
     fail("expected RootExpected")
   }
 
+  let conflict = pdf_document_empty()
+  conflict.set_root(1)
+  conflict.add_object_given_number(1, PdfDictionary([]))
+  conflict.add_object_given_number(
+    10,
+    PdfDictionary([(key, PdfString(@ascii.encode("trailer")))]),
+  )
+  conflict.set_trailer_dict(
+    PdfDictionary([(pdf_merge_root_key(), PdfIndirect(10))]),
+  )
+  @test.assert_eq(
+    try! conflict.pdf_merge_catalog_entry(key),
+    Some(PdfString(@ascii.encode("trailer"))),
+  )
+
+  let unresolved = pdf_document_empty()
+  unresolved.set_root(1)
+  unresolved.add_object_given_number(
+    1,
+    PdfDictionary([(key, PdfString(@ascii.encode("root")))]),
+  )
+  unresolved.set_trailer_dict(
+    PdfDictionary([(pdf_merge_root_key(), PdfIndirect(99))]),
+  )
+  let unresolved_result : Result[PdfObject?, Error] = try? unresolved.pdf_merge_catalog_entry(
+    key,
+  )
+  guard unresolved_result is Err(PdfError::RootExpected) else {
+    fail("expected unresolved trailer root")
+  }
+
   let doc = pdf_document_empty()
   doc.add_object_given_number(
     1,

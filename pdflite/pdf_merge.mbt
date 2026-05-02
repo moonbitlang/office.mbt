@@ -134,6 +134,26 @@ fn pdf_merge_parent_tree_key() -> PdfName {
 }
 
 ///|
+fn PdfDocument::pdf_merge_catalog(
+  self : PdfDocument,
+) -> PdfObject raise PdfError {
+  match self.trailer_dict().lookup_immediate(pdf_merge_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => raise RootExpected
+        catalog => catalog
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        raise RootExpected
+      }
+      root
+    }
+  }
+}
+
+///|
 fn pdf_merge_role_map_key() -> PdfName {
   pdf_merge_name("/RoleMap")
 }
@@ -642,11 +662,7 @@ fn PdfDocument::pdf_merge_catalog_entry(
   self : PdfDocument,
   key : PdfName,
 ) -> PdfObject? raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
-  self.lookup_direct(key, root)
+  self.lookup_direct(key, self.pdf_merge_catalog())
 }
 
 ///|

@@ -909,7 +909,10 @@ MoonBit consequences for this project:
     started with a typed helper for combining already-renumbered optional
     content metadata across documents. Merge support code is started with
     returned-copy object renumbering by positive offset, including root,
-    trailer, and nested indirect-reference rewriting. A first minimal document
+    trailer, and nested indirect-reference rewriting. Merge catalog-entry
+    reads for AcroForm, OpenAction, named destinations, and name dictionaries
+    now resolve the active catalog through trailer `/Root`, with a
+    document-root fallback for synthetic fixtures. A first minimal document
     merge helper now extracts requested page ranges, offsets object numbers,
     concatenates pages, preserves the maximum input version, and removes
     unreferenced imported roots/catalogs. Merge page-label retention is wired
