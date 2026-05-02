@@ -956,7 +956,7 @@ test "PdfDocument read_colour_space rejects malformed Separation and DeviceN spa
 }
 
 ///|
-test "pdf_object_of_colour_space writes supported direct colour spaces" {
+test "pdf_object_of_colour_space writes supported colour spaces" {
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(PdfDeviceGray),
     Some(PdfNameObject(space_name_for_test("/DeviceGray"))),
@@ -984,12 +984,263 @@ test "pdf_object_of_colour_space writes supported direct colour spaces" {
       ]),
     ),
   )
+  let whitepoint : @pdflite.PdfTristimulusPoint = { x: 0.9, y: 1.0, z: 1.1 }
+  let blackpoint : @pdflite.PdfTristimulusPoint = { x: 0.1, y: 0.2, z: 0.3 }
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(PdfCalGray(whitepoint, blackpoint, 2.2)),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalGray")),
+        PdfDictionary([
+          (
+            space_name_for_test("/WhitePoint"),
+            PdfArray([PdfReal(0.9), PdfReal(1.0), PdfReal(1.1)]),
+          ),
+          (
+            space_name_for_test("/BlackPoint"),
+            PdfArray([PdfReal(0.1), PdfReal(0.2), PdfReal(0.3)]),
+          ),
+          (space_name_for_test("/Gamma"), PdfReal(2.2)),
+        ]),
+      ]),
+    ),
+  )
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(
-      PdfPatternWithBaseColourSpace(
-        PdfCalGray({ x: 1.0, y: 1.0, z: 1.0 }, { x: 0.0, y: 0.0, z: 0.0 }, 1.0),
+      PdfCalRGB(whitepoint, blackpoint, [1.0, 1.1, 1.2], [
+        1.0, 0.0, 0.1, 0.0, 1.0, 0.2, 0.0, 0.0, 1.0,
+      ]),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/CalRGB")),
+        PdfDictionary([
+          (
+            space_name_for_test("/WhitePoint"),
+            PdfArray([PdfReal(0.9), PdfReal(1.0), PdfReal(1.1)]),
+          ),
+          (
+            space_name_for_test("/BlackPoint"),
+            PdfArray([PdfReal(0.1), PdfReal(0.2), PdfReal(0.3)]),
+          ),
+          (
+            space_name_for_test("/Gamma"),
+            PdfArray([PdfReal(1.0), PdfReal(1.1), PdfReal(1.2)]),
+          ),
+          (
+            space_name_for_test("/Matrix"),
+            PdfArray([
+              PdfReal(1.0),
+              PdfReal(0.0),
+              PdfReal(0.1),
+              PdfReal(0.0),
+              PdfReal(1.0),
+              PdfReal(0.2),
+              PdfReal(0.0),
+              PdfReal(0.0),
+              PdfReal(1.0),
+            ]),
+          ),
+        ]),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfLab(whitepoint, blackpoint, [-80.0, 90.0, -70.0, 85.0]),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Lab")),
+        PdfDictionary([
+          (
+            space_name_for_test("/WhitePoint"),
+            PdfArray([PdfReal(0.9), PdfReal(1.0), PdfReal(1.1)]),
+          ),
+          (
+            space_name_for_test("/BlackPoint"),
+            PdfArray([PdfReal(0.1), PdfReal(0.2), PdfReal(0.3)]),
+          ),
+          (
+            space_name_for_test("/Range"),
+            PdfArray([
+              PdfReal(-80.0),
+              PdfReal(90.0),
+              PdfReal(-70.0),
+              PdfReal(85.0),
+            ]),
+          ),
+        ]),
+      ]),
+    ),
+  )
+  let icc_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfICCBased(
+        3,
+        PdfDeviceRGB,
+        [0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+        None,
+        icc_stream,
+      ),
+    ),
+    Some(
+      PdfArray([PdfNameObject(space_name_for_test("/ICCBased")), icc_stream]),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfIndexed(PdfDeviceRGB, [(0, [4, 5, 6]), (1, [1, 2, 3])]),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Indexed")),
+        PdfNameObject(space_name_for_test("/DeviceRGB")),
+        PdfInteger(1),
+        PdfString(space_bytes_for_test([4, 5, 6, 1, 2, 3])),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_document_empty().write_colour_space(PdfDeviceRGB),
+    PdfNameObject(space_name_for_test("/DeviceRGB")),
+  )
+  let tint : @pdflite.PdfObject = PdfDictionary([
+    (space_name_for_test("/FunctionType"), PdfInteger(2)),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfSeparation(space_name_for_test("/Spot"), PdfDeviceCMYK, tint),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/Separation")),
+        PdfNameObject(space_name_for_test("/Spot")),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfDeviceN(
+        [space_name_for_test("/Cyan"), space_name_for_test("/Magenta")],
+        PdfDeviceCMYK,
+        tint,
+        @pdflite.pdf_dictionary([]),
+      ),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([
+          PdfNameObject(space_name_for_test("/Cyan")),
+          PdfNameObject(space_name_for_test("/Magenta")),
+        ]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfDeviceN(
+        [space_name_for_test("/Cyan")],
+        PdfDeviceCMYK,
+        tint,
+        @pdflite.pdf_dictionary([
+          (space_name_for_test("/Subtype"), PdfInteger(1)),
+        ]),
+      ),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([PdfNameObject(space_name_for_test("/Cyan"))]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+        PdfDictionary([(space_name_for_test("/Subtype"), PdfInteger(1))]),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfDeviceN([space_name_for_test("/Cyan")], PdfDeviceCMYK, tint, PdfNull),
+    ),
+    Some(
+      PdfArray([
+        PdfNameObject(space_name_for_test("/DeviceN")),
+        PdfArray([PdfNameObject(space_name_for_test("/Cyan"))]),
+        PdfNameObject(space_name_for_test("/DeviceCMYK")),
+        tint,
+        PdfNull,
+      ]),
+    ),
+  )
+}
+
+///|
+test "pdf_object_of_colour_space rejects unsupported indexed tables" {
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfIndexed(PdfDeviceRGB, [(1, [1, 2, 3])]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfIndexed(PdfDeviceRGB, [(0, [1, 2, 256])]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfIndexed(PdfDeviceRGB, [(0, [1, 2, 3]), (1, [4, 5])]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfIndexed(PdfDeviceRGB, [(-1, [1, 2, 3])]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(PdfIndexed(PdfPattern, [(0, [1])])),
+    None,
+  )
+  let unsupported_base : @pdflite.PdfColourSpace = PdfIndexed(PdfDeviceRGB, [])
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfPatternWithBaseColourSpace(unsupported_base),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfSeparation(space_name_for_test("/Spot"), unsupported_base, PdfNull),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_object_of_colour_space(
+      PdfDeviceN(
+        [space_name_for_test("/Spot")],
+        unsupported_base,
+        PdfNull,
+        PdfNull,
       ),
     ),
     None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_document_empty().write_colour_space(
+      PdfIndexed(PdfDeviceRGB, []),
+    ),
+    PdfNull,
   )
 }

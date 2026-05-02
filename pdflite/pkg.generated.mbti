@@ -1139,6 +1139,7 @@ pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise PdfE
 pub fn PdfDocument::version(Self) -> (Int, Int)
 pub fn PdfDocument::was_linearized(Self) -> Bool
 pub fn PdfDocument::what_encryption(Self) -> PdfEncryptionMethod? raise PdfError
+pub fn PdfDocument::write_colour_space(Self, PdfColourSpace) -> PdfObject
 pub fn PdfDocument::write_encoding(Self, PdfEncoding) -> Int raise PdfError
 pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise PdfError
 pub fn PdfDocument::write_optional_content_groups(Self, PdfOptionalContent) -> Self raise PdfError

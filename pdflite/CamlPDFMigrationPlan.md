@@ -593,7 +593,9 @@ MoonBit consequences for this project:
    Status: started with a `pdf_space` foundation for typed colour spaces,
    CamlPDF-compatible debug names, separation colourant names, direct device
    colour-space alias parsing, pattern-with-base parsing, and object rendering
-   for the currently supported direct colour spaces. A document-aware
+   for device, calibrated, ICCBased, Indexed, Pattern, Separation, and DeviceN
+   colour spaces, returning `PdfNull` through the document-level writer when a
+   constructed colour-space table cannot be represented safely. A document-aware
    `read_colour_space` entry point now resolves `/ColorSpace` resources and
    nested single-item arrays, and parses CalGray, CalRGB, and Lab dictionaries
    with CamlPDF-compatible defaults for missing optional BlackPoint, Gamma,
