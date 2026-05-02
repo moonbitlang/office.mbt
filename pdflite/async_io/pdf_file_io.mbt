@@ -6,6 +6,17 @@ pub async fn pdf_read_document_from_file(
 }
 
 ///|
+pub async fn pdf_read_document_revision_from_file(
+  path : StringView,
+  revision : Int,
+) -> @pdflite.PdfDocument {
+  @pdflite.pdf_read_document_revision_from_bytes(
+    @fs.read_file(path).binary(),
+    revision,
+  )
+}
+
+///|
 pub async fn pdf_read_document_from_file_with_passwords(
   path : StringView,
   user_password? : BytesView? = None,
@@ -13,6 +24,21 @@ pub async fn pdf_read_document_from_file_with_passwords(
 ) -> @pdflite.PdfDecryptionResult? {
   @pdflite.pdf_read_document_from_bytes_with_passwords(
     @fs.read_file(path).binary(),
+    user_password~,
+    owner_password~,
+  )
+}
+
+///|
+pub async fn pdf_read_document_revision_from_file_with_passwords(
+  path : StringView,
+  revision : Int,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+) -> @pdflite.PdfDecryptionResult? {
+  @pdflite.pdf_read_document_revision_from_bytes_with_passwords(
+    @fs.read_file(path).binary(),
+    revision,
     user_password~,
     owner_password~,
   )

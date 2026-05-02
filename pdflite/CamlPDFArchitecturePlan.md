@@ -87,7 +87,8 @@ work changes.
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, strict revision-specific reads, and image extraction
-  basics.
+  basics. Native async file wrappers cover read/write, password reads,
+  revision reads, and incremental writes.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, malformed-reader recovery, and example-level integration fixtures.
 - Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, default AES

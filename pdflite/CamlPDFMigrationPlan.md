@@ -1121,11 +1121,13 @@ MoonBit consequences for this project:
     Status: started with a native-only `async_io` package using
     `moonbitlang/async/fs`. It exposes `pdf_read_document_from_file` and
     `pdf_write_document_to_file` wrappers around the pure byte reader/writer,
-    plus password-based encrypted reads, uncompressed and Flate-compressed
+    plus revision-specific file reads, password-based encrypted reads,
+    revision-specific password reads, uncompressed and Flate-compressed
     xref-stream file writes, and classic/xref-stream incremental-update file
     writes. Native async tests cover plain round-trip, xref-stream round-trip,
-    encrypted password read, classic incremental readback, and uncompressed plus
-    compressed xref-stream incremental readback; test paths now use core
+    encrypted password read, classic incremental readback, revision-specific
+    incremental readback, and uncompressed plus compressed xref-stream
+    incremental readback; test paths now use core
     `@env.current_dir` and `@env.now` to avoid fixed filename collisions under
     repeated or concurrent native test runs.
 

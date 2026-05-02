@@ -92,6 +92,40 @@ async test "async file wrappers write incremental updates" {
 }
 
 ///|
+async test "async file wrappers read incremental revisions" {
+  let original_path = pdf_async_io_test_path_for_test("revision_original")
+  let updated_path = pdf_async_io_test_path_for_test("revision_incremental")
+  pdf_async_io_remove_if_exists_for_test(original_path)
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  let original = try! @pdflite.pdf_minimum_valid_pdf()
+  pdf_write_document_to_file(original, original_path)
+  let updated = pdf_read_document_from_file(original_path)
+  let key_title = pdf_async_io_name_for_test("/Title")
+  let added_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("async revision"))),
+  ])
+  updated.add_object_given_number(22, added_object)
+  pdf_write_document_incremental_update_to_file(
+    original_path, updated, updated_path,
+  )
+  let latest = pdf_read_document_revision_from_file(updated_path, 1)
+  let older = pdf_read_document_revision_from_file(updated_path, 2)
+  guard pdf_read_document_revision_from_file_with_passwords(updated_path, 2)
+    is Some(older_password_result) else {
+    fail("expected revision decryption result")
+  }
+  pdf_async_io_remove_if_exists_for_test(original_path)
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  @test.assert_eq(latest.lookup_object_or_null(22), added_object)
+  @test.assert_eq(older.lookup_object_or_null(22), PdfNull)
+  @test.assert_eq(
+    older_password_result.document.lookup_object_or_null(22),
+    PdfNull,
+  )
+  @test.assert_eq(older_password_result.denied_permissions, [])
+}
+
+///|
 async test "async file wrappers write xref stream incremental updates" {
   let original_path = pdf_async_io_test_path_for_test("xref_original")
   let updated_path = pdf_async_io_test_path_for_test("xref_incremental")
