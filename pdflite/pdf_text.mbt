@@ -4676,6 +4676,63 @@ fn pdf_text_glyphname_base_name(name : PdfName, base : BytesView) -> PdfName {
 }
 
 ///|
+fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
+  match pdf_text_codepoint_of_digit_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_punctuation_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_currency_letterlike_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_arrow_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_greek_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_math_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_number_form_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_technical_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_block_element_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_misc_symbol_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_latin_extended_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_expert_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_symbol_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  pdf_text_codepoint_of_dingbat_glyphname(base_name)
+}
+
+///|
 fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
   let base = pdf_text_glyphname_base_bytes(name)
   match pdf_text_uni_glyphname_codepoints(base) {
@@ -4696,112 +4753,9 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                 }
               } else {
                 let base_name = pdf_text_glyphname_base_name(name, base)
-                match pdf_text_codepoint_of_digit_glyphname(base_name) {
+                match pdf_text_codepoint_of_agl_base_glyphname(base_name) {
                   Some(codepoint) => Some([codepoint])
-                  None =>
-                    match
-                      pdf_text_codepoint_of_punctuation_glyphname(base_name) {
-                      Some(codepoint) => Some([codepoint])
-                      None =>
-                        match
-                          pdf_text_codepoint_of_currency_letterlike_glyphname(
-                            base_name,
-                          ) {
-                          Some(codepoint) => Some([codepoint])
-                          None =>
-                            match
-                              pdf_text_codepoint_of_arrow_glyphname(base_name) {
-                              Some(codepoint) => Some([codepoint])
-                              None =>
-                                match
-                                  pdf_text_codepoint_of_greek_glyphname(
-                                    base_name,
-                                  ) {
-                                  Some(codepoint) => Some([codepoint])
-                                  None =>
-                                    match
-                                      pdf_text_codepoint_of_math_glyphname(
-                                        base_name,
-                                      ) {
-                                      Some(codepoint) => Some([codepoint])
-                                      None =>
-                                        match
-                                          pdf_text_codepoint_of_number_form_glyphname(
-                                            base_name,
-                                          ) {
-                                          Some(codepoint) => Some([codepoint])
-                                          None =>
-                                            match
-                                              pdf_text_codepoint_of_technical_glyphname(
-                                                base_name,
-                                              ) {
-                                              Some(codepoint) =>
-                                                Some([codepoint])
-                                              None =>
-                                                match
-                                                  pdf_text_codepoint_of_block_element_glyphname(
-                                                    base_name,
-                                                  ) {
-                                                  Some(codepoint) =>
-                                                    Some([codepoint])
-                                                  None =>
-                                                    match
-                                                      pdf_text_codepoint_of_misc_symbol_glyphname(
-                                                        base_name,
-                                                      ) {
-                                                      Some(codepoint) =>
-                                                        Some([codepoint])
-                                                      None =>
-                                                        match
-                                                          pdf_text_codepoint_of_latin_extended_glyphname(
-                                                            base_name,
-                                                          ) {
-                                                          Some(codepoint) =>
-                                                            Some([codepoint])
-                                                          None =>
-                                                            match
-                                                              pdf_text_codepoint_of_expert_glyphname(
-                                                                base_name,
-                                                              ) {
-                                                              Some(codepoint) =>
-                                                                Some([codepoint])
-                                                              None =>
-                                                                match
-                                                                  pdf_text_codepoint_of_symbol_glyphname(
-                                                                    base_name,
-                                                                  ) {
-                                                                  Some(
-                                                                    codepoint
-                                                                  ) =>
-                                                                    Some([
-                                                                      codepoint,
-                                                                    ])
-                                                                  None =>
-                                                                    match
-                                                                      pdf_text_codepoint_of_dingbat_glyphname(
-                                                                        base_name,
-                                                                      ) {
-                                                                      Some(
-                                                                        codepoint
-                                                                      ) =>
-                                                                        Some([
-                                                                          codepoint,
-                                                                        ])
-                                                                      None =>
-                                                                        None
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                  None => None
                 }
               }
           }
