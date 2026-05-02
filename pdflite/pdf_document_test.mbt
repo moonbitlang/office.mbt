@@ -123,6 +123,41 @@ test "PdfObjects parsed_entries returns sorted parsed objects with generations" 
 }
 
 ///|
+test "PdfObjects stream_entries returns sorted parsed stream objects" {
+  let objects = @pdflite.pdf_objects_empty()
+  let first_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  let second_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66])),
+  )
+  objects.set_entry(
+    3,
+    @pdflite.pdf_object_entry(ObjectParsed(first_stream), generation=2),
+  )
+  objects.set_entry(
+    1,
+    @pdflite.pdf_object_entry(ObjectParsed(PdfInteger(10)), generation=9),
+  )
+  objects.set_entry(
+    2,
+    @pdflite.pdf_object_entry(
+      ObjectParsedAlreadyDecrypted(second_stream),
+      generation=4,
+    ),
+  )
+  guard first_stream is PdfStreamObject(first) else {
+    fail("expected stream object")
+  }
+  guard second_stream is PdfStreamObject(second) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(objects.stream_entries(), [(2, 4, second), (3, 2, first)])
+}
+
+///|
 test "PdfDocument empty document mirrors CamlPDF defaults" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(doc.version(), (1, 0))
@@ -233,6 +268,21 @@ test "PdfDocument parsed_object_entries delegates sorted parsed entries" {
     (1, 3, PdfInteger(10)),
     (4, 2, PdfInteger(40)),
   ])
+}
+
+///|
+test "PdfDocument stream_object_entries delegates stream entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let stream_object = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  doc.add_object_given_number(7, stream_object, generation=2)
+  doc.add_object_given_number(1, PdfInteger(10))
+  guard stream_object is PdfStreamObject(stream) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(doc.stream_object_entries(), [(7, 2, stream)])
 }
 
 ///|

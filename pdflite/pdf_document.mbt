@@ -190,6 +190,20 @@ pub fn PdfObjects::parsed_entries(
 }
 
 ///|
+pub fn PdfObjects::stream_entries(
+  self : PdfObjects,
+) -> Array[(Int, Int, PdfStream)] {
+  let entries : Array[(Int, Int, PdfStream)] = []
+  for entry in self.parsed_entries() {
+    match entry.2 {
+      PdfStreamObject(stream) => entries.push((entry.0, entry.1, stream))
+      _ => ()
+    }
+  }
+  entries
+}
+
+///|
 fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
   let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
   for number in self.object_stream_ids.keys().to_array() {
@@ -394,6 +408,13 @@ pub fn PdfDocument::parsed_object_entries(
   self : PdfDocument,
 ) -> Array[(Int, Int, PdfObject)] {
   self.objects.parsed_entries()
+}
+
+///|
+pub fn PdfDocument::stream_object_entries(
+  self : PdfDocument,
+) -> Array[(Int, Int, PdfStream)] {
+  self.objects.stream_entries()
 }
 
 ///|

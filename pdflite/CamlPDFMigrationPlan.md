@@ -147,9 +147,9 @@ MoonBit consequences for this project:
    dictionary mutation, object map entries, parsed/deferred object states,
    document defaults, checked catalog lookup, add/remove object logging,
    explicit object-entry collection construction, object-number selection,
-   parsed object-entry snapshots with generation numbers, in-place object
-   mapping that preserves parsed-state tags, and tests preserving CamlPDF's
-   new-key dictionary order. CamlPDF-style
+   parsed object-entry and stream-entry snapshots with generation numbers,
+   in-place object mapping that preserves parsed-state tags, and tests
+   preserving CamlPDF's new-key dictionary order. CamlPDF-style
    `unique_key` dictionary-name selection is ported for dictionaries and stream
    dictionaries, using ASCII-prefixed PDF names. Direct indirection resolution
    and direct dictionary lookup, required dictionary lookup with caller-chosen
