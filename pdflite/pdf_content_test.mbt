@@ -768,6 +768,56 @@ test "pdf_parse_content_ops_from_bytes preserves unsupported inline filters" {
       content_bytes_for_test("A"),
     ),
   ])
+  let length_data = content_bytes_for_test(
+    "BI /W 1 /H 1 /CS /G /BPC 8 /F /CCF /L 6 ID A EI B\nEI Q",
+  )
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(length_data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+        (
+          content_name_for_test("/F"),
+          PdfNameObject(content_name_for_test("/CCF")),
+        ),
+        (content_name_for_test("/L"), PdfInteger(6)),
+      ]),
+      None,
+      content_bytes_for_test("A EI B"),
+    ),
+    Op_Q,
+  ])
+  let full_length_data = content_bytes_for_test(
+    "BI /W 1 /H 1 /CS /G /BPC 8 /F /CCF /Length 6 ID C EI D\nEI",
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(full_length_data),
+    [
+      Op_InlineImage(
+        PdfDictionary([
+          (content_name_for_test("/W"), PdfInteger(1)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (
+            content_name_for_test("/CS"),
+            PdfNameObject(content_name_for_test("/G")),
+          ),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+          (
+            content_name_for_test("/F"),
+            PdfNameObject(content_name_for_test("/CCF")),
+          ),
+          (content_name_for_test("/Length"), PdfInteger(6)),
+        ]),
+        None,
+        content_bytes_for_test("C EI D"),
+      ),
+    ],
+  )
 }
 
 ///|

@@ -855,6 +855,15 @@ fn pdf_content_inline_bits_per_component(dictionary : PdfObject) -> Int? {
 }
 
 ///|
+fn pdf_content_inline_declared_data_length(dictionary : PdfObject) -> Int? {
+  pdf_content_inline_int_orelse(
+    dictionary,
+    pdf_content_inline_name("/L"),
+    pdf_content_inline_name("/Length"),
+  )
+}
+
+///|
 fn pdf_content_inline_filter_is_empty(dictionary : PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     None | Some(PdfArray([])) => true
@@ -869,7 +878,7 @@ fn pdf_content_inline_image_data_length(
   dictionary : PdfObject,
 ) -> Int? raise PdfError {
   if !pdf_content_inline_filter_is_empty(dictionary) {
-    None
+    pdf_content_inline_declared_data_length(dictionary)
   } else {
     match
       (
