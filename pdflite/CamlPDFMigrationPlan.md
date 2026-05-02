@@ -463,9 +463,11 @@ MoonBit consequences for this project:
    parse/render path that preserves image data as `Bytes`; known-size
    unfiltered inline images now read exact byte counts from direct
    width/height/colour-space/bits metadata or image-mask metadata, preserving
-   `EI` byte sequences inside payloads. Text-delimited inline image filters
-   whose first filter is ASCIIHex or ASCII85 now decode through the stream
-   codec pipeline and are flattened without stale filter metadata.
+   `EI` byte sequences inside payloads. Text-encoded inline image filters
+   whose first filter is ASCIIHex or ASCII85 now consume encoded bytes through
+   the filter terminator (`>` or `~>`) before reading the inline-image `EI`
+   marker, then decode through the stream codec pipeline and flatten without
+   stale filter metadata.
    The CamlPDF `concat_bytess` helper is exposed as
    `pdf_content_concat_streams`, with borrowed
    `pdf_content_concat_stream_views`, preserving the whitespace inserted

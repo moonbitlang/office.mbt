@@ -881,9 +881,33 @@ test "private content helpers cover malformed operand fallbacks" {
     jpeg_data,
   )
   @test.assert_eq(pdf_content_filter_is_inline_dct(PdfInteger(1)), false)
+  guard pdf_content_filter_inline_text_filter(PdfInteger(1)) is None else {
+    fail("expected no text filter for non-name")
+  }
+  guard pdf_content_filter_inline_text_filter(
+      PdfNameObject(wbtest_content_name("/Unsupported")),
+    )
+    is None else {
+    fail("expected no text filter for unsupported name")
+  }
+  guard pdf_content_filter_inline_text_filter(
+      PdfArray([
+        PdfNameObject(wbtest_content_name("/ASCII85Decode")),
+        PdfNameObject(wbtest_content_name("/FlateDecode")),
+      ]),
+    )
+    is Some(PdfContentInlineAscii85) else {
+    fail("expected ASCII85 text filter")
+  }
+  guard pdf_content_inline_image_text_filter(PdfDictionary([])) is None else {
+    fail("expected no inline image text filter")
+  }
   @test.assert_eq(
-    pdf_content_filter_is_inline_text_encoded(PdfInteger(1)),
-    false,
+    try! pdf_content_read_text_encoded_inline_image_data(
+      byte_cursor_of_bytes(@ascii.encode("616263> EI")),
+      PdfContentInlineAsciiHex,
+    ),
+    @ascii.encode("616263>"),
   )
   @test.assert_eq(pdf_content_filter_is_inline_run_length(PdfInteger(1)), false)
   @test.assert_eq(

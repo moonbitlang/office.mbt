@@ -408,6 +408,31 @@ test "pdf_parse_content_ops_from_bytes decodes ASCII85 inline image arrays" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes reads ASCII85 inline images through terminator" {
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 3 /H 1 /CS /G /BPC 8 /F /A85 ID "),
+    content_bytes_for_test("!%\nEI\n~>"),
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(3)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      try! @pdflite.pdf_bytes_of_int_array([0, 41, 129]),
+    ),
+    Op_Q,
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes decodes RunLength inline images" {
   let encoded = @pdflite.pdf_run_length_encode(content_bytes_for_test("A EI B"))
   let data = content_concat_for_test([
@@ -583,6 +608,18 @@ test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
   )
   guard run_length_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
     fail("expected RunLength ParseEndStreamExpected")
+  }
+  let ascii85_result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /A85 ID !!!! EI"),
+  )
+  guard ascii85_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+    fail("expected ASCII85 ParseEndStreamExpected")
+  }
+  let ascii_hex_result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /AHx ID 41 EI"),
+  )
+  guard ascii_hex_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+    fail("expected ASCIIHex ParseEndStreamExpected")
   }
 }
 

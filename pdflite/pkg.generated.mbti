@@ -852,6 +852,8 @@ pub(all) struct PdfCompositeCIDFont {
   cid_default_width2 : Array[Double]
 } derive(Eq, ToJson, @debug.Debug)
 
+type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
+
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
 
 pub(all) enum PdfContentOp {
