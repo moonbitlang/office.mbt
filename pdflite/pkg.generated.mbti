@@ -677,6 +677,7 @@ pub fn ByteCursor::position(Self) -> Int
 pub fn ByteCursor::read_byte(Self) -> Byte?
 pub fn ByteCursor::read_byte_back(Self) -> Byte?
 pub fn ByteCursor::read_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::read_bytes_at(Self, Int, Int) -> Bytes raise PdfError
 pub fn ByteCursor::read_jpeg_data(Self) -> Bytes raise PdfError
 pub fn ByteCursor::read_line(Self) -> Bytes raise PdfError
 pub fn ByteCursor::read_line_view(Self) -> BytesView raise PdfError
@@ -687,6 +688,7 @@ pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView
 pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise PdfError
 pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
+pub fn ByteCursor::read_view_at(Self, Int, Int) -> BytesView raise PdfError
 pub fn ByteCursor::remaining_length(Self) -> Int
 pub fn ByteCursor::remaining_view(Self) -> BytesView
 pub fn ByteCursor::rewind(Self) -> Unit raise PdfError

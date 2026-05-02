@@ -184,6 +184,16 @@ pub fn ByteCursor::read_view(
 }
 
 ///|
+pub fn ByteCursor::read_view_at(
+  self : ByteCursor,
+  position : Int,
+  length : Int,
+) -> BytesView raise PdfError {
+  self.seek(position)
+  self.read_view(length)
+}
+
+///|
 pub fn ByteCursor::read_until_view(
   self : ByteCursor,
   stop : (Int) -> Bool,
@@ -237,6 +247,15 @@ pub fn ByteCursor::read_bytes(
   length : Int,
 ) -> PdfBytes raise PdfError {
   self.read_view(length).to_owned()
+}
+
+///|
+pub fn ByteCursor::read_bytes_at(
+  self : ByteCursor,
+  position : Int,
+  length : Int,
+) -> PdfBytes raise PdfError {
+  self.read_view_at(position, length).to_owned()
 }
 
 ///|

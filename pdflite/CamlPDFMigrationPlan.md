@@ -122,7 +122,8 @@ MoonBit consequences for this project:
    Status: started with `ByteCursor` backed by `BytesView`, byte/line reads,
    offset handling, checked cursor errors, CamlPDF-style input error context
    formatting, CamlPDF-style byte-predicate `getuntil`/`ignoreuntil` helpers,
-   one-allocation `BytesView` concatenation, MSB-first bitstream read/write,
+   read-at-position byte slices, one-allocation `BytesView` concatenation,
+   MSB-first bitstream read/write,
    Int64-backed 32-bit bit values, aligned write-bitstream append,
    CamlPDF-style byte/int-array conversion helpers, an in-memory byte-output
    builder, and black-box tests.

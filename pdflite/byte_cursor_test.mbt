@@ -123,6 +123,20 @@ test "ByteCursor exposes read-only views without copying" {
 }
 
 ///|
+test "ByteCursor reads borrowed and owned slices at shifted positions" {
+  let bytes = pdf_bytes_for_cursor_test([65, 66, 67, 68])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  cursor.seek(2)
+  cursor.set_offset(1)
+  let view = try! cursor.read_view_at(1, 2)
+  @test.assert_eq(bytes_view_to_ints_for_cursor_test(view), [67, 68])
+  @test.assert_eq(cursor.position(), 3)
+  let owned = try! cursor.read_bytes_at(0, 2)
+  @test.assert_eq(pdf_bytes_to_ints_for_cursor_test(owned), [66, 67])
+  @test.assert_eq(cursor.position(), 2)
+}
+
+///|
 test "ByteCursor read_until_view stops before matching byte" {
   let bytes = pdf_bytes_for_cursor_test([65, 66, 44, 67])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)
@@ -233,6 +247,12 @@ test "ByteCursor reports checked cursor errors" {
   let bad_seek : Result[Unit, Error] = try? cursor.seek(-1)
   guard bad_seek is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
     fail("expected InvalidCursorPosition for negative seek")
+  }
+  let bad_read_position : Result[BytesView, Error] = try? cursor.read_view_at(
+    -1, 1,
+  )
+  guard bad_read_position is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition for negative read position")
   }
   let bad_length : Result[BytesView, Error] = try? cursor.read_view(-1)
   guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
