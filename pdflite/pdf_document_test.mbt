@@ -78,6 +78,27 @@ test "PdfObjects map_objects_in_place preserves parsed state tags" {
 }
 
 ///|
+test "PdfObjects parsed_entries returns sorted parsed objects with generations" {
+  let objects = @pdflite.pdf_objects_empty()
+  objects.set_entry(
+    3,
+    @pdflite.pdf_object_entry(ObjectParsed(PdfInteger(30)), generation=2),
+  )
+  objects.set_entry(1, @pdflite.pdf_object_entry(ObjectToParse, generation=8))
+  objects.set_entry(
+    2,
+    @pdflite.pdf_object_entry(
+      ObjectParsedAlreadyDecrypted(PdfInteger(20)),
+      generation=4,
+    ),
+  )
+  @test.assert_eq(objects.parsed_entries(), [
+    (2, 4, PdfInteger(20)),
+    (3, 2, PdfInteger(30)),
+  ])
+}
+
+///|
 test "PdfDocument empty document mirrors CamlPDF defaults" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(doc.version(), (1, 0))
@@ -177,6 +198,17 @@ test "PdfDocument map_objects_in_place updates document objects" {
   })
   @test.assert_eq(doc.lookup_object_or_null(1), PdfInteger(20))
   @test.assert_eq(doc.lookup_object_or_null(2), PdfBoolean(true))
+}
+
+///|
+test "PdfDocument parsed_object_entries delegates sorted parsed entries" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, PdfInteger(40), generation=2)
+  doc.add_object_given_number(1, PdfInteger(10), generation=3)
+  @test.assert_eq(doc.parsed_object_entries(), [
+    (1, 3, PdfInteger(10)),
+    (4, 2, PdfInteger(40)),
+  ])
 }
 
 ///|

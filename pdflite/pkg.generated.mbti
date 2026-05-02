@@ -964,6 +964,7 @@ pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError
+pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfDocument::pdf_decode_stream(Self, PdfObject) -> PdfObject raise PdfError
 pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, PdfObject) -> PdfObject raise PdfError
 pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> PdfObject
@@ -1216,6 +1217,7 @@ pub fn PdfObjects::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfObjects::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
 pub fn PdfObjects::max_object_number(Self) -> Int
 pub fn PdfObjects::object_numbers(Self) -> Array[Int]
+pub fn PdfObjects::parsed_entries(Self) -> Array[(Int, Int, PdfObject)]
 pub fn PdfObjects::remove_object(Self, Int) -> Unit
 pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
 

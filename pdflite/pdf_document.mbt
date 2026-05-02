@@ -162,6 +162,23 @@ pub fn PdfObjects::map_objects_in_place(
 }
 
 ///|
+pub fn PdfObjects::parsed_entries(
+  self : PdfObjects,
+) -> Array[(Int, Int, PdfObject)] {
+  let entries : Array[(Int, Int, PdfObject)] = []
+  for number in self.object_numbers() {
+    let entry = self.get_entry(number).unwrap()
+    match entry.data {
+      ObjectParsed(object) => entries.push((number, entry.generation, object))
+      ObjectParsedAlreadyDecrypted(object) =>
+        entries.push((number, entry.generation, object))
+      _ => ()
+    }
+  }
+  entries
+}
+
+///|
 fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
   let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
   for number in self.object_stream_ids.keys().to_array() {
@@ -359,6 +376,13 @@ pub fn PdfDocument::map_objects_in_place(
   transform : (PdfObject) -> PdfObject,
 ) -> Unit {
   self.objects.map_objects_in_place(transform)
+}
+
+///|
+pub fn PdfDocument::parsed_object_entries(
+  self : PdfDocument,
+) -> Array[(Int, Int, PdfObject)] {
+  self.objects.parsed_entries()
 }
 
 ///|
