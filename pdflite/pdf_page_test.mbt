@@ -818,6 +818,33 @@ test "PdfDocument combine_pdf_resources resolves indirect subdictionaries" {
 }
 
 ///|
+test "pdf_page_process_stub returns identity page matrix" {
+  let (value, number, matrix) = try! @pdflite.pdf_page_process_stub(
+    fn(n, p) { n + p },
+    2,
+    5,
+  )
+  @test.assert_eq(value, 7)
+  @test.assert_eq(number, 2)
+  @test.assert_eq(matrix, @pdflite.transform_identity_matrix)
+}
+
+///|
+test "pdf_page_process_stub propagates callback errors" {
+  let result : Result[(Int, Int, @pdflite.TransformMatrix), Error] = try? @pdflite.pdf_page_process_stub(
+    fn(n, p) raise {
+      if p == 0 {
+        fail("bad page")
+      }
+      n / p
+    },
+    6,
+    0,
+  )
+  guard result is Err(_) else { fail("expected callback failure") }
+}
+
+///|
 test "PdfDocument process_xobjects rewrites form xobject streams" {
   let key_subtype = page_name_for_test("/Subtype")
   let key_filter = page_name_for_test("/Filter")

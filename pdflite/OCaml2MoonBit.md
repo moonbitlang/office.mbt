@@ -463,6 +463,18 @@ boundaries; it also prevents in-place algorithms from mutating an `Array`
 caller or requiring a copy from `FixedArray`.
 
 ```sh
+moon run -c 'fn[A, B, C] apply_pair(f : (A, B) -> C, a : A, b : B) -> (C, A) { (f(a, b), a) }
+fn main { let result = apply_pair(fn(x, y) { x + y }, 2, 3); println(result.0); println(result.1) }'
+# 5
+# 2
+```
+
+Polymorphic helper functions use type parameters before the function name:
+`fn[A, B, C] name(...) -> ...`. The older `fn name[A, B, C](...)` spelling is
+deprecated. This is the direct shape for porting small OCaml helpers with type
+variables such as `('a -> 'b -> 'c) -> 'a -> 'b -> ...`.
+
+```sh
 moon run -c 'fn apply_twice(f : (Int) -> Int, value : Int) -> Int { f(f(value)) }
 fn main { println(apply_twice(fn(x) { x + 1 }, 40)) }'
 # 42

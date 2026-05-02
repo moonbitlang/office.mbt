@@ -2359,6 +2359,15 @@ fn PdfDocument::pdf_page_process_form_xobject(
 }
 
 ///|
+pub fn[A, B, C] pdf_page_process_stub(
+  process : (A, B) -> C raise,
+  number : A,
+  page : B,
+) -> (C, A, TransformMatrix) raise {
+  (process(number, page), number, transform_identity_matrix)
+}
+
+///|
 pub fn PdfDocument::process_xobjects(
   self : PdfDocument,
   page : PdfPage,

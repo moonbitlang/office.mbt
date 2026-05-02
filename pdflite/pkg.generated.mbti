@@ -257,6 +257,8 @@ pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes
 
 pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
 
+pub fn[A, B, C] pdf_page_process_stub((A, B) -> C raise, A, B) -> (C, A, TransformMatrix) raise
+
 pub fn pdf_page_protect(ArrayView[PdfContentOp]) -> Array[PdfContentOp]
 
 pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject
