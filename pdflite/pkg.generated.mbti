@@ -13,6 +13,8 @@ pub fn bitstream_of_bytes(Bytes, source? : String) -> BitStream
 
 pub fn bitstream_of_cursor(ByteCursor) -> BitStream
 
+pub fn bitstream_of_view(BytesView, source? : String) -> BitStream
+
 pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
 
 pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
@@ -85,11 +87,19 @@ pub fn pdf_array(ArrayView[PdfObject]) -> PdfObject
 
 pub fn pdf_ascii85_decode(Bytes) -> Bytes raise PdfError
 
+pub fn pdf_ascii85_decode_view(BytesView) -> Bytes raise PdfError
+
 pub fn pdf_ascii85_encode(Bytes) -> Bytes
+
+pub fn pdf_ascii85_encode_view(BytesView) -> Bytes
 
 pub fn pdf_ascii_hex_decode(Bytes) -> Bytes raise PdfError
 
+pub fn pdf_ascii_hex_decode_view(BytesView) -> Bytes raise PdfError
+
 pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
+
+pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
 
 pub fn pdf_authenticate_owner_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise PdfError
 
@@ -149,6 +159,8 @@ pub fn pdf_date_of_string(String) -> PdfDate raise PdfError
 
 pub fn pdf_decode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
+pub fn pdf_decode_filter_view(PdfName, BytesView) -> Bytes raise PdfError
+
 pub fn pdf_decode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_decode_stream(PdfObject) -> PdfObject raise PdfError
@@ -165,6 +177,8 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_encode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
+pub fn pdf_encode_filter_view(PdfName, BytesView) -> Bytes raise PdfError
+
 pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_encode_stream_with_filter(PdfName, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
@@ -179,7 +193,11 @@ pub fn pdf_encryption_object_key(PdfCryptType, Int, Int, BytesView, Int) -> Byte
 
 pub fn pdf_flate_decode(Bytes) -> Bytes raise PdfError
 
+pub fn pdf_flate_decode_view(BytesView) -> Bytes raise PdfError
+
 pub fn pdf_flate_encode(Bytes) -> Bytes
+
+pub fn pdf_flate_encode_view(BytesView) -> Bytes
 
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
 
@@ -206,6 +224,8 @@ pub fn pdf_lex_view(BytesView) -> Array[PdfLexeme] raise PdfError
 pub fn pdf_lexeme_debug_name(PdfLexeme) -> String
 
 pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise PdfError
+
+pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise PdfError
 
 pub fn pdf_make_font(PdfName, PdfEncoding) -> PdfObject raise PdfError
 
@@ -349,7 +369,11 @@ pub fn pdf_revisions_from_view(BytesView) -> Int raise PdfError
 
 pub fn pdf_run_length_decode(Bytes) -> Bytes
 
+pub fn pdf_run_length_decode_view(BytesView) -> Bytes
+
 pub fn pdf_run_length_encode(Bytes) -> Bytes
+
+pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 pub fn pdf_sha256_digest(BytesView) -> Bytes
 

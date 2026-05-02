@@ -342,10 +342,13 @@ MoonBit consequences for this project:
    partial final tuple handling, and structured malformed-data errors.
    Low-level RunLength encode/decode is also started, with literal chunks,
    repeat chunks, EOD marker handling, and tolerant missing-EOD decode
-   behavior. A first filter-name dispatch layer maps `/ASCIIHexDecode`/`/AHx`,
+   behavior. ASCIIHex, ASCII85, LZW decode, RunLength, and Flate now expose
+   borrowed `BytesView` entry points alongside owned `Bytes` compatibility
+   wrappers. A first filter-name dispatch layer maps `/ASCIIHexDecode`/`/AHx`,
    `/ASCII85Decode`/`/A85`, `/RunLengthDecode`/`/RL`,
    `/FlateDecode`/`/Fl`, `/LZWDecode`/`/LZW`, and identity `/Crypt` to those
-   byte codecs. Low-level Flate decode is started for zlib-wrapped stored,
+   byte codecs, with borrowed dispatch APIs for encode/decode when callers
+   already hold slices. Low-level Flate decode is started for zlib-wrapped stored,
    fixed-Huffman, and dynamic-Huffman DEFLATE blocks with Adler-32 validation;
    Flate encode emits valid zlib stored blocks for semantic round-tripping,
    leaving compression-ratio work for later.

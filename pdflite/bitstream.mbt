@@ -24,7 +24,15 @@ pub fn bitstream_of_bytes(
   data : PdfBytes,
   source? : String = "bytes",
 ) -> BitStream {
-  bitstream_of_cursor(byte_cursor_of_bytes(data, source~))
+  bitstream_of_view(data[:], source~)
+}
+
+///|
+pub fn bitstream_of_view(
+  data : BytesView,
+  source? : String = "bytes",
+) -> BitStream {
+  bitstream_of_cursor(byte_cursor_of_view(data, source~))
 }
 
 ///|

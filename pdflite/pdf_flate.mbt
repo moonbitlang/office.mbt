@@ -365,11 +365,11 @@ fn pdf_flate_adler32(data : BytesView) -> (Int, Int) {
 
 ///|
 fn pdf_flate_check_adler32(
-  compressed : PdfBytes,
-  decoded : PdfBytes,
+  compressed : BytesView,
+  decoded : BytesView,
 ) -> Unit raise PdfError {
   let offset = compressed.length() - 4
-  let (s1, s2) = pdf_flate_adler32(decoded[:])
+  let (s1, s2) = pdf_flate_adler32(decoded)
   if compressed[offset].to_int() != ((s2 >> 8) & 0xFF) ||
     compressed[offset + 1].to_int() != (s2 & 0xFF) ||
     compressed[offset + 2].to_int() != ((s1 >> 8) & 0xFF) ||
@@ -387,7 +387,7 @@ fn pdf_flate_push_u16_le(output : Array[Byte], value : Int) -> Unit {
 ///|
 fn pdf_flate_push_stored_block(
   output : Array[Byte],
-  data : PdfBytes,
+  data : BytesView,
   offset : Int,
   length : Int,
   final_block : Bool,
@@ -401,8 +401,8 @@ fn pdf_flate_push_stored_block(
 }
 
 ///|
-fn pdf_flate_push_adler32(output : Array[Byte], data : PdfBytes) -> Unit {
-  let (s1, s2) = pdf_flate_adler32(data[:])
+fn pdf_flate_push_adler32(output : Array[Byte], data : BytesView) -> Unit {
+  let (s1, s2) = pdf_flate_adler32(data)
   output.push(((s2 >> 8) & 0xFF).to_byte())
   output.push((s2 & 0xFF).to_byte())
   output.push(((s1 >> 8) & 0xFF).to_byte())
@@ -410,7 +410,7 @@ fn pdf_flate_push_adler32(output : Array[Byte], data : PdfBytes) -> Unit {
 }
 
 ///|
-pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = [0x78, 0x01]
   if data.length() == 0 {
     pdf_flate_push_stored_block(output, data, 0, 0, true)
@@ -434,9 +434,14 @@ pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
 }
 
 ///|
-pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+pub fn pdf_flate_encode(data : PdfBytes) -> PdfBytes {
+  pdf_flate_encode_view(data[:])
+}
+
+///|
+pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   if data.length() == 0 {
-    data
+    Bytes::new(0)
   } else {
     if data.length() < 6 {
       raise InvalidFlateData
@@ -447,7 +452,12 @@ pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
       raise InvalidFlateData
     }
     let decoded = pdf_deflate_decode_raw(data[2:data.length() - 4])
-    pdf_flate_check_adler32(data, decoded)
+    pdf_flate_check_adler32(data, decoded[:])
     decoded
   }
+}
+
+///|
+pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+  pdf_flate_decode_view(data[:])
 }

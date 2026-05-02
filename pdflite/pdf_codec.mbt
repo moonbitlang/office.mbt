@@ -18,7 +18,7 @@ fn pdf_ascii_hex_value(value : Int) -> Int? {
 }
 
 ///|
-pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_ascii_hex_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   for byte in data {
     let value = byte.to_int()
@@ -30,7 +30,12 @@ pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
 }
 
 ///|
-pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+pub fn pdf_ascii_hex_encode(data : PdfBytes) -> PdfBytes {
+  pdf_ascii_hex_encode_view(data[:])
+}
+
+///|
+pub fn pdf_ascii_hex_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   let mut high : Int? = None
   let mut done = false
@@ -61,6 +66,11 @@ pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
     }
   }
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_ascii_hex_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+  pdf_ascii_hex_decode_view(data[:])
 }
 
 ///|
@@ -95,8 +105,8 @@ fn pdf_ascii85_encode_word(
 }
 
 ///|
-fn pdf_ascii85_word_from_bytes(
-  data : PdfBytes,
+fn pdf_ascii85_word_from_view(
+  data : BytesView,
   start : Int,
   count : Int,
 ) -> UInt64 {
@@ -109,19 +119,24 @@ fn pdf_ascii85_word_from_bytes(
 }
 
 ///|
-pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_ascii85_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   let mut index = 0
   while index < data.length() {
     let remaining = data.length() - index
     let count = if remaining < 4 { remaining } else { 4 }
-    let word = pdf_ascii85_word_from_bytes(data, index, count)
+    let word = pdf_ascii85_word_from_view(data, index, count)
     pdf_ascii85_encode_word(output, word, count + 1, count == 4)
     index += count
   }
   output.push(pdf_ascii85_terminator)
   output.push(62)
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_ascii85_encode(data : PdfBytes) -> PdfBytes {
+  pdf_ascii85_encode_view(data[:])
 }
 
 ///|
@@ -168,7 +183,7 @@ fn pdf_ascii85_finish_partial(
 }
 
 ///|
-pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+pub fn pdf_ascii85_decode_view(data : BytesView) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   let mut digits : Array[Int] = []
   let mut done = false
@@ -204,6 +219,11 @@ pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
     raise InvalidASCII85Data
   }
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_ascii85_decode(data : PdfBytes) -> PdfBytes raise PdfError {
+  pdf_ascii85_decode_view(data[:])
 }
 
 ///|
@@ -280,13 +300,13 @@ fn pdf_lzw_output_literal(
 }
 
 ///|
-pub fn pdf_lzw_decode(
-  data : PdfBytes,
+pub fn pdf_lzw_decode_view(
+  data : BytesView,
   early_change? : Int = 1,
 ) -> PdfBytes raise PdfError {
   let prefix_code = Array::make(8192, 0)
   let append_character = Array::make(8192, 0)
-  let bits = bitstream_of_bytes(data)
+  let bits = bitstream_of_view(data)
   let output : Array[Byte] = []
   let mut code_length = 9
   let mut next_code = 258
@@ -353,6 +373,14 @@ pub fn pdf_lzw_decode(
 }
 
 ///|
+pub fn pdf_lzw_decode(
+  data : PdfBytes,
+  early_change? : Int = 1,
+) -> PdfBytes raise PdfError {
+  pdf_lzw_decode_view(data[:], early_change~)
+}
+
+///|
 fn pdf_filter_name(text : String) -> PdfName {
   pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -372,22 +400,50 @@ fn pdf_filter_is_one_of(
 }
 
 ///|
+pub fn pdf_decode_filter_view(
+  filter : PdfName,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  if pdf_filter_is_name(filter, "/Crypt") {
+    data.to_owned()
+  } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
+    pdf_ascii_hex_decode_view(data)
+  } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
+    pdf_ascii85_decode_view(data)
+  } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
+    pdf_run_length_decode_view(data)
+  } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
+    pdf_flate_decode_view(data)
+  } else if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
+    pdf_lzw_decode_view(data)
+  } else {
+    raise FilterNotSupported(filter)
+  }
+}
+
+///|
 pub fn pdf_decode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
+  pdf_decode_filter_view(filter, data[:])
+}
+
+///|
+pub fn pdf_encode_filter_view(
+  filter : PdfName,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
   if pdf_filter_is_name(filter, "/Crypt") {
-    data
+    data.to_owned()
   } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
-    pdf_ascii_hex_decode(data)
+    pdf_ascii_hex_encode_view(data)
   } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
-    pdf_ascii85_decode(data)
+    pdf_ascii85_encode_view(data)
   } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
-    pdf_run_length_decode(data)
+    pdf_run_length_encode_view(data)
   } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
-    pdf_flate_decode(data)
-  } else if pdf_filter_is_one_of(filter, "/LZWDecode", "/LZW") {
-    pdf_lzw_decode(data)
+    pdf_flate_encode_view(data)
   } else {
     raise FilterNotSupported(filter)
   }
@@ -398,19 +454,7 @@ pub fn pdf_encode_filter_bytes(
   filter : PdfName,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  if pdf_filter_is_name(filter, "/Crypt") {
-    data
-  } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
-    pdf_ascii_hex_encode(data)
-  } else if pdf_filter_is_one_of(filter, "/ASCII85Decode", "/A85") {
-    pdf_ascii85_encode(data)
-  } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
-    pdf_run_length_encode(data)
-  } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
-    pdf_flate_encode(data)
-  } else {
-    raise FilterNotSupported(filter)
-  }
+  pdf_encode_filter_view(filter, data[:])
 }
 
 ///|
@@ -1449,7 +1493,7 @@ fn pdf_run_length_flush_literal(
 }
 
 ///|
-pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_run_length_encode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   let mut literal : Array[Byte] = []
   let mut index = 0
@@ -1484,7 +1528,12 @@ pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
 }
 
 ///|
-pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
+pub fn pdf_run_length_encode(data : PdfBytes) -> PdfBytes {
+  pdf_run_length_encode_view(data[:])
+}
+
+///|
+pub fn pdf_run_length_decode_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   let mut index = 0
   let mut done = false
@@ -1517,4 +1566,9 @@ pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
     }
   }
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_run_length_decode(data : PdfBytes) -> PdfBytes {
+  pdf_run_length_decode_view(data[:])
 }
