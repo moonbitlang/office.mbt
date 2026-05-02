@@ -2875,6 +2875,43 @@ test "PdfDocument reads ToUnicode CMaps with PDF whitespace separators" {
 }
 
 ///|
+test "pdf_parse_cmap_data reads whitespace-split CMap markers" {
+  let cmap = text_concat_for_test([
+    @ascii.encode("/WMode 1 def\n1 begin"),
+    text_bytes_for_test([9, 10]),
+    @ascii.encode("bfchar<41><0041>end"),
+    text_bytes_for_test([12]),
+    @ascii.encode("bfchar\n1 begin"),
+    text_bytes_for_test([0, 13, 10]),
+    @ascii.encode("bfrange<42><43><0042>end"),
+    text_bytes_for_test([32]),
+    @ascii.encode("bfrange\n"),
+  ])
+  let parsed = @pdflite.pdf_parse_cmap_data(cmap[:])
+  @test.assert_eq(parsed.wmode, Some(1))
+  @test.assert_eq(parsed.map, [
+    (65, text_bytes_for_test([0x00, 0x41])),
+    (66, text_bytes_for_test([0x00, 0x42])),
+    (67, text_bytes_for_test([0x00, 0x43])),
+  ])
+}
+
+///|
+test "pdf_parse_cmap_data augments partial CMap marker parsing" {
+  let cmap = text_concat_for_test([
+    @ascii.encode("1 beginbfchar\n<40><0040>\nendbfchar\n1 begin"),
+    text_bytes_for_test([10]),
+    @ascii.encode("bfchar<41><0041>end"),
+    text_bytes_for_test([10]),
+    @ascii.encode("bfchar\n"),
+  ])
+  @test.assert_eq(@pdflite.pdf_parse_cmap_data(cmap[:]).map, [
+    (64, text_bytes_for_test([0x00, 0x40])),
+    (65, text_bytes_for_test([0x00, 0x41])),
+  ])
+}
+
+///|
 test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")

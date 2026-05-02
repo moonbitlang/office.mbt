@@ -1801,7 +1801,31 @@ priv enum PdfTextCMapSection {
 }
 
 ///|
-fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
+fn pdf_text_cmap_contains_whitespace(data : BytesView) -> Bool {
+  for byte in data {
+    if pdf_is_whitespace_byte(byte.to_int()) {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_text_cmap_without_whitespace(data : BytesView) -> PdfBytes {
+  let output : Array[Byte] = []
+  for byte in data {
+    if !pdf_is_whitespace_byte(byte.to_int()) {
+      output.push(byte)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_text_parse_tounicode_sections(
+  data : BytesView,
+) -> Array[(Int, PdfBytes)]? {
   let cursor = byte_cursor_of_view(data)
   let entries : Array[(Int, PdfBytes)] = []
   let mut section = PdfTextCMapNone
@@ -1886,6 +1910,27 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
     None
   } else {
     Some(entries)
+  }
+}
+
+///|
+fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
+  if pdf_text_cmap_contains_whitespace(data) {
+    let parsed = pdf_text_parse_tounicode_sections(data)
+    let compact = pdf_text_cmap_without_whitespace(data)
+    let compact_parsed = pdf_text_parse_tounicode_sections(compact[:])
+    match (parsed, compact_parsed) {
+      (Some(original_entries), Some(compact_entries)) =>
+        if compact_entries.length() > original_entries.length() {
+          Some(compact_entries)
+        } else {
+          Some(original_entries)
+        }
+      (None, Some(compact_entries)) => Some(compact_entries)
+      _ => parsed
+    }
+  } else {
+    pdf_text_parse_tounicode_sections(data)
   }
 }
 
