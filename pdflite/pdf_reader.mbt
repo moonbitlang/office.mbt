@@ -788,7 +788,7 @@ pub fn pdf_is_linearized(data : BytesView) -> Bool {
 }
 
 ///|
-pub fn pdf_revisions_from_bytes(data : BytesView) -> Int raise PdfError {
+pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
   let mut current_xref = pdf_read_startxref_position(data)
@@ -811,6 +811,11 @@ pub fn pdf_revisions_from_bytes(data : BytesView) -> Int raise PdfError {
   } else {
     revisions
   }
+}
+
+///|
+pub fn pdf_revisions_from_bytes(data : BytesView) -> Int raise PdfError {
+  pdf_revisions_from_view(data)
 }
 
 ///|

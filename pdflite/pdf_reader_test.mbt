@@ -1328,6 +1328,16 @@ test "pdf_revisions_from_bytes counts classic Prev chain revisions" {
 }
 
 ///|
+test "pdf_revisions_from_view reads borrowed revision metadata slices" {
+  let payload = reader_classic_pdf_with_prev_xref()
+  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_view(wrapped[3:wrapped.length() - 3]),
+    2,
+  )
+}
+
+///|
 test "pdf_revisions_from_bytes reports malformed revision metadata" {
   let missing_startxref : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
     reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n")[:],

@@ -343,6 +343,8 @@ pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise PdfError
 
 pub fn pdf_revisions_from_bytes(BytesView) -> Int raise PdfError
 
+pub fn pdf_revisions_from_view(BytesView) -> Int raise PdfError
+
 pub fn pdf_run_length_decode(Bytes) -> Bytes
 
 pub fn pdf_run_length_encode(Bytes) -> Bytes
