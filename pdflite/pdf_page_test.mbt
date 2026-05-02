@@ -2047,6 +2047,58 @@ test "PdfDocument change_pages rejects reference renumbering when counts differ"
 }
 
 ///|
+test "PdfDocument change_pages accepts explicit serial reference changes" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_fit = page_name_for_test("/Fit")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    page_indexed_blank_for_test(0),
+    page_indexed_blank_for_test(1),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([PdfIndirect(old_numbers[1]), PdfNameObject(type_fit)]),
+    ),
+  )
+  let changed = try! doc.change_pages(
+    [page_indexed_blank_for_test(9)],
+    change_references=true,
+    changes=[(2, 1)],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  @test.assert_eq(new_numbers.length(), 1)
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(PdfArray([PdfIndirect(new_numbers[0]), PdfNameObject(type_fit)])),
+  )
+
+  let bad_old : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
+    [page_indexed_blank_for_test(9)],
+    change_references=true,
+    changes=[(3, 1)],
+  )
+  guard bad_old is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected for bad old serial")
+  }
+  let bad_new : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
+    [page_indexed_blank_for_test(9)],
+    change_references=true,
+    changes=[(1, 2)],
+  )
+  guard bad_new is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected for bad new serial")
+  }
+}
+
+///|
 test "PdfDocument pdf_of_pages extracts pages in requested order" {
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([

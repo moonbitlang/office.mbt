@@ -367,14 +367,16 @@ MoonBit consequences for this project:
    `postpend_operators` helpers over `PdfContentOp` streams.
    Page replacement is now started with a `change_pages` slice that builds a
    replacement page tree in a copied document and can renumber same-count old
-   page indirect references to the new page objects. Matrix-aware destination
-   rewrites are now started for `change_pages` callers that supply page
-   matrices: bookmark targets, link annotation `/Dest` or GoTo `/A`
-   destinations, and catalog `/OpenAction` destinations are transformed after
-   page-reference renumbering. Named destination definitions in old-style
-   catalog `/Dests` dictionaries and `/Root/Names/Dests` name trees are also
-   transformed, so preserved named and string destinations resolve to the new
-   page-space coordinates after page matrix changes. A minimal `pdf_of_pages`
+   page indirect references to the new page objects. Its optional `changes`
+   parameter now ports CamlPDF's explicit 1-based old/new page serial mapping
+   for count-changing replacements. Matrix-aware destination rewrites are now
+   started for `change_pages` callers that supply page matrices: bookmark
+   targets, link annotation `/Dest` or GoTo `/A` destinations, and catalog
+   `/OpenAction` destinations are transformed after page-reference
+   renumbering. Named destination definitions in old-style catalog `/Dests`
+   dictionaries and `/Root/Names/Dests` name trees are also transformed, so
+   preserved named and string destinations resolve to the new page-space
+   coordinates after page matrix changes. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten

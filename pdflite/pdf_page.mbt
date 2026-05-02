@@ -944,6 +944,26 @@ fn pdf_page_reference_changes(
 }
 
 ///|
+fn pdf_page_reference_changes_from_serials(
+  old_numbers : ArrayView[Int],
+  new_numbers : ArrayView[Int],
+  changes : ArrayView[(Int, Int)],
+) -> Array[(Int, Int)] raise PdfError {
+  let output : Array[(Int, Int)] = []
+  for change in changes {
+    let (old_page, new_page) = change
+    if old_page < 1 ||
+      old_page > old_numbers.length() ||
+      new_page < 1 ||
+      new_page > new_numbers.length() {
+      raise PageTreeExpected
+    }
+    output.push((old_numbers[old_page - 1], new_numbers[new_page - 1]))
+  }
+  output
+}
+
+///|
 fn pdf_page_matrix_for_page_number(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_number : Int,
@@ -1364,6 +1384,7 @@ pub fn PdfDocument::change_pages(
   pages : ArrayView[PdfPage],
   change_references? : Bool = false,
   matrices? : ArrayView[(Int, TransformMatrix)] = [],
+  changes? : ArrayView[(Int, Int)] = [],
 ) -> PdfDocument raise PdfError {
   let old_page_numbers = self.page_reference_numbers()
   let pdf = self.copy()
@@ -1371,9 +1392,14 @@ pub fn PdfDocument::change_pages(
   ignore(pdf.add_root(page_root_number, []))
   if change_references {
     let new_page_numbers = pdf.page_reference_numbers()
-    pdf.pdf_page_renumber_references(
-      pdf_page_reference_changes(old_page_numbers, new_page_numbers),
-    )
+    let reference_changes = if changes.length() > 0 {
+      pdf_page_reference_changes_from_serials(
+        old_page_numbers, new_page_numbers, changes,
+      )
+    } else {
+      pdf_page_reference_changes(old_page_numbers, new_page_numbers)
+    }
+    pdf.pdf_page_renumber_references(reference_changes)
     if matrices.length() > 0 {
       pdf.pdf_page_transform_matrix_destinations(matrices, new_page_numbers)
     } else {
