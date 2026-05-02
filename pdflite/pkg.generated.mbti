@@ -123,6 +123,8 @@ pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
 
 pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
 
+pub fn pdf_bytes_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
+
 pub fn pdf_bytes_of_view(BytesView) -> Bytes
 
 pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
@@ -210,6 +212,8 @@ pub fn pdf_format_real(Double) -> Bytes raise PdfError
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
 
 pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise PdfError
+
+pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
@@ -422,6 +426,10 @@ pub fn pdf_string_of_content_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfErro
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_string_of_function(PdfFunction) -> String
+
+pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
 
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 

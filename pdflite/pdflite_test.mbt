@@ -33,6 +33,32 @@ test "PdfBytes concatenate read-only byte views at ownership boundary" {
 }
 
 ///|
+test "PdfBytes expose CamlPDF int-array compatibility conversions" {
+  let first : FixedArray[Int] = [65, 0xFF]
+  let second : Array[Int] = [0, 66]
+  let combined = try! @pdflite.pdf_bytes_of_int_arrays([first, second])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(combined[:]), [
+    65, 0xFF, 0, 66,
+  ])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(combined[1:3]), [0xFF, 0])
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_int_array(first),
+    try! @pdflite.pdf_bytes_of_int_array([65, 0xFF]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_int_arrays([first, second]),
+    combined,
+  )
+  let invalid : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_bytes_of_int_arrays([
+      [256],
+    ],
+  )
+  guard invalid is Err(@pdflite.PdfError::InvalidByte(256)) else {
+    fail("expected InvalidByte for nested int arrays")
+  }
+}
+
+///|
 test "PdfBytes reject out-of-range integers" {
   let too_large : Result[Byte, Error] = try? @pdflite.pdf_byte_of_int(256)
   guard too_large is Err(@pdflite.PdfError::InvalidByte(256)) else {
