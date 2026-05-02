@@ -3902,6 +3902,94 @@ fn pdf_text_u_glyphname_codepoints(base : BytesView) -> Array[Int]? {
 }
 
 ///|
+fn pdf_text_upper_hex_letter(byte : Byte) -> Bool {
+  let value = byte.to_int()
+  value >= 65 && value <= 70
+}
+
+///|
+fn pdf_text_truetype_control_high_byte(value : Int) -> Bool {
+  value == 0x8A ||
+  value == 0x8B ||
+  value == 0x8C ||
+  value == 0x9A ||
+  value == 0x9B ||
+  value == 0x9C
+}
+
+///|
+fn pdf_text_truetype_windows_high_byte_table() -> Array[(Int, Int)] {
+  [
+    (0x82, 0x201A),
+    (0x83, 0x0192),
+    (0x84, 0x201E),
+    (0x85, 0x2026),
+    (0x86, 0x2020),
+    (0x87, 0x2021),
+    (0x88, 0x02C6),
+    (0x89, 0x2030),
+    (0x8A, 0x0160),
+    (0x8B, 0x2039),
+    (0x8C, 0x0152),
+    (0x91, 0x2018),
+    (0x92, 0x2019),
+    (0x93, 0x201C),
+    (0x94, 0x201D),
+    (0x95, 0x2022),
+    (0x96, 0x2013),
+    (0x97, 0x2014),
+    (0x98, 0x02DC),
+    (0x99, 0x2122),
+    (0x9A, 0x0161),
+    (0x9B, 0x203A),
+    (0x9C, 0x0153),
+    (0x9F, 0x0178),
+  ]
+}
+
+///|
+fn pdf_text_truetype_high_byte_codepoint(value : Int, low_hex : Byte) -> Int? {
+  if pdf_text_upper_hex_letter(low_hex) &&
+    pdf_text_truetype_control_high_byte(value) {
+    Some(value)
+  } else {
+    for entry in pdf_text_truetype_windows_high_byte_table() {
+      if entry.0 == value {
+        break Some(entry.1)
+      }
+    } nobreak {
+      None
+    }
+  }
+}
+
+///|
+fn pdf_text_truetype_glyphname_codepoints(base : BytesView) -> Array[Int]? {
+  guard base.length() == 4 && base[0].to_int() == 47 && base[1].to_int() == 71 else {
+    return None
+  }
+  let high = match pdf_text_hex_digit_value(base[2]) {
+    Some(value) => value
+    None => return None
+  }
+  let low = match pdf_text_hex_digit_value(base[3]) {
+    Some(value) => value
+    None => return None
+  }
+  let value = high * 16 + low
+  if value == 0x6D && pdf_text_upper_hex_letter(base[3]) {
+    Some([0x002D])
+  } else if (value >= 0x20 && value <= 0x7E) || (value >= 0xA0 && value <= 0xFF) {
+    Some([value])
+  } else {
+    match pdf_text_truetype_high_byte_codepoint(value, base[3]) {
+      Some(codepoint) => Some([codepoint])
+      None => None
+    }
+  }
+}
+
+///|
 fn pdf_text_glyphname_base_name(name : PdfName, base : BytesView) -> PdfName {
   if base.length() == name.byte_length() {
     name
@@ -3919,37 +4007,45 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
       match pdf_text_u_glyphname_codepoints(base) {
         Some(codepoints) => Some(codepoints)
         None =>
-          if base.length() == 2 && base[0].to_int() == 47 {
-            let value = base[1].to_int()
-            if (value >= 65 && value <= 90) || (value >= 97 && value <= 122) {
-              Some([value])
-            } else {
-              None
-            }
-          } else {
-            let base_name = pdf_text_glyphname_base_name(name, base)
-            match pdf_text_codepoint_of_digit_glyphname(base_name) {
-              Some(codepoint) => Some([codepoint])
-              None =>
-                match pdf_text_codepoint_of_punctuation_glyphname(base_name) {
+          match pdf_text_truetype_glyphname_codepoints(base) {
+            Some(codepoints) => Some(codepoints)
+            None =>
+              if base.length() == 2 && base[0].to_int() == 47 {
+                let value = base[1].to_int()
+                if (value >= 65 && value <= 90) || (value >= 97 && value <= 122) {
+                  Some([value])
+                } else {
+                  None
+                }
+              } else {
+                let base_name = pdf_text_glyphname_base_name(name, base)
+                match pdf_text_codepoint_of_digit_glyphname(base_name) {
                   Some(codepoint) => Some([codepoint])
                   None =>
-                    match pdf_text_codepoint_of_expert_glyphname(base_name) {
+                    match
+                      pdf_text_codepoint_of_punctuation_glyphname(base_name) {
                       Some(codepoint) => Some([codepoint])
                       None =>
                         match
-                          pdf_text_codepoint_of_symbol_glyphname(base_name) {
+                          pdf_text_codepoint_of_expert_glyphname(base_name) {
                           Some(codepoint) => Some([codepoint])
                           None =>
                             match
-                              pdf_text_codepoint_of_dingbat_glyphname(base_name) {
+                              pdf_text_codepoint_of_symbol_glyphname(base_name) {
                               Some(codepoint) => Some([codepoint])
-                              None => None
+                              None =>
+                                match
+                                  pdf_text_codepoint_of_dingbat_glyphname(
+                                    base_name,
+                                  ) {
+                                  Some(codepoint) => Some([codepoint])
+                                  None => None
+                                }
                             }
                         }
                     }
                 }
-            }
+              }
           }
       }
   }

@@ -4640,6 +4640,51 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
 }
 
 ///|
+test "PdfTextExtractor decodes TrueType Gxx glyph names" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, [
+        text_difference_for_test("/G82", 1),
+        text_difference_for_test("/G8a", 2),
+        text_difference_for_test("/G8A", 3),
+        text_difference_for_test("/G6D", 4),
+        text_difference_for_test("/Gf0.alt", 5),
+        text_difference_for_test("/GG2", 6),
+        text_difference_for_test("/G2G", 7),
+        text_difference_for_test("/G81", 8),
+      ]),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8])[:],
+    ),
+    [0x201A, 0x0160, 0x008A, 0x002D, 0x00F0, 6, 7, 8],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8])[:],
+    ),
+    [
+      text_name_for_test("/G82"),
+      text_name_for_test("/G8a"),
+      text_name_for_test("/G8A"),
+      text_name_for_test("/G6D"),
+      text_name_for_test("/Gf0.alt"),
+      text_name_for_test("/GG2"),
+      text_name_for_test("/G2G"),
+      text_name_for_test("/G81"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x201A), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0160), Some(2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x008A), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00F0), Some(5))
+}
+
+///|
 test "PdfTextExtractor decodes control glyph names" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
