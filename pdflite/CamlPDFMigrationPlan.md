@@ -953,9 +953,10 @@ MoonBit consequences for this project:
     collision suffixes, and drops named-target actions when named destinations
     are not retained. Duplicate-font removal is started with
     CamlPDF-style identical stream coalescing: references to duplicate
-    `StreamGot` or deferred `StreamToGet` objects are rewritten to the first
-    matching stream after comparing borrowed stream-data views, and
-    `pdf_merge_documents` can run this pass behind an explicit option. Generic
+    `StreamGot`, deferred `StreamToGet`, or already-decrypted stream objects
+    are rewritten to the first matching stream after comparing borrowed
+    stream-data views, and `pdf_merge_documents` can run this pass behind an
+    explicit option. Generic
     name-dictionary merge support now retains non-destination `/Names` name
     trees such as `/EmbeddedFiles` and `/JavaScript`; `/Dests` remains on the
     destination-aware path so page-object targets are retargeted. The merge
