@@ -205,6 +205,8 @@ pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_encode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise PdfError
 
+pub fn pdf_encode_stream_with_encoding(PdfStreamEncoding, PdfObject, only_if_smaller? : Bool, predictor? : PdfStreamPredictor?, predictor_columns? : Int) -> PdfObject raise PdfError
+
 pub fn pdf_encode_stream_with_filter(PdfName, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
 
 pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
@@ -1641,6 +1643,27 @@ pub(all) enum PdfStreamData {
   StreamGot(Bytes)
   StreamToGet(ToGet)
 } derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfStreamEncoding {
+  PdfStreamASCIIHex
+  PdfStreamASCII85
+  PdfStreamRunLength
+  PdfStreamFlate
+  PdfStreamCCITT(Int, Int)
+  PdfStreamCCITTG4(Int, Int)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStreamEncoding::filter_name(Self) -> PdfName
+
+pub(all) enum PdfStreamPredictor {
+  PdfStreamPredictorTIFF2
+  PdfStreamPredictorPNGNone
+  PdfStreamPredictorPNGSub
+  PdfStreamPredictorPNGUp
+  PdfStreamPredictorPNGAverage
+  PdfStreamPredictorPNGPaeth
+  PdfStreamPredictorPNGOptimum
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStreamPredictor::number(Self) -> Int
 
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int)

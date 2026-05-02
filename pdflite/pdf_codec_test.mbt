@@ -1622,6 +1622,116 @@ test "pdf_encode_stream_with_filter adds filter and updates length" {
 }
 
 ///|
+test "PdfStreamEncoding maps CamlPDF encoding and predictor choices" {
+  @test.assert_eq(
+    @pdflite.PdfStreamASCIIHex.filter_name(),
+    codec_name_for_test("/ASCIIHexDecode"),
+  )
+  @test.assert_eq(
+    @pdflite.PdfStreamASCII85.filter_name(),
+    codec_name_for_test("/ASCII85Decode"),
+  )
+  @test.assert_eq(
+    @pdflite.PdfStreamRunLength.filter_name(),
+    codec_name_for_test("/RunLengthDecode"),
+  )
+  @test.assert_eq(
+    @pdflite.PdfStreamFlate.filter_name(),
+    codec_name_for_test("/FlateDecode"),
+  )
+  @test.assert_eq(@pdflite.PdfStreamPredictorTIFF2.number(), 2)
+  @test.assert_eq(@pdflite.PdfStreamPredictorPNGNone.number(), 10)
+  @test.assert_eq(@pdflite.PdfStreamPredictorPNGSub.number(), 11)
+  @test.assert_eq(@pdflite.PdfStreamPredictorPNGUp.number(), 12)
+  @test.assert_eq(@pdflite.PdfStreamPredictorPNGAverage.number(), 13)
+  @test.assert_eq(@pdflite.PdfStreamPredictorPNGPaeth.number(), 14)
+  @test.assert_eq(@pdflite.PdfStreamPredictorPNGOptimum.number(), 15)
+  @test.assert_eq(
+    @pdflite.PdfStreamCCITT(8, 9).filter_name(),
+    codec_name_for_test("/CCITTFaxDecode"),
+  )
+  @test.assert_eq(
+    @pdflite.PdfStreamCCITTG4(8, 9).filter_name(),
+    codec_name_for_test("/CCITTFaxDecode"),
+  )
+}
+
+///|
+test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamGot(codec_ascii_for_test("Hi")),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamASCIIHex,
+    stream,
+  )
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  @test.assert_eq(encoded_stream.data, StreamGot(codec_ascii_for_test("4869>")))
+  @test.assert_eq(
+    encoded_stream.dictionary.lookup_immediate(filter),
+    Some(PdfNameObject(codec_name_for_test("/ASCIIHexDecode"))),
+  )
+
+  let predictor_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(6))]),
+    StreamGot(codec_bytes_for_test([10, 20, 30, 11, 25, 35])),
+  )
+  let predicted = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamASCIIHex,
+    predictor_stream,
+    predictor=Some(PdfStreamPredictorPNGUp),
+    predictor_columns=3,
+  )
+  guard predicted is PdfStreamObject(predicted_stream) else {
+    fail("expected predicted stream")
+  }
+  @test.assert_eq(
+    predicted_stream.data,
+    StreamGot(codec_ascii_for_test("020A141E02010505>")),
+  )
+  guard predicted_stream.dictionary.lookup_immediate(decodeparms)
+    is Some(PdfDictionary(_)) else {
+    fail("expected typed DecodeParms dictionary")
+  }
+  let decoded = try! @pdflite.pdf_decode_stream(predicted)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([10, 20, 30, 11, 25, 35])),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+
+  let skipped = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamASCIIHex,
+    stream,
+    only_if_smaller=true,
+  )
+  guard skipped is PdfStreamObject(skipped_stream) else {
+    fail("expected skipped stream")
+  }
+  @test.assert_eq(skipped_stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(skipped_stream.dictionary.lookup_immediate(filter), None)
+
+  let unsupported : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITT(1, 1),
+    stream,
+  )
+  guard unsupported is Err(@pdflite.PdfError::FilterNotSupported(name)) &&
+    name == codec_name_for_test("/CCITTFaxDecode") else {
+    fail("expected unsupported typed CCITT encoding")
+  }
+}
+
+///|
 test "pdf_encode_stream_with_filter prepends existing filters" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

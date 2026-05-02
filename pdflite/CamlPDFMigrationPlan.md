@@ -403,7 +403,12 @@ MoonBit consequences for this project:
    `/DecodeParms` predictor dictionary and round-trip through owned stream
    decode. Stream encoding now supports CamlPDF-style
    `only_if_smaller` gating, leaving streams unchanged unless the encoded data
-   plus overhead is smaller than the original bytes. Stream filter
+   plus overhead is smaller than the original bytes. CamlPDF-style typed
+   encoding and predictor choices are now exposed as `PdfStreamEncoding` and
+   `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over
+   the existing filter/predictor implementation; CCITT names map to
+   `/CCITTFaxDecode`, while actual CCITT encoding remains an explicit
+   unsupported-filter path. Stream filter
    encode/decode now materializes `StreamToGet` data only at the owned-byte
    boundary required by codec transforms. A
    document-aware `PdfDocument::pdf_decode_stream` path is now started for

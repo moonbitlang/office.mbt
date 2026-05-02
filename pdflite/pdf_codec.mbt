@@ -478,6 +478,52 @@ fn pdf_filter_name(text : String) -> PdfName {
 }
 
 ///|
+pub(all) enum PdfStreamEncoding {
+  PdfStreamASCIIHex
+  PdfStreamASCII85
+  PdfStreamRunLength
+  PdfStreamFlate
+  PdfStreamCCITT(Int, Int)
+  PdfStreamCCITTG4(Int, Int)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) enum PdfStreamPredictor {
+  PdfStreamPredictorTIFF2
+  PdfStreamPredictorPNGNone
+  PdfStreamPredictorPNGSub
+  PdfStreamPredictorPNGUp
+  PdfStreamPredictorPNGAverage
+  PdfStreamPredictorPNGPaeth
+  PdfStreamPredictorPNGOptimum
+} derive(Debug, Eq, ToJson)
+
+///|
+pub fn PdfStreamEncoding::filter_name(self : PdfStreamEncoding) -> PdfName {
+  match self {
+    PdfStreamASCIIHex => pdf_filter_name("/ASCIIHexDecode")
+    PdfStreamASCII85 => pdf_filter_name("/ASCII85Decode")
+    PdfStreamRunLength => pdf_filter_name("/RunLengthDecode")
+    PdfStreamFlate => pdf_filter_name("/FlateDecode")
+    PdfStreamCCITT(_, _) | PdfStreamCCITTG4(_, _) =>
+      pdf_filter_name("/CCITTFaxDecode")
+  }
+}
+
+///|
+pub fn PdfStreamPredictor::number(self : PdfStreamPredictor) -> Int {
+  match self {
+    PdfStreamPredictorTIFF2 => 2
+    PdfStreamPredictorPNGNone => 10
+    PdfStreamPredictorPNGSub => 11
+    PdfStreamPredictorPNGUp => 12
+    PdfStreamPredictorPNGAverage => 13
+    PdfStreamPredictorPNGPaeth => 14
+    PdfStreamPredictorPNGOptimum => 15
+  }
+}
+
+///|
 fn pdf_filter_is_name(filter : PdfName, text : String) -> Bool {
   filter == pdf_filter_name(text)
 }
@@ -1788,6 +1834,30 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
       }
     }
     _ => raise ParseStreamExpected
+  }
+}
+
+///|
+pub fn pdf_encode_stream_with_encoding(
+  encoding : PdfStreamEncoding,
+  object : PdfObject,
+  only_if_smaller? : Bool = false,
+  predictor? : PdfStreamPredictor? = None,
+  predictor_columns? : Int = 1,
+) -> PdfObject raise PdfError {
+  let filter = encoding.filter_name()
+  match predictor {
+    None => pdf_encode_stream_with_filter(filter, object, only_if_smaller~)
+    Some(predictor) =>
+      pdf_encode_stream_with_filter_and_predictor(
+        filter,
+        predictor.number(),
+        1,
+        8,
+        predictor_columns,
+        object,
+        only_if_smaller~,
+      )
   }
 }
 
