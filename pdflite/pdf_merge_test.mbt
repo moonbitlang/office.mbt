@@ -1362,6 +1362,40 @@ test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
 }
 
 ///|
+test "PdfDocument remove_duplicate_fonts coalesces deferred stream data" {
+  let doc = @pdflite.pdf_document_empty()
+  let input = @pdflite.byte_cursor_of_bytes(@ascii.encode("xxHiyyHi"))
+  let dictionary : @pdflite.PdfObject = PdfDictionary([
+    (merge_name_for_test("/Length"), PdfInteger(2)),
+  ])
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_stream(
+      dictionary,
+      StreamToGet(@pdflite.stream_to_get(input, 2, 2)),
+    ),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_stream(
+      dictionary,
+      StreamToGet(@pdflite.stream_to_get(input, 6, 2)),
+    ),
+  )
+  doc.add_object_given_number(3, PdfArray([PdfIndirect(1), PdfIndirect(2)]))
+  doc.remove_duplicate_fonts()
+  @test.assert_eq(
+    try! doc.lookup_object_or_null(1).stream_bytes(),
+    @ascii.encode("Hi"),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(2), PdfNull)
+  @test.assert_eq(
+    doc.lookup_object_or_null(3),
+    PdfArray([PdfIndirect(1), PdfIndirect(1)]),
+  )
+}
+
+///|
 test "pdf_merge_documents can remove duplicate font streams" {
   let key_first_stream = merge_name_for_test("/PieceInfo")
   let key_second_stream = merge_name_for_test("/Metadata")

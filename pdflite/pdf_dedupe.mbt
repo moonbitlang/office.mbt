@@ -2,13 +2,13 @@
 fn pdf_duplicate_stream_equal(left : PdfObject, right : PdfObject) -> Bool {
   match (left, right) {
     (
-      PdfStreamObject(
-        { dictionary: left_dictionary, data: StreamGot(left_data) }
-      ),
-      PdfStreamObject(
-        { dictionary: right_dictionary, data: StreamGot(right_data) }
-      ),
-    ) => left_dictionary == right_dictionary && left_data == right_data
+      PdfStreamObject({ dictionary: left_dictionary, data: left_data }),
+      PdfStreamObject({ dictionary: right_dictionary, data: right_data }),
+    ) => {
+      let left_view = try! pdf_stream_data_view(left_data)
+      let right_view = try! pdf_stream_data_view(right_data)
+      left_dictionary == right_dictionary && left_view == right_view
+    }
     _ => false
   }
 }
@@ -22,7 +22,7 @@ fn PdfDocument::pdf_duplicate_stream_changes(
   for number in self.object_numbers() {
     let object = self.lookup_object_or_null(number)
     match object {
-      PdfStreamObject({ data: StreamGot(_), .. }) => {
+      PdfStreamObject(_) => {
         let is_duplicate = for entry in unique_streams {
           let (canonical_number, canonical_object) = entry
           if pdf_duplicate_stream_equal(canonical_object, object) {
