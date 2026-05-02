@@ -3692,6 +3692,53 @@ fn pdf_text_codepoint_of_technical_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_box_drawing_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/SF010000" => Some(0x250C)
+    "/SF020000" => Some(0x2514)
+    "/SF030000" => Some(0x2510)
+    "/SF040000" => Some(0x2518)
+    "/SF050000" => Some(0x253C)
+    "/SF060000" => Some(0x252C)
+    "/SF070000" => Some(0x2534)
+    "/SF080000" => Some(0x251C)
+    "/SF090000" => Some(0x2524)
+    "/SF100000" => Some(0x2500)
+    "/SF110000" => Some(0x2502)
+    "/SF190000" => Some(0x2561)
+    "/SF200000" => Some(0x2562)
+    "/SF210000" => Some(0x2556)
+    "/SF220000" => Some(0x2555)
+    "/SF230000" => Some(0x2563)
+    "/SF240000" => Some(0x2551)
+    "/SF250000" => Some(0x2557)
+    "/SF260000" => Some(0x255D)
+    "/SF270000" => Some(0x255C)
+    "/SF280000" => Some(0x255B)
+    "/SF360000" => Some(0x255E)
+    "/SF370000" => Some(0x255F)
+    "/SF380000" => Some(0x255A)
+    "/SF390000" => Some(0x2554)
+    "/SF400000" => Some(0x2569)
+    "/SF410000" => Some(0x2566)
+    "/SF420000" => Some(0x2560)
+    "/SF430000" => Some(0x2550)
+    "/SF440000" => Some(0x256C)
+    "/SF450000" => Some(0x2567)
+    "/SF460000" => Some(0x2568)
+    "/SF470000" => Some(0x2564)
+    "/SF480000" => Some(0x2565)
+    "/SF490000" => Some(0x2559)
+    "/SF500000" => Some(0x2558)
+    "/SF510000" => Some(0x2552)
+    "/SF520000" => Some(0x2553)
+    "/SF530000" => Some(0x256B)
+    "/SF540000" => Some(0x256A)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_block_element_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/block" => Some(0x2588)
@@ -4832,6 +4879,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     None => ()
   }
   match pdf_text_codepoint_of_technical_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_box_drawing_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }

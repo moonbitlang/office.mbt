@@ -5231,6 +5231,78 @@ test "PdfTextExtractor decodes technical AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes box drawing AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/SF010000", 0x250C),
+    ("/SF020000", 0x2514),
+    ("/SF030000", 0x2510),
+    ("/SF040000", 0x2518),
+    ("/SF050000", 0x253C),
+    ("/SF060000", 0x252C),
+    ("/SF070000", 0x2534),
+    ("/SF080000", 0x251C),
+    ("/SF090000", 0x2524),
+    ("/SF100000", 0x2500),
+    ("/SF110000", 0x2502),
+    ("/SF190000", 0x2561),
+    ("/SF200000", 0x2562),
+    ("/SF210000", 0x2556),
+    ("/SF220000", 0x2555),
+    ("/SF230000", 0x2563),
+    ("/SF240000", 0x2551),
+    ("/SF250000", 0x2557),
+    ("/SF260000", 0x255D),
+    ("/SF270000", 0x255C),
+    ("/SF280000", 0x255B),
+    ("/SF360000", 0x255E),
+    ("/SF370000", 0x255F),
+    ("/SF380000", 0x255A),
+    ("/SF390000", 0x2554),
+    ("/SF400000", 0x2569),
+    ("/SF410000", 0x2566),
+    ("/SF420000", 0x2560),
+    ("/SF430000", 0x2550),
+    ("/SF440000", 0x256C),
+    ("/SF450000", 0x2567),
+    ("/SF460000", 0x2568),
+    ("/SF470000", 0x2564),
+    ("/SF480000", 0x2565),
+    ("/SF490000", 0x2559),
+    ("/SF500000", 0x2558),
+    ("/SF510000", 0x2552),
+    ("/SF520000", 0x2553),
+    ("/SF530000", 0x256B),
+    ("/SF540000", 0x256A),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x250C), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x253C), Some(5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2500), Some(10))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x256C), Some(30))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x256A), Some(40))
+}
+
+///|
 test "PdfTextExtractor decodes block element AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/block", 0x2588),
