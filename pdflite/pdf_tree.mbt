@@ -314,3 +314,31 @@ pub fn PdfDocument::build_number_tree(
     self.pdf_tree_build_number_tree_range(sorted, 0, sorted.length(), true)
   }
 }
+
+///|
+pub fn PdfDocument::merge_name_trees_no_clash(
+  self : PdfDocument,
+  trees : ArrayView[PdfObject],
+) -> PdfObject {
+  let entries : Array[(PdfBytes, PdfObject)] = []
+  for tree in trees {
+    for entry in self.read_name_tree(tree) {
+      entries.push(entry)
+    }
+  }
+  self.build_name_tree(entries)
+}
+
+///|
+pub fn PdfDocument::merge_number_trees_no_clash(
+  self : PdfDocument,
+  trees : ArrayView[PdfObject],
+) -> PdfObject {
+  let entries : Array[(Int, PdfObject)] = []
+  for tree in trees {
+    for entry in self.read_number_tree(tree) {
+      entries.push(entry)
+    }
+  }
+  self.build_number_tree(entries)
+}

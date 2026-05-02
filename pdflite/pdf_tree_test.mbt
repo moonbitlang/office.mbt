@@ -196,3 +196,43 @@ test "PdfDocument build empty name and number trees" {
   @test.assert_eq(doc.read_name_tree(doc.build_name_tree([])), [])
   @test.assert_eq(doc.read_number_tree(doc.build_number_tree([])), [])
 }
+
+///|
+test "PdfDocument merges no-clash name trees" {
+  let doc = @pdflite.pdf_document_empty()
+  let left = doc.build_name_tree([
+    (tree_bytes_for_test("b"), PdfInteger(2)),
+    (tree_bytes_for_test("a"), PdfInteger(1)),
+  ])
+  let right = doc.build_name_tree([
+    (tree_bytes_for_test("d"), PdfInteger(4)),
+    (tree_bytes_for_test("c"), PdfInteger(3)),
+  ])
+  let merged = doc.merge_name_trees_no_clash([left, right])
+  @test.assert_eq(doc.read_name_tree(merged), [
+    (tree_bytes_for_test("a"), PdfInteger(1)),
+    (tree_bytes_for_test("b"), PdfInteger(2)),
+    (tree_bytes_for_test("c"), PdfInteger(3)),
+    (tree_bytes_for_test("d"), PdfInteger(4)),
+  ])
+}
+
+///|
+test "PdfDocument merges no-clash number trees" {
+  let doc = @pdflite.pdf_document_empty()
+  let left = doc.build_number_tree([
+    (3, PdfString(tree_bytes_for_test("three"))),
+    (1, PdfString(tree_bytes_for_test("one"))),
+  ])
+  let right = doc.build_number_tree([
+    (4, PdfString(tree_bytes_for_test("four"))),
+    (2, PdfString(tree_bytes_for_test("two"))),
+  ])
+  let merged = doc.merge_number_trees_no_clash([left, right])
+  @test.assert_eq(doc.read_number_tree(merged), [
+    (1, PdfString(tree_bytes_for_test("one"))),
+    (2, PdfString(tree_bytes_for_test("two"))),
+    (3, PdfString(tree_bytes_for_test("three"))),
+    (4, PdfString(tree_bytes_for_test("four"))),
+  ])
+}

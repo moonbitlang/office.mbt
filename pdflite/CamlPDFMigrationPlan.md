@@ -180,7 +180,9 @@ MoonBit consequences for this project:
    CamlPDF's default dictionary-order reversal and explicit preserve-order
    option. Name-tree and number-tree helpers are started with
    sorted/deduplicated readers and builders that emit child tree nodes through
-   the document object map for larger trees.
+   the document object map for larger trees. CamlPDF's no-clash name-tree and
+   number-tree merge helpers are also started by flattening readable inputs and
+   rebuilding sorted trees.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:
