@@ -862,6 +862,41 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
       image_bytes_for_test([0, 0, 0, 255, 255, 255, 136, 136, 136]),
     ),
   )
+  let cal_gray_space : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/CalGray")),
+    @pdflite.pdf_dictionary([]),
+  ])
+  let cal_gray2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(4)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), cal_gray_space),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0001_1011])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), cal_gray2),
+    PdfRawImage(
+      4,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([0, 0, 0, 85, 85, 85, 170, 170, 170, 255, 255, 255]),
+    ),
+  )
+  let cal_gray4 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), cal_gray_space),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(4)),
+    ]),
+    StreamGot(image_bytes_for_test([0x0F])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), cal_gray4),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([0, 0, 0, 255, 255, 255])),
+  )
 }
 
 ///|

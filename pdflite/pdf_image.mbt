@@ -998,9 +998,9 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
     (PdfDeviceCMYK, Some(8)) =>
       pdf_image_cmyk_8bpp_as_rgb24(width, height, data)
     (_, Some(1)) => pdf_image_1bpp_as_rgb24(width, height, data)
-    (PdfDeviceGray, Some(2)) =>
+    (PdfDeviceGray | PdfCalGray(_, _, _), Some(2)) =>
       pdf_image_gray_2bpp_as_rgb24(width, height, data)
-    (PdfDeviceGray, Some(4)) =>
+    (PdfDeviceGray | PdfCalGray(_, _, _), Some(4)) =>
       pdf_image_gray_4bpp_as_rgb24(width, height, data)
     (PdfIndexed(base, table), Some(8)) =>
       match pdf_space_basic_table_colour_space(base) {
