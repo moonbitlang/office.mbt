@@ -302,6 +302,24 @@ test "private page object entry rewriting covers parser states" {
 }
 
 ///|
+test "PdfDocument change_pages preserves object stream bookkeeping" {
+  let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  let page_numbers = try! doc.page_reference_numbers()
+  doc.objects.object_stream_ids[page_numbers[0]] = 42
+  let changed = try! doc.change_pages(
+    [{ ..pdf_page_blank(paper_a4), rotate: Rotate90 }],
+    change_references=true,
+  )
+  @test.assert_eq(
+    changed.objects.object_stream_ids.get(page_numbers[0]),
+    Some(42),
+  )
+
+  changed.objects.object_stream_ids[page_numbers[0]] = 7
+  @test.assert_eq(doc.objects.object_stream_ids.get(page_numbers[0]), Some(42))
+}
+
+///|
 test "private page destination transforms cover unchanged branches" {
   let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
   let page_numbers = try! doc.page_reference_numbers()

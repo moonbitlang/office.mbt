@@ -43,7 +43,8 @@ work changes.
    dictionaries in `/Annots` arrays now participate in geometry transforms and
    `change_pages` link-destination matrix transforms; count-changing
    `change_pages` replacements keep CamlPDF's no-mapping behavior and bookmark
-   matrix guard.
+   matrix guard, while replacement preserves document metadata, trailer extras,
+   and object-stream bookkeeping.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

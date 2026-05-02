@@ -484,6 +484,9 @@ MoonBit consequences for this project:
    for count-changing replacements. When no explicit mapping is supplied for a
    count-changing replacement, `change_pages` now mirrors CamlPDF by leaving
    existing references unchanged instead of rejecting the replacement.
+   Replacement also preserves CamlPDF's document-level state expectations:
+   version, `first_xref`, trailer extras such as `/ID`, catalog extras, and
+   object-stream bookkeeping survive the copied replacement document.
    Matrix-aware destination rewrites are now started for `change_pages` callers
    that supply page matrices: bookmark
    targets, indirect and direct link annotation `/Dest` or GoTo `/A`

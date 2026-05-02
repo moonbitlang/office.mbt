@@ -1898,6 +1898,46 @@ test "PdfDocument change_pages writes modified content into a replacement page t
 }
 
 ///|
+test "PdfDocument change_pages preserves document metadata and trailer entries" {
+  let key_id = page_name_for_test("/ID")
+  let key_lang = page_name_for_test("/Lang")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 7)
+  doc.set_first_xref(4096)
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(
+    try! doc.add_root(page_root, [(key_lang, PdfString(@ascii.encode("en-US")))]),
+  )
+  let document_id : @pdflite.PdfObject = PdfArray([
+    PdfString(@ascii.encode("first-id")),
+    PdfString(@ascii.encode("second-id")),
+  ])
+  doc.set_trailer_dict(doc.trailer_dict().add_dict_entry(key_id, document_id))
+
+  let changed = try! doc.change_pages([
+    { ..@pdflite.pdf_page_blank(@pdflite.paper_a4), rotate: Rotate90 },
+  ])
+  @test.assert_eq(changed.version(), (1, 7))
+  @test.assert_eq(changed.first_xref(), 4096)
+  @test.assert_eq(
+    changed.trailer_dict().lookup_immediate(key_id),
+    Some(document_id),
+  )
+  let root_number = match
+    changed.trailer_dict().lookup_immediate(page_name_for_test("/Root")) {
+    Some(PdfIndirect(root_number)) => root_number
+    _ => fail("expected trailer root")
+  }
+  @test.assert_eq(
+    changed.lookup_object_or_null(root_number).lookup_immediate(key_lang),
+    Some(PdfString(@ascii.encode("en-US"))),
+  )
+  @test.assert_eq((try! changed.pages_of_pagetree())[0].rotate, Rotate90)
+}
+
+///|
 test "pdftest-style content parse rewrite change_pages round trip" {
   let doc = @pdflite.pdf_document_empty()
   let ops = page_hello_ops_for_test()
