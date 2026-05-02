@@ -4818,6 +4818,115 @@ test "PdfTextExtractor decodes spacing modifier AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes combining mark AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/acutebelowcmb", 0x0317),
+    ("/acutecmb", 0x0301),
+    ("/acutecomb", 0x0301),
+    ("/acutetonecmb", 0x0341),
+    ("/brevebelowcmb", 0x032E),
+    ("/brevecmb", 0x0306),
+    ("/breveinvertedbelowcmb", 0x032F),
+    ("/breveinvertedcmb", 0x0311),
+    ("/breveinverteddoublecmb", 0x0361),
+    ("/bridgebelowcmb", 0x032A),
+    ("/bridgeinvertedbelowcmb", 0x033A),
+    ("/candrabinducmb", 0x0310),
+    ("/caronbelowcmb", 0x032C),
+    ("/caroncmb", 0x030C),
+    ("/cedillacmb", 0x0327),
+    ("/circumflexbelowcmb", 0x032D),
+    ("/circumflexcmb", 0x0302),
+    ("/commaabovecmb", 0x0313),
+    ("/commaaboverightcmb", 0x0315),
+    ("/commareversedabovecmb", 0x0314),
+    ("/commaturnedabovecmb", 0x0312),
+    ("/dblarchinvertedbelowcmb", 0x032B),
+    ("/dblgravecmb", 0x030F),
+    ("/dbllowlinecmb", 0x0333),
+    ("/dbloverlinecmb", 0x033F),
+    ("/dblverticallineabovecmb", 0x030E),
+    ("/dialytikatonoscmb", 0x0344),
+    ("/dieresisbelowcmb", 0x0324),
+    ("/dieresiscmb", 0x0308),
+    ("/dotaccentcmb", 0x0307),
+    ("/dotbelowcmb", 0x0323),
+    ("/dotbelowcomb", 0x0323),
+    ("/downtackbelowcmb", 0x031E),
+    ("/gravebelowcmb", 0x0316),
+    ("/gravecmb", 0x0300),
+    ("/gravecomb", 0x0300),
+    ("/gravetonecmb", 0x0340),
+    ("/hookabovecomb", 0x0309),
+    ("/hookcmb", 0x0309),
+    ("/hookpalatalizedbelowcmb", 0x0321),
+    ("/hookretroflexbelowcmb", 0x0322),
+    ("/horncmb", 0x031B),
+    ("/hungarumlautcmb", 0x030B),
+    ("/koroniscmb", 0x0343),
+    ("/leftangleabovecmb", 0x031A),
+    ("/lefttackbelowcmb", 0x0318),
+    ("/lowlinecmb", 0x0332),
+    ("/macronbelowcmb", 0x0331),
+    ("/macroncmb", 0x0304),
+    ("/minusbelowcmb", 0x0320),
+    ("/ogonekcmb", 0x0328),
+    ("/overlinecmb", 0x0305),
+    ("/perispomenigreekcmb", 0x0342),
+    ("/plusbelowcmb", 0x031F),
+    ("/righttackbelowcmb", 0x0319),
+    ("/ringbelowcmb", 0x0325),
+    ("/ringcmb", 0x030A),
+    ("/ringhalfleftbelowcmb", 0x031C),
+    ("/ringhalfrightbelowcmb", 0x0339),
+    ("/seagullbelowcmb", 0x033C),
+    ("/soliduslongoverlaycmb", 0x0338),
+    ("/solidusshortoverlaycmb", 0x0337),
+    ("/squarebelowcmb", 0x033B),
+    ("/strokelongoverlaycmb", 0x0336),
+    ("/strokeshortoverlaycmb", 0x0335),
+    ("/tildebelowcmb", 0x0330),
+    ("/tildecmb", 0x0303),
+    ("/tildecomb", 0x0303),
+    ("/tildedoublecmb", 0x0360),
+    ("/tildeoverlaycmb", 0x0334),
+    ("/tildeverticalcmb", 0x033E),
+    ("/uptackbelowcmb", 0x031D),
+    ("/verticallineabovecmb", 0x030D),
+    ("/verticallinebelowcmb", 0x0329),
+    ("/xabovecmb", 0x033D),
+    ("/ypogegrammenigreekcmb", 0x0345),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0301), Some(2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0323), Some(31))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0300), Some(35))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0309), Some(38))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0303), Some(67))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0345), Some(76))
+}
+
+///|
 test "PdfTextExtractor decodes currency and letterlike AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/afii08941", 0x20A4),
