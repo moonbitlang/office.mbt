@@ -160,8 +160,18 @@ pub fn pdf_name_of_bytes(bytes : PdfBytes) -> PdfName {
 }
 
 ///|
+pub fn pdf_name_of_view(bytes : BytesView) -> PdfName {
+  PdfName(bytes.to_owned())
+}
+
+///|
 pub fn PdfName::bytes(self : PdfName) -> PdfBytes {
   self.0
+}
+
+///|
+pub fn PdfName::view(self : PdfName) -> BytesView {
+  self.0[:]
 }
 
 ///|

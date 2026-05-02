@@ -245,6 +245,8 @@ pub fn pdf_minimum_valid_pdf() -> PdfDocument raise PdfError
 
 pub fn pdf_name_of_bytes(Bytes) -> PdfName
 
+pub fn pdf_name_of_view(BytesView) -> PdfName
+
 pub let pdf_no_more : Int
 
 pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
@@ -1242,6 +1244,7 @@ pub(all) enum PdfLexeme {
 pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
 pub fn PdfName::bytes(Self) -> Bytes
+pub fn PdfName::view(Self) -> BytesView
 
 pub(all) enum PdfObject {
   PdfNull

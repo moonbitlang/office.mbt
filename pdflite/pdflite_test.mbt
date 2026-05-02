@@ -52,3 +52,13 @@ test "PdfName stores names as bytes" {
   @test.assert_eq(name.byte_length(), 5)
   @test.assert_eq(@pdflite.pdf_bytes_get(name.bytes(), 0), Some(0x2F))
 }
+
+///|
+test "PdfName can be built from and inspected as borrowed byte views" {
+  let wrapped = @ascii.encode("xx/Typeyy")
+  let name = @pdflite.pdf_name_of_view(wrapped[2:wrapped.length() - 2])
+  @test.assert_eq(name.byte_length(), 5)
+  @test.assert_eq([ for byte in name.view() => byte.to_int() ], [
+    0x2F, 0x54, 0x79, 0x70, 0x65,
+  ])
+}

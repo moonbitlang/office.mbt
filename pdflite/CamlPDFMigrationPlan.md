@@ -145,7 +145,9 @@ MoonBit consequences for this project:
    renumbering, and name tree helpers. Use `PdfName` for names, `Bytes` for PDF
    strings and streams, `ArrayView`/`BytesView` for read-only sequence
    parameters, and `FixedArray` for fixed OCaml-array semantics.
-   Status: started with `PdfObject`, `PdfStream`, `ToGet`, ordered dictionary
+   Status: started with byte-owned `PdfName` plus borrowed construction and
+   inspection APIs (`pdf_name_of_view`, `PdfName::view`), `PdfObject`,
+   `PdfStream`, `ToGet`, ordered dictionary
    construction, immediate lookup, add/replace/remove helpers, stream
    dictionary mutation, side-effecting deferred stream materialization with
    `/Length` correction, object map entries, parsed/deferred object states,
