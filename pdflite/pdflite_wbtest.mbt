@@ -1388,6 +1388,18 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   let expected_length_code = 192
   @test.assert_eq(length_code, expected_length_code.reinterpret_as_uint())
   @test.assert_eq(length_width, 8)
+  let bad_flate_length : Result[(Int, Int, Int), Error] = try? pdf_flate_length_code(
+    259,
+  )
+  guard bad_flate_length is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_flate_distance : Result[(Int, Int, Int), Error] = try? pdf_flate_distance_code(
+    0,
+  )
+  guard bad_flate_distance is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
   @test.assert_eq(
     try! pdf_flate_decode_view_prefix(Bytes::new(0)[:]),
     (Bytes::new(0), 0),

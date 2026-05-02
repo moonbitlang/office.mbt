@@ -468,6 +468,54 @@ fn pdf_flate_write_fixed_literal(writer : FlateBitWriter, symbol : Int) -> Unit 
 }
 
 ///|
+fn pdf_flate_length_code(length : Int) -> (Int, Int, Int) raise PdfError {
+  for index, base in pdf_flate_length_base {
+    let extra_width = pdf_flate_length_extra[index]
+    let max = base + ((1 << extra_width) - 1)
+    if length >= base && length <= max {
+      break (257 + index, length - base, extra_width)
+    }
+  } nobreak {
+    raise InvalidFlateData
+  }
+}
+
+///|
+fn pdf_flate_distance_code(distance : Int) -> (Int, Int, Int) raise PdfError {
+  for index, base in pdf_flate_distance_base {
+    let extra_width = pdf_flate_distance_extra[index]
+    let max = base + ((1 << extra_width) - 1)
+    if distance >= base && distance <= max {
+      break (index, distance - base, extra_width)
+    }
+  } nobreak {
+    raise InvalidFlateData
+  }
+}
+
+///|
+fn pdf_flate_write_fixed_distance(
+  writer : FlateBitWriter,
+  distance : Int,
+) -> Unit raise PdfError {
+  let (symbol, extra, extra_width) = pdf_flate_distance_code(distance)
+  writer.write_bits(pdf_flate_reverse_bits(symbol.reinterpret_as_uint(), 5), 5)
+  writer.write_bits(extra.reinterpret_as_uint(), extra_width)
+}
+
+///|
+fn pdf_flate_write_fixed_length_distance(
+  writer : FlateBitWriter,
+  length : Int,
+  distance : Int,
+) -> Unit raise PdfError {
+  let (symbol, extra, extra_width) = pdf_flate_length_code(length)
+  pdf_flate_write_fixed_literal(writer, symbol)
+  writer.write_bits(extra.reinterpret_as_uint(), extra_width)
+  pdf_flate_write_fixed_distance(writer, distance)
+}
+
+///|
 fn pdf_flate_push_fixed_literal_block(
   output : Array[Byte],
   data : BytesView,
@@ -478,6 +526,46 @@ fn pdf_flate_push_fixed_literal_block(
   writer.write_bits(1, 2)
   for byte in data {
     pdf_flate_write_fixed_literal(writer, byte.to_int())
+  }
+  pdf_flate_write_fixed_literal(writer, 256)
+  writer.finish()
+}
+
+///|
+fn pdf_flate_repeated_previous_length(data : BytesView, position : Int) -> Int {
+  if position <= 0 || position >= data.length() {
+    0
+  } else {
+    let previous = data[position - 1]
+    let mut length = 0
+    while position + length < data.length() &&
+          data[position + length] == previous &&
+          length < 258 {
+      length += 1
+    }
+    length
+  }
+}
+
+///|
+fn pdf_flate_push_fixed_repeat_block(
+  output : Array[Byte],
+  data : BytesView,
+  final_block : Bool,
+) -> Unit raise PdfError {
+  let writer = FlateBitWriter::new(output)
+  writer.write_bits(if final_block { 1 } else { 0 }, 1)
+  writer.write_bits(1, 2)
+  let mut index = 0
+  while index < data.length() {
+    let repeated = pdf_flate_repeated_previous_length(data, index)
+    if repeated >= 3 {
+      pdf_flate_write_fixed_length_distance(writer, repeated, 1)
+      index += repeated
+    } else {
+      pdf_flate_write_fixed_literal(writer, data[index].to_int())
+      index += 1
+    }
   }
   pdf_flate_write_fixed_literal(writer, 256)
   writer.finish()
@@ -525,10 +613,23 @@ fn pdf_flate_encode_fixed_literal_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
+fn pdf_flate_encode_fixed_repeat_view(
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = [0x78, 0x01]
+  pdf_flate_push_fixed_repeat_block(output, data, true)
+  pdf_flate_push_adler32(output, data)
+  Bytes::from_array(output)
+}
+
+///|
 pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
   let stored = pdf_flate_encode_stored_view(data)
   let fixed = pdf_flate_encode_fixed_literal_view(data)
-  if fixed.length() < stored.length() {
+  let repeat = try! pdf_flate_encode_fixed_repeat_view(data)
+  if repeat.length() < fixed.length() && repeat.length() < stored.length() {
+    repeat
+  } else if fixed.length() < stored.length() {
     fixed
   } else {
     stored
