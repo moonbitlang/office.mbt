@@ -130,6 +130,28 @@ pub fn PdfDocument::lookup_direct_or_array(
 }
 
 ///|
+pub fn PdfDocument::indirect_number(
+  self : PdfDocument,
+  key : PdfName,
+  object : PdfObject,
+) -> Int? {
+  match self.direct(object).dictionary_view() {
+    Some(entries) =>
+      for entry in entries {
+        if entry.0 == key {
+          break match entry.1 {
+            PdfIndirect(number) => Some(number)
+            _ => None
+          }
+        }
+      } nobreak {
+        None
+      }
+    None => None
+  }
+}
+
+///|
 pub fn PdfDocument::lookup_chain(
   self : PdfDocument,
   start : PdfObject,

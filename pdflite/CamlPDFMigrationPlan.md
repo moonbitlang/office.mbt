@@ -149,11 +149,12 @@ MoonBit consequences for this project:
    new-key dictionary order. CamlPDF-style `unique_key` dictionary-name
    selection is ported for dictionaries and stream dictionaries, using
    ASCII-prefixed PDF names. Direct indirection resolution, direct dictionary
-   lookup, `/[n` array-index lookup inside lookup chains, number extraction,
-   rectangle parsing, matrix parsing, and matrix object rendering are also
-   started. Name-tree and number-tree helpers are started with
-   sorted/deduplicated readers and builders that emit child tree nodes through
-   the document object map for larger trees.
+   lookup, `/[n` array-index lookup inside lookup chains, immediate indirect
+   number extraction, PDF numeric extraction, rectangle parsing, matrix
+   parsing, and matrix object rendering are also started. Name-tree and
+   number-tree helpers are started with sorted/deduplicated readers and
+   builders that emit child tree nodes through the document object map for
+   larger trees.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:

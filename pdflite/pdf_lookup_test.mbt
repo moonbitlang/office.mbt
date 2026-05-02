@@ -64,6 +64,29 @@ test "PdfDocument lookup_direct_or_array follows CamlPDF array names" {
 }
 
 ///|
+test "PdfDocument indirect_number returns the stored indirect reference" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_target = lookup_name_for_test([47, 84, 97, 114, 103, 101, 116])
+  let key_other = lookup_name_for_test([47, 79, 116, 104, 101, 114])
+  let key_missing = lookup_name_for_test([47, 77, 105, 115, 115, 105, 110, 103])
+  let dict = @pdflite.pdf_dictionary([
+    (key_target, PdfIndirect(5)),
+    (key_other, PdfInteger(2)),
+  ])
+  doc.add_object_given_number(2, dict)
+  doc.add_object_given_number(5, PdfIndirect(9))
+  @test.assert_eq(doc.indirect_number(key_target, PdfIndirect(2)), Some(5))
+  @test.assert_eq(doc.indirect_number(key_other, PdfIndirect(2)), None)
+  @test.assert_eq(doc.indirect_number(key_missing, PdfIndirect(2)), None)
+  @test.assert_eq(doc.indirect_number(key_target, PdfInteger(1)), None)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(key_target, PdfIndirect(7))]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  @test.assert_eq(doc.indirect_number(key_target, stream), Some(7))
+}
+
+///|
 test "PdfDocument lookup_chain follows nested dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
