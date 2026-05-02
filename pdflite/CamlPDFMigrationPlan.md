@@ -736,7 +736,9 @@ MoonBit consequences for this project:
    CamlPDF glyph-list control names `/controlCR`, `/controlLF`, `/controlHT`,
    and `/controlFF`; the `/Delta`, `/Omega`, and `/mu`
    conflicts between AGL names and Symbol font names are handled with
-   font-specific codepoint lookup. Reverse charcode lookup scans the
+   font-specific codepoint lookup. A Central/Eastern European Latin Extended
+   AGL fallback subset is now also covered for common simple-font encoding
+   differences. Reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs. ToUnicode CMap parsing now
    handles `bfchar` pairs split across lines, inline and multiline `bfrange`
    array mappings, including range headers split before the array, whitespace

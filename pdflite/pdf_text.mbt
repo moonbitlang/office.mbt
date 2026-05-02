@@ -3339,6 +3339,43 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Aogonek" => Some(0x0104)
+    "/aogonek" => Some(0x0105)
+    "/Cacute" => Some(0x0106)
+    "/cacute" => Some(0x0107)
+    "/Ccaron" => Some(0x010C)
+    "/ccaron" => Some(0x010D)
+    "/Dcaron" => Some(0x010E)
+    "/dcaron" => Some(0x010F)
+    "/Ecaron" => Some(0x011A)
+    "/ecaron" => Some(0x011B)
+    "/Eogonek" => Some(0x0118)
+    "/eogonek" => Some(0x0119)
+    "/Lacute" => Some(0x0139)
+    "/lacute" => Some(0x013A)
+    "/Nacute" => Some(0x0143)
+    "/nacute" => Some(0x0144)
+    "/Racute" => Some(0x0154)
+    "/racute" => Some(0x0155)
+    "/Sacute" => Some(0x015A)
+    "/sacute" => Some(0x015B)
+    "/Scedilla" => Some(0x015E)
+    "/scedilla" => Some(0x015F)
+    "/Tcaron" => Some(0x0164)
+    "/tcaron" => Some(0x0165)
+    "/Uring" => Some(0x016E)
+    "/uring" => Some(0x016F)
+    "/Zacute" => Some(0x0179)
+    "/zacute" => Some(0x017A)
+    "/Zdotaccent" => Some(0x017B)
+    "/zdotaccent" => Some(0x017C)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_expert_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/AEsmall" => Some(0xF7E6)
@@ -4029,19 +4066,28 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                       Some(codepoint) => Some([codepoint])
                       None =>
                         match
-                          pdf_text_codepoint_of_expert_glyphname(base_name) {
+                          pdf_text_codepoint_of_latin_extended_glyphname(
+                            base_name,
+                          ) {
                           Some(codepoint) => Some([codepoint])
                           None =>
                             match
-                              pdf_text_codepoint_of_symbol_glyphname(base_name) {
+                              pdf_text_codepoint_of_expert_glyphname(base_name) {
                               Some(codepoint) => Some([codepoint])
                               None =>
                                 match
-                                  pdf_text_codepoint_of_dingbat_glyphname(
+                                  pdf_text_codepoint_of_symbol_glyphname(
                                     base_name,
                                   ) {
                                   Some(codepoint) => Some([codepoint])
-                                  None => None
+                                  None =>
+                                    match
+                                      pdf_text_codepoint_of_dingbat_glyphname(
+                                        base_name,
+                                      ) {
+                                      Some(codepoint) => Some([codepoint])
+                                      None => None
+                                    }
                                 }
                             }
                         }

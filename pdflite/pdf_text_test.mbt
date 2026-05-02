@@ -4640,6 +4640,65 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
 }
 
 ///|
+test "PdfTextExtractor decodes Latin Extended AGL glyph names" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, [
+        text_difference_for_test("/Aogonek", 65),
+        text_difference_for_test("/aogonek", 66),
+        text_difference_for_test("/Cacute", 67),
+        text_difference_for_test("/ccaron", 68),
+        text_difference_for_test("/Eogonek", 69),
+        text_difference_for_test("/Lacute", 70),
+        text_difference_for_test("/Nacute", 71),
+        text_difference_for_test("/Racute", 72),
+        text_difference_for_test("/Scedilla", 73),
+        text_difference_for_test("/Tcaron", 74),
+        text_difference_for_test("/Uring", 75),
+        text_difference_for_test("/Zdotaccent", 76),
+        text_difference_for_test("/cacute", 77),
+        text_difference_for_test("/Dcaron", 78),
+        text_difference_for_test("/eogonek", 79),
+        text_difference_for_test("/lacute", 80),
+        text_difference_for_test("/nacute", 81),
+        text_difference_for_test("/racute", 82),
+        text_difference_for_test("/scedilla", 83),
+        text_difference_for_test("/tcaron", 84),
+        text_difference_for_test("/uring", 85),
+        text_difference_for_test("/zdotaccent", 86),
+        text_difference_for_test("/Ccaron", 87),
+        text_difference_for_test("/dcaron", 88),
+        text_difference_for_test("/Sacute", 89),
+        text_difference_for_test("/Zacute", 90),
+        text_difference_for_test("/Ecaron", 91),
+        text_difference_for_test("/sacute", 92),
+        text_difference_for_test("/zacute", 93),
+        text_difference_for_test("/ecaron", 94),
+      ]),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(
+      text_bytes_for_test([
+        65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+        84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
+      ])[:],
+    ),
+    [
+      0x0104, 0x0105, 0x0106, 0x010D, 0x0118, 0x0139, 0x0143, 0x0154, 0x015E, 0x0164,
+      0x016E, 0x017B, 0x0107, 0x010E, 0x0119, 0x013A, 0x0144, 0x0155, 0x015F, 0x0165,
+      0x016F, 0x017C, 0x010C, 0x010F, 0x015A, 0x0179, 0x011A, 0x015B, 0x017A, 0x011B,
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0104), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x010D), Some(68))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x017B), Some(76))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x017C), Some(86))
+}
+
+///|
 test "PdfTextExtractor decodes TrueType Gxx glyph names" {
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(
