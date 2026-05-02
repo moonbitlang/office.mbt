@@ -26,9 +26,17 @@ fn structure_parent_tree_doc_for_test(
 fn structure_parent_tree_entries_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Array[(Int, @pdflite.PdfObject)] raise {
+  structure_parent_tree_entries_from_catalog_for_test(doc, doc.root())
+}
+
+///|
+fn structure_parent_tree_entries_from_catalog_for_test(
+  doc : @pdflite.PdfDocument,
+  catalog_number : Int,
+) -> Array[(Int, @pdflite.PdfObject)] raise {
   let key_struct_tree_root = structure_name_for_test("/StructTreeRoot")
   let key_parent_tree = structure_name_for_test("/ParentTree")
-  let catalog = doc.lookup_object_or_null(doc.root())
+  let catalog = doc.lookup_object_or_null(catalog_number)
   guard doc.lookup_direct(key_struct_tree_root, catalog) is Some(struct_root) else {
     fail("expected StructTreeRoot")
   }
@@ -36,6 +44,151 @@ fn structure_parent_tree_entries_for_test(
     fail("expected ParentTree")
   }
   doc.read_number_tree(parent_tree)
+}
+
+///|
+test "pdf_renumber_parent_trees uses trailer root parent trees" {
+  let key_root = structure_name_for_test("/Root")
+  let key_struct_tree_root = structure_name_for_test("/StructTreeRoot")
+  let key_parent_tree = structure_name_for_test("/ParentTree")
+  let key_struct_parent = structure_name_for_test("/StructParent")
+  let first = @pdflite.pdf_document_empty()
+  first.set_root(1)
+  first.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_struct_tree_root, PdfIndirect(11))]),
+  )
+  first.add_object_given_number(
+    11,
+    @pdflite.pdf_dictionary([
+      (
+        key_parent_tree,
+        first.build_number_tree([(5, PdfString(@ascii.encode("root")))]),
+      ),
+    ]),
+  )
+  first.add_object_given_number(
+    10,
+    @pdflite.pdf_dictionary([(key_struct_tree_root, PdfIndirect(12))]),
+  )
+  first.add_object_given_number(
+    12,
+    @pdflite.pdf_dictionary([
+      (
+        key_parent_tree,
+        first.build_number_tree([(7, PdfString(@ascii.encode("trailer")))]),
+      ),
+    ]),
+  )
+  first.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([(key_struct_parent, PdfInteger(7))]),
+  )
+  first.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(10))]))
+  let second = structure_parent_tree_doc_for_test([
+    (2, PdfString(@ascii.encode("second"))),
+  ])
+  second.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([(key_struct_parent, PdfInteger(2))]),
+  )
+
+  try! @pdflite.pdf_renumber_parent_trees([first, second])
+
+  let first_trailer_entries = try! structure_parent_tree_entries_from_catalog_for_test(
+    first, 10,
+  )
+  @test.assert_eq([ for entry in first_trailer_entries => entry.0 ], [0])
+  let first_root_entries = try! structure_parent_tree_entries_from_catalog_for_test(
+    first, 1,
+  )
+  @test.assert_eq([ for entry in first_root_entries => entry.0 ], [5])
+  @test.assert_eq(
+    first.lookup_object_or_null(20).lookup_immediate(key_struct_parent),
+    Some(PdfInteger(0)),
+  )
+  let second_entries = try! structure_parent_tree_entries_for_test(second)
+  @test.assert_eq([ for entry in second_entries => entry.0 ], [1])
+  @test.assert_eq(
+    second.lookup_object_or_null(20).lookup_immediate(key_struct_parent),
+    Some(PdfInteger(1)),
+  )
+}
+
+///|
+test "pdf_renumber_parent_trees ignores unresolved trailer root parent tree" {
+  let key_root = structure_name_for_test("/Root")
+  let key_struct_parent = structure_name_for_test("/StructParent")
+  let first = structure_parent_tree_doc_for_test([
+    (5, PdfString(@ascii.encode("root"))),
+  ])
+  first.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([(key_struct_parent, PdfInteger(5))]),
+  )
+  first.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(99))]))
+  let second = structure_parent_tree_doc_for_test([
+    (2, PdfString(@ascii.encode("second"))),
+  ])
+  second.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([(key_struct_parent, PdfInteger(2))]),
+  )
+
+  try! @pdflite.pdf_renumber_parent_trees([first, second])
+
+  let first_entries = try! structure_parent_tree_entries_for_test(first)
+  @test.assert_eq([ for entry in first_entries => entry.0 ], [5])
+  @test.assert_eq(
+    first.lookup_object_or_null(20).lookup_immediate(key_struct_parent),
+    Some(PdfInteger(5)),
+  )
+  let second_entries = try! structure_parent_tree_entries_for_test(second)
+  @test.assert_eq([ for entry in second_entries => entry.0 ], [0])
+  @test.assert_eq(
+    second.lookup_object_or_null(20).lookup_immediate(key_struct_parent),
+    Some(PdfInteger(0)),
+  )
+}
+
+///|
+test "pdf_renumber_parent_trees skips catalogs without structure trees" {
+  let key_root = structure_name_for_test("/Root")
+  let key_type = structure_name_for_test("/Type")
+  let key_struct_parent = structure_name_for_test("/StructParent")
+  let first = @pdflite.pdf_document_empty()
+  first.set_root(1)
+  first.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(structure_name_for_test("/Catalog"))),
+    ]),
+  )
+  first.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([(key_struct_parent, PdfInteger(5))]),
+  )
+  first.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(1))]))
+  let second = structure_parent_tree_doc_for_test([
+    (2, PdfString(@ascii.encode("second"))),
+  ])
+  second.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([(key_struct_parent, PdfInteger(2))]),
+  )
+
+  try! @pdflite.pdf_renumber_parent_trees([first, second])
+
+  @test.assert_eq(
+    first.lookup_object_or_null(20).lookup_immediate(key_struct_parent),
+    Some(PdfInteger(5)),
+  )
+  let second_entries = try! structure_parent_tree_entries_for_test(second)
+  @test.assert_eq([ for entry in second_entries => entry.0 ], [0])
+  @test.assert_eq(
+    second.lookup_object_or_null(20).lookup_immediate(key_struct_parent),
+    Some(PdfInteger(0)),
+  )
 }
 
 ///|

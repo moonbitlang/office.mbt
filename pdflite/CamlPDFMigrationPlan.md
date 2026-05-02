@@ -956,7 +956,10 @@ MoonBit consequences for this project:
     `/StructParent` and `/StructParents` integer keys are made globally unique
     across merged inputs and the merged root receives a combined `/ParentTree`;
     the standalone `pdf_renumber_parent_trees` helper now mirrors CamlPDF's
-    pre-merge parent-tree renumbering pass for document arrays.
+    pre-merge parent-tree renumbering pass for document arrays, including
+    trailer-rooted `/StructTreeRoot`/`/ParentTree` lookup and replacement for
+    parsed PDFs while preserving the document-root fallback used by synthetic
+    tests without a trailer `/Root`.
     Multi-root structure metadata merging now covers `/IDTree`, `/RoleMap`,
     `/ClassMap`, `/Namespaces`, `/PronunciationLexicon`, and `/AF`. Optional
     top-level `/Document` wrapping is started behind

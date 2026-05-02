@@ -14,6 +14,11 @@ fn pdf_structure_obj_key() -> PdfName {
 }
 
 ///|
+fn pdf_structure_root_key() -> PdfName {
+  pdf_structure_name("/Root")
+}
+
+///|
 fn pdf_structure_struct_tree_root_key() -> PdfName {
   pdf_structure_name("/StructTreeRoot")
 }
@@ -167,14 +172,38 @@ fn pdf_structure_k_object(items : ArrayView[PdfObject]) -> PdfObject {
 }
 
 ///|
+fn PdfDocument::pdf_structure_parent_tree_catalog(
+  self : PdfDocument,
+) -> PdfObject? {
+  match self.trailer_dict().lookup_immediate(pdf_structure_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => None
+        catalog => Some(catalog)
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        None
+      } else {
+        Some(root)
+      }
+    }
+  }
+}
+
+///|
 fn PdfDocument::pdf_structure_root_parent_tree_entries(
   self : PdfDocument,
 ) -> Array[(Int, PdfObject)] {
-  let catalog = self.lookup_object_or_null(self.root())
-  match self.lookup_direct(pdf_structure_struct_tree_root_key(), catalog) {
-    Some(root) =>
-      match self.lookup_direct(pdf_structure_parent_tree_key(), root) {
-        Some(parent_tree) => self.read_number_tree(parent_tree)
+  match self.pdf_structure_parent_tree_catalog() {
+    Some(catalog) =>
+      match self.lookup_direct(pdf_structure_struct_tree_root_key(), catalog) {
+        Some(root) =>
+          match self.lookup_direct(pdf_structure_parent_tree_key(), root) {
+            Some(parent_tree) => self.read_number_tree(parent_tree)
+            None => []
+          }
         None => []
       }
     None => []
@@ -220,24 +249,39 @@ fn PdfDocument::pdf_structure_replace_parent_tree(
   self : PdfDocument,
   parent_tree : PdfObject,
 ) -> Unit raise PdfError {
-  let catalog = self.lookup_object_or_null(self.root())
-  match catalog.lookup_immediate(pdf_structure_struct_tree_root_key()) {
-    Some(PdfIndirect(root_number)) => {
-      let root = self.lookup_object_or_null(root_number)
-      self.add_object_given_number(
-        root_number,
-        root.add_dict_entry(pdf_structure_parent_tree_key(), parent_tree),
-      )
-    }
+  match self.trailer_dict().lookup_immediate(pdf_structure_root_key()) {
     Some(root) =>
-      self.add_object_given_number(
-        self.root(),
-        catalog.add_dict_entry(
-          pdf_structure_struct_tree_root_key(),
-          root.add_dict_entry(pdf_structure_parent_tree_key(), parent_tree),
-        ),
-      )
-    None => ()
+      if self.direct(root) != PdfNull {
+        self.replace_chain(
+          [
+            pdf_structure_root_key(),
+            pdf_structure_struct_tree_root_key(),
+            pdf_structure_parent_tree_key(),
+          ],
+          parent_tree,
+        )
+      }
+    None => {
+      let catalog = self.lookup_object_or_null(self.root())
+      match catalog.lookup_immediate(pdf_structure_struct_tree_root_key()) {
+        Some(PdfIndirect(root_number)) => {
+          let root = self.lookup_object_or_null(root_number)
+          self.add_object_given_number(
+            root_number,
+            root.add_dict_entry(pdf_structure_parent_tree_key(), parent_tree),
+          )
+        }
+        Some(root) =>
+          self.add_object_given_number(
+            self.root(),
+            catalog.add_dict_entry(
+              pdf_structure_struct_tree_root_key(),
+              root.add_dict_entry(pdf_structure_parent_tree_key(), parent_tree),
+            ),
+          )
+        None => ()
+      }
+    }
   }
 }
 
