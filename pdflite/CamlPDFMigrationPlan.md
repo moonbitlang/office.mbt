@@ -741,8 +741,9 @@ MoonBit consequences for this project:
    also covered for common simple-font encoding differences. Basic Latin,
    general-punctuation, Latin-1 spacing aliases, IPA-extension,
    spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
-   Cyrillic descriptive and AFII alias, Armenian, Hebrew AFII and descriptive core,
-   Arabic core and presentation-form, Devanagari, Thai, math-operator,
+   Cyrillic descriptive and AFII alias, Armenian, Hebrew AFII/descriptive core
+   and presentation-form, Arabic core and presentation-form, Devanagari, Thai,
+   math-operator,
    Roman-numeral, technical, enclosed-alphanumeric,
    CJK-symbol/Hangzhou, Hiragana, Katakana, Bopomofo,
    Hangul compatibility jamo, Enclosed CJK,
