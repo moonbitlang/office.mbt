@@ -44,8 +44,8 @@ work changes.
    Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, standard-font
    extraction, color spaces, sampled/interpolation/stitching/calculator
    functions, and raw/encoded image extraction are started.
-   Remaining focus: full Adobe Glyph List coverage, broader predefined CMap
-   semantics, JPEG pixel decode, and remaining image filter families.
+   Remaining focus: broader predefined CMap semantics, JPEG pixel decode, and
+   remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -69,10 +69,10 @@ work changes.
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, and image extraction basics.
-- In progress: image/filter parity, text CMap/AGL parity, encryption finishing
+- In progress: image/filter parity, text CMap parity, encryption finishing
   edges, malformed-reader recovery, and example-level integration fixtures.
 - Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, default AES
-  random source, full AGL/predefined CMap coverage, and broad real-world PDF
+  random source, broader predefined CMap coverage, and broad real-world PDF
   recovery behavior.
 
 ## Working Rule
