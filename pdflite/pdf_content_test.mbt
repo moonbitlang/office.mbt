@@ -408,6 +408,79 @@ test "pdf_parse_content_ops_from_bytes decodes ASCII85 inline image arrays" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes decodes RunLength inline images" {
+  let encoded = @pdflite.pdf_run_length_encode(content_bytes_for_test("A EI B"))
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 6 /H 1 /CS /G /BPC 8 /F /RL ID "),
+    encoded,
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(6)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("A EI B"),
+    ),
+    Op_Q,
+  ])
+
+  let array_encoded = @pdflite.pdf_run_length_encode(
+    content_bytes_for_test("ABCZZZZ"),
+  )
+  let array_data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 7 /H 1 /CS /G /BPC 8 /Filter [ /RunLengthDecode ] ID ",
+    ),
+    array_encoded,
+    content_bytes_for_test("\nEI"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(array_data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(7)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("ABCZZZZ"),
+    ),
+  ])
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes preserves unsupported inline filters" {
+  let data = content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F 7 ID A EI")
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+        (content_name_for_test("/F"), PdfInteger(7)),
+      ]),
+      None,
+      content_bytes_for_test("A"),
+    ),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes parses inline image comments" {
   let data = content_bytes_for_test(
     "BI % ignored\n/W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc\nEI",
@@ -499,6 +572,17 @@ test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
   )
   guard result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
     fail("expected ParseEndStreamExpected")
+  }
+  let run_length_data = content_concat_for_test([
+    content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /RL ID "),
+    try! @pdflite.pdf_bytes_of_int_array([0, 65]),
+    content_bytes_for_test(" EI"),
+  ])
+  let run_length_result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    run_length_data,
+  )
+  guard run_length_result is Err(@pdflite.PdfError::ParseEndStreamExpected) else {
+    fail("expected RunLength ParseEndStreamExpected")
   }
 }
 

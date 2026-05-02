@@ -488,9 +488,12 @@ MoonBit consequences for this project:
    raw-byte resource-aware parser,
    `PdfDocument::parse_content_bytes_with_resources`, and borrowed
    `PdfDocument::parse_content_view_with_resources` are also exposed for the
-   CamlPDF `parse_single_stream` use case.
-   Filter-aware binary inline image compression and broader resource-dependent
-   inline image sizing remain deferred.
+   CamlPDF `parse_single_stream` use case. RunLength inline image filters are
+   now decoded by consuming the encoded chunks through their EOD marker, so
+   `EI` byte sequences inside the compressed payload do not terminate the image
+   early; decoded inline images are flattened without stale filter metadata.
+   Broader binary inline image filter handling and resource-dependent inline
+   image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
    page and page-tree resource dictionaries with CamlPDF's lower-case prefix
    sequence. `add_prefix` is also started for page/page-tree resources and
