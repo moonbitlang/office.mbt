@@ -2502,8 +2502,9 @@ fn PdfDocument::pdf_page_process_form_xobject(
   let xobject = self.lookup_object_or_null(object_number)
   match self.lookup_direct(pdf_page_subtype_key(), xobject) {
     Some(PdfNameObject(name)) if name == pdf_page_type_form() =>
-      match self.direct(PdfIndirect(object_number)) {
+      match xobject {
         PdfStreamObject(stream) => {
+          xobject.get_stream()
           let processed = process(self, resources, [PdfStreamObject(stream)])
           if processed.length() != 1 {
             raise ParseStreamExpected

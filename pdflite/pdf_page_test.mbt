@@ -1102,6 +1102,60 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
 }
 
 ///|
+test "PdfDocument process_xobjects materializes deferred form streams" {
+  let key_subtype = page_name_for_test("/Subtype")
+  let key_length = page_name_for_test("/Length")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
+        (key_length, PdfInteger(99)),
+      ]),
+      StreamToGet(
+        @pdflite.stream_to_get(
+          @pdflite.byte_cursor_of_bytes(@ascii.encode("xxBTyy")),
+          2,
+          2,
+        ),
+      ),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (page_name_for_test("/Fm1"), PdfIndirect(20)),
+    ]),
+  }
+  let seen_data : Ref[@pdflite.PdfStreamData?] = { val: None }
+  let seen_length : Ref[@pdflite.PdfObject?] = { val: None }
+  try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
+    if streams.length() < 0 {
+      raise ParseStreamExpected
+    }
+    match streams[0] {
+      PdfStreamObject(stream) => {
+        seen_data.val = Some(stream.data)
+        seen_length.val = stream.dictionary.lookup_immediate(key_length)
+        [PdfStreamObject(stream)]
+      }
+      other => [other]
+    }
+  })
+  @test.assert_eq(seen_data.val, Some(StreamGot(@ascii.encode("BT"))))
+  @test.assert_eq(seen_length.val, Some(PdfInteger(2)))
+  guard doc.lookup_object_or_null(20) is PdfStreamObject(stream) else {
+    fail("expected form xobject stream")
+  }
+  @test.assert_eq(stream.data, StreamGot(@ascii.encode("BT")))
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(key_length),
+    Some(PdfInteger(2)),
+  )
+}
+
+///|
 test "PdfDocument process_xobjects skips non-form xobjects" {
   let key_subtype = page_name_for_test("/Subtype")
   let doc = @pdflite.pdf_document_empty()

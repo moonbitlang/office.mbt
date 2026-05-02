@@ -643,7 +643,9 @@ MoonBit consequences for this project:
    be parsed on their own. Form XObject processing is started with
    `PdfDocument::process_xobjects`, applying a raising callback to indirect
    `/Form` XObject streams while preserving original stream dictionary entries
-   and dropping stale `/Filter` metadata after replacement. CamlPDF's
+   and dropping stale `/Filter` metadata after replacement. Deferred form
+   stream data is materialized before the callback and has its `/Length`
+   corrected, matching CamlPDF's `Pdf.getstream` call. CamlPDF's
    polymorphic `ppstub` helper is ported as `pdf_page_process_stub`, returning
    the callback result, original page number token, and identity matrix for
    page-processing flows that do not transform coordinates. `renumber_pages`

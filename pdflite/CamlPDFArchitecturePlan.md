@@ -51,7 +51,8 @@ work changes.
    passes. Count-changing
    `change_pages` replacements keep CamlPDF's no-mapping behavior and bookmark
    matrix guard, while replacement preserves document metadata, trailer extras,
-   and object-stream bookkeeping.
+   and object-stream bookkeeping. Form XObject processing materializes deferred
+   stream data before callbacks, matching CamlPDF's `Pdf.getstream` path.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.
