@@ -346,6 +346,35 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), encoded_jpeg),
     PdfJPEG(@ascii.encode("jpg"), None),
   )
+  let flate_jbig2_data = @pdflite.pdf_flate_encode(@ascii.encode("jbig-stage"))
+  let encoded_jbig2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Length"), PdfInteger(flate_jbig2_data.length())),
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfArray([
+          PdfNameObject(image_name_for_test("/FlateDecode")),
+          PdfNameObject(image_name_for_test("/JBIG2Decode")),
+        ]),
+      ),
+      (
+        image_name_for_test("/DecodeParms"),
+        PdfArray([
+          PdfNull,
+          @pdflite.pdf_dictionary([
+            (image_name_for_test("/JBIG2Globals"), PdfIndirect(123)),
+          ]),
+        ]),
+      ),
+    ]),
+    StreamGot(flate_jbig2_data),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), encoded_jbig2),
+    PdfJBIG2(@ascii.encode("jbig-stage"), None, Some(123)),
+  )
 }
 
 ///|

@@ -841,7 +841,9 @@ MoonBit consequences for this project:
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. JBIG2 encoded image metadata now preserves
    `/JBIG2Globals` from direct `/DecodeParms`, short `/DP`, and first
-   decode-parameter array entries. The raw-image decode path now has a borrowed
+   decode-parameter array entries, including after earlier filter stages have
+   been decoded and the remaining decode-parameter array has shifted forward.
+   The raw-image decode path now has a borrowed
    `BytesView` helper for sliced inputs while preserving the owned fast path
    for no-op decode cases, so `.to_owned()` stays at borrowed-to-owned
    boundaries. Raw `/Decode` is now applied before colour-space conversion,
