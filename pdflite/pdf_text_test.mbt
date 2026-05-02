@@ -5371,6 +5371,123 @@ test "PdfTextExtractor decodes Greek AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Armenian AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Aybarmenian", 0x0531),
+    ("/Benarmenian", 0x0532),
+    ("/Caarmenian", 0x053E),
+    ("/Chaarmenian", 0x0549),
+    ("/Cheharmenian", 0x0543),
+    ("/Coarmenian", 0x0551),
+    ("/Daarmenian", 0x0534),
+    ("/Echarmenian", 0x0535),
+    ("/Eharmenian", 0x0537),
+    ("/Etarmenian", 0x0538),
+    ("/Feharmenian", 0x0556),
+    ("/Ghadarmenian", 0x0542),
+    ("/Gimarmenian", 0x0533),
+    ("/Hoarmenian", 0x0540),
+    ("/Iniarmenian", 0x053B),
+    ("/Jaarmenian", 0x0541),
+    ("/Jheharmenian", 0x054B),
+    ("/Keharmenian", 0x0554),
+    ("/Kenarmenian", 0x053F),
+    ("/Liwnarmenian", 0x053C),
+    ("/Menarmenian", 0x0544),
+    ("/Nowarmenian", 0x0546),
+    ("/Oharmenian", 0x0555),
+    ("/Peharmenian", 0x054A),
+    ("/Piwrarmenian", 0x0553),
+    ("/Raarmenian", 0x054C),
+    ("/Reharmenian", 0x0550),
+    ("/Seharmenian", 0x054D),
+    ("/Shaarmenian", 0x0547),
+    ("/Tiwnarmenian", 0x054F),
+    ("/Toarmenian", 0x0539),
+    ("/Vewarmenian", 0x054E),
+    ("/Voarmenian", 0x0548),
+    ("/Xeharmenian", 0x053D),
+    ("/Yiarmenian", 0x0545),
+    ("/Yiwnarmenian", 0x0552),
+    ("/Zaarmenian", 0x0536),
+    ("/Zhearmenian", 0x053A),
+    ("/abbreviationmarkarmenian", 0x055F),
+    ("/apostrophearmenian", 0x055A),
+    ("/aybarmenian", 0x0561),
+    ("/benarmenian", 0x0562),
+    ("/caarmenian", 0x056E),
+    ("/chaarmenian", 0x0579),
+    ("/cheharmenian", 0x0573),
+    ("/coarmenian", 0x0581),
+    ("/commaarmenian", 0x055D),
+    ("/daarmenian", 0x0564),
+    ("/echarmenian", 0x0565),
+    ("/echyiwnarmenian", 0x0587),
+    ("/eharmenian", 0x0567),
+    ("/emphasismarkarmenian", 0x055B),
+    ("/etarmenian", 0x0568),
+    ("/exclamarmenian", 0x055C),
+    ("/feharmenian", 0x0586),
+    ("/ghadarmenian", 0x0572),
+    ("/gimarmenian", 0x0563),
+    ("/hoarmenian", 0x0570),
+    ("/iniarmenian", 0x056B),
+    ("/jaarmenian", 0x0571),
+    ("/jheharmenian", 0x057B),
+    ("/keharmenian", 0x0584),
+    ("/kenarmenian", 0x056F),
+    ("/liwnarmenian", 0x056C),
+    ("/menarmenian", 0x0574),
+    ("/nowarmenian", 0x0576),
+    ("/oharmenian", 0x0585),
+    ("/peharmenian", 0x057A),
+    ("/periodarmenian", 0x0589),
+    ("/piwrarmenian", 0x0583),
+    ("/questionarmenian", 0x055E),
+    ("/raarmenian", 0x057C),
+    ("/reharmenian", 0x0580),
+    ("/ringhalfleftarmenian", 0x0559),
+    ("/seharmenian", 0x057D),
+    ("/shaarmenian", 0x0577),
+    ("/tiwnarmenian", 0x057F),
+    ("/toarmenian", 0x0569),
+    ("/vewarmenian", 0x057E),
+    ("/voarmenian", 0x0578),
+    ("/xeharmenian", 0x056D),
+    ("/yiarmenian", 0x0575),
+    ("/yiwnarmenian", 0x0582),
+    ("/zaarmenian", 0x0566),
+    ("/zhearmenian", 0x056A),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0531), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x055A), Some(40))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0587), Some(50))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0589), Some(69))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x056A), Some(85))
+}
+
+///|
 test "PdfTextExtractor decodes math operator AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/allequal", 0x224C),

@@ -740,9 +740,9 @@ MoonBit consequences for this project:
    Latin Extended-B names present in CamlPDF's bundled Adobe Glyph List are now
    also covered for common simple-font encoding differences. Basic Latin,
    general-punctuation, Latin-1 spacing aliases, IPA-extension,
-   spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
-  math-operator, Roman-numeral, technical, enclosed-alphanumeric, Bopomofo,
-  private-use, box-drawing, block-element, geometric-shape,
+  spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
+  Armenian, math-operator, Roman-numeral, technical, enclosed-alphanumeric,
+  Bopomofo, private-use, box-drawing, block-element, geometric-shape,
   miscellaneous-symbol, and dingbat alias AGL names missing from the base
   encoding tables are covered as well.
    Reverse charcode lookup scans the effective encoding for single-codepoint
