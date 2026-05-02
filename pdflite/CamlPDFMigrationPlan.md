@@ -738,12 +738,12 @@ MoonBit consequences for this project:
    conflicts between AGL names and Symbol font names are handled with
    font-specific codepoint lookup. The single-codepoint Latin Extended-A and
    Latin Extended-B names present in CamlPDF's bundled Adobe Glyph List are now
-   also covered for common simple-font encoding differences. General-punctuation,
-   Latin-1 spacing aliases, IPA-extension, spacing-modifier, combining-mark,
-   currency, letterlike, arrow, Greek, math-operator, Roman-numeral, technical,
-   enclosed-alphanumeric, box-drawing, block-element, geometric-shape,
-   miscellaneous-symbol, and dingbat alias AGL names missing from the base
-   encoding tables are covered as well.
+   also covered for common simple-font encoding differences. Basic Latin,
+   general-punctuation, Latin-1 spacing aliases, IPA-extension,
+   spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
+   math-operator, Roman-numeral, technical, enclosed-alphanumeric, box-drawing,
+   block-element, geometric-shape, miscellaneous-symbol, and dingbat alias AGL
+   names missing from the base encoding tables are covered as well.
    Reverse charcode lookup scans the effective encoding for single-codepoint
    glyphs.
    ToUnicode CMap parsing now

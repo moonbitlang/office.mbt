@@ -4640,6 +4640,122 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
 }
 
 ///|
+test "PdfTextExtractor decodes Basic Latin AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/A", 65),
+    ("/B", 66),
+    ("/C", 67),
+    ("/D", 68),
+    ("/E", 69),
+    ("/F", 70),
+    ("/G", 71),
+    ("/H", 72),
+    ("/I", 73),
+    ("/J", 74),
+    ("/K", 75),
+    ("/L", 76),
+    ("/M", 77),
+    ("/N", 78),
+    ("/O", 79),
+    ("/P", 80),
+    ("/Q", 81),
+    ("/R", 82),
+    ("/S", 83),
+    ("/T", 84),
+    ("/U", 85),
+    ("/V", 86),
+    ("/W", 87),
+    ("/X", 88),
+    ("/Y", 89),
+    ("/Z", 90),
+    ("/a", 97),
+    ("/b", 98),
+    ("/c", 99),
+    ("/controlACK", 6),
+    ("/controlBEL", 7),
+    ("/controlBS", 8),
+    ("/controlCAN", 24),
+    ("/controlDC1", 17),
+    ("/controlDC2", 18),
+    ("/controlDC3", 19),
+    ("/controlDC4", 20),
+    ("/controlDEL", 127),
+    ("/controlDLE", 16),
+    ("/controlEM", 25),
+    ("/controlENQ", 5),
+    ("/controlEOT", 4),
+    ("/controlESC", 27),
+    ("/controlETB", 23),
+    ("/controlETX", 3),
+    ("/controlFS", 28),
+    ("/controlGS", 29),
+    ("/controlNAK", 21),
+    ("/controlRS", 30),
+    ("/controlSI", 15),
+    ("/controlSO", 14),
+    ("/controlSOT", 2),
+    ("/controlSTX", 1),
+    ("/controlSUB", 26),
+    ("/controlSYN", 22),
+    ("/controlUS", 31),
+    ("/controlVT", 11),
+    ("/d", 100),
+    ("/e", 101),
+    ("/f", 102),
+    ("/g", 103),
+    ("/h", 104),
+    ("/i", 105),
+    ("/j", 106),
+    ("/k", 107),
+    ("/l", 108),
+    ("/m", 109),
+    ("/n", 110),
+    ("/o", 111),
+    ("/p", 112),
+    ("/q", 113),
+    ("/r", 114),
+    ("/s", 115),
+    ("/spacehackarabic", 32),
+    ("/t", 116),
+    ("/u", 117),
+    ("/v", 118),
+    ("/verticalbar", 124),
+    ("/w", 119),
+    ("/x", 120),
+    ("/y", 121),
+    ("/z", 122),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(65), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(90), Some(26))
+  @test.assert_eq(extractor.charcode_of_codepoint(6), Some(30))
+  @test.assert_eq(extractor.charcode_of_codepoint(127), Some(38))
+  @test.assert_eq(extractor.charcode_of_codepoint(32), Some(74))
+  @test.assert_eq(extractor.charcode_of_codepoint(124), Some(78))
+  @test.assert_eq(extractor.charcode_of_codepoint(122), Some(82))
+}
+
+///|
 test "PdfTextExtractor decodes general punctuation AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/afii00208", 0x2015),
