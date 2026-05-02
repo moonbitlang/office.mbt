@@ -3029,6 +3029,48 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
 }
 
 ///|
+test "pdfencrypt-style AES128 blank-user owner-password output roundtrips" {
+  let key_title = crypt_name_for_test("/Title")
+  let doc = crypt_minimal_catalog_document_for_test(1, 4)
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("pdfencrypt-secret"))),
+  ])
+  doc.add_object_given_number(5, secret_object)
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("")[:],
+    @ascii.encode("owner-password")[:],
+    denied,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    file_id=@ascii.encode("pdfencrypt-doc-id")[:],
+  )
+  @test.assert_eq(try! encrypted.permissions(), denied)
+  @test.assert_eq(encrypted.is_encrypted(), true)
+  let rendered = try! @pdflite.pdf_write_document(encrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(try! parsed.permissions(), denied)
+  let user_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_user_password(@ascii.encode("")[:]),
+  )
+  @test.assert_eq(user_decrypted.denied_permissions, denied)
+  @test.assert_eq(
+    user_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+  let owner_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_owner_password(@ascii.encode("owner-password")[:]),
+  )
+  @test.assert_eq(owner_decrypted.denied_permissions, denied)
+  @test.assert_eq(
+    owner_decrypted.document.lookup_object_or_null(5),
+    secret_object,
+  )
+}
+
+///|
 test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 encryption" {
   let key_type = crypt_name_for_test("/Type")
   let key_title = crypt_name_for_test("/Title")

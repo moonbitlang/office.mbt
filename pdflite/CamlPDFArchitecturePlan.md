@@ -58,7 +58,8 @@ work changes.
    Owner modules: `pdf_crypt*.mbt`.
    Status: ARC4, hashes, AES primitives, R2/R3/R4/R5/R6 authentication,
    object/string/stream crypt, decryption, deterministic provider adapters,
-   provider-backed encryption, and deterministic recrypt paths are started.
+   provider-backed encryption, deterministic recrypt paths, and a
+   `pdfencrypt.ml`-style AES-128 acceptance fixture are started.
    Remaining focus: selecting a true secure OS-entropy provider and deferred
    parser-state encryption/decryption edges.
 

@@ -959,7 +959,10 @@ MoonBit consequences for this project:
     `/ID`, derives `/O` and `/U`, encrypts parsed objects in a copy, installs an
     indirect `/Encrypt` dictionary, applies the revision 4 `/EncryptMetadata`
     file-key and metadata-stream rules, and round-trips through the existing
-    password decryption APIs. Provider-backed AESV3 revision 5 and revision
+    password decryption APIs. A `pdfencrypt.ml`-style fixture now covers
+    AES-128 output with blank user password, owner password, `NoEdit`/`NoPrint`
+    denied permissions, classic writing, parsing, and user/owner decryption.
+    Provider-backed AESV3 revision 5 and revision
     6/ISO output is also started: it accepts explicit file-key, salt, `/Perms`
     padding, and object-IV providers, derives `/U`, `/O`, `/UE`, `/OE`, and
     `/Perms`, applies `/EncryptMetadata` stream skipping, and round-trips
