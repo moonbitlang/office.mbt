@@ -211,6 +211,29 @@ test "pdf_write_object renders real numbers without exponent notation" {
 }
 
 ///|
+test "pdf_write_real exposes the byte-oriented real formatter" {
+  let tiny : Double = try! @strconv.from_str("1e-10")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_real(tiny),
+    writer_bytes_for_test([48, 46, 48, 48, 48, 48, 48, 48]),
+  )
+  let large : Double = try! @strconv.from_str("1.25e6")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_real(large),
+    writer_ascii_for_test("1250000"),
+  )
+  let rounded : Double = try! @strconv.from_str("1.23456789012345e21")
+  @test.assert_eq(
+    try! @pdflite.pdf_write_real(rounded),
+    writer_ascii_for_test("1234567890120000000000"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_write_real(rounded),
+    try! @pdflite.pdf_write_object(PdfReal(rounded)),
+  )
+}
+
+///|
 test "pdf_write_object escapes names and literal strings as bytes" {
   let name = writer_name_for_test([47, 65, 32, 66, 35, 67, 255])
   @test.assert_eq(

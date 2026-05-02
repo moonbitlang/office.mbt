@@ -442,6 +442,13 @@ fn pdf_writer_push_real(
 }
 
 ///|
+pub fn pdf_write_real(value : Double) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  pdf_writer_push_real(output, value)
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_write_object_to(
   output : Array[Byte],
   object : PdfObject,

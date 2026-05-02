@@ -365,6 +365,8 @@ pub fn pdf_write_name(PdfName) -> Bytes
 
 pub fn pdf_write_object(PdfObject) -> Bytes raise PdfError
 
+pub fn pdf_write_real(Double) -> Bytes raise PdfError
+
 pub fn point2(Double, Double) -> Point2
 
 pub fn stream_to_get(ByteCursor, Int, Int) -> ToGet
