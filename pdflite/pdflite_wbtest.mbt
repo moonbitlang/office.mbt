@@ -912,6 +912,15 @@ test "private content helpers cover malformed operand fallbacks" {
     jpeg_data,
   )
   @test.assert_eq(pdf_content_filter_is_inline_dct(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_filter_is_inline_dct(
+      PdfArray([
+        PdfNameObject(wbtest_content_name("/DCTDecode")),
+        PdfNameObject(wbtest_content_name("/ASCII85Decode")),
+      ]),
+    ),
+    true,
+  )
   guard pdf_content_filter_inline_text_filter(PdfInteger(1)) is None else {
     fail("expected no text filter for non-name")
   }

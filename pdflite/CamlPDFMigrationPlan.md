@@ -499,7 +499,10 @@ MoonBit consequences for this project:
    sequences. LZW inline image filters now consume through the LZW EOD code
    before reading `EI`, while ordinary stream decoding still keeps its tolerant
    missing-EOD behavior. Decoded inline images are flattened without stale
-   filter metadata.
+   filter metadata. DCT inline image filter arrays are now treated as JPEG
+   payloads whenever DCT is the first filter, so byte sequences such as `EI`
+   inside JPEG data do not terminate parsing early; the DCT dictionary metadata
+   is preserved because JPEG decoding remains deferred.
    Broader binary inline image filter handling and resource-dependent inline
    image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

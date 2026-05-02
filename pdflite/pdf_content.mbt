@@ -870,7 +870,7 @@ fn pdf_content_filter_is_inline_dct(filter : PdfObject) -> Bool {
     PdfNameObject(name) =>
       name == pdf_content_inline_dctdecode_name() ||
       name == pdf_content_inline_dct_name()
-    PdfArray([PdfNameObject(name)]) =>
+    PdfArray([PdfNameObject(name), ..]) =>
       name == pdf_content_inline_dctdecode_name() ||
       name == pdf_content_inline_dct_name()
     _ => false
