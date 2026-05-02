@@ -243,7 +243,9 @@ MoonBit consequences for this project:
    `/Prev` chains are started for classic xref tables, preserving newer entries
    over older ones, including newer free entries that hide older objects, and
    public `pdf_revisions_from_view`/`pdf_revisions_from_bytes` helpers count
-   those revisions from the xref metadata. Xref
+   those revisions from the xref metadata. Xref table line reading now accepts
+   LF, CR, and CRLF terminators, so strict classic xref parsing handles CR-only
+   files without falling back to reconstruction. Xref
    stream reading is now started for direct/filter-decodable stream data,
    default `/Size` ranges, explicit `/Index` ranges, and ordinary type-1
    entries; xref stream objects are omitted from the loaded object map, and

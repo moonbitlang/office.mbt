@@ -79,6 +79,18 @@ fn reader_pdf_ascii(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_cr_line_endings_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  for byte in bytes {
+    let replacement = if byte.to_int() == 10 { (13).to_byte() } else { byte }
+    output.push(replacement)
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_wrap_view_for_test(
   prefix : String,
   data : BytesView,
@@ -2185,6 +2197,18 @@ test "pdf_read_classic_document_from_bytes accepts fixed-width xref separators" 
   )
   @test.assert_eq(mixed_second.root(), 1)
   @test.assert_eq(mixed_second.object_numbers(), [])
+}
+
+///|
+test "pdf_read_classic_document_from_bytes accepts CR-only xref lines" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_cr_line_endings_for_test(
+      reader_classic_pdf_with_fixed_width_xref_separators(),
+    ),
+  )
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
 }
 
 ///|

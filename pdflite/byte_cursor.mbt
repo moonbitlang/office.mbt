@@ -311,6 +311,12 @@ pub fn ByteCursor::read_line_view(
     let value = self.input_byte()
     if value == 0x0A {
       done = true
+    } else if value == 0x0D {
+      if self.position < self.data.length() &&
+        self.data[self.position].to_int() == 0x0A {
+        ignore(self.input_byte())
+      }
+      done = true
     }
   }
   self.data[start:self.position]

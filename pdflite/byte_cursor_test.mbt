@@ -258,6 +258,24 @@ test "ByteCursor reads lines as byte data" {
 }
 
 ///|
+test "ByteCursor reads CR and CRLF terminated lines" {
+  let bytes = pdf_bytes_for_cursor_test([65, 13, 66, 13, 10, 67])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  @test.assert_eq(
+    bytes_view_to_ints_for_cursor_test(try! cursor.read_line_view()),
+    [65, 13],
+  )
+  @test.assert_eq(
+    bytes_view_to_ints_for_cursor_test(try! cursor.read_line_view()),
+    [66, 13, 10],
+  )
+  @test.assert_eq(
+    bytes_view_to_ints_for_cursor_test(try! cursor.read_line_view()),
+    [67],
+  )
+}
+
+///|
 test "ByteCursor read_line_views consumes remaining line data without ownership" {
   let bytes = pdf_bytes_for_cursor_test([65, 10, 66, 10, 67])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)

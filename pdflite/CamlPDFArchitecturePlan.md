@@ -19,7 +19,8 @@ work changes.
    Status: broad coverage for objects, streams, lazy/deferred stream slices,
    reading, writing, strict/reconstructed xrefs, object streams, name trees, and
    renumbering. Strict classic xref parsing now includes CamlPDF's fixed-width
-   malformed-separator tolerance for independently bad separator columns.
+   malformed-separator tolerance for independently bad separator columns and
+   CR/CRLF line terminators.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 
