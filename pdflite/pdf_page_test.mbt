@@ -1573,6 +1573,40 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
 }
 
 ///|
+test "PdfDocument prepend_operators falls back for missing inline image resources" {
+  let doc = @pdflite.pdf_document_empty()
+  let data = @ascii.encode("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_stream(
+        @pdflite.pdf_dictionary([
+          (page_name_for_test("/Length"), PdfInteger(data.length())),
+        ]),
+        StreamGot(data),
+      ),
+    ],
+  }
+  let updated = try! doc.prepend_operators(page, [Op_q])
+  @test.assert_eq(try! doc.parse_content_ops(updated.content), [
+    Op_q,
+    Op_InlineImage(
+      @pdflite.pdf_dictionary([
+        (page_name_for_test("/W"), PdfInteger(1)),
+        (page_name_for_test("/H"), PdfInteger(1)),
+        (page_name_for_test("/BPC"), PdfInteger(8)),
+        (
+          page_name_for_test("/CS"),
+          PdfNameObject(page_name_for_test("/Missing")),
+        ),
+      ]),
+      None,
+      @ascii.encode("abc"),
+    ),
+  ])
+}
+
+///|
 test "PdfDocument prepend_operators propagates non-colour parse errors" {
   let doc = @pdflite.pdf_document_empty()
   let data = @ascii.encode("1 2")

@@ -505,7 +505,11 @@ MoonBit consequences for this project:
    now treated as JPEG
    payloads whenever DCT is the first filter, so byte sequences such as `EI`
    inside JPEG data do not terminate parsing early; the DCT dictionary metadata
-   is preserved because JPEG decoding remains deferred.
+   is preserved because JPEG decoding remains deferred. Inline image rendering
+   now mirrors CamlPDF's safer default for unfiltered images by emitting Flate
+   inline data with `/F /Fl` and `/L`, while filtered inline images such as DCT
+   remain byte-preserving. Re-parsing decoded inline images also strips stale
+   `/Length`/`/L` metadata alongside filter and decode-parameter keys.
    Broader binary inline image filter handling and resource-dependent inline
    image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

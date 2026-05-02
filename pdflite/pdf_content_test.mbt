@@ -22,6 +22,22 @@ fn content_concat_for_test(
 }
 
 ///|
+fn content_compressed_inline_render_for_test(
+  prefix : @pdflite.PdfBytes,
+  data : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes {
+  let encoded = @pdflite.pdf_flate_encode(data)
+  content_concat_for_test([
+    prefix,
+    content_bytes_for_test(" /F /Fl /L "),
+    content_bytes_for_test(encoded.length().to_string()),
+    content_bytes_for_test(" ID "),
+    encoded,
+    content_bytes_for_test(" EI"),
+  ])
+}
+
+///|
 fn content_lzw_codes_for_test(
   codes : ArrayView[Int],
   early_change : Int,
@@ -302,11 +318,57 @@ test "pdf_parse_content_ops_from_view parses borrowed content slices" {
 
 ///|
 test "pdf_content_bytes_of_ops renders simple inline images" {
-  @test.assert_eq(
-    try! @pdflite.pdf_content_bytes_of_ops([inline_image_content_op_for_test()]),
-    content_bytes_for_test(
-      "BI /W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc EI",
+  let rendered = try! @pdflite.pdf_content_bytes_of_ops([
+    inline_image_content_op_for_test(),
+  ])
+  let expected = content_compressed_inline_render_for_test(
+    content_bytes_for_test("BI /W 1 /H 1 /CS /RGB /BPC 8"),
+    content_bytes_for_test("abc"),
+  )
+  @test.assert_eq(rendered, expected)
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(rendered), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/RGB")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("abc"),
     ),
+  ])
+}
+
+///|
+test "pdf_content_bytes_of_ops preserves filtered inline image data" {
+  let jpeg_data = try! @pdflite.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9])
+  let rendered = try! @pdflite.pdf_content_bytes_of_ops([
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(1)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/F"),
+          PdfNameObject(content_name_for_test("/DCT")),
+        ),
+      ]),
+      Some(
+        PdfDictionary([(content_name_for_test("/Predictor"), PdfInteger(1))]),
+      ),
+      jpeg_data,
+    ),
+  ])
+  @test.assert_eq(
+    rendered,
+    content_concat_for_test([
+      content_bytes_for_test("BI /W 1 /H 1 /F /DCT /DP << /Predictor 1 >> ID "),
+      jpeg_data,
+      content_bytes_for_test(" EI"),
+    ]),
   )
 }
 
@@ -324,9 +386,14 @@ test "pdf_parse_content_ops_from_bytes parses simple inline images" {
     try! @pdflite.pdf_content_bytes_of_ops(
       try! @pdflite.pdf_parse_content_ops_from_bytes(data),
     ),
-    content_bytes_for_test(
-      "q BI /W 1 /H 1 /CS /RGB /BPC 8 /DP << /Predictor 1 >> ID abc EI Q",
-    ),
+    content_concat_for_test([
+      content_bytes_for_test("q "),
+      content_compressed_inline_render_for_test(
+        content_bytes_for_test("BI /W 1 /H 1 /CS /RGB /BPC 8"),
+        content_bytes_for_test("abc"),
+      ),
+      content_bytes_for_test(" Q"),
+    ]),
   )
 }
 
@@ -412,7 +479,10 @@ test "pdf_parse_content_ops_from_bytes decodes ASCIIHex inline images" {
   ])
   @test.assert_eq(
     try! @pdflite.pdf_content_bytes_of_ops(parsed),
-    content_bytes_for_test("BI /W 3 /H 1 /CS /G /BPC 8 ID abc EI"),
+    content_compressed_inline_render_for_test(
+      content_bytes_for_test("BI /W 3 /H 1 /CS /G /BPC 8"),
+      content_bytes_for_test("abc"),
+    ),
   )
 }
 
