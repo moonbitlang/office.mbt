@@ -493,7 +493,10 @@ MoonBit consequences for this project:
    CamlPDF `parse_single_stream` use case. RunLength inline image filters are
    now decoded by consuming the encoded chunks through their EOD marker, so
    `EI` byte sequences inside the compressed payload do not terminate the image
-   early; decoded inline images are flattened without stale filter metadata.
+   early. Flate inline image filters are also started by validating and
+   consuming the zlib stream prefix before reading the following inline-image
+   `EI` marker, covering stored-block payloads that contain `EI` byte
+   sequences. Decoded inline images are flattened without stale filter metadata.
    Broader binary inline image filter handling and resource-dependent inline
    image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

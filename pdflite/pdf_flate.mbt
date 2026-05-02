@@ -316,7 +316,9 @@ fn pdf_flate_decode_huffman_block(
 }
 
 ///|
-fn pdf_deflate_decode_raw(bytes : BytesView) -> PdfBytes raise PdfError {
+fn pdf_deflate_decode_raw_prefix(
+  bytes : BytesView,
+) -> (PdfBytes, Int) raise PdfError {
   let reader = FlateBitReader::new(bytes)
   let output : Array[Byte] = []
   let mut finished = false
@@ -348,7 +350,13 @@ fn pdf_deflate_decode_raw(bytes : BytesView) -> PdfBytes raise PdfError {
     }
     finished = final_block == 1
   }
-  Bytes::from_array(output)
+  (Bytes::from_array(output), reader.byte_pos)
+}
+
+///|
+fn pdf_deflate_decode_raw(bytes : BytesView) -> PdfBytes raise PdfError {
+  let (decoded, _) = pdf_deflate_decode_raw_prefix(bytes)
+  decoded
 }
 
 ///|
@@ -460,4 +468,29 @@ pub fn pdf_flate_decode_view(data : BytesView) -> PdfBytes raise PdfError {
 ///|
 pub fn pdf_flate_decode(data : PdfBytes) -> PdfBytes raise PdfError {
   pdf_flate_decode_view(data[:])
+}
+
+///|
+fn pdf_flate_decode_view_prefix(
+  data : BytesView,
+) -> (PdfBytes, Int) raise PdfError {
+  if data.length() == 0 {
+    (Bytes::new(0), 0)
+  } else {
+    if data.length() < 6 {
+      raise InvalidFlateData
+    }
+    let cmf = data[0].to_int()
+    let flg = data[1].to_int()
+    if (cmf & 0x0F) != 8 || ((cmf << 8) + flg) % 31 != 0 || (flg & 0x20) != 0 {
+      raise InvalidFlateData
+    }
+    let (decoded, deflate_length) = pdf_deflate_decode_raw_prefix(data[2:])
+    let encoded_length = 2 + deflate_length + 4
+    if encoded_length > data.length() {
+      raise InvalidFlateData
+    }
+    pdf_flate_check_adler32(data[:encoded_length], decoded[:])
+    (decoded, encoded_length)
+  }
 }

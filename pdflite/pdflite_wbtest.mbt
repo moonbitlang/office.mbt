@@ -910,6 +910,22 @@ test "private content helpers cover malformed operand fallbacks" {
     @ascii.encode("616263>"),
   )
   @test.assert_eq(pdf_content_filter_is_inline_run_length(PdfInteger(1)), false)
+  @test.assert_eq(pdf_content_filter_is_inline_flate(PdfInteger(1)), false)
+  @test.assert_eq(
+    pdf_content_filter_is_inline_flate(
+      PdfArray([PdfNameObject(wbtest_content_name("/FlateDecode"))]),
+    ),
+    true,
+  )
+  let flate_inline = pdf_flate_encode(@ascii.encode("AB"))
+  @test.assert_eq(
+    try! pdf_content_read_flate_inline_image_data(
+      byte_cursor_of_bytes(
+        pdf_bytes_concat_views([flate_inline[:], @ascii.encode(" EI")[:]]),
+      ),
+    ),
+    flate_inline,
+  )
   @test.assert_eq(
     try! pdf_content_read_run_length_inline_image_data(
       byte_cursor_of_bytes(
@@ -1210,6 +1226,28 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     repeated_lengths, 1, 1, 0,
   )
   guard repeated_overflow is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  @test.assert_eq(
+    try! pdf_flate_decode_view_prefix(Bytes::new(0)[:]),
+    (Bytes::new(0), 0),
+  )
+  let short_prefix : Result[(PdfBytes, Int), Error] = try? pdf_flate_decode_view_prefix(
+    try! pdf_bytes_of_int_array([0x78])[:],
+  )
+  guard short_prefix is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let bad_prefix_header : Result[(PdfBytes, Int), Error] = try? pdf_flate_decode_view_prefix(
+    try! pdf_bytes_of_int_array([0, 0, 0, 0, 0, 0])[:],
+  )
+  guard bad_prefix_header is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData")
+  }
+  let truncated_prefix_adler : Result[(PdfBytes, Int), Error] = try? pdf_flate_decode_view_prefix(
+    try! pdf_bytes_of_int_array([0x78, 0x01, 0x01, 0, 0, 0xFF, 0xFF])[:],
+  )
+  guard truncated_prefix_adler is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
   }
 

@@ -485,6 +485,56 @@ test "pdf_parse_content_ops_from_bytes decodes RunLength inline images" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib end" {
+  let encoded = @pdflite.pdf_flate_encode(content_bytes_for_test("A EI B"))
+  let data = content_concat_for_test([
+    content_bytes_for_test("BI /W 6 /H 1 /CS /G /BPC 8 /F /Fl ID "),
+    encoded,
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(6)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("A EI B"),
+    ),
+    Op_Q,
+  ])
+
+  let array_encoded = @pdflite.pdf_flate_encode(content_bytes_for_test("xyz"))
+  let array_data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 3 /H 1 /CS /G /BPC 8 /Filter [ /FlateDecode ] ID ",
+    ),
+    array_encoded,
+    content_bytes_for_test("\nEI"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(array_data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(3)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(8)),
+      ]),
+      None,
+      content_bytes_for_test("xyz"),
+    ),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes preserves unsupported inline filters" {
   let data = content_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F 7 ID A EI")
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
