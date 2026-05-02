@@ -2999,6 +2999,7 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
   let key_count = page_name_for_test("/Count")
   let key_resources = page_name_for_test("/Resources")
   let key_mediabox = page_name_for_test("/MediaBox")
+  let key_rotate = page_name_for_test("/Rotate")
   let key_font = page_name_for_test("/Font")
   let pages_type = page_name_for_test("/Pages")
   let page_type = page_name_for_test("/Page")
@@ -3019,6 +3020,7 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
   doc.add_object_given_number(8, resource_object)
   doc.add_object_given_number(9, media_object)
   doc.add_object_given_number(10, font_object)
+  doc.add_object_given_number(11, PdfInteger(90))
   doc.add_object_given_number(
     2,
     @pdflite.pdf_dictionary([
@@ -3027,6 +3029,7 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
       (key_count, PdfInteger(1)),
       (key_resources, PdfIndirect(8)),
       (key_mediabox, PdfIndirect(9)),
+      (key_rotate, PdfIndirect(11)),
     ]),
   )
   doc.add_object_given_number(
@@ -3051,9 +3054,14 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
     extracted_page.lookup_immediate(key_mediabox),
     Some(PdfIndirect(9)),
   )
+  @test.assert_eq(
+    extracted_page.lookup_immediate(key_rotate),
+    Some(PdfIndirect(11)),
+  )
   @test.assert_eq(extracted.lookup_object_or_null(8), resource_object)
   @test.assert_eq(extracted.lookup_object_or_null(9), media_object)
   @test.assert_eq(extracted.lookup_object_or_null(10), font_object)
+  @test.assert_eq(extracted.lookup_object_or_null(11), PdfInteger(90))
 }
 
 ///|

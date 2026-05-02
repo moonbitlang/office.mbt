@@ -1341,15 +1341,26 @@ test "private page selection reports empty and invalid ranges" {
 
 ///|
 test "private materialized page inheritance keeps partial attributes" {
-  let doc = pdf_document_empty()
-  doc.add_object_given_number(
+  let source = pdf_document_empty()
+  source.add_object_given_number(
     1,
     PdfDictionary([(pdf_page_resources_key(), PdfIndirect(2))]),
   )
-  let page = pdf_page_blank(paper_a4)
-  let preserved = doc.pdf_page_preserve_materialized_inherited_page(page, 1)
-  @test.assert_eq(preserved.resources, PdfIndirect(2))
-  @test.assert_eq(preserved.mediabox, page.mediabox)
+  let target = pdf_document_empty()
+  let original_page = PdfDictionary([
+    (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
+    (pdf_page_mediabox_key(), pdf_page_rectangle_of_paper(paper_a4)),
+  ])
+  target.add_object_given_number(3, original_page)
+  try! target.pdf_page_preserve_materialized_inherited_entries(source, [1], [3])
+  @test.assert_eq(
+    target.lookup_object_or_null(3).lookup_immediate(pdf_page_resources_key()),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(
+    target.lookup_object_or_null(3).lookup_immediate(pdf_page_mediabox_key()),
+    original_page.lookup_immediate(pdf_page_mediabox_key()),
+  )
 }
 
 ///|

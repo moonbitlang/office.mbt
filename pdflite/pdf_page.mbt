@@ -2083,40 +2083,37 @@ fn PdfDocument::pdf_page_fixup_parents(
 }
 
 ///|
-fn PdfDocument::pdf_page_preserve_materialized_inherited_page(
-  self : PdfDocument,
-  page : PdfPage,
-  page_object_number : Int,
-) -> PdfPage {
-  let page_object = self.lookup_object_or_null(page_object_number)
-  let mut output = page
-  match page_object.lookup_immediate(pdf_page_resources_key()) {
-    Some(resources) => output = { ..output, resources, }
-    None => ()
-  }
-  match page_object.lookup_immediate(pdf_page_mediabox_key()) {
-    Some(mediabox) => output = { ..output, mediabox, }
-    None => ()
-  }
-  output
+fn pdf_page_inheritable_keys() -> Array[PdfName] {
+  [
+    pdf_page_mediabox_key(),
+    pdf_page_cropbox_key(),
+    pdf_page_rotate_key(),
+    pdf_page_resources_key(),
+  ]
 }
 
 ///|
-fn PdfDocument::pdf_page_preserve_materialized_inherited_pages(
+fn PdfDocument::pdf_page_preserve_materialized_inherited_entries(
   self : PdfDocument,
-  pages : ArrayView[PdfPage],
-  page_object_numbers : ArrayView[Int],
-) -> Array[PdfPage] {
-  let output : Array[PdfPage] = []
-  for index in 0..<pages.length() {
-    output.push(
-      self.pdf_page_preserve_materialized_inherited_page(
-        pages[index],
-        page_object_numbers[index],
-      ),
-    )
+  source : PdfDocument,
+  old_page_numbers : ArrayView[Int],
+  new_page_numbers : ArrayView[Int],
+) -> Unit raise PdfError {
+  for index in 0..<old_page_numbers.length() {
+    let old_page = source.lookup_object_or_null(old_page_numbers[index])
+    let new_page_number = new_page_numbers[index]
+    let original = self.lookup_object_or_null(new_page_number)
+    let mut updated = original
+    for key in pdf_page_inheritable_keys() {
+      match old_page.lookup_immediate(key) {
+        Some(value) => updated = updated.add_dict_entry(key, value)
+        None => ()
+      }
+    }
+    if updated != original {
+      self.add_object_given_number(new_page_number, updated)
+    }
   }
-  output
 }
 
 ///|
@@ -2147,9 +2144,6 @@ pub fn PdfDocument::pdf_of_pages(
     []
   }
   let selected = pdf_page_select_pages(source.pages_of_pagetree(), page_numbers)
-  let selected = source.pdf_page_preserve_materialized_inherited_pages(
-    selected, old_page_numbers,
-  )
   let deleted_page_numbers = if process_struct_tree {
     pdf_page_deleted_numbers(all_page_numbers, old_page_numbers)
   } else {
@@ -2161,8 +2155,12 @@ pub fn PdfDocument::pdf_of_pages(
   } else {
     pdf
   }
+  let new_page_numbers = pdf.page_reference_numbers()
+  pdf.pdf_page_preserve_materialized_inherited_entries(
+    source, old_page_numbers, new_page_numbers,
+  )
   pdf.pdf_page_renumber_references(
-    pdf_page_reference_changes(old_page_numbers, pdf.page_reference_numbers()),
+    pdf_page_reference_changes(old_page_numbers, new_page_numbers),
   )
   if process_struct_tree {
     pdf.pdf_structure_trim_deleted_pages(deleted_page_numbers)

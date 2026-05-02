@@ -54,8 +54,8 @@ work changes.
    and object-stream bookkeeping. Form XObject processing materializes deferred
    stream data before callbacks, matching CamlPDF's `Pdf.getstream` path.
    `pdf_of_pages` now materializes inherited page attributes before extraction
-   so inherited `/CropBox` values and inherited indirect
-   `/Resources`/`/MediaBox` references are preserved with selected pages.
+   so inherited `/CropBox` values and inherited indirect `/Resources`,
+   `/MediaBox`, and `/Rotate` references are preserved with selected pages.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

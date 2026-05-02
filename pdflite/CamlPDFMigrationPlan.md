@@ -528,9 +528,9 @@ MoonBit consequences for this project:
    to the new page objects, duplicated annotation references are copied to fresh
    object numbers, copied annotation `/Popup` and `/Parent` links are repaired
    within each extracted page, inherited page attributes are materialized before
-   extraction so parent `/CropBox` entries and inherited indirect
-   `/Resources`/`/MediaBox` references survive, and `/Root/Names/Dests`
-   name-tree entries whose page targets were nulled are pruned. Old-style
+   extraction so parent `/CropBox` entries and inherited indirect `/Resources`,
+   `/MediaBox`, and `/Rotate` references survive, and `/Root/Names/Dests` name-tree
+   entries whose page targets were nulled are pruned. Old-style
    catalog `/Dests` dictionary
    entries are also pruned after selected page references are rewritten; this
    destination cleanup also follows trailer `/Root` for parsed PDFs.
