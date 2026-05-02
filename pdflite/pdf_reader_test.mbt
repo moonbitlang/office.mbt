@@ -79,6 +79,21 @@ fn reader_pdf_ascii(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_wrap_view_for_test(
+  prefix : String,
+  data : BytesView,
+  suffix : String,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, prefix)
+  for byte in data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, suffix)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_push_indirect_object(
   output : Array[Byte],
   number : Int,
@@ -918,6 +933,15 @@ test "pdf_read_header_from_bytes ignores malformed header digits" {
 }
 
 ///|
+test "pdf_read_header_from_view reads borrowed slices" {
+  let wrapped = reader_pdf_ascii("xx%PDF-1.6\nzz")
+  @test.assert_eq(
+    try! @pdflite.pdf_read_header_from_view(wrapped[2:wrapped.length() - 2]),
+    { major: 1, minor: 6 },
+  )
+}
+
+///|
 test "pdf_document_of_parsed_indirect_objects preserves version and generations" {
   let document = @pdflite.pdf_document_of_parsed_indirect_objects(
     [
@@ -946,6 +970,21 @@ test "pdf_read_primitive_document_from_bytes loads non-stream indirect objects" 
   @test.assert_eq(document.object_numbers(), [1, 2])
   @test.assert_eq(
     document.lookup_object_or_null(2),
+    @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
+  )
+}
+
+///|
+test "pdf_read_primitive_document_from_view loads borrowed slices" {
+  let payload = reader_pdf_ascii("%PDF-1.4\n1 0 obj\n[1 2]\nendobj\nxref")
+  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let document = try! @pdflite.pdf_read_primitive_document_from_view(
+    wrapped[3:wrapped.length() - 3],
+  )
+  @test.assert_eq(document.version(), (1, 4))
+  @test.assert_eq(document.object_numbers(), [1])
+  @test.assert_eq(
+    document.lookup_object_or_null(1),
     @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
   )
 }
@@ -1099,6 +1138,23 @@ test "pdf_read_classic_document_from_bytes uses xref and trailer root" {
     ),
     Some(PdfIndirect(1)),
   )
+}
+
+///|
+test "pdf_read_classic_document_from_view reads borrowed slices" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  document.add_object_given_number(1, PdfInteger(42))
+  let rendered = try! @pdflite.pdf_write_document(document)
+  let wrapped = reader_wrap_view_for_test("abc", rendered[:], "xyz")
+  let parsed = try! @pdflite.pdf_read_classic_document_from_view(
+    wrapped[3:wrapped.length() - 3],
+  )
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(parsed.lookup_object_or_null(1), PdfInteger(42))
 }
 
 ///|
@@ -1327,6 +1383,19 @@ test "pdf_read_document_from_bytes reconstructs missing startxref PDFs" {
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Size"))),
     Some(PdfInteger(3)),
   )
+}
+
+///|
+test "pdf_read_document_from_view reconstructs borrowed malformed slices" {
+  let payload = reader_malformed_pdf_without_startxref()
+  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let parsed = try! @pdflite.pdf_read_document_from_view(
+    wrapped[3:wrapped.length() - 3],
+  )
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
 }
 
 ///|

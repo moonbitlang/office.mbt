@@ -264,7 +264,10 @@ MoonBit consequences for this project:
    hex escapes when a later reconstructed catalog remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
-   xref-stream/object-stream subset. Reader
+   xref-stream/object-stream subset; borrowed `BytesView` entry points are now
+   exposed for header reads, primitive object scans, strict classic reads,
+   public fallback reads, and password-aware public reads, with owned `Bytes`
+   functions kept as compatibility wrappers. Reader
    hardening now covers malformed headers, missing/bad `startxref`, malformed
    xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
    breaks, indirect stream-length failures, and xref/object mismatch errors.

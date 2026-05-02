@@ -315,13 +315,23 @@ pub fn pdf_read_afm(BytesView) -> PdfAfmData raise PdfError
 
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
+pub fn pdf_read_classic_document_from_view(BytesView) -> PdfDocument raise PdfError
+
 pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
 pub fn pdf_read_document_from_bytes_with_passwords(Bytes, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
 
+pub fn pdf_read_document_from_view(BytesView) -> PdfDocument raise PdfError
+
+pub fn pdf_read_document_from_view_with_passwords(BytesView, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
+
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
+pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise PdfError
+
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
+
+pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise PdfError
 
 pub fn pdf_recurse_array((PdfObject) -> PdfObject, ArrayView[PdfObject]) -> PdfObject
 

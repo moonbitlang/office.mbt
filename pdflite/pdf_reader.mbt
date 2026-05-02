@@ -58,8 +58,13 @@ pub fn ByteCursor::read_pdf_header(
 }
 
 ///|
+pub fn pdf_read_header_from_view(data : BytesView) -> PdfVersion raise PdfError {
+  byte_cursor_of_view(data).read_pdf_header()
+}
+
+///|
 pub fn pdf_read_header_from_bytes(data : PdfBytes) -> PdfVersion raise PdfError {
-  byte_cursor_of_bytes(data).read_pdf_header()
+  pdf_read_header_from_view(data[:])
 }
 
 ///|
@@ -80,10 +85,10 @@ pub fn pdf_document_of_parsed_indirect_objects(
 }
 
 ///|
-pub fn pdf_read_primitive_document_from_bytes(
-  data : PdfBytes,
+pub fn pdf_read_primitive_document_from_view(
+  data : BytesView,
 ) -> PdfDocument raise PdfError {
-  let cursor = byte_cursor_of_bytes(data)
+  let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
@@ -112,6 +117,13 @@ pub fn pdf_read_primitive_document_from_bytes(
     }
   }
   document
+}
+
+///|
+pub fn pdf_read_primitive_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  pdf_read_primitive_document_from_view(data[:])
 }
 
 ///|
@@ -1064,16 +1076,16 @@ fn PdfDocument::set_trailer_and_root(
 }
 
 ///|
-fn pdf_read_reconstructed_document_from_bytes(
-  data : PdfBytes,
+fn pdf_read_reconstructed_document_from_view(
+  data : BytesView,
 ) -> PdfDocument raise PdfError {
-  let cursor = byte_cursor_of_bytes(data)
+  let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
   let document = pdf_document_empty()
   document.set_version(version.major, version.minor)
   document.set_first_xref(0)
-  document.set_was_linearized(pdf_read_was_linearized(data[:]))
-  for parsed in pdf_read_reconstructed_objects(data[:]) {
+  document.set_was_linearized(pdf_read_was_linearized(data))
+  for parsed in pdf_read_reconstructed_objects(data) {
     if parsed.number > 0 {
       document.load_object_given_number(
         parsed.number,
@@ -1084,7 +1096,7 @@ fn pdf_read_reconstructed_document_from_bytes(
   }
   document.set_trailer_and_root(
     document.select_reconstructed_trailer(
-      pdf_read_reconstructed_trailers(data[:])[:],
+      pdf_read_reconstructed_trailers(data)[:],
     ),
   )
   document.set_trailer_dict(
@@ -1098,20 +1110,20 @@ fn pdf_read_reconstructed_document_from_bytes(
 
 ///|
 fn pdf_read_reconstructed_or_raise(
-  data : PdfBytes,
+  data : BytesView,
   original_error : PdfError,
 ) -> PdfDocument raise PdfError {
-  pdf_read_reconstructed_document_from_bytes(data) catch {
+  pdf_read_reconstructed_document_from_view(data) catch {
     _ => raise original_error
   }
 }
 
 ///|
-pub fn pdf_read_classic_document_from_bytes(
-  data : PdfBytes,
+pub fn pdf_read_classic_document_from_view(
+  data : BytesView,
 ) -> PdfDocument raise PdfError {
-  let was_linearized = pdf_read_was_linearized(data[:])
-  let cursor = byte_cursor_of_bytes(data)
+  let was_linearized = pdf_read_was_linearized(data)
+  let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
   let xref_position = pdf_read_startxref_position(cursor.data)
   let xrefs : Array[PdfClassicXRefEntry] = []
@@ -1207,11 +1219,18 @@ pub fn pdf_read_classic_document_from_bytes(
 }
 
 ///|
-pub fn pdf_read_document_from_bytes(
+pub fn pdf_read_classic_document_from_bytes(
   data : PdfBytes,
 ) -> PdfDocument raise PdfError {
-  pdf_read_classic_document_from_bytes(data) catch {
-    StartXRefExpected => pdf_read_reconstructed_document_from_bytes(data)
+  pdf_read_classic_document_from_view(data[:])
+}
+
+///|
+pub fn pdf_read_document_from_view(
+  data : BytesView,
+) -> PdfDocument raise PdfError {
+  pdf_read_classic_document_from_view(data) catch {
+    StartXRefExpected => pdf_read_reconstructed_document_from_view(data)
     XRefExpected => pdf_read_reconstructed_or_raise(data, XRefExpected)
     XRefEntryExpected =>
       pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
@@ -1238,13 +1257,33 @@ pub fn pdf_read_document_from_bytes(
 }
 
 ///|
+pub fn pdf_read_document_from_bytes(
+  data : PdfBytes,
+) -> PdfDocument raise PdfError {
+  pdf_read_document_from_view(data[:])
+}
+
+///|
+pub fn pdf_read_document_from_view_with_passwords(
+  data : BytesView,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+) -> PdfDecryptionResult? raise PdfError {
+  let document = pdf_read_document_from_view(data)
+  document.decrypt_with_passwords(user_password~, owner_password~)
+}
+
+///|
 pub fn pdf_read_document_from_bytes_with_passwords(
   data : PdfBytes,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
 ) -> PdfDecryptionResult? raise PdfError {
-  let document = pdf_read_document_from_bytes(data)
-  document.decrypt_with_passwords(user_password~, owner_password~)
+  pdf_read_document_from_view_with_passwords(
+    data[:],
+    user_password~,
+    owner_password~,
+  )
 }
 
 ///|
