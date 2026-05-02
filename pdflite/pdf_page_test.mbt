@@ -1858,6 +1858,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
   let type_xyz = page_name_for_test("/XYZ")
   let direct_annotation_number = 20
   let action_annotation_number = 21
+  let annotation_array_number = 22
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
@@ -1868,45 +1869,46 @@ test "PdfDocument change_pages transforms link annotations and open action" {
     old_numbers[0],
     try! doc
     .lookup_object_or_null(old_numbers[0])
-    .add_dict_entry(
-      key_annots,
-      PdfArray([
-        PdfIndirect(direct_annotation_number),
-        PdfIndirect(action_annotation_number),
-        @pdflite.pdf_dictionary([
-          (key_subtype, PdfNameObject(type_link)),
-          (
-            key_dest,
-            PdfArray([
-              PdfIndirect(old_numbers[0]),
-              PdfNameObject(type_xyz),
-              PdfInteger(7),
-              PdfInteger(8),
-              PdfNull,
-            ]),
-          ),
-        ]),
-        @pdflite.pdf_dictionary([
-          (key_subtype, PdfNameObject(type_link)),
-          (
-            key_action,
-            @pdflite.pdf_dictionary([
-              (key_s, PdfNameObject(type_goto)),
-              (
-                key_d,
-                PdfArray([
-                  PdfIndirect(old_numbers[0]),
-                  PdfNameObject(type_xyz),
-                  PdfInteger(9),
-                  PdfInteger(10),
-                  PdfNull,
-                ]),
-              ),
-            ]),
-          ),
-        ]),
+    .add_dict_entry(key_annots, PdfIndirect(annotation_array_number)),
+  )
+  doc.add_object_given_number(
+    annotation_array_number,
+    PdfArray([
+      PdfIndirect(direct_annotation_number),
+      PdfIndirect(action_annotation_number),
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(type_link)),
+        (
+          key_dest,
+          PdfArray([
+            PdfIndirect(old_numbers[0]),
+            PdfNameObject(type_xyz),
+            PdfInteger(7),
+            PdfInteger(8),
+            PdfNull,
+          ]),
+        ),
       ]),
-    ),
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(type_link)),
+        (
+          key_action,
+          @pdflite.pdf_dictionary([
+            (key_s, PdfNameObject(type_goto)),
+            (
+              key_d,
+              PdfArray([
+                PdfIndirect(old_numbers[0]),
+                PdfNameObject(type_xyz),
+                PdfInteger(9),
+                PdfInteger(10),
+                PdfNull,
+              ]),
+            ),
+          ]),
+        ),
+      ]),
+    ]),
   )
   doc.add_object_given_number(
     direct_annotation_number,
@@ -2000,17 +2002,18 @@ test "PdfDocument change_pages transforms link annotations and open action" {
       )
     _ => fail("expected transformed link action")
   }
-  match
-    changed.lookup_object_or_null(new_numbers[0]).lookup_immediate(key_annots) {
-    Some(
-      PdfArray(
-        [
-          PdfIndirect(_),
-          PdfIndirect(_),
-          PdfDictionary(_) as direct_dest_annotation,
-          PdfDictionary(_) as direct_action_annotation,
-        ]
-      )
+  @test.assert_eq(
+    changed.lookup_object_or_null(new_numbers[0]).lookup_immediate(key_annots),
+    Some(PdfIndirect(annotation_array_number)),
+  )
+  match changed.lookup_object_or_null(annotation_array_number) {
+    PdfArray(
+      [
+        PdfIndirect(_),
+        PdfIndirect(_),
+        PdfDictionary(_) as direct_dest_annotation,
+        PdfDictionary(_) as direct_action_annotation,
+      ]
     ) => {
       @test.assert_eq(
         direct_dest_annotation.lookup_immediate(key_dest),
@@ -2041,7 +2044,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
         _ => fail("expected transformed direct link action")
       }
     }
-    _ => fail("expected direct link annotations in changed page")
+    _ => fail("expected direct link annotations in indirect annotation array")
   }
   @test.assert_eq(
     changed
