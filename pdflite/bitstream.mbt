@@ -111,10 +111,16 @@ pub fn bit_writer_new() -> BitWriter {
 }
 
 ///|
-pub fn BitWriter::put_bit(self : BitWriter, bit : Int) -> Unit raise PdfError {
-  if bit != 0 && bit != 1 {
-    raise InvalidBit(bit)
+fn BitWriter::copy(self : BitWriter) -> BitWriter {
+  {
+    current_byte: self.current_byte,
+    bit_index: self.bit_index,
+    bytes: self.bytes.copy(),
   }
+}
+
+///|
+fn BitWriter::put_bit_unchecked(self : BitWriter, bit : Int) -> Unit {
   if bit == 1 {
     self.current_byte = self.current_byte | (1 << (7 - self.bit_index))
   }
@@ -124,6 +130,14 @@ pub fn BitWriter::put_bit(self : BitWriter, bit : Int) -> Unit raise PdfError {
     self.current_byte = 0
     self.bit_index = 0
   }
+}
+
+///|
+pub fn BitWriter::put_bit(self : BitWriter, bit : Int) -> Unit raise PdfError {
+  if bit != 0 && bit != 1 {
+    raise InvalidBit(bit)
+  }
+  self.put_bit_unchecked(bit)
 }
 
 ///|
@@ -153,6 +167,22 @@ pub fn BitWriter::align(self : BitWriter) -> Unit {
 pub fn BitWriter::to_bytes(self : BitWriter) -> PdfBytes {
   self.align()
   Bytes::from_array(self.bytes)
+}
+
+///|
+pub fn BitWriter::append_aligned(
+  self : BitWriter,
+  other : BitWriter,
+) -> BitWriter {
+  let output = self.copy()
+  output.align()
+  for byte in other.bytes {
+    output.bytes.push(byte)
+  }
+  for bit_index in 0..<other.bit_index {
+    output.put_bit_unchecked((other.current_byte >> (7 - bit_index)) & 1)
+  }
+  output
 }
 
 ///|

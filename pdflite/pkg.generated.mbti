@@ -519,6 +519,7 @@ pub struct BitWriter {
   bytes : Array[Byte]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn BitWriter::align(Self) -> Unit
+pub fn BitWriter::append_aligned(Self, Self) -> Self
 pub fn BitWriter::bit_length(Self) -> Int
 pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
 pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError

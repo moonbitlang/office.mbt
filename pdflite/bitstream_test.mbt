@@ -85,6 +85,48 @@ test "BitWriter writes multi-bit values across byte boundaries" {
 }
 
 ///|
+test "BitWriter append_aligned pads first stream and preserves inputs" {
+  let first = @pdflite.bit_writer_new()
+  first.put_value_int(3, 0b101)
+  let second = @pdflite.bit_writer_new()
+  second.put_value_int(2, 0b11)
+  let appended = first.append_aligned(second)
+  @test.assert_eq(first.bit_length(), 3)
+  @test.assert_eq(second.bit_length(), 2)
+  @test.assert_eq(appended.bit_length(), 10)
+  @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(appended.to_bytes()), [
+    0b1010_0000, 0b1100_0000,
+  ])
+}
+
+///|
+test "BitWriter append_aligned avoids extra padding for byte-aligned input" {
+  let first = @pdflite.bit_writer_new()
+  first.put_value_int(8, 0xAB)
+  let second = @pdflite.bit_writer_new()
+  second.put_value_int(4, 0xC)
+  let appended = first.append_aligned(second)
+  @test.assert_eq(appended.bit_length(), 12)
+  @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(appended.to_bytes()), [
+    0xAB, 0xC0,
+  ])
+}
+
+///|
+test "BitWriter append_aligned copies complete bytes from second stream" {
+  let first = @pdflite.bit_writer_new()
+  first.put_value_int(4, 0xA)
+  let second = @pdflite.bit_writer_new()
+  second.put_value_int(8, 0xBC)
+  second.put_value_int(4, 0xD)
+  let appended = first.append_aligned(second)
+  @test.assert_eq(appended.bit_length(), 20)
+  @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(appended.to_bytes()), [
+    0xA0, 0xBC, 0xD0,
+  ])
+}
+
+///|
 test "BitWriter reports checked write errors" {
   let writer = @pdflite.bit_writer_new()
   let bad_bit : Result[Unit, Error] = try? writer.put_bit(2)
