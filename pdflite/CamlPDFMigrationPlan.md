@@ -746,7 +746,7 @@ MoonBit consequences for this project:
    math-operator,
    Roman-numeral, technical, enclosed-alphanumeric,
    CJK-symbol/Hangzhou, Hiragana, Katakana, Bopomofo,
-   Hangul compatibility jamo, Enclosed CJK,
+   Hangul compatibility jamo, Enclosed CJK, CJK compatibility square/unit,
    Latin Extended Additional, private-use, Halfwidth/Fullwidth, box-drawing,
    block-element, geometric-shape, miscellaneous-symbol, and dingbat alias AGL
    names missing from the base encoding tables are covered as well.
