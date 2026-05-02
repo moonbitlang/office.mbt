@@ -1246,6 +1246,59 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
     try! doc.get_image_24bpp(empty_resources, rgb4),
     PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([10, 20, 30, 40, 50, 60])),
   )
+  let icc_rgb_base = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(image_name_for_test("/N"), PdfInteger(3))]),
+    StreamGot(@ascii.encode("icc")),
+  )
+  let indexed_icc_rgb : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    PdfArray([PdfNameObject(image_name_for_test("/ICCBased")), icc_rgb_base]),
+    PdfInteger(1),
+    PdfString(image_bytes_for_test([1, 2, 3, 4, 5, 6])),
+  ])
+  let icc_rgb4 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_icc_rgb),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(4)),
+    ]),
+    StreamGot(image_bytes_for_test([0x01])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, icc_rgb4),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([1, 2, 3, 4, 5, 6])),
+  )
+  let device_n_cmyk_base : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/DeviceN")),
+    PdfArray([PdfNameObject(image_name_for_test("/Spot"))]),
+    PdfNameObject(image_name_for_test("/DeviceCMYK")),
+    PdfNull,
+  ])
+  let indexed_device_n_cmyk : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    device_n_cmyk_base,
+    PdfInteger(1),
+    PdfString(image_bytes_for_test([0, 0, 0, 0, 0, 255, 255, 0])),
+  ])
+  let device_n_cmyk8 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_device_n_cmyk),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(image_bytes_for_test([0, 1])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, device_n_cmyk8),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([255, 255, 255, 255, 0, 0]),
+    ),
+  )
   let missing_index = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_name_for_test("/Width"), PdfInteger(1)),

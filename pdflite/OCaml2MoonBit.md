@@ -118,6 +118,17 @@ state. This makes impossible fallback branches explicit at the type boundary
 instead of carrying broad `Object`-like values through the rest of the port.
 
 ```sh
+moon run -c 'fn helper(x : Int) -> Int { x + 1 }
+fn main { println(helper(1)) }'
+# 2
+```
+
+Top-level helper functions other than `main` need explicit return type
+annotations. This applies to quick `moon run -c` probes as well as package
+source. Annotate helpers such as `fn helper(...) -> T { ... }` instead of
+relying on return inference.
+
+```sh
 moon run -c 'fn main { let empty = Bytes::new(0); let zeros = Bytes::new(2); println(empty.length()); println(zeros.length()); println(zeros[0].to_int()) }'
 # 0
 # 2

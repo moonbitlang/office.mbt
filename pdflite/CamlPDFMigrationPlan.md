@@ -790,8 +790,9 @@ MoonBit consequences for this project:
    Raw 1-bit row-padded image masks plus 2-bit and 4-bit row-padded
    DeviceGray/CalGray images are also started. Indexed RGB/CalRGB and CMYK
    table images are started for 8-bit, 4-bit, and 2-bit row-padded samples,
-   and Lab-backed indexed table conversion is started for 8-bit, 4-bit, and
-   2-bit row-padded samples. CamlPDF-style
+   including ICCBased and DeviceN bases through their basic alternate colour
+   spaces. Lab-backed indexed table conversion is started for 8-bit, 4-bit,
+   and 2-bit row-padded samples. CamlPDF-style
    `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. JBIG2 encoded image metadata now preserves
