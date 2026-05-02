@@ -42,6 +42,42 @@ test "PdfObjects add and remove objects with CamlPDF-style event log" {
 }
 
 ///|
+test "PdfObjects map_objects_in_place preserves parsed state tags" {
+  let objects = @pdflite.pdf_objects_empty()
+  objects.set_entry(
+    1,
+    @pdflite.pdf_object_entry(ObjectParsed(PdfInteger(10)), generation=2),
+  )
+  objects.set_entry(
+    2,
+    @pdflite.pdf_object_entry(
+      ObjectParsedAlreadyDecrypted(PdfInteger(20)),
+      generation=3,
+    ),
+  )
+  objects.set_entry(3, @pdflite.pdf_object_entry(ObjectToParse, generation=4))
+  objects.map_objects_in_place(fn(object) {
+    match object {
+      PdfInteger(value) => PdfInteger(value + 1)
+      _ => object
+    }
+  })
+  guard objects.get_entry(1)
+    is Some({ data: ObjectParsed(PdfInteger(11)), generation: 2 }) else {
+    fail("expected mapped parsed object")
+  }
+  guard objects.get_entry(2)
+    is Some(
+      { data: ObjectParsedAlreadyDecrypted(PdfInteger(21)), generation: 3 }
+    ) else {
+    fail("expected mapped already-decrypted object")
+  }
+  guard objects.get_entry(3) is Some({ data: ObjectToParse, generation: 4 }) else {
+    fail("expected deferred object to remain deferred")
+  }
+}
+
+///|
 test "PdfDocument empty document mirrors CamlPDF defaults" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(doc.version(), (1, 0))
@@ -126,6 +162,21 @@ test "PdfDocument select_object_numbers filters sorted parsed objects" {
   @test.assert_eq(doc.select_object_numbers(fn(object) { object == PdfNull }), [
     2,
   ])
+}
+
+///|
+test "PdfDocument map_objects_in_place updates document objects" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(1, PdfInteger(10))
+  doc.add_object_given_number(2, PdfBoolean(true))
+  doc.map_objects_in_place(fn(object) {
+    match object {
+      PdfInteger(value) => PdfInteger(value * 2)
+      _ => object
+    }
+  })
+  @test.assert_eq(doc.lookup_object_or_null(1), PdfInteger(20))
+  @test.assert_eq(doc.lookup_object_or_null(2), PdfBoolean(true))
 }
 
 ///|

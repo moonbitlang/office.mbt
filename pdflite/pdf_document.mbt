@@ -145,6 +145,23 @@ pub fn PdfObjects::object_numbers(self : PdfObjects) -> Array[Int] {
 }
 
 ///|
+pub fn PdfObjects::map_objects_in_place(
+  self : PdfObjects,
+  transform : (PdfObject) -> PdfObject,
+) -> Unit {
+  for number in self.object_numbers() {
+    let entry = self.get_entry(number).unwrap()
+    let data = match entry.data {
+      ObjectParsed(object) => ObjectParsed(transform(object))
+      ObjectParsedAlreadyDecrypted(object) =>
+        ObjectParsedAlreadyDecrypted(transform(object))
+      _ => entry.data
+    }
+    self.set_entry(number, { data, generation: entry.generation })
+  }
+}
+
+///|
 fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
   let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
   for number in self.object_stream_ids.keys().to_array() {
@@ -334,6 +351,14 @@ pub fn PdfDocument::select_object_numbers(
     }
   }
   selected
+}
+
+///|
+pub fn PdfDocument::map_objects_in_place(
+  self : PdfDocument,
+  transform : (PdfObject) -> PdfObject,
+) -> Unit {
+  self.objects.map_objects_in_place(transform)
 }
 
 ///|

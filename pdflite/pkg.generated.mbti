@@ -949,6 +949,7 @@ pub fn PdfDocument::lookup_direct_or_array(Self, PdfName, PdfObject) -> PdfObjec
 pub fn PdfDocument::lookup_direct_or_else(Self, PdfName, PdfName, PdfObject) -> PdfObject?
 pub fn PdfDocument::lookup_object_or_null(Self, Int) -> PdfObject
 pub fn PdfDocument::lookup_required(Self, PdfName, PdfObject, PdfError) -> PdfObject raise PdfError
+pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
 pub fn PdfDocument::merge_content_streams(Self) -> Unit raise PdfError
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
@@ -1212,6 +1213,7 @@ pub fn PdfObjects::get_entry(Self, Int) -> PdfObjectEntry?
 pub fn PdfObjects::length(Self) -> Int
 pub fn PdfObjects::log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfObjects::lookup_object_or_null(Self, Int) -> PdfObject
+pub fn PdfObjects::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
 pub fn PdfObjects::max_object_number(Self) -> Int
 pub fn PdfObjects::object_numbers(Self) -> Array[Int]
 pub fn PdfObjects::remove_object(Self, Int) -> Unit
