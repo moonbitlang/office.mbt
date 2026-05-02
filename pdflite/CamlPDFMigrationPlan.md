@@ -597,7 +597,10 @@ MoonBit consequences for this project:
    generation, destination-vs-action field selection, and returned-copy catalog
    replacement. The CamlPDF bookmark debug-line helper is also ported as
    `pdf_string_of_bookmark`, returning `PdfBytes` so bookmark titles remain
-   byte-preserving. `change_pages` matrix integration is started for
+   byte-preserving. Bookmark read/remove/add now resolve the active catalog
+   through trailer `/Root`, matching CamlPDF for real parsed documents while
+   retaining a document-root fallback for synthetic in-memory test fixtures.
+   `change_pages` matrix integration is started for
    transformed page destinations, including named destination definitions
    retained in the catalog or destination name tree.
 

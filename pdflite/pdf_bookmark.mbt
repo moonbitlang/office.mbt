@@ -74,6 +74,26 @@ fn pdf_bookmark_flags_key() -> PdfName {
 }
 
 ///|
+fn PdfDocument::pdf_bookmark_catalog(
+  self : PdfDocument,
+) -> PdfObject raise PdfError {
+  match self.trailer_dict().lookup_immediate(pdf_bookmark_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => raise RootExpected
+        catalog => catalog
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        raise RootExpected
+      }
+      root
+    }
+  }
+}
+
+///|
 pub(all) struct PdfBookmarkColour {
   red : Double
   green : Double
@@ -489,10 +509,7 @@ pub fn PdfDocument::read_bookmarks(
   preserve_actions? : Bool = false,
 ) -> Array[PdfBookmark] raise PdfError {
   let output : Array[PdfBookmark] = []
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_bookmark_catalog()
   match self.lookup_direct(pdf_bookmark_outlines_key(), root) {
     Some(outlines) =>
       self.pdf_bookmark_traverse_children(
@@ -507,10 +524,7 @@ pub fn PdfDocument::read_bookmarks(
 fn PdfDocument::pdf_bookmark_has_outlines(
   self : PdfDocument,
 ) -> Bool raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_bookmark_catalog()
   self.lookup_direct(pdf_bookmark_outlines_key(), root) is Some(_)
 }
 
@@ -576,10 +590,7 @@ fn PdfDocument::pdf_bookmarks_for_pages(
 pub fn PdfDocument::remove_bookmarks(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_bookmark_catalog()
   let pdf = self.copy()
   let root_without_outlines = root.remove_dict_entry(
     pdf_bookmark_outlines_key(),
@@ -602,10 +613,7 @@ pub fn PdfDocument::add_bookmarks(
   if bookmarks.length() == 0 {
     self.remove_bookmarks()
   } else {
-    let root = self.lookup_object_or_null(self.root())
-    if root == PdfNull {
-      raise RootExpected
-    }
+    let root = self.pdf_bookmark_catalog()
     let pdf = self.copy()
     let base_object_number = self.objects.max_object_number()
     let source : Ref[Int] = { val: 0 }

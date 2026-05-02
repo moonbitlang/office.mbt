@@ -38,9 +38,11 @@ fn bookmark_document_for_test() -> @pdflite.PdfDocument {
   let key_count = bookmark_name_for_test("/Count")
   let key_colour = bookmark_name_for_test("/C")
   let key_flags = bookmark_name_for_test("/F")
+  let key_root = bookmark_name_for_test("/Root")
   let type_catalog = bookmark_name_for_test("/Catalog")
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
   doc.add_object_given_number(
     1,
     PdfDictionary([
@@ -106,9 +108,11 @@ fn bookmark_single_outline_doc_for_test(
   let key_type = bookmark_name_for_test("/Type")
   let key_outlines = bookmark_name_for_test("/Outlines")
   let key_first = bookmark_name_for_test("/First")
+  let key_root = bookmark_name_for_test("/Root")
   let type_catalog = bookmark_name_for_test("/Catalog")
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
   doc.add_object_given_number(
     1,
     PdfDictionary([
@@ -236,6 +240,7 @@ test "PdfDocument read_bookmarks can preserve non-array actions" {
   let key_action = bookmark_name_for_test("/A")
   let key_s = bookmark_name_for_test("/S")
   let key_d = bookmark_name_for_test("/D")
+  let key_root = bookmark_name_for_test("/Root")
   let type_catalog = bookmark_name_for_test("/Catalog")
   let doc = @pdflite.pdf_document_empty()
   let action : @pdflite.PdfObject = PdfDictionary([
@@ -243,6 +248,7 @@ test "PdfDocument read_bookmarks can preserve non-array actions" {
     (key_d, PdfString(bookmark_bytes_for_test("named"))),
   ])
   doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
   doc.add_object_given_number(
     1,
     PdfDictionary([
@@ -269,8 +275,59 @@ test "PdfDocument read_bookmarks can preserve non-array actions" {
 }
 
 ///|
+test "PdfDocument read_bookmarks prefers trailer root over document root" {
+  let key_type = bookmark_name_for_test("/Type")
+  let key_outlines = bookmark_name_for_test("/Outlines")
+  let key_first = bookmark_name_for_test("/First")
+  let key_title = bookmark_name_for_test("/Title")
+  let key_root = bookmark_name_for_test("/Root")
+  let type_catalog = bookmark_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_outlines, PdfIndirect(11)),
+    ]),
+  )
+  doc.add_object_given_number(11, PdfDictionary([(key_first, PdfIndirect(12))]))
+  doc.add_object_given_number(
+    12,
+    PdfDictionary([(key_title, PdfString(bookmark_bytes_for_test("Trailer")))]),
+  )
+  @test.assert_eq(
+    (try! doc.read_bookmarks())[0].text,
+    bookmark_bytes_for_test("Trailer"),
+  )
+}
+
+///|
 test "PdfDocument read_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
+  let result : Result[Array[@pdflite.PdfBookmark], Error] = try? doc.read_bookmarks()
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}
+
+///|
+test "PdfDocument read_bookmarks rejects unresolved trailer root" {
+  let key_root = bookmark_name_for_test("/Root")
+  let key_type = bookmark_name_for_test("/Type")
+  let type_catalog = bookmark_name_for_test("/Catalog")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
+  )
   let result : Result[Array[@pdflite.PdfBookmark], Error] = try? doc.read_bookmarks()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected RootExpected")
@@ -294,7 +351,6 @@ test "PdfDocument read_bookmarks returns empty without outlines" {
 test "PdfDocument remove_bookmarks installs a catalog without outlines" {
   let key_root = bookmark_name_for_test("/Root")
   let doc = bookmark_document_for_test()
-  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(doc.root()))]))
   let stripped = try! doc.remove_bookmarks()
   @test.assert_eq((try! doc.read_bookmarks()).length(), 3)
   @test.assert_eq(try! stripped.read_bookmarks(), [])
@@ -302,6 +358,50 @@ test "PdfDocument remove_bookmarks installs a catalog without outlines" {
   @test.assert_eq(
     stripped.trailer_dict().lookup_immediate(key_root),
     Some(PdfIndirect(6)),
+  )
+}
+
+///|
+test "PdfDocument remove_bookmarks preserves trailer-root catalog entries" {
+  let key_type = bookmark_name_for_test("/Type")
+  let key_outlines = bookmark_name_for_test("/Outlines")
+  let key_first = bookmark_name_for_test("/First")
+  let key_title = bookmark_name_for_test("/Title")
+  let key_root = bookmark_name_for_test("/Root")
+  let key_lang = bookmark_name_for_test("/Lang")
+  let key_page_mode = bookmark_name_for_test("/PageMode")
+  let type_catalog = bookmark_name_for_test("/Catalog")
+  let page_mode_use_outlines = bookmark_name_for_test("/UseOutlines")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_lang, PdfString(bookmark_bytes_for_test("stale"))),
+    ]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_page_mode, PdfNameObject(page_mode_use_outlines)),
+      (key_outlines, PdfIndirect(11)),
+    ]),
+  )
+  doc.add_object_given_number(11, PdfDictionary([(key_first, PdfIndirect(12))]))
+  doc.add_object_given_number(
+    12,
+    PdfDictionary([(key_title, PdfString(bookmark_bytes_for_test("Trailer")))]),
+  )
+  let stripped = try! doc.remove_bookmarks()
+  let catalog = stripped.lookup_object_or_null(stripped.root())
+  @test.assert_eq(catalog.lookup_immediate(key_outlines), None)
+  @test.assert_eq(catalog.lookup_immediate(key_lang), None)
+  @test.assert_eq(
+    catalog.lookup_immediate(key_page_mode),
+    Some(PdfNameObject(page_mode_use_outlines)),
   )
 }
 
@@ -400,6 +500,54 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
   let hidden = updated.lookup_object_or_null(5)
   @test.assert_eq(hidden.lookup_immediate(key_parent), Some(PdfIndirect(4)))
   @test.assert_eq(hidden.lookup_immediate(key_action), Some(action))
+}
+
+///|
+test "PdfDocument add_bookmarks preserves trailer-root catalog entries" {
+  let key_type = bookmark_name_for_test("/Type")
+  let key_outlines = bookmark_name_for_test("/Outlines")
+  let key_root = bookmark_name_for_test("/Root")
+  let key_lang = bookmark_name_for_test("/Lang")
+  let key_page_mode = bookmark_name_for_test("/PageMode")
+  let type_catalog = bookmark_name_for_test("/Catalog")
+  let page_mode_use_none = bookmark_name_for_test("/UseNone")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_lang, PdfString(bookmark_bytes_for_test("stale"))),
+    ]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_type, PdfNameObject(type_catalog)),
+      (key_page_mode, PdfNameObject(page_mode_use_none)),
+    ]),
+  )
+  let bookmarks : Array[@pdflite.PdfBookmark] = [
+    {
+      level: 0,
+      text: bookmark_bytes_for_test("Top"),
+      target: DestNull,
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ]
+  let updated = try! doc.add_bookmarks(bookmarks)
+  @test.assert_eq(try! updated.read_bookmarks(), bookmarks)
+  @test.assert_eq(updated.root(), 13)
+  let catalog = updated.lookup_object_or_null(updated.root())
+  @test.assert_eq(catalog.lookup_immediate(key_lang), None)
+  @test.assert_eq(catalog.lookup_immediate(key_outlines), Some(PdfIndirect(12)))
+  @test.assert_eq(
+    catalog.lookup_immediate(key_page_mode),
+    Some(PdfNameObject(page_mode_use_none)),
+  )
 }
 
 ///|
