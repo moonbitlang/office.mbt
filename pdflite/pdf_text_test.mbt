@@ -5453,6 +5453,178 @@ test "PdfTextExtractor decodes technical AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes enclosed alphanumeric AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Acircle", 0x24B6),
+    ("/Bcircle", 0x24B7),
+    ("/Ccircle", 0x24B8),
+    ("/Dcircle", 0x24B9),
+    ("/Ecircle", 0x24BA),
+    ("/Fcircle", 0x24BB),
+    ("/Gcircle", 0x24BC),
+    ("/Hcircle", 0x24BD),
+    ("/Icircle", 0x24BE),
+    ("/Jcircle", 0x24BF),
+    ("/Kcircle", 0x24C0),
+    ("/Lcircle", 0x24C1),
+    ("/Mcircle", 0x24C2),
+    ("/Ncircle", 0x24C3),
+    ("/Ocircle", 0x24C4),
+    ("/Pcircle", 0x24C5),
+    ("/Qcircle", 0x24C6),
+    ("/Rcircle", 0x24C7),
+    ("/Scircle", 0x24C8),
+    ("/Tcircle", 0x24C9),
+    ("/Ucircle", 0x24CA),
+    ("/Vcircle", 0x24CB),
+    ("/Wcircle", 0x24CC),
+    ("/Xcircle", 0x24CD),
+    ("/Ycircle", 0x24CE),
+    ("/Zcircle", 0x24CF),
+    ("/acircle", 0x24D0),
+    ("/aparen", 0x249C),
+    ("/bcircle", 0x24D1),
+    ("/bparen", 0x249D),
+    ("/ccircle", 0x24D2),
+    ("/cparen", 0x249E),
+    ("/dcircle", 0x24D3),
+    ("/dparen", 0x249F),
+    ("/ecircle", 0x24D4),
+    ("/eightcircle", 0x2467),
+    ("/eighteencircle", 0x2471),
+    ("/eighteenparen", 0x2485),
+    ("/eighteenperiod", 0x2499),
+    ("/eightparen", 0x247B),
+    ("/eightperiod", 0x248F),
+    ("/elevencircle", 0x246A),
+    ("/elevenparen", 0x247E),
+    ("/elevenperiod", 0x2492),
+    ("/eparen", 0x24A0),
+    ("/fcircle", 0x24D5),
+    ("/fifteencircle", 0x246E),
+    ("/fifteenparen", 0x2482),
+    ("/fifteenperiod", 0x2496),
+    ("/fivecircle", 0x2464),
+    ("/fiveparen", 0x2478),
+    ("/fiveperiod", 0x248C),
+    ("/fourcircle", 0x2463),
+    ("/fourparen", 0x2477),
+    ("/fourperiod", 0x248B),
+    ("/fourteencircle", 0x246D),
+    ("/fourteenparen", 0x2481),
+    ("/fourteenperiod", 0x2495),
+    ("/fparen", 0x24A1),
+    ("/gcircle", 0x24D6),
+    ("/gparen", 0x24A2),
+    ("/hcircle", 0x24D7),
+    ("/hparen", 0x24A3),
+    ("/icircle", 0x24D8),
+    ("/iparen", 0x24A4),
+    ("/jcircle", 0x24D9),
+    ("/jparen", 0x24A5),
+    ("/kcircle", 0x24DA),
+    ("/kparen", 0x24A6),
+    ("/lcircle", 0x24DB),
+    ("/lparen", 0x24A7),
+    ("/mcircle", 0x24DC),
+    ("/mparen", 0x24A8),
+    ("/ncircle", 0x24DD),
+    ("/ninecircle", 0x2468),
+    ("/nineparen", 0x247C),
+    ("/nineperiod", 0x2490),
+    ("/nineteencircle", 0x2472),
+    ("/nineteenparen", 0x2486),
+    ("/nineteenperiod", 0x249A),
+    ("/nparen", 0x24A9),
+    ("/ocircle", 0x24DE),
+    ("/onecircle", 0x2460),
+    ("/oneparen", 0x2474),
+    ("/oneperiod", 0x2488),
+    ("/oparen", 0x24AA),
+    ("/pcircle", 0x24DF),
+    ("/pparen", 0x24AB),
+    ("/qcircle", 0x24E0),
+    ("/qparen", 0x24AC),
+    ("/rcircle", 0x24E1),
+    ("/rparen", 0x24AD),
+    ("/scircle", 0x24E2),
+    ("/sevencircle", 0x2466),
+    ("/sevenparen", 0x247A),
+    ("/sevenperiod", 0x248E),
+    ("/seventeencircle", 0x2470),
+    ("/seventeenparen", 0x2484),
+    ("/seventeenperiod", 0x2498),
+    ("/sixcircle", 0x2465),
+    ("/sixparen", 0x2479),
+    ("/sixperiod", 0x248D),
+    ("/sixteencircle", 0x246F),
+    ("/sixteenparen", 0x2483),
+    ("/sixteenperiod", 0x2497),
+    ("/sparen", 0x24AE),
+    ("/tcircle", 0x24E3),
+    ("/tencircle", 0x2469),
+    ("/tenparen", 0x247D),
+    ("/tenperiod", 0x2491),
+    ("/thirteencircle", 0x246C),
+    ("/thirteenparen", 0x2480),
+    ("/thirteenperiod", 0x2494),
+    ("/threecircle", 0x2462),
+    ("/threeparen", 0x2476),
+    ("/threeperiod", 0x248A),
+    ("/tparen", 0x24AF),
+    ("/twelvecircle", 0x246B),
+    ("/twelveparen", 0x247F),
+    ("/twelveperiod", 0x2493),
+    ("/twentycircle", 0x2473),
+    ("/twentyparen", 0x2487),
+    ("/twentyperiod", 0x249B),
+    ("/twocircle", 0x2461),
+    ("/twoparen", 0x2475),
+    ("/twoperiod", 0x2489),
+    ("/ucircle", 0x24E4),
+    ("/uparen", 0x24B0),
+    ("/vcircle", 0x24E5),
+    ("/vparen", 0x24B1),
+    ("/wcircle", 0x24E6),
+    ("/wparen", 0x24B2),
+    ("/xcircle", 0x24E7),
+    ("/xparen", 0x24B3),
+    ("/ycircle", 0x24E8),
+    ("/yparen", 0x24B4),
+    ("/zcircle", 0x24E9),
+    ("/zparen", 0x24B5),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x24B6), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x24CF), Some(26))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x249C), Some(28))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2460), Some(83))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x249B), Some(123))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x24E9), Some(137))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x24B5), Some(138))
+}
+
+///|
 test "PdfTextExtractor decodes box drawing AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/SF010000", 0x250C),
