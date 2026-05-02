@@ -4,6 +4,19 @@ fn page_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn page_assert_indirect_object_for_test(
+  doc : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+  expected : @pdflite.PdfObject,
+) -> Unit raise {
+  match object {
+    PdfIndirect(number) =>
+      @test.assert_eq(doc.lookup_object_or_null(number), expected)
+    _ => fail("expected indirect object")
+  }
+}
+
+///|
 fn page_rect_for_test(
   min_x : Double,
   min_y : Double,
@@ -2281,37 +2294,44 @@ test "PdfDocument change_pages transforms link annotations and open action" {
     matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
-  @test.assert_eq(
+  match
     changed
     .lookup_object_or_null(direct_annotation_number)
-    .lookup_immediate(key_dest),
-    Some(
-      PdfArray([
-        PdfIndirect(new_numbers[0]),
-        PdfNameObject(type_xyz),
-        PdfReal(13.0),
-        PdfReal(24.0),
-        PdfNull,
-      ]),
-    ),
-  )
+    .lookup_immediate(key_dest) {
+    Some(destination) =>
+      page_assert_indirect_object_for_test(
+        changed,
+        destination,
+        PdfArray([
+          PdfIndirect(new_numbers[0]),
+          PdfNameObject(type_xyz),
+          PdfReal(13.0),
+          PdfReal(24.0),
+          PdfNull,
+        ]),
+      )
+    _ => fail("expected transformed indirect destination")
+  }
   match
     changed
     .lookup_object_or_null(action_annotation_number)
     .lookup_immediate(key_action) {
     Some(PdfDictionary(_) as action) =>
-      @test.assert_eq(
-        action.lookup_immediate(key_d),
-        Some(
-          PdfArray([
-            PdfIndirect(new_numbers[0]),
-            PdfNameObject(type_xyz),
-            PdfReal(15.0),
-            PdfReal(26.0),
-            PdfNull,
-          ]),
-        ),
-      )
+      match action.lookup_immediate(key_d) {
+        Some(destination) =>
+          page_assert_indirect_object_for_test(
+            changed,
+            destination,
+            PdfArray([
+              PdfIndirect(new_numbers[0]),
+              PdfNameObject(type_xyz),
+              PdfReal(15.0),
+              PdfReal(26.0),
+              PdfNull,
+            ]),
+          )
+        _ => fail("expected transformed indirect action destination")
+      }
     _ => fail("expected transformed link action")
   }
   @test.assert_eq(
@@ -2327,51 +2347,61 @@ test "PdfDocument change_pages transforms link annotations and open action" {
         PdfDictionary(_) as direct_action_annotation,
       ]
     ) => {
-      @test.assert_eq(
-        direct_dest_annotation.lookup_immediate(key_dest),
-        Some(
-          PdfArray([
-            PdfIndirect(new_numbers[0]),
-            PdfNameObject(type_xyz),
-            PdfReal(17.0),
-            PdfReal(28.0),
-            PdfNull,
-          ]),
-        ),
-      )
+      match direct_dest_annotation.lookup_immediate(key_dest) {
+        Some(destination) =>
+          page_assert_indirect_object_for_test(
+            changed,
+            destination,
+            PdfArray([
+              PdfIndirect(new_numbers[0]),
+              PdfNameObject(type_xyz),
+              PdfReal(17.0),
+              PdfReal(28.0),
+              PdfNull,
+            ]),
+          )
+        _ => fail("expected transformed direct annotation destination")
+      }
       match direct_action_annotation.lookup_immediate(key_action) {
         Some(PdfDictionary(_) as action) =>
-          @test.assert_eq(
-            action.lookup_immediate(key_d),
-            Some(
-              PdfArray([
-                PdfIndirect(new_numbers[0]),
-                PdfNameObject(type_xyz),
-                PdfReal(19.0),
-                PdfReal(30.0),
-                PdfNull,
-              ]),
-            ),
-          )
+          match action.lookup_immediate(key_d) {
+            Some(destination) =>
+              page_assert_indirect_object_for_test(
+                changed,
+                destination,
+                PdfArray([
+                  PdfIndirect(new_numbers[0]),
+                  PdfNameObject(type_xyz),
+                  PdfReal(19.0),
+                  PdfReal(30.0),
+                  PdfNull,
+                ]),
+              )
+            _ => fail("expected transformed direct action destination")
+          }
         _ => fail("expected transformed direct link action")
       }
     }
     _ => fail("expected direct link annotations in indirect annotation array")
   }
-  @test.assert_eq(
+  match
     changed
     .lookup_object_or_null(changed.root())
-    .lookup_immediate(key_open_action),
-    Some(
-      PdfArray([
-        PdfIndirect(new_numbers[0]),
-        PdfNameObject(type_xyz),
-        PdfReal(11.0),
-        PdfReal(22.0),
-        PdfNull,
-      ]),
-    ),
-  )
+    .lookup_immediate(key_open_action) {
+    Some(destination) =>
+      page_assert_indirect_object_for_test(
+        changed,
+        destination,
+        PdfArray([
+          PdfIndirect(new_numbers[0]),
+          PdfNameObject(type_xyz),
+          PdfReal(11.0),
+          PdfReal(22.0),
+          PdfNull,
+        ]),
+      )
+    _ => fail("expected transformed indirect open action")
+  }
 }
 
 ///|
@@ -2659,20 +2689,24 @@ test "PdfDocument change_pages skips bookmark matrices when page count changes" 
       flags: 0,
     },
   ])
-  @test.assert_eq(
+  match
     changed
     .lookup_object_or_null(changed.root())
-    .lookup_immediate(key_open_action),
-    Some(
-      PdfArray([
-        PdfIndirect(new_numbers[0]),
-        PdfNameObject(type_xyz),
-        PdfReal(11.0),
-        PdfReal(22.0),
-        PdfNull,
-      ]),
-    ),
-  )
+    .lookup_immediate(key_open_action) {
+    Some(destination) =>
+      page_assert_indirect_object_for_test(
+        changed,
+        destination,
+        PdfArray([
+          PdfIndirect(new_numbers[0]),
+          PdfNameObject(type_xyz),
+          PdfReal(11.0),
+          PdfReal(22.0),
+          PdfNull,
+        ]),
+      )
+    _ => fail("expected transformed indirect open action")
+  }
 }
 
 ///|

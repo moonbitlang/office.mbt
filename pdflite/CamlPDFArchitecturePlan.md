@@ -44,7 +44,9 @@ work changes.
    bookmarks, annotations, page labels, duplicate annotation fixups, and
    destination pruning are started with direct tests. Direct annotation
    dictionaries in `/Annots` arrays now participate in geometry transforms and
-   `change_pages` link-destination matrix transforms; count-changing
+   `change_pages` link-destination matrix transforms; transformed annotation,
+   GoTo action, and `/OpenAction` destinations are allocated as indirect
+   destination objects like CamlPDF. Count-changing
    `change_pages` replacements keep CamlPDF's no-mapping behavior and bookmark
    matrix guard, while replacement preserves document metadata, trailer extras,
    and object-stream bookkeeping.

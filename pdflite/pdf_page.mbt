@@ -1006,9 +1006,13 @@ fn PdfDocument::pdf_page_transform_destination_object(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> PdfObject? raise PdfError {
-  self.pdf_page_transform_destination_object_with_shallow(
-    raw_destination, matrices, page_reference_numbers, false,
-  )
+  match
+    self.pdf_page_transform_destination_object_with_shallow(
+      raw_destination, matrices, page_reference_numbers, false,
+    ) {
+    Some(destination) => Some(PdfIndirect(self.add_object(destination)))
+    None => None
+  }
 }
 
 ///|

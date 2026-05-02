@@ -515,7 +515,11 @@ MoonBit consequences for this project:
    replace a different number of pages, bookmark page references are renumbered
    but bookmark coordinates are not matrix-transformed, while catalog
    `/OpenAction` and annotation destinations still run through the matrix
-   pass. A minimal `pdf_of_pages`
+   pass. Transformed annotation, GoTo action, and `/OpenAction` destinations
+   are now written as freshly allocated indirect destination objects, matching
+   CamlPDF's `rewrite_dest` path, while direct annotation dictionaries in
+   annotation arrays still participate in the MoonBit port's broader transform
+   coverage. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten

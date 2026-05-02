@@ -32,6 +32,19 @@ fn page_wb_xyz_destination(
 }
 
 ///|
+fn page_wb_assert_indirect_object_for_test(
+  doc : PdfDocument,
+  object : PdfObject,
+  expected : PdfObject,
+) -> Unit raise {
+  match object {
+    PdfIndirect(number) =>
+      @test.assert_eq(doc.lookup_object_or_null(number), expected)
+    _ => fail("expected indirect object")
+  }
+}
+
+///|
 fn page_wb_catalog_destination(
   doc : PdfDocument,
   catalog_number : Int,
@@ -474,18 +487,21 @@ test "private page link and open-action transforms cover fallback branches" {
     .lookup_object_or_null(doc.root())
     .lookup_immediate(pdf_page_open_action_key()) {
     Some(PdfDictionary(_) as updated_action) =>
-      @test.assert_eq(
-        updated_action.lookup_immediate(pdf_dest_d_key()),
-        Some(
-          PdfArray([
-            PdfIndirect(page_numbers[0]),
-            PdfNameObject(pdf_dest_type_xyz()),
-            PdfReal(11.0),
-            PdfReal(22.0),
-            PdfNull,
-          ]),
-        ),
-      )
+      match updated_action.lookup_immediate(pdf_dest_d_key()) {
+        Some(destination) =>
+          page_wb_assert_indirect_object_for_test(
+            doc,
+            destination,
+            PdfArray([
+              PdfIndirect(page_numbers[0]),
+              PdfNameObject(pdf_dest_type_xyz()),
+              PdfReal(11.0),
+              PdfReal(22.0),
+              PdfNull,
+            ]),
+          )
+        _ => fail("expected transformed indirect action destination")
+      }
     _ => fail("expected open action dictionary")
   }
   doc.add_object_given_number(
@@ -551,20 +567,24 @@ test "private page open-action transform uses trailer root catalog" {
     .lookup_immediate(pdf_page_open_action_key()),
     Some(stale_destination),
   )
-  @test.assert_eq(
+  match
     doc
     .lookup_object_or_null(active_root)
-    .lookup_immediate(pdf_page_open_action_key()),
-    Some(
-      PdfArray([
-        PdfIndirect(page_numbers[0]),
-        PdfNameObject(pdf_dest_type_xyz()),
-        PdfReal(11.0),
-        PdfReal(22.0),
-        PdfNull,
-      ]),
-    ),
-  )
+    .lookup_immediate(pdf_page_open_action_key()) {
+    Some(destination) =>
+      page_wb_assert_indirect_object_for_test(
+        doc,
+        destination,
+        PdfArray([
+          PdfIndirect(page_numbers[0]),
+          PdfNameObject(pdf_dest_type_xyz()),
+          PdfReal(11.0),
+          PdfReal(22.0),
+          PdfNull,
+        ]),
+      )
+    _ => fail("expected transformed indirect trailer-root open action")
+  }
 }
 
 ///|
