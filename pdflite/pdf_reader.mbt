@@ -1324,7 +1324,14 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
 pub fn pdf_parse_stream_object_from_bytes(
   data : PdfBytes,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let cursor = byte_cursor_of_bytes(data)
+  pdf_parse_stream_object_from_view(data[:])
+}
+
+///|
+pub fn pdf_parse_stream_object_from_view(
+  data : BytesView,
+) -> PdfParsedIndirectObject raise PdfError {
+  let cursor = byte_cursor_of_view(data)
   let prefix = pdf_parse_indirect_object_prefix_lexemes(cursor.lex_pdf_tokens())
   cursor.finish_pdf_stream_object(prefix)
 }

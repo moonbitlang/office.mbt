@@ -980,6 +980,21 @@ test "pdf_parse_stream_object_from_bytes parses direct-length stream objects" {
 }
 
 ///|
+test "pdf_parse_stream_object_from_view parses borrowed stream object slices" {
+  let data = reader_pdf_ascii(
+    "x\n7 0 obj\n<< /Length 5 >>\nstream\nHello\nendstream\nendobj\nx",
+  )
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_view(
+    data[2:data.length() - 2],
+  )
+  @test.assert_eq(parsed.number, 7)
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+}
+
+///|
 test "pdf_parse_stream_object_from_bytes accepts CR and CRLF stream line breaks" {
   let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
     reader_pdf_ascii(

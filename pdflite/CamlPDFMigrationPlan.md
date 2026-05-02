@@ -214,9 +214,10 @@ MoonBit consequences for this project:
    stream-aware lexing, and a primitive document loader can collect multiple
    non-stream indirect objects from byte input into `PdfDocument`. Direct-length
    stream object parsing is started for `/Length n` streams, materializing owned
-   `StreamGot(Bytes)` data at the object boundary; the primitive document loader
-   now includes those direct-length stream objects. A classic xref-table reader
-   is also started for the current writer's output: it follows the final
+   `StreamGot(Bytes)` data at the object boundary and accepting borrowed
+   `BytesView` input for parser callsites; the primitive document loader now
+   includes those direct-length stream objects. A classic xref-table reader is
+   also started for the current writer's output: it follows the final
    `startxref`, reads one classic xref section, parses the trailer dictionary,
    sets `/Root` and `first_xref`, and loads in-use plain objects by offset. It
    can resolve direct stream `/Length n` and plain indirect stream
