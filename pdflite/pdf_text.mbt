@@ -6397,6 +6397,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }
+  match pdf_text_codepoint_of_presentation_form_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
   match pdf_text_codepoint_of_box_drawing_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
