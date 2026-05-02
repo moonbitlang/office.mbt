@@ -60,6 +60,35 @@ test "ArrayView accepts fixed and growable arrays for read-only APIs" {
 }
 
 ///|
+fn first_sorted_for_ocaml2moonbit_test(values : ArrayView[Int]) -> Int {
+  let owned = values.to_owned()
+  owned.sort()
+  owned[0]
+}
+
+///|
+test "ArrayView to_owned makes an explicit mutable sorting boundary" {
+  let fixed : FixedArray[Int] = [3, 1, 2]
+  let growable : Array[Int] = [4, 2, 3]
+  @test.assert_eq(first_sorted_for_ocaml2moonbit_test(fixed), 1)
+  @test.assert_eq(first_sorted_for_ocaml2moonbit_test(growable), 2)
+  @test.assert_eq(fixed[0], 3)
+  @test.assert_eq(growable[0], 4)
+}
+
+///|
+test "MoonBit iterates iterable key views without array conversion" {
+  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  values[1] = 10
+  values[2] = 20
+  let mut total = 0
+  for key in values.keys() {
+    total += key
+  }
+  @test.assert_eq(total, 3)
+}
+
+///|
 fn bytes_view_has_ab_for_test(view : BytesView) -> Bool {
   match view {
     [65, 66, ..] => true
@@ -75,6 +104,17 @@ test "BytesView provides read-only byte slices and pattern matching" {
   @test.assert_eq(view[0].to_int(), 65)
   @test.assert_eq(bytes_view_has_ab_for_test(bytes[:]), true)
   @test.assert_eq(bytes_view_has_ab_for_test(view), true)
+}
+
+///|
+test "Core env API handles process variables and optional current directory" {
+  @env.set_env_var("MOONBIT_PORTING_PROBE", "ok")
+  @test.assert_eq(@env.get_env_var("MOONBIT_PORTING_PROBE"), Some("ok"))
+  @env.unset_env_var("MOONBIT_PORTING_PROBE")
+  @test.assert_eq(@env.get_env_var("MOONBIT_PORTING_PROBE"), None)
+  @test.assert_eq(@env.args().length() >= 0, true)
+  @test.assert_eq(@env.current_dir() is Some(_), true)
+  @test.assert_eq(@env.now().to_string().length() > 0, true)
 }
 
 ///|
