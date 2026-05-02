@@ -940,8 +940,9 @@ MoonBit consequences for this project:
     serialization for unknown subtypes, and geometry transforms for `/Rect`,
     `/QuadPoints`, and `/L`. Date support is started with typed PDF dates,
     CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
-    borrowed `BytesView`/owned `Bytes` parsing, PDF date string/byte rendering,
-    and `PdfString` object conversion helpers. Optional content group support
+    borrowed `BytesView`/owned `Bytes` parsing, local-time delimiter quirks,
+    PDF date string/byte rendering, and `PdfString` object conversion helpers.
+    Optional content group support
     is started with typed OCG usage/configuration/application records,
     `/OCProperties` reading, returned-copy writing/removal, byte-preserving
     PDF strings, and explicit `PdfName` fields for PDF name values. OCG

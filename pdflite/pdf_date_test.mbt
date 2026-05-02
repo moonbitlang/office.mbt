@@ -118,6 +118,40 @@ test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
 }
 
 ///|
+test "pdf_date_of_string preserves CamlPDF local-time quirks" {
+  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405+0830"), {
+    year: 2024,
+    month: 1,
+    day: 2,
+    hour: 3,
+    minute: 4,
+    second: 5,
+    hour_offset: 8,
+    minute_offset: 0,
+  })
+  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405+08x30"), {
+    year: 2024,
+    month: 1,
+    day: 2,
+    hour: 3,
+    minute: 4,
+    second: 5,
+    hour_offset: 8,
+    minute_offset: 30,
+  })
+  @test.assert_eq(try! @pdflite.pdf_date_of_string("D:20240102030405+08"), {
+    year: 2024,
+    month: 1,
+    day: 2,
+    hour: 3,
+    minute: 4,
+    second: 5,
+    hour_offset: 0,
+    minute_offset: 0,
+  })
+}
+
+///|
 test "pdf_string_of_date renders checked PDF date syntax" {
   @test.assert_eq(
     try! @pdflite.pdf_string_of_date({
