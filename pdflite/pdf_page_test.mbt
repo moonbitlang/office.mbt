@@ -254,6 +254,136 @@ fn page_renumber_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn page_draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_q,
+    Op_w(0.0),
+    Op_G(0.0),
+    Op_re(0.0, 0.0, 1.0, 1.0),
+    Op_m(0.0, 0.0),
+    Op_l(1.0, 1.0),
+    Op_m(0.0, 1.0),
+    Op_l(1.0, 0.0),
+    Op_S,
+    Op_Q,
+  ]
+}
+
+///|
+fn page_draft_xobject_is_image_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  name : @pdflite.PdfName,
+) -> Bool {
+  match doc.lookup_direct(page_name_for_test("/XObject"), resources) {
+    Some(xobjects) =>
+      match doc.lookup_direct(name, xobjects) {
+        Some(xobject) =>
+          match doc.lookup_direct(page_name_for_test("/Subtype"), xobject) {
+            Some(PdfNameObject(subtype)) =>
+              subtype == page_name_for_test("/Image")
+            _ => false
+          }
+        None => false
+      }
+    None => false
+  }
+}
+
+///|
+fn page_draft_remove_image_xobjects_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  let key_xobject = page_name_for_test("/XObject")
+  match resources {
+    PdfDictionary(entries) => {
+      let retained : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+      for entry in entries {
+        let (key, value) = entry
+        if key == key_xobject {
+          match doc.direct(value) {
+            PdfDictionary(xobjects) => {
+              let kept : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+              for xobject_entry in xobjects {
+                let (name, _) = xobject_entry
+                if !page_draft_xobject_is_image_for_test(doc, resources, name) {
+                  kept.push(xobject_entry)
+                }
+              }
+              retained.push((key, PdfDictionary(kept)))
+            }
+            _ => retained.push(entry)
+          }
+        } else {
+          retained.push(entry)
+        }
+      }
+      PdfDictionary(retained)
+    }
+    _ => resources
+  }
+}
+
+///|
+fn page_draft_ops_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Array[@pdflite.PdfContentOp] {
+  let output : Array[@pdflite.PdfContentOp] = []
+  for op in ops {
+    match op {
+      Op_Do(name) if page_draft_xobject_is_image_for_test(doc, resources, name) =>
+        for replacement in page_draft_substitute_ops_for_test() {
+          output.push(replacement)
+        }
+      Op_InlineImage(_, _, _) =>
+        for replacement in page_draft_substitute_ops_for_test() {
+          output.push(replacement)
+        }
+      _ => output.push(op)
+    }
+  }
+  output
+}
+
+///|
+fn page_draft_page_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+) -> @pdflite.PdfPage {
+  let ops = try! doc.parse_content_ops(page.content)
+  let stream = try! @pdflite.pdf_content_stream_of_ops(
+    page_draft_ops_for_test(doc, page.resources, ops),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter(
+    page_name_for_test("/FlateDecode"),
+    stream,
+  )
+  {
+    ..page,
+    content: [encoded],
+    resources: page_draft_remove_image_xobjects_for_test(doc, page.resources),
+  }
+}
+
+///|
+fn page_draft_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument {
+  let pages = try! doc.pages_of_pagetree()
+  let rewritten : Array[@pdflite.PdfPage] = []
+  for page in pages {
+    rewritten.push(page_draft_page_for_test(doc, page))
+  }
+  let page_root = try! doc.add_pagetree(rewritten)
+  ignore(try! doc.add_root(page_root, []))
+  try! doc.remove_unreferenced()
+  doc
+}
+
+///|
 fn page_resource_value_for_test(
   resources : @pdflite.PdfObject,
   key : String,
@@ -1754,6 +1884,98 @@ test "pdftest-style content parse rewrite change_pages round trip" {
   @test.assert_eq(
     try! reparsed.parse_content_ops(output_pages[0].content),
     page_hello_ops_for_test(),
+  )
+}
+
+///|
+test "pdfdraft-style image replacement removes image xobjects and roundtrips" {
+  let key_length = page_name_for_test("/Length")
+  let key_subtype = page_name_for_test("/Subtype")
+  let image_name = page_name_for_test("/Im1")
+  let form_name = page_name_for_test("/Fm1")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
+        (key_length, PdfInteger(0)),
+      ]),
+      StreamGot([]),
+    ),
+  )
+  doc.add_object_given_number(
+    8,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
+        (key_length, PdfInteger(3)),
+      ]),
+      StreamGot(@ascii.encode("q Q")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: page_xobject_resources_for_test([
+      (image_name, PdfIndirect(7)),
+      (form_name, PdfIndirect(8)),
+    ]),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops([
+        Op_Do(image_name),
+        Op_Do(form_name),
+        Op_InlineImage(
+          PdfDictionary([
+            (page_name_for_test("/W"), PdfInteger(1)),
+            (page_name_for_test("/H"), PdfInteger(1)),
+            (
+              page_name_for_test("/CS"),
+              PdfNameObject(page_name_for_test("/DeviceGray")),
+            ),
+            (page_name_for_test("/BPC"), PdfInteger(1)),
+          ]),
+          None,
+          Bytes::from_array([0]),
+        ),
+      ]),
+    ],
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let drafted = page_draft_document_for_test(doc)
+  let drafted_pages = try! drafted.pages_of_pagetree()
+  @test.assert_eq(drafted_pages.length(), 1)
+  @test.assert_eq(
+    try! drafted.parse_content_ops(drafted_pages[0].content),
+    [
+      ..page_draft_substitute_ops_for_test(),
+      Op_Do(form_name),
+      ..page_draft_substitute_ops_for_test(),
+    ],
+  )
+  @test.assert_eq(drafted.lookup_object_or_null(7), PdfNull)
+  guard drafted.lookup_object_or_null(8) is PdfStreamObject(_) else {
+    fail("expected form xobject to remain")
+  }
+  guard drafted.lookup_direct(
+      page_name_for_test("/XObject"),
+      drafted_pages[0].resources,
+    )
+    is Some(PdfDictionary(xobjects)) else {
+    fail("expected retained XObject dictionary")
+  }
+  @test.assert_eq(xobjects, [(form_name, PdfIndirect(8))])
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(drafted),
+  )
+  let reparsed_pages = try! reparsed.pages_of_pagetree()
+  @test.assert_eq(
+    try! reparsed.parse_content_ops(reparsed_pages[0].content),
+    [
+      ..page_draft_substitute_ops_for_test(),
+      Op_Do(form_name),
+      ..page_draft_substitute_ops_for_test(),
+    ],
   )
 }
 

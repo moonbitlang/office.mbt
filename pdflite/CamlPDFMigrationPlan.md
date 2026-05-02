@@ -450,9 +450,10 @@ MoonBit consequences for this project:
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
-   `pdfhello.ml`, `pdfdecomp.ml`, and `pdftest.ml` workflows: create a page,
-   parse/write content operators, read pages from a page tree, modify page
-   contents, remove unreferenced objects, and write the result.
+   `pdfhello.ml`, `pdfdecomp.ml`, `pdftest.ml`, and `pdfdraft.ml` workflows:
+   create a page, parse/write content operators, read pages from a page tree,
+   modify page contents, replace image draws, remove unreferenced objects, and
+   write the result.
    Status: started with CamlPDF-style page tree reference-number traversal
    through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
    `pages_of_pagetree_quick` counting, top-level `/Count` based
@@ -535,7 +536,11 @@ MoonBit consequences for this project:
    also includes dash patterns, rendering intent, flatness, Bezier curves, text
    state operators, color-space/color setters including named SCN/scn patterns,
    shadings, text quote operators, Type 3 glyph metrics, marked-content
-   operators, compatibility-section markers, and artifact marker helpers.
+   operators, compatibility-section markers, and artifact marker helpers. A
+   `pdfdraft.ml`-style acceptance fixture now replaces image XObject draws and
+   inline images with crossed-box path operators, drops image XObject resource
+   entries, Flate-encodes the rewritten content stream, prunes the removed image
+   object, and verifies writer/reader round-trip behavior.
    Inline images are started with a conservative unfiltered `BI ... ID ... EI`
    parse/render path that preserves image data as `Bytes`; known-size
    unfiltered inline images now read exact byte counts from direct
