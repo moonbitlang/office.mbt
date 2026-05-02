@@ -467,8 +467,9 @@ MoonBit consequences for this project:
    whose first filter is ASCIIHex or ASCII85 now decode through the stream
    codec pipeline and are flattened without stale filter metadata.
    The CamlPDF `concat_bytess` helper is exposed as
-   `pdf_content_concat_streams`, preserving the whitespace inserted between
-   split content streams before parsing. The CamlPDF `string_of_op` helper is
+   `pdf_content_concat_streams`, with borrowed
+   `pdf_content_concat_stream_views`, preserving the whitespace inserted
+   between split content streams before parsing. The CamlPDF `string_of_op` helper is
    exposed as `pdf_content_bytes_of_op`, preserving the port's byte-oriented
    naming while delegating to the existing multi-operator renderer. Content
    parsing now has a borrowed `BytesView` entry point,

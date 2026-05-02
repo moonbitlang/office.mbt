@@ -472,6 +472,20 @@ pub fn pdf_content_stream_of_ops(
 }
 
 ///|
+pub fn pdf_content_concat_stream_views(
+  streams : ArrayView[BytesView],
+) -> PdfBytes {
+  let output : Array[Byte] = []
+  for stream in streams {
+    if output.length() > 0 {
+      output.push(32)
+    }
+    pdf_content_push_view(output, stream)
+  }
+  Bytes::from_array(output)
+}
+
+///|
 pub fn pdf_content_concat_streams(streams : ArrayView[PdfBytes]) -> PdfBytes {
   let output : Array[Byte] = []
   for stream in streams {

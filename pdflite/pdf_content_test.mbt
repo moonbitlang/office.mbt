@@ -812,6 +812,21 @@ test "pdf_content_concat_streams inserts whitespace between split bytes" {
 }
 
 ///|
+test "pdf_content_concat_stream_views inserts whitespace between borrowed slices" {
+  let first = content_bytes_for_test("xxq")
+  let second = content_bytes_for_test("Qyy")
+  let third = content_bytes_for_test("zzBTww")
+  @test.assert_eq(
+    @pdflite.pdf_content_concat_stream_views([
+      first[2:],
+      second[:second.length() - 2],
+      third[2:third.length() - 2],
+    ]),
+    content_bytes_for_test("q Q BT"),
+  )
+}
+
+///|
 test "PdfDocument parse_content_ops reports non-stream content objects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(10, PdfInteger(42))
