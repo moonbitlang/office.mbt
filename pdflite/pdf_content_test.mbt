@@ -256,6 +256,17 @@ test "pdf_parse_content_ops_from_bytes parses hello-style content bytes" {
 }
 
 ///|
+test "pdf_parse_content_ops_from_view parses borrowed content slices" {
+  let wrapped = content_bytes_for_test("xxBT /F0 12 Tf ETyy")
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_view(
+      wrapped[2:wrapped.length() - 2],
+    ),
+    [Op_BT, Op_Tf(content_name_for_test("/F0"), 12.0), Op_ET],
+  )
+}
+
+///|
 test "pdf_content_bytes_of_ops renders simple inline images" {
   @test.assert_eq(
     try! @pdflite.pdf_content_bytes_of_ops([inline_image_content_op_for_test()]),

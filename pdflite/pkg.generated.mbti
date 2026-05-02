@@ -279,6 +279,8 @@ pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise PdfError
 
 pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfError
 
+pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[PdfContentOp] raise PdfError
+
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
 pub fn pdf_parse_indirect_object_from_view(BytesView) -> PdfParsedIndirectObject raise PdfError
@@ -1012,6 +1014,7 @@ pub fn PdfDocument::pages_of_pagetree_quick(Self) -> Int raise PdfError
 pub fn PdfDocument::parse_content_bytes_with_resources(Self, PdfObject, Bytes) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
+pub fn PdfDocument::parse_content_view_with_resources(Self, PdfObject, BytesView) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_function(Self, PdfObject) -> PdfFunction raise PdfError
 pub fn PdfDocument::parse_matrix(Self, PdfName, PdfObject) -> TransformMatrix raise PdfError
 pub fn PdfDocument::parse_rectangle(Self, PdfObject) -> PdfRectangle raise PdfError

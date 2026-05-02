@@ -464,7 +464,10 @@ MoonBit consequences for this project:
    `pdf_content_concat_streams`, preserving the whitespace inserted between
    split content streams before parsing. The CamlPDF `string_of_op` helper is
    exposed as `pdf_content_bytes_of_op`, preserving the port's byte-oriented
-   naming while delegating to the existing multi-operator renderer.
+   naming while delegating to the existing multi-operator renderer. Content
+   parsing now has a borrowed `BytesView` entry point,
+   `pdf_parse_content_ops_from_view`, with the owned `Bytes` parser kept as a
+   compatibility wrapper.
    The CamlPDF resource-aware `components` helper is started as
    `PdfDocument::colour_space_components`, covering device, calibrated,
    resource-named, ICCBased, Indexed, Separation, Pattern-with-base, and DeviceN
@@ -475,8 +478,10 @@ MoonBit consequences for this project:
    preserve `EI` sequences inside unfiltered payloads. Page-level content
    mutation and resource-renumbering paths now use that resource-aware parser
    when the `PdfPage` or page object already carries a resource dictionary. A
-   raw-byte resource-aware parser, `PdfDocument::parse_content_bytes_with_resources`,
-   is also exposed for the CamlPDF `parse_single_stream` use case.
+   raw-byte resource-aware parser,
+   `PdfDocument::parse_content_bytes_with_resources`, and borrowed
+   `PdfDocument::parse_content_view_with_resources` are also exposed for the
+   CamlPDF `parse_single_stream` use case.
    Filter-aware binary inline image compression and broader resource-dependent
    inline image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning

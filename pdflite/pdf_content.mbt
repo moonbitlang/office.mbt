@@ -489,7 +489,7 @@ pub fn PdfDocument::parse_content_ops(
   streams : ArrayView[PdfObject],
 ) -> Array[PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
-  pdf_parse_content_ops_from_bytes(pdf_content_concat_streams(raw_streams))
+  pdf_parse_content_ops_from_view(pdf_content_concat_streams(raw_streams)[:])
 }
 
 ///|
@@ -499,8 +499,8 @@ pub fn PdfDocument::parse_content_ops_with_resources(
   streams : ArrayView[PdfObject],
 ) -> Array[PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
-  pdf_parse_content_ops_from_bytes_with_context(
-    pdf_content_concat_streams(raw_streams),
+  pdf_parse_content_ops_from_view_with_context(
+    pdf_content_concat_streams(raw_streams)[:],
     Some(self),
     resources,
   )
@@ -512,7 +512,16 @@ pub fn PdfDocument::parse_content_bytes_with_resources(
   resources : PdfObject,
   data : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
-  pdf_parse_content_ops_from_bytes_with_context(data, Some(self), resources)
+  self.parse_content_view_with_resources(resources, data[:])
+}
+
+///|
+pub fn PdfDocument::parse_content_view_with_resources(
+  self : PdfDocument,
+  resources : PdfObject,
+  data : BytesView,
+) -> Array[PdfContentOp] raise PdfError {
+  pdf_parse_content_ops_from_view_with_context(data, Some(self), resources)
 }
 
 ///|
@@ -1570,16 +1579,23 @@ fn pdf_content_parse_section(
 pub fn pdf_parse_content_ops_from_bytes(
   data : PdfBytes,
 ) -> Array[PdfContentOp] raise PdfError {
-  pdf_parse_content_ops_from_bytes_with_context(data, None, PdfDictionary([]))
+  pdf_parse_content_ops_from_view(data[:])
 }
 
 ///|
-fn pdf_parse_content_ops_from_bytes_with_context(
-  data : PdfBytes,
+pub fn pdf_parse_content_ops_from_view(
+  data : BytesView,
+) -> Array[PdfContentOp] raise PdfError {
+  pdf_parse_content_ops_from_view_with_context(data, None, PdfDictionary([]))
+}
+
+///|
+fn pdf_parse_content_ops_from_view_with_context(
+  data : BytesView,
   document : PdfDocument?,
   resources : PdfObject,
 ) -> Array[PdfContentOp] raise PdfError {
-  let cursor = byte_cursor_of_bytes(data)
+  let cursor = byte_cursor_of_view(data)
   let ops : Array[PdfContentOp] = []
   let operands : Array[PdfObject] = []
   let mut done = false
