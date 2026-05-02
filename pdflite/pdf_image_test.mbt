@@ -167,6 +167,94 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), jbig2),
     PdfJBIG2(@ascii.encode("jbig"), None, Some(99)),
   )
+  let jbig2_short_decodeparms = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfNameObject(image_name_for_test("/JBIG2Decode")),
+      ),
+      (
+        image_name_for_test("/DP"),
+        @pdflite.pdf_dictionary([
+          (image_name_for_test("/JBIG2Globals"), PdfIndirect(77)),
+        ]),
+      ),
+    ]),
+    StreamGot(@ascii.encode("short-jbig")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(
+      @pdflite.pdf_dictionary([]),
+      jbig2_short_decodeparms,
+    ),
+    PdfJBIG2(@ascii.encode("short-jbig"), None, Some(77)),
+  )
+  let jbig2_array_decodeparms = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfArray([PdfNameObject(image_name_for_test("/JBIG2Decode"))]),
+      ),
+      (
+        image_name_for_test("/DecodeParms"),
+        PdfArray([
+          @pdflite.pdf_dictionary([
+            (image_name_for_test("/JBIG2Globals"), PdfIndirect(42)),
+          ]),
+        ]),
+      ),
+    ]),
+    StreamGot(@ascii.encode("array-jbig")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(
+      @pdflite.pdf_dictionary([]),
+      jbig2_array_decodeparms,
+    ),
+    PdfJBIG2(@ascii.encode("array-jbig"), None, Some(42)),
+  )
+  let jbig2_empty_decodeparms = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfNameObject(image_name_for_test("/JBIG2Decode")),
+      ),
+      (image_name_for_test("/DecodeParms"), @pdflite.pdf_dictionary([])),
+    ]),
+    StreamGot(@ascii.encode("empty-dp-jbig")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(
+      @pdflite.pdf_dictionary([]),
+      jbig2_empty_decodeparms,
+    ),
+    PdfJBIG2(@ascii.encode("empty-dp-jbig"), None, None),
+  )
+  let jbig2_bad_array_decodeparms = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/Filter"),
+        PdfArray([PdfNameObject(image_name_for_test("/JBIG2Decode"))]),
+      ),
+      (image_name_for_test("/DecodeParms"), PdfArray([PdfInteger(1)])),
+    ]),
+    StreamGot(@ascii.encode("bad-array-jbig")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(
+      @pdflite.pdf_dictionary([]),
+      jbig2_bad_array_decodeparms,
+    ),
+    PdfJBIG2(@ascii.encode("bad-array-jbig"), None, None),
+  )
   let jbig2_without_globals = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_name_for_test("/Width"), PdfInteger(1)),

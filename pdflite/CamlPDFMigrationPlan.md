@@ -709,7 +709,9 @@ MoonBit consequences for this project:
    8-bit and 4-bit row-padded samples, and Lab-backed indexed table conversion
    is started for 8-bit samples. CamlPDF-style `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
-   for encoded image metadata. The raw-image decode path now has a borrowed
+   for encoded image metadata. JBIG2 encoded image metadata now preserves
+   `/JBIG2Globals` from direct `/DecodeParms`, short `/DP`, and first
+   decode-parameter array entries. The raw-image decode path now has a borrowed
    `BytesView` helper for sliced inputs while preserving the owned fast path
    for no-op decode cases, so `.to_owned()` stays at borrowed-to-owned
    boundaries. Raw `/Decode` is now applied before colour-space conversion,

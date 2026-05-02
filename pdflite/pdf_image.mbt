@@ -347,12 +347,21 @@ fn PdfDocument::pdf_image_jbig2_globals(
   self : PdfDocument,
   dictionary : PdfObject,
 ) -> Int? {
-  match
+  let first_decodeparms = match
     self.lookup_direct_or_else(
       pdf_image_decodeparms_key(),
       pdf_image_dp_key(),
       dictionary,
     ) {
+    Some(PdfDictionary(_) as decodeparms) => Some(decodeparms)
+    Some(PdfArray([first, ..])) =>
+      match self.direct(first) {
+        PdfDictionary(_) as decodeparms => Some(decodeparms)
+        _ => None
+      }
+    _ => None
+  }
+  match first_decodeparms {
     Some(decodeparms) =>
       match decodeparms.lookup_immediate(pdf_image_jbig2_globals_key()) {
         Some(PdfIndirect(number)) => Some(number)
