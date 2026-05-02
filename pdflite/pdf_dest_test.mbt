@@ -510,6 +510,77 @@ test "PdfDocument read_destination resolves string name-tree destinations" {
 }
 
 ///|
+test "PdfDocument read_destination uses trailer root for string name-tree destinations" {
+  let key_type = dest_name_for_test("/Type")
+  let key_root = dest_name_for_test("/Root")
+  let key_names = dest_name_for_test("/Names")
+  let key_dests = dest_name_for_test("/Dests")
+  let doc = @pdflite.pdf_document_empty()
+  let stale_tree = doc.build_name_tree([
+    (
+      dest_bytes_for_test("intro"),
+      PdfArray([PdfIndirect(8), PdfNameObject(dest_name_for_test("/Fit"))]),
+    ),
+  ])
+  let active_tree = doc.build_name_tree([
+    (
+      dest_bytes_for_test("intro"),
+      PdfArray([PdfIndirect(22), PdfNameObject(dest_name_for_test("/Fit"))]),
+    ),
+  ])
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (key_names, PdfDictionary([(key_dests, stale_tree)])),
+    ]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (key_names, PdfDictionary([(key_dests, active_tree)])),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  @test.assert_eq(
+    try! doc.read_destination(PdfString(dest_bytes_for_test("intro"))),
+    DestFit(TargetPageObject(22)),
+  )
+}
+
+///|
+test "PdfDocument read_destination rejects unresolved trailer root for string destinations" {
+  let key_type = dest_name_for_test("/Type")
+  let key_root = dest_name_for_test("/Root")
+  let key_names = dest_name_for_test("/Names")
+  let key_dests = dest_name_for_test("/Dests")
+  let doc = @pdflite.pdf_document_empty()
+  let dest_tree = doc.build_name_tree([
+    (
+      dest_bytes_for_test("intro"),
+      PdfArray([PdfIndirect(8), PdfNameObject(dest_name_for_test("/Fit"))]),
+    ),
+  ])
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (key_names, PdfDictionary([(key_dests, dest_tree)])),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
+  let result : Result[@pdflite.PdfDestination, Error] = try? doc.read_destination(
+    PdfString(dest_bytes_for_test("intro")),
+  )
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}
+
+///|
 test "PdfDocument transform_destination adjusts page-object coordinates" {
   let doc = @pdflite.pdf_document_empty()
   let matrix = @pdflite.transform_translate(10.0, 20.0)

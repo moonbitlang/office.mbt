@@ -154,9 +154,9 @@ fn PdfDocument::pdf_dest_catalog(
 fn PdfDocument::pdf_dest_lookup_string_destination(
   self : PdfDocument,
   key : PdfBytes,
-) -> PdfObject? {
-  let root_object = self.lookup_object_or_null(self.root())
-  match self.lookup_direct(pdf_dest_names_key(), root_object) {
+) -> PdfObject? raise PdfError {
+  let catalog = self.pdf_dest_catalog()
+  match self.lookup_direct(pdf_dest_names_key(), catalog) {
     Some(names_dict) =>
       match self.lookup_direct(pdf_dest_dests_key(), names_dict) {
         Some(dests_tree) =>

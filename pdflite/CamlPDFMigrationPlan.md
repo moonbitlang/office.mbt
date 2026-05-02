@@ -582,7 +582,8 @@ MoonBit consequences for this project:
    dictionary following, shallow named/string destination preservation, old
    catalog `/Dests` lookup for named destinations through trailer `/Root`
    with an in-memory root fallback, and `/Root/Names/Dests` name-tree lookup
-   for string destinations. Matrix transformation is also started for
+   for string destinations through the same active-catalog path. Matrix
+   transformation is also started for
    page-object targets, with CamlPDF-style coordinate clipping and `/GoTo`
    action `/D` rewriting. Page/destination convenience helpers are started
    with `page_number_of_target` and `target_of_page_number`;
