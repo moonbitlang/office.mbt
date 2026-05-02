@@ -33,8 +33,9 @@ work changes.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
    `pdf_bookmark.mbt`, `pdf_annot.mbt`, `pdf_page_label.mbt`.
    Status: page tree read/write/change/extract flows, content operators,
-   inline images, destinations, bookmarks, annotations, page labels, duplicate
-   annotation fixups, and destination pruning are started with direct tests.
+   `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
+   bookmarks, annotations, page labels, duplicate annotation fixups, and
+   destination pruning are started with direct tests.
    Remaining focus: edge-case parity for direct annotation structures and
    additional `change_pages` compatibility fixtures.
 

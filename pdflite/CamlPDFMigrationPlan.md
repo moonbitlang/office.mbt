@@ -540,7 +540,10 @@ MoonBit consequences for this project:
    available over the same renderer. Content
    parsing now has a borrowed `BytesView` entry point,
    `pdf_parse_content_ops_from_view`, with the owned `Bytes` parser kept as a
-   compatibility wrapper.
+   compatibility wrapper. A `pdftest.ml`-style acceptance fixture now parses
+   split page content streams, rewrites each page to a single rendered content
+   stream through `change_pages`, prunes unreferenced objects, writes the
+   document, and reads the operators back.
    The CamlPDF resource-aware `components` helper is started as
    `PdfDocument::colour_space_components`, covering device, calibrated,
    resource-named, ICCBased, Indexed, Separation, Pattern-with-base, and DeviceN

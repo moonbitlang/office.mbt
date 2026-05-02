@@ -1718,6 +1718,46 @@ test "PdfDocument change_pages writes modified content into a replacement page t
 }
 
 ///|
+test "pdftest-style content parse rewrite change_pages round trip" {
+  let doc = @pdflite.pdf_document_empty()
+  let ops = page_hello_ops_for_test()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      try! @pdflite.pdf_content_stream_of_ops(ops[0:3]),
+      try! @pdflite.pdf_content_stream_of_ops(ops[3:ops.length()]),
+    ],
+    resources: page_hello_resources_for_test(),
+  }
+  let page_root = try! doc.add_pagetree([page])
+  ignore(try! doc.add_root(page_root, []))
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(doc),
+  )
+  let parsed_pages = try! parsed.pages_of_pagetree()
+  let rewritten_pages : Array[@pdflite.PdfPage] = []
+  for parsed_page in parsed_pages {
+    let parsed_ops = try! parsed.parse_content_ops(parsed_page.content)
+    rewritten_pages.push({
+      ..parsed_page,
+      content: [try! @pdflite.pdf_content_stream_of_ops(parsed_ops)],
+    })
+  }
+  let changed = try! parsed.change_pages(rewritten_pages)
+  try! changed.remove_unreferenced()
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(
+    try! @pdflite.pdf_write_document(changed),
+  )
+  let output_pages = try! reparsed.pages_of_pagetree()
+  @test.assert_eq(output_pages.length(), 1)
+  @test.assert_eq(output_pages[0].content.length(), 1)
+  @test.assert_eq(
+    try! reparsed.parse_content_ops(output_pages[0].content),
+    page_hello_ops_for_test(),
+  )
+}
+
+///|
 test "PdfDocument change_pages renumbers same-count page references" {
   let key_open_action = page_name_for_test("/OpenAction")
   let type_fit = page_name_for_test("/Fit")
