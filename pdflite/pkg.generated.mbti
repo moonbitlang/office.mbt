@@ -205,6 +205,8 @@ pub fn pdf_flate_encode(Bytes) -> Bytes
 
 pub fn pdf_flate_encode_view(BytesView) -> Bytes
 
+pub fn pdf_format_real(Double) -> Bytes raise PdfError
+
 pub fn pdf_generate_id(String, () -> Double) -> PdfObject
 
 pub fn pdf_get_jpeg_data(ByteCursor) -> Bytes raise PdfError
@@ -237,7 +239,11 @@ pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise PdfErr
 
 pub fn pdf_make_font(PdfName, PdfEncoding) -> PdfObject raise PdfError
 
+pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
+
 pub fn pdf_make_owner_password_entry(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
+
+pub fn pdf_make_pdf_string(BytesView) -> Bytes
 
 pub fn pdf_make_user_password_entry(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes raise PdfError
 
@@ -410,6 +416,10 @@ pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
+
+pub fn pdf_string_of_pdf(PdfObject) -> Bytes raise PdfError
+
+pub fn pdf_string_of_pdf_including_data(PdfObject) -> Bytes raise PdfError
 
 pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, PdfName)]
 

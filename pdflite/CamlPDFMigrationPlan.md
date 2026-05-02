@@ -300,7 +300,10 @@ MoonBit consequences for this project:
    CamlPDF-style PDF name rendering plus literal-string and hex-string rendering
    is exposed for byte strings through `pdf_write_name`,
    `pdf_write_literal_string`, and `pdf_write_hex_string`. The CamlPDF
-   `format_real` helper is exposed as byte-oriented `pdf_write_real`.
+   `make_pdf_string`, `make_hex_pdf_string`, `string_of_pdf`,
+   `string_of_pdf_including_data`, and `format_real` helpers are exposed as
+   byte-oriented wrappers so PDF syntax and binary strings stay out of MoonBit
+   UTF-16 `String`; the primary real formatter remains `pdf_write_real`.
    Real number serialization now avoids exponent notation and includes the
    CamlPDF fixed-six formatting branch for tiny non-integer real numbers plus
    12-significant-digit rounding for ordinary plain-decimal and exponent-form

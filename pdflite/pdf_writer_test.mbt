@@ -132,6 +132,12 @@ test "pdf_write_hex_string renders byte strings as PDF hex strings" {
     writer_ascii_for_test("<000a0f10ff>"),
   )
   @test.assert_eq(
+    @pdflite.pdf_make_hex_pdf_string(
+      writer_bytes_for_test([0, 10, 15, 16, 255])[:],
+    ),
+    writer_ascii_for_test("<000a0f10ff>"),
+  )
+  @test.assert_eq(
     @pdflite.pdf_write_hex_string(Bytes::new(0)[:]),
     writer_ascii_for_test("<>"),
   )
@@ -142,6 +148,12 @@ test "pdf_write_literal_string renders byte strings as PDF literal strings" {
   let string = writer_bytes_for_test([65, 10, 40, 41, 92, 0, 255])
   @test.assert_eq(
     @pdflite.pdf_write_literal_string(string[:]),
+    writer_bytes_for_test([
+      40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
+    ]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_make_pdf_string(string[:]),
     writer_bytes_for_test([
       40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
     ]),
@@ -222,6 +234,10 @@ test "pdf_write_real exposes the byte-oriented real formatter" {
     try! @pdflite.pdf_write_real(large),
     writer_ascii_for_test("1250000"),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_format_real(large),
+    writer_ascii_for_test("1250000"),
+  )
   let rounded : Double = try! @strconv.from_str("1.23456789012345e21")
   @test.assert_eq(
     try! @pdflite.pdf_write_real(rounded),
@@ -240,9 +256,19 @@ test "pdf_write_object escapes names and literal strings as bytes" {
     try! @pdflite.pdf_write_object(PdfNameObject(name)),
     writer_bytes_for_test([47, 65, 35, 50, 48, 66, 35, 50, 51, 67, 35, 70, 70]),
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_pdf(PdfNameObject(name)),
+    writer_bytes_for_test([47, 65, 35, 50, 48, 66, 35, 50, 51, 67, 35, 70, 70]),
+  )
   let string = writer_bytes_for_test([65, 10, 40, 41, 92, 0, 255])
   @test.assert_eq(
     try! @pdflite.pdf_write_object(PdfString(string)),
+    writer_bytes_for_test([
+      40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
+    ]),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_pdf_including_data(PdfString(string)),
     writer_bytes_for_test([
       40, 65, 92, 110, 92, 40, 92, 41, 92, 92, 92, 48, 48, 48, 92, 51, 55, 55, 41,
     ]),

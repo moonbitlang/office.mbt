@@ -115,6 +115,11 @@ pub fn pdf_write_literal_string(bytes : BytesView) -> PdfBytes {
 }
 
 ///|
+pub fn pdf_make_pdf_string(bytes : BytesView) -> PdfBytes {
+  pdf_write_literal_string(bytes)
+}
+
+///|
 fn pdf_write_hex_string_to(output : Array[Byte], bytes : BytesView) -> Unit {
   pdf_writer_push_byte(output, 60)
   for byte in bytes {
@@ -130,6 +135,11 @@ pub fn pdf_write_hex_string(bytes : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   pdf_write_hex_string_to(output, bytes)
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_make_hex_pdf_string(bytes : BytesView) -> PdfBytes {
+  pdf_write_hex_string(bytes)
 }
 
 ///|
@@ -449,6 +459,11 @@ pub fn pdf_write_real(value : Double) -> PdfBytes raise PdfError {
 }
 
 ///|
+pub fn pdf_format_real(value : Double) -> PdfBytes raise PdfError {
+  pdf_write_real(value)
+}
+
+///|
 fn pdf_write_object_to(
   output : Array[Byte],
   object : PdfObject,
@@ -504,6 +519,18 @@ pub fn pdf_write_object(object : PdfObject) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   pdf_write_object_to(output, object)
   Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_string_of_pdf(object : PdfObject) -> PdfBytes raise PdfError {
+  pdf_write_object(object)
+}
+
+///|
+pub fn pdf_string_of_pdf_including_data(
+  object : PdfObject,
+) -> PdfBytes raise PdfError {
+  pdf_write_object(object)
 }
 
 ///|
