@@ -582,6 +582,21 @@ deprecated. If the callback slot expects a narrower project error type, annotate
 the literal with that type, for example `fn(x) raise ProjectError { ... }`.
 
 ```sh
+moon run -c $'fn apply(f : (Int) -> Int raise Error) -> Int raise Error { f(1) }\nfn main { let result : Result[Int, Error] = try? apply(fn(x) raise Error { if x > 0 { fail("x") } else { x } }); println(result is Err(_)) }'
+# true
+```
+
+Raising and non-raising callback types are not interchangeable. A closure that
+may raise must be accepted by a callback slot whose function type includes
+`raise`, and a non-raising callback slot cannot call a raising provider.
+Intentional probes that pass `(Int) -> Int` where `(Int) -> Int raise Error` is
+expected, or pass `(Int) -> Int raise Error` where `(Int) -> Int` is expected,
+produce type mismatches in the current toolchain. When porting OCaml callbacks
+whose implementation may later use filesystem, async, random, or other fallible
+APIs, put the checked error effect in the callback type from the start instead
+of trying to hide the failure inside the callback.
+
+```sh
 moon run -c 'fn main { let xs = [1, 2, 3]; match xs { [_, .. rest] => { let owned = [ for x in rest => x ]; println(rest.length()); println(owned.length()); println(owned[0]) }; _ => () } }'
 # 2
 # 2

@@ -328,7 +328,11 @@ MoonBit consequences for this project:
    explicit typed random-field and IV-provider callbacks, with classic-writer
    plus uncompressed and Flate-compressed xref-stream round-trip gates. Default
    AES writers remain deferred until a project-level random-byte source is
-   selected.
+   selected. A MoonBit effect-typing probe confirms that raising and
+   non-raising callback types are not interchangeable, so a fallible secure
+   random-byte provider cannot be passed through the current non-raising AES
+   provider callbacks without changing those public signatures or choosing a
+   non-raising target-specific provider.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -791,6 +795,9 @@ MoonBit consequences for this project:
     including `/EncryptMetadata false` metadata-stream skipping. Default AES
     recrypt remains deferred until a project-level cryptographic random-byte
     source is selected; core `@random` is not being used for AES IVs or salts.
+    The current AES provider callbacks are intentionally non-raising. If the
+    selected secure provider is fallible, the AES API should grow raising
+    provider variants instead of wrapping the failure in an unchecked fallback.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
