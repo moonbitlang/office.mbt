@@ -6,13 +6,22 @@ async fn pdf_async_io_remove_if_exists_for_test(path : String) -> Unit {
 }
 
 ///|
+fn pdf_async_io_test_path_for_test(name : String) -> String {
+  let directory = match @env.current_dir() {
+    Some(current_dir) => current_dir + "/_build/"
+    None => "_build/"
+  }
+  directory + "pdflite_async_io_" + name + "_" + @env.now().to_string() + ".pdf"
+}
+
+///|
 fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }
 
 ///|
 async test "async file wrappers write and read PDF documents" {
-  let path = "_build/pdflite_async_io_roundtrip.pdf"
+  let path = pdf_async_io_test_path_for_test("roundtrip")
   pdf_async_io_remove_if_exists_for_test(path)
   let original = try! @pdflite.pdf_minimum_valid_pdf()
   pdf_write_document_to_file(original, path)
@@ -24,8 +33,8 @@ async test "async file wrappers write and read PDF documents" {
 
 ///|
 async test "async file wrappers write xref streams and read encrypted documents" {
-  let xref_path = "_build/pdflite_async_io_xref.pdf"
-  let encrypted_path = "_build/pdflite_async_io_encrypted_xref.pdf"
+  let xref_path = pdf_async_io_test_path_for_test("xref")
+  let encrypted_path = pdf_async_io_test_path_for_test("encrypted_xref")
   pdf_async_io_remove_if_exists_for_test(xref_path)
   pdf_async_io_remove_if_exists_for_test(encrypted_path)
   let original = try! @pdflite.pdf_minimum_valid_pdf()
@@ -60,8 +69,8 @@ async test "async file wrappers write xref streams and read encrypted documents"
 
 ///|
 async test "async file wrappers write incremental updates" {
-  let original_path = "_build/pdflite_async_io_original.pdf"
-  let updated_path = "_build/pdflite_async_io_incremental.pdf"
+  let original_path = pdf_async_io_test_path_for_test("original")
+  let updated_path = pdf_async_io_test_path_for_test("incremental")
   pdf_async_io_remove_if_exists_for_test(original_path)
   pdf_async_io_remove_if_exists_for_test(updated_path)
   let original = try! @pdflite.pdf_minimum_valid_pdf()
@@ -84,9 +93,11 @@ async test "async file wrappers write incremental updates" {
 
 ///|
 async test "async file wrappers write xref stream incremental updates" {
-  let original_path = "_build/pdflite_async_io_xref_original.pdf"
-  let updated_path = "_build/pdflite_async_io_xref_incremental.pdf"
-  let compressed_path = "_build/pdflite_async_io_xref_incremental_compressed.pdf"
+  let original_path = pdf_async_io_test_path_for_test("xref_original")
+  let updated_path = pdf_async_io_test_path_for_test("xref_incremental")
+  let compressed_path = pdf_async_io_test_path_for_test(
+    "xref_incremental_compressed",
+  )
   pdf_async_io_remove_if_exists_for_test(original_path)
   pdf_async_io_remove_if_exists_for_test(updated_path)
   pdf_async_io_remove_if_exists_for_test(compressed_path)

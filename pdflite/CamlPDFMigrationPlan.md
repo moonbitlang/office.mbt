@@ -871,7 +871,9 @@ MoonBit consequences for this project:
     xref-stream file writes, and classic/xref-stream incremental-update file
     writes. Native async tests cover plain round-trip, xref-stream round-trip,
     encrypted password read, classic incremental readback, and uncompressed plus
-    compressed xref-stream incremental readback.
+    compressed xref-stream incremental readback; test paths now use core
+    `@env.current_dir` and `@env.now` to avoid fixed filename collisions under
+    repeated or concurrent native test runs.
 
 13. Compatibility and coverage hardening.
     Add fixture suites as features land, update snapshots deliberately, and use
