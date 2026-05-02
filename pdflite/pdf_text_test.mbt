@@ -6621,6 +6621,150 @@ test "PdfTextExtractor decodes Hangul compatibility jamo AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Enclosed CJK AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/chieuchacirclekorean", 0x3277),
+    ("/chieuchaparenkorean", 0x3217),
+    ("/chieuchcirclekorean", 0x3269),
+    ("/chieuchparenkorean", 0x3209),
+    ("/cieucacirclekorean", 0x3276),
+    ("/cieucaparenkorean", 0x3216),
+    ("/cieuccirclekorean", 0x3268),
+    ("/cieucparenkorean", 0x3208),
+    ("/cieucuparenkorean", 0x321C),
+    ("/eightideographicparen", 0x3227),
+    ("/fiveideographicparen", 0x3224),
+    ("/fourideographicparen", 0x3223),
+    ("/hieuhacirclekorean", 0x327B),
+    ("/hieuhaparenkorean", 0x321B),
+    ("/hieuhcirclekorean", 0x326D),
+    ("/hieuhparenkorean", 0x320D),
+    ("/ideographearthcircle", 0x328F),
+    ("/ideographfirecircle", 0x328B),
+    ("/ideographicallianceparen", 0x323F),
+    ("/ideographiccallparen", 0x323A),
+    ("/ideographiccentrecircle", 0x32A5),
+    ("/ideographiccongratulationparen", 0x3237),
+    ("/ideographiccorrectcircle", 0x32A3),
+    ("/ideographicearthparen", 0x322F),
+    ("/ideographicenterpriseparen", 0x323D),
+    ("/ideographicexcellentcircle", 0x329D),
+    ("/ideographicfestivalparen", 0x3240),
+    ("/ideographicfinancialcircle", 0x3296),
+    ("/ideographicfinancialparen", 0x3236),
+    ("/ideographicfireparen", 0x322B),
+    ("/ideographichaveparen", 0x3232),
+    ("/ideographichighcircle", 0x32A4),
+    ("/ideographiclaborcircle", 0x3298),
+    ("/ideographiclaborparen", 0x3238),
+    ("/ideographicleftcircle", 0x32A7),
+    ("/ideographiclowcircle", 0x32A6),
+    ("/ideographicmedicinecircle", 0x32A9),
+    ("/ideographicmetalparen", 0x322E),
+    ("/ideographicmoonparen", 0x322A),
+    ("/ideographicnameparen", 0x3234),
+    ("/ideographicprintcircle", 0x329E),
+    ("/ideographicreachparen", 0x3243),
+    ("/ideographicrepresentparen", 0x3239),
+    ("/ideographicresourceparen", 0x323E),
+    ("/ideographicrightcircle", 0x32A8),
+    ("/ideographicsecretcircle", 0x3299),
+    ("/ideographicselfparen", 0x3242),
+    ("/ideographicsocietyparen", 0x3233),
+    ("/ideographicspecialparen", 0x3235),
+    ("/ideographicstockparen", 0x3231),
+    ("/ideographicstudyparen", 0x323B),
+    ("/ideographicsunparen", 0x3230),
+    ("/ideographicsuperviseparen", 0x323C),
+    ("/ideographicwaterparen", 0x322C),
+    ("/ideographicwoodparen", 0x322D),
+    ("/ideographmetalcircle", 0x328E),
+    ("/ideographmooncircle", 0x328A),
+    ("/ideographnamecircle", 0x3294),
+    ("/ideographsuncircle", 0x3290),
+    ("/ideographwatercircle", 0x328C),
+    ("/ideographwoodcircle", 0x328D),
+    ("/ieungacirclekorean", 0x3275),
+    ("/ieungaparenkorean", 0x3215),
+    ("/ieungcirclekorean", 0x3267),
+    ("/ieungparenkorean", 0x3207),
+    ("/khieukhacirclekorean", 0x3278),
+    ("/khieukhaparenkorean", 0x3218),
+    ("/khieukhcirclekorean", 0x326A),
+    ("/khieukhparenkorean", 0x320A),
+    ("/kiyeokacirclekorean", 0x326E),
+    ("/kiyeokaparenkorean", 0x320E),
+    ("/kiyeokcirclekorean", 0x3260),
+    ("/kiyeokparenkorean", 0x3200),
+    ("/koreanstandardsymbol", 0x327F),
+    ("/mieumacirclekorean", 0x3272),
+    ("/mieumaparenkorean", 0x3212),
+    ("/mieumcirclekorean", 0x3264),
+    ("/mieumparenkorean", 0x3204),
+    ("/nieunacirclekorean", 0x326F),
+    ("/nieunaparenkorean", 0x320F),
+    ("/nieuncirclekorean", 0x3261),
+    ("/nieunparenkorean", 0x3201),
+    ("/nineideographicparen", 0x3228),
+    ("/oneideographicparen", 0x3220),
+    ("/phieuphacirclekorean", 0x327A),
+    ("/phieuphaparenkorean", 0x321A),
+    ("/phieuphcirclekorean", 0x326C),
+    ("/phieuphparenkorean", 0x320C),
+    ("/pieupacirclekorean", 0x3273),
+    ("/pieupaparenkorean", 0x3213),
+    ("/pieupcirclekorean", 0x3265),
+    ("/pieupparenkorean", 0x3205),
+    ("/rieulacirclekorean", 0x3271),
+    ("/rieulaparenkorean", 0x3211),
+    ("/rieulcirclekorean", 0x3263),
+    ("/rieulparenkorean", 0x3203),
+    ("/sevenideographicparen", 0x3226),
+    ("/siosacirclekorean", 0x3274),
+    ("/siosaparenkorean", 0x3214),
+    ("/sioscirclekorean", 0x3266),
+    ("/siosparenkorean", 0x3206),
+    ("/sixideographicparen", 0x3225),
+    ("/tenideographicparen", 0x3229),
+    ("/thieuthacirclekorean", 0x3279),
+    ("/thieuthaparenkorean", 0x3219),
+    ("/thieuthcirclekorean", 0x326B),
+    ("/thieuthparenkorean", 0x320B),
+    ("/threeideographicparen", 0x3222),
+    ("/tikeutacirclekorean", 0x3270),
+    ("/tikeutaparenkorean", 0x3210),
+    ("/tikeutcirclekorean", 0x3262),
+    ("/tikeutparenkorean", 0x3202),
+    ("/twoideographicparen", 0x3221),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3277), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x328F), Some(17))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x327F), Some(74))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3221), Some(113))
+}
+
+///|
 test "PdfTextExtractor decodes box drawing AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/SF010000", 0x250C),
