@@ -514,6 +514,9 @@ MoonBit consequences for this project:
    falling back to marker scanning when filter or colour-space metadata is not
    enough to compute a size, preserving opaque binary payloads that contain
    `EI` without requiring every filter codec or resource colour space yet.
+   After a known inline-image payload has been consumed, the parser now mirrors
+   CamlPDF's recovery behavior for malformed trailing bytes by scanning forward
+   to a later `EI` marker instead of failing immediately.
    Broader binary inline image filter handling and resource-dependent inline
    image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
