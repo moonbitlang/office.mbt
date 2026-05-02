@@ -787,7 +787,8 @@ MoonBit consequences for this project:
    CamlPDF-style `colspace`/`bpc` convenience wrappers,
    including image-mask defaults. `get_image_24bpp` is started for encoded
    JPEG/JPEG2000/JBIG2 pass-through, single-item encoded filter arrays, JBIG2
-   globals, filter-stage decoding up to raw or encoded-image stop filters, and raw 8-bit RGB/CalRGB,
+   globals, filter-stage decoding up to raw or encoded-image stop filters,
+   raw 8-bit RGB/CalRGB, packed 1-bit, 2-bit, and 4-bit RGB/CalRGB,
    Gray/CalGray, CMYK, and ICCBased alternate conversion to RGB24.
    Raw 1-bit row-padded image masks plus 2-bit and 4-bit row-padded
    DeviceGray/CalGray images are also started. Indexed RGB/CalRGB and CMYK

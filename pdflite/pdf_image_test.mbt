@@ -900,6 +900,82 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
 }
 
 ///|
+test "PdfDocument get_image_24bpp reads packed RGB images" {
+  let doc = @pdflite.pdf_document_empty()
+  let empty_resources = @pdflite.pdf_dictionary([])
+  let rgb1 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceRGB")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(1)),
+    ]),
+    StreamGot(image_bytes_for_test([0b1010_1000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb1),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([255, 0, 255, 0, 255, 0])),
+  )
+  let rgb2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceRGB")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0001_1011, 0b1001_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb2),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([0, 85, 170, 255, 170, 85]),
+    ),
+  )
+  let rgb4 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceRGB")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(4)),
+    ]),
+    StreamGot(image_bytes_for_test([0x0F, 0x81, 0x23])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb4),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([0, 255, 136, 17, 34, 51])),
+  )
+  let cal_rgb_space : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/CalRGB")),
+    @pdflite.pdf_dictionary([]),
+  ])
+  let cal_rgb2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), cal_rgb_space),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b1100_0100])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, cal_rgb2),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([255, 0, 85])),
+  )
+}
+
+///|
 test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
   let doc = @pdflite.pdf_document_empty()
   let inverted_mask = @pdflite.pdf_stream(
@@ -1062,7 +1138,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
 ///|
 test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let unsupported_rgb2 = @pdflite.pdf_stream(
+  let unsupported_rgb16 = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_name_for_test("/Width"), PdfInteger(1)),
       (image_name_for_test("/Height"), PdfInteger(1)),
@@ -1070,13 +1146,13 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
         image_name_for_test("/ColorSpace"),
         PdfNameObject(image_name_for_test("/DeviceRGB")),
       ),
-      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(16)),
     ]),
-    StreamGot(image_bytes_for_test([0])),
+    StreamGot(image_bytes_for_test([0, 0, 0, 0, 0, 0])),
   )
   let unsupported : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
     @pdflite.pdf_dictionary([]),
-    unsupported_rgb2,
+    unsupported_rgb16,
   )
   guard unsupported is Err(@pdflite.PdfError::FilterExpected) else {
     fail("expected unsupported raw image")

@@ -658,6 +658,64 @@ fn pdf_image_gray_4bpp_as_rgb24(
 }
 
 ///|
+fn pdf_image_rgb_packed_bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  bits_per_component : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let samples_per_row = width * 3
+  let bytes_per_row = pdf_image_packed_bytes_per_row(
+    samples_per_row, bits_per_component,
+  )
+  pdf_image_require_size(data, bytes_per_row * height)
+  let max_sample = (1 << bits_per_component) - 1
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      for component in 0..<3 {
+        let sample = pdf_image_packed_sample(
+          data,
+          row_offset,
+          column * 3 + component,
+          bits_per_component,
+        )
+        output.push((sample * 255 / max_sample).to_byte())
+      }
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_rgb_1bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_rgb_packed_bpp_as_rgb24(width, height, 1, data)
+}
+
+///|
+fn pdf_image_rgb_2bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_rgb_packed_bpp_as_rgb24(width, height, 2, data)
+}
+
+///|
+fn pdf_image_rgb_4bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_rgb_packed_bpp_as_rgb24(width, height, 4, data)
+}
+
+///|
 fn pdf_image_indexed_lookup(
   table : ArrayView[(Int, Array[Int])],
   index : Int,
@@ -993,6 +1051,12 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
       pdf_image_require_size(data, required)
       data[:required].to_owned()
     }
+    (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(1)) =>
+      pdf_image_rgb_1bpp_as_rgb24(width, height, data)
+    (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(2)) =>
+      pdf_image_rgb_2bpp_as_rgb24(width, height, data)
+    (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(4)) =>
+      pdf_image_rgb_4bpp_as_rgb24(width, height, data)
     (PdfDeviceGray | PdfCalGray(_, _, _), Some(8)) =>
       pdf_image_gray_8bpp_as_rgb24(width, height, data)
     (PdfDeviceCMYK, Some(8)) =>
