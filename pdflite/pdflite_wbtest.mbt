@@ -2143,6 +2143,61 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     pdf_text_codepoint_of_basic_latin_glyphname(wbtest_text_name("/not-basic")),
     None,
   )
+  let cjk_symbol_entries : Array[(String, Int)] = [
+    ("/anglebracketleft", 0x3008),
+    ("/anglebracketright", 0x3009),
+    ("/blacklenticularbracketleft", 0x3010),
+    ("/blacklenticularbracketright", 0x3011),
+    ("/circlepostalmark", 0x3036),
+    ("/cornerbracketleft", 0x300C),
+    ("/cornerbracketright", 0x300D),
+    ("/dblanglebracketleft", 0x300A),
+    ("/dblanglebracketright", 0x300B),
+    ("/dittomark", 0x3003),
+    ("/eighthangzhou", 0x3028),
+    ("/fivehangzhou", 0x3025),
+    ("/fourhangzhou", 0x3024),
+    ("/getamark", 0x3013),
+    ("/ideographicclose", 0x3006),
+    ("/ideographiccomma", 0x3001),
+    ("/ideographiciterationmark", 0x3005),
+    ("/ideographicperiod", 0x3002),
+    ("/ideographicspace", 0x3000),
+    ("/ideographiczero", 0x3007),
+    ("/jis", 0x3004),
+    ("/ninehangzhou", 0x3029),
+    ("/onehangzhou", 0x3021),
+    ("/postalmark", 0x3012),
+    ("/postalmarkface", 0x3020),
+    ("/quotedblprime", 0x301E),
+    ("/quotedblprimereversed", 0x301D),
+    ("/sevenhangzhou", 0x3027),
+    ("/sixhangzhou", 0x3026),
+    ("/threehangzhou", 0x3023),
+    ("/tortoiseshellbracketleft", 0x3014),
+    ("/tortoiseshellbracketright", 0x3015),
+    ("/twentyhangzhou", 0x5344),
+    ("/twohangzhou", 0x3022),
+    ("/wavedash", 0x301C),
+    ("/whitecornerbracketleft", 0x300E),
+    ("/whitecornerbracketright", 0x300F),
+    ("/whitelenticularbracketleft", 0x3016),
+    ("/whitelenticularbracketright", 0x3017),
+    ("/whitetortoiseshellbracketleft", 0x3018),
+    ("/whitetortoiseshellbracketright", 0x3019),
+  ]
+  for entry in cjk_symbol_entries {
+    @test.assert_eq(
+      pdf_text_codepoint_of_cjk_symbol_glyphname(wbtest_text_name(entry.0)),
+      Some(entry.1),
+    )
+  }
+  @test.assert_eq(
+    pdf_text_codepoint_of_cjk_symbol_glyphname(
+      wbtest_text_name("/not-cjk-symbol"),
+    ),
+    None,
+  )
   let bopomofo_entries : Array[(String, Int)] = [
     ("/abopomofo", 0x311A),
     ("/aibopomofo", 0x311E),

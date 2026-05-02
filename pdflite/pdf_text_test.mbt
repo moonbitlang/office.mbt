@@ -5994,6 +5994,78 @@ test "PdfTextExtractor decodes enclosed alphanumeric AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes CJK symbol AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/anglebracketleft", 0x3008),
+    ("/anglebracketright", 0x3009),
+    ("/blacklenticularbracketleft", 0x3010),
+    ("/blacklenticularbracketright", 0x3011),
+    ("/circlepostalmark", 0x3036),
+    ("/cornerbracketleft", 0x300C),
+    ("/cornerbracketright", 0x300D),
+    ("/dblanglebracketleft", 0x300A),
+    ("/dblanglebracketright", 0x300B),
+    ("/dittomark", 0x3003),
+    ("/eighthangzhou", 0x3028),
+    ("/fivehangzhou", 0x3025),
+    ("/fourhangzhou", 0x3024),
+    ("/getamark", 0x3013),
+    ("/ideographicclose", 0x3006),
+    ("/ideographiccomma", 0x3001),
+    ("/ideographiciterationmark", 0x3005),
+    ("/ideographicperiod", 0x3002),
+    ("/ideographicspace", 0x3000),
+    ("/ideographiczero", 0x3007),
+    ("/jis", 0x3004),
+    ("/ninehangzhou", 0x3029),
+    ("/onehangzhou", 0x3021),
+    ("/postalmark", 0x3012),
+    ("/postalmarkface", 0x3020),
+    ("/quotedblprime", 0x301E),
+    ("/quotedblprimereversed", 0x301D),
+    ("/sevenhangzhou", 0x3027),
+    ("/sixhangzhou", 0x3026),
+    ("/threehangzhou", 0x3023),
+    ("/tortoiseshellbracketleft", 0x3014),
+    ("/tortoiseshellbracketright", 0x3015),
+    ("/twentyhangzhou", 0x5344),
+    ("/twohangzhou", 0x3022),
+    ("/wavedash", 0x301C),
+    ("/whitecornerbracketleft", 0x300E),
+    ("/whitecornerbracketright", 0x300F),
+    ("/whitelenticularbracketleft", 0x3016),
+    ("/whitelenticularbracketright", 0x3017),
+    ("/whitetortoiseshellbracketleft", 0x3018),
+    ("/whitetortoiseshellbracketright", 0x3019),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3008), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3000), Some(19))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5344), Some(33))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3019), Some(41))
+}
+
+///|
 test "PdfTextExtractor decodes Bopomofo AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/abopomofo", 0x311A),

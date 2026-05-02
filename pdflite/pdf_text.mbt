@@ -4299,6 +4299,54 @@ fn pdf_text_codepoint_of_enclosed_alnum_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_cjk_symbol_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/anglebracketleft" => Some(0x3008)
+    "/anglebracketright" => Some(0x3009)
+    "/blacklenticularbracketleft" => Some(0x3010)
+    "/blacklenticularbracketright" => Some(0x3011)
+    "/circlepostalmark" => Some(0x3036)
+    "/cornerbracketleft" => Some(0x300C)
+    "/cornerbracketright" => Some(0x300D)
+    "/dblanglebracketleft" => Some(0x300A)
+    "/dblanglebracketright" => Some(0x300B)
+    "/dittomark" => Some(0x3003)
+    "/eighthangzhou" => Some(0x3028)
+    "/fivehangzhou" => Some(0x3025)
+    "/fourhangzhou" => Some(0x3024)
+    "/getamark" => Some(0x3013)
+    "/ideographicclose" => Some(0x3006)
+    "/ideographiccomma" => Some(0x3001)
+    "/ideographiciterationmark" => Some(0x3005)
+    "/ideographicperiod" => Some(0x3002)
+    "/ideographicspace" => Some(0x3000)
+    "/ideographiczero" => Some(0x3007)
+    "/jis" => Some(0x3004)
+    "/ninehangzhou" => Some(0x3029)
+    "/onehangzhou" => Some(0x3021)
+    "/postalmark" => Some(0x3012)
+    "/postalmarkface" => Some(0x3020)
+    "/quotedblprime" => Some(0x301E)
+    "/quotedblprimereversed" => Some(0x301D)
+    "/sevenhangzhou" => Some(0x3027)
+    "/sixhangzhou" => Some(0x3026)
+    "/threehangzhou" => Some(0x3023)
+    "/tortoiseshellbracketleft" => Some(0x3014)
+    "/tortoiseshellbracketright" => Some(0x3015)
+    "/twentyhangzhou" => Some(0x5344)
+    "/twohangzhou" => Some(0x3022)
+    "/wavedash" => Some(0x301C)
+    "/whitecornerbracketleft" => Some(0x300E)
+    "/whitecornerbracketright" => Some(0x300F)
+    "/whitelenticularbracketleft" => Some(0x3016)
+    "/whitelenticularbracketright" => Some(0x3017)
+    "/whitetortoiseshellbracketleft" => Some(0x3018)
+    "/whitetortoiseshellbracketright" => Some(0x3019)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_bopomofo_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/abopomofo" => Some(0x311A)
@@ -5610,6 +5658,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     None => ()
   }
   match pdf_text_codepoint_of_enclosed_alnum_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_cjk_symbol_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }
