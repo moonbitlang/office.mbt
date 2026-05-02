@@ -798,9 +798,11 @@ MoonBit consequences for this project:
     standard ARC4 known vectors plus round-trip and empty-key tests. CamlPDF's
     permission enum and signed PDF `/P` mask conversion are also started,
     preserving the R2/R3 denied-permission bit order and signed `Int32`
-    values such as `-4`, `-8`, and `-3904`. The MD5 digest wrapper is started
-    through `moonbitlang/x/crypto`, with RFC 1321 vectors over `BytesView`
-    input. MD5-backed Algorithm 3.1 object-key derivation is started for R2/R3/R4
+    values such as `-4`, `-8`, and `-3904`. The MD5 and SHA-256 digest wrappers
+    are started through `moonbitlang/x/crypto`, with RFC/FIPS vectors over
+    `BytesView` input. Local SHA-384 and SHA-512 primitives are also started for
+    the CamlPDF AESV3 revision 6 `shamix` path, with standard FIPS vector tests.
+    MD5-backed Algorithm 3.1 object-key derivation is started for R2/R3/R4
     encryption, including object/generation little-endian byte packing,
     key-length truncation, and the AESV2 `sAlT` suffix branch. PDF password
     padding and R2/R3/R4 file-key derivation are also started, including the
@@ -881,14 +883,14 @@ MoonBit consequences for this project:
     xref-stream-writer/xref-stream-reader/decrypt, and encrypted incremental
     update integration gates.
     Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
-    structured unsupported errors until the remaining primitives are available.
+    structured unsupported errors until the SHA-family primitives are wired into
+    the revision 6 password-hash loop.
     The document-level decryption entry points for parsed ARC4 and AESV2
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, and return CamlPDF-style denied permissions.
     AESV3 revision 6 object/data crypt, AESV3 revision 6/ISO re-encryption,
-    SHA-family helpers beyond the available package surface, deferred
-    stream/object decryption, and default random-IV AES re-encryption remain
-    deferred.
+    deferred stream/object decryption, and default random-IV AES re-encryption
+    remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

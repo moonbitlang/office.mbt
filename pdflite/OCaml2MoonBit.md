@@ -259,6 +259,20 @@ means overflow needs explicit tests when the source relied on arbitrary-size or
 64-bit integer behavior.
 
 ```sh
+moon run -c 'fn rotr64(value : UInt64, bits : Int) -> UInt64 { (value >> bits) | (value << (64 - bits)) }
+fn main { let value : UInt64 = 0x0123456789abcdef; let full : UInt64 = UInt64::lnot(0); println(rotr64(value, 8).to_string()); println((full + (1 : UInt64)).to_string()); println(((0x80 : UInt64) >> 7).to_string()) }'
+# 17222085231038278605
+# 0
+# 1
+```
+
+MoonBit `UInt64` arithmetic wraps modulo 2^64, unsigned right shifts are
+logical, and bit rotations can be built from paired shifts. This is useful for
+porting OCaml code that used fixed-width SHA/AES helper arithmetic. In mixed
+literal expressions, provide explicit `UInt64` context when the literal is
+outside signed `Int` range.
+
+```sh
 moon run -c 'fn main { println(Int::lnot(0)); println((0x0F).lnot()); println((!true).to_string()) }'
 # -1
 # -16

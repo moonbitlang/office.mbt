@@ -421,6 +421,10 @@ pub fn pdf_run_length_encode_view(BytesView) -> Bytes
 
 pub fn pdf_sha256_digest(BytesView) -> Bytes
 
+pub fn pdf_sha384_digest(BytesView) -> Bytes
+
+pub fn pdf_sha512_digest(BytesView) -> Bytes
+
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise PdfError
 
 pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
