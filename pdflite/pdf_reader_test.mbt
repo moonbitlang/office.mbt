@@ -417,6 +417,36 @@ fn reader_linearized_classic_pdf(value : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_linearized_classic_pdf_with_prev_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let linearized_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Linearized 1 /L 0 >>",
+  )
+  let catalog_offset = reader_push_indirect_object(
+    output, 2, 0, "<< /Type /Catalog >>",
+  )
+  let base_xref = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, linearized_offset, 0)
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 2 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+
+  let update_offset = reader_push_indirect_object(output, 3, 0, "3")
+  let final_xref = output.length()
+  reader_push_ascii(output, "xref\n3 1\n")
+  reader_push_xref_entry(output, update_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 2 0 R /Size 4 /Prev ")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n")
+  reader_push_ascii(output, final_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_leading_junk() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\nnotobject\n")
@@ -1196,6 +1226,60 @@ test "pdf_is_linearized probes byte input without full parsing" {
     @pdflite.pdf_is_linearized(reader_pdf_ascii("not a pdf")[:]),
     false,
   )
+}
+
+///|
+test "pdf_revisions_from_bytes counts classic Prev chain revisions" {
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_classic_pdf_with_indirect_stream_length()[:],
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_classic_pdf_with_prev_xref()[:],
+    ),
+    2,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_linearized_classic_pdf("1")[:],
+    ),
+    1,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_linearized_classic_pdf_with_prev_xref()[:],
+    ),
+    1,
+  )
+}
+
+///|
+test "pdf_revisions_from_bytes reports malformed revision metadata" {
+  let missing_startxref : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n")[:],
+  )
+  guard missing_startxref is Err(@pdflite.PdfError::StartXRefExpected) else {
+    fail("expected StartXRefExpected")
+  }
+
+  let malformed_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev /Bad >>",
+    )[:],
+  )
+  guard malformed_prev is Err(@pdflite.PdfError::TrailerExpected) else {
+    fail("expected TrailerExpected")
+  }
+
+  let cyclic_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
+    reader_classic_pdf_with_self_prev_xref()[:],
+  )
+  guard cyclic_prev is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected XRefExpected")
+  }
 }
 
 ///|

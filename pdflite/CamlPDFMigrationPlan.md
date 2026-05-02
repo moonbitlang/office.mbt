@@ -219,7 +219,9 @@ MoonBit consequences for this project:
    can resolve direct stream `/Length n` and plain indirect stream
    `/Length n 0 R` entries through that xref table. Incremental trailer
    `/Prev` chains are started for classic xref tables, preserving newer entries
-   over older ones, including newer free entries that hide older objects. Xref
+   over older ones, including newer free entries that hide older objects, and a
+   public `pdf_revisions_from_bytes` helper counts those revisions from the
+   xref metadata. Xref
    stream reading is now started for direct/filter-decodable stream data,
    default `/Size` ranges, explicit `/Index` ranges, and ordinary type-1
    entries; xref stream objects are omitted from the loaded object map, and

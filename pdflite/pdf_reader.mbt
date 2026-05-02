@@ -776,6 +776,32 @@ pub fn pdf_is_linearized(data : BytesView) -> Bool {
 }
 
 ///|
+pub fn pdf_revisions_from_bytes(data : BytesView) -> Int raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  ignore(cursor.read_pdf_header())
+  let mut current_xref = pdf_read_startxref_position(data)
+  let mut revisions = 0
+  let mut done = false
+  while !done {
+    if revisions >= 1024 {
+      raise XRefExpected
+    }
+    cursor.seek_pdf_absolute(current_xref)
+    let section = cursor.read_pdf_xref_section()
+    revisions += 1
+    match pdf_trailer_prev_position(section.trailer) {
+      Some(previous) => current_xref = previous
+      None => done = true
+    }
+  }
+  if pdf_is_linearized(data) && revisions > 1 {
+    revisions - 1
+  } else {
+    revisions
+  }
+}
+
+///|
 fn ByteCursor::resolve_classic_stream_length(
   self : ByteCursor,
   object : PdfObject,
