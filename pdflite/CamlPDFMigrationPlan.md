@@ -847,10 +847,11 @@ MoonBit consequences for this project:
     40-bit ARC4, 128-bit ARC4 revision 3, 128-bit ARC4 revision 4, and
     explicit-IV-provider AESV2 revision 4 and AESV3 revision 5 documents.
     AESV2 recrypt also has classic plus uncompressed and Flate-compressed
-    xref-stream incremental update gates; AESV3 revision 5 recrypt has a
-    classic writer/read/decrypt round-trip gate plus classic, uncompressed
-    xref-stream, and Flate-compressed xref-stream incremental update gates,
-    including `/EncryptMetadata false` metadata-stream skipping. Default AES
+    xref-stream incremental update gates; AESV3 revision 5 and revision 6/ISO
+    recrypt have a classic writer/read/decrypt round-trip gate plus classic,
+    uncompressed xref-stream, and Flate-compressed xref-stream incremental
+    update gates, including `/EncryptMetadata false` metadata-stream skipping.
+    Default AES
     recrypt remains deferred until a project-level cryptographic random-byte
     source is selected; core `@random` is not being used for AES IVs or salts.
     The current AES provider callbacks are intentionally non-raising. If the
@@ -863,34 +864,35 @@ MoonBit consequences for this project:
     unsupported encryption methods, malformed required entries, short `/O` or
     `/U` entries, and missing trailer IDs. Typed password authentication and
     file-key derivation are started on top of parsed encryption values for
-    ARC4 revisions 2/3 and AESV2 revision 4. AESV3 revision 5 SHA-256
-    user-password and owner-password authentication is also started, including
-    `/UE` and `/OE` file-key unwrap through AES-256-CBC with no padding.
-    AESV3 `/Perms` parsing and validation is started for revision 5 file-key
-    unwraps, including missing, short, corrupt marker, and `/P` mismatch errors.
+    ARC4 revisions 2/3 and AESV2 revision 4. AESV3 revision 5 SHA-256 and
+    revision 6/ISO `shamix` user-password and owner-password authentication are
+    also started, including `/UE` and `/OE` file-key unwrap through
+    AES-256-CBC with no padding. AESV3 `/Perms` parsing and validation is
+    started for revision 5 and 6 file-key unwraps, including missing, short,
+    corrupt marker, and `/P` mismatch errors.
     Parsed-object output encryption is started with CamlPDF-style 40-bit ARC4,
     128-bit ARC4 revision 3, 128-bit ARC4 revision 4 crypt filters, and an
     explicit-IV-provider AESV2 revision 4 path: it preserves or installs trailer
     `/ID`, derives `/O` and `/U`, encrypts parsed objects in a copy, installs an
     indirect `/Encrypt` dictionary, applies the revision 4 `/EncryptMetadata`
     file-key and metadata-stream rules, and round-trips through the existing
-    password decryption APIs. Provider-backed AESV3 revision 5 output is also
-    started: it accepts explicit file-key, salt, `/Perms` padding, and object-IV
-    providers, derives `/U`, `/O`, `/UE`, `/OE`, and `/Perms`, applies
-    `/EncryptMetadata` stream skipping, and round-trips through user and owner
-    password decryption. The revision 4 ARC4 path now also has
+    password decryption APIs. Provider-backed AESV3 revision 5 and revision
+    6/ISO output is also started: it accepts explicit file-key, salt, `/Perms`
+    padding, and object-IV providers, derives `/U`, `/O`, `/UE`, `/OE`, and
+    `/Perms`, applies `/EncryptMetadata` stream skipping, and round-trips
+    through user and owner password decryption. The revision 4 ARC4 path now
+    also has
     classic-writer/classic-reader/decrypt,
     xref-stream-writer/xref-stream-reader/decrypt, and encrypted incremental
     update integration gates.
-    Revision 6/ISO `shamix` and AESV3 revision 6 object crypt still report
-    structured unsupported errors until the SHA-family primitives are wired into
-    the revision 6 password-hash loop.
+    Revision 6/ISO `shamix` now uses the local SHA-256/SHA-384/SHA-512 helpers
+    plus the CamlPDF AES-CBC loop, and AESV3 revision 6 parsed-object crypt now
+    shares the existing AESV3 file-key object crypt path.
     The document-level decryption entry points for parsed ARC4 and AESV2
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, and return CamlPDF-style denied permissions.
-    AESV3 revision 6 object/data crypt, AESV3 revision 6/ISO re-encryption,
-    deferred stream/object decryption, and default random-IV AES re-encryption
-    remain deferred.
+    Deferred stream/object parser-state decryption and default random-IV AES
+    re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content

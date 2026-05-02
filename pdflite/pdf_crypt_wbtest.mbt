@@ -177,7 +177,7 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
 }
 
 ///|
-test "private document decrypt reports unsupported ISO AESV3 object crypt" {
+test "private document decrypt supports ISO AESV3 object crypt with a file key" {
   let values : PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(true),
     user_entry: Bytes::new(0),
@@ -190,11 +190,14 @@ test "private document decrypt reports unsupported ISO AESV3 object crypt" {
     owner_encryption_key: None,
   }
   let file_key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
-  let result : Result[PdfDecryptionResult, Error] = try? pdf_document_empty().decrypt_with_file_key(
-    values, file_key,
+  let doc = pdf_document_empty()
+  let secret : PdfObject = PdfString(@ascii.encode("revision 6 secret"))
+  let encrypted = try! pdf_aesv3_encrypt_pdf_object_with_iv_provider(
+    file_key[:],
+    secret,
+    fn(index) { crypt_wb_iv_for_test(index) },
   )
-  guard result
-    is Err(PdfError::EncryptionObjectCryptUnsupported(PdfCryptAESV3(true))) else {
-    fail("expected unsupported ISO AESV3 object crypt")
-  }
+  doc.add_object_given_number(1, encrypted)
+  let decrypted = try! doc.decrypt_with_file_key(values, file_key)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(1), secret)
 }

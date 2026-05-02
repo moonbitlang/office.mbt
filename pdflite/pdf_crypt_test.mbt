@@ -759,17 +759,10 @@ test "PdfDocument encryption_values parses crypt filter methods" {
     aesv3_values.owner_encryption_key,
     Some(crypt_aesv3_r5_owner_encryption_key_for_test()),
   )
-  let unsupported : Result[Bool, Error] = try? aesv3_values.authenticate_user_password(
-    @ascii.encode("user")[:],
+  @test.assert_eq(
+    try! aesv3_values.authenticate_user_password(@ascii.encode("user")[:]),
+    false,
   )
-  guard unsupported
-    is Err(
-      @pdflite.PdfError::EncryptionAuthenticationUnsupported(
-        PdfCryptAESV3(true)
-      )
-    ) else {
-    fail("expected unsupported AESV3 authentication")
-  }
 }
 
 ///|
@@ -1882,8 +1875,6 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
 
 ///|
 test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AESV3 revision 5 encryption" {
-  let user_entry = crypt_aesv3_r5_user_entry_for_test()
-  let owner_entry = crypt_aesv3_r5_owner_entry_for_test()
   let key_title = crypt_name_for_test("/Title")
   let key_metadata = crypt_name_for_test("/Metadata")
   let original_secret : @pdflite.PdfObject = PdfDictionary([
@@ -1981,33 +1972,88 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
     fail("expected missing AESV3 saved encryption")
   }
 
-  let iso_saved : @pdflite.PdfSavedEncryption = {
+  let wrong_saved : @pdflite.PdfSavedEncryption = {
     values: {
-      crypt_type: PdfCryptAESV3(true),
-      user_entry,
-      owner_entry,
-      permissions: -3904,
+      crypt_type: PdfCryptAESV2,
+      user_entry: Bytes::new(32),
+      owner_entry: Bytes::new(32),
+      permissions: -4,
       file_id: @ascii.encode("doc-id"),
-      encrypt_metadata: false,
-      permissions_entry: Some(
-        crypt_aesv3_r5_permissions_for_test(encrypt_metadata=false),
-      ),
-      user_encryption_key: Some(crypt_aesv3_r5_user_encryption_key_for_test()),
-      owner_encryption_key: Some(crypt_aesv3_r5_owner_encryption_key_for_test()),
+      encrypt_metadata: true,
+      permissions_entry: None,
+      user_encryption_key: None,
+      owner_encryption_key: None,
     },
   }
-  let iso_doc = crypt_minimal_catalog_document_for_test(1, 7)
-  iso_doc.set_saved_encryption(Some(iso_saved))
-  let unsupported : Result[@pdflite.PdfDocument, Error] = try? iso_doc.recrypt_with_password_aesv3_with_iv_provider(
+  let wrong_doc = crypt_minimal_catalog_document_for_test(1, 7)
+  wrong_doc.set_saved_encryption(Some(wrong_saved))
+  let wrong_method : Result[@pdflite.PdfDocument, Error] = try? wrong_doc.recrypt_with_password_aesv3_with_iv_provider(
     @ascii.encode("user")[:],
     fn(object_number, generation, index) {
       crypt_aes_document_iv_for_test(object_number, generation, index)
     },
   )
-  guard unsupported
-    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptAESV3(true))) else {
-    fail("expected unsupported AESV3 revision 6 recrypt")
+  guard wrong_method
+    is Err(@pdflite.PdfError::EncryptionRecryptUnsupported(PdfCryptAESV2)) else {
+    fail("expected non-AESV3 saved encryption rejection")
   }
+}
+
+///|
+test "PdfDocument recrypt_with_password_aesv3_with_iv_provider supports AESV3 revision 6" {
+  let key_title = crypt_name_for_test("/Title")
+  let original_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3-r6-original"))),
+  ])
+  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3-r6-updated"))),
+  ])
+  let doc = crypt_minimal_catalog_document_for_test(1, 7)
+  doc.add_object_given_number(5, original_secret)
+  let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    @pdflite.pdf_permissions_of_p(-3904)[:],
+    crypt_aesv3_r5_random_for_test,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    iso=true,
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  @test.assert_eq(
+    try! encrypted.what_encryption(),
+    Some(PdfEncryptionAES256ISO(false)),
+  )
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), original_secret)
+  decrypted.document.add_object_given_number(5, updated_secret)
+  let recrypted = try! decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
+    @ascii.encode("user")[:],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index + 3)
+    },
+  )
+  @test.assert_eq(
+    try! recrypted.what_encryption(),
+    Some(PdfEncryptionAES256ISO(false)),
+  )
+  let roundtrip = crypt_unwrap_decryption_result_for_test(
+    try! recrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(5), updated_secret)
+  let rendered = try! @pdflite.pdf_write_document(recrypted)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  let read_decrypted = crypt_unwrap_decryption_result_for_test(
+    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(
+    read_decrypted.document.lookup_object_or_null(5),
+    updated_secret,
+  )
 }
 
 ///|
@@ -4421,34 +4467,54 @@ test "pdf_authenticate_aesv3_password validates R5 SHA-256 entries" {
     fail("expected short AESV3 owner /U")
   }
 
-  let iso_user_result : Result[Bool, Error] = try? @pdflite.pdf_authenticate_user_password_aesv3(
-    true,
+  let iso_doc = crypt_minimal_catalog_document_for_test(1, 7)
+  let iso_encrypted = try! iso_doc.encrypt_256bit_aesv3_with_providers(
     @ascii.encode("user")[:],
-    user_entry[:],
-  )
-  guard iso_user_result
-    is Err(
-      @pdflite.PdfError::EncryptionAuthenticationUnsupported(
-        PdfCryptAESV3(true)
-      )
-    ) else {
-    fail("expected unsupported ISO AESV3 user authentication")
-  }
-
-  let iso_owner_result : Result[Bool, Error] = try? @pdflite.pdf_authenticate_owner_password_aesv3(
-    true,
     @ascii.encode("owner")[:],
-    user_entry[:],
-    owner_entry[:],
+    @pdflite.pdf_permissions_of_p(-3904)[:],
+    crypt_aesv3_r5_random_for_test,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    iso=true,
+    file_id=@ascii.encode("doc-id")[:],
   )
-  guard iso_owner_result
-    is Err(
-      @pdflite.PdfError::EncryptionAuthenticationUnsupported(
-        PdfCryptAESV3(true)
-      )
-    ) else {
-    fail("expected unsupported ISO AESV3 owner authentication")
-  }
+  let iso_values = try! iso_encrypted.encryption_values()
+  @test.assert_eq(iso_values.crypt_type, PdfCryptAESV3(true))
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password_aesv3(
+      true,
+      @ascii.encode("user")[:],
+      iso_values.user_entry[:],
+    ),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_user_password_aesv3(
+      true,
+      @ascii.encode("bad")[:],
+      iso_values.user_entry[:],
+    ),
+    false,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_owner_password_aesv3(
+      true,
+      @ascii.encode("owner")[:],
+      iso_values.user_entry[:],
+      iso_values.owner_entry[:],
+    ),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_authenticate_owner_password_aesv3(
+      true,
+      @ascii.encode("bad")[:],
+      iso_values.user_entry[:],
+      iso_values.owner_entry[:],
+    ),
+    false,
+  )
 
   @test.assert_eq(
     crypt_concat_bytes_for_test([@ascii.encode("user")[:], user_entry[32:40]]),
