@@ -53,6 +53,8 @@ work changes.
    matrix guard, while replacement preserves document metadata, trailer extras,
    and object-stream bookkeeping. Form XObject processing materializes deferred
    stream data before callbacks, matching CamlPDF's `Pdf.getstream` path.
+   `pdf_of_pages` now materializes inherited page attributes before extraction
+   so inherited `/CropBox` values are preserved with selected pages.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

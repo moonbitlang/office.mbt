@@ -1320,6 +1320,26 @@ test "private page prefix helpers cover direct and fallback operators" {
 }
 
 ///|
+test "private page selection reports empty and invalid ranges" {
+  let page = pdf_page_blank(paper_a4)
+  @test.assert_eq(try! pdf_page_select_pages([page], [1]), [page])
+  let empty_result : Result[Array[PdfPage], Error] = try? pdf_page_select_pages(
+    [page],
+    [],
+  )
+  guard empty_result is Err(PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected for empty page selection")
+  }
+  let invalid_result : Result[Array[PdfPage], Error] = try? pdf_page_select_pages(
+    [page],
+    [2],
+  )
+  guard invalid_result is Err(PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected for invalid page selection")
+  }
+}
+
+///|
 test "private page resource renumber helpers cover optional misses" {
   let color_space = pdf_page_name("/ColorSpace")
   let properties = pdf_page_name("/Properties")

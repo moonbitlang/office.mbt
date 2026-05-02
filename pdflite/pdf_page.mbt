@@ -2089,9 +2089,13 @@ pub fn PdfDocument::pdf_of_pages(
   retain_numbering? : Bool = false,
   process_struct_tree? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  let has_page_labels = self.pdf_page_label_has_labels()
+  let source = self.copy()
+  let all_page_numbers = source.page_reference_numbers()
+  let old_page_numbers = pdf_page_select_numbers(all_page_numbers, page_numbers)
+  source.replace_inherit(old_page_numbers)
+  let has_page_labels = source.pdf_page_label_has_labels()
   let retained_page_labels = if retain_numbering && has_page_labels {
-    pdf_page_label_merge([self], [
+    pdf_page_label_merge([source], [
       [
         for page_number in page_numbers => page_number
       ],
@@ -2099,21 +2103,19 @@ pub fn PdfDocument::pdf_of_pages(
   } else {
     []
   }
-  let has_bookmarks = self.pdf_bookmark_has_outlines()
+  let has_bookmarks = source.pdf_bookmark_has_outlines()
   let retained_bookmarks = if has_bookmarks {
-    self.pdf_bookmarks_for_pages(page_numbers)
+    source.pdf_bookmarks_for_pages(page_numbers)
   } else {
     []
   }
-  let selected = pdf_page_select_pages(self.pages_of_pagetree(), page_numbers)
-  let all_page_numbers = self.page_reference_numbers()
-  let old_page_numbers = pdf_page_select_numbers(all_page_numbers, page_numbers)
+  let selected = pdf_page_select_pages(source.pages_of_pagetree(), page_numbers)
   let deleted_page_numbers = if process_struct_tree {
     pdf_page_deleted_numbers(all_page_numbers, old_page_numbers)
   } else {
     []
   }
-  let pdf = self.change_pages(selected)
+  let pdf = source.change_pages(selected)
   let pdf = if has_bookmarks {
     pdf.add_bookmarks(retained_bookmarks)
   } else {

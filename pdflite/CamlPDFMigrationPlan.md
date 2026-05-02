@@ -527,8 +527,10 @@ MoonBit consequences for this project:
    `remove_unreferenced`; references to selected old page objects are rewritten
    to the new page objects, duplicated annotation references are copied to fresh
    object numbers, copied annotation `/Popup` and `/Parent` links are repaired
-   within each extracted page, and `/Root/Names/Dests` name-tree entries whose
-   page targets were nulled are pruned. Old-style catalog `/Dests` dictionary
+   within each extracted page, inherited page attributes are materialized before
+   extraction so parent `/CropBox` entries survive, and `/Root/Names/Dests`
+   name-tree entries whose page targets were nulled are pruned. Old-style
+   catalog `/Dests` dictionary
    entries are also pruned after selected page references are rewritten; this
    destination cleanup also follows trailer `/Root` for parsed PDFs.
    CamlPDF's duplicate page-reference repair is now ported for malformed or

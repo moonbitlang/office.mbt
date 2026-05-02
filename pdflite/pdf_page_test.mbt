@@ -2932,6 +2932,66 @@ test "PdfDocument pdf_of_pages extracts pages in requested order" {
 }
 
 ///|
+test "PdfDocument pdf_of_pages materializes inherited crop boxes" {
+  let key_type = page_name_for_test("/Type")
+  let key_parent = page_name_for_test("/Parent")
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let key_mediabox = page_name_for_test("/MediaBox")
+  let key_cropbox = page_name_for_test("/CropBox")
+  let pages_type = page_name_for_test("/Pages")
+  let page_type = page_name_for_test("/Page")
+  let inherited_mediabox : @pdflite.PdfObject = PdfArray([
+    PdfInteger(0),
+    PdfInteger(0),
+    PdfInteger(600),
+    PdfInteger(800),
+  ])
+  let inherited_cropbox : @pdflite.PdfObject = PdfArray([
+    PdfInteger(20),
+    PdfInteger(30),
+    PdfInteger(560),
+    PdfInteger(760),
+  ])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(pages_type)),
+      (key_kids, PdfArray([PdfIndirect(3)])),
+      (key_count, PdfInteger(1)),
+      (key_mediabox, inherited_mediabox),
+      (key_cropbox, inherited_cropbox),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_type)),
+      (key_parent, PdfIndirect(2)),
+    ]),
+  )
+  ignore(try! doc.add_root(2, []))
+  @test.assert_eq(
+    doc.lookup_object_or_null(3).lookup_immediate(key_cropbox),
+    None,
+  )
+  let extracted = try! doc.pdf_of_pages([1])
+  let extracted_page_numbers = try! extracted.page_reference_numbers()
+  @test.assert_eq(extracted_page_numbers.length(), 1)
+  @test.assert_eq(
+    extracted
+    .lookup_object_or_null(extracted_page_numbers[0])
+    .lookup_immediate(key_cropbox),
+    Some(inherited_cropbox),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(3).lookup_immediate(key_cropbox),
+    None,
+  )
+}
+
+///|
 test "PdfDocument pdf_of_pages repeats selected pages with distinct objects" {
   let key_parent = page_name_for_test("/Parent")
   let key_kids = page_name_for_test("/Kids")
