@@ -3636,6 +3636,24 @@ fn pdf_text_codepoint_of_technical_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_block_element_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/block" => Some(0x2588)
+    "/dkshade" => Some(0x2593)
+    "/dnblock" => Some(0x2584)
+    "/lfblock" => Some(0x258C)
+    "/ltshade" => Some(0x2591)
+    "/rtblock" => Some(0x2590)
+    "/shade" => Some(0x2592)
+    "/shadedark" => Some(0x2593)
+    "/shadelight" => Some(0x2591)
+    "/shademedium" => Some(0x2592)
+    "/upblock" => Some(0x2580)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4668,33 +4686,45 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                                                 Some([codepoint])
                                               None =>
                                                 match
-                                                  pdf_text_codepoint_of_latin_extended_glyphname(
+                                                  pdf_text_codepoint_of_block_element_glyphname(
                                                     base_name,
                                                   ) {
                                                   Some(codepoint) =>
                                                     Some([codepoint])
                                                   None =>
                                                     match
-                                                      pdf_text_codepoint_of_expert_glyphname(
+                                                      pdf_text_codepoint_of_latin_extended_glyphname(
                                                         base_name,
                                                       ) {
                                                       Some(codepoint) =>
                                                         Some([codepoint])
                                                       None =>
                                                         match
-                                                          pdf_text_codepoint_of_symbol_glyphname(
+                                                          pdf_text_codepoint_of_expert_glyphname(
                                                             base_name,
                                                           ) {
                                                           Some(codepoint) =>
                                                             Some([codepoint])
                                                           None =>
                                                             match
-                                                              pdf_text_codepoint_of_dingbat_glyphname(
+                                                              pdf_text_codepoint_of_symbol_glyphname(
                                                                 base_name,
                                                               ) {
                                                               Some(codepoint) =>
                                                                 Some([codepoint])
-                                                              None => None
+                                                              None =>
+                                                                match
+                                                                  pdf_text_codepoint_of_dingbat_glyphname(
+                                                                    base_name,
+                                                                  ) {
+                                                                  Some(
+                                                                    codepoint
+                                                                  ) =>
+                                                                    Some([
+                                                                      codepoint,
+                                                                    ])
+                                                                  None => None
+                                                                }
                                                             }
                                                         }
                                                     }
