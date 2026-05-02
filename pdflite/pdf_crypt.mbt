@@ -569,6 +569,64 @@ fn PdfDocument::with_file_id(
 }
 
 ///|
+fn pdf_crypt_deterministic_seed32(
+  seed : BytesView,
+  purpose : BytesView,
+) -> PdfBytes {
+  let first = pdf_md5_digest(pdf_crypt_concat_bytes([seed, purpose]))
+  let second = pdf_md5_digest(pdf_crypt_concat_bytes([purpose, seed, first[:]]))
+  pdf_crypt_concat_bytes([first[:], second[:]])
+}
+
+///|
+fn pdf_crypt_deterministic_bytes(
+  seed : BytesView,
+  purpose : BytesView,
+  length : Int,
+) -> PdfBytes {
+  if length <= 0 {
+    Bytes::new(0)
+  } else {
+    let rand = @random.Rand::chacha8(
+      seed=pdf_crypt_deterministic_seed32(seed, purpose),
+    )
+    Bytes::makei(length, _ => rand.uint(limit=256U).to_byte())
+  }
+}
+
+///|
+pub fn pdf_deterministic_aes_iv_provider_from_seed(
+  seed : BytesView,
+) -> (Int, Int, Int) -> PdfBytes {
+  let owned_seed = seed.to_owned()
+  fn(object_number, generation, index) {
+    let purpose = @ascii.encode(
+      "aes-iv:" +
+      object_number.to_string() +
+      ":" +
+      generation.to_string() +
+      ":" +
+      index.to_string(),
+    )
+    pdf_crypt_deterministic_bytes(owned_seed[:], purpose[:], 16)
+  }
+}
+
+///|
+pub fn pdf_deterministic_aesv3_random_provider_from_seed(
+  seed : BytesView,
+) -> (PdfAesV3RandomField, Int) -> PdfBytes {
+  let owned_seed = seed.to_owned()
+  fn(field, length) {
+    pdf_crypt_deterministic_bytes(
+      owned_seed[:],
+      pdf_aesv3_random_field_key(field).view(),
+      length,
+    )
+  }
+}
+
+///|
 fn PdfDocument::finish_decrypted_copy(
   self : PdfDocument,
   values : PdfEncryptionValues,

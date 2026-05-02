@@ -52,9 +52,9 @@ work changes.
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
    Status: ARC4, hashes, AES primitives, R2/R3/R4/R5/R6 authentication,
-   object/string/stream crypt, decryption, provider-backed encryption, and
-   deterministic recrypt paths are started.
-   Remaining focus: default secure random provider selection and deferred
+   object/string/stream crypt, decryption, deterministic provider adapters,
+   provider-backed encryption, and deterministic recrypt paths are started.
+   Remaining focus: selecting a true secure OS-entropy provider and deferred
    parser-state encryption/decryption edges.
 
 7. Document-level features.

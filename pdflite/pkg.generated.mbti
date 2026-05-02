@@ -191,6 +191,10 @@ pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise PdfError
 
 pub let pdf_default_version : PdfVersion
 
+pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int) -> Bytes
+
+pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (PdfAesV3RandomField, Int) -> Bytes
+
 pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument

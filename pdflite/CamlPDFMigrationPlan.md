@@ -870,9 +870,11 @@ MoonBit consequences for this project:
     object keys is started for the legacy string/stream path. AESV2 object data
     encryption/decryption is also started for IV-prefixed strings and stream
     payloads using derived AES object keys. AESV3 object data
-    encryption/decryption is started with the unwrapped 32-byte file key. AES
-    encryption helpers require caller-supplied IVs until a project-level
-    random-byte source is selected. Recursive ARC4 crypt plus AESV2/AESV3
+    encryption/decryption is started with the unwrapped 32-byte file key.
+    Deterministic AES IV and AESV3 random-field provider adapters are started
+    for reproducible fixtures, backed by `moonbitlang/core/random` with an
+    explicit seed; true secure default entropy remains deferred until a
+    suitable OS-backed source is selected. Recursive ARC4 crypt plus AESV2/AESV3
     encrypt/decrypt object walks are started for PDF strings, arrays,
     dictionaries, and stream dictionaries/data, with stream data materialized at
     the crypt boundary and `/Length` refreshed. Stream crypt skipping now matches

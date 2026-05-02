@@ -4,6 +4,7 @@ import {
   "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/hashmap",
   "moonbitlang/core/math",
+  "moonbitlang/core/random",
   "moonbitlang/core/strconv",
   "moonbitlang/x/crypto",
 }

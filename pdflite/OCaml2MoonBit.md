@@ -173,6 +173,18 @@ wrappers. Match options with `value is Some(_)` in probes and tests; `.is_some()
 is deprecated in the current toolchain.
 
 ```sh
+moon run -c 'fn main { let r = @random.Rand::new(); println(r.uint64().to_string()); let s = @random.Rand::new(); println(s.uint64().to_string()) }'
+# 13219109469176600229
+# 13219109469176600229
+```
+
+`moonbitlang/core/random` provides deterministic PRNGs such as `@random.Rand`.
+The default `Rand::new()` sequence is reproducible, not an operating-system
+entropy source. Use it for deterministic fixtures and simulations; do not
+treat it as a secure random provider when porting cryptographic OCaml code
+unless the seed/source is supplied from an appropriate entropy boundary.
+
+```sh
 moon run -c 'fn helper(flag : Bool) -> Unit raise { if flag { fail("x") } }
 fn main { try! helper(false); println("helper uses raise") }'
 # helper uses raise

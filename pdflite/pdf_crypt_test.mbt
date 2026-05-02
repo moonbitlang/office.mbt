@@ -238,6 +238,40 @@ fn crypt_aesv3_r5_encrypt_dictionary_for_test(
 }
 
 ///|
+test "deterministic AES providers derive stable bytes from seed and callsite" {
+  let seed = @ascii.encode("fixture-seed")
+  let iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+    seed[:],
+  )
+  let same_iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+    seed[:],
+  )
+  let other_iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+    @ascii.encode("other-seed")[:],
+  )
+  let iv = iv_provider(5, 0, 1)
+  @test.assert_eq(iv.length(), 16)
+  @test.assert_eq(iv, same_iv_provider(5, 0, 1))
+  @test.assert_eq(iv == iv_provider(5, 0, 2), false)
+  @test.assert_eq(iv == other_iv_provider(5, 0, 1), false)
+  let random_provider = @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
+    seed[:],
+  )
+  let same_random_provider = @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
+    seed[:],
+  )
+  let file_key = random_provider(PdfAesV3FileKey, 32)
+  @test.assert_eq(file_key.length(), 32)
+  @test.assert_eq(file_key, same_random_provider(PdfAesV3FileKey, 32))
+  @test.assert_eq(
+    file_key == random_provider(PdfAesV3UserValidationSalt, 8),
+    false,
+  )
+  @test.assert_eq(random_provider(PdfAesV3PermissionsPadding, 4).length(), 4)
+  @test.assert_eq(random_provider(PdfAesV3PermissionsPadding, 0), Bytes::new(0))
+}
+
+///|
 fn crypt_aesv3_r5_document_with_object_for_test(
   major : Int,
   minor : Int,
