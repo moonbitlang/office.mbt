@@ -150,6 +150,18 @@ then append binary payloads as `Bytes`/`BytesView`. Do not build binary file
 formats through `String` concatenation.
 
 ```sh
+moon run -c 'fn main { println(@env.current_dir() is Some(_)); println(@env.now() > 0UL) }'
+# true
+# true
+```
+
+`moonbitlang/core/env` provides small process-environment helpers such as
+`@env.current_dir() -> String?` and `@env.now() -> UInt64`. Prefer these over
+hard-coded paths or fixed timestamp-like names in tests and command-facing
+wrappers. Match options with `value is Some(_)` in probes and tests; `.is_some()`
+is deprecated in the current toolchain.
+
+```sh
 moon run -c 'fn helper(flag : Bool) -> Unit raise { if flag { fail("x") } }
 fn main { try! helper(false); println("helper uses raise") }'
 # helper uses raise
