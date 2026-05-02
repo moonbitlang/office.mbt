@@ -776,6 +776,35 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), inverted_gray),
     PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([255, 255, 255, 0, 0, 0])),
   )
+  let decoded_cmyk = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceCMYK")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        image_name_for_test("/Decode"),
+        PdfArray([
+          PdfInteger(0),
+          PdfInteger(255),
+          PdfInteger(0),
+          PdfInteger(255),
+          PdfInteger(0),
+          PdfInteger(255),
+          PdfInteger(255),
+          PdfInteger(0),
+        ]),
+      ),
+    ]),
+    StreamGot(image_bytes_for_test([0, 0, 0, 0])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), decoded_cmyk),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([0, 0, 0])),
+  )
   let identity_empty_decode = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_name_for_test("/Width"), PdfInteger(1)),
@@ -829,6 +858,45 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
   @test.assert_eq(
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), decoded_gray4),
     PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([0, 0, 0, 255, 255, 255])),
+  )
+  let tint_function = @pdflite.pdf_dictionary([
+    (image_name_for_test("/FunctionType"), PdfInteger(2)),
+    (image_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+    (
+      image_name_for_test("/C0"),
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(0), PdfInteger(0)]),
+    ),
+    (
+      image_name_for_test("/C1"),
+      PdfArray([PdfInteger(0), PdfInteger(1), PdfInteger(0), PdfInteger(0)]),
+    ),
+    (image_name_for_test("/N"), PdfInteger(1)),
+  ])
+  let decoded_separation : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Separation")),
+    PdfNameObject(image_name_for_test("/Spot")),
+    PdfNameObject(image_name_for_test("/DeviceCMYK")),
+    tint_function,
+  ])
+  let decoded_separation_image = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), decoded_separation),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (
+        image_name_for_test("/Decode"),
+        PdfArray([PdfInteger(255), PdfInteger(0)]),
+      ),
+    ]),
+    StreamGot(image_bytes_for_test([0])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(
+      @pdflite.pdf_dictionary([]),
+      decoded_separation_image,
+    ),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([255, 255, 0])),
   )
 }
 

@@ -691,8 +691,10 @@ MoonBit consequences for this project:
    for encoded image metadata. The raw-image decode path now has a borrowed
    `BytesView` helper for sliced inputs while preserving the owned fast path
    for no-op decode cases, so `.to_owned()` stays at borrowed-to-owned
-   boundaries. Separation image pixels are started for 8-bit samples with Type 2
-   and Type 4 tint functions and DeviceCMYK alternates.
+   boundaries. Raw `/Decode` is now applied before colour-space conversion,
+   matching CamlPDF for CMYK and Separation samples where post-RGB decode is
+   not equivalent. Separation image pixels are started for 8-bit samples with
+   Type 2 and Type 4 tint functions and DeviceCMYK alternates.
    Type 4 calculator bitshift direction, logical right-shift behavior, and
    masked-width behavior are covered. JPEG decoding remains deferred.
 

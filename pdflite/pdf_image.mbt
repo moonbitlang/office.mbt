@@ -940,25 +940,27 @@ pub fn PdfDocument::get_image_24bpp(
         ),
         self.pdf_image_jbig2_globals(decoded_stream.dictionary),
       )
-    PdfImageRawStream(_) =>
+    PdfImageRawStream(_) => {
+      let decoded_data = pdf_image_apply_decode(
+        data,
+        self.pdf_image_bits_per_component_int(decoded_stream.dictionary),
+        self.pdf_image_decode_values_with_defaults(
+          resources,
+          decoded_stream.dictionary,
+        ),
+      )
       PdfRawImage(
         width,
         height,
         PdfBPP24,
-        pdf_image_apply_decode(
-          self.pdf_image_raw_8bpp_as_rgb24(
-            resources,
-            width,
-            height,
-            decoded_stream.dictionary,
-            data[:],
-          ),
-          self.pdf_image_bits_per_component_int(decoded_stream.dictionary),
-          self.pdf_image_decode_values_with_defaults(
-            resources,
-            decoded_stream.dictionary,
-          ),
+        self.pdf_image_raw_8bpp_as_rgb24(
+          resources,
+          width,
+          height,
+          decoded_stream.dictionary,
+          decoded_data[:],
         ),
       )
+    }
   }
 }
