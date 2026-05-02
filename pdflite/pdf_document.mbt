@@ -206,7 +206,7 @@ pub fn PdfObjects::stream_entries(
 ///|
 fn PdfObjects::copy(self : PdfObjects) -> PdfObjects {
   let object_stream_ids : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
-  for number in self.object_stream_ids.keys().to_array() {
+  for number in self.object_stream_ids.keys() {
     object_stream_ids[number] = self.object_stream_ids.get(number).unwrap()
   }
   {

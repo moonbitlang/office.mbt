@@ -83,6 +83,14 @@ fn pdf_stream_data_bytes(data : PdfStreamData) -> PdfBytes raise PdfError {
 }
 
 ///|
+pub fn PdfObject::stream_bytes(self : PdfObject) -> PdfBytes raise PdfError {
+  match self {
+    PdfStreamObject(stream) => pdf_stream_data_bytes(stream.data)
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
 pub fn ToGet::input(self : ToGet) -> ByteCursor {
   self.input
 }

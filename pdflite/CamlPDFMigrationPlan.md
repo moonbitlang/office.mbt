@@ -160,10 +160,11 @@ MoonBit consequences for this project:
    sorted referenced-object traversal with skipped keys and marker dictionaries,
    explicit change-table object renumbering, compact object renumbering,
    offset renumbering, and multi-document disjoint compact renumbering,
-   PDF numeric extraction, rectangle parsing, matrix parsing, and matrix object
-   rendering are also started. Name-tree and number-tree helpers are started
-   with sorted/deduplicated readers and builders that emit child tree nodes
-   through the document object map for larger trees.
+   raw stream-byte extraction at the owned-byte boundary, PDF numeric
+   extraction, rectangle parsing, matrix parsing, and matrix object rendering
+   are also started. Name-tree and number-tree helpers are started with
+   sorted/deduplicated readers and builders that emit child tree nodes through
+   the document object map for larger trees.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:

@@ -330,6 +330,16 @@ Use `ArrayView[T]` for read-only sequence parameters when callers should be
 able to pass `Array`, `FixedArray`, or read-only arrays without copying.
 
 ```sh
+moon run -c 'fn main { let map : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new(); map[1] = 10; map[2] = 20; let mut total = 0; for key in map.keys() { total += key }; println(total) }'
+# 3
+```
+
+MoonBit `for x in xs` works for any iterable value, not only arrays and views.
+Do not convert an iterable to an `Array` just to loop over it. Reserve
+`.to_array()`/`.to_owned()` for cases that need an owned snapshot, sorting,
+indexing, or mutation.
+
+```sh
 moon run -c 'fn has_ab(view : BytesView) -> Bool { match view { [65, 66, ..] => true; _ => false } }
 fn main { let bytes : Bytes = [65, 66, 67]; let view = bytes[:2]; println(view.length()); println(view[0].to_int()); println(has_ab(bytes[:])); println(has_ab(view)) }'
 # 2

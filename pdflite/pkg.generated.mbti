@@ -1181,6 +1181,7 @@ pub fn PdfObject::find_indirect(Self, PdfName) -> Int? raise PdfError
 pub fn PdfObject::lookup_immediate(Self, PdfName) -> Self?
 pub fn PdfObject::remove_dict_entry(Self, PdfName) -> Self raise PdfError
 pub fn PdfObject::replace_dict_entry(Self, PdfName, Self) -> Self raise PdfError
+pub fn PdfObject::stream_bytes(Self) -> Bytes raise PdfError
 pub fn PdfObject::unique_key(Self, String) -> PdfName raise PdfError
 
 pub(all) enum PdfObjectData {

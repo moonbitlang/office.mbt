@@ -86,6 +86,33 @@ test "PdfObject find_indirect reads immediate dictionary references" {
 }
 
 ///|
+test "PdfObject stream_bytes materializes owned and deferred stream data" {
+  let owned = try! @pdflite.pdf_bytes_of_int_array([65, 66])
+  let owned_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamGot(owned),
+  )
+  @test.assert_eq(try! owned_stream.stream_bytes(), owned)
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    try! @pdflite.pdf_bytes_of_int_array([70, 71, 72, 73]),
+  )
+  let deferred_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([]),
+    StreamToGet(@pdflite.stream_to_get(cursor, 1, 2)),
+  )
+  @test.assert_eq(
+    try! deferred_stream.stream_bytes(),
+    try! @pdflite.pdf_bytes_of_int_array([71, 72]),
+  )
+  let non_stream : Result[@pdflite.PdfBytes, Error] = try? @pdflite.PdfInteger(
+    1,
+  ).stream_bytes()
+  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+}
+
+///|
 test "PdfObject unique_key scans dictionary names in CamlPDF order" {
   let name_gs0 = object_name_for_test([47, 103, 115, 48])
   let name_gs1 = object_name_for_test([47, 103, 115, 49])

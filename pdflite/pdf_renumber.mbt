@@ -17,7 +17,7 @@ fn pdf_renumber_document_with_changes(
     entries.push((new_number, pdf_page_renumber_entry(entry, changes)))
   }
   let objects = pdf_objects_of_entries(entries[:])
-  for number in output.objects.object_stream_ids.keys().to_array() {
+  for number in output.objects.object_stream_ids.keys() {
     if output.objects.object_map.contains(number) {
       let new_number = pdf_page_changed_reference(changes, number)
       objects.object_stream_ids[new_number] = output.objects.object_stream_ids
