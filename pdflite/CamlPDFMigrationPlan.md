@@ -880,8 +880,10 @@ MoonBit consequences for this project:
     6/ISO output is also started: it accepts explicit file-key, salt, `/Perms`
     padding, and object-IV providers, derives `/U`, `/O`, `/UE`, `/OE`, and
     `/Perms`, applies `/EncryptMetadata` stream skipping, and round-trips
-    through user and owner password decryption. The revision 4 ARC4 path now
-    also has
+    through user and owner password decryption. A named
+    `encrypt_256bit_aesv3_iso_with_providers` helper now mirrors CamlPDF's
+    AES-256 ISO output entry point while preserving deterministic provider
+    injection for tests. The revision 4 ARC4 path now also has
     classic-writer/classic-reader/decrypt,
     xref-stream-writer/xref-stream-reader/decrypt, and encrypted incremental
     update integration gates.

@@ -2081,6 +2081,48 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider supports AESV3 re
 }
 
 ///|
+test "PdfDocument encrypt_256bit_aesv3_iso_with_providers mirrors ISO AESV3 option" {
+  let key_title = crypt_name_for_test("/Title")
+  let doc = crypt_minimal_catalog_document_for_test(1, 7)
+  let secret_object : @pdflite.PdfObject = PdfDictionary([
+    (key_title, PdfString(@ascii.encode("aes3-iso-secret"))),
+  ])
+  doc.add_object_given_number(5, secret_object)
+  let denied_permissions = @pdflite.pdf_permissions_of_p(-3904)
+  let encrypted = try! doc.encrypt_256bit_aesv3_iso_with_providers(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    denied_permissions[:],
+    crypt_aesv3_r5_random_for_test,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    file_id=@ascii.encode("doc-id")[:],
+  )
+  @test.assert_eq(
+    try! encrypted.what_encryption(),
+    Some(PdfEncryptionAES256ISO(false)),
+  )
+  let values = try! encrypted.encryption_values()
+  @test.assert_eq(values.crypt_type, PdfCryptAESV3(true))
+  let decrypted = crypt_unwrap_decryption_result_for_test(
+    try! encrypted.decrypt_with_user_password(@ascii.encode("user")[:]),
+  )
+  @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
+  @test.assert_eq(decrypted.denied_permissions, denied_permissions)
+
+  let encrypted_stream = encrypted.lookup_object_or_null(5)
+  let single_stream = try! encrypted.decrypt_single_stream(
+    5,
+    0,
+    encrypted_stream,
+    owner_password=Some(@ascii.encode("owner")[:]),
+  )
+  @test.assert_eq(single_stream, Some(secret_object))
+}
+
+///|
 test "PdfDocument AESV3 revision 6 recrypt supports incremental updates" {
   let key_title = crypt_name_for_test("/Title")
   let original_secret : @pdflite.PdfObject = PdfDictionary([

@@ -1046,6 +1046,29 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
 }
 
 ///|
+pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes,
+  encrypt_metadata? : Bool = true,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  self.encrypt_256bit_aesv3_with_providers(
+    user_password,
+    owner_password,
+    denied_permissions,
+    random_provider,
+    iv_provider,
+    iso=true,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
 fn PdfDocument::encrypt_arc4_standard(
   self : PdfDocument,
   user_password : BytesView,

@@ -1114,6 +1114,7 @@ pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encryption_values(Self) -> PdfEncryptionValues raise PdfError
