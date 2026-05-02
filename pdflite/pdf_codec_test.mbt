@@ -381,17 +381,35 @@ test "pdf_flate_encode chooses compact zlib blocks" {
   let encoded_run = @pdflite.pdf_flate_encode(long_run)
   @test.assert_eq(encoded_run.length() < 20, true)
   @test.assert_eq(try! @pdflite.pdf_flate_decode(encoded_run), long_run)
+  let repeated_phrase = codec_ascii_for_test("ABCABCABCABCABCABC")
+  let encoded_phrase = @pdflite.pdf_flate_encode(repeated_phrase)
+  @test.assert_eq(encoded_phrase.length() < 20, true)
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(encoded_phrase),
+    repeated_phrase,
+  )
   let alternating_high = try! @pdflite.pdf_bytes_of_int_array(
     [
       for i in 0..<40 => if i % 2 == 0 { 255 } else { 254 }
     ],
   )
-  let stored = @pdflite.pdf_flate_encode(alternating_high)
+  let encoded_alternating_high = @pdflite.pdf_flate_encode(alternating_high)
+  @test.assert_eq(encoded_alternating_high.length() < 20, true)
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(encoded_alternating_high),
+    alternating_high,
+  )
+  let non_repeating_high = try! @pdflite.pdf_bytes_of_int_array(
+    [
+      for i in 0..<40 => 216 + i
+    ],
+  )
+  let stored = @pdflite.pdf_flate_encode(non_repeating_high)
   @test.assert_eq(stored.length(), 51)
   @test.assert_eq(@pdflite.pdf_int_array_of_bytes(stored[:7]), [
     120, 1, 1, 40, 0, 215, 255,
   ])
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(stored), alternating_high)
+  @test.assert_eq(try! @pdflite.pdf_flate_decode(stored), non_repeating_high)
 }
 
 ///|

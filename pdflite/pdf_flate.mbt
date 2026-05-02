@@ -572,6 +572,83 @@ fn pdf_flate_push_fixed_repeat_block(
 }
 
 ///|
+fn pdf_flate_match_key(data : BytesView, position : Int) -> Int {
+  (data[position].to_int() << 8) | data[position + 1].to_int()
+}
+
+///|
+fn pdf_flate_remember_match_prefix(
+  table : Array[Int],
+  data : BytesView,
+  position : Int,
+) -> Unit {
+  if position + 1 < data.length() {
+    table[pdf_flate_match_key(data, position)] = position
+  }
+}
+
+///|
+fn pdf_flate_previous_match_length(
+  data : BytesView,
+  source : Int,
+  position : Int,
+) -> Int {
+  let mut length = 0
+  while position + length < data.length() &&
+        length < 258 &&
+        data[source + length] == data[position + length] {
+    length += 1
+  }
+  length
+}
+
+///|
+fn pdf_flate_push_fixed_match_block(
+  output : Array[Byte],
+  data : BytesView,
+  final_block : Bool,
+) -> Unit raise PdfError {
+  let writer = FlateBitWriter::new(output)
+  writer.write_bits(if final_block { 1 } else { 0 }, 1)
+  writer.write_bits(1, 2)
+  let last_by_prefix : Array[Int] = Array::make(65536, -1)
+  let mut index = 0
+  while index < data.length() {
+    let mut match_length = 0
+    let mut match_distance = 0
+    if index + 2 < data.length() {
+      let candidate = last_by_prefix[pdf_flate_match_key(data, index)]
+      if candidate >= 0 {
+        let distance = index - candidate
+        if distance > 0 && distance <= 32768 {
+          let length = pdf_flate_previous_match_length(data, candidate, index)
+          if length >= 3 {
+            match_length = length
+            match_distance = distance
+          }
+        }
+      }
+    }
+    if match_length >= 3 {
+      pdf_flate_write_fixed_length_distance(
+        writer, match_length, match_distance,
+      )
+      let next_index = index + match_length
+      while index < next_index {
+        pdf_flate_remember_match_prefix(last_by_prefix, data, index)
+        index += 1
+      }
+    } else {
+      pdf_flate_write_fixed_literal(writer, data[index].to_int())
+      pdf_flate_remember_match_prefix(last_by_prefix, data, index)
+      index += 1
+    }
+  }
+  pdf_flate_write_fixed_literal(writer, 256)
+  writer.finish()
+}
+
+///|
 fn pdf_flate_push_adler32(output : Array[Byte], data : BytesView) -> Unit {
   let (s1, s2) = pdf_flate_adler32(data)
   output.push(((s2 >> 8) & 0xFF).to_byte())
@@ -623,11 +700,27 @@ fn pdf_flate_encode_fixed_repeat_view(
 }
 
 ///|
+fn pdf_flate_encode_fixed_match_view(
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = [0x78, 0x01]
+  pdf_flate_push_fixed_match_block(output, data, true)
+  pdf_flate_push_adler32(output, data)
+  Bytes::from_array(output)
+}
+
+///|
 pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
   let stored = pdf_flate_encode_stored_view(data)
   let fixed = pdf_flate_encode_fixed_literal_view(data)
   let repeat = try! pdf_flate_encode_fixed_repeat_view(data)
-  if repeat.length() < fixed.length() && repeat.length() < stored.length() {
+  let matched = try! pdf_flate_encode_fixed_match_view(data)
+  if matched.length() < repeat.length() &&
+    matched.length() < fixed.length() &&
+    matched.length() < stored.length() {
+    matched
+  } else if repeat.length() < fixed.length() &&
+    repeat.length() < stored.length() {
     repeat
   } else if fixed.length() < stored.length() {
     fixed

@@ -373,9 +373,10 @@ MoonBit consequences for this project:
    already hold slices. Low-level Flate decode is started for zlib-wrapped stored,
    fixed-Huffman, and dynamic-Huffman DEFLATE blocks with Adler-32 validation;
    Flate encode now chooses between zlib stored blocks, compact fixed-Huffman
-   literal blocks, and a conservative fixed-Huffman length/distance path for
-   distance-1 repeated-byte runs, keeping stored blocks as the fallback for data
-   where Huffman output would be larger. General LZ77 match search and
+   literal blocks, a conservative fixed-Huffman length/distance path for
+   distance-1 repeated-byte runs, and a bounded fixed-Huffman prior-prefix
+   match path for short LZ77-style matches, keeping stored blocks as the
+   fallback for data where Huffman output would be larger. Full match search and
    higher-ratio dynamic-Huffman output remain deferred.
    Low-level LZW decode is started with clear/EOD handling and default
    EarlyChange 1; owned stream decode reads direct first-stage `/EarlyChange`
