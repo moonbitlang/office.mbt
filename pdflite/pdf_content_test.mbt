@@ -1387,6 +1387,23 @@ test "pdf_content_concat_stream_views inserts whitespace between borrowed slices
 }
 
 ///|
+test "pdf_string_of_content_op exposes CamlPDF byte-oriented debug strings" {
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_content_op(Op_q),
+    content_bytes_for_test("q"),
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_string_of_content_ops([
+      Op_q,
+      Op_Tf(content_name_for_test("/F1"), 12.0),
+      Op_Tj(try! @pdflite.pdf_bytes_of_int_array([65, 0xFF])),
+      Op_Q,
+    ]),
+    content_bytes_for_test("q /F1 12 Tf (A\\377) Tj Q"),
+  )
+}
+
+///|
 test "PdfDocument parse_content_ops reports non-stream content objects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(10, PdfInteger(42))

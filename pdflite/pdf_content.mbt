@@ -503,6 +503,18 @@ pub fn pdf_content_bytes_of_op(op : PdfContentOp) -> PdfBytes raise PdfError {
 }
 
 ///|
+pub fn pdf_string_of_content_ops(
+  ops : ArrayView[PdfContentOp],
+) -> PdfBytes raise PdfError {
+  pdf_content_bytes_of_ops(ops)
+}
+
+///|
+pub fn pdf_string_of_content_op(op : PdfContentOp) -> PdfBytes raise PdfError {
+  pdf_content_bytes_of_op(op)
+}
+
+///|
 pub fn pdf_content_stream_of_ops(
   ops : ArrayView[PdfContentOp],
 ) -> PdfObject raise PdfError {

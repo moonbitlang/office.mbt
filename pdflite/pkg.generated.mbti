@@ -415,6 +415,10 @@ pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
 
 pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
 
+pub fn pdf_string_of_content_op(PdfContentOp) -> Bytes raise PdfError
+
+pub fn pdf_string_of_content_ops(ArrayView[PdfContentOp]) -> Bytes raise PdfError
+
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_string_of_function(PdfFunction) -> String

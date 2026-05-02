@@ -487,9 +487,11 @@ MoonBit consequences for this project:
    The CamlPDF `concat_bytess` helper is exposed as
    `pdf_content_concat_streams`, with borrowed
    `pdf_content_concat_stream_views`, preserving the whitespace inserted
-   between split content streams before parsing. The CamlPDF `string_of_op` helper is
-   exposed as `pdf_content_bytes_of_op`, preserving the port's byte-oriented
-   naming while delegating to the existing multi-operator renderer. Content
+   between split content streams before parsing. The CamlPDF `string_of_op`
+   and `string_of_ops` helpers are exposed as `pdf_string_of_content_op` and
+   `pdf_string_of_content_ops`, returning `PdfBytes` so debug output remains
+   byte-preserving; the older `pdf_content_bytes_of_op` naming remains
+   available over the same renderer. Content
    parsing now has a borrowed `BytesView` entry point,
    `pdf_parse_content_ops_from_view`, with the owned `Bytes` parser kept as a
    compatibility wrapper.
