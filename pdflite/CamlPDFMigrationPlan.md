@@ -890,8 +890,10 @@ MoonBit consequences for this project:
     single-page label lookup, rendered label bytes for
     decimal/roman/letter/prefix-only styles, adjacent range coalescing,
     merge-label construction for selected page ranges, CamlPDF-compatible
-    label-style debug string parsing/rendering, and byte-preserving page-label
-    debug-line rendering. Annotation support is
+    label-style debug string parsing/rendering, byte-preserving page-label
+    debug-line rendering, and active-catalog page-label read/write/remove
+    through trailer `/Root` with document-root fallback for synthetic
+    fixtures. Annotation support is
     started with typed subtypes, borders, colours, byte-preserving
     contents/subjects, page annotation reading with popup-parent filtering,
     page-record annotation insertion, CamlPDF-compatible `/Unknown`

@@ -495,13 +495,30 @@ fn pdf_page_label_object(label : PdfPageLabel) -> PdfObject {
 }
 
 ///|
+fn PdfDocument::pdf_page_label_catalog(
+  self : PdfDocument,
+) -> PdfObject raise PdfError {
+  match self.trailer_dict().lookup_immediate(pdf_page_label_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => raise RootExpected
+        catalog => catalog
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        raise RootExpected
+      }
+      root
+    }
+  }
+}
+
+///|
 pub fn PdfDocument::read_page_labels(
   self : PdfDocument,
 ) -> Array[PdfPageLabel] raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_page_label_catalog()
   match self.lookup_direct(pdf_page_label_page_labels_key(), root) {
     Some(label_tree) =>
       [
@@ -517,10 +534,7 @@ pub fn PdfDocument::read_page_labels(
 fn PdfDocument::pdf_page_label_has_labels(
   self : PdfDocument,
 ) -> Bool raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_page_label_catalog()
   self.lookup_direct(pdf_page_label_page_labels_key(), root) is Some(_)
 }
 
@@ -528,10 +542,7 @@ fn PdfDocument::pdf_page_label_has_labels(
 pub fn PdfDocument::remove_page_labels(
   self : PdfDocument,
 ) -> PdfDocument raise PdfError {
-  let root = self.lookup_object_or_null(self.root())
-  if root == PdfNull {
-    raise RootExpected
-  }
+  let root = self.pdf_page_label_catalog()
   let pdf = self.copy()
   let root_without_labels = root.remove_dict_entry(
     pdf_page_label_page_labels_key(),
@@ -554,10 +565,7 @@ pub fn PdfDocument::write_page_labels(
   if labels.length() == 0 {
     self.remove_page_labels()
   } else {
-    let root = self.lookup_object_or_null(self.root())
-    if root == PdfNull {
-      raise RootExpected
-    }
+    let root = self.pdf_page_label_catalog()
     let pdf = self.copy()
     let entries : Array[(Int, PdfObject)] = []
     for label in labels {

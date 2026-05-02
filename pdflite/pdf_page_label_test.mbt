@@ -271,6 +271,73 @@ test "PdfDocument remove_page_labels and empty write drop labels" {
 }
 
 ///|
+test "PdfDocument page labels use trailer root catalog" {
+  let key_root = page_label_name_for_test("/Root")
+  let key_lang = page_label_name_for_test("/Lang")
+  let labels : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelDecimalArabic,
+      label_prefix: Some(page_label_bytes_for_test("active-")),
+      start_page: 1,
+      start_value: 1,
+    },
+  ]
+  let replacement : Array[@pdflite.PdfPageLabel] = [
+    {
+      label_style: PageLabelUppercaseLetters,
+      label_prefix: Some(page_label_bytes_for_test("new-")),
+      start_page: 2,
+      start_value: 3,
+    },
+  ]
+  let doc = page_label_catalog_document_for_test()
+  let stale = try! doc.write_page_labels([
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(page_label_bytes_for_test("stale-")),
+      start_page: 1,
+      start_value: 1,
+    },
+  ])
+  stale.add_object_given_number(
+    stale.root(),
+    try! stale
+    .lookup_object_or_null(stale.root())
+    .add_dict_entry(key_lang, PdfString(page_label_bytes_for_test("stale"))),
+  )
+  let active = try! doc.write_page_labels(labels)
+  let active_root = 10
+  stale.add_object_given_number(
+    active_root,
+    try! active
+    .lookup_object_or_null(active.root())
+    .add_dict_entry(key_lang, PdfString(page_label_bytes_for_test("active"))),
+  )
+  stale.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(active_root))]))
+
+  @test.assert_eq(
+    stale.lookup_object_or_null(stale.root()).lookup_immediate(key_lang),
+    Some(PdfString(page_label_bytes_for_test("stale"))),
+  )
+  @test.assert_eq(try! stale.read_page_labels(), labels)
+  let removed = try! stale.remove_page_labels()
+  let removed_catalog = removed.lookup_object_or_null(removed.root())
+  @test.assert_eq(
+    removed_catalog.lookup_immediate(key_lang),
+    Some(PdfString(page_label_bytes_for_test("active"))),
+  )
+  @test.assert_eq(try! removed.read_page_labels(), [])
+
+  let written = try! stale.write_page_labels(replacement)
+  let written_catalog = written.lookup_object_or_null(written.root())
+  @test.assert_eq(
+    written_catalog.lookup_immediate(key_lang),
+    Some(PdfString(page_label_bytes_for_test("active"))),
+  )
+  @test.assert_eq(try! written.read_page_labels(), replacement)
+}
+
+///|
 test "PdfDocument page label APIs require a root catalog" {
   let doc = @pdflite.pdf_document_empty()
   let labels : Array[@pdflite.PdfPageLabel] = [@pdflite.pdf_page_label_basic]
@@ -287,6 +354,14 @@ test "PdfDocument page label APIs require a root catalog" {
   let remove_result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_page_labels()
   guard remove_result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected RootExpected from remove_page_labels")
+  }
+
+  let key_root = page_label_name_for_test("/Root")
+  let unresolved = page_label_catalog_document_for_test()
+  unresolved.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
+  let unresolved_read : Result[Array[@pdflite.PdfPageLabel], Error] = try? unresolved.read_page_labels()
+  guard unresolved_read is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected from unresolved trailer root")
   }
 }
 
