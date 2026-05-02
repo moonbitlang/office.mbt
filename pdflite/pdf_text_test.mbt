@@ -5050,6 +5050,61 @@ test "PdfTextExtractor decodes math operator AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Roman numeral AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Oneroman", 0x2160),
+    ("/Tworoman", 0x2161),
+    ("/Threeroman", 0x2162),
+    ("/Fourroman", 0x2163),
+    ("/Fiveroman", 0x2164),
+    ("/Sixroman", 0x2165),
+    ("/Sevenroman", 0x2166),
+    ("/Eightroman", 0x2167),
+    ("/Nineroman", 0x2168),
+    ("/Tenroman", 0x2169),
+    ("/Elevenroman", 0x216A),
+    ("/Twelveroman", 0x216B),
+    ("/oneroman", 0x2170),
+    ("/tworoman", 0x2171),
+    ("/threeroman", 0x2172),
+    ("/fourroman", 0x2173),
+    ("/fiveroman", 0x2174),
+    ("/sixroman", 0x2175),
+    ("/sevenroman", 0x2176),
+    ("/eightroman", 0x2177),
+    ("/nineroman", 0x2178),
+    ("/tenroman", 0x2179),
+    ("/elevenroman", 0x217A),
+    ("/twelveroman", 0x217B),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2160), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x216B), Some(12))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2170), Some(13))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x217B), Some(24))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),

@@ -3585,6 +3585,37 @@ fn pdf_text_codepoint_of_math_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_number_form_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Oneroman" => Some(0x2160)
+    "/Tworoman" => Some(0x2161)
+    "/Threeroman" => Some(0x2162)
+    "/Fourroman" => Some(0x2163)
+    "/Fiveroman" => Some(0x2164)
+    "/Sixroman" => Some(0x2165)
+    "/Sevenroman" => Some(0x2166)
+    "/Eightroman" => Some(0x2167)
+    "/Nineroman" => Some(0x2168)
+    "/Tenroman" => Some(0x2169)
+    "/Elevenroman" => Some(0x216A)
+    "/Twelveroman" => Some(0x216B)
+    "/oneroman" => Some(0x2170)
+    "/tworoman" => Some(0x2171)
+    "/threeroman" => Some(0x2172)
+    "/fourroman" => Some(0x2173)
+    "/fiveroman" => Some(0x2174)
+    "/sixroman" => Some(0x2175)
+    "/sevenroman" => Some(0x2176)
+    "/eightroman" => Some(0x2177)
+    "/nineroman" => Some(0x2178)
+    "/tenroman" => Some(0x2179)
+    "/elevenroman" => Some(0x217A)
+    "/twelveroman" => Some(0x217B)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4604,32 +4635,40 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                                       Some(codepoint) => Some([codepoint])
                                       None =>
                                         match
-                                          pdf_text_codepoint_of_latin_extended_glyphname(
+                                          pdf_text_codepoint_of_number_form_glyphname(
                                             base_name,
                                           ) {
                                           Some(codepoint) => Some([codepoint])
                                           None =>
                                             match
-                                              pdf_text_codepoint_of_expert_glyphname(
+                                              pdf_text_codepoint_of_latin_extended_glyphname(
                                                 base_name,
                                               ) {
                                               Some(codepoint) =>
                                                 Some([codepoint])
                                               None =>
                                                 match
-                                                  pdf_text_codepoint_of_symbol_glyphname(
+                                                  pdf_text_codepoint_of_expert_glyphname(
                                                     base_name,
                                                   ) {
                                                   Some(codepoint) =>
                                                     Some([codepoint])
                                                   None =>
                                                     match
-                                                      pdf_text_codepoint_of_dingbat_glyphname(
+                                                      pdf_text_codepoint_of_symbol_glyphname(
                                                         base_name,
                                                       ) {
                                                       Some(codepoint) =>
                                                         Some([codepoint])
-                                                      None => None
+                                                      None =>
+                                                        match
+                                                          pdf_text_codepoint_of_dingbat_glyphname(
+                                                            base_name,
+                                                          ) {
+                                                          Some(codepoint) =>
+                                                            Some([codepoint])
+                                                          None => None
+                                                        }
                                                     }
                                                 }
                                             }
