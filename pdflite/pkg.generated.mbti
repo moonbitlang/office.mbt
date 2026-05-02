@@ -307,6 +307,8 @@ pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
+pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise PdfError
+
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise PdfError
 
 pub fn pdf_run_length_decode(Bytes) -> Bytes
@@ -1002,7 +1004,9 @@ pub fn PdfDocument::remove_object(Self, Int) -> Unit
 pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_page_labels(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise PdfError
+pub fn PdfDocument::renumber_objects(Self, ArrayView[(Int, Int)]) -> Self raise PdfError
 pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise PdfError
+pub fn PdfDocument::renumber_objects_compact(Self) -> Self raise PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::replace_chain(Self, ArrayView[PdfName], PdfObject) -> Unit raise PdfError
 pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise PdfError

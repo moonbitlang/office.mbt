@@ -343,6 +343,107 @@ test "PdfDocument renumber_objects_by_offset moves objects and rewrites referenc
 }
 
 ///|
+test "PdfDocument renumber_objects_compact packs sparse object numbers" {
+  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_pages = @pdflite.pdf_name_of_bytes(@ascii.encode("/Pages"))
+  let key_parent = @pdflite.pdf_name_of_bytes(@ascii.encode("/Parent"))
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(10)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  doc.add_object_given_number(10, PdfDictionary([(key_pages, PdfIndirect(20))]))
+  doc.add_object_given_number(
+    20,
+    PdfDictionary([(key_parent, PdfIndirect(10))]),
+  )
+  doc.add_object_given_number(40, PdfString(@ascii.encode("detached")))
+  let renumbered = try! doc.renumber_objects_compact()
+  @test.assert_eq(doc.object_numbers(), [10, 20, 40])
+  @test.assert_eq(renumbered.object_numbers(), [1, 2, 3])
+  @test.assert_eq(renumbered.root(), 1)
+  @test.assert_eq(renumbered.event_log(), [])
+  @test.assert_eq(
+    renumbered.trailer_dict().lookup_immediate(key_root),
+    Some(PdfIndirect(1)),
+  )
+  @test.assert_eq(
+    renumbered.lookup_object_or_null(1).lookup_immediate(key_pages),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(
+    renumbered.lookup_object_or_null(2).lookup_immediate(key_parent),
+    Some(PdfIndirect(1)),
+  )
+}
+
+///|
+test "PdfDocument renumber_objects applies explicit change table" {
+  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_next = @pdflite.pdf_name_of_bytes(@ascii.encode("/Next"))
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(10)
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  doc.add_object_given_number(10, PdfDictionary([(key_next, PdfIndirect(20))]))
+  doc.add_object_given_number(20, PdfArray([PdfIndirect(10), PdfIndirect(99)]))
+  let renumbered = try! doc.renumber_objects([(10, 5), (20, 6)])
+  @test.assert_eq(renumbered.object_numbers(), [5, 6])
+  @test.assert_eq(renumbered.root(), 5)
+  @test.assert_eq(
+    renumbered.lookup_object_or_null(5).lookup_immediate(key_next),
+    Some(PdfIndirect(6)),
+  )
+  @test.assert_eq(
+    renumbered.lookup_object_or_null(6),
+    PdfArray([PdfIndirect(5), PdfIndirect(99)]),
+  )
+  let duplicate : Result[@pdflite.PdfDocument, Error] = try? doc.renumber_objects([
+      (10, 5),
+      (20, 5),
+    ],
+  )
+  guard duplicate is Err(@pdflite.PdfError::InvalidObjectNumber(5)) else {
+    fail("expected duplicate target to be rejected")
+  }
+}
+
+///|
+test "pdf_renumber_documents gives documents disjoint compact ranges" {
+  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_peer = @pdflite.pdf_name_of_bytes(@ascii.encode("/Peer"))
+  let first = @pdflite.pdf_document_empty()
+  first.set_root(10)
+  first.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  first.add_object_given_number(
+    10,
+    PdfDictionary([(key_peer, PdfIndirect(20))]),
+  )
+  first.add_object_given_number(20, PdfInteger(20))
+  let second = @pdflite.pdf_document_empty()
+  second.set_root(7)
+  second.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(7))]))
+  second.add_object_given_number(
+    7,
+    PdfDictionary([(key_peer, PdfIndirect(30))]),
+  )
+  second.add_object_given_number(30, PdfInteger(30))
+  let renumbered = try! @pdflite.pdf_renumber_documents([first, second])
+  @test.assert_eq(renumbered.length(), 2)
+  @test.assert_eq(renumbered[0].object_numbers(), [1, 2])
+  @test.assert_eq(renumbered[0].root(), 1)
+  @test.assert_eq(
+    renumbered[0].lookup_object_or_null(1).lookup_immediate(key_peer),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(renumbered[1].object_numbers(), [3, 4])
+  @test.assert_eq(renumbered[1].root(), 3)
+  @test.assert_eq(
+    renumbered[1].lookup_object_or_null(3).lookup_immediate(key_peer),
+    Some(PdfIndirect(4)),
+  )
+  @test.assert_eq(first.object_numbers(), [10, 20])
+  @test.assert_eq(second.object_numbers(), [7, 30])
+}
+
+///|
 test "PdfDocument renumber_objects_by_offset rejects negative offsets" {
   let doc = @pdflite.pdf_document_empty()
   let result : Result[@pdflite.PdfDocument, Error] = try? doc.renumber_objects_by_offset(

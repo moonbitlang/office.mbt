@@ -45,6 +45,19 @@ test "PdfDocument copy preserves parser-private object states" {
 }
 
 ///|
+test "PdfDocument renumbering preserves parser object-stream hints" {
+  let doc = pdf_document_empty()
+  doc.objects.set_entry(8, pdf_object_entry(ObjectParsed(PdfInteger(8))))
+  doc.objects.set_entry(9, pdf_object_entry(ObjectParsed(PdfInteger(9))))
+  doc.objects.object_stream_ids[8] = 5
+  doc.objects.object_stream_ids[99] = 5
+  let renumbered = try! doc.renumber_objects([(8, 2), (9, 3)])
+  @test.assert_eq(renumbered.objects.object_stream_ids.get(2), Some(5))
+  @test.assert_eq(renumbered.objects.object_stream_ids.get(8), None)
+  @test.assert_eq(renumbered.objects.object_stream_ids.get(99), None)
+}
+
+///|
 test "PdfDocument ARC4 crypt preserves parser-private object states" {
   let key = try! pdf_bytes_of_int_array([1, 2, 3, 4, 5])
   let doc = pdf_document_empty()
