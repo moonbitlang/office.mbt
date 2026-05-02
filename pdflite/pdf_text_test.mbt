@@ -5105,6 +5105,50 @@ test "PdfTextExtractor decodes Roman numeral AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes technical AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/arc", 0x2312),
+    ("/clear", 0x2327),
+    ("/control", 0x2303),
+    ("/deleteleft", 0x232B),
+    ("/deleteright", 0x2326),
+    ("/house", 0x2302),
+    ("/integralbottom", 0x2321),
+    ("/integraltop", 0x2320),
+    ("/logicalnotreversed", 0x2310),
+    ("/option", 0x2325),
+    ("/projective", 0x2305),
+    ("/propellor", 0x2318),
+    ("/revlogicalnot", 0x2310),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2302), Some(6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2310), Some(9))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2320), Some(8))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x232B), Some(4))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),

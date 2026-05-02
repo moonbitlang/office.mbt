@@ -3616,6 +3616,26 @@ fn pdf_text_codepoint_of_number_form_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_technical_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/arc" => Some(0x2312)
+    "/clear" => Some(0x2327)
+    "/control" => Some(0x2303)
+    "/deleteleft" => Some(0x232B)
+    "/deleteright" => Some(0x2326)
+    "/house" => Some(0x2302)
+    "/integralbottom" => Some(0x2321)
+    "/integraltop" => Some(0x2320)
+    "/logicalnotreversed" => Some(0x2310)
+    "/option" => Some(0x2325)
+    "/projective" => Some(0x2305)
+    "/propellor" => Some(0x2318)
+    "/revlogicalnot" => Some(0x2310)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4641,33 +4661,41 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                                           Some(codepoint) => Some([codepoint])
                                           None =>
                                             match
-                                              pdf_text_codepoint_of_latin_extended_glyphname(
+                                              pdf_text_codepoint_of_technical_glyphname(
                                                 base_name,
                                               ) {
                                               Some(codepoint) =>
                                                 Some([codepoint])
                                               None =>
                                                 match
-                                                  pdf_text_codepoint_of_expert_glyphname(
+                                                  pdf_text_codepoint_of_latin_extended_glyphname(
                                                     base_name,
                                                   ) {
                                                   Some(codepoint) =>
                                                     Some([codepoint])
                                                   None =>
                                                     match
-                                                      pdf_text_codepoint_of_symbol_glyphname(
+                                                      pdf_text_codepoint_of_expert_glyphname(
                                                         base_name,
                                                       ) {
                                                       Some(codepoint) =>
                                                         Some([codepoint])
                                                       None =>
                                                         match
-                                                          pdf_text_codepoint_of_dingbat_glyphname(
+                                                          pdf_text_codepoint_of_symbol_glyphname(
                                                             base_name,
                                                           ) {
                                                           Some(codepoint) =>
                                                             Some([codepoint])
-                                                          None => None
+                                                          None =>
+                                                            match
+                                                              pdf_text_codepoint_of_dingbat_glyphname(
+                                                                base_name,
+                                                              ) {
+                                                              Some(codepoint) =>
+                                                                Some([codepoint])
+                                                              None => None
+                                                            }
                                                         }
                                                     }
                                                 }
