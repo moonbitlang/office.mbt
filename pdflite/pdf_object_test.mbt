@@ -14,6 +14,16 @@ fn object_dictionary_keys_for_test(
 }
 
 ///|
+fn object_bump_integer_for_test(
+  object : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  match object {
+    PdfInteger(value) => PdfInteger(value + 1)
+    _ => object
+  }
+}
+
+///|
 test "PdfObject stores byte strings names arrays and dictionaries" {
   let name_type = object_name_for_test([47, 84, 121, 112, 101])
   let string_bytes = try! @pdflite.pdf_bytes_of_int_array([0, 255])
@@ -43,6 +53,45 @@ test "PdfObject stores byte strings names arrays and dictionaries" {
     StreamToGet(deferred),
   )
   @test.assert_eq(non_dict_stream.dictionary_view(), None)
+}
+
+///|
+test "pdf_recurse_array and pdf_recurse_dict map one container level" {
+  let name_a = object_name_for_test([47, 65])
+  let name_b = object_name_for_test([47, 66])
+  let name_c = object_name_for_test([47, 67])
+  @test.assert_eq(
+    @pdflite.pdf_recurse_array(object_bump_integer_for_test, [
+      PdfInteger(1),
+      PdfBoolean(false),
+    ]),
+    PdfArray([PdfInteger(2), PdfBoolean(false)]),
+  )
+  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+    (name_a, PdfInteger(1)),
+    (name_b, PdfBoolean(false)),
+    (name_c, PdfInteger(3)),
+  ]
+  @test.assert_eq(
+    @pdflite.pdf_recurse_dict(object_bump_integer_for_test, entries),
+    PdfDictionary([
+      (name_c, PdfInteger(4)),
+      (name_b, PdfBoolean(false)),
+      (name_a, PdfInteger(2)),
+    ]),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_recurse_dict(
+      object_bump_integer_for_test,
+      entries,
+      preserve_order=true,
+    ),
+    PdfDictionary([
+      (name_a, PdfInteger(2)),
+      (name_b, PdfBoolean(false)),
+      (name_c, PdfInteger(4)),
+    ]),
+  )
 }
 
 ///|

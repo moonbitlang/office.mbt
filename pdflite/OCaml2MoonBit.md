@@ -508,6 +508,16 @@ usually become `xs.sort_by(fn(a, b) { ...compare... })` after copying to an
 owned `Array` if the source is an `ArrayView` or other read-only view.
 
 ```sh
+moon run -c 'fn main { let xs = [1, 2, 3]; let ys = xs.rev(); println(ys[0]); println(xs[0]) }'
+# 3
+# 1
+```
+
+MoonBit `Array::rev()` returns a reversed copy and leaves the original array
+unchanged. This is useful when porting OCaml list-building code that conses into
+reverse order and then conditionally applies `List.rev`.
+
+```sh
 moon run -c 'fn first_sorted(xs : ArrayView[Int]) -> Int { let ys = xs.to_owned(); ys.sort(); ys[0] }
 fn main { let fixed : FixedArray[Int] = [3, 1, 2]; let grow = [4, 2, 3]; println(first_sorted(fixed)); println(first_sorted(grow)); println(fixed[0]); println(grow[0]) }'
 # 1

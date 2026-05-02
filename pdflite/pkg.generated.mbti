@@ -309,6 +309,10 @@ pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 
 pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise PdfError
 
+pub fn pdf_recurse_array((PdfObject) -> PdfObject, ArrayView[PdfObject]) -> PdfObject
+
+pub fn pdf_recurse_dict((PdfObject) -> PdfObject, ArrayView[(PdfName, PdfObject)], preserve_order? : Bool) -> PdfObject
+
 pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise PdfError
 
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise PdfError

@@ -85,6 +85,30 @@ pub fn pdf_dictionary(entries : ArrayView[(PdfName, PdfObject)]) -> PdfObject {
 }
 
 ///|
+pub fn pdf_recurse_array(
+  transform : (PdfObject) -> PdfObject,
+  values : ArrayView[PdfObject],
+) -> PdfObject {
+  PdfArray([ for value in values => transform(value) ])
+}
+
+///|
+pub fn pdf_recurse_dict(
+  transform : (PdfObject) -> PdfObject,
+  entries : ArrayView[(PdfName, PdfObject)],
+  preserve_order? : Bool = false,
+) -> PdfObject {
+  let transformed : Array[(PdfName, PdfObject)] = [
+    for entry in entries => (entry.0, transform(entry.1))
+  ]
+  if preserve_order {
+    PdfDictionary(transformed)
+  } else {
+    PdfDictionary(transformed.rev())
+  }
+}
+
+///|
 pub fn pdf_stream(dictionary : PdfObject, data : PdfStreamData) -> PdfObject {
   PdfStreamObject({ dictionary, data })
 }
