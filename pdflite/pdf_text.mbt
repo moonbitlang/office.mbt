@@ -3654,6 +3654,72 @@ fn pdf_text_codepoint_of_block_element_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_geometric_shape_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/H18533" => Some(0x25CF)
+    "/H18543" => Some(0x25AA)
+    "/H18551" => Some(0x25AB)
+    "/H22073" => Some(0x25A1)
+    "/blackcircle" => Some(0x25CF)
+    "/blackdiamond" => Some(0x25C6)
+    "/blackdownpointingtriangle" => Some(0x25BC)
+    "/blackleftpointingpointer" => Some(0x25C4)
+    "/blackleftpointingtriangle" => Some(0x25C0)
+    "/blacklowerlefttriangle" => Some(0x25E3)
+    "/blacklowerrighttriangle" => Some(0x25E2)
+    "/blackrectangle" => Some(0x25AC)
+    "/blackrightpointingpointer" => Some(0x25BA)
+    "/blackrightpointingtriangle" => Some(0x25B6)
+    "/blacksmallsquare" => Some(0x25AA)
+    "/blacksquare" => Some(0x25A0)
+    "/blackupperlefttriangle" => Some(0x25E4)
+    "/blackupperrighttriangle" => Some(0x25E5)
+    "/blackuppointingsmalltriangle" => Some(0x25B4)
+    "/blackuppointingtriangle" => Some(0x25B2)
+    "/bulletinverse" => Some(0x25D8)
+    "/bullseye" => Some(0x25CE)
+    "/circle" => Some(0x25CB)
+    "/circlewithlefthalfblack" => Some(0x25D0)
+    "/circlewithrighthalfblack" => Some(0x25D1)
+    "/dottedcircle" => Some(0x25CC)
+    "/filledbox" => Some(0x25A0)
+    "/filledrect" => Some(0x25AC)
+    "/fisheye" => Some(0x25C9)
+    "/invbullet" => Some(0x25D8)
+    "/invcircle" => Some(0x25D9)
+    "/largecircle" => Some(0x25EF)
+    "/openbullet" => Some(0x25E6)
+    "/squarediagonalcrosshatchfill" => Some(0x25A9)
+    "/squarehorizontalfill" => Some(0x25A4)
+    "/squareorthogonalcrosshatchfill" => Some(0x25A6)
+    "/squareupperlefttolowerrightfill" => Some(0x25A7)
+    "/squareupperrighttolowerleftfill" => Some(0x25A8)
+    "/squareverticalfill" => Some(0x25A5)
+    "/squarewhitewithsmallblack" => Some(0x25A3)
+    "/triagdn" => Some(0x25BC)
+    "/triaglf" => Some(0x25C4)
+    "/triagrt" => Some(0x25BA)
+    "/triagup" => Some(0x25B2)
+    "/whitebullet" => Some(0x25E6)
+    "/whitecircle" => Some(0x25CB)
+    "/whitecircleinverse" => Some(0x25D9)
+    "/whitediamond" => Some(0x25C7)
+    "/whitediamondcontainingblacksmalldiamond" => Some(0x25C8)
+    "/whitedownpointingsmalltriangle" => Some(0x25BF)
+    "/whitedownpointingtriangle" => Some(0x25BD)
+    "/whiteleftpointingsmalltriangle" => Some(0x25C3)
+    "/whiteleftpointingtriangle" => Some(0x25C1)
+    "/whiterightpointingsmalltriangle" => Some(0x25B9)
+    "/whiterightpointingtriangle" => Some(0x25B7)
+    "/whitesmallsquare" => Some(0x25AB)
+    "/whitesquare" => Some(0x25A1)
+    "/whiteuppointingsmalltriangle" => Some(0x25B5)
+    "/whiteuppointingtriangle" => Some(0x25B3)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_misc_symbol_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/beamedsixteenthnotes" => Some(0x266C)
@@ -4710,6 +4776,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     None => ()
   }
   match pdf_text_codepoint_of_block_element_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_geometric_shape_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }

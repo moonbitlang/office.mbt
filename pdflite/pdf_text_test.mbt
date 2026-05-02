@@ -5191,6 +5191,99 @@ test "PdfTextExtractor decodes block element AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes geometric shape AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/H18533", 0x25CF),
+    ("/H18543", 0x25AA),
+    ("/H18551", 0x25AB),
+    ("/H22073", 0x25A1),
+    ("/blackcircle", 0x25CF),
+    ("/blackdiamond", 0x25C6),
+    ("/blackdownpointingtriangle", 0x25BC),
+    ("/blackleftpointingpointer", 0x25C4),
+    ("/blackleftpointingtriangle", 0x25C0),
+    ("/blacklowerlefttriangle", 0x25E3),
+    ("/blacklowerrighttriangle", 0x25E2),
+    ("/blackrectangle", 0x25AC),
+    ("/blackrightpointingpointer", 0x25BA),
+    ("/blackrightpointingtriangle", 0x25B6),
+    ("/blacksmallsquare", 0x25AA),
+    ("/blacksquare", 0x25A0),
+    ("/blackupperlefttriangle", 0x25E4),
+    ("/blackupperrighttriangle", 0x25E5),
+    ("/blackuppointingsmalltriangle", 0x25B4),
+    ("/blackuppointingtriangle", 0x25B2),
+    ("/bulletinverse", 0x25D8),
+    ("/bullseye", 0x25CE),
+    ("/circle", 0x25CB),
+    ("/circlewithlefthalfblack", 0x25D0),
+    ("/circlewithrighthalfblack", 0x25D1),
+    ("/dottedcircle", 0x25CC),
+    ("/filledbox", 0x25A0),
+    ("/filledrect", 0x25AC),
+    ("/fisheye", 0x25C9),
+    ("/invbullet", 0x25D8),
+    ("/invcircle", 0x25D9),
+    ("/largecircle", 0x25EF),
+    ("/openbullet", 0x25E6),
+    ("/squarediagonalcrosshatchfill", 0x25A9),
+    ("/squarehorizontalfill", 0x25A4),
+    ("/squareorthogonalcrosshatchfill", 0x25A6),
+    ("/squareupperlefttolowerrightfill", 0x25A7),
+    ("/squareupperrighttolowerleftfill", 0x25A8),
+    ("/squareverticalfill", 0x25A5),
+    ("/squarewhitewithsmallblack", 0x25A3),
+    ("/triagdn", 0x25BC),
+    ("/triaglf", 0x25C4),
+    ("/triagrt", 0x25BA),
+    ("/triagup", 0x25B2),
+    ("/whitebullet", 0x25E6),
+    ("/whitecircle", 0x25CB),
+    ("/whitecircleinverse", 0x25D9),
+    ("/whitediamond", 0x25C7),
+    ("/whitediamondcontainingblacksmalldiamond", 0x25C8),
+    ("/whitedownpointingsmalltriangle", 0x25BF),
+    ("/whitedownpointingtriangle", 0x25BD),
+    ("/whiteleftpointingsmalltriangle", 0x25C3),
+    ("/whiteleftpointingtriangle", 0x25C1),
+    ("/whiterightpointingsmalltriangle", 0x25B9),
+    ("/whiterightpointingtriangle", 0x25B7),
+    ("/whitesmallsquare", 0x25AB),
+    ("/whitesquare", 0x25A1),
+    ("/whiteuppointingsmalltriangle", 0x25B5),
+    ("/whiteuppointingtriangle", 0x25B3),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25CF), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25AA), Some(2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25AB), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25A1), Some(4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25BC), Some(7))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25E6), Some(33))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x25B3), Some(59))
+}
+
+///|
 test "PdfTextExtractor decodes dingbat AGL alias glyph names" {
   let entries : Array[(String, Int)] = [
     ("/arrowrightheavy", 0x279E),
