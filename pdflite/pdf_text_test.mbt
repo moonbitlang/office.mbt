@@ -2244,6 +2244,67 @@ test "PdfDocument write_font writes TrueType ToUnicode CMaps" {
 }
 
 ///|
+test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "/CIDInit /ProcSet findresource begin\n" +
+      "/WMode 1 def\n" +
+      "2 beginbfchar\n" +
+      "<21><0041>\n" +
+      "<22><0042>\n" +
+      "endbfchar\n",
+    )[:],
+  )
+  @test.assert_eq(parsed.wmode, Some(1))
+  @test.assert_eq(parsed.map, [
+    (33, text_bytes_for_test([0x00, 0x41])),
+    (34, text_bytes_for_test([0x00, 0x42])),
+  ])
+  let malformed_wmode = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode("/WMode invalid\n")[:],
+  )
+  @test.assert_eq(malformed_wmode.wmode, None)
+  @test.assert_eq(malformed_wmode.map, [])
+  @test.assert_eq(
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/XMode 1\n")[:]).wmode,
+    None,
+  )
+}
+
+///|
+test "PdfDocument parse_cmap decodes stream objects" {
+  let doc = @pdflite.pdf_document_empty()
+  let cmap_data = @ascii.encode(
+    "/WMode 0 def\n" + "1 beginbfrange\n" + "<30><31><0061>\n" + "endbfrange\n",
+  )
+  let encoded_cmap = @pdflite.pdf_flate_encode(cmap_data)
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(encoded_cmap.length())),
+      (
+        text_name_for_test("/Filter"),
+        PdfNameObject(text_name_for_test("/FlateDecode")),
+      ),
+    ]),
+    StreamGot(encoded_cmap),
+  )
+  doc.add_object_given_number(17, stream)
+  @test.assert_eq(try! doc.parse_cmap(PdfIndirect(17)), {
+    map: [
+      (48, text_bytes_for_test([0x00, 0x61])),
+      (49, text_bytes_for_test([0x00, 0x62])),
+    ],
+    wmode: Some(0),
+  })
+  let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? doc.parse_cmap(
+    PdfInteger(1),
+  )
+  guard non_stream is Err(@pdflite.PdfError::CMapEncodingExpected) else {
+    fail("expected CMapEncodingExpected")
+  }
+}
+
+///|
 test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
   let tounicode = @pdflite.pdf_stream(

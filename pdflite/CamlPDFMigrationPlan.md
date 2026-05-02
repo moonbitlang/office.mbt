@@ -674,7 +674,10 @@ MoonBit consequences for this project:
    hex-string nibbles, and multiple compact
    `beginbfchar`/`beginbfrange` sections on the same physical line. Inline
    `bfrange` parsing now consumes repeated array-form and sequential entries
-   from one line instead of stopping after the first array mapping.
+   from one line instead of stopping after the first array mapping. A small
+   public parsed-CMap API is also started: borrowed CMap bytes and direct or
+   indirect stream objects can now return a typed map plus `/WMode`, decoding
+   supported stream filters first.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol

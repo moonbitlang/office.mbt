@@ -305,6 +305,8 @@ pub fn pdf_page_rectangle_of_paper(PaperSize) -> PdfObject
 
 pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise PdfError
 
+pub fn pdf_parse_cmap_data(BytesView) -> PdfParsedCMap
+
 pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfError
 
 pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[PdfContentOp] raise PdfError
@@ -1045,6 +1047,7 @@ pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise PdfError
 pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise PdfError
 pub fn PdfDocument::pages_of_pagetree(Self) -> Array[PdfPage] raise PdfError
 pub fn PdfDocument::pages_of_pagetree_quick(Self) -> Int raise PdfError
+pub fn PdfDocument::parse_cmap(Self, PdfObject) -> PdfParsedCMap raise PdfError
 pub fn PdfDocument::parse_content_bytes_with_resources(Self, PdfObject, Bytes) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_content_ops(Self, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
 pub fn PdfDocument::parse_content_ops_with_resources(Self, PdfObject, ArrayView[PdfObject]) -> Array[PdfContentOp] raise PdfError
@@ -1411,6 +1414,11 @@ pub(all) enum PdfPageRotation {
   Rotate90
   Rotate180
   Rotate270
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfParsedCMap {
+  map : Array[(Int, Bytes)]
+  wmode : Int?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfParsedIndirectObject {

@@ -255,6 +255,12 @@ pub(all) enum PdfCMapEncoding {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct PdfParsedCMap {
+  map : Array[(Int, PdfBytes)]
+  wmode : Int?
+} derive(Debug, Eq, ToJson)
+
+///|
 pub(all) struct PdfCIDKeyedFont {
   basefont : PdfName
   composite : PdfCompositeCIDFont
@@ -1338,6 +1344,44 @@ fn pdf_text_after_ascii(line : BytesView, word : String) -> BytesView? {
 }
 
 ///|
+fn pdf_text_view_equals_ascii(view : BytesView, text : String) -> Bool {
+  let expected = @ascii.encode(text)
+  guard view.length() == expected.length() else { return false }
+  for index in 0..<view.length() {
+    if view[index] != expected[index] {
+      break false
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
+  let cursor = byte_cursor_of_view(data)
+  for line in cursor.read_line_views() {
+    let tokens = pdf_split_whitespace_tokens(line)
+    if tokens.length() >= 2 {
+      for index in 0..<(tokens.length() - 1) {
+        if pdf_text_view_equals_ascii(tokens[index], "/WMode") {
+          let parsed = try pdf_parse_ascii_int_view(tokens[index + 1]) catch {
+            _ => None
+          } noraise {
+            value => Some(value)
+          }
+          match parsed {
+            Some(value) => return Some(value)
+            None => ()
+          }
+        }
+      }
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
 fn pdf_text_cmap_end_marker(line : BytesView, start : Int) -> (Int, Int)? {
   let bfchar = pdf_text_index_of_ascii_from(line, "endbfchar", start)
   let bfrange = pdf_text_index_of_ascii_from(line, "endbfrange", start)
@@ -1807,12 +1851,41 @@ fn pdf_text_parse_tounicode(data : BytesView) -> Array[(Int, PdfBytes)]? {
 }
 
 ///|
-fn pdf_text_stream_data_bytes(data : PdfStreamData) -> PdfBytes? {
-  try pdf_stream_data_bytes(data) catch {
-    _ => None
-  } noraise {
-    bytes => Some(bytes)
+pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
+  {
+    map: match pdf_text_parse_tounicode(data) {
+      Some(entries) => entries
+      None => []
+    },
+    wmode: pdf_text_parse_cmap_wmode(data),
   }
+}
+
+///|
+fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
+  self : PdfDocument,
+  object : PdfObject,
+) -> PdfBytes raise PdfError {
+  match self.direct(object) {
+    PdfStreamObject(stream) => {
+      let decoded = match
+        self.pdf_stream_first_filter_direct(stream.dictionary) {
+        None => stream
+        Some(_) => self.pdf_decode_stream_value_direct(stream)
+      }
+      pdf_stream_data_bytes(decoded.data)
+    }
+    _ => raise CMapEncodingExpected
+  }
+}
+
+///|
+pub fn PdfDocument::parse_cmap(
+  self : PdfDocument,
+  cmap : PdfObject,
+) -> PdfParsedCMap raise PdfError {
+  let bytes = self.pdf_text_decoded_cmap_stream_data_direct(cmap)
+  pdf_parse_cmap_data(bytes[:])
 }
 
 ///|
@@ -1820,20 +1893,10 @@ fn PdfDocument::pdf_text_decoded_stream_data_direct(
   self : PdfDocument,
   object : PdfObject,
 ) -> PdfBytes? {
-  match self.direct(object) {
-    PdfStreamObject(stream) =>
-      try self.pdf_stream_first_filter_direct(stream.dictionary) catch {
-        _ => None
-      } noraise {
-        None => pdf_text_stream_data_bytes(stream.data)
-        Some(_) =>
-          try self.pdf_decode_stream_value_direct(stream) catch {
-            _ => None
-          } noraise {
-            decoded => pdf_text_stream_data_bytes(decoded.data)
-          }
-      }
+  try self.pdf_text_decoded_cmap_stream_data_direct(object) catch {
     _ => None
+  } noraise {
+    bytes => Some(bytes)
   }
 }
 
