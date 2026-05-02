@@ -3501,6 +3501,80 @@ fn pdf_text_codepoint_of_greek_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_math_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/allequal" => Some(0x224C)
+    "/approaches" => Some(0x2250)
+    "/approxequalorimage" => Some(0x2252)
+    "/approximatelyequal" => Some(0x2245)
+    "/asteriskmath" => Some(0x2217)
+    "/asymptoticallyequal" => Some(0x2243)
+    "/because" => Some(0x2235)
+    "/bulletoperator" => Some(0x2219)
+    "/circleot" => Some(0x2299)
+    "/contourintegral" => Some(0x222E)
+    "/curlyand" => Some(0x22CF)
+    "/curlyor" => Some(0x22CE)
+    "/dblintegral" => Some(0x222C)
+    "/divides" => Some(0x2223)
+    "/divisionslash" => Some(0x2215)
+    "/ellipsisvertical" => Some(0x22EE)
+    "/forall" => Some(0x2200)
+    "/geometricallyequal" => Some(0x2251)
+    "/greaterequalorless" => Some(0x22DB)
+    "/greaterorequivalent" => Some(0x2273)
+    "/greaterorless" => Some(0x2277)
+    "/greateroverequal" => Some(0x2267)
+    "/imageorapproximatelyequal" => Some(0x2253)
+    "/increment" => Some(0x2206)
+    "/lessequalorgreater" => Some(0x22DA)
+    "/lessorequivalent" => Some(0x2272)
+    "/lessorgreater" => Some(0x2276)
+    "/lessoverequal" => Some(0x2266)
+    "/minus" => Some(0x2212)
+    "/minuscircle" => Some(0x2296)
+    "/minusplus" => Some(0x2213)
+    "/muchgreater" => Some(0x226B)
+    "/muchless" => Some(0x226A)
+    "/nabla" => Some(0x2207)
+    "/notcontains" => Some(0x220C)
+    "/notelementof" => Some(0x2209)
+    "/notgreater" => Some(0x226F)
+    "/notgreaternorequal" => Some(0x2271)
+    "/notgreaternorless" => Some(0x2279)
+    "/notidentical" => Some(0x2262)
+    "/notless" => Some(0x226E)
+    "/notlessnorequal" => Some(0x2270)
+    "/notparallel" => Some(0x2226)
+    "/notprecedes" => Some(0x2280)
+    "/notsucceeds" => Some(0x2281)
+    "/notsuperset" => Some(0x2285)
+    "/orthogonal" => Some(0x221F)
+    "/parallel" => Some(0x2225)
+    "/pluscircle" => Some(0x2295)
+    "/precedes" => Some(0x227A)
+    "/proportion" => Some(0x2237)
+    "/ratio" => Some(0x2236)
+    "/reversedtilde" => Some(0x223D)
+    "/rightangle" => Some(0x221F)
+    "/righttriangle" => Some(0x22BF)
+    "/subset" => Some(0x2282)
+    "/subsetnotequal" => Some(0x228A)
+    "/subsetorequal" => Some(0x2286)
+    "/succeeds" => Some(0x227B)
+    "/superset" => Some(0x2283)
+    "/supersetnotequal" => Some(0x228B)
+    "/supersetorequal" => Some(0x2287)
+    "/tackdown" => Some(0x22A4)
+    "/tackleft" => Some(0x22A3)
+    "/thereexists" => Some(0x2203)
+    "/tildeoperator" => Some(0x223C)
+    "/timescircle" => Some(0x2297)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4514,31 +4588,39 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                                   Some(codepoint) => Some([codepoint])
                                   None =>
                                     match
-                                      pdf_text_codepoint_of_latin_extended_glyphname(
+                                      pdf_text_codepoint_of_math_glyphname(
                                         base_name,
                                       ) {
                                       Some(codepoint) => Some([codepoint])
                                       None =>
                                         match
-                                          pdf_text_codepoint_of_expert_glyphname(
+                                          pdf_text_codepoint_of_latin_extended_glyphname(
                                             base_name,
                                           ) {
                                           Some(codepoint) => Some([codepoint])
                                           None =>
                                             match
-                                              pdf_text_codepoint_of_symbol_glyphname(
+                                              pdf_text_codepoint_of_expert_glyphname(
                                                 base_name,
                                               ) {
                                               Some(codepoint) =>
                                                 Some([codepoint])
                                               None =>
                                                 match
-                                                  pdf_text_codepoint_of_dingbat_glyphname(
+                                                  pdf_text_codepoint_of_symbol_glyphname(
                                                     base_name,
                                                   ) {
                                                   Some(codepoint) =>
                                                     Some([codepoint])
-                                                  None => None
+                                                  None =>
+                                                    match
+                                                      pdf_text_codepoint_of_dingbat_glyphname(
+                                                        base_name,
+                                                      ) {
+                                                      Some(codepoint) =>
+                                                        Some([codepoint])
+                                                      None => None
+                                                    }
                                                 }
                                             }
                                         }

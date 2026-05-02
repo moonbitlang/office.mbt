@@ -4910,6 +4910,105 @@ test "PdfTextExtractor decodes Greek AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes math operator AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/allequal", 0x224C),
+    ("/approaches", 0x2250),
+    ("/approxequalorimage", 0x2252),
+    ("/approximatelyequal", 0x2245),
+    ("/asteriskmath", 0x2217),
+    ("/asymptoticallyequal", 0x2243),
+    ("/because", 0x2235),
+    ("/bulletoperator", 0x2219),
+    ("/circleot", 0x2299),
+    ("/contourintegral", 0x222E),
+    ("/curlyand", 0x22CF),
+    ("/curlyor", 0x22CE),
+    ("/dblintegral", 0x222C),
+    ("/divides", 0x2223),
+    ("/divisionslash", 0x2215),
+    ("/ellipsisvertical", 0x22EE),
+    ("/forall", 0x2200),
+    ("/geometricallyequal", 0x2251),
+    ("/greaterequalorless", 0x22DB),
+    ("/greaterorequivalent", 0x2273),
+    ("/greaterorless", 0x2277),
+    ("/greateroverequal", 0x2267),
+    ("/imageorapproximatelyequal", 0x2253),
+    ("/increment", 0x2206),
+    ("/lessequalorgreater", 0x22DA),
+    ("/lessorequivalent", 0x2272),
+    ("/lessorgreater", 0x2276),
+    ("/lessoverequal", 0x2266),
+    ("/minus", 0x2212),
+    ("/minuscircle", 0x2296),
+    ("/minusplus", 0x2213),
+    ("/muchgreater", 0x226B),
+    ("/muchless", 0x226A),
+    ("/nabla", 0x2207),
+    ("/notcontains", 0x220C),
+    ("/notelementof", 0x2209),
+    ("/notgreater", 0x226F),
+    ("/notgreaternorequal", 0x2271),
+    ("/notgreaternorless", 0x2279),
+    ("/notidentical", 0x2262),
+    ("/notless", 0x226E),
+    ("/notlessnorequal", 0x2270),
+    ("/notparallel", 0x2226),
+    ("/notprecedes", 0x2280),
+    ("/notsucceeds", 0x2281),
+    ("/notsuperset", 0x2285),
+    ("/orthogonal", 0x221F),
+    ("/parallel", 0x2225),
+    ("/pluscircle", 0x2295),
+    ("/precedes", 0x227A),
+    ("/proportion", 0x2237),
+    ("/ratio", 0x2236),
+    ("/reversedtilde", 0x223D),
+    ("/rightangle", 0x221F),
+    ("/righttriangle", 0x22BF),
+    ("/subset", 0x2282),
+    ("/subsetnotequal", 0x228A),
+    ("/subsetorequal", 0x2286),
+    ("/succeeds", 0x227B),
+    ("/superset", 0x2283),
+    ("/supersetnotequal", 0x228B),
+    ("/supersetorequal", 0x2287),
+    ("/tackdown", 0x22A4),
+    ("/tackleft", 0x22A3),
+    ("/thereexists", 0x2203),
+    ("/tildeoperator", 0x223C),
+    ("/timescircle", 0x2297),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2206), Some(24))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x221F), Some(47))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2282), Some(56))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x22A3), Some(64))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2297), Some(67))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),
