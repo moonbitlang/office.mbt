@@ -23,6 +23,28 @@ test "pdf_date_of_string parses full PDF dates" {
 }
 
 ///|
+test "pdf_date byte APIs parse borrowed PDF date slices" {
+  let wrapped = @ascii.encode("xxD:20240203040506+08'30'yy")
+  let view = wrapped[2:wrapped.length() - 2]
+  let expected : @pdflite.PdfDate = {
+    year: 2024,
+    month: 2,
+    day: 3,
+    hour: 4,
+    minute: 5,
+    second: 6,
+    hour_offset: 8,
+    minute_offset: 30,
+  }
+  @test.assert_eq(try! @pdflite.pdf_date_of_view(view), expected)
+  @test.assert_eq(try! @pdflite.pdf_date_of_bytes(view.to_owned()), expected)
+  @test.assert_eq(
+    try! @pdflite.pdf_bytes_of_date(expected),
+    @ascii.encode("D:20240203040506+08'30'"),
+  )
+}
+
+///|
 test "pdf_date_of_string applies CamlPDF defaults and Y2K recovery" {
   @test.assert_eq(try! @pdflite.pdf_date_of_string("D:2024"), {
     year: 2024,

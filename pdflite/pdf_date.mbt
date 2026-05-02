@@ -102,7 +102,7 @@ fn pdf_date_digit(byte : Byte) -> Int? {
 }
 
 ///|
-fn pdf_date_two_digits(bytes : Bytes, index : Int) -> Int raise PdfError {
+fn pdf_date_two_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
   if index + 1 >= bytes.length() {
     raise BadDate
   }
@@ -113,7 +113,7 @@ fn pdf_date_two_digits(bytes : Bytes, index : Int) -> Int raise PdfError {
 }
 
 ///|
-fn pdf_date_four_digits(bytes : Bytes, index : Int) -> Int raise PdfError {
+fn pdf_date_four_digits(bytes : BytesView, index : Int) -> Int raise PdfError {
   if index + 3 >= bytes.length() {
     raise BadDate
   }
@@ -137,7 +137,7 @@ fn pdf_date_is_local_time_start(byte : Byte) -> Bool {
 
 ///|
 fn pdf_date_parse_optional_two(
-  bytes : Bytes,
+  bytes : BytesView,
   index : Int,
   default : Int,
   hour_offset : Ref[Int],
@@ -160,7 +160,7 @@ fn pdf_date_parse_optional_two(
 
 ///|
 fn pdf_date_parse_local_time(
-  bytes : Bytes,
+  bytes : BytesView,
   index : Int,
   hour_offset : Ref[Int],
   minute_offset : Ref[Int],
@@ -193,7 +193,7 @@ fn pdf_date_parse_local_time(
 }
 
 ///|
-fn pdf_date_has_distiller_y2k_bug(bytes : Bytes, index : Int) -> Bool {
+fn pdf_date_has_distiller_y2k_bug(bytes : BytesView, index : Int) -> Bool {
   index + 4 < bytes.length() &&
   bytes[index].to_int() == 49 &&
   bytes[index + 1].to_int() == 57 &&
@@ -203,8 +203,7 @@ fn pdf_date_has_distiller_y2k_bug(bytes : Bytes, index : Int) -> Bool {
 }
 
 ///|
-pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
-  let bytes = @ascii.encode(text)
+pub fn pdf_date_of_view(bytes : BytesView) -> PdfDate raise PdfError {
   let mut index = if bytes.length() >= 2 &&
     bytes[0].to_int() == 68 &&
     bytes[1].to_int() == 58 {
@@ -257,4 +256,21 @@ pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
   }
   pdf_date_check(date)
   date
+}
+
+///|
+pub fn pdf_date_of_bytes(bytes : PdfBytes) -> PdfDate raise PdfError {
+  pdf_date_of_view(bytes[:])
+}
+
+///|
+pub fn pdf_date_of_string(text : String) -> PdfDate raise PdfError {
+  let bytes = @ascii.encode(text)
+  pdf_date_of_view(bytes[:])
+}
+
+///|
+pub fn pdf_bytes_of_date(date : PdfDate) -> PdfBytes raise PdfError {
+  let text = pdf_string_of_date(date)
+  @ascii.encode(text)
 }
