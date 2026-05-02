@@ -742,7 +742,7 @@ MoonBit consequences for this project:
    general-punctuation, Latin-1 spacing aliases, IPA-extension,
   spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
   Armenian, Devanagari, Thai, math-operator, Roman-numeral, technical,
-  enclosed-alphanumeric, CJK-symbol/Hangzhou, Hiragana, Bopomofo, private-use,
+  enclosed-alphanumeric, CJK-symbol/Hangzhou, Hiragana, Katakana, Bopomofo, private-use,
   box-drawing, block-element, geometric-shape,
   miscellaneous-symbol, and dingbat alias AGL names missing from the base
   encoding tables are covered as well.

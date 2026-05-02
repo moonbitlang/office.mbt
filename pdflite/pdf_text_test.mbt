@@ -6303,6 +6303,131 @@ test "PdfTextExtractor decodes Hiragana AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Katakana AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/akatakana", 0x30A2),
+    ("/asmallkatakana", 0x30A1),
+    ("/bakatakana", 0x30D0),
+    ("/bekatakana", 0x30D9),
+    ("/bikatakana", 0x30D3),
+    ("/bokatakana", 0x30DC),
+    ("/bukatakana", 0x30D6),
+    ("/dakatakana", 0x30C0),
+    ("/dekatakana", 0x30C7),
+    ("/dikatakana", 0x30C2),
+    ("/dokatakana", 0x30C9),
+    ("/dotkatakana", 0x30FB),
+    ("/dukatakana", 0x30C5),
+    ("/ekatakana", 0x30A8),
+    ("/esmallkatakana", 0x30A7),
+    ("/gakatakana", 0x30AC),
+    ("/gekatakana", 0x30B2),
+    ("/gikatakana", 0x30AE),
+    ("/gokatakana", 0x30B4),
+    ("/gukatakana", 0x30B0),
+    ("/hakatakana", 0x30CF),
+    ("/hekatakana", 0x30D8),
+    ("/hikatakana", 0x30D2),
+    ("/hokatakana", 0x30DB),
+    ("/hukatakana", 0x30D5),
+    ("/ikatakana", 0x30A4),
+    ("/ismallkatakana", 0x30A3),
+    ("/iterationkatakana", 0x30FD),
+    ("/kakatakana", 0x30AB),
+    ("/kasmallkatakana", 0x30F5),
+    ("/kekatakana", 0x30B1),
+    ("/kesmallkatakana", 0x30F6),
+    ("/kikatakana", 0x30AD),
+    ("/kokatakana", 0x30B3),
+    ("/kukatakana", 0x30AF),
+    ("/makatakana", 0x30DE),
+    ("/mekatakana", 0x30E1),
+    ("/mikatakana", 0x30DF),
+    ("/mokatakana", 0x30E2),
+    ("/mukatakana", 0x30E0),
+    ("/nakatakana", 0x30CA),
+    ("/nekatakana", 0x30CD),
+    ("/nikatakana", 0x30CB),
+    ("/nkatakana", 0x30F3),
+    ("/nokatakana", 0x30CE),
+    ("/nukatakana", 0x30CC),
+    ("/okatakana", 0x30AA),
+    ("/osmallkatakana", 0x30A9),
+    ("/pakatakana", 0x30D1),
+    ("/pekatakana", 0x30DA),
+    ("/pikatakana", 0x30D4),
+    ("/pokatakana", 0x30DD),
+    ("/prolongedkana", 0x30FC),
+    ("/pukatakana", 0x30D7),
+    ("/rakatakana", 0x30E9),
+    ("/rekatakana", 0x30EC),
+    ("/rikatakana", 0x30EA),
+    ("/rokatakana", 0x30ED),
+    ("/rukatakana", 0x30EB),
+    ("/sakatakana", 0x30B5),
+    ("/sekatakana", 0x30BB),
+    ("/sikatakana", 0x30B7),
+    ("/sokatakana", 0x30BD),
+    ("/sukatakana", 0x30B9),
+    ("/takatakana", 0x30BF),
+    ("/tekatakana", 0x30C6),
+    ("/tikatakana", 0x30C1),
+    ("/tokatakana", 0x30C8),
+    ("/tukatakana", 0x30C4),
+    ("/tusmallkatakana", 0x30C3),
+    ("/ukatakana", 0x30A6),
+    ("/usmallkatakana", 0x30A5),
+    ("/vakatakana", 0x30F7),
+    ("/vekatakana", 0x30F9),
+    ("/vikatakana", 0x30F8),
+    ("/voicediterationkatakana", 0x30FE),
+    ("/vokatakana", 0x30FA),
+    ("/vukatakana", 0x30F4),
+    ("/wakatakana", 0x30EF),
+    ("/wasmallkatakana", 0x30EE),
+    ("/wekatakana", 0x30F1),
+    ("/wikatakana", 0x30F0),
+    ("/wokatakana", 0x30F2),
+    ("/yakatakana", 0x30E4),
+    ("/yasmallkatakana", 0x30E3),
+    ("/yokatakana", 0x30E8),
+    ("/yosmallkatakana", 0x30E7),
+    ("/yukatakana", 0x30E6),
+    ("/yusmallkatakana", 0x30E5),
+    ("/zakatakana", 0x30B6),
+    ("/zekatakana", 0x30BC),
+    ("/zikatakana", 0x30B8),
+    ("/zokatakana", 0x30BE),
+    ("/zukatakana", 0x30BA),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x30A2), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x30FB), Some(12))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x30FC), Some(53))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x30BA), Some(94))
+}
+
+///|
 test "PdfTextExtractor decodes Bopomofo AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/abopomofo", 0x311A),
