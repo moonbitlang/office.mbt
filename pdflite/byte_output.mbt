@@ -99,6 +99,30 @@ pub fn ByteOutput::write_view_slice(
 }
 
 ///|
+pub fn ByteOutput::write_repeated_byte(
+  self : ByteOutput,
+  length : Int,
+  value? : Int = 0,
+) -> Unit raise PdfError {
+  if length < 0 {
+    raise InvalidReadLength(length)
+  }
+  let byte = pdf_byte_of_int(value)
+  let end = self.position + length
+  if end < self.position {
+    raise InvalidReadLength(length)
+  }
+  self.ensure_capacity(end)
+  for index in self.position..<end {
+    self.data[index] = byte
+  }
+  self.position = end
+  if self.position > self.written_length {
+    self.written_length = self.position
+  }
+}
+
+///|
 pub fn ByteOutput::write_ascii(
   self : ByteOutput,
   text : String,

@@ -80,6 +80,38 @@ test "ByteOutput sparse writes zero-fill skipped positions" {
 }
 
 ///|
+test "ByteOutput writes repeated bytes for padding and fill" {
+  let output = try! @pdflite.byte_output_new()
+  try! output.write_ascii("A")
+  try! output.write_repeated_byte(3, value=0x20)
+  try! output.write_repeated_byte(2, value=0xFF)
+  @test.assert_eq(output.position(), 6)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(output.to_bytes()[:]), [
+    65, 0x20, 0x20, 0x20, 0xFF, 0xFF,
+  ])
+  let empty = try! @pdflite.byte_output_new()
+  try! empty.write_repeated_byte(0, value=0x41)
+  @test.assert_eq(empty.position(), 0)
+  @test.assert_eq(empty.to_bytes(), Bytes::new(0))
+  let bad_length : Result[Unit, Error] = try? output.write_repeated_byte(-1)
+  guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength for repeated byte write")
+  }
+  let bad_value : Result[Unit, Error] = try? output.write_repeated_byte(
+    1,
+    value=256,
+  )
+  guard bad_value is Err(@pdflite.PdfError::InvalidByte(256)) else {
+    fail("expected InvalidByte for repeated byte write")
+  }
+  try! output.seek(2147483647)
+  let overflow : Result[Unit, Error] = try? output.write_repeated_byte(1)
+  guard overflow is Err(@pdflite.PdfError::InvalidReadLength(1)) else {
+    fail("expected InvalidReadLength for repeated byte overflow")
+  }
+}
+
+///|
 test "ByteOutput reports checked cursor and byte errors" {
   let negative_size : Result[@pdflite.ByteOutput, Error] = try? @pdflite.byte_output_new(
     initial_size=-1,
