@@ -281,18 +281,26 @@ pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
 }
 
 ///|
-pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
+pub fn PdfCMapEncoding::is_identity_v(self : PdfCMapEncoding) -> Bool {
   match self {
-    PdfPredefinedCMap(name) =>
-      name == pdf_text_name("/Identity-H") ||
-      name == pdf_text_name("/Identity-V")
+    PdfPredefinedCMap(name) => name == pdf_text_name("/Identity-V")
     _ => false
   }
 }
 
 ///|
+pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
+  self.is_identity_h() || self.is_identity_v()
+}
+
+///|
 pub fn PdfCIDKeyedFont::is_identity_h(self : PdfCIDKeyedFont) -> Bool {
   self.encoding.is_identity_h()
+}
+
+///|
+pub fn PdfCIDKeyedFont::is_identity_v(self : PdfCIDKeyedFont) -> Bool {
+  self.encoding.is_identity_v()
 }
 
 ///|
@@ -380,6 +388,14 @@ pub fn PdfFont::debug_name(self : PdfFont) -> String {
 pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
   match self {
     PdfFontCIDKeyed(font) => font.is_identity_h()
+    _ => false
+  }
+}
+
+///|
+pub fn PdfFont::is_identity_v(self : PdfFont) -> Bool {
+  match self {
+    PdfFontCIDKeyed(font) => font.is_identity_v()
     _ => false
   }
 }
