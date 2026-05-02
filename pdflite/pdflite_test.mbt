@@ -59,6 +59,21 @@ test "PdfBytes expose CamlPDF int-array compatibility conversions" {
 }
 
 ///|
+test "PdfBytes map byte values without mutating the source" {
+  let source = try! @pdflite.pdf_bytes_of_int_array([0, 1, 255, 7])
+  let mapped = try! @pdflite.pdf_bytes_map_int(source[1:3], value => 255 - value)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(mapped[:]), [254, 0])
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(source[:]), [0, 1, 255, 7])
+  let invalid : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_bytes_map_int(
+    source[2:3],
+    value => value + 1,
+  )
+  guard invalid is Err(@pdflite.PdfError::InvalidByte(256)) else {
+    fail("expected InvalidByte for mapped byte")
+  }
+}
+
+///|
 test "PdfBytes reject out-of-range integers" {
   let too_large : Result[Byte, Error] = try? @pdflite.pdf_byte_of_int(256)
   guard too_large is Err(@pdflite.PdfError::InvalidByte(256)) else {

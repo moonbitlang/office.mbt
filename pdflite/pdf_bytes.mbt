@@ -149,6 +149,18 @@ pub fn pdf_bytes_of_int_arrays(
 }
 
 ///|
+pub fn pdf_bytes_map_int(
+  bytes : BytesView,
+  f : (Int) -> Int,
+) -> PdfBytes raise PdfError {
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(pdf_byte_of_int(f(byte.to_int())))
+  }
+  Bytes::from_array(output)
+}
+
+///|
 pub fn pdf_int_array_of_bytes(bytes : BytesView) -> Array[Int] {
   [
     for byte in bytes => byte.to_int()

@@ -125,7 +125,8 @@ MoonBit consequences for this project:
    read-at-position byte slices, one-allocation `BytesView` concatenation,
    MSB-first bitstream read/write,
    Int64-backed 32-bit bit values, aligned write-bitstream append,
-   CamlPDF-style byte/int-array conversion helpers, an in-memory byte-output
+   CamlPDF-style byte/int-array conversion helpers, a non-mutating byte-map
+   replacement for CamlPDF's mutable `bytes_selfmap`, an in-memory byte-output
    builder, and black-box tests.
 
 2. Small pure support modules.

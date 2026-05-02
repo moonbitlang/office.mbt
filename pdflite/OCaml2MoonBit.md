@@ -61,6 +61,18 @@ use `(65).to_byte()`, not `65.to_byte()`, because `65.` is parsed as the start
 of a floating-point literal.
 
 ```sh
+moon run -c 'fn main { let source : Array[Byte] = [1, 2]; let bytes = Bytes::from_array(source); source[0] = 9; println(bytes[0].to_int()); println(source[0].to_int()) }'
+# 1
+# 9
+```
+
+`Bytes::from_array` creates an immutable owned byte value. Later mutation of the
+source `Array[Byte]` does not mutate the `Bytes`. Port OCaml byte-mutating
+helpers such as `bytes_selfmap` either as a new `BytesView -> Bytes` transform,
+or keep data in a mutable `Array[Byte]`/`FixedArray[Byte]` until the final
+freeze.
+
+```sh
 moon run -c 'enum E { A(Int) } derive(Debug)
 fn E::value(self : E) -> Int { match self { A(n) => n } }
 fn main { let value = A(7); println(value.value()) }'
