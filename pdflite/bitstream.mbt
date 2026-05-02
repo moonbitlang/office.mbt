@@ -94,6 +94,21 @@ pub fn BitStream::get_value_int(
 }
 
 ///|
+pub fn BitStream::get_value_int64(
+  self : BitStream,
+  width : Int,
+) -> Int64 raise PdfError {
+  if width < 0 || width > 32 {
+    raise InvalidBitCount(width)
+  }
+  let mut value : Int64 = 0
+  for _ in 0..<width {
+    value = (value << 1) | self.get_bit_int().to_int64()
+  }
+  value
+}
+
+///|
 pub fn BitStream::bits_read(self : BitStream) -> Int {
   self.bits_read
 }
@@ -151,6 +166,20 @@ pub fn BitWriter::put_value_int(
   }
   for shift = width - 1; shift >= 0; shift = shift - 1 {
     self.put_bit((value >> shift) & 1)
+  }
+}
+
+///|
+pub fn BitWriter::put_value_int64(
+  self : BitWriter,
+  width : Int,
+  value : Int64,
+) -> Unit raise PdfError {
+  if width < 0 || width > 32 {
+    raise InvalidBitCount(width)
+  }
+  for shift = width - 1; shift >= 0; shift = shift - 1 {
+    self.put_bit_unchecked(((value >> shift) & 1).to_int())
   }
 }
 

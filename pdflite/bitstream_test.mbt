@@ -24,6 +24,18 @@ test "BitStream reads bits most significant bit first" {
 }
 
 ///|
+test "BitStream reads 32-bit values into Int64" {
+  let bytes = pdf_bytes_for_bitstream_test([0x80, 0x00, 0x00, 0x01])
+  let stream = @pdflite.bitstream_of_bytes(bytes)
+  @test.assert_eq(try! stream.get_value_int64(32), 0x8000_0001)
+  @test.assert_eq(stream.bits_read(), 32)
+  let bad_count : Result[Int64, Error] = try? stream.get_value_int64(33)
+  guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(33)) else {
+    fail("expected InvalidBitCount for oversized 32-bit read")
+  }
+}
+
+///|
 test "BitStream can align to the next byte boundary" {
   let bytes = pdf_bytes_for_bitstream_test([0b1010_0001, 0b0110_0000])
   let stream = @pdflite.bitstream_of_bytes(bytes)
@@ -82,6 +94,20 @@ test "BitWriter writes multi-bit values across byte boundaries" {
   @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(writer.to_bytes()), [
     0b1010_0001, 0b0110_0000,
   ])
+}
+
+///|
+test "BitWriter writes 32-bit Int64 values" {
+  let writer = @pdflite.bit_writer_new()
+  writer.put_value_int64(32, 0x8000_0001)
+  @test.assert_eq(writer.bit_length(), 32)
+  @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(writer.to_bytes()), [
+    0x80, 0x00, 0x00, 0x01,
+  ])
+  let bad_count : Result[Unit, Error] = try? writer.put_value_int64(33, 0)
+  guard bad_count is Err(@pdflite.PdfError::InvalidBitCount(33)) else {
+    fail("expected InvalidBitCount for oversized 32-bit write")
+  }
 }
 
 ///|

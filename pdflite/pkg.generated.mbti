@@ -503,6 +503,7 @@ pub fn BitStream::bits_read(Self) -> Int
 pub fn BitStream::get_bit(Self) -> Bool raise PdfError
 pub fn BitStream::get_bit_int(Self) -> Int raise PdfError
 pub fn BitStream::get_value_int(Self, Int) -> Int raise PdfError
+pub fn BitStream::get_value_int64(Self, Int) -> Int64 raise PdfError
 pub fn BitStream::position(Self) -> BitStreamPosition
 pub fn BitStream::seek(Self, BitStreamPosition) -> Unit
 
@@ -523,6 +524,7 @@ pub fn BitWriter::append_aligned(Self, Self) -> Self
 pub fn BitWriter::bit_length(Self) -> Int
 pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
 pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError
+pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise PdfError
 pub fn BitWriter::to_bytes(Self) -> Bytes
 
 pub struct ByteCursor {

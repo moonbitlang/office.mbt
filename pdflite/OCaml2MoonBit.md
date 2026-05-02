@@ -161,15 +161,19 @@ boundary. This is the usual MoonBit replacement for OCaml code that used
 `Buffer`, `Bytes`, or byte-oriented `string` concatenation to construct output.
 
 ```sh
-moon run -c 'fn main { let (b, u16, i64, u64) : (Byte, UInt16, Int64, UInt64) = (255, 65535, 42, 42); println(b.to_int()); println(u16.to_int()); println(i64.to_string()); println(u64.to_string()) }'
+moon run -c 'fn main { let (b, u, u16, i64, u64) : (Byte, UInt, UInt16, Int64, UInt64) = (255, 7, 65535, 42, 42); println(b.to_int()); println(u.to_string()); println(u16.to_int()); println(i64.to_string()); println(u64.to_string()) }'
 # 255
+# 7
 # 65535
 # 42
 # 42
 ```
 
 MoonBit has useful scalar types for ports from OCaml: `Byte`, `Int16`,
-`UInt16`, `Int`, `UInt`, `Int64`, `UInt64`, `Float`, and `Double`.
+`UInt16`, `Int`, `UInt`, `Int64`, `UInt64`, `Float`, and `Double`. In the
+current toolchain there is no `Int32` type; use `Int` when deliberate 32-bit
+wrapping is wanted, or `Int64`/`UInt64` when an OCaml `int32` value needs to be
+represented without signed-32-bit truncation.
 
 ```sh
 moon run -c 'fn main { let b : Byte = 255; let x : UInt64 = b.to_uint64(); println(x.to_string()); println((x / 85).to_string()); println((x % 85).to_byte().to_int()) }'

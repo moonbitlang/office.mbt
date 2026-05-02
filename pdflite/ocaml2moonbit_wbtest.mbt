@@ -17,10 +17,11 @@ test "Bytes preserve raw PDF byte values" {
 
 ///|
 test "Scalar literals narrow by type context" {
-  let (byte, uint16, int64, uint64) : (Byte, UInt16, Int64, UInt64) = (
-    255, 65535, 42, 42,
+  let (byte, uint, uint16, int64, uint64) : (Byte, UInt, UInt16, Int64, UInt64) = (
+    255, 7, 65535, 42, 42,
   )
   @test.assert_eq(byte.to_int(), 255)
+  @test.assert_eq(uint.to_string(), "7")
   @test.assert_eq(uint16.to_int(), 65535)
   @test.assert_eq(int64.to_string(), "42")
   @test.assert_eq(uint64.to_string(), "42")
