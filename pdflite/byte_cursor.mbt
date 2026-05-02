@@ -184,6 +184,54 @@ pub fn ByteCursor::read_view(
 }
 
 ///|
+pub fn ByteCursor::read_until_view(
+  self : ByteCursor,
+  stop : (Int) -> Bool,
+  eof_is_delimiter? : Bool = true,
+) -> BytesView raise PdfError {
+  let start = self.position
+  let mut done = false
+  while !done {
+    let value = self.peek_byte()
+    if value == pdf_no_more {
+      if eof_is_delimiter {
+        done = true
+      } else {
+        raise EndOfInput
+      }
+    } else if stop(value) {
+      done = true
+    } else {
+      self.nudge()
+    }
+  }
+  self.data[start:self.position]
+}
+
+///|
+pub fn ByteCursor::ignore_until(
+  self : ByteCursor,
+  stop : (Int) -> Bool,
+  eof_is_delimiter? : Bool = true,
+) -> Unit raise PdfError {
+  let mut done = false
+  while !done {
+    let value = self.peek_byte()
+    if value == pdf_no_more {
+      if eof_is_delimiter {
+        done = true
+      } else {
+        raise EndOfInput
+      }
+    } else if stop(value) {
+      done = true
+    } else {
+      self.nudge()
+    }
+  }
+}
+
+///|
 pub fn ByteCursor::read_bytes(
   self : ByteCursor,
   length : Int,

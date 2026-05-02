@@ -123,6 +123,60 @@ test "ByteCursor exposes read-only views without copying" {
 }
 
 ///|
+test "ByteCursor read_until_view stops before matching byte" {
+  let bytes = pdf_bytes_for_cursor_test([65, 66, 44, 67])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  let token = try! cursor.read_until_view(byte => byte == 44)
+  @test.assert_eq(bytes_view_to_ints_for_cursor_test(token), [65, 66])
+  @test.assert_eq(cursor.position(), 2)
+  @test.assert_eq(cursor.peek_byte(), 44)
+  let empty = try! cursor.read_until_view(byte => byte == 44)
+  @test.assert_eq(bytes_view_to_ints_for_cursor_test(empty), [])
+  @test.assert_eq(cursor.position(), 2)
+}
+
+///|
+test "ByteCursor read_until_view handles EOF policy" {
+  let bytes = pdf_bytes_for_cursor_test([65, 66])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  let all = try! cursor.read_until_view(byte => byte == 44)
+  @test.assert_eq(bytes_view_to_ints_for_cursor_test(all), [65, 66])
+  @test.assert_eq(cursor.position(), 2)
+
+  let strict = @pdflite.byte_cursor_of_bytes(bytes)
+  let missing : Result[BytesView, Error] = try? strict.read_until_view(
+    byte => byte == 44,
+    eof_is_delimiter=false,
+  )
+  guard missing is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput when EOF is not a delimiter")
+  }
+  @test.assert_eq(strict.position(), 2)
+}
+
+///|
+test "ByteCursor ignore_until stops before matching byte" {
+  let bytes = pdf_bytes_for_cursor_test([65, 66, 44, 67])
+  let cursor = @pdflite.byte_cursor_of_bytes(bytes)
+  cursor.ignore_until(byte => byte == 44)
+  @test.assert_eq(cursor.position(), 2)
+  @test.assert_eq(cursor.peek_byte(), 44)
+  cursor.nudge()
+  let missing : Result[Unit, Error] = try? cursor.ignore_until(
+    byte => byte == 90,
+    eof_is_delimiter=false,
+  )
+  guard missing is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput for strict ignore_until")
+  }
+  @test.assert_eq(cursor.position(), 4)
+
+  let eof_delimiter = @pdflite.byte_cursor_of_bytes(bytes)
+  eof_delimiter.ignore_until(byte => byte == 90)
+  @test.assert_eq(eof_delimiter.position(), 4)
+}
+
+///|
 test "ByteCursor reads lines as byte data" {
   let bytes = pdf_bytes_for_cursor_test([65, 10, 66])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)

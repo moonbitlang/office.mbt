@@ -535,6 +535,7 @@ pub struct ByteCursor {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn ByteCursor::absolute_position(Self) -> Int
 pub fn ByteCursor::drop_pdf_whitespace(Self) -> Unit
+pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise PdfError
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::input_pdf_error(Self, String) -> String
 pub fn ByteCursor::length(Self) -> Int
@@ -563,6 +564,7 @@ pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
 pub fn ByteCursor::read_pdf_header(Self) -> PdfVersion raise PdfError
 pub fn ByteCursor::read_pdf_regular_token_view(Self) -> BytesView
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(Self) -> BytesView
+pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise PdfError
 pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
 pub fn ByteCursor::remaining_length(Self) -> Int
 pub fn ByteCursor::remaining_view(Self) -> BytesView

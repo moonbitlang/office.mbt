@@ -68,17 +68,7 @@ pub fn ByteCursor::drop_pdf_whitespace(self : ByteCursor) -> Unit {
 pub fn ByteCursor::read_until_pdf_whitespace_or_delimiter(
   self : ByteCursor,
 ) -> BytesView {
-  let start = self.absolute_position()
-  let mut done = false
-  while !done {
-    let value = self.peek_byte()
-    if value == pdf_no_more || pdf_is_whitespace_or_delimiter_byte(value) {
-      done = true
-    } else {
-      self.nudge()
-    }
-  }
-  self.data[start:self.absolute_position()]
+  try! self.read_until_view(pdf_is_whitespace_or_delimiter_byte)
 }
 
 ///|
