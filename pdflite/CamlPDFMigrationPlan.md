@@ -743,7 +743,7 @@ MoonBit consequences for this project:
    spacing-modifier, combining-mark, currency, letterlike, arrow, Greek,
    Cyrillic descriptive and AFII alias, Armenian, Hebrew AFII/descriptive core
    and presentation-form, Arabic core and presentation-form, Devanagari,
-   Bengali, Thai,
+   Bengali, Gurmukhi, Thai,
    math-operator,
    Roman-numeral, technical, enclosed-alphanumeric,
    CJK-symbol/Hangzhou, Hiragana, Katakana, Bopomofo,
