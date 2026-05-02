@@ -298,9 +298,10 @@ MoonBit consequences for this project:
    exposed for header reads, primitive object scans, strict classic reads,
    public fallback reads, and password-aware public reads, with owned `Bytes`
    functions kept as compatibility wrappers. Reader
-   hardening now covers malformed headers, missing/bad `startxref`, malformed
-   xref rows, malformed trailers, cyclic `/Prev` chains, CR/CRLF stream line
-   breaks, indirect stream-length failures, and xref/object mismatch errors.
+   hardening now covers malformed headers, missing/bad `startxref`, CamlPDF-style
+   non-digit prefixes before `startxref` offsets, malformed xref rows, malformed
+   trailers, cyclic `/Prev` chains, CR/CRLF stream line breaks, indirect
+   stream-length failures, and xref/object mismatch errors.
    A password-aware byte-reader wrapper is now started:
    `pdf_read_document_from_bytes_with_passwords` preserves the existing
    plain-reader API while returning a `PdfDecryptionResult?` for parsed classic

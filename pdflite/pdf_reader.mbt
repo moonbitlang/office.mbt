@@ -279,9 +279,16 @@ fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
   if start < 0 {
     raise StartXRefExpected
   }
-  let cursor = byte_cursor_of_view(search[start + 9:])
-  cursor.drop_pdf_whitespace()
-  pdf_parse_ascii_int_view(cursor.read_pdf_regular_token_view())
+  let rest = search[start + 9:]
+  let mut index = 0
+  while index < rest.length() && !pdf_is_digit_byte(rest[index].to_int()) {
+    index += 1
+  }
+  let digits_start = index
+  while index < rest.length() && pdf_is_digit_byte(rest[index].to_int()) {
+    index += 1
+  }
+  pdf_parse_ascii_int_view(rest[digits_start:index])
 }
 
 ///|
