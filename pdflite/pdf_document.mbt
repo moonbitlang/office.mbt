@@ -51,6 +51,16 @@ pub struct PdfDocument {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_document_name(text : String) -> PdfName {
+  pdf_name_of_bytes(@ascii.encode(text))
+}
+
+///|
+fn pdf_document_root_key() -> PdfName {
+  pdf_document_name("/Root")
+}
+
+///|
 pub fn pdf_object_entry(
   data : PdfObjectData,
   generation? : Int = 0,
@@ -353,11 +363,15 @@ pub fn PdfDocument::root(self : PdfDocument) -> Int {
 
 ///|
 pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
-  let object = self.lookup_object_or_null(self.root)
-  if object == PdfNull {
-    raise RootExpected
+  let object = match
+    self.trailer_dict.lookup_immediate(pdf_document_root_key()) {
+    Some(root) => self.direct(root)
+    None => self.lookup_object_or_null(self.root)
   }
-  object
+  match object {
+    PdfNull => raise RootExpected
+    catalog => catalog
+  }
 }
 
 ///|

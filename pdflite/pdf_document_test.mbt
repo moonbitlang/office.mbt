@@ -210,6 +210,39 @@ test "PdfDocument catalog reads the root object or reports RootExpected" {
 }
 
 ///|
+test "PdfDocument catalog prefers trailer Root over stale root number" {
+  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_type = @pdflite.pdf_name_of_bytes(@ascii.encode("/Type"))
+  let key_catalog = @pdflite.pdf_name_of_bytes(@ascii.encode("/Catalog"))
+  let key_lang = @pdflite.pdf_name_of_bytes(@ascii.encode("/Lang"))
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_lang, PdfString(@ascii.encode("stale")))]),
+  )
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(key_catalog)),
+      (key_lang, PdfString(@ascii.encode("active"))),
+    ]),
+  )
+  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(10))]))
+
+  @test.assert_eq(
+    try! doc.catalog().lookup_immediate(key_lang),
+    Some(PdfString(@ascii.encode("active"))),
+  )
+
+  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(99))]))
+  let missing : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
+  guard missing is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected for unresolved trailer root")
+  }
+}
+
+///|
 test "PdfDocument object helpers delegate to document object state" {
   let doc = @pdflite.pdf_document_empty()
   let first = doc.add_object(PdfInteger(1))

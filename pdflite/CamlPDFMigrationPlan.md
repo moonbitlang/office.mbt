@@ -164,7 +164,9 @@ MoonBit consequences for this project:
    deterministic object-number/generation callback iteration,
    raising-callback stream-object iteration, in-place object mapping that
    preserves parsed-state tags, and tests preserving CamlPDF's new-key
-   dictionary order. Immediate dictionary-only indirect lookup is ported for
+   dictionary order. Public catalog lookup now resolves trailer `/Root` first,
+   while retaining the document-root fallback used by synthetic tests without
+   a trailer root. Immediate dictionary-only indirect lookup is ported for
    object-level helpers. CamlPDF-style
    `unique_key` dictionary-name selection is ported for dictionaries and stream
    dictionaries, using ASCII-prefixed PDF names. Direct indirection resolution
