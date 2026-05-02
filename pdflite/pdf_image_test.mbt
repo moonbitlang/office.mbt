@@ -1236,45 +1236,76 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
     @pdflite.pdf_dictionary([
       (
         image_name_for_test("/WhitePoint"),
-        PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
+        PdfArray([PdfInteger(1000), PdfInteger(1000), PdfInteger(1000)]),
       ),
     ]),
   ])
   let indexed_lab : @pdflite.PdfObject = PdfArray([
     PdfNameObject(image_name_for_test("/Indexed")),
     lab_space,
-    PdfInteger(0),
-    PdfString(image_bytes_for_test([255, 255, 255])),
+    PdfInteger(3),
+    PdfString(
+      image_bytes_for_test([
+        127, 127, 127, 255, 127, 127, 255, 255, 255, 255, 0, 0,
+      ]),
+    ),
   ])
-  let image = @pdflite.pdf_stream(
+  let image8 = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
-      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Width"), PdfInteger(4)),
       (image_name_for_test("/Height"), PdfInteger(1)),
       (image_name_for_test("/ColorSpace"), indexed_lab),
       (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
     ]),
-    StreamGot(image_bytes_for_test([0])),
+    StreamGot(image_bytes_for_test([0, 1, 2, 3])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
-    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([0, 0, 0])),
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image8),
+    PdfRawImage(
+      4,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([0, 0, 0, 141, 141, 141, 255, 104, 47, 25, 178, 235]),
+    ),
   )
-  let unsupported_lab4 = @pdflite.pdf_stream(
+  let image4 = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
-      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Width"), PdfInteger(4)),
       (image_name_for_test("/Height"), PdfInteger(1)),
       (image_name_for_test("/ColorSpace"), indexed_lab),
       (image_name_for_test("/BitsPerComponent"), PdfInteger(4)),
     ]),
-    StreamGot(image_bytes_for_test([0])),
+    StreamGot(image_bytes_for_test([0x12, 0x30])),
   )
-  let unsupported : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
-    @pdflite.pdf_dictionary([]),
-    unsupported_lab4,
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image4),
+    PdfRawImage(
+      4,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([141, 141, 141, 255, 104, 47, 25, 178, 235, 0, 0, 0]),
+    ),
   )
-  guard unsupported is Err(@pdflite.PdfError::FilterExpected) else {
-    fail("expected unsupported 4bpp Lab indexed image")
-  }
+  let image2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(5)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_lab),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0001_1011, 0b0100_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image2),
+    PdfRawImage(
+      5,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([
+        0, 0, 0, 141, 141, 141, 255, 104, 47, 25, 178, 235, 141, 141, 141,
+      ]),
+    ),
+  )
 }
 
 ///|
