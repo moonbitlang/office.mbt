@@ -25,6 +25,34 @@ test "ByteOutput seek overwrites bytes and frozen output stays owned" {
 }
 
 ///|
+test "ByteOutput writes bytes and views at explicit positions" {
+  let output = try! @pdflite.byte_output_new()
+  try! output.write_ascii("ABCD")
+  try! output.write_byte_at(1, 0x78)
+  @test.assert_eq(output.position(), 2)
+  try! output.write_view_at(3, @ascii.encode("YZ")[:])
+  @test.assert_eq(output.position(), 5)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(output.to_bytes()[:]), [
+    65, 0x78, 67, 89, 90,
+  ])
+  try! output.write_byte_at(7, 0x51)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(output.to_bytes()[:]), [
+    65, 0x78, 67, 89, 90, 0, 0, 0x51,
+  ])
+  let bad_position : Result[Unit, Error] = try? output.write_byte_at(-1, 0)
+  guard bad_position is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition for positioned byte output")
+  }
+  let bad_view_position : Result[Unit, Error] = try? output.write_view_at(
+    -1,
+    @ascii.encode("x")[:],
+  )
+  guard bad_view_position is Err(@pdflite.PdfError::InvalidCursorPosition(-1)) else {
+    fail("expected InvalidCursorPosition for positioned view output")
+  }
+}
+
+///|
 test "ByteOutput writes checked byte slices" {
   let output = try! @pdflite.byte_output_new()
   let source = @ascii.encode("012345")

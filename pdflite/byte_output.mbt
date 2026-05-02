@@ -57,6 +57,16 @@ pub fn ByteOutput::write_byte(
 }
 
 ///|
+pub fn ByteOutput::write_byte_at(
+  self : ByteOutput,
+  position : Int,
+  value : Int,
+) -> Unit raise PdfError {
+  self.seek(position)
+  self.write_byte(value)
+}
+
+///|
 pub fn ByteOutput::write_view(
   self : ByteOutput,
   bytes : BytesView,
@@ -73,6 +83,16 @@ pub fn ByteOutput::write_view(
   if self.position > self.written_length {
     self.written_length = self.position
   }
+}
+
+///|
+pub fn ByteOutput::write_view_at(
+  self : ByteOutput,
+  position : Int,
+  bytes : BytesView,
+) -> Unit raise PdfError {
+  self.seek(position)
+  self.write_view(bytes)
 }
 
 ///|

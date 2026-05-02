@@ -128,7 +128,7 @@ MoonBit consequences for this project:
    CamlPDF-style filled-byte construction, explicit physical byte copying, and
    byte/int-array conversion helpers, a non-mutating byte-map replacement for
    CamlPDF's mutable `bytes_selfmap`, an in-memory byte-output builder, and
-   checked byte-output slice/fill writes with black-box tests.
+   checked byte-output positioned/slice/fill writes with black-box tests.
 
 2. Small pure support modules.
    Port `.repos/pdftransform`, `.repos/pdfunits`, `.repos/pdfpaper`, and the
