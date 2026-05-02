@@ -6317,6 +6317,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }
+  match pdf_text_codepoint_of_cyrillic_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
   match pdf_text_codepoint_of_armenian_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
