@@ -311,6 +311,30 @@ fn PdfDocument::pdf_image_decode_values_with_defaults(
 }
 
 ///|
+fn PdfDocument::pdf_image_encoded_decode_values_with_defaults(
+  self : PdfDocument,
+  resources : PdfObject,
+  image : PdfObject,
+) -> Array[Double]? raise PdfError {
+  match self.pdf_image_decode_values(image) {
+    Some(values) => Some(values)
+    None =>
+      match
+        self.lookup_direct_or_else(
+          pdf_image_colorspace_key(),
+          pdf_image_cs_key(),
+          image,
+        ) {
+        None => None
+        Some(_) =>
+          pdf_image_decode_defaults_for_space(
+            self.image_colour_space(image, resources),
+          )
+      }
+  }
+}
+
+///|
 priv enum PdfImageDecodedStream {
   PdfImageRawStream(PdfStream)
   PdfImageDctStream(PdfStream)
@@ -1152,7 +1176,7 @@ pub fn PdfDocument::get_image_24bpp(
     PdfImageDctStream(_) =>
       PdfJPEG(
         data,
-        self.pdf_image_decode_values_with_defaults(
+        self.pdf_image_encoded_decode_values_with_defaults(
           resources,
           decoded_stream.dictionary,
         ),
@@ -1160,7 +1184,7 @@ pub fn PdfDocument::get_image_24bpp(
     PdfImageJpxStream(_) =>
       PdfJPEG2000(
         data,
-        self.pdf_image_decode_values_with_defaults(
+        self.pdf_image_encoded_decode_values_with_defaults(
           resources,
           decoded_stream.dictionary,
         ),
@@ -1168,7 +1192,7 @@ pub fn PdfDocument::get_image_24bpp(
     PdfImageJbig2Stream(_) =>
       PdfJBIG2(
         data,
-        self.pdf_image_decode_values_with_defaults(
+        self.pdf_image_encoded_decode_values_with_defaults(
           resources,
           decoded_stream.dictionary,
         ),

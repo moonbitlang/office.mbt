@@ -869,10 +869,13 @@ MoonBit consequences for this project:
    and 2-bit row-padded samples. CamlPDF-style
    `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
-   for encoded image metadata. JBIG2 encoded image metadata now preserves
-   `/JBIG2Globals` from direct `/DecodeParms`, short `/DP`, and first
-   decode-parameter array entries, including after earlier filter stages have
-   been decoded and the remaining decode-parameter array has shifted forward.
+   for encoded image metadata. Encoded image metadata now also preserves
+   explicit `/Decode` arrays on `/Indexed` color spaces, matching CamlPDF's
+   JPEG/JPEG2000/JBIG2 pass-through result shape. JBIG2 encoded image metadata
+   now preserves `/JBIG2Globals` from direct `/DecodeParms`, short `/DP`, and
+   first decode-parameter array entries, including after earlier filter stages
+   have been decoded and the remaining decode-parameter array has shifted
+   forward.
    The raw-image decode path now has a borrowed
    `BytesView` helper for sliced inputs while preserving the owned fast path
    for no-op decode cases, so `.to_owned()` stays at borrowed-to-owned

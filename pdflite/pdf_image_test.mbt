@@ -122,6 +122,21 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), array_jpeg),
     PdfJPEG(@ascii.encode("array-jpg"), None),
   )
+  let short_alias_jpeg = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/W"), PdfInteger(1)),
+      (image_name_for_test("/H"), PdfInteger(1)),
+      (
+        image_name_for_test("/F"),
+        PdfArray([PdfNameObject(image_name_for_test("/DCT"))]),
+      ),
+    ]),
+    StreamGot(@ascii.encode("short-alias-jpg")),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), short_alias_jpeg),
+    PdfJPEG(@ascii.encode("short-alias-jpg"), None),
+  )
   doc.add_object_given_number(
     8,
     PdfNameObject(image_name_for_test("/DCTDecode")),
@@ -632,7 +647,7 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), indexed_jpeg),
-    PdfJPEG(@ascii.encode("indexed"), None),
+    PdfJPEG(@ascii.encode("indexed"), Some([0.0, 1.0])),
   )
   let pattern_jpeg = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -1239,6 +1254,20 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
   @test.assert_eq(
     try! doc.get_image_24bpp(empty_resources, rgb8),
     PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([10, 20, 30, 40, 50, 60])),
+  )
+  let rgb8_with_decode = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(1)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_rgb),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+      (image_name_for_test("/Decode"), PdfArray([PdfInteger(1), PdfInteger(0)])),
+    ]),
+    StreamGot(image_bytes_for_test([0])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb8_with_decode),
+    PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([10, 20, 30])),
   )
   let indexed_rgb4 : @pdflite.PdfObject = PdfArray([
     PdfNameObject(image_name_for_test("/Indexed")),

@@ -54,7 +54,8 @@ work changes.
    two-byte CID text extraction, CamlPDF-style whitespace-elided ToUnicode CMap
    section scanning, standard-font extraction, color spaces,
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
-   extraction are started.
+   extraction are started, including explicit `/Indexed` encoded-image
+   `/Decode` metadata preservation.
    Remaining focus: broader predefined CMap semantics, JPEG pixel decode, and
    remaining image filter families.
 
