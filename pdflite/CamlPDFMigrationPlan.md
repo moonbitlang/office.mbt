@@ -255,7 +255,11 @@ MoonBit consequences for this project:
    at junk object offsets: it scans recoverable indirect objects, selects the
    latest trailer whose `/Root` points at a parsed dictionary, sets
    `first_xref` to zero, and keeps stricter xref errors on the strict classic
-   reader path. Broader malformed xref-table recovery remains deferred. The
+   reader path. Xref-stream trailer reconstruction is now started for missing
+   or unusable `startxref` pointers, using `/Type /XRef` stream dictionaries as
+   trailer candidates while stripping stream/xref-only keys; object-stream
+   integrity errors still propagate instead of being hidden by this recovery.
+   Broader malformed xref-table recovery remains deferred. The
    reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered
    streams can resolve plain indirect `/Length n 0 R` entries, and the public

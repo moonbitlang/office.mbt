@@ -1030,13 +1030,43 @@ fn pdf_read_reconstructed_trailer_at(
 }
 
 ///|
-fn pdf_read_reconstructed_trailers(data : BytesView) -> Array[PdfObject] {
+fn pdf_reconstructed_xref_stream_trailer_at(
+  data : BytesView,
+  position : Int,
+) -> PdfObject raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  cursor.seek_pdf_absolute(position)
+  let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
+  match parsed.object {
+    PdfDictionary(_) as dictionary =>
+      match dictionary.lookup_immediate(pdf_reader_type_name()) {
+        Some(PdfNameObject(name)) if name == pdf_reader_xref_name() =>
+          pdf_reader_stream_dictionary_without_xref_keys(dictionary)
+        _ => raise XRefExpected
+      }
+    _ => raise XRefExpected
+  }
+}
+
+///|
+fn pdf_read_reconstructed_trailers(
+  data : BytesView,
+  include_xref_streams? : Bool = true,
+) -> Array[PdfObject] {
   let trailers : Array[PdfObject] = []
   for position = 0; position < data.length(); position = position + 1 {
     if pdf_view_matches_ascii_at(data, position, [
         116, 114, 97, 105, 108, 101, 114,
       ]) {
       let trailer : Result[PdfObject, Error] = try? pdf_read_reconstructed_trailer_at(
+        data, position,
+      )
+      match trailer {
+        Ok(object) => trailers.push(object)
+        Err(_) => ()
+      }
+    } else if include_xref_streams && pdf_is_digit_byte(data[position].to_int()) {
+      let trailer : Result[PdfObject, Error] = try? pdf_reconstructed_xref_stream_trailer_at(
         data, position,
       )
       match trailer {
@@ -1083,6 +1113,7 @@ fn PdfDocument::set_trailer_and_root(
 ///|
 fn pdf_read_reconstructed_document_from_view(
   data : BytesView,
+  include_xref_stream_trailers? : Bool = true,
 ) -> PdfDocument raise PdfError {
   let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
@@ -1101,7 +1132,10 @@ fn pdf_read_reconstructed_document_from_view(
   }
   document.set_trailer_and_root(
     document.select_reconstructed_trailer(
-      pdf_read_reconstructed_trailers(data)[:],
+      pdf_read_reconstructed_trailers(
+        data,
+        include_xref_streams=include_xref_stream_trailers,
+      )[:],
     ),
   )
   document.set_trailer_dict(
@@ -1117,8 +1151,9 @@ fn pdf_read_reconstructed_document_from_view(
 fn pdf_read_reconstructed_or_raise(
   data : BytesView,
   original_error : PdfError,
+  include_xref_stream_trailers? : Bool = false,
 ) -> PdfDocument raise PdfError {
-  pdf_read_reconstructed_document_from_view(data) catch {
+  pdf_read_reconstructed_document_from_view(data, include_xref_stream_trailers~) catch {
     _ => raise original_error
   }
 }
@@ -1236,7 +1271,12 @@ pub fn pdf_read_document_from_view(
 ) -> PdfDocument raise PdfError {
   pdf_read_classic_document_from_view(data) catch {
     StartXRefExpected => pdf_read_reconstructed_document_from_view(data)
-    XRefExpected => pdf_read_reconstructed_or_raise(data, XRefExpected)
+    XRefExpected =>
+      pdf_read_reconstructed_or_raise(
+        data,
+        XRefExpected,
+        include_xref_stream_trailers=true,
+      )
     XRefEntryExpected =>
       pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
     TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
@@ -1256,7 +1296,11 @@ pub fn pdf_read_document_from_view(
       pdf_read_reconstructed_or_raise(data, ParseObjectExpected)
     InvalidHexEscape => pdf_read_reconstructed_or_raise(data, InvalidHexEscape)
     InvalidCursorPosition(position) =>
-      pdf_read_reconstructed_or_raise(data, InvalidCursorPosition(position))
+      pdf_read_reconstructed_or_raise(
+        data,
+        InvalidCursorPosition(position),
+        include_xref_stream_trailers=true,
+      )
     error => raise error
   }
 }
