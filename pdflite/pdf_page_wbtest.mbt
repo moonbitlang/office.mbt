@@ -465,6 +465,60 @@ test "private page link and open-action transforms cover fallback branches" {
     [(1, transform_translate(10.0, 20.0))],
     page_numbers,
   )
+  let unresolved = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  unresolved.set_trailer_dict(
+    PdfDictionary([(pdf_page_root_key(), PdfIndirect(99))]),
+  )
+  try! unresolved.pdf_page_transform_open_action_for_matrices([], [])
+}
+
+///|
+test "private page open-action transform uses trailer root catalog" {
+  let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  let page_numbers = try! doc.page_reference_numbers()
+  let stale_root = doc.root()
+  let active_root = 10
+  let stale_destination = page_wb_xyz_destination(page_numbers[0], 5, 6)
+  let active_destination = page_wb_xyz_destination(page_numbers[0], 1, 2)
+  doc.add_object_given_number(
+    stale_root,
+    try! doc
+    .lookup_object_or_null(stale_root)
+    .add_dict_entry(pdf_page_open_action_key(), stale_destination),
+  )
+  doc.add_object_given_number(
+    active_root,
+    try! doc
+    .lookup_object_or_null(stale_root)
+    .add_dict_entry(pdf_page_open_action_key(), active_destination),
+  )
+  doc.set_trailer_dict(PdfDictionary([(pdf_page_root_key(), PdfIndirect(10))]))
+
+  try! doc.pdf_page_transform_open_action_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    page_numbers,
+  )
+
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(stale_root)
+    .lookup_immediate(pdf_page_open_action_key()),
+    Some(stale_destination),
+  )
+  @test.assert_eq(
+    doc
+    .lookup_object_or_null(active_root)
+    .lookup_immediate(pdf_page_open_action_key()),
+    Some(
+      PdfArray([
+        PdfIndirect(page_numbers[0]),
+        PdfNameObject(pdf_dest_type_xyz()),
+        PdfReal(11.0),
+        PdfReal(22.0),
+        PdfNull,
+      ]),
+    ),
+  )
 }
 
 ///|

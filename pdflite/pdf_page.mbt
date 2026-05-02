@@ -1361,39 +1361,42 @@ fn PdfDocument::pdf_page_transform_open_action_for_matrices(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
-  let root_number = self.root()
-  let root_object = self.lookup_object_or_null(root_number)
-  match root_object.lookup_immediate(pdf_page_open_action_key()) {
-    Some(raw_open_action) =>
-      match self.direct(raw_open_action) {
-        PdfArray(_) as raw_destination =>
-          match
-            self.pdf_page_transform_destination_object(
-              raw_destination, matrices, page_reference_numbers,
-            ) {
-            Some(destination) =>
-              self.add_object_given_number(
-                root_number,
-                root_object.add_dict_entry(
-                  pdf_page_open_action_key(),
-                  destination,
-                ),
-              )
-            None => ()
+  match self.pdf_page_active_catalog() {
+    Some((root_object, uses_trailer_root)) =>
+      match root_object.lookup_immediate(pdf_page_open_action_key()) {
+        Some(raw_open_action) =>
+          match self.direct(raw_open_action) {
+            PdfArray(_) as raw_destination =>
+              match
+                self.pdf_page_transform_destination_object(
+                  raw_destination, matrices, page_reference_numbers,
+                ) {
+                Some(destination) =>
+                  self.pdf_page_replace_active_catalog_entry(
+                    pdf_page_open_action_key(),
+                    destination,
+                    root_object,
+                    uses_trailer_root,
+                  )
+                None => ()
+              }
+            PdfDictionary(_) as raw_action =>
+              match
+                self.pdf_page_transform_action_object(
+                  raw_action, matrices, page_reference_numbers,
+                ) {
+                Some(action) =>
+                  self.pdf_page_replace_active_catalog_entry(
+                    pdf_page_open_action_key(),
+                    action,
+                    root_object,
+                    uses_trailer_root,
+                  )
+                None => ()
+              }
+            _ => ()
           }
-        PdfDictionary(_) as raw_action =>
-          match
-            self.pdf_page_transform_action_object(
-              raw_action, matrices, page_reference_numbers,
-            ) {
-            Some(action) =>
-              self.add_object_given_number(
-                root_number,
-                root_object.add_dict_entry(pdf_page_open_action_key(), action),
-              )
-            None => ()
-          }
-        _ => ()
+        None => ()
       }
     None => ()
   }

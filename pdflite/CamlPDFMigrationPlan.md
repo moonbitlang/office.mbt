@@ -449,9 +449,9 @@ MoonBit consequences for this project:
    dictionaries and `/Root/Names/Dests` name trees are also transformed, so
    preserved named and string destinations resolve to the new page-space
    coordinates after page matrix changes. These catalog destination transform
-   paths now prefer the active catalog through trailer `/Root`, matching
-   CamlPDF's parsed-PDF lookup path while retaining the document-root fallback
-   for synthetic fixtures. A minimal `pdf_of_pages`
+   paths, including `/OpenAction`, now prefer the active catalog through
+   trailer `/Root`, matching CamlPDF's parsed-PDF lookup path while retaining
+   the document-root fallback for synthetic fixtures. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
