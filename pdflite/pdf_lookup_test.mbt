@@ -38,6 +38,32 @@ test "PdfDocument lookup_direct follows dictionary indirections" {
 }
 
 ///|
+test "PdfDocument lookup_direct_or_array follows CamlPDF array names" {
+  let doc = @pdflite.pdf_document_empty()
+  let index_1 = lookup_name_for_test([47, 91, 49])
+  let index_1_with_tail = lookup_name_for_test([47, 91, 49, 116, 97, 105, 108])
+  let index_2 = lookup_name_for_test([47, 91, 50])
+  let malformed_index = lookup_name_for_test([47, 91, 120])
+  doc.add_object_given_number(8, PdfInteger(88))
+  let array : @pdflite.PdfObject = PdfArray([PdfInteger(7), PdfIndirect(8)])
+  @test.assert_eq(
+    doc.lookup_direct_or_array(index_1, array),
+    Some(PdfInteger(88)),
+  )
+  @test.assert_eq(
+    doc.lookup_direct_or_array(index_1_with_tail, array),
+    Some(PdfInteger(88)),
+  )
+  @test.assert_eq(doc.lookup_direct_or_array(index_2, array), None)
+  @test.assert_eq(doc.lookup_direct_or_array(index_1, PdfInteger(1)), None)
+  let dict = @pdflite.pdf_dictionary([(malformed_index, PdfInteger(5))])
+  @test.assert_eq(
+    doc.lookup_direct_or_array(malformed_index, dict),
+    Some(PdfInteger(5)),
+  )
+}
+
+///|
 test "PdfDocument lookup_chain follows nested dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
@@ -56,6 +82,27 @@ test "PdfDocument lookup_chain follows nested dictionaries" {
     Some(PdfInteger(7)),
   )
   @test.assert_eq(doc.lookup_chain(nested, [key_child]), None)
+}
+
+///|
+test "PdfDocument lookup_chain can traverse arrays by index names" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_items = lookup_name_for_test([47, 73, 116, 101, 109, 115])
+  let key_value = lookup_name_for_test([47, 86, 97, 108, 117, 101])
+  let index_1 = lookup_name_for_test([47, 91, 49])
+  let nested = @pdflite.pdf_dictionary([
+    (
+      key_items,
+      PdfArray([
+        PdfInteger(0),
+        @pdflite.pdf_dictionary([(key_value, PdfInteger(9))]),
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    doc.lookup_chain(nested, [key_items, index_1, key_value]),
+    Some(PdfInteger(9)),
+  )
 }
 
 ///|

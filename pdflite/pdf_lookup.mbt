@@ -87,6 +87,49 @@ pub fn PdfDocument::lookup_direct_or_else(
 }
 
 ///|
+fn pdf_lookup_array_index_name(name : PdfName) -> Int? {
+  let bytes = name.bytes()
+  guard bytes.length() >= 3 &&
+    bytes[0].to_int() == 47 &&
+    bytes[1].to_int() == 91 else {
+    return None
+  }
+  let first = bytes[2].to_int()
+  guard first >= 48 && first <= 57 else { return None }
+  let mut value = 0
+  let mut index = 2
+  while index < bytes.length() {
+    let byte = bytes[index].to_int()
+    if byte < 48 || byte > 57 {
+      break
+    }
+    value = value * 10 + byte - 48
+    index += 1
+  }
+  Some(value)
+}
+
+///|
+pub fn PdfDocument::lookup_direct_or_array(
+  self : PdfDocument,
+  name : PdfName,
+  object : PdfObject,
+) -> PdfObject? {
+  match pdf_lookup_array_index_name(name) {
+    Some(index) =>
+      match object {
+        PdfArray(values) =>
+          match values.get(index) {
+            Some(value) => Some(self.direct(value))
+            None => None
+          }
+        _ => None
+      }
+    None => self.lookup_direct(name, object)
+  }
+}
+
+///|
 pub fn PdfDocument::lookup_chain(
   self : PdfDocument,
   start : PdfObject,
@@ -94,7 +137,7 @@ pub fn PdfDocument::lookup_chain(
 ) -> PdfObject? {
   let mut current = start
   for i = 0; i < keys.length(); i = i + 1 {
-    match self.lookup_direct(keys[i], current) {
+    match self.lookup_direct_or_array(keys[i], current) {
       Some(next) => current = next
       None => break None
     }
