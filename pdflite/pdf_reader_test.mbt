@@ -618,6 +618,16 @@ fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_glued_reconstruction_trailers() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  reader_push_ascii(output, "trailer << /Size 2 >>\n")
+  reader_push_ascii(output, "trailer<< /Root 1 0 R /Size 2 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_with_endobj_text_in_catalog_string() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -1783,6 +1793,13 @@ test "pdf_read_document_from_bytes reconstructs malformed trailers" {
   @test.assert_eq(missing_root.first_xref(), 0)
   @test.assert_eq(missing_root.root(), 1)
   @test.assert_eq(missing_root.object_numbers(), [1])
+
+  let glued_trailers = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_glued_reconstruction_trailers(),
+  )
+  @test.assert_eq(glued_trailers.first_xref(), 0)
+  @test.assert_eq(glued_trailers.root(), 1)
+  @test.assert_eq(glued_trailers.object_numbers(), [1])
 }
 
 ///|

@@ -273,7 +273,9 @@ MoonBit consequences for this project:
    `/Root`, or xref rows pointing at junk object offsets: it scans recoverable
    indirect objects, selects the latest trailer whose `/Root` points at a
    parsed dictionary, sets `first_xref` to zero, and keeps stricter xref errors
-   on the strict classic reader path. Xref-stream trailer reconstruction is now
+   on the strict classic reader path. Reconstructed trailer scanning also
+   accepts CamlPDF-style `trailer <<...>>` and `trailer<<...>>` dictionaries.
+   Xref-stream trailer reconstruction is now
    started for missing or unusable `startxref` pointers, using `/Type /XRef`
    stream dictionaries as trailer candidates while stripping stream/xref-only
    keys; object-stream integrity errors still propagate instead of being hidden
