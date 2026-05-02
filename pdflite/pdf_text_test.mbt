@@ -4736,6 +4736,119 @@ test "PdfTextExtractor decodes Latin-1 spacing AGL aliases" {
 }
 
 ///|
+test "PdfTextExtractor decodes IPA extension AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Gsmallhook", 0x029B),
+    ("/Rsmallinverted", 0x0281),
+    ("/ascript", 0x0251),
+    ("/ascriptturned", 0x0252),
+    ("/aturned", 0x0250),
+    ("/bhook", 0x0253),
+    ("/bilabialclick", 0x0298),
+    ("/ccurl", 0x0255),
+    ("/cstretched", 0x0297),
+    ("/dezh", 0x02A4),
+    ("/dhook", 0x0257),
+    ("/dotlessjstrokehook", 0x0284),
+    ("/dtail", 0x0256),
+    ("/dzaltone", 0x02A3),
+    ("/dzcurl", 0x02A5),
+    ("/eopen", 0x025B),
+    ("/eopenclosed", 0x029A),
+    ("/eopenreversed", 0x025C),
+    ("/eopenreversedclosed", 0x025E),
+    ("/eopenreversedhook", 0x025D),
+    ("/ereversed", 0x0258),
+    ("/esh", 0x0283),
+    ("/eshcurl", 0x0286),
+    ("/eshsquatreversed", 0x0285),
+    ("/ezh", 0x0292),
+    ("/ezhcurl", 0x0293),
+    ("/gammalatinsmall", 0x0263),
+    ("/ghook", 0x0260),
+    ("/glottalstop", 0x0294),
+    ("/glottalstopinverted", 0x0296),
+    ("/glottalstopreversed", 0x0295),
+    ("/glottalstopstroke", 0x02A1),
+    ("/glottalstopstrokereversed", 0x02A2),
+    ("/gscript", 0x0261),
+    ("/henghook", 0x0267),
+    ("/hhook", 0x0266),
+    ("/hturned", 0x0265),
+    ("/iotalatin", 0x0269),
+    ("/istroke", 0x0268),
+    ("/jcrossedtail", 0x029D),
+    ("/jdotlessstroke", 0x025F),
+    ("/kturned", 0x029E),
+    ("/lbelt", 0x026C),
+    ("/lezh", 0x026E),
+    ("/lhookretroflex", 0x026D),
+    ("/lmiddletilde", 0x026B),
+    ("/mhook", 0x0271),
+    ("/mlonglegturned", 0x0270),
+    ("/mturned", 0x026F),
+    ("/nhookleft", 0x0272),
+    ("/nhookretroflex", 0x0273),
+    ("/obarred", 0x0275),
+    ("/omegalatinclosed", 0x0277),
+    ("/oopen", 0x0254),
+    ("/philatin", 0x0278),
+    ("/qhook", 0x02A0),
+    ("/ramshorn", 0x0264),
+    ("/rfishhook", 0x027E),
+    ("/rfishhookreversed", 0x027F),
+    ("/rhook", 0x027D),
+    ("/rhookturned", 0x027B),
+    ("/rlongleg", 0x027C),
+    ("/rlonglegturned", 0x027A),
+    ("/rturned", 0x0279),
+    ("/schwa", 0x0259),
+    ("/schwahook", 0x025A),
+    ("/shook", 0x0282),
+    ("/tccurl", 0x02A8),
+    ("/tesh", 0x02A7),
+    ("/tretroflexhook", 0x0288),
+    ("/ts", 0x02A6),
+    ("/tturned", 0x0287),
+    ("/ubar", 0x0289),
+    ("/upsilonlatin", 0x028A),
+    ("/vhook", 0x028B),
+    ("/vturned", 0x028C),
+    ("/wturned", 0x028D),
+    ("/yturned", 0x028E),
+    ("/zcurl", 0x0291),
+    ("/zretroflexhook", 0x0290),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x029B), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0251), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0294), Some(29))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02A1), Some(32))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0279), Some(64))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0290), Some(80))
+}
+
+///|
 test "PdfTextExtractor decodes spacing modifier AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Rsmallinvertedsuperior", 0x02B6),
