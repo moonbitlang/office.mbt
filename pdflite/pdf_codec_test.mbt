@@ -543,6 +543,29 @@ test "pdf_decode_predictor decodes tiff predictor 2" {
 }
 
 ///|
+test "pdf_encode_predictor emits tiff predictor 2 rows" {
+  let plain = codec_bytes_for_test([10, 15, 20, 1, 2, 3])
+  let encoded = try! @pdflite.pdf_encode_predictor(2, 1, 8, 3, plain)
+  @test.assert_eq(encoded, codec_bytes_for_test([10, 5, 5, 1, 1, 1]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(2, 1, 8, 3, encoded),
+    plain,
+  )
+  let rgb_plain = codec_bytes_for_test([10, 20, 30, 13, 25, 35])
+  let rgb_encoded = try! @pdflite.pdf_encode_predictor(2, 3, 8, 2, rgb_plain)
+  @test.assert_eq(rgb_encoded, codec_bytes_for_test([10, 20, 30, 3, 5, 5]))
+  @test.assert_eq(
+    try! @pdflite.pdf_decode_predictor(2, 3, 8, 2, rgb_encoded),
+    rgb_plain,
+  )
+  let partial = codec_bytes_for_test([10, 20, 30, 40])
+  @test.assert_eq(
+    try! @pdflite.pdf_encode_predictor(2, 1, 8, 3, partial),
+    codec_bytes_for_test([10, 10, 10, 40]),
+  )
+}
+
+///|
 test "pdf_decode_predictor decodes png row filters" {
   @test.assert_eq(
     try! @pdflite.pdf_decode_predictor(
@@ -646,6 +669,16 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
     try! @pdflite.pdf_encode_predictor(1, 1, 8, 1, codec_ascii_for_test("raw")),
     codec_ascii_for_test("raw"),
   )
+  let unsupported_tiff : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
+    2,
+    1,
+    1,
+    1,
+    codec_bytes_for_test([0]),
+  )
+  guard unsupported_tiff is Err(@pdflite.PdfError::PredictorNotSupported(2)) else {
+    fail("expected PredictorNotSupported")
+  }
   let unsupported : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
     9,
     1,
@@ -1684,6 +1717,51 @@ test "pdf_encode_stream_with_filter_and_predictor round trips through decode str
   )
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
   @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "pdf_encode_stream_with_filter_and_predictor round trips tiff predictor" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let predictor = codec_name_for_test("/Predictor")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(6))]),
+    StreamGot(codec_bytes_for_test([10, 20, 30, 13, 25, 35])),
+  )
+  let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    codec_name_for_test("/ASCIIHexDecode"),
+    2,
+    3,
+    8,
+    2,
+    stream,
+  )
+  guard encoded is PdfStreamObject(encoded_stream) else {
+    fail("expected encoded stream")
+  }
+  @test.assert_eq(
+    encoded_stream.data,
+    StreamGot(codec_ascii_for_test("0A141E030505>")),
+  )
+  guard encoded_stream.dictionary.lookup_immediate(
+      codec_name_for_test("/DecodeParms"),
+    )
+    is Some(PdfDictionary(_) as decodeparms_object) else {
+    fail("expected DecodeParms dictionary")
+  }
+  @test.assert_eq(
+    decodeparms_object.lookup_immediate(predictor),
+    Some(PdfInteger(2)),
+  )
+  let decoded = try! @pdflite.pdf_decode_stream(encoded)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([10, 20, 30, 13, 25, 35])),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
 }
 
 ///|

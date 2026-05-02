@@ -387,12 +387,13 @@ MoonBit consequences for this project:
    Predictor decoding is started for TIFF predictor 2 at 8 bpc and PNG row
    predictors, with borrowed view entry points for low-level predictor
    encode/decode, and owned stream decode now applies the first direct
-   `/DecodeParms` or `/DP` predictor. Predictor encoding is started for PNG None
-   (`10`), Sub (`11`), Up (`12`), Average (`13`), Paeth (`14`), and Optimum
-   (`15`) rows, including explicit negative-delta normalization to PDF byte
-   range and row-local Optimum filter selection. Owned stream encode can now add
-   a filter plus direct `/DecodeParms` predictor dictionary and round-trip
-   through owned stream decode. Stream encoding now supports CamlPDF-style
+   `/DecodeParms` or `/DP` predictor. Predictor encoding is started for TIFF
+   predictor 2 at 8 bpc plus PNG None (`10`), Sub (`11`), Up (`12`), Average
+   (`13`), Paeth (`14`), and Optimum (`15`) rows, including explicit
+   negative-delta normalization to PDF byte range and row-local Optimum filter
+   selection. Owned stream encode can now add a filter plus direct
+   `/DecodeParms` predictor dictionary and round-trip through owned stream
+   decode. Stream encoding now supports CamlPDF-style
    `only_if_smaller` gating, leaving streams unchanged unless the encoded data
    plus overhead is smaller than the original bytes. Stream filter
    encode/decode now materializes `StreamToGet` data only at the owned-byte
