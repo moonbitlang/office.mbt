@@ -18,6 +18,32 @@ fn assert_point_close_for_transform_test(
 }
 
 ///|
+fn assert_matrix_close_for_transform_test(
+  actual : @pdflite.TransformMatrix,
+  expected : @pdflite.TransformMatrix,
+) -> Unit raise {
+  assert_close_for_transform_test(actual.a, expected.a)
+  assert_close_for_transform_test(actual.b, expected.b)
+  assert_close_for_transform_test(actual.c, expected.c)
+  assert_close_for_transform_test(actual.d, expected.d)
+  assert_close_for_transform_test(actual.e, expected.e)
+  assert_close_for_transform_test(actual.f, expected.f)
+}
+
+///|
+fn assert_decomposition_close_for_transform_test(
+  actual : @pdflite.TransformDecomposition,
+  expected : @pdflite.TransformDecomposition,
+) -> Unit raise {
+  assert_close_for_transform_test(actual.scale, expected.scale)
+  assert_close_for_transform_test(actual.aspect, expected.aspect)
+  assert_close_for_transform_test(actual.rotation, expected.rotation)
+  assert_close_for_transform_test(actual.shear, expected.shear)
+  assert_close_for_transform_test(actual.translate_x, expected.translate_x)
+  assert_close_for_transform_test(actual.translate_y, expected.translate_y)
+}
+
+///|
 test "TransformMatrix identity translate and scale points" {
   let point = @pdflite.point2(2.0, 3.0)
   @test.assert_eq(@pdflite.transform_identity_matrix.apply(point), point)
@@ -134,4 +160,53 @@ test "TransformMatrix inversion rejects overflow-scaled matrices" {
   guard result is Err(@pdflite.PdfError::MatrixNotInvertable) else {
     fail("expected MatrixNotInvertable")
   }
+}
+
+///|
+test "TransformMatrix decompose mirrors CamlPDF scalar components" {
+  assert_decomposition_close_for_transform_test(
+    @pdflite.transform_identity_matrix.decompose(),
+    {
+      scale: 1.0,
+      aspect: 1.0,
+      rotation: 0.0,
+      shear: 0.0,
+      translate_x: 0.0,
+      translate_y: 0.0,
+    },
+  )
+  let degenerate : @pdflite.TransformMatrix = {
+    a: 0.0,
+    b: 0.0,
+    c: 0.0,
+    d: 0.0,
+    e: 0.0,
+    f: 0.0,
+  }
+  assert_decomposition_close_for_transform_test(degenerate.decompose(), {
+    scale: 0.0,
+    aspect: 0.0,
+    rotation: 0.0,
+    shear: 0.0,
+    translate_x: 0.0,
+    translate_y: 0.0,
+  })
+}
+
+///|
+test "transform_recompose rebuilds decomposed matrix components" {
+  let parts : @pdflite.TransformDecomposition = {
+    scale: 2.0,
+    aspect: 3.0,
+    rotation: 0.25,
+    shear: 0.1,
+    translate_x: 10.0,
+    translate_y: -4.0,
+  }
+  let matrix = @pdflite.transform_recompose(parts)
+  assert_decomposition_close_for_transform_test(matrix.decompose(), parts)
+  assert_matrix_close_for_transform_test(
+    @pdflite.transform_recompose(matrix.decompose()),
+    matrix,
+  )
 }

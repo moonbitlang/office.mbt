@@ -445,6 +445,8 @@ pub fn transform_matrix_of_op(TransformOp) -> TransformMatrix
 
 pub fn transform_matrix_of_ops(ArrayView[TransformOp]) -> TransformMatrix
 
+pub fn transform_recompose(TransformDecomposition) -> TransformMatrix
+
 pub fn transform_rotate(Point2, Double) -> TransformMatrix
 
 pub fn transform_scale(Point2, Double, Double) -> TransformMatrix
@@ -1586,6 +1588,15 @@ pub fn ToGet::input(Self) -> ByteCursor
 pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int
 
+pub(all) struct TransformDecomposition {
+  scale : Double
+  aspect : Double
+  rotation : Double
+  shear : Double
+  translate_x : Double
+  translate_y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) struct TransformMatrix {
   a : Double
   b : Double
@@ -1595,6 +1606,7 @@ pub(all) struct TransformMatrix {
   f : Double
 } derive(Eq, ToJson, @debug.Debug)
 pub fn TransformMatrix::apply(Self, Point2) -> Point2
+pub fn TransformMatrix::decompose(Self) -> TransformDecomposition
 pub fn TransformMatrix::invert(Self) -> Self raise PdfError
 
 pub(all) enum TransformOp {

@@ -24,6 +24,16 @@ pub(all) struct TransformMatrix {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub(all) struct TransformDecomposition {
+  scale : Double
+  aspect : Double
+  rotation : Double
+  shear : Double
+  translate_x : Double
+  translate_y : Double
+} derive(Debug, Eq, ToJson)
+
+///|
 pub fn point2(x : Double, y : Double) -> Point2 {
   { x, y }
 }
@@ -176,4 +186,59 @@ pub fn TransformMatrix::invert(
     e: scale * (self.c * self.f - self.d * self.e),
     f: scale * (self.b * self.e - self.a * self.f),
   }
+}
+
+///|
+fn transform_safe_float(value : Double) -> Double {
+  if value.is_nan() ||
+    value.is_inf() ||
+    value == 0.0 ||
+    value.abs() < 2.2250738585072014e-308 {
+    0.0
+  } else {
+    value
+  }
+}
+
+///|
+pub fn TransformMatrix::decompose(
+  self : TransformMatrix,
+) -> TransformDecomposition {
+  let determinant = self.a * self.d - self.c * self.b
+  let moda = (self.a * self.a + self.b * self.b).sqrt()
+  let modb = (self.c * self.c + self.d * self.d).sqrt()
+  let dot = self.a * self.c + self.b * self.d
+  let scale = determinant / moda
+  let aspect = if scale.abs() == 0.0 { 1.0 } else { moda / scale.abs() }
+  let rotation = @math.atan2(self.b, self.a)
+  let shear = if moda * modb == 0.0 {
+    0.0
+  } else {
+    @math.PI / 2.0 - @math.acos(dot / (moda * modb))
+  }
+  {
+    scale: transform_safe_float(scale),
+    aspect: transform_safe_float(aspect),
+    rotation: transform_safe_float(rotation),
+    shear: transform_safe_float(shear),
+    translate_x: transform_safe_float(self.e),
+    translate_y: transform_safe_float(self.f),
+  }
+}
+
+///|
+pub fn transform_recompose(parts : TransformDecomposition) -> TransformMatrix {
+  let scale_aspect_shear = {
+    ..transform_identity_matrix,
+    a: parts.scale.abs() * parts.aspect,
+    c: parts.scale * @math.tan(parts.shear),
+    d: parts.scale,
+  }
+  transform_matrix_compose(
+    transform_translate(parts.translate_x, parts.translate_y),
+    transform_matrix_compose(
+      transform_rotate(point2(0.0, 0.0), parts.rotation),
+      scale_aspect_shear,
+    ),
+  )
 }
