@@ -675,6 +675,8 @@ pub fn ByteCursor::lex_pdf_tokens(Self) -> Array[PdfLexeme] raise PdfError
 pub fn ByteCursor::nudge(Self) -> Unit
 pub fn ByteCursor::peek(Self) -> Byte?
 pub fn ByteCursor::peek_byte(Self) -> Int
+pub fn ByteCursor::peek_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::peek_view(Self, Int) -> BytesView raise PdfError
 pub fn ByteCursor::position(Self) -> Int
 pub fn ByteCursor::read_byte(Self) -> Byte?
 pub fn ByteCursor::read_byte_back(Self) -> Byte?

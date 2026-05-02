@@ -68,6 +68,31 @@ test "ByteCursor reports remaining length and peek at boundaries" {
 }
 
 ///|
+test "ByteCursor peeks byte slices without advancing" {
+  let cursor = @pdflite.byte_cursor_of_bytes(
+    pdf_bytes_for_cursor_test([65, 66, 67]),
+  )
+  cursor.nudge()
+  @test.assert_eq(
+    bytes_view_to_ints_for_cursor_test(try! cursor.peek_view(2)),
+    [66, 67],
+  )
+  @test.assert_eq(
+    pdf_bytes_to_ints_for_cursor_test(try! cursor.peek_bytes(1)),
+    [66],
+  )
+  @test.assert_eq(cursor.position(), 1)
+  let bad_length : Result[BytesView, Error] = try? cursor.peek_view(-1)
+  guard bad_length is Err(@pdflite.PdfError::InvalidReadLength(-1)) else {
+    fail("expected InvalidReadLength for negative peek")
+  }
+  let too_long : Result[BytesView, Error] = try? cursor.peek_view(3)
+  guard too_long is Err(@pdflite.PdfError::EndOfInput) else {
+    fail("expected EndOfInput for oversized peek")
+  }
+}
+
+///|
 test "ByteCursor supports rewind nudge and reading behind" {
   let bytes = pdf_bytes_for_cursor_test([65, 66, 67])
   let cursor = @pdflite.byte_cursor_of_bytes(bytes)

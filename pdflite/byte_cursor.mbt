@@ -141,6 +141,29 @@ pub fn ByteCursor::peek(self : ByteCursor) -> Byte? {
 }
 
 ///|
+pub fn ByteCursor::peek_view(
+  self : ByteCursor,
+  length : Int,
+) -> BytesView raise PdfError {
+  if length < 0 {
+    raise InvalidReadLength(length)
+  }
+  let end = self.position + length
+  if end > self.data.length() {
+    raise EndOfInput
+  }
+  self.data[self.position:end]
+}
+
+///|
+pub fn ByteCursor::peek_bytes(
+  self : ByteCursor,
+  length : Int,
+) -> PdfBytes raise PdfError {
+  self.peek_view(length).to_owned()
+}
+
+///|
 pub fn ByteCursor::nudge(self : ByteCursor) -> Unit {
   ignore(self.input_byte())
 }
