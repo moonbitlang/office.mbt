@@ -32,6 +32,44 @@ fn page_wb_xyz_destination(
 }
 
 ///|
+fn page_wb_catalog_destination(
+  doc : PdfDocument,
+  catalog_number : Int,
+  name : PdfName,
+) -> PdfObject? {
+  match
+    doc
+    .lookup_object_or_null(catalog_number)
+    .lookup_immediate(pdf_page_dests_key()) {
+    Some(PdfDictionary(entries)) =>
+      for entry in entries {
+        let (key, value) = entry
+        if key == name {
+          break Some(value)
+        }
+      } nobreak {
+        None
+      }
+    _ => None
+  }
+}
+
+///|
+fn page_wb_name_tree_entries_from_catalog(
+  doc : PdfDocument,
+  catalog_number : Int,
+) -> Array[(PdfBytes, PdfObject)] {
+  match
+    doc.lookup_chain(doc.lookup_object_or_null(catalog_number), [
+      pdf_page_names_key(),
+      pdf_page_dests_key(),
+    ]) {
+    Some(tree) => doc.read_name_tree(tree)
+    None => []
+  }
+}
+
+///|
 test "private page tree readers cover guard branches" {
   let doc = pdf_document_empty()
   @test.assert_eq(pdf_page_int_of_rotation(Rotate180), 180)
@@ -542,6 +580,86 @@ test "private page destination cleanup covers indirect containers" {
 }
 
 ///|
+test "private page destination cleanup uses trailer root catalog" {
+  let drop_name = pdf_page_name("/Drop")
+  let keep_name = pdf_page_name("/Keep")
+  let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  let page_numbers = try! doc.page_reference_numbers()
+  let stale_catalog_number = doc.root()
+  let stale_tree = doc.build_name_tree([
+    (
+      page_wb_text("drop"),
+      PdfArray([PdfNull, PdfNameObject(pdf_dest_type_fit())]),
+    ),
+    (page_wb_text("keep"), page_wb_fit_destination(page_numbers[0])),
+  ])
+  let stale_catalog = try! doc
+    .lookup_object_or_null(stale_catalog_number)
+    .add_dict_entry(
+      pdf_page_dests_key(),
+      PdfDictionary([
+        (drop_name, PdfArray([PdfNull, PdfNameObject(pdf_dest_type_fit())])),
+        (keep_name, page_wb_fit_destination(page_numbers[0])),
+      ]),
+    )
+  let stale_catalog = try! stale_catalog.add_dict_entry(
+    pdf_page_names_key(),
+    PdfDictionary([(pdf_page_dests_key(), stale_tree)]),
+  )
+  doc.add_object_given_number(stale_catalog_number, stale_catalog)
+  let active_tree = doc.build_name_tree([
+    (
+      page_wb_text("drop"),
+      PdfArray([PdfNull, PdfNameObject(pdf_dest_type_fit())]),
+    ),
+    (page_wb_text("keep"), page_wb_fit_destination(page_numbers[0])),
+  ])
+  doc.add_object_given_number(
+    90,
+    PdfDictionary([
+      (
+        pdf_page_dests_key(),
+        PdfDictionary([
+          (drop_name, PdfArray([PdfNull, PdfNameObject(pdf_dest_type_fit())])),
+          (keep_name, page_wb_fit_destination(page_numbers[0])),
+        ]),
+      ),
+      (
+        pdf_page_names_key(),
+        PdfDictionary([(pdf_page_dests_key(), active_tree)]),
+      ),
+    ]),
+  )
+  doc.set_trailer_dict(
+    try! doc.trailer_dict().add_dict_entry(pdf_page_root_key(), PdfIndirect(90)),
+  )
+
+  try! doc.pdf_page_fixup_destination_name_tree()
+  try! doc.pdf_page_fixup_catalog_destinations()
+
+  @test.assert_eq(page_wb_catalog_destination(doc, 90, drop_name), None)
+  @test.assert_eq(
+    page_wb_catalog_destination(doc, 90, keep_name),
+    Some(page_wb_fit_destination(page_numbers[0])),
+  )
+  @test.assert_eq(
+    page_wb_catalog_destination(doc, stale_catalog_number, drop_name),
+    Some(PdfArray([PdfNull, PdfNameObject(pdf_dest_type_fit())])),
+  )
+  @test.assert_eq(page_wb_name_tree_entries_from_catalog(doc, 90), [
+    (page_wb_text("keep"), page_wb_fit_destination(page_numbers[0])),
+  ])
+  @test.assert_eq(
+    [
+      for entry in page_wb_name_tree_entries_from_catalog(
+        doc, stale_catalog_number,
+      ) => entry.0
+    ],
+    [page_wb_text("drop"), page_wb_text("keep")],
+  )
+}
+
+///|
 test "private page named destination transforms cover indirect containers" {
   let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
   let page_numbers = try! doc.page_reference_numbers()
@@ -800,6 +918,159 @@ test "private page named destination transforms cover indirect containers" {
     is Some(_) else {
     fail("expected unchanged direct destination tree")
   }
+}
+
+///|
+test "private page named destination transforms use trailer root catalog" {
+  let active_name = pdf_page_name("/Active")
+  let stale_name = pdf_page_name("/Stale")
+  let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
+  let page_numbers = try! doc.page_reference_numbers()
+  let stale_catalog_number = doc.root()
+  let stale_tree = doc.build_name_tree([
+    (page_wb_text("stale"), page_wb_fit_destination(page_numbers[0])),
+  ])
+  let stale_catalog = try! doc
+    .lookup_object_or_null(stale_catalog_number)
+    .add_dict_entry(
+      pdf_page_dests_key(),
+      PdfDictionary([(stale_name, page_wb_fit_destination(page_numbers[0]))]),
+    )
+  let stale_catalog = try! stale_catalog.add_dict_entry(
+    pdf_page_names_key(),
+    PdfDictionary([(pdf_page_dests_key(), stale_tree)]),
+  )
+  doc.add_object_given_number(stale_catalog_number, stale_catalog)
+  let active_tree = doc.build_name_tree([
+    (page_wb_text("active"), page_wb_xyz_destination(page_numbers[0], 3, 4)),
+  ])
+  doc.add_object_given_number(
+    90,
+    PdfDictionary([
+      (
+        pdf_page_dests_key(),
+        PdfDictionary([
+          (active_name, page_wb_xyz_destination(page_numbers[0], 1, 2)),
+        ]),
+      ),
+      (
+        pdf_page_names_key(),
+        PdfDictionary([(pdf_page_dests_key(), active_tree)]),
+      ),
+    ]),
+  )
+  doc.set_trailer_dict(
+    try! doc.trailer_dict().add_dict_entry(pdf_page_root_key(), PdfIndirect(90)),
+  )
+
+  try! doc.pdf_page_transform_catalog_destinations_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    page_numbers,
+  )
+  try! doc.pdf_page_transform_destination_name_tree_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    page_numbers,
+  )
+
+  @test.assert_eq(
+    page_wb_catalog_destination(doc, 90, active_name),
+    Some(
+      PdfArray([
+        PdfIndirect(page_numbers[0]),
+        PdfNameObject(pdf_dest_type_xyz()),
+        PdfReal(11.0),
+        PdfReal(22.0),
+        PdfNull,
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    page_wb_catalog_destination(doc, stale_catalog_number, stale_name),
+    Some(page_wb_fit_destination(page_numbers[0])),
+  )
+  @test.assert_eq(page_wb_name_tree_entries_from_catalog(doc, 90), [
+    (
+      page_wb_text("active"),
+      PdfArray([
+        PdfIndirect(page_numbers[0]),
+        PdfNameObject(pdf_dest_type_xyz()),
+        PdfReal(13.0),
+        PdfReal(24.0),
+        PdfNull,
+      ]),
+    ),
+  ])
+  @test.assert_eq(
+    page_wb_name_tree_entries_from_catalog(doc, stale_catalog_number),
+    [(page_wb_text("stale"), page_wb_fit_destination(page_numbers[0]))],
+  )
+}
+
+///|
+test "private page active catalog covers fallback and absent roots" {
+  let name = pdf_page_name("/Fallback")
+  let fallback = pdf_document_empty()
+  fallback.set_root(1)
+  fallback.add_object_given_number(
+    1,
+    PdfDictionary([
+      (
+        pdf_page_dests_key(),
+        PdfDictionary([(name, page_wb_xyz_destination(7, 1, 2))]),
+      ),
+    ]),
+  )
+  try! fallback.pdf_page_transform_catalog_destinations_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    [7],
+  )
+  @test.assert_eq(
+    page_wb_catalog_destination(fallback, 1, name),
+    Some(
+      PdfArray([
+        PdfIndirect(7),
+        PdfNameObject(pdf_dest_type_xyz()),
+        PdfReal(11.0),
+        PdfReal(22.0),
+        PdfNull,
+      ]),
+    ),
+  )
+
+  let empty = pdf_document_empty()
+  try! empty.pdf_page_transform_catalog_destinations_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    [7],
+  )
+  try! empty.pdf_page_transform_destination_name_tree_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    [7],
+  )
+  try! empty.pdf_page_fixup_catalog_destinations()
+  try! empty.pdf_page_fixup_destination_name_tree()
+
+  let unresolved = pdf_document_empty()
+  unresolved.set_root(1)
+  unresolved.add_object_given_number(
+    1,
+    PdfDictionary([
+      (
+        pdf_page_dests_key(),
+        PdfDictionary([(name, page_wb_xyz_destination(7, 1, 2))]),
+      ),
+    ]),
+  )
+  unresolved.set_trailer_dict(
+    PdfDictionary([(pdf_page_root_key(), PdfIndirect(99))]),
+  )
+  try! unresolved.pdf_page_transform_catalog_destinations_for_matrices(
+    [(1, transform_translate(10.0, 20.0))],
+    [7],
+  )
+  @test.assert_eq(
+    page_wb_catalog_destination(unresolved, 1, name),
+    Some(page_wb_xyz_destination(7, 1, 2)),
+  )
 }
 
 ///|

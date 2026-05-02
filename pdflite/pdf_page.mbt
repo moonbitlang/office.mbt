@@ -1066,34 +1066,77 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
 }
 
 ///|
+fn PdfDocument::pdf_page_active_catalog(
+  self : PdfDocument,
+) -> (PdfObject, Bool)? {
+  match self.trailer_dict().lookup_immediate(pdf_page_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => None
+        catalog => Some((catalog, true))
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        None
+      } else {
+        Some((root, false))
+      }
+    }
+  }
+}
+
+///|
+fn PdfDocument::pdf_page_replace_active_catalog_entry(
+  self : PdfDocument,
+  key : PdfName,
+  value : PdfObject,
+  catalog : PdfObject,
+  uses_trailer_root : Bool,
+) -> Unit raise PdfError {
+  if uses_trailer_root {
+    self.replace_chain([pdf_page_root_key(), key], value)
+  } else {
+    self.add_object_given_number(
+      self.root(),
+      catalog.add_dict_entry(key, value),
+    )
+  }
+}
+
+///|
 fn PdfDocument::pdf_page_transform_catalog_destinations_for_matrices(
   self : PdfDocument,
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
-  let root_number = self.root()
-  let root_object = self.lookup_object_or_null(root_number)
-  match root_object.lookup_immediate(pdf_page_dests_key()) {
-    Some(PdfIndirect(dests_number)) =>
-      match
-        self.pdf_page_transform_catalog_destinations_object(
-          self.lookup_object_or_null(dests_number),
-          matrices,
-          page_reference_numbers,
-        ) {
-        Some(dests) => self.add_object_given_number(dests_number, dests)
-        None => ()
-      }
-    Some(dests) =>
-      match
-        self.pdf_page_transform_catalog_destinations_object(
-          dests, matrices, page_reference_numbers,
-        ) {
-        Some(transformed) =>
-          self.add_object_given_number(
-            root_number,
-            root_object.add_dict_entry(pdf_page_dests_key(), transformed),
-          )
+  match self.pdf_page_active_catalog() {
+    Some((root_object, uses_trailer_root)) =>
+      match root_object.lookup_immediate(pdf_page_dests_key()) {
+        Some(PdfIndirect(dests_number)) =>
+          match
+            self.pdf_page_transform_catalog_destinations_object(
+              self.lookup_object_or_null(dests_number),
+              matrices,
+              page_reference_numbers,
+            ) {
+            Some(dests) => self.add_object_given_number(dests_number, dests)
+            None => ()
+          }
+        Some(dests) =>
+          match
+            self.pdf_page_transform_catalog_destinations_object(
+              dests, matrices, page_reference_numbers,
+            ) {
+            Some(transformed) =>
+              self.pdf_page_replace_active_catalog_entry(
+                pdf_page_dests_key(),
+                transformed,
+                root_object,
+                uses_trailer_root,
+              )
+            None => ()
+          }
         None => ()
       }
     None => ()
@@ -1135,51 +1178,52 @@ fn PdfDocument::pdf_page_transform_destination_name_tree_for_matrices(
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
-  let root_number = self.root()
-  let root_object = self.lookup_object_or_null(root_number)
-  match root_object.lookup_immediate(pdf_page_names_key()) {
-    Some(PdfIndirect(names_number)) => {
-      let names_object = self.lookup_object_or_null(names_number)
-      match self.lookup_direct(pdf_page_dests_key(), names_object) {
-        Some(dests_tree) =>
-          match
-            self.pdf_page_transform_name_tree_destination_entries(
-              dests_tree, matrices, page_reference_numbers,
-            ) {
-            Some(entries) =>
-              self.add_object_given_number(
-                names_number,
-                names_object.add_dict_entry(
-                  pdf_page_dests_key(),
-                  self.build_name_tree(entries),
-                ),
-              )
+  match self.pdf_page_active_catalog() {
+    Some((root_object, uses_trailer_root)) =>
+      match root_object.lookup_immediate(pdf_page_names_key()) {
+        Some(PdfIndirect(names_number)) => {
+          let names_object = self.lookup_object_or_null(names_number)
+          match self.lookup_direct(pdf_page_dests_key(), names_object) {
+            Some(dests_tree) =>
+              match
+                self.pdf_page_transform_name_tree_destination_entries(
+                  dests_tree, matrices, page_reference_numbers,
+                ) {
+                Some(entries) =>
+                  self.add_object_given_number(
+                    names_number,
+                    names_object.add_dict_entry(
+                      pdf_page_dests_key(),
+                      self.build_name_tree(entries),
+                    ),
+                  )
+                None => ()
+              }
             None => ()
           }
-        None => ()
-      }
-    }
-    Some(PdfDictionary(_) as names_object) =>
-      match self.lookup_direct(pdf_page_dests_key(), names_object) {
-        Some(dests_tree) =>
-          match
-            self.pdf_page_transform_name_tree_destination_entries(
-              dests_tree, matrices, page_reference_numbers,
-            ) {
-            Some(entries) =>
-              self.add_object_given_number(
-                root_number,
-                root_object.add_dict_entry(
-                  pdf_page_names_key(),
-                  names_object.add_dict_entry(
-                    pdf_page_dests_key(),
-                    self.build_name_tree(entries),
-                  ),
-                ),
-              )
+        }
+        Some(PdfDictionary(_) as names_object) =>
+          match self.lookup_direct(pdf_page_dests_key(), names_object) {
+            Some(dests_tree) =>
+              match
+                self.pdf_page_transform_name_tree_destination_entries(
+                  dests_tree, matrices, page_reference_numbers,
+                ) {
+                Some(entries) =>
+                  self.pdf_page_replace_active_catalog_entry(
+                    pdf_page_names_key(),
+                    names_object.add_dict_entry(
+                      pdf_page_dests_key(),
+                      self.build_name_tree(entries),
+                    ),
+                    root_object,
+                    uses_trailer_root,
+                  )
+                None => ()
+              }
             None => ()
           }
-        None => ()
+        _ => ()
       }
     _ => ()
   }
@@ -1631,23 +1675,25 @@ fn PdfDocument::pdf_page_live_catalog_destinations(
 fn PdfDocument::pdf_page_fixup_catalog_destinations(
   self : PdfDocument,
 ) -> Unit raise PdfError {
-  let root_object = self.lookup_object_or_null(self.root())
-  match root_object.lookup_immediate(pdf_page_dests_key()) {
-    Some(PdfIndirect(dests_number)) =>
-      self.add_object_given_number(
-        dests_number,
-        self.pdf_page_live_catalog_destinations(
-          self.lookup_object_or_null(dests_number),
-        ),
-      )
-    Some(dests) =>
-      self.add_object_given_number(
-        self.root(),
-        root_object.add_dict_entry(
-          pdf_page_dests_key(),
-          self.pdf_page_live_catalog_destinations(dests),
-        ),
-      )
+  match self.pdf_page_active_catalog() {
+    Some((root_object, uses_trailer_root)) =>
+      match root_object.lookup_immediate(pdf_page_dests_key()) {
+        Some(PdfIndirect(dests_number)) =>
+          self.add_object_given_number(
+            dests_number,
+            self.pdf_page_live_catalog_destinations(
+              self.lookup_object_or_null(dests_number),
+            ),
+          )
+        Some(dests) =>
+          self.pdf_page_replace_active_catalog_entry(
+            pdf_page_dests_key(),
+            self.pdf_page_live_catalog_destinations(dests),
+            root_object,
+            uses_trailer_root,
+          )
+        None => ()
+      }
     None => ()
   }
 }
@@ -1656,38 +1702,42 @@ fn PdfDocument::pdf_page_fixup_catalog_destinations(
 fn PdfDocument::pdf_page_fixup_destination_name_tree(
   self : PdfDocument,
 ) -> Unit raise PdfError {
-  let root_object = self.lookup_object_or_null(self.root())
-  match root_object.lookup_immediate(pdf_page_names_key()) {
-    Some(PdfIndirect(names_number)) => {
-      let names_object = self.lookup_object_or_null(names_number)
-      match self.lookup_direct(pdf_page_dests_key(), names_object) {
-        Some(dests_tree) =>
-          self.add_object_given_number(
-            names_number,
-            names_object.add_dict_entry(
-              pdf_page_dests_key(),
-              self.build_name_tree(self.pdf_page_live_destinations(dests_tree)),
-            ),
-          )
-        None => ()
-      }
-    }
-    Some(PdfDictionary(_) as names_object) =>
-      match self.lookup_direct(pdf_page_dests_key(), names_object) {
-        Some(dests_tree) =>
-          self.add_object_given_number(
-            self.root(),
-            root_object.add_dict_entry(
-              pdf_page_names_key(),
-              names_object.add_dict_entry(
-                pdf_page_dests_key(),
-                self.build_name_tree(
-                  self.pdf_page_live_destinations(dests_tree),
+  match self.pdf_page_active_catalog() {
+    Some((root_object, uses_trailer_root)) =>
+      match root_object.lookup_immediate(pdf_page_names_key()) {
+        Some(PdfIndirect(names_number)) => {
+          let names_object = self.lookup_object_or_null(names_number)
+          match self.lookup_direct(pdf_page_dests_key(), names_object) {
+            Some(dests_tree) =>
+              self.add_object_given_number(
+                names_number,
+                names_object.add_dict_entry(
+                  pdf_page_dests_key(),
+                  self.build_name_tree(
+                    self.pdf_page_live_destinations(dests_tree),
+                  ),
                 ),
-              ),
-            ),
-          )
-        None => ()
+              )
+            None => ()
+          }
+        }
+        Some(PdfDictionary(_) as names_object) =>
+          match self.lookup_direct(pdf_page_dests_key(), names_object) {
+            Some(dests_tree) =>
+              self.pdf_page_replace_active_catalog_entry(
+                pdf_page_names_key(),
+                names_object.add_dict_entry(
+                  pdf_page_dests_key(),
+                  self.build_name_tree(
+                    self.pdf_page_live_destinations(dests_tree),
+                  ),
+                ),
+                root_object,
+                uses_trailer_root,
+              )
+            None => ()
+          }
+        _ => ()
       }
     _ => ()
   }

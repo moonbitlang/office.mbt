@@ -448,7 +448,10 @@ MoonBit consequences for this project:
    renumbering. Named destination definitions in old-style catalog `/Dests`
    dictionaries and `/Root/Names/Dests` name trees are also transformed, so
    preserved named and string destinations resolve to the new page-space
-   coordinates after page matrix changes. A minimal `pdf_of_pages`
+   coordinates after page matrix changes. These catalog destination transform
+   paths now prefer the active catalog through trailer `/Root`, matching
+   CamlPDF's parsed-PDF lookup path while retaining the document-root fallback
+   for synthetic fixtures. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
@@ -456,7 +459,8 @@ MoonBit consequences for this project:
    object numbers, copied annotation `/Popup` and `/Parent` links are repaired
    within each extracted page, and `/Root/Names/Dests` name-tree entries whose
    page targets were nulled are pruned. Old-style catalog `/Dests` dictionary
-   entries are also pruned after selected page references are rewritten.
+   entries are also pruned after selected page references are rewritten; this
+   destination cleanup also follows trailer `/Root` for parsed PDFs.
    CamlPDF's duplicate page-reference repair is now ported for malformed or
    object-preserving page trees: repeated `/Kids` references are copied to fresh
    page objects, the first repeated kid is rewritten, and stale page-tree
