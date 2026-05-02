@@ -1072,20 +1072,12 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
 fn PdfDocument::pdf_page_active_catalog(
   self : PdfDocument,
 ) -> (PdfObject, Bool)? {
-  match self.trailer_dict().lookup_immediate(pdf_page_root_key()) {
-    Some(root) =>
-      match self.direct(root) {
-        PdfNull => None
-        catalog => Some((catalog, true))
-      }
-    None => {
-      let root = self.lookup_object_or_null(self.root())
-      if root == PdfNull {
-        None
-      } else {
-        Some((root, false))
-      }
-    }
+  let uses_trailer_root = self
+    .trailer_dict()
+    .lookup_immediate(pdf_page_root_key())
+    is Some(_)
+  Some((self.catalog(), uses_trailer_root)) catch {
+    _ => None
   }
 }
 
