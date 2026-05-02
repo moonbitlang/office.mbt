@@ -414,21 +414,22 @@ pub fn PdfDocument::add_root(
   page_root_number : Int,
   extras : ArrayView[(PdfName, PdfObject)],
 ) -> Int raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = [
+  let mut root = PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
     (pdf_page_pages_key(), PdfIndirect(page_root_number)),
-  ]
+  ])
   let current_root = self.lookup_object_or_null(self.root())
   for entry in pdf_page_root_entries_without_catalog_keys(current_root) {
-    entries.push(entry)
+    let (key, value) = entry
+    root = root.add_dict_entry(key, value)
   }
   for entry in extras {
-    let (key, _) = entry
+    let (key, value) = entry
     if key != pdf_page_type_key() && key != pdf_page_pages_key() {
-      entries.push(entry)
+      root = root.add_dict_entry(key, value)
     }
   }
-  let root_number = self.add_object(PdfDictionary(entries))
+  let root_number = self.add_object(root)
   self.set_root(root_number)
   self.set_trailer_dict(
     self

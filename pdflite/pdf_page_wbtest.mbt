@@ -155,6 +155,7 @@ test "private page root and content helpers cover filtered shapes" {
       (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
       (pdf_page_pages_key(), PdfIndirect(9)),
       (pdf_page_name("/Lang"), PdfString(page_wb_text("en"))),
+      (pdf_page_name("/Metadata"), PdfString(page_wb_text("old-meta"))),
     ]),
   )
   let root_number = try! doc.add_root(2, [
