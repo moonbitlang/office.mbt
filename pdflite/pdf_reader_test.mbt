@@ -575,6 +575,19 @@ fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_endobj_text_in_catalog_string() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(
+    reader_push_indirect_object(
+      output, 1, 0, "<< /Type /Catalog /Title (literal endobj marker) >>",
+    ),
+  )
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -1573,6 +1586,22 @@ test "pdf_read_document_from_view reconstructs borrowed malformed slices" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1, 2])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs strings containing endobj text" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_endobj_text_in_catalog_string(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed
+    .lookup_object_or_null(1)
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Title"))),
+    Some(PdfString(reader_pdf_ascii("literal endobj marker"))),
+  )
 }
 
 ///|

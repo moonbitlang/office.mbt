@@ -290,10 +290,12 @@ MoonBit consequences for this project:
    streams can resolve plain indirect `/Length n 0 R` entries. Public
    reconstruction can now also recover stream objects with missing or unreadable
    `/Length` values by scanning through the following `endstream` marker and
-   correcting `/Length`, while still skipping stream objects with malformed
-   `stream`, `endstream`, or `endobj` markers, truncated stream data, malformed
-   object bodies, and invalid PDF name hex escapes when a later reconstructed
-   catalog remains valid.
+   correcting `/Length`, and reconstructed object tokenization now skips raw
+   `endobj` byte sequences inside literal strings by retrying the next candidate
+   terminator. It still skips stream objects with malformed `stream`,
+   `endstream`, or `endobj` markers, truncated stream data, malformed object
+   bodies, and invalid PDF name hex escapes when a later reconstructed catalog
+   remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset; borrowed `BytesView` entry points are now

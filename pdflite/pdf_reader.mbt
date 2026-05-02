@@ -1026,14 +1026,32 @@ fn ByteCursor::lex_reconstructed_indirect_object_tokens_at_current(
   self : ByteCursor,
 ) -> Array[PdfLexeme] raise PdfError {
   let start = self.absolute_position()
-  let endobj = pdf_find_ascii_from(self.data, start, [
-    101, 110, 100, 111, 98, 106,
-  ])
-  let end = if endobj < 0 { self.data.length() } else { endobj + 6 }
-  let cursor = byte_cursor_of_view(self.data[start:end])
-  let tokens = cursor.lex_pdf_tokens()
-  self.seek_pdf_absolute(start + cursor.absolute_position())
-  tokens
+  let mut search = start
+  let mut done = false
+  let mut found = false
+  let mut output : Array[PdfLexeme] = []
+  while !done {
+    let endobj = pdf_find_ascii_from(self.data, search, [
+      101, 110, 100, 111, 98, 106,
+    ])
+    let end = if endobj < 0 { self.data.length() } else { endobj + 6 }
+    let cursor = byte_cursor_of_view(self.data[start:end])
+    let tokens : Result[Array[PdfLexeme], Error] = try? cursor.lex_pdf_tokens()
+    match tokens {
+      Ok(tokens) => {
+        output = tokens
+        self.seek_pdf_absolute(start + cursor.absolute_position())
+        found = true
+        done = true
+      }
+      Err(_) => if endobj < 0 { done = true } else { search = endobj + 1 }
+    }
+  }
+  if found {
+    output
+  } else {
+    raise ParseIndirectObjectExpected
+  }
 }
 
 ///|
