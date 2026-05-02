@@ -389,8 +389,10 @@ MoonBit consequences for this project:
    literal blocks, a conservative fixed-Huffman length/distance path for
    distance-1 repeated-byte runs, and a bounded fixed-Huffman prior-prefix
    match path for short LZ77-style matches, keeping stored blocks as the
-   fallback for data where Huffman output would be larger. Full match search and
-   higher-ratio dynamic-Huffman output remain deferred.
+  fallback for data where Huffman output would be larger. The fixed-Huffman
+  path now keeps a bounded hash chain per byte prefix so a short recent match
+  does not hide a longer older match. Unbounded full match search and
+  higher-ratio dynamic-Huffman output remain deferred.
    Low-level LZW decode is started with clear/EOD handling and default
    EarlyChange 1; owned stream decode reads direct first-stage `/EarlyChange`
    from `/DecodeParms` or `/DP` for `/LZWDecode`/`/LZW`. Owned `StreamGot`

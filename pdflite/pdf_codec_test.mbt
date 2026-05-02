@@ -388,6 +388,18 @@ test "pdf_flate_encode chooses compact zlib blocks" {
     try! @pdflite.pdf_flate_decode(encoded_phrase),
     repeated_phrase,
   )
+  let shadowed_match = codec_ascii_for_test(
+    "ABCDEFGHIJABCXABCDEFGHIJABCDEFGHIJ",
+  )
+  let encoded_shadowed_match = @pdflite.pdf_flate_encode(shadowed_match)
+  @test.assert_eq(
+    encoded_shadowed_match.length() < shadowed_match.length(),
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(encoded_shadowed_match),
+    shadowed_match,
+  )
   let alternating_high = try! @pdflite.pdf_bytes_of_int_array(
     [
       for i in 0..<40 => if i % 2 == 0 { 255 } else { 254 }

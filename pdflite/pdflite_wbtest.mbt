@@ -1400,6 +1400,28 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   guard bad_flate_distance is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
   }
+  let shadowed_match = @ascii.encode("ABCDEFGHIJABCXABCDEFGHIJ")
+  let last_by_prefix : Array[Int] = Array::make(65536, -1)
+  let previous_by_position : Array[Int] = Array::make(
+    shadowed_match.length(),
+    -1,
+  )
+  for index in 0..<14 {
+    pdf_flate_remember_match_prefix(
+      last_by_prefix,
+      previous_by_position,
+      shadowed_match[:],
+      index,
+    )
+  }
+  let (shadowed_length, shadowed_distance) = pdf_flate_best_previous_match(
+    shadowed_match[:],
+    last_by_prefix[:],
+    previous_by_position[:],
+    14,
+  )
+  @test.assert_eq(shadowed_length, 10)
+  @test.assert_eq(shadowed_distance, 14)
   @test.assert_eq(
     try! pdf_flate_decode_view_prefix(Bytes::new(0)[:]),
     (Bytes::new(0), 0),

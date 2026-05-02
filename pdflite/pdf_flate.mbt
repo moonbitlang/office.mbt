@@ -579,11 +579,14 @@ fn pdf_flate_match_key(data : BytesView, position : Int) -> Int {
 ///|
 fn pdf_flate_remember_match_prefix(
   table : Array[Int],
+  previous : Array[Int],
   data : BytesView,
   position : Int,
 ) -> Unit {
   if position + 1 < data.length() {
-    table[pdf_flate_match_key(data, position)] = position
+    let key = pdf_flate_match_key(data, position)
+    previous[position] = table[key]
+    table[key] = position
   }
 }
 
@@ -603,6 +606,37 @@ fn pdf_flate_previous_match_length(
 }
 
 ///|
+fn pdf_flate_best_previous_match(
+  data : BytesView,
+  last_by_prefix : ArrayView[Int],
+  previous_by_position : ArrayView[Int],
+  position : Int,
+) -> (Int, Int) {
+  let mut match_length = 0
+  let mut match_distance = 0
+  if position + 2 < data.length() {
+    let mut candidate = last_by_prefix[pdf_flate_match_key(data, position)]
+    let mut probes = 0
+    while candidate >= 0 && probes < 64 {
+      let distance = position - candidate
+      if distance > 0 && distance <= 32768 {
+        let length = pdf_flate_previous_match_length(data, candidate, position)
+        if length > match_length {
+          match_length = length
+          match_distance = distance
+          if length == 258 {
+            break
+          }
+        }
+      }
+      candidate = previous_by_position[candidate]
+      probes += 1
+    }
+  }
+  (match_length, match_distance)
+}
+
+///|
 fn pdf_flate_push_fixed_match_block(
   output : Array[Byte],
   data : BytesView,
@@ -612,35 +646,31 @@ fn pdf_flate_push_fixed_match_block(
   writer.write_bits(if final_block { 1 } else { 0 }, 1)
   writer.write_bits(1, 2)
   let last_by_prefix : Array[Int] = Array::make(65536, -1)
+  let previous_by_position : Array[Int] = Array::make(data.length(), -1)
   let mut index = 0
   while index < data.length() {
-    let mut match_length = 0
-    let mut match_distance = 0
-    if index + 2 < data.length() {
-      let candidate = last_by_prefix[pdf_flate_match_key(data, index)]
-      if candidate >= 0 {
-        let distance = index - candidate
-        if distance > 0 && distance <= 32768 {
-          let length = pdf_flate_previous_match_length(data, candidate, index)
-          if length >= 3 {
-            match_length = length
-            match_distance = distance
-          }
-        }
-      }
-    }
+    let (match_length, match_distance) = pdf_flate_best_previous_match(
+      data,
+      last_by_prefix[:],
+      previous_by_position[:],
+      index,
+    )
     if match_length >= 3 {
       pdf_flate_write_fixed_length_distance(
         writer, match_length, match_distance,
       )
       let next_index = index + match_length
       while index < next_index {
-        pdf_flate_remember_match_prefix(last_by_prefix, data, index)
+        pdf_flate_remember_match_prefix(
+          last_by_prefix, previous_by_position, data, index,
+        )
         index += 1
       }
     } else {
       pdf_flate_write_fixed_literal(writer, data[index].to_int())
-      pdf_flate_remember_match_prefix(last_by_prefix, data, index)
+      pdf_flate_remember_match_prefix(
+        last_by_prefix, previous_by_position, data, index,
+      )
       index += 1
     }
   }
