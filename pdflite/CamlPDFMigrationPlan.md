@@ -712,7 +712,9 @@ MoonBit consequences for this project:
    one-line `beginbfchar`/`beginbfrange` sections with entries before the end
    marker are also accepted. `beginbfchar` lines can contain repeated
    source-to-Unicode pairs, and sequential `beginbfrange` lines can contain
-   repeated source ranges.
+   repeated source ranges. Sequential `beginbfrange` Unicode increments also
+   carry across UTF-16BE bytes, so ranges such as `00FE`, `00FF`, `0100` are
+   decoded without truncating to the final byte.
    AFM parsing is started with a byte-oriented `pdf_read_afm` API that returns
    header entries, character-code widths, glyph-name widths, and kerning pairs
    without converting AFM syntax or glyph names through `String`. Standard 14
