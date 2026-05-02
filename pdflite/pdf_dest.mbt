@@ -131,6 +131,26 @@ fn pdf_dest_bytes_equal(left : PdfBytes, right : PdfBytes) -> Bool {
 }
 
 ///|
+fn PdfDocument::pdf_dest_catalog(
+  self : PdfDocument,
+) -> PdfObject raise PdfError {
+  match self.trailer_dict().lookup_immediate(pdf_dest_root_key()) {
+    Some(root) =>
+      match self.direct(root) {
+        PdfNull => raise RootExpected
+        catalog => catalog
+      }
+    None => {
+      let root = self.lookup_object_or_null(self.root())
+      if root == PdfNull {
+        raise RootExpected
+      }
+      root
+    }
+  }
+}
+
+///|
 fn PdfDocument::pdf_dest_lookup_string_destination(
   self : PdfDocument,
   key : PdfBytes,
@@ -243,18 +263,14 @@ pub fn PdfDocument::read_destination(
       if shallow {
         DestNamed(name)
       } else {
-        match self.lookup_direct(pdf_dest_root_key(), self.trailer_dict()) {
-          Some(catalog) =>
-            match self.lookup_direct(pdf_dest_dests_key(), catalog) {
-              Some(dests) =>
-                match self.lookup_direct(name, dests) {
-                  Some(destination) =>
-                    self.read_destination(destination, shallow~)
-                  None => DestNamed(name)
-                }
+        let catalog = self.pdf_dest_catalog()
+        match self.lookup_direct(pdf_dest_dests_key(), catalog) {
+          Some(dests) =>
+            match self.lookup_direct(name, dests) {
+              Some(destination) => self.read_destination(destination, shallow~)
               None => DestNamed(name)
             }
-          None => raise RootExpected
+          None => DestNamed(name)
         }
       }
     PdfString(key) =>

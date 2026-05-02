@@ -348,6 +348,114 @@ test "PdfDocument read_destination resolves named catalog destinations" {
 }
 
 ///|
+test "PdfDocument read_destination uses trailer root for named catalog destinations" {
+  let key_type = dest_name_for_test("/Type")
+  let key_root = dest_name_for_test("/Root")
+  let key_dests = dest_name_for_test("/Dests")
+  let name_chapter = dest_name_for_test("/Chapter")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (
+        key_dests,
+        PdfDictionary([
+          (
+            name_chapter,
+            PdfArray([PdfIndirect(8), PdfNameObject(dest_name_for_test("/Fit"))]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (
+        key_dests,
+        PdfDictionary([
+          (
+            name_chapter,
+            PdfArray([
+              PdfIndirect(22),
+              PdfNameObject(dest_name_for_test("/Fit")),
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
+  @test.assert_eq(
+    try! doc.read_destination(PdfNameObject(name_chapter)),
+    DestFit(TargetPageObject(22)),
+  )
+}
+
+///|
+test "PdfDocument read_destination falls back to document root for synthetic named destinations" {
+  let key_type = dest_name_for_test("/Type")
+  let key_dests = dest_name_for_test("/Dests")
+  let name_chapter = dest_name_for_test("/Chapter")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (
+        key_dests,
+        PdfDictionary([
+          (
+            name_chapter,
+            PdfArray([PdfIndirect(8), PdfNameObject(dest_name_for_test("/Fit"))]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    try! doc.read_destination(PdfNameObject(name_chapter)),
+    DestFit(TargetPageObject(8)),
+  )
+}
+
+///|
+test "PdfDocument read_destination rejects unresolved trailer root for named destinations" {
+  let key_type = dest_name_for_test("/Type")
+  let key_root = dest_name_for_test("/Root")
+  let key_dests = dest_name_for_test("/Dests")
+  let name_chapter = dest_name_for_test("/Chapter")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (key_type, PdfNameObject(dest_name_for_test("/Catalog"))),
+      (
+        key_dests,
+        PdfDictionary([
+          (
+            name_chapter,
+            PdfArray([PdfIndirect(8), PdfNameObject(dest_name_for_test("/Fit"))]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
+  let result : Result[@pdflite.PdfDestination, Error] = try? doc.read_destination(
+    PdfNameObject(name_chapter),
+  )
+  guard result is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected")
+  }
+}
+
+///|
 test "PdfDocument read_destination resolves string name-tree destinations" {
   let key_type = dest_name_for_test("/Type")
   let key_names = dest_name_for_test("/Names")
