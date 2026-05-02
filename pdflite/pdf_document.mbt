@@ -135,6 +135,17 @@ pub fn pdf_objects_empty() -> PdfObjects {
 }
 
 ///|
+pub fn pdf_objects_of_entries(
+  entries : ArrayView[(Int, PdfObjectEntry)],
+) -> PdfObjects {
+  let objects = pdf_objects_empty()
+  for entry in entries {
+    objects.set_entry(entry.0, entry.1)
+  }
+  objects
+}
+
+///|
 pub fn PdfObjects::length(self : PdfObjects) -> Int {
   self.object_map.length()
 }

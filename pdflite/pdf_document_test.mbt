@@ -42,6 +42,30 @@ test "PdfObjects add and remove objects with CamlPDF-style event log" {
 }
 
 ///|
+test "pdf_objects_of_entries derives max object number without event log" {
+  let objects = @pdflite.pdf_objects_of_entries([
+    (5, @pdflite.pdf_object_entry(ObjectParsed(PdfInteger(50)), generation=2)),
+    (
+      1,
+      @pdflite.pdf_object_entry(
+        ObjectParsedAlreadyDecrypted(PdfInteger(10)),
+        generation=3,
+      ),
+    ),
+  ])
+  @test.assert_eq(objects.max_object_number(), 5)
+  @test.assert_eq(objects.object_numbers(), [1, 5])
+  @test.assert_eq(objects.lookup_object_or_null(5), PdfInteger(50))
+  @test.assert_eq(objects.log(), [])
+  guard objects.get_entry(1)
+    is Some(
+      { data: ObjectParsedAlreadyDecrypted(PdfInteger(10)), generation: 3 }
+    ) else {
+    fail("expected parsed state and generation to be preserved")
+  }
+}
+
+///|
 test "PdfObjects map_objects_in_place preserves parsed state tags" {
   let objects = @pdflite.pdf_objects_empty()
   objects.set_entry(
