@@ -235,11 +235,11 @@ fn pdf_merge_catalog_extra_key(key : PdfName) -> Bool {
 ///|
 fn pdf_merge_catalog_extra_entries(
   documents : ArrayView[PdfDocument],
-) -> Array[(PdfName, PdfObject)] {
+) -> Array[(PdfName, PdfObject)] raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = []
   let seen : Array[PdfName] = []
   for document in documents {
-    match document.lookup_object_or_null(document.root()) {
+    match document.pdf_merge_catalog() {
       PdfDictionary(root_entries) =>
         for entry in root_entries {
           let (key, _) = entry
@@ -258,12 +258,12 @@ fn pdf_merge_catalog_extra_entries(
 ///|
 fn pdf_merge_structure_tree_roots(
   documents : ArrayView[PdfDocument],
-) -> Array[PdfObject] {
+) -> Array[PdfObject] raise PdfError {
   let roots : Array[PdfObject] = []
   for document in documents {
     match
       document
-      .lookup_object_or_null(document.root())
+      .pdf_merge_catalog()
       .lookup_immediate(pdf_merge_struct_tree_root_key()) {
       Some(root) => roots.push(root)
       None => ()
@@ -499,7 +499,7 @@ fn PdfDocument::pdf_merge_renumber_struct_parent_entries(
 ///|
 fn pdf_merge_renumber_parent_trees(
   documents : ArrayView[PdfDocument],
-) -> Array[(Int, PdfObject)] {
+) -> Array[(Int, PdfObject)] raise PdfError {
   let merged_entries : Array[(Int, PdfObject)] = []
   let mut next_key = 0
   for document in documents {

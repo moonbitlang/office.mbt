@@ -21,7 +21,7 @@ test "private merge helpers cover guards and membership branches" {
   let doc = pdf_document_empty()
   doc.add_object_given_number(1, PdfInteger(1))
   doc.set_root(1)
-  @test.assert_eq(pdf_merge_catalog_extra_entries([doc]), [])
+  @test.assert_eq(try! pdf_merge_catalog_extra_entries([doc]), [])
 }
 
 ///|
@@ -219,6 +219,23 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
     try! conflict.pdf_merge_catalog_entry(key),
     Some(PdfString(@ascii.encode("trailer"))),
   )
+  @test.assert_eq(try! pdf_merge_catalog_extra_entries([conflict]), [
+    (key, PdfString(@ascii.encode("trailer"))),
+  ])
+
+  let structure_conflict = pdf_document_empty()
+  structure_conflict.set_root(1)
+  structure_conflict.add_object_given_number(1, PdfDictionary([]))
+  structure_conflict.add_object_given_number(
+    10,
+    PdfDictionary([(pdf_merge_struct_tree_root_key(), PdfIndirect(30))]),
+  )
+  structure_conflict.set_trailer_dict(
+    PdfDictionary([(pdf_merge_root_key(), PdfIndirect(10))]),
+  )
+  @test.assert_eq(try! pdf_merge_structure_tree_roots([structure_conflict]), [
+    PdfIndirect(30),
+  ])
 
   let unresolved = pdf_document_empty()
   unresolved.set_root(1)
