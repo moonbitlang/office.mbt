@@ -285,6 +285,15 @@ pub fn PdfDocument::root(self : PdfDocument) -> Int {
 }
 
 ///|
+pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
+  let object = self.lookup_object_or_null(self.root)
+  if object == PdfNull {
+    raise RootExpected
+  }
+  object
+}
+
+///|
 pub fn PdfDocument::set_root(self : PdfDocument, root : Int) -> Unit {
   self.root = root
 }

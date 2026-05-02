@@ -145,8 +145,9 @@ MoonBit consequences for this project:
    Status: started with `PdfObject`, `PdfStream`, `ToGet`, ordered dictionary
    construction, immediate lookup, add/replace/remove helpers, stream
    dictionary mutation, object map entries, parsed/deferred object states,
-   document defaults, add/remove object logging, object-number selection, and
-   tests preserving CamlPDF's new-key dictionary order. CamlPDF-style
+   document defaults, checked catalog lookup, add/remove object logging,
+   object-number selection, and tests preserving CamlPDF's new-key dictionary
+   order. CamlPDF-style
    `unique_key` dictionary-name selection is ported for dictionaries and stream
    dictionaries, using ASCII-prefixed PDF names. Direct indirection resolution
    and direct dictionary lookup, required dictionary lookup with caller-chosen

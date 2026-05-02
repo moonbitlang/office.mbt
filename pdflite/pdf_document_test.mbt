@@ -77,6 +77,23 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
 }
 
 ///|
+test "PdfDocument catalog reads the root object or reports RootExpected" {
+  let doc = @pdflite.pdf_document_empty()
+  let missing : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
+  guard missing is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected for missing catalog")
+  }
+  doc.set_root(4)
+  doc.add_object_given_number(4, @pdflite.pdf_dictionary([]))
+  @test.assert_eq(try! doc.catalog(), @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(4, PdfNull)
+  let null_root : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
+  guard null_root is Err(@pdflite.PdfError::RootExpected) else {
+    fail("expected RootExpected for null catalog")
+  }
+}
+
+///|
 test "PdfDocument object helpers delegate to document object state" {
   let doc = @pdflite.pdf_document_empty()
   let first = doc.add_object(PdfInteger(1))
