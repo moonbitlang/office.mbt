@@ -194,8 +194,13 @@ pub fn pdf_parse_single_lexeme_object(
 }
 
 ///|
+pub fn pdf_parse_object_from_view(data : BytesView) -> PdfObject raise PdfError {
+  pdf_parse_single_lexeme_object(pdf_lex_view(data))
+}
+
+///|
 pub fn pdf_parse_object_from_bytes(data : PdfBytes) -> PdfObject raise PdfError {
-  pdf_parse_single_lexeme_object(pdf_lex_bytes(data))
+  pdf_parse_object_from_view(data[:])
 }
 
 ///|
@@ -274,7 +279,14 @@ pub fn pdf_parse_indirect_object_lexemes(
 pub fn pdf_parse_indirect_object_from_bytes(
   data : PdfBytes,
 ) -> PdfParsedIndirectObject raise PdfError {
-  pdf_parse_indirect_object_lexemes(pdf_lex_bytes(data))
+  pdf_parse_indirect_object_from_view(data[:])
+}
+
+///|
+pub fn pdf_parse_indirect_object_from_view(
+  data : BytesView,
+) -> PdfParsedIndirectObject raise PdfError {
+  pdf_parse_indirect_object_lexemes(pdf_lex_view(data))
 }
 
 ///|

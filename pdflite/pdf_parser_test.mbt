@@ -158,6 +158,15 @@ test "pdf_parse_object_from_bytes lexes and parses primitive PDF bytes" {
 }
 
 ///|
+test "pdf_parse_object_from_view parses borrowed primitive object slices" {
+  let data = parser_bytes_for_test([90, 32, 91, 49, 32, 50, 32, 51, 93, 32, 90])
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_object_from_view(data[2:9]),
+    @pdflite.pdf_array([PdfInteger(1), PdfInteger(2), PdfInteger(3)]),
+  )
+}
+
+///|
 test "pdf_parse_indirect_object_from_bytes parses primitive indirect objects" {
   let type_key = parser_name_for_test([47, 84, 121, 112, 101])
   let parsed = try! @pdflite.pdf_parse_indirect_object_from_bytes(
@@ -174,6 +183,18 @@ test "pdf_parse_indirect_object_from_bytes parses primitive indirect objects" {
       (type_key, PdfNameObject(parser_name_for_test([47, 80, 97, 103, 101]))),
     ]),
   )
+}
+
+///|
+test "pdf_parse_indirect_object_from_view parses borrowed indirect object slices" {
+  let data = parser_bytes_for_test([
+    90, 32, 55, 32, 48, 32, 111, 98, 106, 10, 52, 50, 10, 101, 110, 100, 111, 98,
+    106, 32, 90,
+  ])
+  let parsed = try! @pdflite.pdf_parse_indirect_object_from_view(data[2:19])
+  @test.assert_eq(parsed.number, 7)
+  @test.assert_eq(parsed.generation, 0)
+  @test.assert_eq(parsed.object, PdfInteger(42))
 }
 
 ///|

@@ -281,6 +281,8 @@ pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[PdfContentOp] raise PdfE
 
 pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> PdfParsedIndirectObject raise PdfError
 
+pub fn pdf_parse_indirect_object_from_view(BytesView) -> PdfParsedIndirectObject raise PdfError
+
 pub fn pdf_parse_indirect_object_lexemes(ArrayView[PdfLexeme]) -> PdfParsedIndirectObject raise PdfError
 
 pub fn pdf_parse_indirect_objects(ArrayView[PdfLexeme]) -> Array[PdfParsedIndirectObject] raise PdfError
@@ -288,6 +290,8 @@ pub fn pdf_parse_indirect_objects(ArrayView[PdfLexeme]) -> Array[PdfParsedIndire
 pub fn pdf_parse_lexemes(ArrayView[PdfLexeme]) -> Array[PdfObject] raise PdfError
 
 pub fn pdf_parse_object_from_bytes(Bytes) -> PdfObject raise PdfError
+
+pub fn pdf_parse_object_from_view(BytesView) -> PdfObject raise PdfError
 
 pub fn pdf_parse_single_lexeme_object(ArrayView[PdfLexeme]) -> PdfObject raise PdfError
 
