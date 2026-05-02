@@ -738,9 +738,10 @@ MoonBit consequences for this project:
    conflicts between AGL names and Symbol font names are handled with
    font-specific codepoint lookup. The single-codepoint Latin Extended-A and
    Latin Extended-B names present in CamlPDF's bundled Adobe Glyph List are now
-   also covered for common simple-font encoding differences. General-punctuation
-   AGL names missing from the base encoding tables are covered as well. Reverse
-   charcode lookup scans the effective encoding for single-codepoint glyphs.
+   also covered for common simple-font encoding differences. General-punctuation,
+   currency, and letterlike AGL names missing from the base encoding tables are
+   covered as well. Reverse charcode lookup scans the effective encoding for
+   single-codepoint glyphs.
    ToUnicode CMap parsing now
    handles `bfchar` pairs split across lines, inline and multiline `bfrange`
    array mappings, including range headers split before the array, whitespace

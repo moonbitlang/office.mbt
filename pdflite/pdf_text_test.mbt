@@ -4695,6 +4695,66 @@ test "PdfTextExtractor decodes general punctuation AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes currency and letterlike AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/afii08941", 0x20A4),
+    ("/afii57636", 0x20AA),
+    ("/colonsign", 0x20A1),
+    ("/cruzeiro", 0x20A2),
+    ("/dong", 0x20AB),
+    ("/euro", 0x20AC),
+    ("/franc", 0x20A3),
+    ("/lira", 0x20A4),
+    ("/newsheqelsign", 0x20AA),
+    ("/peseta", 0x20A7),
+    ("/sheqel", 0x20AA),
+    ("/sheqelhebrew", 0x20AA),
+    ("/won", 0x20A9),
+    ("/Ohm", 0x2126),
+    ("/afii61248", 0x2105),
+    ("/afii61289", 0x2113),
+    ("/afii61352", 0x2116),
+    ("/angstrom", 0x212B),
+    ("/careof", 0x2105),
+    ("/centigrade", 0x2103),
+    ("/estimated", 0x212E),
+    ("/fahrenheit", 0x2109),
+    ("/lsquare", 0x2113),
+    ("/numero", 0x2116),
+    ("/prescription", 0x211E),
+    ("/telephone", 0x2121),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20A4), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AA), Some(2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), Some(6))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2105), Some(15))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2113), Some(16))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2116), Some(17))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2121), Some(26))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),
