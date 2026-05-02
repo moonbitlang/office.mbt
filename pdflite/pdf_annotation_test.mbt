@@ -236,7 +236,7 @@ test "PdfDocument add_annotation writes subtype names for annotation variants" {
     (AnnotationTrapNet, annotation_name_for_test("/TrapNet")),
     (AnnotationWatermark, annotation_name_for_test("/Watermark")),
     (AnnotationThreeDee, annotation_name_for_test("/3D")),
-    (AnnotationUnknown(custom_name), custom_name),
+    (AnnotationUnknown(custom_name), annotation_name_for_test("/Unknown")),
   ]
   let doc = @pdflite.pdf_document_empty()
   for case in cases {

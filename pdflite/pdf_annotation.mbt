@@ -232,7 +232,7 @@ fn pdf_annotation_subtype_name(subtype : PdfAnnotationSubtype) -> PdfName {
     AnnotationTrapNet => pdf_annotation_name("/TrapNet")
     AnnotationWatermark => pdf_annotation_name("/Watermark")
     AnnotationThreeDee => pdf_annotation_name("/3D")
-    AnnotationUnknown(name) => name
+    AnnotationUnknown(_) => pdf_annotation_name("/Unknown")
   }
 }
 

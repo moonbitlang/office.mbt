@@ -886,7 +886,8 @@ MoonBit consequences for this project:
     debug-line rendering. Annotation support is
     started with typed subtypes, borders, colours, byte-preserving
     contents/subjects, page annotation reading with popup-parent filtering,
-    page-record annotation insertion, and geometry transforms for `/Rect`,
+    page-record annotation insertion, CamlPDF-compatible `/Unknown`
+    serialization for unknown subtypes, and geometry transforms for `/Rect`,
     `/QuadPoints`, and `/L`. Date support is started with typed PDF dates,
     CamlPDF-compatible default fields, Distiller Y2K recovery, checked ranges,
     borrowed `BytesView`/owned `Bytes` parsing, PDF date string/byte rendering,
