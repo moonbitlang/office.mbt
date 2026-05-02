@@ -435,7 +435,11 @@ pub fn point2(Double, Double) -> Point2
 
 pub fn stream_to_get(ByteCursor, Int, Int) -> ToGet
 
+pub fn transform_append(ArrayView[TransformOp], ArrayView[TransformOp]) -> Array[TransformOp]
+
 pub fn transform_apply_ops(ArrayView[TransformOp], Point2) -> Point2
+
+pub fn transform_compose_op(TransformOp, ArrayView[TransformOp]) -> Array[TransformOp]
 
 pub let transform_identity_matrix : TransformMatrix
 

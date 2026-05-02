@@ -131,6 +131,59 @@ pub fn transform_shear_y(origin : Point2, factor : Double) -> TransformMatrix {
 }
 
 ///|
+fn transform_ops_with_head(
+  head : TransformOp,
+  tail : ArrayView[TransformOp],
+) -> Array[TransformOp] {
+  let output = [head]
+  for item in tail {
+    output.push(item)
+  }
+  output
+}
+
+///|
+pub fn transform_compose_op(
+  op : TransformOp,
+  ops : ArrayView[TransformOp],
+) -> Array[TransformOp] {
+  if ops.length() == 0 {
+    [op]
+  } else {
+    let head = ops[0]
+    let rest = ops[1:]
+    match (head, op) {
+      (Translate(dx, dy), Translate(dx2, dy2)) =>
+        transform_ops_with_head(Translate(dx + dx2, dy + dy2), rest)
+      (Scale(origin, sx, sy), Scale(origin2, sx2, sy2)) if origin == origin2 =>
+        transform_ops_with_head(Scale(origin, sx * sx2, sy * sy2), rest)
+      (Rotate(origin, angle), Rotate(origin2, angle2)) if origin == origin2 =>
+        transform_ops_with_head(Rotate(origin, angle + angle2), rest)
+      (ShearX(origin, factor), ShearX(origin2, factor2)) if origin == origin2 =>
+        transform_ops_with_head(ShearX(origin, factor + factor2), rest)
+      (ShearY(origin, factor), ShearY(origin2, factor2)) if origin == origin2 =>
+        transform_ops_with_head(ShearY(origin, factor + factor2), rest)
+      _ => transform_ops_with_head(op, ops)
+    }
+  }
+}
+
+///|
+pub fn transform_append(
+  after : ArrayView[TransformOp],
+  before : ArrayView[TransformOp],
+) -> Array[TransformOp] {
+  let output : Array[TransformOp] = []
+  for item in after {
+    output.push(item)
+  }
+  for item in before {
+    output.push(item)
+  }
+  output
+}
+
+///|
 pub fn TransformMatrix::apply(self : TransformMatrix, point : Point2) -> Point2 {
   {
     x: point.x * self.a + point.y * self.c + self.e,

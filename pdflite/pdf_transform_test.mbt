@@ -94,6 +94,69 @@ test "Transform operations preserve CamlPDF list ordering" {
 }
 
 ///|
+test "transform_compose_op merges like operations at the head" {
+  let origin = @pdflite.point2(1.0, 2.0)
+  @test.assert_eq(@pdflite.transform_compose_op(Translate(1.0, 2.0), []), [
+    Translate(1.0, 2.0),
+  ])
+  let tail : Array[@pdflite.TransformOp] = [
+    Scale(origin, 2.0, 3.0),
+    Translate(4.0, 5.0),
+  ]
+  @test.assert_eq(
+    @pdflite.transform_compose_op(Scale(origin, 5.0, 7.0), tail),
+    [Scale(origin, 10.0, 21.0), Translate(4.0, 5.0)],
+  )
+  @test.assert_eq(
+    @pdflite.transform_compose_op(Translate(6.0, 7.0), [
+      Translate(1.0, 2.0),
+      Rotate(origin, 0.5),
+    ]),
+    [Translate(7.0, 9.0), Rotate(origin, 0.5)],
+  )
+  @test.assert_eq(
+    @pdflite.transform_compose_op(Rotate(origin, 0.25), [Rotate(origin, 0.5)]),
+    [Rotate(origin, 0.75)],
+  )
+  @test.assert_eq(
+    @pdflite.transform_compose_op(ShearX(origin, 0.25), [ShearX(origin, 0.5)]),
+    [ShearX(origin, 0.75)],
+  )
+  @test.assert_eq(
+    @pdflite.transform_compose_op(ShearY(origin, 0.25), [ShearY(origin, 0.5)]),
+    [ShearY(origin, 0.75)],
+  )
+  @test.assert_eq(
+    @pdflite.transform_compose_op(
+      Scale(@pdflite.point2(0.0, 0.0), 2.0, 2.0),
+      tail,
+    ),
+    [
+      Scale(@pdflite.point2(0.0, 0.0), 2.0, 2.0),
+      Scale(origin, 2.0, 3.0),
+      Translate(4.0, 5.0),
+    ],
+  )
+}
+
+///|
+test "transform_append preserves CamlPDF transform-list order" {
+  let after : Array[@pdflite.TransformOp] = [Translate(10.0, 20.0)]
+  let before : Array[@pdflite.TransformOp] = [
+    Scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0),
+  ]
+  let appended = @pdflite.transform_append(after, before)
+  @test.assert_eq(appended, [
+    Translate(10.0, 20.0),
+    Scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0),
+  ])
+  @test.assert_eq(
+    @pdflite.transform_apply_ops(appended, @pdflite.point2(1.0, 1.0)),
+    @pdflite.point2(12.0, 23.0),
+  )
+}
+
+///|
 test "transform_matrix_of_op covers direct operation variants" {
   let quarter_turn = @pdflite.transform_matrix_of_op(
     Rotate(@pdflite.point2(0.0, 0.0), 1.5707963267948966),
