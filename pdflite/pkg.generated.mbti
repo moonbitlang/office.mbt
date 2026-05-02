@@ -19,6 +19,8 @@ pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
 
 pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
 
+pub fn byte_output_new(initial_size? : Int) -> ByteOutput raise PdfError
+
 pub let paper_a0 : PaperSize
 
 pub let paper_a1 : PaperSize
@@ -691,6 +693,19 @@ pub fn ByteCursor::rewind(Self) -> Unit raise PdfError
 pub fn ByteCursor::seek(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::source(Self) -> String
+
+pub struct ByteOutput {
+  data : Array[Byte]
+  mut position : Int
+  mut written_length : Int
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ByteOutput::length(Self) -> Int
+pub fn ByteOutput::position(Self) -> Int
+pub fn ByteOutput::seek(Self, Int) -> Unit raise PdfError
+pub fn ByteOutput::to_bytes(Self) -> Bytes
+pub fn ByteOutput::write_ascii(Self, String) -> Unit raise PdfError
+pub fn ByteOutput::write_byte(Self, Int) -> Unit raise PdfError
+pub fn ByteOutput::write_view(Self, BytesView) -> Unit raise PdfError
 
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
