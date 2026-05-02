@@ -2184,20 +2184,51 @@ test "PdfDocument change_pages transforms named destination definitions" {
 }
 
 ///|
-test "PdfDocument change_pages rejects reference renumbering when counts differ" {
+test "PdfDocument change_pages leaves references when count differs without mapping" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_xyz = page_name_for_test("/XYZ")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
     @pdflite.pdf_page_blank(@pdflite.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
-  let result : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
+  let old_numbers = try! doc.page_reference_numbers()
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfIndirect(old_numbers[1]),
+        PdfNameObject(type_xyz),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  )
+  let changed = try! doc.change_pages(
     [@pdflite.pdf_page_blank(@pdflite.paper_a4)],
     change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
   )
-  guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
-    fail("expected PageTreeExpected")
-  }
+  @test.assert_eq((try! changed.page_reference_numbers()).length(), 1)
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(
+      PdfArray([
+        PdfIndirect(old_numbers[1]),
+        PdfNameObject(type_xyz),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  )
 }
 
 ///|

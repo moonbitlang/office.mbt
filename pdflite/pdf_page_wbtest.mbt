@@ -565,6 +565,13 @@ test "private page selection annotation and destination helpers cover fallbacks"
   guard bad_number is Err(PdfError::PageTreeExpected) else {
     fail("expected invalid selection rejection")
   }
+  let bad_reference_changes : Result[Array[(Int, Int)], Error] = try? pdf_page_reference_changes(
+    [1, 2],
+    [3],
+  )
+  guard bad_reference_changes is Err(PdfError::PageTreeExpected) else {
+    fail("expected reference change length rejection")
+  }
   @test.assert_eq(pdf_page_number_index([1, 2], 9), None)
 
   let doc = pdf_document_empty()

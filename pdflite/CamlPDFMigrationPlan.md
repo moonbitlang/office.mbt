@@ -478,8 +478,11 @@ MoonBit consequences for this project:
    replacement page tree in a copied document and can renumber same-count old
    page indirect references to the new page objects. Its optional `changes`
    parameter now ports CamlPDF's explicit 1-based old/new page serial mapping
-   for count-changing replacements. Matrix-aware destination rewrites are now
-   started for `change_pages` callers that supply page matrices: bookmark
+   for count-changing replacements. When no explicit mapping is supplied for a
+   count-changing replacement, `change_pages` now mirrors CamlPDF by leaving
+   existing references unchanged instead of rejecting the replacement.
+   Matrix-aware destination rewrites are now started for `change_pages` callers
+   that supply page matrices: bookmark
    targets, indirect and direct link annotation `/Dest` or GoTo `/A`
    destinations, and catalog `/OpenAction` destinations are transformed after
    page-reference renumbering. Named destination definitions in old-style

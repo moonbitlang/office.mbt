@@ -1462,6 +1462,8 @@ pub fn PdfDocument::change_pages(
       pdf_page_reference_changes_from_serials(
         old_page_numbers, new_page_numbers, changes,
       )
+    } else if old_page_numbers.length() != new_page_numbers.length() {
+      []
     } else {
       pdf_page_reference_changes(old_page_numbers, new_page_numbers)
     }
