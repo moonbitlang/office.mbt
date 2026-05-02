@@ -409,6 +409,81 @@ fn pdf_flate_push_stored_block(
 }
 
 ///|
+priv struct FlateBitWriter {
+  output : Array[Byte]
+  mut current_byte : Int
+  mut bit_count : Int
+}
+
+///|
+fn FlateBitWriter::new(output : Array[Byte]) -> FlateBitWriter {
+  { output, current_byte: 0, bit_count: 0 }
+}
+
+///|
+fn FlateBitWriter::write_bits(
+  self : FlateBitWriter,
+  value : UInt,
+  width : Int,
+) -> Unit {
+  for bit_index in 0..<width {
+    if ((value >> bit_index) & 1) == 1 {
+      self.current_byte = self.current_byte | (1 << self.bit_count)
+    }
+    self.bit_count += 1
+    if self.bit_count == 8 {
+      self.output.push(self.current_byte.to_byte())
+      self.current_byte = 0
+      self.bit_count = 0
+    }
+  }
+}
+
+///|
+fn FlateBitWriter::finish(self : FlateBitWriter) -> Unit {
+  if self.bit_count > 0 {
+    self.output.push(self.current_byte.to_byte())
+    self.current_byte = 0
+    self.bit_count = 0
+  }
+}
+
+///|
+fn pdf_flate_fixed_literal_code(symbol : Int) -> (UInt, Int) {
+  if symbol <= 143 {
+    ((0x30 + symbol).reinterpret_as_uint(), 8)
+  } else if symbol <= 255 {
+    ((0x190 + symbol - 144).reinterpret_as_uint(), 9)
+  } else if symbol <= 279 {
+    ((symbol - 256).reinterpret_as_uint(), 7)
+  } else {
+    ((0xC0 + symbol - 280).reinterpret_as_uint(), 8)
+  }
+}
+
+///|
+fn pdf_flate_write_fixed_literal(writer : FlateBitWriter, symbol : Int) -> Unit {
+  let (code, width) = pdf_flate_fixed_literal_code(symbol)
+  writer.write_bits(pdf_flate_reverse_bits(code, width), width)
+}
+
+///|
+fn pdf_flate_push_fixed_literal_block(
+  output : Array[Byte],
+  data : BytesView,
+  final_block : Bool,
+) -> Unit {
+  let writer = FlateBitWriter::new(output)
+  writer.write_bits(if final_block { 1 } else { 0 }, 1)
+  writer.write_bits(1, 2)
+  for byte in data {
+    pdf_flate_write_fixed_literal(writer, byte.to_int())
+  }
+  pdf_flate_write_fixed_literal(writer, 256)
+  writer.finish()
+}
+
+///|
 fn pdf_flate_push_adler32(output : Array[Byte], data : BytesView) -> Unit {
   let (s1, s2) = pdf_flate_adler32(data)
   output.push(((s2 >> 8) & 0xFF).to_byte())
@@ -418,7 +493,7 @@ fn pdf_flate_push_adler32(output : Array[Byte], data : BytesView) -> Unit {
 }
 
 ///|
-pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
+fn pdf_flate_encode_stored_view(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = [0x78, 0x01]
   if data.length() == 0 {
     pdf_flate_push_stored_block(output, data, 0, 0, true)
@@ -439,6 +514,25 @@ pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
   }
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
+}
+
+///|
+fn pdf_flate_encode_fixed_literal_view(data : BytesView) -> PdfBytes {
+  let output : Array[Byte] = [0x78, 0x01]
+  pdf_flate_push_fixed_literal_block(output, data, true)
+  pdf_flate_push_adler32(output, data)
+  Bytes::from_array(output)
+}
+
+///|
+pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
+  let stored = pdf_flate_encode_stored_view(data)
+  let fixed = pdf_flate_encode_fixed_literal_view(data)
+  if fixed.length() < stored.length() {
+    fixed
+  } else {
+    stored
+  }
 }
 
 ///|

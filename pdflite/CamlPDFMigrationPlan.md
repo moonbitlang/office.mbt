@@ -372,8 +372,10 @@ MoonBit consequences for this project:
    byte codecs, with borrowed dispatch APIs for encode/decode when callers
    already hold slices. Low-level Flate decode is started for zlib-wrapped stored,
    fixed-Huffman, and dynamic-Huffman DEFLATE blocks with Adler-32 validation;
-   Flate encode emits valid zlib stored blocks for semantic round-tripping,
-   leaving compression-ratio work for later.
+   Flate encode now chooses between zlib stored blocks and compact
+   fixed-Huffman literal blocks, keeping stored blocks as the fallback for data
+   where literal Huffman output would be larger. Length/distance compression and
+   higher-ratio dynamic-Huffman output remain deferred.
    Low-level LZW decode is started with clear/EOD handling and default
    EarlyChange 1; owned stream decode reads direct first-stage `/EarlyChange`
    from `/DecodeParms` or `/DP` for `/LZWDecode`/`/LZW`. Owned `StreamGot`

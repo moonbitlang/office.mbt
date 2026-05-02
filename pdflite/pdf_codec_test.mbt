@@ -353,7 +353,7 @@ test "pdf_flate_decode reports malformed zlib data" {
 }
 
 ///|
-test "pdf_flate_encode emits zlib stored blocks" {
+test "pdf_flate_encode chooses compact zlib blocks" {
   @test.assert_eq(
     try! @pdflite.pdf_flate_decode(
       @pdflite.pdf_flate_encode(codec_bytes_for_test([])),
@@ -363,12 +363,23 @@ test "pdf_flate_encode emits zlib stored blocks" {
   let encoded = @pdflite.pdf_flate_encode(codec_ascii_for_test("Hi"))
   @test.assert_eq(
     encoded,
-    codec_bytes_for_test([120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    codec_bytes_for_test([120, 1, 243, 200, 4, 0, 0, 251, 0, 178]),
   )
   @test.assert_eq(
     try! @pdflite.pdf_flate_decode(encoded),
     codec_ascii_for_test("Hi"),
   )
+  let high_bytes = try! @pdflite.pdf_bytes_of_int_array(
+    [
+      for _ in 0..<32 => 255
+    ],
+  )
+  let stored = @pdflite.pdf_flate_encode(high_bytes)
+  @test.assert_eq(stored.length(), 43)
+  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(stored[:7]), [
+    120, 1, 1, 32, 0, 223, 255,
+  ])
+  @test.assert_eq(try! @pdflite.pdf_flate_decode(stored), high_bytes)
 }
 
 ///|
@@ -380,7 +391,7 @@ test "pdf_flate view codecs read borrowed slices" {
   )
   @test.assert_eq(
     encoded,
-    codec_bytes_for_test([120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    codec_bytes_for_test([120, 1, 243, 200, 4, 0, 0, 251, 0, 178]),
   )
   let wrapped_encoded = codec_wrap_view_for_test("xx", encoded[:], "yy")
   @test.assert_eq(
@@ -492,7 +503,7 @@ test "pdf_encode_filter_bytes dispatches supported filter names" {
       codec_name_for_test("/FlateDecode"),
       codec_ascii_for_test("Hi"),
     ),
-    codec_bytes_for_test([120, 1, 1, 2, 0, 253, 255, 72, 105, 0, 251, 0, 178]),
+    codec_bytes_for_test([120, 1, 243, 200, 4, 0, 0, 251, 0, 178]),
   )
 }
 

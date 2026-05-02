@@ -1373,6 +1373,10 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   guard repeated_overflow is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData")
   }
+  let (length_code, length_width) = pdf_flate_fixed_literal_code(280)
+  let expected_length_code = 192
+  @test.assert_eq(length_code, expected_length_code.reinterpret_as_uint())
+  @test.assert_eq(length_width, 8)
   @test.assert_eq(
     try! pdf_flate_decode_view_prefix(Bytes::new(0)[:]),
     (Bytes::new(0), 0),
