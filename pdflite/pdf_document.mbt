@@ -419,6 +419,34 @@ pub fn PdfDocument::parsed_object_entries(
 }
 
 ///|
+pub fn PdfDocument::iter_objects(
+  self : PdfDocument,
+  callback : (Int, PdfObject) -> Unit raise,
+) -> Unit raise {
+  self.iter_objects_in_order(callback)
+}
+
+///|
+pub fn PdfDocument::iter_objects_in_order(
+  self : PdfDocument,
+  callback : (Int, PdfObject) -> Unit raise,
+) -> Unit raise {
+  for entry in self.parsed_object_entries() {
+    callback(entry.0, entry.2)
+  }
+}
+
+///|
+pub fn PdfDocument::iter_objects_with_generation(
+  self : PdfDocument,
+  callback : (Int, Int, PdfObject) -> Unit raise,
+) -> Unit raise {
+  for entry in self.parsed_object_entries() {
+    callback(entry.0, entry.1, entry.2)
+  }
+}
+
+///|
 pub fn PdfDocument::stream_object_entries(
   self : PdfDocument,
 ) -> Array[(Int, Int, PdfStream)] {

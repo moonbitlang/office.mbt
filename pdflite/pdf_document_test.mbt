@@ -271,6 +271,28 @@ test "PdfDocument parsed_object_entries delegates sorted parsed entries" {
 }
 
 ///|
+test "PdfDocument object iteration visits sorted parsed objects" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, PdfInteger(40), generation=2)
+  doc.add_object_given_number(1, PdfInteger(10), generation=3)
+  let seen : Array[(Int, @pdflite.PdfObject)] = []
+  try! doc.iter_objects(fn(number, object) { seen.push((number, object)) })
+  @test.assert_eq(seen, [(1, PdfInteger(10)), (4, PdfInteger(40))])
+  let with_generation : Array[(Int, Int, @pdflite.PdfObject)] = []
+  try! doc.iter_objects_with_generation(fn(number, generation, object) {
+    with_generation.push((number, generation, object))
+  })
+  @test.assert_eq(with_generation, [
+    (1, 3, PdfInteger(10)),
+    (4, 2, PdfInteger(40)),
+  ])
+  let failed : Result[Unit, Error] = try? doc.iter_objects(fn(_, _) raise {
+    fail("stop")
+  })
+  guard failed is Err(_) else { fail("expected callback failure") }
+}
+
+///|
 test "PdfDocument stream_object_entries delegates stream entries" {
   let doc = @pdflite.pdf_document_empty()
   let stream_object = @pdflite.pdf_stream(

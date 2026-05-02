@@ -149,6 +149,7 @@ MoonBit consequences for this project:
    document defaults, checked catalog lookup, add/remove object logging,
    explicit object-entry collection construction, object-number selection,
    parsed object-entry and stream-entry snapshots with generation numbers,
+   deterministic object-number/generation callback iteration,
    raising-callback stream-object iteration, in-place object mapping that
    preserves parsed-state tags, and tests preserving CamlPDF's new-key
    dictionary order. Immediate dictionary-only indirect lookup is ported for
