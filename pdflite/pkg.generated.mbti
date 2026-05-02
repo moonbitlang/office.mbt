@@ -183,6 +183,8 @@ pub fn pdf_generate_id(String, () -> Double) -> PdfObject
 
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
+pub fn pdf_is_linearized(BytesView) -> Bool
+
 pub fn pdf_is_newline_byte(Int) -> Bool
 
 pub fn pdf_is_not_whitespace_byte(Int) -> Bool

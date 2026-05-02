@@ -235,10 +235,11 @@ MoonBit consequences for this project:
    Xref-stream `/Prev` chains are also covered, including newer updates and
    free entries hiding older objects. The reader now mirrors CamlPDF's
    non-fatal first-object `/Linearized` probe and records the result in
-   `PdfDocument::was_linearized`. Final trailer cleanup now mirrors CamlPDF's
-   removal of xref machinery keys such as `/Prev`, `/XRefStm`, `/W`, `/Index`,
-   `/Type`, `/Filter`, and `/DecodeParms`, while deriving `/Size` from the
-   loaded document object map. A first malformed-file reconstruction path is
+   `PdfDocument::was_linearized`; the byte-level probe is exposed as
+   `pdf_is_linearized`. Final trailer cleanup now mirrors CamlPDF's removal of
+   xref machinery keys such as `/Prev`, `/XRefStm`, `/W`, `/Index`, `/Type`,
+   `/Filter`, and `/DecodeParms`, while deriving `/Size` from the loaded
+   document object map. A first malformed-file reconstruction path is
    started for public reads with missing `startxref`, a `startxref` pointer
    that is not an xref section or is past EOF, malformed xref rows, malformed
    trailer syntax, a strict-read trailer missing `/Root`, or xref rows pointing

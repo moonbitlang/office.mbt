@@ -1179,6 +1179,26 @@ test "pdf_read_document_from_bytes records linearized first-object marker" {
 }
 
 ///|
+test "pdf_is_linearized probes byte input without full parsing" {
+  @test.assert_eq(
+    @pdflite.pdf_is_linearized(reader_linearized_classic_pdf("1")[:]),
+    true,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_is_linearized(reader_linearized_classic_pdf("/Name")[:]),
+    false,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_is_linearized(reader_classic_pdf_with_leading_junk()[:]),
+    false,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_is_linearized(reader_pdf_ascii("not a pdf")[:]),
+    false,
+  )
+}
+
+///|
 test "pdf_read_document_from_bytes reconstructs missing startxref PDFs" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_malformed_pdf_without_startxref(),

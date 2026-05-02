@@ -771,6 +771,11 @@ fn pdf_read_was_linearized(data : BytesView) -> Bool {
 }
 
 ///|
+pub fn pdf_is_linearized(data : BytesView) -> Bool {
+  pdf_read_was_linearized(data)
+}
+
+///|
 fn ByteCursor::resolve_classic_stream_length(
   self : ByteCursor,
   object : PdfObject,
