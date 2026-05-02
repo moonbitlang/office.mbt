@@ -313,6 +313,21 @@ pub fn PdfDocument::object_numbers(self : PdfDocument) -> Array[Int] {
 }
 
 ///|
+pub fn PdfDocument::select_object_numbers(
+  self : PdfDocument,
+  predicate : (PdfObject) -> Bool,
+) -> Array[Int] {
+  let selected : Array[Int] = []
+  for number in self.object_numbers() {
+    let object = self.lookup_object_or_null(number)
+    if predicate(object) {
+      selected.push(number)
+    }
+  }
+  selected
+}
+
+///|
 pub fn PdfDocument::add_object(
   self : PdfDocument,
   object : PdfObject,

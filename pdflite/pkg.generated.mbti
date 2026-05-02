@@ -1000,6 +1000,7 @@ pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
 pub fn PdfDocument::saved_encryption(Self) -> PdfSavedEncryption?
+pub fn PdfDocument::select_object_numbers(Self, (PdfObject) -> Bool) -> Array[Int]
 pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
 pub fn PdfDocument::set_revision_read(Self, Int) -> Unit
 pub fn PdfDocument::set_root(Self, Int) -> Unit

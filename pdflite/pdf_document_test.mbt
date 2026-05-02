@@ -94,6 +94,24 @@ test "PdfDocument object helpers delegate to document object state" {
 }
 
 ///|
+test "PdfDocument select_object_numbers filters sorted parsed objects" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    3,
+    PdfString(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  doc.add_object_given_number(1, PdfInteger(10))
+  doc.add_object_given_number(2, PdfNull)
+  @test.assert_eq(
+    doc.select_object_numbers(fn(object) { object is PdfInteger(_) }),
+    [1],
+  )
+  @test.assert_eq(doc.select_object_numbers(fn(object) { object == PdfNull }), [
+    2,
+  ])
+}
+
+///|
 test "PdfDocument copy preserves metadata and separates object map state" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 6)
