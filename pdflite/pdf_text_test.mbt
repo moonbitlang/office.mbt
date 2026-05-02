@@ -4640,6 +4640,61 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
 }
 
 ///|
+test "PdfTextExtractor decodes general punctuation AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/afii00208", 0x2015),
+    ("/afii299", 0x200E),
+    ("/afii300", 0x200F),
+    ("/afii301", 0x200D),
+    ("/afii61573", 0x202C),
+    ("/afii61574", 0x202D),
+    ("/afii61575", 0x202E),
+    ("/afii61664", 0x200C),
+    ("/asterism", 0x2042),
+    ("/dbllowline", 0x2017),
+    ("/dblverticalbar", 0x2016),
+    ("/enspace", 0x2002),
+    ("/exclamdbl", 0x203C),
+    ("/horizontalbar", 0x2015),
+    ("/hyphentwo", 0x2010),
+    ("/overline", 0x203E),
+    ("/primereversed", 0x2035),
+    ("/quoteleftreversed", 0x201B),
+    ("/quotereversed", 0x201B),
+    ("/referencemark", 0x203B),
+    ("/twodotleader", 0x2025),
+    ("/underscoredbl", 0x2017),
+    ("/zerowidthnonjoiner", 0x200C),
+    ("/zerowidthspace", 0x200B),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2015), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2017), Some(10))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x200C), Some(8))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x200B), Some(24))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),
