@@ -3977,7 +3977,9 @@ fn pdf_text_truetype_glyphname_codepoints(base : BytesView) -> Array[Int]? {
     None => return None
   }
   let value = high * 16 + low
-  if value == 0x6D && pdf_text_upper_hex_letter(base[3]) {
+  if base[2].to_int() == 65 && base[3].to_int() == 54 {
+    Some([0x00B6])
+  } else if value == 0x6D && pdf_text_upper_hex_letter(base[3]) {
     Some([0x002D])
   } else if (value >= 0x20 && value <= 0x7E) || (value >= 0xA0 && value <= 0xFF) {
     Some([value])

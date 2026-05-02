@@ -4653,19 +4653,21 @@ test "PdfTextExtractor decodes TrueType Gxx glyph names" {
         text_difference_for_test("/GG2", 6),
         text_difference_for_test("/G2G", 7),
         text_difference_for_test("/G81", 8),
+        text_difference_for_test("/GA6", 9),
+        text_difference_for_test("/Ga6", 10),
       ]),
     ),
   )
   let extractor = standard_font.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
-      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8])[:],
+      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])[:],
     ),
-    [0x201A, 0x0160, 0x008A, 0x002D, 0x00F0, 6, 7, 8],
+    [0x201A, 0x0160, 0x008A, 0x002D, 0x00F0, 6, 7, 8, 0x00B6, 0x00A6],
   )
   @test.assert_eq(
     try! extractor.glyphnames_of_text(
-      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8])[:],
+      text_bytes_for_test([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])[:],
     ),
     [
       text_name_for_test("/G82"),
@@ -4676,12 +4678,16 @@ test "PdfTextExtractor decodes TrueType Gxx glyph names" {
       text_name_for_test("/GG2"),
       text_name_for_test("/G2G"),
       text_name_for_test("/G81"),
+      text_name_for_test("/GA6"),
+      text_name_for_test("/Ga6"),
     ],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x201A), Some(1))
   @test.assert_eq(extractor.charcode_of_codepoint(0x0160), Some(2))
   @test.assert_eq(extractor.charcode_of_codepoint(0x008A), Some(3))
   @test.assert_eq(extractor.charcode_of_codepoint(0x00F0), Some(5))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00B6), Some(9))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00A6), Some(10))
 }
 
 ///|
