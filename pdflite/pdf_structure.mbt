@@ -175,20 +175,8 @@ fn pdf_structure_k_object(items : ArrayView[PdfObject]) -> PdfObject {
 fn PdfDocument::pdf_structure_parent_tree_catalog(
   self : PdfDocument,
 ) -> PdfObject? {
-  match self.trailer_dict().lookup_immediate(pdf_structure_root_key()) {
-    Some(root) =>
-      match self.direct(root) {
-        PdfNull => None
-        catalog => Some(catalog)
-      }
-    None => {
-      let root = self.lookup_object_or_null(self.root())
-      if root == PdfNull {
-        None
-      } else {
-        Some(root)
-      }
-    }
+  Some(self.catalog()) catch {
+    _ => None
   }
 }
 

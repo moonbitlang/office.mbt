@@ -137,20 +137,7 @@ fn pdf_merge_parent_tree_key() -> PdfName {
 fn PdfDocument::pdf_merge_catalog(
   self : PdfDocument,
 ) -> PdfObject raise PdfError {
-  match self.trailer_dict().lookup_immediate(pdf_merge_root_key()) {
-    Some(root) =>
-      match self.direct(root) {
-        PdfNull => raise RootExpected
-        catalog => catalog
-      }
-    None => {
-      let root = self.lookup_object_or_null(self.root())
-      if root == PdfNull {
-        raise RootExpected
-      }
-      root
-    }
-  }
+  self.catalog()
 }
 
 ///|

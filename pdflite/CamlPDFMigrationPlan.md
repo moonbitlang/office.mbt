@@ -166,8 +166,10 @@ MoonBit consequences for this project:
    preserves parsed-state tags, and tests preserving CamlPDF's new-key
    dictionary order. Public catalog lookup now resolves trailer `/Root` first,
    while retaining the document-root fallback used by synthetic tests without
-   a trailer root. Immediate dictionary-only indirect lookup is ported for
-   object-level helpers. CamlPDF-style
+   a trailer root, and feature-level catalog readers for bookmarks,
+   destinations, merge, page labels, optional content, and structure
+   parent-tree reads now share that core path. Immediate dictionary-only
+   indirect lookup is ported for object-level helpers. CamlPDF-style
    `unique_key` dictionary-name selection is ported for dictionaries and stream
    dictionaries, using ASCII-prefixed PDF names. Direct indirection resolution
    and direct dictionary lookup, required dictionary lookup with caller-chosen

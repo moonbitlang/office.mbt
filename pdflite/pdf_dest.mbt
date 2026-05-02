@@ -19,11 +19,6 @@ fn pdf_dest_goto_name() -> PdfName {
 }
 
 ///|
-fn pdf_dest_root_key() -> PdfName {
-  pdf_dest_name("/Root")
-}
-
-///|
 fn pdf_dest_dests_key() -> PdfName {
   pdf_dest_name("/Dests")
 }
@@ -134,20 +129,7 @@ fn pdf_dest_bytes_equal(left : PdfBytes, right : PdfBytes) -> Bool {
 fn PdfDocument::pdf_dest_catalog(
   self : PdfDocument,
 ) -> PdfObject raise PdfError {
-  match self.trailer_dict().lookup_immediate(pdf_dest_root_key()) {
-    Some(root) =>
-      match self.direct(root) {
-        PdfNull => raise RootExpected
-        catalog => catalog
-      }
-    None => {
-      let root = self.lookup_object_or_null(self.root())
-      if root == PdfNull {
-        raise RootExpected
-      }
-      root
-    }
-  }
+  self.catalog()
 }
 
 ///|

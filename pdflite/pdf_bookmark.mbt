@@ -77,20 +77,7 @@ fn pdf_bookmark_flags_key() -> PdfName {
 fn PdfDocument::pdf_bookmark_catalog(
   self : PdfDocument,
 ) -> PdfObject raise PdfError {
-  match self.trailer_dict().lookup_immediate(pdf_bookmark_root_key()) {
-    Some(root) =>
-      match self.direct(root) {
-        PdfNull => raise RootExpected
-        catalog => catalog
-      }
-    None => {
-      let root = self.lookup_object_or_null(self.root())
-      if root == PdfNull {
-        raise RootExpected
-      }
-      root
-    }
-  }
+  self.catalog()
 }
 
 ///|
