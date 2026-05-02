@@ -1374,6 +1374,63 @@ test "PdfDocument pdf_decode_streams_until_unknown mutates document streams" {
 }
 
 ///|
+test "pdfdecomp-style stream decompression survives writer reader round trip" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let type_name = codec_name_for_test("/Type")
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 4)
+  document.set_root(1)
+  document.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (type_name, PdfNameObject(codec_name_for_test("/Catalog"))),
+    ]),
+  )
+  let encoded = @pdflite.pdf_ascii_hex_encode(codec_ascii_for_test("Hi"))
+  let unsupported : @pdflite.PdfObject = PdfNameObject(
+    codec_name_for_test("/NoSuchFilter"),
+  )
+  document.add_object_given_number(
+    2,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (length, PdfInteger(encoded.length())),
+        (
+          filter,
+          PdfArray([
+            PdfNameObject(codec_name_for_test("/ASCIIHexDecode")),
+            unsupported,
+          ]),
+        ),
+        (decodeparms, PdfArray([PdfNull, PdfNull])),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  try! document.pdf_decode_streams_until_unknown()
+  let written = try! @pdflite.pdf_write_document(document)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(written)
+  guard parsed.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected decompressed stream")
+  }
+  @test.assert_eq(stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(length),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(filter),
+    Some(PdfArray([unsupported])),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(decodeparms),
+    Some(PdfArray([PdfNull])),
+  )
+}
+
+///|
 test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inputs" {
   let length = codec_name_for_test("/Length")
   let filter = codec_name_for_test("/Filter")

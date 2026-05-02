@@ -433,12 +433,14 @@ MoonBit consequences for this project:
    `pdf_decode_streams_until_unknown` helper also starts the `pdfdecomp.ml`
    workflow by replacing every parsed stream with its decoded-until-unknown
    form, preserving object generation numbers and already-decrypted parser
-   state. Content streams, sampled functions, indexed colour lookup streams,
-   ToUnicode CMap streams, and staged image decoding now use the document-aware
-   stream decoder internally, so indirect filter metadata is honored across
-   those callers. Reader object-stream extraction also uses document-aware
-   decoding after the object map is loaded. Higher-ratio Flate compression and
-   other filters remain deferred.
+   state; a writer/reader acceptance fixture checks that decoded streams and
+   unsupported tail filters survive serialization. Content streams, sampled
+   functions, indexed colour lookup streams, ToUnicode CMap streams, and staged
+   image decoding now use the document-aware stream decoder internally, so
+   indirect filter metadata is honored across those callers. Reader
+   object-stream extraction also uses document-aware decoding after the object
+   map is loaded. Higher-ratio Flate compression and other filters remain
+   deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
