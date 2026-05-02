@@ -293,6 +293,8 @@ pub fn pdf_page_label_of_page_number(Int, ArrayView[PdfPageLabel]) -> PdfPageLab
 
 pub fn pdf_page_label_of_single(Int, PdfPageLabel) -> PdfPageLabel
 
+pub fn pdf_page_label_style_of_string(String) -> PdfPageLabelStyle raise PdfError
+
 pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes?
 
 pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
@@ -402,6 +404,8 @@ pub fn pdf_stream(PdfObject, PdfStreamData) -> PdfObject
 pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
 
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
+
+pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 
 pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
 
@@ -564,6 +568,7 @@ pub(all) suberror PdfError {
   CIDWidths2Expected
   DescendantFontExpected
   CMapEncodingExpected
+  PageLabelStyleExpected(String)
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
 
@@ -1420,6 +1425,7 @@ pub(all) enum PdfPageLabelStyle {
   PageLabelLowercaseLetters
   PageLabelNoLabelPrefixOnly
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPageLabelStyle::debug_name(Self) -> String
 
 pub(all) enum PdfPageRotation {
   Rotate0

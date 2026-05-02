@@ -89,6 +89,7 @@ pub(all) suberror PdfError {
   CIDWidths2Expected
   DescendantFontExpected
   CMapEncodingExpected
+  PageLabelStyleExpected(String)
   EndOfInput
 } derive(Debug, Eq, ToJson)
 

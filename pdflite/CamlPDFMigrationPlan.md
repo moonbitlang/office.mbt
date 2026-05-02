@@ -858,8 +858,10 @@ MoonBit consequences for this project:
     number-tree reading, replacement writing, empty-list removal, returned
     catalog-copy updates, basic completion, bounded range insertion,
     single-page label lookup, rendered label bytes for
-    decimal/roman/letter/prefix-only styles, adjacent range coalescing, and
-    merge-label construction for selected page ranges. Annotation support is
+    decimal/roman/letter/prefix-only styles, adjacent range coalescing,
+    merge-label construction for selected page ranges, CamlPDF-compatible
+    label-style debug string parsing/rendering, and byte-preserving page-label
+    debug-line rendering. Annotation support is
     started with typed subtypes, borders, colours, byte-preserving
     contents/subjects, page annotation reading with popup-parent filtering,
     page-record annotation insertion, and geometry transforms for `/Rect`,

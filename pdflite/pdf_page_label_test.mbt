@@ -9,6 +9,13 @@ fn page_label_bytes_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn page_label_bytes_from_ints_for_test(
+  values : ArrayView[Int],
+) -> @pdflite.PdfBytes {
+  try! @pdflite.pdf_bytes_of_int_array(values)
+}
+
+///|
 fn page_label_catalog_document_for_test() -> @pdflite.PdfDocument {
   let key_root = page_label_name_for_test("/Root")
   let key_type = page_label_name_for_test("/Type")
@@ -21,6 +28,67 @@ fn page_label_catalog_document_for_test() -> @pdflite.PdfDocument {
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
   doc
+}
+
+///|
+test "PdfPageLabelStyle converts to and from CamlPDF names" {
+  let styles : Array[(@pdflite.PdfPageLabelStyle, String)] = [
+    (PageLabelDecimalArabic, "DecimalArabic"),
+    (PageLabelUppercaseRoman, "UppercaseRoman"),
+    (PageLabelLowercaseRoman, "LowercaseRoman"),
+    (PageLabelUppercaseLetters, "UppercaseLetters"),
+    (PageLabelLowercaseLetters, "LowercaseLetters"),
+    (PageLabelNoLabelPrefixOnly, "NoLabelPrefixOnly"),
+  ]
+  for entry in styles {
+    @test.assert_eq(entry.0.debug_name(), entry.1)
+    @test.assert_eq(
+      try! @pdflite.pdf_page_label_style_of_string(entry.1),
+      entry.0,
+    )
+  }
+  let result : Result[@pdflite.PdfPageLabelStyle, Error] = try? @pdflite.pdf_page_label_style_of_string(
+    "Missing",
+  )
+  guard result is Err(@pdflite.PdfError::PageLabelStyleExpected("Missing")) else {
+    fail("expected PageLabelStyleExpected")
+  }
+}
+
+///|
+test "pdf_string_of_page_label renders CamlPDF debug bytes" {
+  let no_prefix : @pdflite.PdfPageLabel = {
+    label_style: PageLabelDecimalArabic,
+    label_prefix: None,
+    start_page: 1,
+    start_value: 1,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_string_of_page_label(no_prefix),
+    page_label_bytes_for_test(
+      "labelstyle: DecimalArabic\n" +
+      "labelprefix: None\n" +
+      "startpage: 1\n" +
+      "startvalue: 1\n",
+    ),
+  )
+  let prefix = page_label_bytes_from_ints_for_test([65, 0xFF])
+  let label : @pdflite.PdfPageLabel = {
+    label_style: PageLabelLowercaseRoman,
+    label_prefix: Some(prefix),
+    start_page: 3,
+    start_value: 7,
+  }
+  @test.assert_eq(
+    @pdflite.pdf_string_of_page_label(label),
+    page_label_bytes_from_ints_for_test([
+      108, 97, 98, 101, 108, 115, 116, 121, 108, 101, 58, 32, 76, 111, 119, 101,
+      114, 99, 97, 115, 101, 82, 111, 109, 97, 110, 10, 108, 97, 98, 101, 108, 112,
+      114, 101, 102, 105, 120, 58, 32, 65, 0xFF, 10, 115, 116, 97, 114, 116, 112,
+      97, 103, 101, 58, 32, 51, 10, 115, 116, 97, 114, 116, 118, 97, 108, 117, 101,
+      58, 32, 55, 10,
+    ]),
+  )
 }
 
 ///|

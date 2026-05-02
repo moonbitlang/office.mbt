@@ -72,6 +72,54 @@ pub(all) struct PdfPageLabel {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub fn PdfPageLabelStyle::debug_name(self : PdfPageLabelStyle) -> String {
+  match self {
+    PageLabelDecimalArabic => "DecimalArabic"
+    PageLabelUppercaseRoman => "UppercaseRoman"
+    PageLabelLowercaseRoman => "LowercaseRoman"
+    PageLabelUppercaseLetters => "UppercaseLetters"
+    PageLabelLowercaseLetters => "LowercaseLetters"
+    PageLabelNoLabelPrefixOnly => "NoLabelPrefixOnly"
+  }
+}
+
+///|
+pub fn pdf_page_label_style_of_string(
+  text : String,
+) -> PdfPageLabelStyle raise PdfError {
+  match text {
+    "DecimalArabic" => PageLabelDecimalArabic
+    "UppercaseRoman" => PageLabelUppercaseRoman
+    "LowercaseRoman" => PageLabelLowercaseRoman
+    "UppercaseLetters" => PageLabelUppercaseLetters
+    "LowercaseLetters" => PageLabelLowercaseLetters
+    "NoLabelPrefixOnly" => PageLabelNoLabelPrefixOnly
+    _ => raise PageLabelStyleExpected(text)
+  }
+}
+
+///|
+pub fn pdf_string_of_page_label(label : PdfPageLabel) -> PdfBytes {
+  let output : Array[Byte] = []
+  pdf_writer_push_ascii(output, "labelstyle: ")
+  pdf_writer_push_ascii(output, label.label_style.debug_name())
+  pdf_writer_push_byte(output, 10)
+  pdf_writer_push_ascii(output, "labelprefix: ")
+  match label.label_prefix {
+    Some(prefix) => pdf_writer_push_view(output, prefix[:])
+    None => pdf_writer_push_ascii(output, "None")
+  }
+  pdf_writer_push_byte(output, 10)
+  pdf_writer_push_ascii(output, "startpage: ")
+  pdf_writer_push_ascii(output, label.start_page.to_string())
+  pdf_writer_push_byte(output, 10)
+  pdf_writer_push_ascii(output, "startvalue: ")
+  pdf_writer_push_ascii(output, label.start_value.to_string())
+  pdf_writer_push_byte(output, 10)
+  Bytes::from_array(output)
+}
+
+///|
 pub let pdf_page_label_basic : PdfPageLabel = {
   label_style: PageLabelDecimalArabic,
   label_prefix: None,
