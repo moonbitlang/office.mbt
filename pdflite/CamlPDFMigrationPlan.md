@@ -249,6 +249,8 @@ MoonBit consequences for this project:
    `pdf_read_document_revision_from_view`/`_from_bytes`: revision `1` is the
    newest xref section, larger revision numbers skip newer sections and read
    older `/Prev` state, and invalid or missing revisions raise `BadRevision`.
+   The revision-specific path is covered for classic update chains and
+   xref-stream update/delete chains over an older classic base revision.
    Xref table line reading now accepts LF, CR, and CRLF terminators, so strict
    classic xref parsing handles CR-only files without falling back to
    reconstruction. Xref

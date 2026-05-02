@@ -22,7 +22,7 @@ work changes.
    malformed-separator tolerance for independently bad separator columns,
    CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
    revision-specific reads where revision `1` is newest and larger numbers
-   follow older `/Prev` state.
+   follow older `/Prev` state across classic and xref-stream update chains.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 

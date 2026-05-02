@@ -2019,6 +2019,25 @@ test "pdf_read_document_from_bytes follows xref stream Prev chains" {
 }
 
 ///|
+test "pdf_read_document_revision_from_bytes reads xref stream older Prev revision" {
+  let updated = try! @pdflite.pdf_read_document_revision_from_bytes(
+    reader_xref_stream_pdf_with_prev_update(),
+    2,
+  )
+  @test.assert_eq(updated.revision_read(), 2)
+  @test.assert_eq(updated.object_numbers(), [1])
+  @test.assert_eq(updated.lookup_object_or_null(1), PdfInteger(1))
+
+  let deleted = try! @pdflite.pdf_read_document_revision_from_bytes(
+    reader_xref_stream_pdf_with_prev_deleted_object(),
+    2,
+  )
+  @test.assert_eq(deleted.revision_read(), 2)
+  @test.assert_eq(deleted.object_numbers(), [1])
+  @test.assert_eq(deleted.lookup_object_or_null(1), PdfInteger(1))
+}
+
+///|
 test "pdf_read_document_from_bytes extracts xref object-stream entries" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_object_stream(),
