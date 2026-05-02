@@ -281,6 +281,18 @@ pub fn PdfCMapEncoding::is_identity_h(self : PdfCMapEncoding) -> Bool {
 }
 
 ///|
+fn PdfCMapEncoding::pdf_text_uses_two_byte_codes(
+  self : PdfCMapEncoding,
+) -> Bool {
+  match self {
+    PdfPredefinedCMap(name) =>
+      name == pdf_text_name("/Identity-H") ||
+      name == pdf_text_name("/Identity-V")
+    _ => false
+  }
+}
+
+///|
 pub fn PdfCIDKeyedFont::is_identity_h(self : PdfCIDKeyedFont) -> Bool {
   self.encoding.is_identity_h()
 }
@@ -365,6 +377,21 @@ pub fn PdfFont::debug_name(self : PdfFont) -> String {
 pub fn PdfFont::is_identity_h(self : PdfFont) -> Bool {
   match self {
     PdfFontCIDKeyed(font) => font.is_identity_h()
+    _ => false
+  }
+}
+
+///|
+fn PdfCIDKeyedFont::pdf_text_uses_two_byte_codes(
+  self : PdfCIDKeyedFont,
+) -> Bool {
+  self.encoding.pdf_text_uses_two_byte_codes()
+}
+
+///|
+fn PdfFont::pdf_text_uses_two_byte_codes(self : PdfFont) -> Bool {
+  match self {
+    PdfFontCIDKeyed(font) => font.pdf_text_uses_two_byte_codes()
     _ => false
   }
 }
@@ -6612,7 +6639,7 @@ pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(
   text : BytesView,
 ) -> Array[PdfTextGlyph] raise PdfError {
   let output : Array[PdfTextGlyph] = []
-  if self.font.is_identity_h() {
+  if self.font.pdf_text_uses_two_byte_codes() {
     guard text.length() % 2 == 0 else { raise BadText }
     let mut index = 0
     while index < text.length() {

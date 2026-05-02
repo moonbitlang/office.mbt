@@ -2918,25 +2918,26 @@ test "PdfDocument decodes filtered ToUnicode CMap streams" {
 }
 
 ///|
-test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
-  let cid_font : @pdflite.PdfFont = PdfFontCIDKeyed({
-    basefont: text_name_for_test("/Top"),
-    composite: {
-      cid_system_info: {
-        registry: text_bytes_for_test([65]),
-        ordering: text_bytes_for_test([73]),
-        supplement: 0,
-      },
-      cid_basefont: text_name_for_test("/Descendant"),
-      cid_fontdescriptor: text_font_descriptor_for_test(),
-      cid_widths: [],
-      cid_widths2: [],
-      cid_default_width: 1000.0,
-      cid_default_width2: [880.0, -1000.0],
+test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
+  let composite : @pdflite.PdfCompositeCIDFont = {
+    cid_system_info: {
+      registry: text_bytes_for_test([65]),
+      ordering: text_bytes_for_test([73]),
+      supplement: 0,
     },
+    cid_basefont: text_name_for_test("/Descendant"),
+    cid_fontdescriptor: text_font_descriptor_for_test(),
+    cid_widths: [],
+    cid_widths2: [],
+    cid_default_width: 1000.0,
+    cid_default_width2: [880.0, -1000.0],
+  }
+  let cid_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/Top"),
+    composite,
     encoding: PdfPredefinedCMap(text_name_for_test("/Identity-H")),
   })
-  let extractor = cid_font.text_extractor()
+  let extractor = cid_font_h.text_extractor()
   @test.assert_eq(
     try! extractor.codepoints_of_text(
       text_bytes_for_test([0x00, 0x41, 0x20, 0xAC])[:],
@@ -2951,6 +2952,41 @@ test "PdfTextExtractor reads Identity-H text as two-byte character codes" {
   @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), None)
   let odd = try? extractor.codepoints_of_text(text_bytes_for_test([0x00])[:])
   guard odd is Err(BadText) else { fail("expected BadText") }
+  let cid_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopVertical"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/Identity-V")),
+  })
+  @test.assert_eq(cid_font_v.is_identity_h(), false)
+  let vertical_extractor = cid_font_v.text_extractor()
+  @test.assert_eq(
+    try! vertical_extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x42, 0x4E, 0x00])[:],
+    ),
+    [0x42, 0x4E00],
+  )
+  @test.assert_eq(
+    try! vertical_extractor.glyphnames_of_text(
+      text_bytes_for_test([0x4E, 0x00])[:],
+    ),
+    [text_name_for_test(".notdef")],
+  )
+  let vertical_odd = try? vertical_extractor.codepoints_of_text(
+    text_bytes_for_test([0x4E])[:],
+  )
+  guard vertical_odd is Err(BadText) else { fail("expected BadText") }
+  let external_cmap_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/ExternalCMap"),
+    composite,
+    encoding: PdfCMap(7),
+  })
+  let external_extractor = external_cmap_font.text_extractor()
+  @test.assert_eq(
+    try! external_extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x42])[:],
+    ),
+    [0x00, 0x42],
+  )
 }
 
 ///|

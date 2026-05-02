@@ -41,9 +41,10 @@ work changes.
 5. Text, font, color, function, and image layer.
    Owner modules: `pdf_text.mbt`, `pdf_space.mbt`, `pdf_fun.mbt`,
    `pdf_image.mbt`.
-   Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, standard-font
-   extraction, color spaces, sampled/interpolation/stitching/calculator
-   functions, and raw/encoded image extraction are started.
+   Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, Identity-H/V
+   two-byte CID text extraction, standard-font extraction, color spaces,
+   sampled/interpolation/stitching/calculator functions, and raw/encoded image
+   extraction are started.
    Remaining focus: broader predefined CMap semantics, JPEG pixel decode, and
    remaining image filter families.
 

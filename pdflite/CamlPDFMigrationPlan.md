@@ -706,12 +706,13 @@ MoonBit consequences for this project:
    glyph-name widths for explicit encodings, `/space` fallback for undefined
    encoded bytes, and optional byte-pair kerning.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
-   and `/Identity-H` CID text, including decoded glyph records, glyph-name
-   extraction, flattened codepoint extraction, and reverse ToUnicode charcode
-   lookup for single Unicode codepoints. Basic Latin glyph-list-backed fallback
-   is also started for StandardEncoding, MacRomanEncoding, WinAnsiEncoding,
-   custom encoding differences, effective encoding-table/reverse-table export,
-   and reverse charcode lookup over that subset.
+   and `/Identity-H`/`/Identity-V` CID text, including decoded glyph records,
+   glyph-name extraction, flattened codepoint extraction, odd-length composite
+   string rejection, and reverse ToUnicode charcode lookup for single Unicode
+   codepoints. Basic Latin glyph-list-backed fallback is also started for
+   StandardEncoding, MacRomanEncoding, WinAnsiEncoding, custom encoding
+   differences, effective encoding-table/reverse-table export, and reverse
+   charcode lookup over that subset.
    StandardEncoding fallback is started for CamlPDF's annotation-text control
    bytes plus common high-byte punctuation, ligatures, bullets, text marks,
    Adobe Standard accent marks, and common ligature/Latin glyph names.
