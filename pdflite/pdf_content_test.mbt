@@ -569,6 +569,67 @@ test "pdf_parse_content_ops_from_bytes decodes Flate inline images through zlib 
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes decodes multi-filter inline images" {
+  let ascii85_flate_encoded = @pdflite.pdf_ascii85_encode(
+    @pdflite.pdf_flate_encode(content_bytes_for_test("abc")),
+  )
+  let ascii85_flate_data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 3 /H 1 /CS /G /BPC 8 /Filter [ /A85 /Fl ] ID ",
+    ),
+    ascii85_flate_encoded,
+    content_bytes_for_test("\nEI"),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(ascii85_flate_data),
+    [
+      Op_InlineImage(
+        PdfDictionary([
+          (content_name_for_test("/W"), PdfInteger(3)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (
+            content_name_for_test("/CS"),
+            PdfNameObject(content_name_for_test("/G")),
+          ),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+        ]),
+        None,
+        content_bytes_for_test("abc"),
+      ),
+    ],
+  )
+
+  let run_length_hex_encoded = @pdflite.pdf_run_length_encode(
+    @pdflite.pdf_ascii_hex_encode(content_bytes_for_test("xyz")),
+  )
+  let run_length_hex_data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 3 /H 1 /CS /G /BPC 8 /Filter [ /RL /AHx ] ID ",
+    ),
+    run_length_hex_encoded,
+    content_bytes_for_test("\nEI"),
+  ])
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_content_ops_from_bytes(run_length_hex_data),
+    [
+      Op_InlineImage(
+        PdfDictionary([
+          (content_name_for_test("/W"), PdfInteger(3)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (
+            content_name_for_test("/CS"),
+            PdfNameObject(content_name_for_test("/G")),
+          ),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+        ]),
+        None,
+        content_bytes_for_test("xyz"),
+      ),
+    ],
+  )
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes decodes LZW inline images through EOD" {
   let encoded = content_lzw_codes_for_test([65, 32, 69, 73, 32, 66, 257], 1)
   let data = content_concat_for_test([
