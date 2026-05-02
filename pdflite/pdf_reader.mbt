@@ -256,6 +256,11 @@ fn pdf_xref_malformed_zero_offset_in_use_free(
 }
 
 ///|
+fn pdf_xref_marker_token(token : BytesView) -> Bool {
+  pdf_view_equals_ascii(token, [120, 114, 101, 102])
+}
+
+///|
 fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
   let start = pdf_find_last_ascii(data, [
     115, 116, 97, 114, 116, 120, 114, 101, 102,
@@ -338,9 +343,14 @@ fn ByteCursor::read_pdf_classic_xref_entries(
       raise TrailerExpected
     } else {
       let tokens = pdf_split_whitespace_tokens(self.read_line_view())
-      if tokens.length() == 2 {
+      if tokens.length() == 1 && pdf_xref_marker_token(tokens[0]) {
+        ()
+      } else if tokens.length() == 2 {
         object_number = pdf_parse_ascii_int_view(tokens[0])
         ignore(pdf_parse_ascii_int_view(tokens[1]))
+      } else if tokens.length() == 3 && pdf_xref_marker_token(tokens[0]) {
+        object_number = pdf_parse_ascii_int_view(tokens[1])
+        ignore(pdf_parse_ascii_int_view(tokens[2]))
       } else if tokens.length() >= 3 {
         entries.push({
           object_number,

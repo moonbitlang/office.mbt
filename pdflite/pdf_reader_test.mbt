@@ -1883,6 +1883,17 @@ test "pdf_read_classic_document_from_bytes accepts malformed zero-offset xref ro
 }
 
 ///|
+test "pdf_read_classic_document_from_bytes accepts repeated xref section markers" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "xref\nxref 0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [])
+}
+
+///|
 test "pdf_read_classic_document_from_bytes reports missing startxref" {
   let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_pdf_ascii(

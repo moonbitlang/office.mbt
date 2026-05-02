@@ -276,7 +276,8 @@ MoonBit consequences for this project:
    integrity errors still propagate instead of being hidden by this recovery.
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
    workaround that treats `0000000000 _____ n` rows as free entries instead of
-   failing the table.
+   failing the table, and accepts repeated `xref` marker lines plus
+   `xref n m` section headers inside a classic table.
    Broader malformed xref-table recovery remains deferred. The
    reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered
@@ -1087,8 +1088,9 @@ MoonBit consequences for this project:
    removes `pdf_reader.mbt` from the uncovered-line report by testing public
    malformed-file behavior, private byte-view/xref helpers, indirect stream
    length resolution failures, CamlPDF-compatible malformed zero-offset xref row
-   handling, and by deleting two unreachable defensive branches around xref
-   blank-line parsing and post-loop trailer presence.
+   handling, repeated xref section markers, and by deleting two unreachable
+   defensive branches around xref blank-line parsing and post-loop trailer
+   presence.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     stream materialization guards and by replacing impossible map-key `None`
