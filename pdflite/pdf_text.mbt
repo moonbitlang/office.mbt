@@ -4440,6 +4440,17 @@ fn pdf_text_codepoint_of_dingbat_glyphname(name : PdfName) -> Int? {
     "/a189" => Some(0x27BC)
     "/a190" => Some(0x27BD)
     "/a191" => Some(0x27BE)
+    "/arrowrightheavy" => Some(0x279E)
+    "/checkmark" => Some(0x2713)
+    "/onecircleinversesansserif" => Some(0x278A)
+    "/twocircleinversesansserif" => Some(0x278B)
+    "/threecircleinversesansserif" => Some(0x278C)
+    "/fourcircleinversesansserif" => Some(0x278D)
+    "/fivecircleinversesansserif" => Some(0x278E)
+    "/sixcircleinversesansserif" => Some(0x278F)
+    "/sevencircleinversesansserif" => Some(0x2790)
+    "/eightcircleinversesansserif" => Some(0x2791)
+    "/ninecircleinversesansserif" => Some(0x2792)
     _ => None
   }
 }

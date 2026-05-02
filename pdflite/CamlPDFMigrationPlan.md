@@ -740,9 +740,9 @@ MoonBit consequences for this project:
    Latin Extended-B names present in CamlPDF's bundled Adobe Glyph List are now
    also covered for common simple-font encoding differences. General-punctuation,
    Latin-1 spacing aliases, currency, letterlike, arrow, Greek, math-operator,
-   Roman-numeral, technical, and block-element AGL names missing from the base
-   encoding tables are covered as well. Reverse charcode lookup scans the
-   effective encoding for single-codepoint glyphs.
+   Roman-numeral, technical, block-element, and dingbat alias AGL names missing
+   from the base encoding tables are covered as well. Reverse charcode lookup
+   scans the effective encoding for single-codepoint glyphs.
    ToUnicode CMap parsing now
    handles `bfchar` pairs split across lines, inline and multiline `bfrange`
    array mappings, including range headers split before the array, whitespace

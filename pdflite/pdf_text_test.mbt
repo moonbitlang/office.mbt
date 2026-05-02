@@ -5191,6 +5191,48 @@ test "PdfTextExtractor decodes block element AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes dingbat AGL alias glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/arrowrightheavy", 0x279E),
+    ("/checkmark", 0x2713),
+    ("/onecircleinversesansserif", 0x278A),
+    ("/twocircleinversesansserif", 0x278B),
+    ("/threecircleinversesansserif", 0x278C),
+    ("/fourcircleinversesansserif", 0x278D),
+    ("/fivecircleinversesansserif", 0x278E),
+    ("/sixcircleinversesansserif", 0x278F),
+    ("/sevencircleinversesansserif", 0x2790),
+    ("/eightcircleinversesansserif", 0x2791),
+    ("/ninecircleinversesansserif", 0x2792),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x279E), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2713), Some(2))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x278A), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2792), Some(11))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),
