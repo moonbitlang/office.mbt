@@ -23,6 +23,7 @@ work changes.
    CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
    revision-specific reads where revision `1` is newest and larger numbers
    follow older `/Prev` state across classic and xref-stream update chains.
+   Password-aware public read wrappers now also have revision-aware variants.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 

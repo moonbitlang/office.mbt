@@ -1520,6 +1520,32 @@ pub fn pdf_read_document_from_bytes(
 }
 
 ///|
+pub fn pdf_read_document_revision_from_view_with_passwords(
+  data : BytesView,
+  revision : Int,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+) -> PdfDecryptionResult? raise PdfError {
+  let document = pdf_read_document_revision_from_view(data, revision)
+  document.decrypt_with_passwords(user_password~, owner_password~)
+}
+
+///|
+pub fn pdf_read_document_revision_from_bytes_with_passwords(
+  data : PdfBytes,
+  revision : Int,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
+) -> PdfDecryptionResult? raise PdfError {
+  pdf_read_document_revision_from_view_with_passwords(
+    data[:],
+    revision,
+    user_password~,
+    owner_password~,
+  )
+}
+
+///|
 pub fn pdf_read_document_from_view_with_passwords(
   data : BytesView,
   user_password? : BytesView? = None,

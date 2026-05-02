@@ -401,7 +401,11 @@ pub fn pdf_read_document_from_view_with_passwords(BytesView, user_password? : By
 
 pub fn pdf_read_document_revision_from_bytes(Bytes, Int) -> PdfDocument raise PdfError
 
+pub fn pdf_read_document_revision_from_bytes_with_passwords(Bytes, Int, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
+
 pub fn pdf_read_document_revision_from_view(BytesView, Int) -> PdfDocument raise PdfError
+
+pub fn pdf_read_document_revision_from_view_with_passwords(BytesView, Int, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise PdfError
 
 pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise PdfError
 

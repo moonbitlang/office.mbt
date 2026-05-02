@@ -2210,6 +2210,36 @@ test "pdf_read_document_revision_from_view reads borrowed older revision" {
 }
 
 ///|
+test "pdf_read_document_revision_with_passwords reads older revisions" {
+  let bytes_result_option = try! @pdflite.pdf_read_document_revision_from_bytes_with_passwords(
+    reader_classic_pdf_with_prev_xref(),
+    2,
+  )
+  guard bytes_result_option is Some(bytes_result) else {
+    fail("expected decryption result")
+  }
+  @test.assert_eq(bytes_result.document.revision_read(), 2)
+  @test.assert_eq(bytes_result.document.object_numbers(), [1])
+  @test.assert_eq(bytes_result.document.lookup_object_or_null(1), PdfInteger(1))
+  @test.assert_eq(bytes_result.denied_permissions, [])
+
+  let payload = reader_classic_pdf_with_prev_xref()
+  let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
+  let view_result_option = try! @pdflite.pdf_read_document_revision_from_view_with_passwords(
+    wrapped[3:wrapped.length() - 3],
+    2,
+    owner_password=Some(@ascii.encode("unused")[:]),
+  )
+  guard view_result_option is Some(view_result) else {
+    fail("expected borrowed-view decryption result")
+  }
+  @test.assert_eq(view_result.document.revision_read(), 2)
+  @test.assert_eq(view_result.document.object_numbers(), [1])
+  @test.assert_eq(view_result.document.lookup_object_or_null(1), PdfInteger(1))
+  @test.assert_eq(view_result.denied_permissions, [])
+}
+
+///|
 test "pdf_read_classic_document_revision_from_bytes reports bad revisions" {
   let invalid : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
     reader_classic_pdf_with_prev_xref(),

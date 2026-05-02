@@ -323,7 +323,9 @@ MoonBit consequences for this project:
    A password-aware byte-reader wrapper is now started:
    `pdf_read_document_from_bytes_with_passwords` preserves the existing
    plain-reader API while returning a `PdfDecryptionResult?` for parsed classic
-   encrypted documents.
+   encrypted documents. Revision-aware password wrappers are also started for
+   `Bytes` and borrowed `BytesView` inputs, sharing the strict revision reader
+   before password authentication/decryption is applied.
 
 6. Minimal PDF writer.
    Port object rendering, dictionary/array rendering, stream rendering, xref,
