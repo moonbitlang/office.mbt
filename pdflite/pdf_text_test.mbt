@@ -4816,6 +4816,100 @@ test "PdfTextExtractor decodes arrow AGL glyph names" {
 }
 
 ///|
+test "PdfTextExtractor decodes Greek AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Alphatonos", 0x0386),
+    ("/Deicoptic", 0x03EE),
+    ("/Deltagreek", 0x0394),
+    ("/Digammagreek", 0x03DC),
+    ("/Epsilontonos", 0x0388),
+    ("/Etatonos", 0x0389),
+    ("/Feicoptic", 0x03E4),
+    ("/Gangiacoptic", 0x03EA),
+    ("/Horicoptic", 0x03E8),
+    ("/Iotadieresis", 0x03AA),
+    ("/Iotatonos", 0x038A),
+    ("/Kheicoptic", 0x03E6),
+    ("/Koppagreek", 0x03DE),
+    ("/Omegagreek", 0x03A9),
+    ("/Omegatonos", 0x038F),
+    ("/Omicrontonos", 0x038C),
+    ("/Sampigreek", 0x03E0),
+    ("/Sheicoptic", 0x03E2),
+    ("/Shimacoptic", 0x03EC),
+    ("/Stigmagreek", 0x03DA),
+    ("/Upsilonacutehooksymbolgreek", 0x03D3),
+    ("/Upsilondieresis", 0x03AB),
+    ("/Upsilondieresishooksymbolgreek", 0x03D4),
+    ("/Upsilonhooksymbol", 0x03D2),
+    ("/Upsilontonos", 0x038E),
+    ("/alphatonos", 0x03AC),
+    ("/anoteleia", 0x0387),
+    ("/betasymbolgreek", 0x03D0),
+    ("/deicoptic", 0x03EF),
+    ("/dialytikatonos", 0x0385),
+    ("/dieresistonos", 0x0385),
+    ("/epsilontonos", 0x03AD),
+    ("/etatonos", 0x03AE),
+    ("/feicoptic", 0x03E5),
+    ("/gangiacoptic", 0x03EB),
+    ("/horicoptic", 0x03E9),
+    ("/iotadieresis", 0x03CA),
+    ("/iotadieresistonos", 0x0390),
+    ("/iotatonos", 0x03AF),
+    ("/kappasymbolgreek", 0x03F0),
+    ("/kheicoptic", 0x03E7),
+    ("/mugreek", 0x03BC),
+    ("/numeralsigngreek", 0x0374),
+    ("/numeralsignlowergreek", 0x0375),
+    ("/omegatonos", 0x03CE),
+    ("/omicrontonos", 0x03CC),
+    ("/phisymbolgreek", 0x03D5),
+    ("/pisymbolgreek", 0x03D6),
+    ("/questiongreek", 0x037E),
+    ("/rhosymbolgreek", 0x03F1),
+    ("/sheicoptic", 0x03E3),
+    ("/shimacoptic", 0x03ED),
+    ("/sigmafinal", 0x03C2),
+    ("/sigmalunatesymbolgreek", 0x03F2),
+    ("/thetasymbolgreek", 0x03D1),
+    ("/tonos", 0x0384),
+    ("/upsilondieresis", 0x03CB),
+    ("/upsilondieresistonos", 0x03B0),
+    ("/upsilontonos", 0x03CD),
+    ("/yotgreek", 0x03F3),
+    ("/ypogegrammeni", 0x037A),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0394), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), Some(14))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03D2), Some(24))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0385), Some(30))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03BC), Some(42))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x037A), Some(61))
+}
+
+///|
 test "PdfTextExtractor decodes Latin Extended-A AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/Abreve", 0x0102),

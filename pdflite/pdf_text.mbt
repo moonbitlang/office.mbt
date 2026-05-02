@@ -3433,6 +3433,74 @@ fn pdf_text_codepoint_of_arrow_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_greek_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Alphatonos" => Some(0x0386)
+    "/Deicoptic" => Some(0x03EE)
+    "/Deltagreek" => Some(0x0394)
+    "/Digammagreek" => Some(0x03DC)
+    "/Epsilontonos" => Some(0x0388)
+    "/Etatonos" => Some(0x0389)
+    "/Feicoptic" => Some(0x03E4)
+    "/Gangiacoptic" => Some(0x03EA)
+    "/Horicoptic" => Some(0x03E8)
+    "/Iotadieresis" => Some(0x03AA)
+    "/Iotatonos" => Some(0x038A)
+    "/Kheicoptic" => Some(0x03E6)
+    "/Koppagreek" => Some(0x03DE)
+    "/Omegagreek" => Some(0x03A9)
+    "/Omegatonos" => Some(0x038F)
+    "/Omicrontonos" => Some(0x038C)
+    "/Sampigreek" => Some(0x03E0)
+    "/Sheicoptic" => Some(0x03E2)
+    "/Shimacoptic" => Some(0x03EC)
+    "/Stigmagreek" => Some(0x03DA)
+    "/Upsilonacutehooksymbolgreek" => Some(0x03D3)
+    "/Upsilondieresis" => Some(0x03AB)
+    "/Upsilondieresishooksymbolgreek" => Some(0x03D4)
+    "/Upsilonhooksymbol" => Some(0x03D2)
+    "/Upsilontonos" => Some(0x038E)
+    "/alphatonos" => Some(0x03AC)
+    "/anoteleia" => Some(0x0387)
+    "/betasymbolgreek" => Some(0x03D0)
+    "/deicoptic" => Some(0x03EF)
+    "/dialytikatonos" => Some(0x0385)
+    "/dieresistonos" => Some(0x0385)
+    "/epsilontonos" => Some(0x03AD)
+    "/etatonos" => Some(0x03AE)
+    "/feicoptic" => Some(0x03E5)
+    "/gangiacoptic" => Some(0x03EB)
+    "/horicoptic" => Some(0x03E9)
+    "/iotadieresis" => Some(0x03CA)
+    "/iotadieresistonos" => Some(0x0390)
+    "/iotatonos" => Some(0x03AF)
+    "/kappasymbolgreek" => Some(0x03F0)
+    "/kheicoptic" => Some(0x03E7)
+    "/mugreek" => Some(0x03BC)
+    "/numeralsigngreek" => Some(0x0374)
+    "/numeralsignlowergreek" => Some(0x0375)
+    "/omegatonos" => Some(0x03CE)
+    "/omicrontonos" => Some(0x03CC)
+    "/phisymbolgreek" => Some(0x03D5)
+    "/pisymbolgreek" => Some(0x03D6)
+    "/questiongreek" => Some(0x037E)
+    "/rhosymbolgreek" => Some(0x03F1)
+    "/sheicoptic" => Some(0x03E3)
+    "/shimacoptic" => Some(0x03ED)
+    "/sigmafinal" => Some(0x03C2)
+    "/sigmalunatesymbolgreek" => Some(0x03F2)
+    "/thetasymbolgreek" => Some(0x03D1)
+    "/tonos" => Some(0x0384)
+    "/upsilondieresis" => Some(0x03CB)
+    "/upsilondieresistonos" => Some(0x03B0)
+    "/upsilontonos" => Some(0x03CD)
+    "/yotgreek" => Some(0x03F3)
+    "/ypogegrammeni" => Some(0x037A)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4440,30 +4508,38 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                               Some(codepoint) => Some([codepoint])
                               None =>
                                 match
-                                  pdf_text_codepoint_of_latin_extended_glyphname(
+                                  pdf_text_codepoint_of_greek_glyphname(
                                     base_name,
                                   ) {
                                   Some(codepoint) => Some([codepoint])
                                   None =>
                                     match
-                                      pdf_text_codepoint_of_expert_glyphname(
+                                      pdf_text_codepoint_of_latin_extended_glyphname(
                                         base_name,
                                       ) {
                                       Some(codepoint) => Some([codepoint])
                                       None =>
                                         match
-                                          pdf_text_codepoint_of_symbol_glyphname(
+                                          pdf_text_codepoint_of_expert_glyphname(
                                             base_name,
                                           ) {
                                           Some(codepoint) => Some([codepoint])
                                           None =>
                                             match
-                                              pdf_text_codepoint_of_dingbat_glyphname(
+                                              pdf_text_codepoint_of_symbol_glyphname(
                                                 base_name,
                                               ) {
                                               Some(codepoint) =>
                                                 Some([codepoint])
-                                              None => None
+                                              None =>
+                                                match
+                                                  pdf_text_codepoint_of_dingbat_glyphname(
+                                                    base_name,
+                                                  ) {
+                                                  Some(codepoint) =>
+                                                    Some([codepoint])
+                                                  None => None
+                                                }
                                             }
                                         }
                                     }
