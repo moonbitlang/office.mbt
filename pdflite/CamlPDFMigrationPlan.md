@@ -2,7 +2,8 @@
 
 This is the project-specific plan for porting the vendored CamlPDF code in
 `.repos/` to MoonBit. The general, library-agnostic OCaml-to-MoonBit rules live
-in `OCaml2MoonBit.md`.
+in `OCaml2MoonBit.md`. The separate high-level architecture checklist lives in
+`CamlPDFArchitecturePlan.md`.
 
 Update this file whenever the CamlPDF architecture understanding, migration
 ordering, acceptance criteria, or deferred behavior changes.
@@ -786,10 +787,11 @@ MoonBit consequences for this project:
    JPEG/JPEG2000/JBIG2 pass-through, single-item encoded filter arrays, JBIG2
    globals, filter-stage decoding up to raw or encoded-image stop filters, and raw 8-bit RGB/CalRGB,
    Gray/CalGray, CMYK, and ICCBased alternate conversion to RGB24.
-   Raw 1-bit row-padded image masks and 4-bit row-padded DeviceGray images are
-   also started. Indexed RGB/CalRGB and CMYK table images are started for
-   8-bit and 4-bit row-padded samples, and Lab-backed indexed table conversion
-   is started for 8-bit samples. CamlPDF-style `/Decode` handling is started
+   Raw 1-bit row-padded image masks plus 2-bit and 4-bit row-padded DeviceGray
+   images are also started. Indexed RGB/CalRGB and CMYK table images are
+   started for 8-bit, 4-bit, and 2-bit row-padded samples, and Lab-backed
+   indexed table conversion is started for 8-bit samples. CamlPDF-style
+   `/Decode` handling is started
    for raw image masks and 8-bit raw samples, including default decode arrays
    for encoded image metadata. JBIG2 encoded image metadata now preserves
    `/JBIG2Globals` from direct `/DecodeParms`, short `/DP`, and first

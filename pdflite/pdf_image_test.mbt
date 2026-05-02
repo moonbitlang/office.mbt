@@ -796,7 +796,7 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 4 CMYK tint"
 }
 
 ///|
-test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
+test "PdfDocument get_image_24bpp reads packed grayscale images" {
   let doc = @pdflite.pdf_document_empty()
   let mask = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -814,6 +814,30 @@ test "PdfDocument get_image_24bpp reads one and four bit grayscale images" {
       PdfBPP24,
       image_bytes_for_test([
         255, 255, 255, 0, 0, 0, 255, 255, 255, 0, 0, 0, 255, 255, 255, 0, 0, 0,
+      ]),
+    ),
+  )
+  let gray2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(5)),
+      (image_name_for_test("/Height"), PdfInteger(2)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceGray")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0001_1011, 0, 0b1110_0100, 0b1100_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), gray2),
+    PdfRawImage(
+      5,
+      2,
+      PdfBPP24,
+      image_bytes_for_test([
+        0, 0, 0, 85, 85, 85, 170, 170, 170, 255, 255, 255, 0, 0, 0, 255, 255, 255,
+        170, 170, 170, 85, 85, 85, 0, 0, 0, 255, 255, 255,
       ]),
     ),
   )
@@ -1076,6 +1100,34 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
     try! doc.get_image_24bpp(empty_resources, rgb8),
     PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([10, 20, 30, 40, 50, 60])),
   )
+  let indexed_rgb4 : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    PdfNameObject(image_name_for_test("/DeviceRGB")),
+    PdfInteger(3),
+    PdfString(
+      image_bytes_for_test([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]),
+    ),
+  ])
+  let rgb2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(5)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_rgb4),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0001_1011, 0b1000_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb2),
+    PdfRawImage(
+      5,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([
+        10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 70, 80, 90,
+      ]),
+    ),
+  )
   let indexed_cmyk : @pdflite.PdfObject = PdfArray([
     PdfNameObject(image_name_for_test("/Indexed")),
     PdfNameObject(image_name_for_test("/DeviceCMYK")),
@@ -1098,6 +1150,34 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       1,
       PdfBPP24,
       image_bytes_for_test([255, 255, 255, 255, 0, 0]),
+    ),
+  )
+  let indexed_cmyk4 : @pdflite.PdfObject = PdfArray([
+    PdfNameObject(image_name_for_test("/Indexed")),
+    PdfNameObject(image_name_for_test("/DeviceCMYK")),
+    PdfInteger(3),
+    PdfString(
+      image_bytes_for_test([
+        0, 0, 0, 0, 0, 255, 255, 0, 255, 0, 255, 0, 255, 255, 0, 0,
+      ]),
+    ),
+  ])
+  let cmyk2 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(4)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_cmyk4),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0001_1011])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, cmyk2),
+    PdfRawImage(
+      4,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([255, 255, 255, 255, 0, 0, 0, 255, 0, 0, 0, 255]),
     ),
   )
   let cmyk8 = @pdflite.pdf_stream(

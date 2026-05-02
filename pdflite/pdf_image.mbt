@@ -590,26 +590,71 @@ fn pdf_image_1bpp_as_rgb24(
 }
 
 ///|
-fn pdf_image_gray_4bpp_as_rgb24(
+fn pdf_image_packed_bytes_per_row(width : Int, bits_per_component : Int) -> Int {
+  let row_bits = width * bits_per_component
+  if row_bits % 8 == 0 {
+    row_bits / 8
+  } else {
+    row_bits / 8 + 1
+  }
+}
+
+///|
+fn pdf_image_packed_sample(
+  data : BytesView,
+  row_offset : Int,
+  column : Int,
+  bits_per_component : Int,
+) -> Int {
+  let bit_offset = column * bits_per_component
+  let byte = data[row_offset + bit_offset / 8].to_int()
+  let shift = 8 - bits_per_component - bit_offset % 8
+  let mask = (1 << bits_per_component) - 1
+  (byte >> shift) & mask
+}
+
+///|
+fn pdf_image_gray_packed_bpp_as_rgb24(
   width : Int,
   height : Int,
+  bits_per_component : Int,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = (width + 1) / 2
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
+  let max_sample = (1 << bits_per_component) - 1
   let output : Array[Byte] = []
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
-      let byte = data[row_offset + column / 2].to_int()
-      let nibble = if column % 2 == 0 { byte >> 4 } else { byte & 0x0F }
-      let value = (nibble * 17).to_byte()
+      let sample = pdf_image_packed_sample(
+        data, row_offset, column, bits_per_component,
+      )
+      let value = (sample * 255 / max_sample).to_byte()
       output.push(value)
       output.push(value)
       output.push(value)
     }
   }
   Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_gray_2bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_gray_packed_bpp_as_rgb24(width, height, 2, data)
+}
+
+///|
+fn pdf_image_gray_4bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_gray_packed_bpp_as_rgb24(width, height, 4, data)
 }
 
 ///|
@@ -781,14 +826,33 @@ fn pdf_image_indexed_4bpp_as_rgb24(
   table : ArrayView[(Int, Array[Int])],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = (width + 1) / 2
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 4)
   pdf_image_require_size(data, bytes_per_row * height)
   let output : Array[Byte] = []
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
-      let byte = data[row_offset + column / 2].to_int()
-      let index = if column % 2 == 0 { byte >> 4 } else { byte & 0x0F }
+      let index = pdf_image_packed_sample(data, row_offset, column, 4)
+      pdf_image_rgb_indexed_value(output, table, index)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_indexed_2bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 2)
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let index = pdf_image_packed_sample(data, row_offset, column, 2)
       pdf_image_rgb_indexed_value(output, table, index)
     }
   }
@@ -802,14 +866,33 @@ fn pdf_image_cmyk_indexed_4bpp_as_rgb24(
   table : ArrayView[(Int, Array[Int])],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = (width + 1) / 2
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 4)
   pdf_image_require_size(data, bytes_per_row * height)
   let output : Array[Byte] = []
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
-      let byte = data[row_offset + column / 2].to_int()
-      let index = if column % 2 == 0 { byte >> 4 } else { byte & 0x0F }
+      let index = pdf_image_packed_sample(data, row_offset, column, 4)
+      pdf_image_cmyk_indexed_value(output, table, index)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+fn pdf_image_cmyk_indexed_2bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 2)
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let index = pdf_image_packed_sample(data, row_offset, column, 2)
       pdf_image_cmyk_indexed_value(output, table, index)
     }
   }
@@ -865,6 +948,8 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
     (PdfDeviceCMYK, Some(8)) =>
       pdf_image_cmyk_8bpp_as_rgb24(width, height, data)
     (_, Some(1)) => pdf_image_1bpp_as_rgb24(width, height, data)
+    (PdfDeviceGray, Some(2)) =>
+      pdf_image_gray_2bpp_as_rgb24(width, height, data)
     (PdfDeviceGray, Some(4)) =>
       pdf_image_gray_4bpp_as_rgb24(width, height, data)
     (PdfIndexed(base, table), Some(8)) =>
@@ -875,6 +960,14 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
           pdf_image_cmyk_indexed_8bpp_as_rgb24(width, height, table, data)
         PdfLab(white, _, _) =>
           pdf_image_lab_indexed_8bpp_as_rgb24(width, height, table, white, data)
+        _ => raise FilterExpected
+      }
+    (PdfIndexed(base, table), Some(2)) =>
+      match pdf_space_basic_table_colour_space(base) {
+        PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
+          pdf_image_indexed_2bpp_as_rgb24(width, height, table, data)
+        PdfDeviceCMYK =>
+          pdf_image_cmyk_indexed_2bpp_as_rgb24(width, height, table, data)
         _ => raise FilterExpected
       }
     (PdfIndexed(base, table), Some(4)) =>
