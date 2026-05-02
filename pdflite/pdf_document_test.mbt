@@ -314,6 +314,64 @@ test "PdfDocument copy preserves metadata and separates object map state" {
 }
 
 ///|
+test "PdfDocument copy deep-copies mutable object containers and streams" {
+  let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
+  let key_length = @pdflite.pdf_name_of_bytes(@ascii.encode("/Length"))
+  let key_initial = @pdflite.pdf_name_of_bytes(@ascii.encode("/Initial"))
+  let key_added = @pdflite.pdf_name_of_bytes(@ascii.encode("/Added"))
+  let doc = @pdflite.pdf_document_empty()
+  let stream_object : @pdflite.PdfObject = @pdflite.pdf_stream(
+    PdfDictionary([(key_length, PdfInteger(1))]),
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  doc.add_object_given_number(
+    1,
+    PdfArray([PdfDictionary([(key_initial, PdfInteger(1))]), stream_object]),
+  )
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_stream(
+      PdfDictionary([]),
+      StreamToGet(
+        @pdflite.stream_to_get(
+          @pdflite.byte_cursor_of_bytes(
+            try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
+          ),
+          1,
+          2,
+        ),
+      ),
+    ),
+  )
+  doc.set_trailer_dict(PdfDictionary([(key_root, PdfArray([PdfIndirect(1)]))]))
+  let copied = doc.copy()
+  guard copied.lookup_object_or_null(1) is PdfArray(copied_values) else {
+    fail("expected copied array")
+  }
+  guard doc.lookup_object_or_null(1) is PdfArray(original_values) else {
+    fail("expected original array")
+  }
+  copied_values.push(PdfInteger(99))
+  @test.assert_eq(original_values.length(), 2)
+  guard copied_values[0] is PdfDictionary(copied_nested_entries) else {
+    fail("expected copied nested dictionary")
+  }
+  copied_nested_entries.push((key_added, PdfInteger(2)))
+  @test.assert_eq(original_values[0].lookup_immediate(key_added), None)
+  ignore(try! copied_values[1].add_dict_entry(key_added, PdfInteger(3)))
+  @test.assert_eq(original_values[1].lookup_immediate(key_added), None)
+  guard copied.trailer_dict() is PdfDictionary(copied_trailer_entries) else {
+    fail("expected copied trailer dictionary")
+  }
+  copied_trailer_entries.push((key_added, PdfInteger(4)))
+  @test.assert_eq(doc.trailer_dict().lookup_immediate(key_added), None)
+  @test.assert_eq(
+    try! copied.lookup_object_or_null(2).stream_bytes(),
+    try! @pdflite.pdf_bytes_of_int_array([66, 67]),
+  )
+}
+
+///|
 test "PdfDocument renumber_objects_by_offset moves objects and rewrites references" {
   let key_root = @pdflite.pdf_name_of_bytes(@ascii.encode("/Root"))
   let key_pages = @pdflite.pdf_name_of_bytes(@ascii.encode("/Pages"))

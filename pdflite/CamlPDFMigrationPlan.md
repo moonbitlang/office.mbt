@@ -163,9 +163,12 @@ MoonBit consequences for this project:
    raw stream-byte extraction at the owned-byte boundary, CamlPDF-style trailer
    `/ID` generation/replacement with reproducible-ID environment handling, PDF
    numeric extraction, rectangle parsing, rectangle/QuadPoints transformation,
-   matrix parsing, and matrix object rendering are also started. Name-tree and
-   number-tree helpers are started with sorted/deduplicated readers and builders
-   that emit child tree nodes through the document object map for larger trees.
+   matrix parsing, matrix object rendering, and document deep-copy isolation for
+   mutable MoonBit object containers, stream records, stream byte payloads,
+   deferred-stream cursor state, and trailer dictionaries are also started.
+   Name-tree and number-tree helpers are started with sorted/deduplicated
+   readers and builders that emit child tree nodes through the document object
+   map for larger trees.
 
 4. Lexer and primitive parser.
    Port `.repos/pdfgenlex` and the lexical subset of `.repos/pdfread`:

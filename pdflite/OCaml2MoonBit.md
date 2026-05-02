@@ -117,6 +117,17 @@ Use `Bytes::new(0)` or a typed empty byte builder when porting OCaml code that
 used `Bytes.empty` or an empty byte string.
 
 ```sh
+moon run -c 'fn main { let bytes = @ascii.encode("abc"); let copied = Bytes::makei(bytes.length(), i => bytes[i]); println(bytes == copied); println(physical_equal(bytes, copied)) }'
+# true
+# false
+```
+
+`Bytes::copy` is deprecated because `Bytes` is immutable. When a port needs a
+deliberate physical byte copy, for example to preserve an OCaml API that
+promises no shared stream buffers, use `Bytes::makei(bytes.length(), i =>
+bytes[i])` at that ownership boundary.
+
+```sh
 moon run -c 'fn main { let b = @ascii.encode("PDF"); println(b.length()); println(b[0].to_int()) }'
 # 3
 # 80

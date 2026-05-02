@@ -107,7 +107,15 @@ fn PdfObjectMap::copy(self : PdfObjectMap) -> PdfObjectMap {
   let output = pdf_object_map_empty()
   for number in self.object_numbers() {
     let entry = self.get_entry(number).unwrap()
-    output.set_entry(number, { data: entry.data, generation: entry.generation })
+    let data = match entry.data {
+      ObjectParsed(object) => ObjectParsed(object.deep_copy())
+      ObjectParsedAlreadyDecrypted(object) =>
+        ObjectParsedAlreadyDecrypted(object.deep_copy())
+      ObjectToParse => ObjectToParse
+      ObjectToParseFromObjectStream(reference) =>
+        ObjectToParseFromObjectStream(reference)
+    }
+    output.set_entry(number, { data, generation: entry.generation })
   }
   output
 }
@@ -315,7 +323,7 @@ pub fn PdfDocument::copy(self : PdfDocument) -> PdfDocument {
     minor: self.minor,
     root: self.root,
     objects: self.objects.copy(),
-    trailer_dict: self.trailer_dict,
+    trailer_dict: self.trailer_dict.deep_copy(),
     was_linearized: self.was_linearized,
     saved_encryption: self.saved_encryption,
     first_xref: self.first_xref,

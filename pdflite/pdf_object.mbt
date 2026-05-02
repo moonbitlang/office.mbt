@@ -32,6 +32,49 @@ pub(all) enum PdfObject {
 } derive(Debug, Eq, ToJson)
 
 ///|
+fn pdf_bytes_physical_copy(bytes : PdfBytes) -> PdfBytes {
+  Bytes::makei(bytes.length(), i => bytes[i])
+}
+
+///|
+fn ByteCursor::deep_copy(self : ByteCursor) -> ByteCursor {
+  {
+    data: self.data,
+    position: self.position,
+    offset: self.offset,
+    source: self.source,
+  }
+}
+
+///|
+fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
+  match self {
+    StreamGot(bytes) => StreamGot(pdf_bytes_physical_copy(bytes))
+    StreamToGet(to_get) =>
+      StreamToGet({
+        input: to_get.input.deep_copy(),
+        position: to_get.position,
+        length: to_get.length,
+      })
+  }
+}
+
+///|
+fn PdfObject::deep_copy(self : PdfObject) -> PdfObject {
+  match self {
+    PdfArray(values) => PdfArray([ for value in values => value.deep_copy() ])
+    PdfDictionary(entries) =>
+      PdfDictionary([ for entry in entries => (entry.0, entry.1.deep_copy()) ])
+    PdfStreamObject(stream) =>
+      PdfStreamObject({
+        dictionary: stream.dictionary.deep_copy(),
+        data: stream.data.deep_copy(),
+      })
+    _ => self
+  }
+}
+
+///|
 pub fn pdf_array(values : ArrayView[PdfObject]) -> PdfObject {
   PdfArray([ for value in values => value ])
 }
