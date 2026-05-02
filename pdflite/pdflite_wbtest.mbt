@@ -2143,6 +2143,55 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     pdf_text_codepoint_of_basic_latin_glyphname(wbtest_text_name("/not-basic")),
     None,
   )
+  let bopomofo_entries : Array[(String, Int)] = [
+    ("/abopomofo", 0x311A),
+    ("/aibopomofo", 0x311E),
+    ("/anbopomofo", 0x3122),
+    ("/angbopomofo", 0x3124),
+    ("/aubopomofo", 0x3120),
+    ("/bbopomofo", 0x3105),
+    ("/cbopomofo", 0x3118),
+    ("/chbopomofo", 0x3114),
+    ("/dbopomofo", 0x3109),
+    ("/ebopomofo", 0x311C),
+    ("/ehbopomofo", 0x311D),
+    ("/eibopomofo", 0x311F),
+    ("/enbopomofo", 0x3123),
+    ("/engbopomofo", 0x3125),
+    ("/erbopomofo", 0x3126),
+    ("/fbopomofo", 0x3108),
+    ("/gbopomofo", 0x310D),
+    ("/hbopomofo", 0x310F),
+    ("/ibopomofo", 0x3127),
+    ("/iubopomofo", 0x3129),
+    ("/jbopomofo", 0x3110),
+    ("/kbopomofo", 0x310E),
+    ("/lbopomofo", 0x310C),
+    ("/mbopomofo", 0x3107),
+    ("/nbopomofo", 0x310B),
+    ("/obopomofo", 0x311B),
+    ("/oubopomofo", 0x3121),
+    ("/pbopomofo", 0x3106),
+    ("/qbopomofo", 0x3111),
+    ("/rbopomofo", 0x3116),
+    ("/sbopomofo", 0x3119),
+    ("/shbopomofo", 0x3115),
+    ("/tbopomofo", 0x310A),
+    ("/ubopomofo", 0x3128),
+    ("/xbopomofo", 0x3112),
+    ("/zbopomofo", 0x3117),
+    ("/zhbopomofo", 0x3113),
+  ]
+  for entry in bopomofo_entries {
+    @test.assert_eq(
+      pdf_text_codepoint_of_bopomofo_glyphname(wbtest_text_name(entry.0)),
+      Some(entry.1),
+    )
+  }
+  @test.assert_eq(
+    pdf_text_codepoint_of_bopomofo_glyphname(wbtest_text_name("/not-bopomofo")),
+    None,
+  )
   @test.assert_eq(
     pdf_text_codepoint_of_punctuation_glyphname(
       wbtest_text_name("/twosuperior"),

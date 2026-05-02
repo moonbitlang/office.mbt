@@ -4096,6 +4096,50 @@ fn pdf_text_codepoint_of_enclosed_alnum_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_bopomofo_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/abopomofo" => Some(0x311A)
+    "/aibopomofo" => Some(0x311E)
+    "/anbopomofo" => Some(0x3122)
+    "/angbopomofo" => Some(0x3124)
+    "/aubopomofo" => Some(0x3120)
+    "/bbopomofo" => Some(0x3105)
+    "/cbopomofo" => Some(0x3118)
+    "/chbopomofo" => Some(0x3114)
+    "/dbopomofo" => Some(0x3109)
+    "/ebopomofo" => Some(0x311C)
+    "/ehbopomofo" => Some(0x311D)
+    "/eibopomofo" => Some(0x311F)
+    "/enbopomofo" => Some(0x3123)
+    "/engbopomofo" => Some(0x3125)
+    "/erbopomofo" => Some(0x3126)
+    "/fbopomofo" => Some(0x3108)
+    "/gbopomofo" => Some(0x310D)
+    "/hbopomofo" => Some(0x310F)
+    "/ibopomofo" => Some(0x3127)
+    "/iubopomofo" => Some(0x3129)
+    "/jbopomofo" => Some(0x3110)
+    "/kbopomofo" => Some(0x310E)
+    "/lbopomofo" => Some(0x310C)
+    "/mbopomofo" => Some(0x3107)
+    "/nbopomofo" => Some(0x310B)
+    "/obopomofo" => Some(0x311B)
+    "/oubopomofo" => Some(0x3121)
+    "/pbopomofo" => Some(0x3106)
+    "/qbopomofo" => Some(0x3111)
+    "/rbopomofo" => Some(0x3116)
+    "/sbopomofo" => Some(0x3119)
+    "/shbopomofo" => Some(0x3115)
+    "/tbopomofo" => Some(0x310A)
+    "/ubopomofo" => Some(0x3128)
+    "/xbopomofo" => Some(0x3112)
+    "/zbopomofo" => Some(0x3117)
+    "/zhbopomofo" => Some(0x3113)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_box_drawing_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/SF010000" => Some(0x250C)
@@ -5299,6 +5343,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     None => ()
   }
   match pdf_text_codepoint_of_enclosed_alnum_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_bopomofo_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }
