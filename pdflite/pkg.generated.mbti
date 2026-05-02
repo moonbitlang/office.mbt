@@ -375,6 +375,8 @@ pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] rais
 
 pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise PdfError
 
+pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(PdfName, Int)]
+
 pub fn pdf_revisions_from_bytes(BytesView) -> Int raise PdfError
 
 pub fn pdf_revisions_from_view(BytesView) -> Int raise PdfError
@@ -406,6 +408,8 @@ pub fn pdf_string_of_bookmark(PdfBookmark) -> Bytes raise PdfError
 pub fn pdf_string_of_date(PdfDate) -> String raise PdfError
 
 pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
+
+pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, PdfName)]
 
 pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise PdfError
 
@@ -1156,6 +1160,8 @@ pub(all) enum PdfEncoding {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfEncoding::debug_name(Self) -> String
 pub fn PdfEncoding::pdf_name(Self) -> PdfName?
+pub fn PdfEncoding::reverse_table(Self) -> Array[(PdfName, Int)]
+pub fn PdfEncoding::table(Self) -> Array[(Int, PdfName)]
 
 pub(all) struct PdfEncodingDifference {
   name : PdfName

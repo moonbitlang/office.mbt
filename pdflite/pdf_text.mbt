@@ -3035,6 +3035,37 @@ fn PdfEncoding::pdf_text_glyphname_of_charcode(
 }
 
 ///|
+pub fn PdfEncoding::table(self : PdfEncoding) -> Array[(Int, PdfName)] {
+  let output : Array[(Int, PdfName)] = []
+  for code in 0..<256 {
+    match self.pdf_text_glyphname_of_charcode(code) {
+      Some(name) => output.push((code, name))
+      None => ()
+    }
+  }
+  output
+}
+
+///|
+pub fn PdfEncoding::reverse_table(self : PdfEncoding) -> Array[(PdfName, Int)] {
+  [
+    for entry in self.table() => (entry.1, entry.0)
+  ]
+}
+
+///|
+pub fn pdf_table_of_encoding(encoding : PdfEncoding) -> Array[(Int, PdfName)] {
+  encoding.table()
+}
+
+///|
+pub fn pdf_reverse_table_of_encoding(
+  encoding : PdfEncoding,
+) -> Array[(PdfName, Int)] {
+  encoding.reverse_table()
+}
+
+///|
 fn PdfStandardFontData::pdf_text_glyphname_of_charcode(
   self : PdfStandardFontData,
   code : Int,

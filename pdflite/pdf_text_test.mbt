@@ -30,6 +30,34 @@ fn text_difference_for_test(
 }
 
 ///|
+fn text_encoding_table_lookup_for_test(
+  table : ArrayView[(Int, @pdflite.PdfName)],
+  code : Int,
+) -> @pdflite.PdfName? {
+  for entry in table {
+    if entry.0 == code {
+      break Some(entry.1)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn text_reverse_encoding_table_lookup_for_test(
+  table : ArrayView[(@pdflite.PdfName, Int)],
+  name : @pdflite.PdfName,
+) -> Int? {
+  for entry in table {
+    if entry.0 == name {
+      break Some(entry.1)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
 fn text_standard_font_data_for_test(
   font : @pdflite.PdfStandardFont,
   encoding : @pdflite.PdfEncoding,
@@ -535,6 +563,51 @@ test "PdfEncoding converts predefined encoding names" {
     @pdflite.pdf_encoding_of_name(text_name_for_test("/MissingEncoding")),
     None,
   )
+}
+
+///|
+test "PdfEncoding exposes effective encoding tables" {
+  let standard_table = @pdflite.PdfStandardEncoding.table()
+  @test.assert_eq(
+    text_encoding_table_lookup_for_test(standard_table, 65),
+    Some(text_name_for_test("/A")),
+  )
+  @test.assert_eq(text_encoding_table_lookup_for_test(standard_table, 0), None)
+  let custom : @pdflite.PdfEncoding = PdfCustomEncoding(PdfStandardEncoding, [
+    text_difference_for_test("/Alpha", 65),
+  ])
+  let custom_table = @pdflite.pdf_table_of_encoding(custom)
+  @test.assert_eq(
+    text_encoding_table_lookup_for_test(custom_table, 65),
+    Some(text_name_for_test("/Alpha")),
+  )
+  @test.assert_eq(
+    text_encoding_table_lookup_for_test(custom_table, 66),
+    Some(text_name_for_test("/B")),
+  )
+  let reverse = @pdflite.pdf_reverse_table_of_encoding(custom)
+  @test.assert_eq(
+    text_reverse_encoding_table_lookup_for_test(
+      reverse,
+      text_name_for_test("/Alpha"),
+    ),
+    Some(65),
+  )
+  @test.assert_eq(
+    text_reverse_encoding_table_lookup_for_test(
+      reverse,
+      text_name_for_test("/B"),
+    ),
+    Some(66),
+  )
+  let filled : @pdflite.PdfEncoding = PdfFillUndefinedWithStandard(
+    PdfImplicitInFontFile,
+  )
+  @test.assert_eq(
+    text_encoding_table_lookup_for_test(filled.table(), 65),
+    Some(text_name_for_test("/A")),
+  )
+  @test.assert_eq(@pdflite.PdfImplicitInFontFile.reverse_table(), [])
 }
 
 ///|
