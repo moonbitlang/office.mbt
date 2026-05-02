@@ -19,3 +19,8 @@ pub fn ByteCursor::read_jpeg_data(self : ByteCursor) -> PdfBytes raise PdfError 
   }
   Bytes::from_array(output)
 }
+
+///|
+pub fn pdf_get_jpeg_data(input : ByteCursor) -> PdfBytes raise PdfError {
+  input.read_jpeg_data()
+}

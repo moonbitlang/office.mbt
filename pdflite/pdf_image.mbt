@@ -156,6 +156,15 @@ pub fn PdfDocument::image_colour_space(
 }
 
 ///|
+pub fn PdfDocument::colspace(
+  self : PdfDocument,
+  image : PdfObject,
+  resources : PdfObject,
+) -> PdfColourSpace raise PdfError {
+  self.image_colour_space(image, resources)
+}
+
+///|
 pub fn PdfDocument::image_bits_per_component(
   self : PdfDocument,
   image : PdfObject,
@@ -174,6 +183,11 @@ pub fn PdfDocument::image_bits_per_component(
         None
       }
   }
+}
+
+///|
+pub fn PdfDocument::bpc(self : PdfDocument, image : PdfObject) -> PdfObject? {
+  self.image_bits_per_component(image)
 }
 
 ///|

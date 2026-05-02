@@ -724,12 +724,13 @@ MoonBit consequences for this project:
    dictionaries and Type 3 stitching dictionaries with child functions placed
    into the document object map. As in CamlPDF, sampled and calculator function
    serialization currently emits only the common dictionary entries.
-   `pdfjpeg` is started with a byte-cursor
-   helper that extracts JPEG data through the `FF D9` EOI marker while leaving
+   `pdfjpeg` is started with byte-cursor and function-style
+   helpers that extract JPEG data through the `FF D9` EOI marker while leaving
    following bytes unread, and content inline image parsing now uses that path
    for `/DCT`, `/DCTDecode`, and single-item filter arrays. `pdfimage` is
    started with typed image result and pixel-layout enums plus image
-   `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers,
+   `/ColorSpace`/`/CS` and `/BitsPerComponent`/`/BPC` lookup helpers and
+   CamlPDF-style `colspace`/`bpc` convenience wrappers,
    including image-mask defaults. `get_image_24bpp` is started for encoded
    JPEG/JPEG2000/JBIG2 pass-through, single-item encoded filter arrays, JBIG2
    globals, filter-stage decoding up to raw or encoded-image stop filters, and raw 8-bit RGB/CalRGB,

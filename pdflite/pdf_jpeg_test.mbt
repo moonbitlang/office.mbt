@@ -18,6 +18,16 @@ test "ByteCursor read_jpeg_data consumes through JPEG EOI marker" {
   ])
   @test.assert_eq(cursor.position(), 6)
   @test.assert_eq(cursor.read_byte(), Some(65))
+  let function_cursor = @pdflite.byte_cursor_of_bytes(
+    jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xD9, 0]),
+  )
+  @test.assert_eq(
+    jpeg_bytes_to_ints_for_test(
+      try! @pdflite.pdf_get_jpeg_data(function_cursor),
+    ),
+    [0xFF, 0xD8, 0xFF, 0xD9],
+  )
+  @test.assert_eq(function_cursor.read_byte(), Some(0))
 }
 
 ///|

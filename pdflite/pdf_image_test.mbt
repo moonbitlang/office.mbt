@@ -47,6 +47,18 @@ test "PdfDocument image_colour_space resolves direct and resource colour spaces"
     PdfDeviceCMYK,
   )
   @test.assert_eq(
+    try! doc.colspace(
+      @pdflite.pdf_dictionary([
+        (
+          image_name_for_test("/ColorSpace"),
+          PdfNameObject(image_name_for_test("/DeviceCMYK")),
+        ),
+      ]),
+      resources,
+    ),
+    PdfDeviceCMYK,
+  )
+  @test.assert_eq(
     try! doc.image_colour_space(
       @pdflite.pdf_dictionary([
         (image_name_for_test("/CS"), PdfNameObject(image_name_for_test("/CS1"))),
@@ -1269,6 +1281,12 @@ test "PdfDocument image_bits_per_component reads long and abbreviated keys" {
   )
   @test.assert_eq(
     doc.image_bits_per_component(
+      @pdflite.pdf_dictionary([(image_name_for_test("/BPC"), PdfInteger(4))]),
+    ),
+    Some(PdfInteger(4)),
+  )
+  @test.assert_eq(
+    doc.bpc(
       @pdflite.pdf_dictionary([(image_name_for_test("/BPC"), PdfInteger(4))]),
     ),
     Some(PdfInteger(4)),
