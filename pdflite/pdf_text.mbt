@@ -3654,6 +3654,48 @@ fn pdf_text_codepoint_of_block_element_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_misc_symbol_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/beamedsixteenthnotes" => Some(0x266C)
+    "/blacksmilingface" => Some(0x263B)
+    "/blackstar" => Some(0x2605)
+    "/clubsuitblack" => Some(0x2663)
+    "/clubsuitwhite" => Some(0x2667)
+    "/compass" => Some(0x263C)
+    "/diamondsuitwhite" => Some(0x2662)
+    "/earth" => Some(0x2641)
+    "/eighthnotebeamed" => Some(0x266B)
+    "/female" => Some(0x2640)
+    "/heartsuitblack" => Some(0x2665)
+    "/heartsuitwhite" => Some(0x2661)
+    "/hotsprings" => Some(0x2668)
+    "/invsmileface" => Some(0x263B)
+    "/male" => Some(0x2642)
+    "/mars" => Some(0x2642)
+    "/musicalnote" => Some(0x266A)
+    "/musicalnotedbl" => Some(0x266B)
+    "/musicflatsign" => Some(0x266D)
+    "/musicsharpsign" => Some(0x266F)
+    "/pointingindexdownwhite" => Some(0x261F)
+    "/pointingindexleftwhite" => Some(0x261C)
+    "/pointingindexrightwhite" => Some(0x261E)
+    "/pointingindexupwhite" => Some(0x261D)
+    "/quarternote" => Some(0x2669)
+    "/smileface" => Some(0x263A)
+    "/spadesuitblack" => Some(0x2660)
+    "/spadesuitwhite" => Some(0x2664)
+    "/sun" => Some(0x263C)
+    "/telephoneblack" => Some(0x260E)
+    "/venus" => Some(0x2640)
+    "/whitesmilingface" => Some(0x263A)
+    "/whitestar" => Some(0x2606)
+    "/whitetelephone" => Some(0x260F)
+    "/yinyang" => Some(0x262F)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_latin_extended_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/Abreve" => Some(0x0102)
@@ -4704,28 +4746,28 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                                                     Some([codepoint])
                                                   None =>
                                                     match
-                                                      pdf_text_codepoint_of_latin_extended_glyphname(
+                                                      pdf_text_codepoint_of_misc_symbol_glyphname(
                                                         base_name,
                                                       ) {
                                                       Some(codepoint) =>
                                                         Some([codepoint])
                                                       None =>
                                                         match
-                                                          pdf_text_codepoint_of_expert_glyphname(
+                                                          pdf_text_codepoint_of_latin_extended_glyphname(
                                                             base_name,
                                                           ) {
                                                           Some(codepoint) =>
                                                             Some([codepoint])
                                                           None =>
                                                             match
-                                                              pdf_text_codepoint_of_symbol_glyphname(
+                                                              pdf_text_codepoint_of_expert_glyphname(
                                                                 base_name,
                                                               ) {
                                                               Some(codepoint) =>
                                                                 Some([codepoint])
                                                               None =>
                                                                 match
-                                                                  pdf_text_codepoint_of_dingbat_glyphname(
+                                                                  pdf_text_codepoint_of_symbol_glyphname(
                                                                     base_name,
                                                                   ) {
                                                                   Some(
@@ -4734,7 +4776,20 @@ fn pdf_text_codepoints_of_glyphname(name : PdfName) -> Array[Int]? {
                                                                     Some([
                                                                       codepoint,
                                                                     ])
-                                                                  None => None
+                                                                  None =>
+                                                                    match
+                                                                      pdf_text_codepoint_of_dingbat_glyphname(
+                                                                        base_name,
+                                                                      ) {
+                                                                      Some(
+                                                                        codepoint
+                                                                      ) =>
+                                                                        Some([
+                                                                          codepoint,
+                                                                        ])
+                                                                      None =>
+                                                                        None
+                                                                    }
                                                                 }
                                                             }
                                                         }
