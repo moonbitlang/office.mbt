@@ -129,6 +129,132 @@ test "PdfDocument lookup_chain can traverse arrays by index names" {
 }
 
 ///|
+test "PdfDocument replace_chain creates missing direct dictionaries" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
+  let key_names = lookup_name_for_test([47, 78, 97, 109, 101, 115])
+  let key_javascript = lookup_name_for_test([
+    47, 74, 97, 118, 97, 83, 99, 114, 105, 112, 116,
+  ])
+  try! doc.replace_chain([key_root, key_names, key_javascript], PdfInteger(42))
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_root, key_names, key_javascript]),
+    Some(PdfInteger(42)),
+  )
+}
+
+///|
+test "PdfDocument replace_chain preserves indirect dictionary structure" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
+  let key_names = lookup_name_for_test([47, 78, 97, 109, 101, 115])
+  let key_javascript = lookup_name_for_test([
+    47, 74, 97, 118, 97, 83, 99, 114, 105, 112, 116,
+  ])
+  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(1))]))
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(key_names, @pdflite.pdf_dictionary([]))]),
+  )
+  try! doc.replace_chain(
+    [key_root, key_names, key_javascript],
+    PdfString(try! @pdflite.pdf_bytes_of_int_array([65])),
+  )
+  @test.assert_eq(
+    doc.trailer_dict().lookup_immediate(key_root),
+    Some(PdfIndirect(1)),
+  )
+  @test.assert_eq(
+    doc.lookup_chain(doc.lookup_object_or_null(1), [key_names, key_javascript]),
+    Some(PdfString(try! @pdflite.pdf_bytes_of_int_array([65]))),
+  )
+}
+
+///|
+test "PdfDocument replace_chain updates array chain entries" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_items = lookup_name_for_test([47, 73, 116, 101, 109, 115])
+  let key_value = lookup_name_for_test([47, 86, 97, 108, 117, 101])
+  let index_0 = lookup_name_for_test([47, 91, 48])
+  let index_1 = lookup_name_for_test([47, 91, 49])
+  let index_2 = lookup_name_for_test([47, 91, 50])
+  let bad_index = lookup_name_for_test([47, 91, 120])
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_dictionary([(key_value, PdfInteger(1))]),
+  )
+  doc.set_trailer_dict(
+    @pdflite.pdf_dictionary([
+      (
+        key_items,
+        PdfArray([
+          PdfIndirect(7),
+          @pdflite.pdf_dictionary([(key_value, PdfInteger(2))]),
+        ]),
+      ),
+    ]),
+  )
+  try! doc.replace_chain([key_items, index_0, key_value], PdfInteger(10))
+  try! doc.replace_chain([key_items, index_1, key_value], PdfInteger(11))
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_items, index_0, key_value]),
+    Some(PdfInteger(10)),
+  )
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_items, index_1, key_value]),
+    Some(PdfInteger(11)),
+  )
+  try! doc.replace_chain([key_items, index_1], PdfInteger(99))
+  @test.assert_eq(
+    doc.lookup_chain(doc.trailer_dict(), [key_items, index_1]),
+    Some(PdfInteger(99)),
+  )
+  let final_out_of_range : Result[Unit, Error] = try? doc.replace_chain(
+    [key_items, index_2],
+    PdfInteger(0),
+  )
+  guard final_out_of_range
+    is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
+    missing == index_2 else {
+    fail("expected DictionaryKeyNotFound for final out-of-range array chain")
+  }
+  let out_of_range : Result[Unit, Error] = try? doc.replace_chain(
+    [key_items, index_2, key_value],
+    PdfInteger(0),
+  )
+  guard out_of_range is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
+    missing == index_2 else {
+    fail("expected DictionaryKeyNotFound for out-of-range array chain")
+  }
+  let malformed : Result[Unit, Error] = try? doc.replace_chain(
+    [key_items, bad_index],
+    PdfInteger(0),
+  )
+  guard malformed is Err(@pdflite.PdfError::DictionaryKeyNotFound(missing)) &&
+    missing == bad_index else {
+    fail("expected DictionaryKeyNotFound for malformed array chain")
+  }
+}
+
+///|
+test "PdfDocument replace_chain reports malformed chains" {
+  let doc = @pdflite.pdf_document_empty()
+  let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
+  let empty : Result[Unit, Error] = try? doc.replace_chain([], PdfInteger(1))
+  guard empty is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for empty chain")
+  }
+  doc.set_trailer_dict(PdfInteger(1))
+  let not_dictionary : Result[Unit, Error] = try? doc.replace_chain(
+    [key_root],
+    PdfInteger(2),
+  )
+  guard not_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected for non-dictionary trailer")
+  }
+}
+
+///|
 test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(3, PdfReal(2.5))

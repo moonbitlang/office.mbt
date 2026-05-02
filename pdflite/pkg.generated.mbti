@@ -996,6 +996,7 @@ pub fn PdfDocument::remove_page_labels(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise PdfError
 pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise PdfError
 pub fn PdfDocument::renumber_pages(Self, ArrayView[PdfPage]) -> Array[PdfPage] raise PdfError
+pub fn PdfDocument::replace_chain(Self, ArrayView[PdfName], PdfObject) -> Unit raise PdfError
 pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise PdfError
 pub fn PdfDocument::revision_read(Self) -> Int
 pub fn PdfDocument::root(Self) -> Int
