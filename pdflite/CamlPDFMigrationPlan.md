@@ -263,14 +263,15 @@ MoonBit consequences for this project:
    `pdf_is_linearized`. Final trailer cleanup now mirrors CamlPDF's removal of
    xref machinery keys such as `/Prev`, `/XRefStm`, `/W`, `/Index`, `/Type`,
    `/Filter`, and `/DecodeParms`, while deriving `/Size` from the loaded
-   document object map. A first malformed-file reconstruction path is
-   started for public reads with missing `startxref`, a `startxref` pointer
-   that is not an xref section or is past EOF, malformed xref rows, malformed
-   trailer syntax, a strict-read trailer missing `/Root`, or xref rows pointing
-   at junk object offsets: it scans recoverable indirect objects, selects the
-   latest trailer whose `/Root` points at a parsed dictionary, sets
-   `first_xref` to zero, and keeps stricter xref errors on the strict classic
-   reader path. Xref-stream trailer reconstruction is now started for missing
+  document object map. A first malformed-file reconstruction path is
+  started for public reads with missing `startxref`, malformed startxref
+  numbers, startxref pointers that are not xref sections or are past EOF,
+  malformed xref rows, malformed trailer syntax, a strict-read trailer missing
+  `/Root`, or xref rows pointing at junk object offsets: it scans recoverable
+  indirect objects, selects the latest trailer whose `/Root` points at a parsed
+  dictionary, sets `first_xref` to zero, and keeps stricter xref errors on the
+  strict classic reader path. Xref-stream trailer reconstruction is now started
+  for missing
    or unusable `startxref` pointers, using `/Type /XRef` stream dictionaries as
    trailer candidates while stripping stream/xref-only keys; object-stream
    integrity errors still propagate instead of being hidden by this recovery.
@@ -1091,8 +1092,9 @@ MoonBit consequences for this project:
    malformed-file behavior, private byte-view/xref helpers, indirect stream
    length resolution failures, CamlPDF-compatible malformed zero-offset xref row
    handling, repeated xref section markers, trailing startxref junk after EOF,
-   and by deleting two unreachable defensive branches around xref blank-line
-   parsing and post-loop trailer presence.
+   malformed startxref-number recovery, and by deleting two unreachable
+   defensive branches around xref blank-line parsing and post-loop trailer
+   presence.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     stream materialization guards and by replacing impossible map-key `None`

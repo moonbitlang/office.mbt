@@ -333,6 +333,22 @@ fn reader_xref_stream_pdf() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_xref_stream_pdf_with_short_entry_data() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(
+    output, "<< /Type /XRef /Length 1 /Size 2 /Root 1 0 R /W [1 4 2] >>\nstream\n",
+  )
+  reader_push_byte(output, 0)
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -531,6 +547,16 @@ fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
   ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
   reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
   reader_push_ascii(output, "startxref\n9\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_malformed_pdf_with_malformed_startxref_number() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(reader_push_indirect_object(output, 1, 0, "<< /Type /Catalog >>"))
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
+  reader_push_ascii(output, "startxref\nabc\n%%EOF\n")
   Bytes::from_array(output)
 }
 
@@ -824,6 +850,47 @@ fn reader_xref_stream_pdf_with_object_stream_number(
 ///|
 fn reader_xref_stream_pdf_with_object_stream() -> @pdflite.PdfBytes {
   reader_xref_stream_pdf_with_object_stream_number(2)
+}
+
+///|
+fn reader_xref_stream_pdf_with_object_stream_bad_first() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let object_stream_data : Array[Byte] = []
+  reader_push_ascii(object_stream_data, "2 0 ")
+  let bad_first = object_stream_data.length() + 32
+  reader_push_ascii(object_stream_data, "<< /Answer 42 >>")
+  let object_stream_offset = output.length()
+  reader_push_ascii(output, "3 0 obj\n<< /Type /ObjStm /N 1 /First ")
+  reader_push_ascii(output, bad_first.to_string())
+  reader_push_ascii(output, " /Length ")
+  reader_push_ascii(output, object_stream_data.length().to_string())
+  reader_push_ascii(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 2, 3, 0)
+  reader_push_xref_stream_entry(stream_data, 1, object_stream_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "4 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 5 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
 }
 
 ///|
@@ -1465,6 +1532,23 @@ test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
 }
 
 ///|
+test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_malformed_pdf_with_malformed_startxref_number(),
+  )
+  guard strict is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected strict NumberExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_malformed_startxref_number(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
 test "pdf_read_document_from_bytes reconstructs xref stream trailers" {
   let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_xref_stream_pdf_with_bad_startxref(),
@@ -1498,6 +1582,16 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers" {
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length"))),
     None,
   )
+}
+
+///|
+test "pdf_read_document_from_bytes rejects truncated xref stream data" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_short_entry_data(),
+  )
+  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
 }
 
 ///|
@@ -1814,6 +1908,16 @@ test "pdf_read_document_from_bytes rejects mismatched object-stream entries" {
   )
   guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
+  }
+}
+
+///|
+test "pdf_read_document_from_bytes rejects invalid object-stream data slices" {
+  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_object_stream_bad_first(),
+  )
+  guard result is Err(@pdflite.PdfError::StreamDataExpected) else {
+    fail("expected StreamDataExpected")
   }
 }
 

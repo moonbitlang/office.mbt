@@ -1324,6 +1324,7 @@ pub fn pdf_read_document_from_view(
       pdf_read_reconstructed_or_raise(data, XRefEntryExpected)
     TrailerExpected => pdf_read_reconstructed_or_raise(data, TrailerExpected)
     RootExpected => pdf_read_reconstructed_or_raise(data, RootExpected)
+    NumberExpected => pdf_read_reconstructed_or_raise(data, NumberExpected)
     ParseIndirectObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
     StreamLengthExpected =>
