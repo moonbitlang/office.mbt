@@ -283,7 +283,9 @@ MoonBit consequences for this project:
    failing the table, and accepts repeated `xref` marker lines plus
    `xref n m` section headers inside a classic table. It also accepts
    CamlPDF-style fixed-width xref rows whose separator columns are malformed
-   while the offset, generation, and `n`/`f` columns remain parseable.
+   while the offset, generation, and `n`/`f` columns remain parseable, and
+   classic trailers whose dictionary starts immediately after the `trailer`
+   keyword without intervening whitespace.
    Broader malformed xref-table recovery remains deferred. The
    reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered

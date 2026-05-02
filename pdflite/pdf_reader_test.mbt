@@ -159,6 +159,22 @@ fn reader_classic_pdf_with_fixed_width_xref_separators() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_glued_trailer_dictionary() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_trailing_startxref_junk() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   for
@@ -2140,6 +2156,16 @@ test "pdf_read_classic_document_from_bytes accepts fixed-width xref separators" 
       ),
     ]),
   )
+}
+
+///|
+test "pdf_read_classic_document_from_bytes accepts glued trailer dictionaries" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_glued_trailer_dictionary(),
+  )
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
 }
 
 ///|
