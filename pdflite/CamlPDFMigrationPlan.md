@@ -730,7 +730,9 @@ MoonBit consequences for this project:
    small-capital, small accent-mark, small punctuation/currency, and
    superior/inferior punctuation and letter codepoints.
    Glyph-name decoding now handles suffix-stripped names such as `/A.alt`,
-   `uniXXXX` names, and `uXXXX` names; the `/Delta`, `/Omega`, and `/mu`
+   `uniXXXX` names, `uXXXX` names, and the CamlPDF glyph-list control names
+   `/controlCR`, `/controlLF`, `/controlHT`, and `/controlFF`; the `/Delta`,
+   `/Omega`, and `/mu`
    conflicts between AGL names and Symbol font names are handled with
    font-specific codepoint lookup. Reverse charcode lookup scans the
    effective encoding for single-codepoint glyphs. ToUnicode CMap parsing now

@@ -3151,6 +3151,10 @@ fn pdf_text_codepoint_of_digit_glyphname(name : PdfName) -> Int? {
 fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/space" => Some(32)
+    "/controlHT" => Some(9)
+    "/controlLF" => Some(10)
+    "/controlFF" => Some(12)
+    "/controlCR" => Some(13)
     "/exclam" => Some(33)
     "/quotedbl" => Some(34)
     "/numbersign" => Some(35)

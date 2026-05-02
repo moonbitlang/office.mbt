@@ -4623,6 +4623,39 @@ test "PdfTextExtractor uses custom encoding differences before base encoding" {
 }
 
 ///|
+test "PdfTextExtractor decodes control glyph names" {
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, [
+        text_difference_for_test("/controlCR", 1),
+        text_difference_for_test("/controlLF", 2),
+        text_difference_for_test("/controlHT", 3),
+        text_difference_for_test("/controlFF", 4),
+      ]),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([1, 2, 3, 4])[:]),
+    [13, 10, 9, 12],
+  )
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(text_bytes_for_test([1, 2, 3, 4])[:]),
+    [
+      text_name_for_test("/controlCR"),
+      text_name_for_test("/controlLF"),
+      text_name_for_test("/controlHT"),
+      text_name_for_test("/controlFF"),
+    ],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(13), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(10), Some(2))
+  @test.assert_eq(extractor.charcode_of_codepoint(9), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(12), Some(4))
+}
+
+///|
 test "PdfDocument write_font rejects unsupported font variants" {
   let doc = @pdflite.pdf_document_empty()
   let unsupported = try? doc.write_font(
