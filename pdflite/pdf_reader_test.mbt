@@ -142,6 +142,23 @@ fn reader_classic_pdf_with_xref_body(
 }
 
 ///|
+fn reader_classic_pdf_with_fixed_width_xref_separators() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n")
+  reader_push_padded_decimal(output, 0, 10)
+  reader_push_ascii(output, "_65535_f \n")
+  reader_push_padded_decimal(output, catalog_offset, 10)
+  reader_push_ascii(output, "_00000_n \n")
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_trailing_startxref_junk() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   for
@@ -2078,6 +2095,25 @@ test "pdf_read_classic_document_from_bytes accepts repeated xref section markers
 }
 
 ///|
+test "pdf_read_classic_document_from_bytes accepts fixed-width xref separators" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_fixed_width_xref_separators(),
+  )
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
+}
+
+///|
 test "pdf_read_classic_document_from_bytes ignores trailing startxref junk after EOF" {
   let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_trailing_startxref_junk(),
@@ -2143,6 +2179,22 @@ test "pdf_read_classic_document_from_bytes reports malformed xref rows" {
     reader_classic_pdf_with_xref_body("0\n", "<< /Root 1 0 R /Size 1 >>"),
   )
   guard short_row is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+  let bad_fixed_digit : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000_65x35_f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  guard bad_fixed_digit is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+  let bad_fixed_marker : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000_65535_q \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  guard bad_fixed_marker is Err(@pdflite.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 }

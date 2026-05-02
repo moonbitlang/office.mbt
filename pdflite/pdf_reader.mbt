@@ -271,6 +271,46 @@ fn pdf_xref_marker_token(token : BytesView) -> Bool {
 }
 
 ///|
+fn pdf_xref_fixed_width_digits(
+  line : BytesView,
+  start : Int,
+  end : Int,
+) -> Bool {
+  for i in start..<end {
+    if !pdf_is_digit_byte(line[i].to_int()) {
+      break false
+    }
+  } nobreak {
+    true
+  }
+}
+
+///|
+fn pdf_xref_fixed_width_entry(
+  line : BytesView,
+  object_number : Int,
+) -> PdfClassicXRefEntry? raise PdfError {
+  if line.length() >= 18 &&
+    pdf_xref_fixed_width_digits(line, 0, 10) &&
+    pdf_xref_fixed_width_digits(line, 11, 16) {
+    let in_use = match line[17].to_int() {
+      110 => true
+      102 => false
+      _ => raise XRefEntryExpected
+    }
+    Some({
+      object_number,
+      offset: pdf_parse_ascii_int_view(line[0:10]),
+      generation: pdf_parse_ascii_int_view(line[11:16]),
+      in_use,
+      object_stream: None,
+    })
+  } else {
+    None
+  }
+}
+
+///|
 fn pdf_read_startxref_position(data : BytesView) -> Int raise PdfError {
   let search = pdf_startxref_search_view(data)
   let start = pdf_find_last_ascii(search, [
@@ -360,7 +400,8 @@ fn ByteCursor::read_pdf_classic_xref_entries(
     } else if self.peek_byte() == pdf_no_more {
       raise TrailerExpected
     } else {
-      let tokens = pdf_split_whitespace_tokens(self.read_line_view())
+      let line = self.read_line_view()
+      let tokens = pdf_split_whitespace_tokens(line)
       if tokens.length() == 1 && pdf_xref_marker_token(tokens[0]) {
         ()
       } else if tokens.length() == 2 {
@@ -387,7 +428,13 @@ fn ByteCursor::read_pdf_classic_xref_entries(
         })
         object_number += 1
       } else {
-        raise XRefEntryExpected
+        match pdf_xref_fixed_width_entry(line, object_number) {
+          Some(entry) => {
+            entries.push(entry)
+            object_number += 1
+          }
+          None => raise XRefEntryExpected
+        }
       }
     }
   }

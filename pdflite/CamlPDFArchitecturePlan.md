@@ -17,7 +17,8 @@ work changes.
    Owner modules: `pdf_object.mbt`, `pdf_document.mbt`, `pdf_writer.mbt`,
    `pdf_reader.mbt`, `pdf_renumber.mbt`.
    Status: broad coverage for objects, streams, lazy/deferred stream slices,
-   reading, writing, xrefs, object streams, name trees, and renumbering.
+   reading, writing, strict/reconstructed xrefs, object streams, name trees, and
+   renumbering.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 

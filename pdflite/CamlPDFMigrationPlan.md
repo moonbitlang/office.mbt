@@ -281,7 +281,9 @@ MoonBit consequences for this project:
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
    workaround that treats `0000000000 _____ n` rows as free entries instead of
    failing the table, and accepts repeated `xref` marker lines plus
-   `xref n m` section headers inside a classic table.
+   `xref n m` section headers inside a classic table. It also accepts
+   CamlPDF-style fixed-width xref rows whose separator columns are malformed
+   while the offset, generation, and `n`/`f` columns remain parseable.
    Broader malformed xref-table recovery remains deferred. The
    reconstruction scan now
    builds a temporary offset table before materializing objects, so recovered
