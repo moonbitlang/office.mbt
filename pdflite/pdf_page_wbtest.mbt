@@ -218,6 +218,33 @@ test "private page root and content helpers cover filtered shapes" {
     root.lookup_immediate(pdf_page_name("/Metadata")),
     Some(PdfString(page_wb_text("meta"))),
   )
+  let active_doc = pdf_document_empty()
+  active_doc.set_root(1)
+  active_doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
+      (pdf_page_pages_key(), PdfIndirect(9)),
+      (pdf_page_name("/Lang"), PdfString(page_wb_text("stale"))),
+    ]),
+  )
+  active_doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
+      (pdf_page_pages_key(), PdfIndirect(19)),
+      (pdf_page_name("/Lang"), PdfString(page_wb_text("active"))),
+    ]),
+  )
+  active_doc.set_trailer_dict(
+    PdfDictionary([(pdf_page_root_key(), PdfIndirect(10))]),
+  )
+  let active_root_number = try! active_doc.add_root(2, [])
+  let active_root = active_doc.lookup_object_or_null(active_root_number)
+  @test.assert_eq(
+    active_root.lookup_immediate(pdf_page_name("/Lang")),
+    Some(PdfString(page_wb_text("active"))),
+  )
 
   let stream = try! pdf_content_stream_of_ops([Op_BT, Op_ET])
   doc.add_object_given_number(10, PdfArray([PdfIndirect(11)]))

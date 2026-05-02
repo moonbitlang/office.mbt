@@ -418,7 +418,10 @@ pub fn PdfDocument::add_root(
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
     (pdf_page_pages_key(), PdfIndirect(page_root_number)),
   ])
-  let current_root = self.lookup_object_or_null(self.root())
+  let current_root = match self.pdf_page_active_catalog() {
+    Some((catalog, _)) => catalog
+    None => PdfNull
+  }
   for entry in pdf_page_root_entries_without_catalog_keys(current_root) {
     let (key, value) = entry
     root = root.add_dict_entry(key, value)

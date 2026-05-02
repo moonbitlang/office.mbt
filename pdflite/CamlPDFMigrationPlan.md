@@ -428,7 +428,8 @@ MoonBit consequences for this project:
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
    Root installation now matches CamlPDF's catalog-entry precedence: the new
    `/Type` and `/Pages` entries are authoritative, existing catalog extras are
-   preserved, and explicit extras replace same-name existing extras.
+   preserved from the active trailer-root catalog, and explicit extras replace
+   same-name existing extras.
    CamlPDF's `replace_inherit` helper is also started as
    `PdfDocument::replace_inherit`, materializing inherited `/MediaBox`,
    `/CropBox`, `/Rotate`, and `/Resources` entries onto selected page objects
