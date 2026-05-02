@@ -402,39 +402,40 @@ fn ByteCursor::read_pdf_classic_xref_entries(
     } else {
       let line = self.read_line_view()
       let tokens = pdf_split_whitespace_tokens(line)
-      if tokens.length() == 1 && pdf_xref_marker_token(tokens[0]) {
-        ()
-      } else if tokens.length() == 2 {
-        object_number = pdf_parse_ascii_int_view(tokens[0])
-        ignore(pdf_parse_ascii_int_view(tokens[1]))
-      } else if tokens.length() == 3 && pdf_xref_marker_token(tokens[0]) {
-        object_number = pdf_parse_ascii_int_view(tokens[1])
-        ignore(pdf_parse_ascii_int_view(tokens[2]))
-      } else if tokens.length() >= 3 {
-        entries.push({
-          object_number,
-          offset: pdf_parse_ascii_int_view(tokens[0]),
-          generation: if pdf_xref_malformed_zero_offset_in_use_free(tokens) {
-            0
-          } else {
-            pdf_parse_ascii_int_view(tokens[1])
-          },
-          in_use: if pdf_xref_malformed_zero_offset_in_use_free(tokens) {
-            false
-          } else {
-            pdf_xref_token_in_use(tokens[2])
-          },
-          object_stream: None,
-        })
-        object_number += 1
-      } else {
-        match pdf_xref_fixed_width_entry(line, object_number) {
-          Some(entry) => {
-            entries.push(entry)
-            object_number += 1
-          }
-          None => raise XRefEntryExpected
+      match pdf_xref_fixed_width_entry(line, object_number) {
+        Some(entry) => {
+          entries.push(entry)
+          object_number += 1
         }
+        None =>
+          if tokens.length() == 1 && pdf_xref_marker_token(tokens[0]) {
+            ()
+          } else if tokens.length() == 2 {
+            object_number = pdf_parse_ascii_int_view(tokens[0])
+            ignore(pdf_parse_ascii_int_view(tokens[1]))
+          } else if tokens.length() == 3 && pdf_xref_marker_token(tokens[0]) {
+            object_number = pdf_parse_ascii_int_view(tokens[1])
+            ignore(pdf_parse_ascii_int_view(tokens[2]))
+          } else if tokens.length() >= 3 {
+            entries.push({
+              object_number,
+              offset: pdf_parse_ascii_int_view(tokens[0]),
+              generation: if pdf_xref_malformed_zero_offset_in_use_free(tokens) {
+                0
+              } else {
+                pdf_parse_ascii_int_view(tokens[1])
+              },
+              in_use: if pdf_xref_malformed_zero_offset_in_use_free(tokens) {
+                false
+              } else {
+                pdf_xref_token_in_use(tokens[2])
+              },
+              object_stream: None,
+            })
+            object_number += 1
+          } else {
+            raise XRefEntryExpected
+          }
       }
     }
   }

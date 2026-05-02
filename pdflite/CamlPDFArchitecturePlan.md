@@ -18,7 +18,8 @@ work changes.
    `pdf_reader.mbt`, `pdf_renumber.mbt`.
    Status: broad coverage for objects, streams, lazy/deferred stream slices,
    reading, writing, strict/reconstructed xrefs, object streams, name trees, and
-   renumbering.
+   renumbering. Strict classic xref parsing now includes CamlPDF's fixed-width
+   malformed-separator tolerance for independently bad separator columns.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 

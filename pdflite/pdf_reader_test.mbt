@@ -159,6 +159,21 @@ fn reader_classic_pdf_with_fixed_width_xref_separators() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_unpadded_xref_entry() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n1 1\n")
+  reader_push_ascii(output, catalog_offset.to_string())
+  reader_push_ascii(output, " 0 n\n")
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_glued_trailer_dictionary() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -2156,6 +2171,45 @@ test "pdf_read_classic_document_from_bytes accepts fixed-width xref separators" 
       ),
     ]),
   )
+  let mixed_first = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000_65535 f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  @test.assert_eq(mixed_first.root(), 1)
+  @test.assert_eq(mixed_first.object_numbers(), [])
+  let mixed_second = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 65535_f \n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  @test.assert_eq(mixed_second.root(), 1)
+  @test.assert_eq(mixed_second.object_numbers(), [])
+}
+
+///|
+test "pdf_read_classic_document_from_bytes accepts tokenized xref rows" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_unpadded_xref_entry(),
+  )
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
+  let free = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0 0 f\n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  @test.assert_eq(free.root(), 1)
+  @test.assert_eq(free.object_numbers(), [])
 }
 
 ///|
