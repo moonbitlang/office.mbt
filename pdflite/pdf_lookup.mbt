@@ -74,6 +74,27 @@ pub fn PdfDocument::lookup_direct(
 }
 
 ///|
+pub fn PdfDocument::lookup_required(
+  self : PdfDocument,
+  key : PdfName,
+  object : PdfObject,
+  error : PdfError,
+) -> PdfObject raise PdfError {
+  match self.direct(object).dictionary_view() {
+    Some(entries) =>
+      for entry in entries {
+        if entry.0 == key {
+          let direct_value = self.direct(entry.1)
+          break if direct_value == PdfNull { raise error } else { direct_value }
+        }
+      } nobreak {
+        raise error
+      }
+    None => raise error
+  }
+}
+
+///|
 pub fn PdfDocument::lookup_direct_or_else(
   self : PdfDocument,
   first_key : PdfName,
