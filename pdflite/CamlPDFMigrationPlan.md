@@ -422,7 +422,8 @@ MoonBit consequences for this project:
    through `/Root`, `/Pages`, and nested `/Kids`, plus `endpage` and
    `pages_of_pagetree_quick` counting, top-level `/Count` based
    `endpage_fast`, `page_object_number`, page records, blank/custom pages,
-   page-tree construction, root installation, and
+   page-tree construction, root installation, active-catalog `/Pages`
+   resolution through trailer `/Root`, and
    `pages_of_pagetree` extraction with inherited `/Resources`, `/MediaBox`,
    `/Rotate`, indirect content preservation, and last-seen mediabox fallback.
    Root installation now matches CamlPDF's catalog-entry precedence: the new

@@ -1748,9 +1748,9 @@ fn PdfDocument::pdf_page_fixup_destination_name_tree(
 
 ///|
 fn pdf_page_root_pages_number(pdf : PdfDocument) -> Int raise PdfError {
-  let root = pdf.lookup_object_or_null(pdf.root())
-  if root == PdfNull {
-    raise RootExpected
+  let root = match pdf.pdf_page_active_catalog() {
+    Some((catalog, _)) => catalog
+    None => raise RootExpected
   }
   match root.lookup_immediate(pdf_page_pages_key()) {
     Some(PdfIndirect(number)) => number
@@ -3217,9 +3217,9 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
 
 ///|
 fn pdf_page_root_pages_node(pdf : PdfDocument) -> PdfObject raise PdfError {
-  let root = pdf.lookup_object_or_null(pdf.root())
-  if root == PdfNull {
-    raise RootExpected
+  let root = match pdf.pdf_page_active_catalog() {
+    Some((catalog, _)) => catalog
+    None => raise RootExpected
   }
   match pdf.lookup_direct(pdf_page_pages_key(), root) {
     Some(pages) => pages

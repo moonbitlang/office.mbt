@@ -1282,6 +1282,61 @@ test "private page reference collection covers malformed nodes" {
 }
 
 ///|
+test "private page tree root helpers use trailer root catalog" {
+  let doc = pdf_document_empty()
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
+      (pdf_page_pages_key(), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    2,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+      (pdf_page_kids_key(), PdfArray([PdfIndirect(3)])),
+      (pdf_page_count_key(), PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
+      (pdf_page_parent_key(), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(
+    10,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
+      (pdf_page_pages_key(), PdfIndirect(20)),
+    ]),
+  )
+  doc.add_object_given_number(
+    20,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())),
+      (pdf_page_kids_key(), PdfArray([PdfIndirect(21)])),
+      (pdf_page_count_key(), PdfInteger(1)),
+    ]),
+  )
+  doc.add_object_given_number(
+    21,
+    PdfDictionary([
+      (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
+      (pdf_page_parent_key(), PdfIndirect(20)),
+    ]),
+  )
+  doc.set_trailer_dict(PdfDictionary([(pdf_page_root_key(), PdfIndirect(10))]))
+
+  @test.assert_eq(try! pdf_page_root_pages_number(doc), 20)
+  @test.assert_eq(try! doc.page_reference_numbers(), [21])
+  @test.assert_eq(try! doc.pages_of_pagetree_quick(), 1)
+}
+
+///|
 fn page_wb_duplicate_page_tree_doc() -> PdfDocument {
   let doc = pdf_document_empty()
   doc.set_root(1)
