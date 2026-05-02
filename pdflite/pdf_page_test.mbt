@@ -2992,6 +2992,71 @@ test "PdfDocument pdf_of_pages materializes inherited crop boxes" {
 }
 
 ///|
+test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
+  let key_type = page_name_for_test("/Type")
+  let key_parent = page_name_for_test("/Parent")
+  let key_kids = page_name_for_test("/Kids")
+  let key_count = page_name_for_test("/Count")
+  let key_resources = page_name_for_test("/Resources")
+  let key_mediabox = page_name_for_test("/MediaBox")
+  let key_font = page_name_for_test("/Font")
+  let pages_type = page_name_for_test("/Pages")
+  let page_type = page_name_for_test("/Page")
+  let font_name = page_name_for_test("/F0")
+  let resource_object : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+    (key_font, PdfDictionary([(font_name, PdfIndirect(10))])),
+  ])
+  let media_object : @pdflite.PdfObject = PdfArray([
+    PdfInteger(0),
+    PdfInteger(0),
+    PdfInteger(600),
+    PdfInteger(800),
+  ])
+  let font_object : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+    (key_type, PdfNameObject(page_name_for_test("/Font"))),
+  ])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(8, resource_object)
+  doc.add_object_given_number(9, media_object)
+  doc.add_object_given_number(10, font_object)
+  doc.add_object_given_number(
+    2,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(pages_type)),
+      (key_kids, PdfArray([PdfIndirect(3)])),
+      (key_count, PdfInteger(1)),
+      (key_resources, PdfIndirect(8)),
+      (key_mediabox, PdfIndirect(9)),
+    ]),
+  )
+  doc.add_object_given_number(
+    3,
+    @pdflite.pdf_dictionary([
+      (key_type, PdfNameObject(page_type)),
+      (key_parent, PdfIndirect(2)),
+    ]),
+  )
+  ignore(try! doc.add_root(2, []))
+  let extracted = try! doc.pdf_of_pages([1])
+  let extracted_page_numbers = try! extracted.page_reference_numbers()
+  @test.assert_eq(extracted_page_numbers.length(), 1)
+  let extracted_page = extracted.lookup_object_or_null(
+    extracted_page_numbers[0],
+  )
+  @test.assert_eq(
+    extracted_page.lookup_immediate(key_resources),
+    Some(PdfIndirect(8)),
+  )
+  @test.assert_eq(
+    extracted_page.lookup_immediate(key_mediabox),
+    Some(PdfIndirect(9)),
+  )
+  @test.assert_eq(extracted.lookup_object_or_null(8), resource_object)
+  @test.assert_eq(extracted.lookup_object_or_null(9), media_object)
+  @test.assert_eq(extracted.lookup_object_or_null(10), font_object)
+}
+
+///|
 test "PdfDocument pdf_of_pages repeats selected pages with distinct objects" {
   let key_parent = page_name_for_test("/Parent")
   let key_kids = page_name_for_test("/Kids")

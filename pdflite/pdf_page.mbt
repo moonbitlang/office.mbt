@@ -2083,6 +2083,43 @@ fn PdfDocument::pdf_page_fixup_parents(
 }
 
 ///|
+fn PdfDocument::pdf_page_preserve_materialized_inherited_page(
+  self : PdfDocument,
+  page : PdfPage,
+  page_object_number : Int,
+) -> PdfPage {
+  let page_object = self.lookup_object_or_null(page_object_number)
+  let mut output = page
+  match page_object.lookup_immediate(pdf_page_resources_key()) {
+    Some(resources) => output = { ..output, resources, }
+    None => ()
+  }
+  match page_object.lookup_immediate(pdf_page_mediabox_key()) {
+    Some(mediabox) => output = { ..output, mediabox, }
+    None => ()
+  }
+  output
+}
+
+///|
+fn PdfDocument::pdf_page_preserve_materialized_inherited_pages(
+  self : PdfDocument,
+  pages : ArrayView[PdfPage],
+  page_object_numbers : ArrayView[Int],
+) -> Array[PdfPage] {
+  let output : Array[PdfPage] = []
+  for index in 0..<pages.length() {
+    output.push(
+      self.pdf_page_preserve_materialized_inherited_page(
+        pages[index],
+        page_object_numbers[index],
+      ),
+    )
+  }
+  output
+}
+
+///|
 pub fn PdfDocument::pdf_of_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
@@ -2110,6 +2147,9 @@ pub fn PdfDocument::pdf_of_pages(
     []
   }
   let selected = pdf_page_select_pages(source.pages_of_pagetree(), page_numbers)
+  let selected = source.pdf_page_preserve_materialized_inherited_pages(
+    selected, old_page_numbers,
+  )
   let deleted_page_numbers = if process_struct_tree {
     pdf_page_deleted_numbers(all_page_numbers, old_page_numbers)
   } else {

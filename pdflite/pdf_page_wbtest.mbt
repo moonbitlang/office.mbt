@@ -1340,6 +1340,19 @@ test "private page selection reports empty and invalid ranges" {
 }
 
 ///|
+test "private materialized page inheritance keeps partial attributes" {
+  let doc = pdf_document_empty()
+  doc.add_object_given_number(
+    1,
+    PdfDictionary([(pdf_page_resources_key(), PdfIndirect(2))]),
+  )
+  let page = pdf_page_blank(paper_a4)
+  let preserved = doc.pdf_page_preserve_materialized_inherited_page(page, 1)
+  @test.assert_eq(preserved.resources, PdfIndirect(2))
+  @test.assert_eq(preserved.mediabox, page.mediabox)
+}
+
+///|
 test "private page resource renumber helpers cover optional misses" {
   let color_space = pdf_page_name("/ColorSpace")
   let properties = pdf_page_name("/Properties")
