@@ -134,7 +134,8 @@ MoonBit consequences for this project:
    Status: started with `PdfUnit` conversions, `PaperSize` constants, and the
    first `Pdftransform` matrix operations: translate, scale, rotate, shear,
    compose, apply, operation-list ordering, `compose`/`append` operation-list
-   helpers, inversion, and CamlPDF-compatible matrix decomposition/recomposition
+   helpers, operation/matrix debug string helpers, inversion, and
+   CamlPDF-compatible matrix decomposition/recomposition
    with abnormal floating results normalized at the API boundary. The MoonBit
    port intentionally preserves CamlPDF's historical conversion constants,
    including the `PdfPoint -> Centimetre` divisor `28.3456`.

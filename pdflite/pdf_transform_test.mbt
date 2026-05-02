@@ -94,6 +94,43 @@ test "Transform operations preserve CamlPDF list ordering" {
 }
 
 ///|
+test "Transform debug strings preserve CamlPDF transform ordering" {
+  let origin = @pdflite.point2(1.0, 2.0)
+  let ops : Array[@pdflite.TransformOp] = [
+    Translate(10.0, 20.0),
+    Scale(origin, 3.0, 4.0),
+    Rotate(origin, 0.5),
+    ShearX(origin, 0.25),
+    ShearY(origin, 0.75),
+  ]
+  @test.assert_eq(
+    @pdflite.transform_string_of_ops(ops),
+    "Shear in Y about (1, 2), proportionality constant 0.75\nShear in X about (1, 2), proportionality constant 0.25\nRotate by 0.5 about (1, 2)\nScale about (1, 2) by 3 in x and 4 in y\nTranslate by 10, 20\n",
+  )
+  @test.assert_eq(
+    @pdflite.transform_string_of_op(Translate(10.0, 20.0)),
+    "Translate by 10, 20\n",
+  )
+}
+
+///|
+test "TransformMatrix debug string renders matrix components" {
+  let matrix : @pdflite.TransformMatrix = {
+    a: 1.0,
+    b: 2.0,
+    c: 3.0,
+    d: 4.0,
+    e: 5.0,
+    f: 6.0,
+  }
+  @test.assert_eq(matrix.debug_string(), "1, 2, 3, 4, 5, 6")
+  @test.assert_eq(
+    @pdflite.transform_string_of_matrix(matrix),
+    matrix.debug_string(),
+  )
+}
+
+///|
 test "transform_compose_op merges like operations at the head" {
   let origin = @pdflite.point2(1.0, 2.0)
   @test.assert_eq(@pdflite.transform_compose_op(Translate(1.0, 2.0), []), [
