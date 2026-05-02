@@ -389,6 +389,105 @@ test "PdfStandardFont exposes standard14 baseline stem and flags" {
 }
 
 ///|
+test "PdfStandardFont exposes Standard14 AFM data tables" {
+  let counts : Array[(@pdflite.PdfStandardFont, Int, Int, Int, Int)] = [
+    (PdfTimesRoman, 25, 149, 315, 206),
+    (PdfTimesBold, 25, 149, 315, 223),
+    (PdfTimesItalic, 25, 149, 315, 213),
+    (PdfTimesBoldItalic, 25, 149, 315, 205),
+    (PdfHelvetica, 25, 149, 315, 289),
+    (PdfHelveticaBold, 25, 149, 315, 252),
+    (PdfHelveticaOblique, 25, 149, 315, 289),
+    (PdfHelveticaBoldOblique, 25, 149, 315, 252),
+    (PdfCourier, 25, 149, 315, 0),
+    (PdfCourierBold, 25, 149, 315, 0),
+    (PdfCourierOblique, 25, 149, 315, 0),
+    (PdfCourierBoldOblique, 25, 149, 315, 0),
+    (PdfSymbol, 21, 189, 190, 0),
+    (PdfZapfDingbats, 21, 202, 202, 0),
+  ]
+  for entry in counts {
+    let data = @pdflite.pdf_standard14_afm_data(entry.0)
+    @test.assert_eq(data.headers.length(), entry.1)
+    @test.assert_eq(data.char_metrics.length(), entry.2)
+    @test.assert_eq(data.char_name_widths.length(), entry.3)
+    @test.assert_eq(data.kerns.length(), entry.4)
+  }
+  @test.assert_eq(
+    @pdflite.PdfCourier.afm_data().headers[5],
+    (@ascii.encode("FontName"), @ascii.encode("Courier")),
+  )
+}
+
+///|
+test "PdfStandardFont text_width mirrors CamlPDF widths and kerning" {
+  let av = text_bytes_for_test([65, 86])
+  @test.assert_eq(
+    @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av[:]),
+    1334,
+  )
+  @test.assert_eq(
+    @pdflite.PdfHelvetica.text_width(PdfWinAnsiEncoding, av[:], kern=true),
+    1264,
+  )
+  let to = text_bytes_for_test([84, 111])
+  @test.assert_eq(
+    @pdflite.pdf_standard14_text_width(PdfTimesRoman, PdfWinAnsiEncoding, to[:]),
+    1111,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_standard14_text_width(
+      PdfTimesRoman,
+      PdfWinAnsiEncoding,
+      to[:],
+      kern=true,
+    ),
+    1031,
+  )
+  let courier = text_bytes_for_test([65, 66, 67])
+  @test.assert_eq(
+    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, courier[:]),
+    1800,
+  )
+  @test.assert_eq(
+    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, courier[:], kern=true),
+    1800,
+  )
+  let missing_code = text_bytes_for_test([1])
+  @test.assert_eq(
+    @pdflite.PdfCourier.text_width(PdfImplicitInFontFile, missing_code[:]),
+    0,
+  )
+}
+
+///|
+test "PdfStandardFont text_width uses glyph-name widths for explicit encodings" {
+  let custom : @pdflite.PdfEncoding = PdfCustomEncoding(PdfWinAnsiEncoding, [
+    text_difference_for_test("/AE", 65),
+  ])
+  let text = text_bytes_for_test([65, 66, 0])
+  @test.assert_eq(@pdflite.PdfHelvetica.text_width(custom, text[:]), 1945)
+  let standard_font = text_standard_font_data_for_test(PdfHelvetica, custom)
+  @test.assert_eq(standard_font.text_width(text[:]), 1945)
+  let symbol_text = text_bytes_for_test([65])
+  @test.assert_eq(
+    @pdflite.PdfSymbol.text_width(PdfImplicitInFontFile, symbol_text[:]),
+    722,
+  )
+  let slashless : @pdflite.PdfEncoding = PdfCustomEncoding(PdfWinAnsiEncoding, [
+    { name: text_name_for_test("AE"), code: 65 },
+  ])
+  @test.assert_eq(
+    @pdflite.PdfHelvetica.text_width(slashless, symbol_text[:]),
+    1000,
+  )
+  let unknown : @pdflite.PdfEncoding = PdfCustomEncoding(PdfWinAnsiEncoding, [
+    text_difference_for_test("/MissingGlyph", 65),
+  ])
+  @test.assert_eq(@pdflite.PdfHelvetica.text_width(unknown, symbol_text[:]), 0)
+}
+
+///|
 test "PdfEncoding debug names preserve CamlPDF forms" {
   @test.assert_eq(
     @pdflite.PdfImplicitInFontFile.debug_name(),

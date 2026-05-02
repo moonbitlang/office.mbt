@@ -389,6 +389,10 @@ pub fn pdf_sha256_digest(BytesView) -> Bytes
 
 pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise PdfError
 
+pub fn pdf_standard14_afm_data(PdfStandardFont) -> PdfAfmData
+
+pub fn pdf_standard14_text_width(PdfStandardFont, PdfEncoding, BytesView, kern? : Bool) -> Int
+
 pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
 
 pub fn pdf_standard_font_of_pdf_name(PdfName) -> PdfStandardFont?
@@ -1507,17 +1511,20 @@ pub(all) enum PdfStandardFont {
   PdfSymbol
   PdfZapfDingbats
 } derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFont::afm_data(Self) -> PdfAfmData
 pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
 pub fn PdfStandardFont::flags(Self) -> Int
 pub fn PdfStandardFont::name(Self) -> String
 pub fn PdfStandardFont::pdf_name(Self) -> PdfName
 pub fn PdfStandardFont::stemv(Self) -> Int
+pub fn PdfStandardFont::text_width(Self, PdfEncoding, BytesView, kern? : Bool) -> Int
 
 pub(all) struct PdfStandardFontData {
   font : PdfStandardFont
   encoding : PdfEncoding
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfStandardFontData::debug_name(Self) -> String
+pub fn PdfStandardFontData::text_width(Self, BytesView, kern? : Bool) -> Int
 
 pub(all) struct PdfStitchingFunction {
   functions : Array[PdfFunction]

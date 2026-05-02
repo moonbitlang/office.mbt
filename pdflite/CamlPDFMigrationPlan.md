@@ -644,7 +644,12 @@ MoonBit consequences for this project:
    repeated source ranges.
    AFM parsing is started with a byte-oriented `pdf_read_afm` API that returns
    header entries, character-code widths, glyph-name widths, and kerning pairs
-   without converting AFM syntax or glyph names through `String`.
+   without converting AFM syntax or glyph names through `String`. Standard 14
+   built-in AFM table access is now started with generated tables derived from
+   the vendored CamlPDF AFM data, plus CamlPDF-compatible byte-oriented
+   `text_width` helpers that use character-code widths for implicit encodings,
+   glyph-name widths for explicit encodings, `/space` fallback for undefined
+   encoded bytes, and optional byte-pair kerning.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
    and `/Identity-H` CID text, including decoded glyph records, glyph-name
    extraction, flattened codepoint extraction, and reverse ToUnicode charcode
