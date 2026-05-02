@@ -1188,6 +1188,7 @@ pub(all) enum PdfObject {
 pub fn PdfObject::add_dict_entry(Self, PdfName, Self) -> Self raise PdfError
 pub fn PdfObject::dictionary_view(Self) -> ArrayView[(PdfName, Self)]?
 pub fn PdfObject::find_indirect(Self, PdfName) -> Int? raise PdfError
+pub fn PdfObject::get_stream(Self) -> Unit raise PdfError
 pub fn PdfObject::lookup_immediate(Self, PdfName) -> Self?
 pub fn PdfObject::remove_dict_entry(Self, PdfName) -> Self raise PdfError
 pub fn PdfObject::replace_dict_entry(Self, PdfName, Self) -> Self raise PdfError

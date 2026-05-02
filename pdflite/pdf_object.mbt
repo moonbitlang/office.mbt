@@ -119,6 +119,11 @@ pub fn stream_to_get(input : ByteCursor, position : Int, length : Int) -> ToGet 
 }
 
 ///|
+fn pdf_object_length_name() -> PdfName {
+  pdf_name_of_bytes(@ascii.encode("/Length"))
+}
+
+///|
 fn pdf_stream_data_view(data : PdfStreamData) -> BytesView raise PdfError {
   match data {
     StreamGot(bytes) => bytes[:]
@@ -153,6 +158,29 @@ fn pdf_stream_data_bytes(data : PdfStreamData) -> PdfBytes raise PdfError {
 pub fn PdfObject::stream_bytes(self : PdfObject) -> PdfBytes raise PdfError {
   match self {
     PdfStreamObject(stream) => pdf_stream_data_bytes(stream.data)
+    _ => raise ParseStreamExpected
+  }
+}
+
+///|
+pub fn PdfObject::get_stream(self : PdfObject) -> Unit raise PdfError {
+  match self {
+    PdfStreamObject(stream) =>
+      match stream.data {
+        StreamGot(_) => ()
+        StreamToGet(_) => {
+          let data = pdf_stream_data_bytes(stream.data)
+          match stream.dictionary {
+            PdfDictionary(_) =>
+              stream.dictionary = stream.dictionary.replace_dict_entry(
+                pdf_object_length_name(),
+                PdfInteger(data.length()),
+              )
+            _ => ()
+          }
+          stream.data = StreamGot(data)
+        }
+      }
     _ => raise ParseStreamExpected
   }
 }

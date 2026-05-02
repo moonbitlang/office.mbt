@@ -162,6 +162,62 @@ test "PdfObject stream_bytes materializes owned and deferred stream data" {
 }
 
 ///|
+test "PdfObject get_stream materializes deferred streams and corrects length" {
+  let key_length = object_name_for_test([47, 76, 101, 110, 103, 116, 104])
+  let deferred_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(key_length, PdfInteger(99))]),
+    StreamToGet(
+      @pdflite.stream_to_get(
+        @pdflite.byte_cursor_of_bytes(
+          try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
+        ),
+        1,
+        2,
+      ),
+    ),
+  )
+  try! deferred_stream.get_stream()
+  guard deferred_stream is PdfStreamObject(stream) else {
+    fail("expected stream")
+  }
+  @test.assert_eq(
+    stream.data,
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66, 67])),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(key_length),
+    Some(PdfInteger(2)),
+  )
+  try! deferred_stream.get_stream()
+  @test.assert_eq(
+    stream.data,
+    StreamGot(try! @pdflite.pdf_bytes_of_int_array([66, 67])),
+  )
+  let non_dictionary_stream = @pdflite.pdf_stream(
+    PdfNull,
+    StreamToGet(
+      @pdflite.stream_to_get(
+        @pdflite.byte_cursor_of_bytes(
+          try! @pdflite.pdf_bytes_of_int_array([68]),
+        ),
+        0,
+        1,
+      ),
+    ),
+  )
+  try! non_dictionary_stream.get_stream()
+  @test.assert_eq(
+    try! non_dictionary_stream.stream_bytes(),
+    try! @pdflite.pdf_bytes_of_int_array([68]),
+  )
+  let non_stream_object : @pdflite.PdfObject = PdfInteger(1)
+  let non_stream : Result[Unit, Error] = try? non_stream_object.get_stream()
+  guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
+    fail("expected ParseStreamExpected")
+  }
+}
+
+///|
 test "PdfObject unique_key scans dictionary names in CamlPDF order" {
   let name_gs0 = object_name_for_test([47, 103, 115, 48])
   let name_gs1 = object_name_for_test([47, 103, 115, 49])

@@ -144,7 +144,8 @@ MoonBit consequences for this project:
    parameters, and `FixedArray` for fixed OCaml-array semantics.
    Status: started with `PdfObject`, `PdfStream`, `ToGet`, ordered dictionary
    construction, immediate lookup, add/replace/remove helpers, stream
-   dictionary mutation, object map entries, parsed/deferred object states,
+   dictionary mutation, side-effecting deferred stream materialization with
+   `/Length` correction, object map entries, parsed/deferred object states,
    document defaults, checked catalog lookup, add/remove object logging,
    explicit object-entry collection construction, object-number selection,
    parsed object-entry and stream-entry snapshots with generation numbers,
