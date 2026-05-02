@@ -3373,6 +3373,62 @@ fn pdf_text_codepoint_of_punctuation_glyphname(name : PdfName) -> Int? {
 }
 
 ///|
+fn pdf_text_codepoint_of_spacing_modifier_glyphname(name : PdfName) -> Int? {
+  match pdf_text_string_of_name(name) {
+    "/Rsmallinvertedsuperior" => Some(0x02B6)
+    "/acutelowmod" => Some(0x02CF)
+    "/afii57929" => Some(0x02BC)
+    "/afii64937" => Some(0x02BD)
+    "/apostrophemod" => Some(0x02BC)
+    "/arrowheaddownmod" => Some(0x02C5)
+    "/arrowheadleftmod" => Some(0x02C2)
+    "/arrowheadrightmod" => Some(0x02C3)
+    "/arrowheadupmod" => Some(0x02C4)
+    "/colontriangularhalfmod" => Some(0x02D1)
+    "/colontriangularmod" => Some(0x02D0)
+    "/commareversedmod" => Some(0x02BD)
+    "/commaturnedmod" => Some(0x02BB)
+    "/dblprimemod" => Some(0x02BA)
+    "/downtackmod" => Some(0x02D5)
+    "/firsttonechinese" => Some(0x02C9)
+    "/fourthtonechinese" => Some(0x02CB)
+    "/gammasuperior" => Some(0x02E0)
+    "/glottalstopmod" => Some(0x02C0)
+    "/glottalstopreversedmod" => Some(0x02C1)
+    "/glottalstopreversedsuperior" => Some(0x02E4)
+    "/gravelowmod" => Some(0x02CE)
+    "/hhooksuperior" => Some(0x02B1)
+    "/hsuperior" => Some(0x02B0)
+    "/ilde" => Some(0x02DC)
+    "/jsuperior" => Some(0x02B2)
+    "/macronlowmod" => Some(0x02CD)
+    "/minusmod" => Some(0x02D7)
+    "/plusmod" => Some(0x02D6)
+    "/primemod" => Some(0x02B9)
+    "/rhookturnedsuperior" => Some(0x02B5)
+    "/rhotichookmod" => Some(0x02DE)
+    "/ringhalfleft" => Some(0x02BF)
+    "/ringhalfleftcentered" => Some(0x02D3)
+    "/ringhalfright" => Some(0x02BE)
+    "/ringhalfrightcentered" => Some(0x02D2)
+    "/rturnedsuperior" => Some(0x02B4)
+    "/secondtonechinese" => Some(0x02CA)
+    "/tonebarextrahighmod" => Some(0x02E5)
+    "/tonebarextralowmod" => Some(0x02E9)
+    "/tonebarhighmod" => Some(0x02E6)
+    "/tonebarlowmod" => Some(0x02E8)
+    "/tonebarmidmod" => Some(0x02E7)
+    "/uptackmod" => Some(0x02D4)
+    "/verticallinelowmod" => Some(0x02CC)
+    "/verticallinemod" => Some(0x02C8)
+    "/wsuperior" => Some(0x02B7)
+    "/xsuperior" => Some(0x02E3)
+    "/ysuperior" => Some(0x02B8)
+    _ => None
+  }
+}
+
+///|
 fn pdf_text_codepoint_of_currency_letterlike_glyphname(name : PdfName) -> Int? {
   match pdf_text_string_of_name(name) {
     "/afii08941" => Some(0x20A4)
@@ -4748,6 +4804,10 @@ fn pdf_text_codepoint_of_agl_base_glyphname(base_name : PdfName) -> Int? {
     None => ()
   }
   match pdf_text_codepoint_of_punctuation_glyphname(base_name) {
+    Some(codepoint) => return Some(codepoint)
+    None => ()
+  }
+  match pdf_text_codepoint_of_spacing_modifier_glyphname(base_name) {
     Some(codepoint) => return Some(codepoint)
     None => ()
   }

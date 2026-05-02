@@ -4736,6 +4736,88 @@ test "PdfTextExtractor decodes Latin-1 spacing AGL aliases" {
 }
 
 ///|
+test "PdfTextExtractor decodes spacing modifier AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/Rsmallinvertedsuperior", 0x02B6),
+    ("/acutelowmod", 0x02CF),
+    ("/afii57929", 0x02BC),
+    ("/afii64937", 0x02BD),
+    ("/apostrophemod", 0x02BC),
+    ("/arrowheaddownmod", 0x02C5),
+    ("/arrowheadleftmod", 0x02C2),
+    ("/arrowheadrightmod", 0x02C3),
+    ("/arrowheadupmod", 0x02C4),
+    ("/colontriangularhalfmod", 0x02D1),
+    ("/colontriangularmod", 0x02D0),
+    ("/commareversedmod", 0x02BD),
+    ("/commaturnedmod", 0x02BB),
+    ("/dblprimemod", 0x02BA),
+    ("/downtackmod", 0x02D5),
+    ("/firsttonechinese", 0x02C9),
+    ("/fourthtonechinese", 0x02CB),
+    ("/gammasuperior", 0x02E0),
+    ("/glottalstopmod", 0x02C0),
+    ("/glottalstopreversedmod", 0x02C1),
+    ("/glottalstopreversedsuperior", 0x02E4),
+    ("/gravelowmod", 0x02CE),
+    ("/hhooksuperior", 0x02B1),
+    ("/hsuperior", 0x02B0),
+    ("/ilde", 0x02DC),
+    ("/jsuperior", 0x02B2),
+    ("/macronlowmod", 0x02CD),
+    ("/minusmod", 0x02D7),
+    ("/plusmod", 0x02D6),
+    ("/primemod", 0x02B9),
+    ("/rhookturnedsuperior", 0x02B5),
+    ("/rhotichookmod", 0x02DE),
+    ("/ringhalfleft", 0x02BF),
+    ("/ringhalfleftcentered", 0x02D3),
+    ("/ringhalfright", 0x02BE),
+    ("/ringhalfrightcentered", 0x02D2),
+    ("/rturnedsuperior", 0x02B4),
+    ("/secondtonechinese", 0x02CA),
+    ("/tonebarextrahighmod", 0x02E5),
+    ("/tonebarextralowmod", 0x02E9),
+    ("/tonebarhighmod", 0x02E6),
+    ("/tonebarlowmod", 0x02E8),
+    ("/tonebarmidmod", 0x02E7),
+    ("/uptackmod", 0x02D4),
+    ("/verticallinelowmod", 0x02CC),
+    ("/verticallinemod", 0x02C8),
+    ("/wsuperior", 0x02B7),
+    ("/xsuperior", 0x02E3),
+    ("/ysuperior", 0x02B8),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)[:]),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02B0), Some(24))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02BC), Some(3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02BD), Some(4))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02DC), Some(25))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02E9), Some(40))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x02B8), Some(49))
+}
+
+///|
 test "PdfTextExtractor decodes currency and letterlike AGL glyph names" {
   let entries : Array[(String, Int)] = [
     ("/afii08941", 0x20A4),
