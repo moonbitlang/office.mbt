@@ -410,7 +410,7 @@ fn pdf_image_decode_interpolate(
 }
 
 ///|
-fn pdf_image_apply_1bpp_decode(data : PdfBytes) -> PdfBytes {
+fn pdf_image_apply_1bpp_decode(data : BytesView) -> PdfBytes {
   let output : Array[Byte] = []
   for value in data {
     output.push((value.to_int() ^ 0xFF).to_byte())
@@ -420,7 +420,7 @@ fn pdf_image_apply_1bpp_decode(data : PdfBytes) -> PdfBytes {
 
 ///|
 fn pdf_image_apply_8bpp_decode(
-  data : PdfBytes,
+  data : BytesView,
   values : ArrayView[Double],
 ) -> PdfBytes raise PdfError {
   let components = values.length() / 2
@@ -442,6 +442,28 @@ fn pdf_image_apply_8bpp_decode(
 }
 
 ///|
+fn pdf_image_apply_decode_borrowed(
+  data : BytesView,
+  bpc : Int?,
+  decode_values : Array[Double]?,
+) -> PdfBytes raise PdfError {
+  match decode_values {
+    None => data.to_owned()
+    Some(values) =>
+      if pdf_image_decode_is_identity(values) {
+        data.to_owned()
+      } else {
+        match bpc {
+          Some(1) => pdf_image_apply_1bpp_decode(data)
+          Some(2) | Some(4) | Some(16) => data.to_owned()
+          Some(8) => pdf_image_apply_8bpp_decode(data, values)
+          _ => raise FilterExpected
+        }
+      }
+  }
+}
+
+///|
 fn pdf_image_apply_decode(
   data : PdfBytes,
   bpc : Int?,
@@ -454,9 +476,9 @@ fn pdf_image_apply_decode(
         data
       } else {
         match bpc {
-          Some(1) => pdf_image_apply_1bpp_decode(data)
+          Some(1) => pdf_image_apply_decode_borrowed(data[:], bpc, Some(values))
           Some(2) | Some(4) | Some(16) => data
-          Some(8) => pdf_image_apply_8bpp_decode(data, values)
+          Some(8) => pdf_image_apply_decode_borrowed(data[:], bpc, Some(values))
           _ => raise FilterExpected
         }
       }

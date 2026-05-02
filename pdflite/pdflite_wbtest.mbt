@@ -1278,6 +1278,52 @@ test "private image decode helpers cover scalar edge behavior" {
     fail("expected missing bpc for non-identity decode")
   }
 
+  let wrapped = try! pdf_bytes_of_int_array([153, 170, 0, 255, 136])
+  @test.assert_eq(
+    try! pdf_image_apply_decode_borrowed(
+      wrapped[1:2],
+      Some(1),
+      Some([1.0, 0.0]),
+    ),
+    try! pdf_bytes_of_int_array([85]),
+  )
+  @test.assert_eq(
+    try! pdf_image_apply_decode_borrowed(
+      wrapped[2:4],
+      Some(8),
+      Some([1.0, 0.0]),
+    ),
+    try! pdf_bytes_of_int_array([1, 0]),
+  )
+  @test.assert_eq(
+    try! pdf_image_apply_decode_borrowed(
+      wrapped[2:4],
+      Some(2),
+      Some([1.0, 0.0]),
+    ),
+    try! pdf_bytes_of_int_array([0, 255]),
+  )
+  @test.assert_eq(
+    try! pdf_image_apply_decode_borrowed(wrapped[2:4], Some(8), None),
+    try! pdf_bytes_of_int_array([0, 255]),
+  )
+  @test.assert_eq(
+    try! pdf_image_apply_decode_borrowed(
+      wrapped[2:4],
+      Some(8),
+      Some([0.0, 1.0]),
+    ),
+    try! pdf_bytes_of_int_array([0, 255]),
+  )
+  let borrowed_missing_bpc : Result[PdfBytes, Error] = try? pdf_image_apply_decode_borrowed(
+    wrapped[2:4],
+    None,
+    Some([1.0, 0.0]),
+  )
+  guard borrowed_missing_bpc is Err(PdfError::FilterExpected) else {
+    fail("expected borrowed missing bpc for non-identity decode")
+  }
+
   let doc = pdf_document_empty()
   let unsupported_indexed = PdfIndexed(PdfDeviceGray, [(0, [7])])
   let unsupported8 : Result[PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
