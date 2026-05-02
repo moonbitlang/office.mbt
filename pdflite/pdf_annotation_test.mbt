@@ -559,3 +559,81 @@ test "PdfDocument transform_annotations updates annotation geometry" {
     PdfDictionary([]),
   )
 }
+
+///|
+test "PdfDocument transform_annotations updates direct annotation dictionaries" {
+  let key_annots = annotation_name_for_test("/Annots")
+  let key_rect = annotation_name_for_test("/Rect")
+  let key_quadpoints = annotation_name_for_test("/QuadPoints")
+  let key_line = annotation_name_for_test("/L")
+  let doc = @pdflite.pdf_document_empty()
+  let rest : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_annots,
+      PdfArray([
+        PdfDictionary([
+          (
+            key_rect,
+            PdfArray([
+              PdfInteger(0),
+              PdfInteger(0),
+              PdfInteger(10),
+              PdfInteger(20),
+            ]),
+          ),
+          (
+            key_quadpoints,
+            PdfArray([
+              PdfInteger(0),
+              PdfInteger(0),
+              PdfInteger(10),
+              PdfInteger(0),
+              PdfInteger(10),
+              PdfInteger(10),
+              PdfInteger(0),
+              PdfInteger(10),
+            ]),
+          ),
+          (
+            key_line,
+            PdfArray([
+              PdfInteger(0),
+              PdfInteger(0),
+              PdfInteger(5),
+              PdfInteger(5),
+            ]),
+          ),
+        ]),
+        PdfNull,
+      ]),
+    ),
+  ])
+  try! doc.transform_annotations(@pdflite.transform_translate(1.0, 2.0), rest)
+  guard rest.lookup_immediate(key_annots)
+    is Some(PdfArray([PdfDictionary(_) as annotation, PdfNull])) else {
+    fail("expected transformed direct annotation")
+  }
+  @test.assert_eq(
+    annotation.lookup_immediate(key_rect),
+    Some(PdfArray([PdfReal(1.0), PdfReal(2.0), PdfReal(11.0), PdfReal(22.0)])),
+  )
+  @test.assert_eq(
+    annotation.lookup_immediate(key_quadpoints),
+    Some(
+      PdfArray([
+        PdfReal(1.0),
+        PdfReal(2.0),
+        PdfReal(11.0),
+        PdfReal(2.0),
+        PdfReal(11.0),
+        PdfReal(12.0),
+        PdfReal(1.0),
+        PdfReal(12.0),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    annotation.lookup_immediate(key_line),
+    Some(PdfArray([PdfReal(1.0), PdfReal(2.0), PdfReal(6.0), PdfReal(7.0)])),
+  )
+}

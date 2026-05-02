@@ -36,9 +36,9 @@ work changes.
    Status: page tree read/write/change/extract flows, content operators,
    `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
    bookmarks, annotations, page labels, duplicate annotation fixups, and
-   destination pruning are started with direct tests.
-   Remaining focus: edge-case parity for direct annotation structures and
-   additional `change_pages` compatibility fixtures.
+   destination pruning are started with direct tests. Direct annotation
+   dictionaries in `/Annots` arrays now participate in geometry transforms.
+   Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.
    Owner modules: `pdf_text.mbt`, `pdf_space.mbt`, `pdf_fun.mbt`,

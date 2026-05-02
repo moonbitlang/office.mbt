@@ -615,6 +615,18 @@ fn PdfDocument::pdf_annotation_transform_one(
   annotation_number : Int,
 ) -> Unit raise PdfError {
   let annotation = self.lookup_object_or_null(annotation_number)
+  let transformed = self.pdf_annotation_transform_object(matrix, annotation)
+  if transformed != annotation {
+    self.add_object_given_number(annotation_number, transformed)
+  }
+}
+
+///|
+fn PdfDocument::pdf_annotation_transform_object(
+  self : PdfDocument,
+  matrix : TransformMatrix,
+  annotation : PdfObject,
+) -> PdfObject raise PdfError {
   let mut transformed = annotation
   match self.lookup_direct(pdf_annotation_rect_key(), annotation) {
     Some(rectangle) =>
@@ -640,9 +652,7 @@ fn PdfDocument::pdf_annotation_transform_one(
       )
     None => ()
   }
-  if transformed != annotation {
-    self.add_object_given_number(annotation_number, transformed)
-  }
+  transformed
 }
 
 ///|
@@ -653,10 +663,18 @@ pub fn PdfDocument::transform_annotations(
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), rest) {
     Some(PdfArray(annotations)) =>
-      for annotation in annotations {
-        match annotation {
+      for index in 0..<annotations.length() {
+        match annotations[index] {
           PdfIndirect(number) =>
             self.pdf_annotation_transform_one(matrix, number)
+          PdfDictionary(_) as annotation => {
+            let transformed = self.pdf_annotation_transform_object(
+              matrix, annotation,
+            )
+            if transformed != annotation {
+              annotations[index] = transformed
+            }
+          }
           _ => ()
         }
       }
