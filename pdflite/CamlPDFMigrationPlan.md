@@ -789,8 +789,8 @@ MoonBit consequences for this project:
     classic writer/read/decrypt round-trip gate plus classic, uncompressed
     xref-stream, and Flate-compressed xref-stream incremental update gates,
     including `/EncryptMetadata false` metadata-stream skipping. Default AES
-    recrypt remains deferred until a project-level random-byte source is
-    selected.
+    recrypt remains deferred until a project-level cryptographic random-byte
+    source is selected; core `@random` is not being used for AES IVs or salts.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`

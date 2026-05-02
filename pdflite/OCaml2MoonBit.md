@@ -393,6 +393,18 @@ because some platforms cannot always determine it. Prefer `x is Some(_)` or
 pattern matching to test options; `Option::is_some` is deprecated.
 
 ```sh
+moon run -c 'fn main { let r = @random.Rand::chacha8(seed=@ascii.encode("01234567890123456789012345678901")); println(r.uint(limit=256).to_string()); println(r.uint(limit=256).to_string()) }'
+# 21
+# 42
+```
+
+Use core `@random` for deterministic or ordinary pseudo-random generation.
+`Rand::chacha8(seed=...)` requires a 32-byte seed. Do not substitute
+`@random` or `@env.now()` for a cryptographic random-byte source when porting
+security-sensitive OCaml code such as AES IV, salt, or file-key generation;
+keep an explicit random provider or use a target-specific secure API.
+
+```sh
 moon run -c 'fn has_ab(view : BytesView) -> Bool { match view { [65, 66, ..] => true; _ => false } }
 fn main { let bytes : Bytes = [65, 66, 67]; let view = bytes[:2]; println(view.length()); println(view[0].to_int()); println(has_ab(bytes[:])); println(has_ab(view)) }'
 # 2
