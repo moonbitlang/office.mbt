@@ -415,6 +415,21 @@ test "pdf_parse_content_ops_from_bytes falls back for array inline image spaces"
       content_bytes_for_test("abc"),
     ),
   ])
+  let length_data = content_bytes_for_test("BI /CS [/RGB] /L 6 ID A EI B\nEI Q")
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(length_data), [
+    Op_InlineImage(
+      @pdflite.pdf_dictionary([
+        (
+          content_name_for_test("/CS"),
+          PdfArray([PdfNameObject(content_name_for_test("/RGB"))]),
+        ),
+        (content_name_for_test("/L"), PdfInteger(6)),
+      ]),
+      None,
+      content_bytes_for_test("A EI B"),
+    ),
+    Op_Q,
+  ])
 }
 
 ///|
@@ -1254,6 +1269,30 @@ test "PdfDocument parse_content_ops_with_resources sizes array inline image spac
 ///|
 test "PdfDocument parse_content_ops_with_resources reports missing inline image resources" {
   let doc = @pdflite.pdf_document_empty()
+  @test.assert_eq(
+    try! doc.parse_content_ops_with_resources(@pdflite.pdf_dictionary([]), [
+      content_stream_for_test(
+        "BI /W 1 /H 1 /BPC 8 /CS /Missing /L 6 ID A EI B\nEI Q",
+      ),
+    ]),
+    [
+      Op_InlineImage(
+        @pdflite.pdf_dictionary([
+          (content_name_for_test("/W"), PdfInteger(1)),
+          (content_name_for_test("/H"), PdfInteger(1)),
+          (content_name_for_test("/BPC"), PdfInteger(8)),
+          (
+            content_name_for_test("/CS"),
+            PdfNameObject(content_name_for_test("/Missing")),
+          ),
+          (content_name_for_test("/L"), PdfInteger(6)),
+        ]),
+        None,
+        content_bytes_for_test("A EI B"),
+      ),
+      Op_Q,
+    ],
+  )
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? doc.parse_content_ops_with_resources(
     @pdflite.pdf_dictionary([]),
     [content_stream_for_test("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")],

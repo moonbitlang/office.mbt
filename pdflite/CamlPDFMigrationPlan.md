@@ -510,11 +510,12 @@ MoonBit consequences for this project:
    inline data with `/F /Fl` and `/L`, while filtered inline images such as DCT
    remain byte-preserving. Re-parsing decoded inline images also strips stale
    `/Length`/`/L` metadata alongside filter and decode-parameter keys.
-   Unsupported filtered inline images now honor declared `/L` or `/Length`
-   byte counts before falling back to marker scanning, preserving opaque binary
-   payloads that contain `EI` without requiring the filter codec yet. Broader
-   binary inline image filter handling and resource-dependent inline image
-   sizing remain deferred.
+   Inline images now honor declared `/L` or `/Length` byte counts before
+   falling back to marker scanning when filter or colour-space metadata is not
+   enough to compute a size, preserving opaque binary payloads that contain
+   `EI` without requiring every filter codec or resource colour space yet.
+   Broader binary inline image filter handling and resource-dependent inline
+   image sizing remain deferred.
    Resource-prefix support is started with `shortest_unused_prefix`, scanning
    page and page-tree resource dictionaries with CamlPDF's lower-case prefix
    sequence. `add_prefix` is also started for page/page-tree resources and

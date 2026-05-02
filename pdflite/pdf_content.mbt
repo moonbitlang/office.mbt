@@ -880,31 +880,44 @@ fn pdf_content_inline_image_data_length(
   if !pdf_content_inline_filter_is_empty(dictionary) {
     pdf_content_inline_declared_data_length(dictionary)
   } else {
-    match
-      (
-        pdf_content_inline_int_orelse(
-          dictionary,
-          pdf_content_inline_name("/W"),
-          pdf_content_inline_name("/Width"),
-        ),
-        pdf_content_inline_int_orelse(
-          dictionary,
-          pdf_content_inline_name("/H"),
-          pdf_content_inline_name("/Height"),
-        ),
-        pdf_content_inline_bits_per_component(dictionary),
-        pdf_content_inline_components(document, resources, dictionary),
-      ) {
-      (Some(width), Some(height), Some(bits), Some(components)) => {
-        let row_bits = width * components * bits
-        let row_bytes = if row_bits % 8 == 0 {
-          row_bits / 8
-        } else {
-          row_bits / 8 + 1
+    let declared = pdf_content_inline_declared_data_length(dictionary)
+    let metadata_length = try {
+      match
+        (
+          pdf_content_inline_int_orelse(
+            dictionary,
+            pdf_content_inline_name("/W"),
+            pdf_content_inline_name("/Width"),
+          ),
+          pdf_content_inline_int_orelse(
+            dictionary,
+            pdf_content_inline_name("/H"),
+            pdf_content_inline_name("/Height"),
+          ),
+          pdf_content_inline_bits_per_component(dictionary),
+          pdf_content_inline_components(document, resources, dictionary),
+        ) {
+        (Some(width), Some(height), Some(bits), Some(components)) => {
+          let row_bits = width * components * bits
+          let row_bytes = if row_bits % 8 == 0 {
+            row_bits / 8
+          } else {
+            row_bits / 8 + 1
+          }
+          Some(row_bytes * height)
         }
-        Some(row_bytes * height)
+        _ => None
       }
-      _ => None
+    } catch {
+      error =>
+        match declared {
+          Some(_) => declared
+          None => raise error
+        }
+    }
+    match metadata_length {
+      Some(length) => Some(length)
+      None => declared
     }
   }
 }
