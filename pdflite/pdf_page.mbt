@@ -983,6 +983,24 @@ fn pdf_page_matrix_for_page_number(
 }
 
 ///|
+fn pdf_page_matrix_page_number_of_target(
+  page_reference_numbers : ArrayView[Int],
+  target : PdfTargetPage,
+) -> Int {
+  match target {
+    TargetPageObject(object_number) =>
+      for index in 0..<page_reference_numbers.length() {
+        if page_reference_numbers[index] == object_number {
+          break index + 1
+        }
+      } nobreak {
+        0
+      }
+    TargetOtherDocPageNumber(_) => 0
+  }
+}
+
+///|
 fn PdfDocument::pdf_page_matrix_for_destination(
   self : PdfDocument,
   destination : PdfDestination,
@@ -1038,7 +1056,7 @@ fn PdfDocument::pdf_page_matrix_page_number_for_destination(
     | DestFitR(target, _, _, _, _)
     | DestFitBH(target, _)
     | DestFitBV(target, _) =>
-      pdf_destination_page_number_of_target(page_reference_numbers, target)
+      pdf_page_matrix_page_number_of_target(page_reference_numbers, target)
     _ => 0
   }
 }

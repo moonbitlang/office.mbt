@@ -2504,6 +2504,51 @@ test "PdfDocument change_pages leaves full-page fit destinations untransformed" 
 }
 
 ///|
+test "PdfDocument change_pages leaves integer page destinations untransformed" {
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_xyz = page_name_for_test("/XYZ")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_open_action,
+      PdfArray([
+        PdfInteger(0),
+        PdfNameObject(type_xyz),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  )
+  let changed = try! doc.change_pages(
+    try! doc.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(
+      PdfArray([
+        PdfInteger(0),
+        PdfNameObject(type_xyz),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+    ),
+  )
+}
+
+///|
 test "PdfDocument change_pages transforms named destination definitions" {
   let key_names = page_name_for_test("/Names")
   let key_dests = page_name_for_test("/Dests")

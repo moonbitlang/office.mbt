@@ -359,9 +359,38 @@ test "private page destination transforms cover unchanged branches" {
     None,
   )
   @test.assert_eq(
+    pdf_page_matrix_page_number_of_target(
+      page_numbers,
+      TargetOtherDocPageNumber(0),
+    ),
+    0,
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_matrix_for_destination(
+      DestXYZ(TargetOtherDocPageNumber(0), Some(1.0), Some(2.0), None),
+      [(1, translation)],
+      page_numbers,
+    ),
+    None,
+  )
+  @test.assert_eq(
     try! doc.pdf_page_transform_destination_object(
       destination,
       [],
+      page_numbers,
+    ),
+    None,
+  )
+  @test.assert_eq(
+    try! doc.pdf_page_transform_destination_object(
+      PdfArray([
+        PdfInteger(0),
+        PdfNameObject(pdf_dest_type_xyz()),
+        PdfInteger(1),
+        PdfInteger(2),
+        PdfNull,
+      ]),
+      [(1, translation)],
       page_numbers,
     ),
     None,
