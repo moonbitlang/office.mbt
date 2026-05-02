@@ -118,6 +118,11 @@ pub fn pdf_bytes_of_view(values : BytesView) -> PdfBytes {
 }
 
 ///|
+pub fn pdf_bytes_copy(values : BytesView) -> PdfBytes {
+  Bytes::makei(values.length(), i => values[i])
+}
+
+///|
 pub fn pdf_bytes_make(
   length : Int,
   value? : Int = 0,

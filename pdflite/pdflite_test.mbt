@@ -57,6 +57,18 @@ test "PdfBytes make immutable filled byte data" {
 }
 
 ///|
+test "PdfBytes explicit copy preserves value but not physical identity" {
+  let source = try! @pdflite.pdf_bytes_of_int_array([65, 66, 67])
+  let copied = @pdflite.pdf_bytes_copy(source[:])
+  @test.assert_eq(copied, source)
+  @test.assert_eq(physical_equal(copied, source), false)
+  @test.assert_eq(
+    @pdflite.pdf_int_array_of_bytes(@pdflite.pdf_bytes_copy(source[1:])[:]),
+    [66, 67],
+  )
+}
+
+///|
 test "PdfBytes expose CamlPDF int-array compatibility conversions" {
   let first : FixedArray[Int] = [65, 0xFF]
   let second : Array[Int] = [0, 66]

@@ -117,6 +117,8 @@ pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
 
 pub fn pdf_bytes_concat_views(ArrayView[BytesView]) -> Bytes
 
+pub fn pdf_bytes_copy(BytesView) -> Bytes
+
 pub fn pdf_bytes_get(Bytes, Int) -> Byte?
 
 pub fn pdf_bytes_length(Bytes) -> Int
