@@ -1536,6 +1536,21 @@ fn pdf_content_numbers_from_operands(
 }
 
 ///|
+fn pdf_content_malformed_color_fallback() -> Array[Double] {
+  [0.0, 0.0, 0.0]
+}
+
+///|
+fn pdf_content_numbers_or_malformed_color_fallback(
+  operands : ArrayView[PdfObject],
+) -> Array[Double] {
+  match pdf_content_numbers_from_operands(operands) {
+    Some(values) => values
+    None => pdf_content_malformed_color_fallback()
+  }
+}
+
+///|
 fn pdf_content_named_color_operands(
   operands : ArrayView[PdfObject],
 ) -> (PdfName, Array[Double])? {
@@ -1557,6 +1572,25 @@ fn pdf_content_named_color_operands(
       }
       _ => None
     }
+  }
+}
+
+///|
+fn pdf_content_named_color_operands_or_malformed_fallback(
+  operands : ArrayView[PdfObject],
+) -> (PdfName, Array[Double])? {
+  match pdf_content_named_color_operands(operands) {
+    Some(named_color) => Some(named_color)
+    None =>
+      if operands.length() == 0 {
+        None
+      } else {
+        match operands[operands.length() - 1] {
+          PdfNameObject(name) =>
+            Some((name, pdf_content_malformed_color_fallback()))
+          _ => None
+        }
+      }
   }
 }
 
@@ -1908,32 +1942,24 @@ fn pdf_content_parse_known_section(
         None => None
       }
     "SC" =>
-      match pdf_content_numbers_from_operands(operands) {
-        Some(values) => Some(Op_SC(values))
-        None => None
-      }
+      Some(Op_SC(pdf_content_numbers_or_malformed_color_fallback(operands)))
     "sc" =>
-      match pdf_content_numbers_from_operands(operands) {
-        Some(values) => Some(Op_sc(values))
-        None => None
-      }
+      Some(Op_sc(pdf_content_numbers_or_malformed_color_fallback(operands)))
     "SCN" =>
-      match pdf_content_named_color_operands(operands) {
+      match pdf_content_named_color_operands_or_malformed_fallback(operands) {
         Some((name, values)) => Some(Op_SCNName(name, values))
         None =>
-          match pdf_content_numbers_from_operands(operands) {
-            Some(values) => Some(Op_SCN(values))
-            None => None
-          }
+          Some(
+            Op_SCN(pdf_content_numbers_or_malformed_color_fallback(operands)),
+          )
       }
     "scn" =>
-      match pdf_content_named_color_operands(operands) {
+      match pdf_content_named_color_operands_or_malformed_fallback(operands) {
         Some((name, values)) => Some(Op_scnName(name, values))
         None =>
-          match pdf_content_numbers_from_operands(operands) {
-            Some(values) => Some(Op_scn(values))
-            None => None
-          }
+          Some(
+            Op_scn(pdf_content_numbers_or_malformed_color_fallback(operands)),
+          )
       }
     "sh" if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {

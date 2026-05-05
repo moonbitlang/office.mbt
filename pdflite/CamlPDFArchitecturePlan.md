@@ -68,6 +68,8 @@ work changes.
    `pdf_of_pages` now materializes inherited page attributes before extraction
    so inherited `/CropBox` values and inherited indirect `/Resources`,
    `/MediaBox`, and `/Rotate` references are preserved with selected pages.
+   Content parsing also follows CamlPDF's malformed color-operator fallback for
+   bad `SC`/`sc`/`SCN`/`scn` operands.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

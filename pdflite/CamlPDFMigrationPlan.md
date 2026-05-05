@@ -571,8 +571,10 @@ MoonBit consequences for this project:
    text operators used by the `pdfhello.ml` workflow. Operator coverage now
    also includes dash patterns, rendering intent, flatness, Bezier curves, text
    state operators, color-space/color setters including named SCN/scn patterns,
-   shadings, text quote operators, Type 3 glyph metrics, marked-content
-   operators, compatibility-section markers, and artifact marker helpers. A
+   CamlPDF's malformed `SC`/`sc`/`SCN`/`scn` fallback to black-like
+   `[0 0 0]` operands for Distiller-style bad color operators, shadings, text
+   quote operators, Type 3 glyph metrics, marked-content operators,
+   compatibility-section markers, and artifact marker helpers. A
    `pdfdraft.ml`-style acceptance fixture now replaces image XObject draws and
    inline images with crossed-box path operators, drops image XObject resource
    entries, Flate-encodes the rewritten content stream, prunes the removed image

@@ -1549,6 +1549,22 @@ test "pdf_parse_content_ops_from_bytes preserves invalid known-operator operands
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes uses CamlPDF malformed color fallback" {
+  let data = content_bytes_for_test(
+    "SCN scn true SC /Bad sc null SCN true /Spot scn /TintOnly scn",
+  )
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_SCN([]),
+    Op_scn([]),
+    Op_SC([0.0, 0.0, 0.0]),
+    Op_sc([0.0, 0.0, 0.0]),
+    Op_SCN([0.0, 0.0, 0.0]),
+    Op_scnName(content_name_for_test("/Spot"), [0.0, 0.0, 0.0]),
+    Op_scnName(content_name_for_test("/TintOnly"), []),
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes reports trailing operands" {
   let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("1 2"),

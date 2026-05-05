@@ -837,6 +837,18 @@ fn wbtest_assert_known_content_none(
 }
 
 ///|
+fn wbtest_assert_known_content_some(
+  operator : String,
+  operands : ArrayView[PdfObject],
+  expected : PdfContentOp,
+) -> Unit raise Error {
+  @test.assert_eq(
+    pdf_content_parse_known_section(operands, @ascii.encode(operator)),
+    Some(expected),
+  )
+}
+
+///|
 fn wbtest_lzw_codes(codes : ArrayView[Int], early_change : Int) -> PdfBytes {
   let writer = bit_writer_new()
   let mut code_length = 9
@@ -1210,16 +1222,26 @@ test "private content helpers cover malformed operand fallbacks" {
   wbtest_assert_known_content_none("gs", bad_name)
   wbtest_assert_known_content_none("CS", bad_name)
   wbtest_assert_known_content_none("cs", bad_name)
-  wbtest_assert_known_content_none("SC", [PdfNameObject(name)])
-  wbtest_assert_known_content_none("sc", [PdfNameObject(name)])
-  wbtest_assert_known_content_none("SCN", [
-    PdfNameObject(name),
-    PdfNameObject(wbtest_content_name("/Pattern")),
-  ])
-  wbtest_assert_known_content_none("scn", [
-    PdfNameObject(name),
-    PdfNameObject(wbtest_content_name("/Pattern")),
-  ])
+  wbtest_assert_known_content_some(
+    "SC",
+    [PdfNameObject(name)],
+    Op_SC([0.0, 0.0, 0.0]),
+  )
+  wbtest_assert_known_content_some(
+    "sc",
+    [PdfNameObject(name)],
+    Op_sc([0.0, 0.0, 0.0]),
+  )
+  wbtest_assert_known_content_some(
+    "SCN",
+    [PdfNameObject(name), PdfNameObject(wbtest_content_name("/Pattern"))],
+    Op_SCNName(wbtest_content_name("/Pattern"), [0.0, 0.0, 0.0]),
+  )
+  wbtest_assert_known_content_some(
+    "scn",
+    [PdfNameObject(name), PdfNameObject(wbtest_content_name("/Pattern"))],
+    Op_scnName(wbtest_content_name("/Pattern"), [0.0, 0.0, 0.0]),
+  )
   wbtest_assert_known_content_none("sh", bad_name)
   wbtest_assert_known_content_none("MP", bad_name)
   wbtest_assert_known_content_none("DP", [PdfInteger(1), PdfDictionary([])])
