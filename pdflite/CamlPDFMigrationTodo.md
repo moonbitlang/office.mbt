@@ -11,6 +11,36 @@ Current estimate:
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 83-88%.
 
+## Big Picture Checklist
+
+- [x] ~~P0 native core workflows: object graph, reader/writer, page tree,
+  merge/extract, encryption, async file wrappers, and main CamlPDF-style example
+  gates.~~
+- [x] ~~Core format layer: filters, predictors, text encodings, color spaces,
+  functions, raw/encoded image extraction, and primary font workflows.~~
+- [x] ~~Native real-file gates for the checked-in CamlPDF `logo.pdf` and
+  `introduction_to_camlpdf.pdf` fixtures, including compressed rewrites,
+  malformed `startxref` recovery, and incremental update recovery.~~
+- [x] ~~CJK text parity for the currently generated Adobe-GB1, Adobe-CNS1,
+  Adobe-Japan1, and Adobe-Korea1 predefined CMap fallbacks, plus external CMap
+  codespace/CID parsing and `/UseCMap` stream composition through ToUnicode.~~
+- [ ] Finish broader external/general CMap parsing beyond the current
+  codespace/CID-char/CID-range, Identity `/UseCMap`, and parsed stream
+  `/UseCMap` composition subset.
+- [ ] Add remaining rare predefined CMap family coverage when useful source
+  tables or fixtures are available.
+- [ ] Add more TrueType and Type3 glyph-program edge coverage beyond current
+  Type3 CharProc and embedded TrueType gates.
+- [ ] Add broader real-world DCT/JPEG and CCITT image corpus coverage; keep
+  optional JBIG2/JPEG pixel-decoder decisions explicit.
+- [ ] Improve byte-identical zlib strategy and performance parity beyond the
+  explicit Flate level API.
+- [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
+  real-world corpus cases.
+- [ ] Revisit all-backend validation after native feature parity is stable.
+- [ ] Tune performance for large files, object streams, filters, and text/image
+  extraction.
+
 ## P0: Native Main Workflows
 
 - [x] ~~Byte foundation with `Bytes`/`BytesView` ownership boundaries.~~
