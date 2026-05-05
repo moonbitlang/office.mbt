@@ -35,8 +35,8 @@ Current estimate:
   suitable fixtures are available.
 - [ ] Add broader real-world DCT/JPEG and CCITT image corpus coverage; keep
   optional JBIG2/JPEG pixel-decoder decisions explicit.
-- [ ] Improve byte-identical zlib strategy and performance parity beyond the
-  explicit Flate level API.
+- [ ] Improve byte-identical zlib output strategy and broader performance
+  parity beyond the explicit Flate level API.
 - [ ] Broaden malformed xref-table/xref-stream/object-stream recovery with more
   real-world corpus cases.
 - [ ] Revisit all-backend validation after native feature parity is stable.
@@ -245,8 +245,11 @@ Current estimate:
   stream encoding surfaces.~~
 - [x] ~~Fast explicit Flate levels fall back to stored blocks for incompressible
   data instead of forcing larger fixed-Huffman output.~~
-- [ ] Byte-identical zlib strategy and performance parity beyond explicit
-  Flate level selection.
+- [x] ~~Explicit Flate levels now influence match-chain search depth, so fast
+  levels use a smaller search budget and high levels can find older repeated
+  spans.~~
+- [ ] Byte-identical zlib output strategy and broader performance parity beyond
+  explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
@@ -377,6 +380,8 @@ Current estimate:
   codespaces.~~
 - [x] ~~Add the next remaining API parity slice: name/number tree contents and
   lookup helpers.~~
+- [x] ~~Add the next remaining performance parity slice: level-sensitive Flate
+  match-chain search depth.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

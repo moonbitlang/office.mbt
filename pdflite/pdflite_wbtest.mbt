@@ -1624,9 +1624,60 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
     last_by_prefix[:],
     previous_by_position[:],
     14,
+    64,
   )
   @test.assert_eq(shadowed_length, 10)
   @test.assert_eq(shadowed_distance, 14)
+  let deep_phrase = @ascii.encode("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+  let deep_match_data : Array[Byte] = []
+  for byte in deep_phrase[:] {
+    deep_match_data.push(byte)
+  }
+  for index in 0..<20 {
+    deep_match_data.push(65)
+    deep_match_data.push(66)
+    deep_match_data.push((33 + index).to_byte())
+  }
+  let deep_match_position = deep_match_data.length()
+  for byte in deep_phrase[:] {
+    deep_match_data.push(byte)
+  }
+  let deep_match_bytes = Bytes::from_array(deep_match_data)
+  let deep_last_by_prefix : Array[Int] = Array::make(65536, -1)
+  let deep_previous_by_position : Array[Int] = Array::make(
+    deep_match_bytes.length(),
+    -1,
+  )
+  for index in 0..<deep_match_position {
+    pdf_flate_remember_match_prefix(
+      deep_last_by_prefix,
+      deep_previous_by_position,
+      deep_match_bytes[:],
+      index,
+    )
+  }
+  let (shallow_length, _) = pdf_flate_best_previous_match(
+    deep_match_bytes[:],
+    deep_last_by_prefix[:],
+    deep_previous_by_position[:],
+    deep_match_position,
+    8,
+  )
+  let (deep_length, deep_distance) = pdf_flate_best_previous_match(
+    deep_match_bytes[:],
+    deep_last_by_prefix[:],
+    deep_previous_by_position[:],
+    deep_match_position,
+    64,
+  )
+  @test.assert_eq(shallow_length < 3, true)
+  @test.assert_eq(deep_length, deep_phrase.length())
+  @test.assert_eq(deep_distance, deep_match_position)
+  @test.assert_eq(pdf_flate_max_probes_for_level(1), 8)
+  @test.assert_eq(pdf_flate_max_probes_for_level(3), 16)
+  @test.assert_eq(pdf_flate_max_probes_for_level(6), 64)
+  @test.assert_eq(pdf_flate_max_probes_for_level(8), 128)
+  @test.assert_eq(pdf_flate_max_probes_for_level(9), 256)
   @test.assert_eq(
     try! pdf_flate_decode_view_prefix(Bytes::new(0)[:]),
     (Bytes::new(0), 0),
@@ -1785,7 +1836,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
   @test.assert_eq(match_frequencies[257], 1)
   @test.assert_eq(match_distance_frequencies[0], 1)
   let data = @ascii.encode("ABCDABCDABCD")
-  let tokens = pdf_flate_match_tokens(data[:])
+  let tokens = pdf_flate_match_tokens(data[:], 64)
   guard tokens[4] is PdfFlateLengthDistance(length, distance) else {
     fail("expected a length-distance token")
   }
@@ -1807,6 +1858,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     [],
     Bytes::new(0)[:],
     true,
+    64,
   )
   guard empty_dynamic is Err(PdfError::InvalidFlateData) else {
     fail("expected InvalidFlateData for empty dynamic block")

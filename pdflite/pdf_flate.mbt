@@ -755,13 +755,14 @@ fn pdf_flate_best_previous_match(
   last_by_prefix : ArrayView[Int],
   previous_by_position : ArrayView[Int],
   position : Int,
+  max_probes : Int,
 ) -> (Int, Int) {
   let mut match_length = 0
   let mut match_distance = 0
   if position + 2 < data.length() {
     let mut candidate = last_by_prefix[pdf_flate_match_key(data, position)]
     let mut probes = 0
-    while candidate >= 0 && probes < 64 {
+    while candidate >= 0 && probes < max_probes {
       let distance = position - candidate
       if distance > 0 && distance <= 32768 {
         let length = pdf_flate_previous_match_length(data, candidate, position)
@@ -787,7 +788,10 @@ priv enum PdfFlateToken {
 }
 
 ///|
-fn pdf_flate_match_tokens(data : BytesView) -> Array[PdfFlateToken] {
+fn pdf_flate_match_tokens(
+  data : BytesView,
+  max_probes : Int,
+) -> Array[PdfFlateToken] {
   let tokens : Array[PdfFlateToken] = []
   let last_by_prefix : Array[Int] = Array::make(65536, -1)
   let previous_by_position : Array[Int] = Array::make(data.length(), -1)
@@ -798,6 +802,7 @@ fn pdf_flate_match_tokens(data : BytesView) -> Array[PdfFlateToken] {
       last_by_prefix[:],
       previous_by_position[:],
       index,
+      max_probes,
     )
     if match_length >= 3 {
       tokens.push(PdfFlateLengthDistance(match_length, match_distance))
@@ -824,6 +829,7 @@ fn pdf_flate_push_fixed_match_block(
   output : Array[Byte],
   data : BytesView,
   final_block : Bool,
+  max_probes : Int,
 ) -> Unit raise PdfError {
   let writer = FlateBitWriter::new(output)
   writer.write_bits(if final_block { 1 } else { 0 }, 1)
@@ -837,6 +843,7 @@ fn pdf_flate_push_fixed_match_block(
       last_by_prefix[:],
       previous_by_position[:],
       index,
+      max_probes,
     )
     if match_length >= 3 {
       pdf_flate_write_fixed_length_distance(
@@ -1073,9 +1080,10 @@ fn pdf_flate_push_dynamic_match_block(
   output : Array[Byte],
   data : BytesView,
   final_block : Bool,
+  max_probes : Int,
 ) -> Unit raise PdfError {
   guard data.length() > 0 else { raise InvalidFlateData }
-  let tokens = pdf_flate_match_tokens(data)
+  let tokens = pdf_flate_match_tokens(data, max_probes)
   let (literal_frequencies, distance_frequencies) = pdf_flate_count_dynamic_frequencies(
     tokens[:],
   )
@@ -1235,9 +1243,10 @@ fn pdf_flate_encode_fixed_repeat_view_with_header(
 fn pdf_flate_encode_fixed_match_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
+  max_probes : Int,
 ) -> PdfBytes raise PdfError {
   let output = pdf_flate_output_with_header(header)
-  pdf_flate_push_fixed_match_block(output, data, true)
+  pdf_flate_push_fixed_match_block(output, data, true, max_probes)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
 }
@@ -1246,9 +1255,10 @@ fn pdf_flate_encode_fixed_match_view_with_header(
 fn pdf_flate_encode_dynamic_match_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
+  max_probes : Int,
 ) -> PdfBytes raise PdfError {
   let output = pdf_flate_output_with_header(header)
-  pdf_flate_push_dynamic_match_block(output, data, true)
+  pdf_flate_push_dynamic_match_block(output, data, true, max_probes)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
 }
@@ -1277,6 +1287,7 @@ fn pdf_flate_shortest_result(
 fn pdf_flate_encode_shortest_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
+  max_probes : Int,
 ) -> PdfBytes {
   let stored = pdf_flate_encode_stored_view_with_header(data, header)
   let fixed = pdf_flate_encode_fixed_literal_view_with_header(data, header)
@@ -1286,11 +1297,11 @@ fn pdf_flate_encode_shortest_view_with_header(
   )
   shortest = pdf_flate_shortest_result(shortest, repeat)
   let matched : Result[PdfBytes, Error] = try? pdf_flate_encode_fixed_match_view_with_header(
-    data, header,
+    data, header, max_probes,
   )
   shortest = pdf_flate_shortest_result(shortest, matched)
   let dynamic : Result[PdfBytes, Error] = try? pdf_flate_encode_dynamic_match_view_with_header(
-    data, header,
+    data, header, max_probes,
   )
   pdf_flate_shortest_result(shortest, dynamic)
 }
@@ -1299,12 +1310,30 @@ fn pdf_flate_encode_shortest_view_with_header(
 fn pdf_flate_encode_fast_view_with_header(
   data : BytesView,
   header : ArrayView[Byte],
+  max_probes : Int,
 ) -> PdfBytes {
   let stored = pdf_flate_encode_stored_view_with_header(data, header)
   let matched : Result[PdfBytes, Error] = try? pdf_flate_encode_fixed_match_view_with_header(
-    data, header,
+    data, header, max_probes,
   )
   pdf_flate_shortest_result(stored, matched)
+}
+
+///|
+fn pdf_flate_max_probes_for_level(level : Int) -> Int {
+  if level <= 1 {
+    8
+  } else if level <= 3 {
+    16
+  } else if level <= 5 {
+    32
+  } else if level == 6 {
+    64
+  } else if level <= 8 {
+    128
+  } else {
+    256
+  }
 }
 
 ///|
@@ -1316,9 +1345,17 @@ pub fn pdf_flate_encode_view_with_level(
   if level == 0 {
     pdf_flate_encode_stored_view_with_header(data, header[:])
   } else if level <= 3 {
-    pdf_flate_encode_fast_view_with_header(data, header[:])
+    pdf_flate_encode_fast_view_with_header(
+      data,
+      header[:],
+      pdf_flate_max_probes_for_level(level),
+    )
   } else {
-    pdf_flate_encode_shortest_view_with_header(data, header[:])
+    pdf_flate_encode_shortest_view_with_header(
+      data,
+      header[:],
+      pdf_flate_max_probes_for_level(level),
+    )
   }
 }
 
@@ -1327,6 +1364,7 @@ pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
   pdf_flate_encode_shortest_view_with_header(
     data,
     pdf_flate_default_header()[:],
+    64,
   )
 }
 

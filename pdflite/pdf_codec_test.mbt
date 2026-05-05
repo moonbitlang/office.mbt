@@ -33,6 +33,26 @@ fn codec_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn codec_deep_flate_match_data_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  let phrase = codec_ascii_for_test(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz",
+  )
+  for byte in phrase[:] {
+    output.push(byte)
+  }
+  for index in 0..<96 {
+    output.push(65)
+    output.push(66)
+    output.push((33 + index % 80).to_byte())
+  }
+  for byte in phrase[:] {
+    output.push(byte)
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn codec_lzw_codes_for_test(
   codes : ArrayView[Int],
   early_change : Int,
@@ -495,6 +515,19 @@ test "pdf_flate_encode_with_level exposes zlib level choices" {
     repeated, 10,
   )
   guard invalid is Err(_) else { fail("expected invalid Flate level to raise") }
+}
+
+///|
+test "pdf_flate_encode_with_level uses deeper match search at high levels" {
+  let data = codec_deep_flate_match_data_for_test()
+  let fast = @pdflite.pdf_flate_encode_with_level(data, 1)
+  let default_level = @pdflite.pdf_flate_encode_with_level(data, 6)
+  let best = @pdflite.pdf_flate_encode_with_level(data, 9)
+
+  @test.assert_eq(@pdflite.pdf_flate_decode(fast), data)
+  @test.assert_eq(@pdflite.pdf_flate_decode(default_level), data)
+  @test.assert_eq(@pdflite.pdf_flate_decode(best), data)
+  @test.assert_eq(best.length() < fast.length(), true)
 }
 
 ///|

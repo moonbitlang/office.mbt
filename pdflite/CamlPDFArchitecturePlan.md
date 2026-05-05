@@ -108,10 +108,12 @@ work changes.
    Direct Flate, filter, and stream encoding APIs now accept explicit zlib-style
    levels 0 through 9, keeping the default compact encoder unchanged while
    exposing CamlPDF's `flate_level` workflow without global mutable state; fast
-   levels now still fall back to stored blocks for incompressible data.
-   Remaining focus: byte-identical zlib strategy/performance tuning, optional
-   JBIG2 external-tool decode parity, broader CCITT corpus validation, and
-   DCT/JPEG real-world payload coverage.
+   levels now still fall back to stored blocks for incompressible data, while
+   higher levels search deeper match chains for better compression on older
+   repeated spans.
+   Remaining focus: byte-identical zlib output strategy and broader performance
+   tuning, optional JBIG2 external-tool decode parity, broader CCITT corpus
+   validation, and DCT/JPEG real-world payload coverage.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
