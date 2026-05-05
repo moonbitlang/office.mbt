@@ -141,6 +141,20 @@ work changes.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 
+## Active Large Milestone
+
+Native reader compatibility is the current focus. Work should move through one
+vertical acceptance path at a time instead of isolated edge polishing:
+
+- maintain a black-box native acceptance suite that reads, writes, rereads, and
+  checks stable invariants across classic xref, xref-stream, compressed
+  xref-stream, incremental update, object-stream, partially decoded filter, and
+  encrypted AES-128 workflows;
+- fix failures exposed by that suite in reader/parser/deferred-encryption
+  paths before moving to backend breadth;
+- keep unrelated image/CMap/JPEG/CCITT work deferred unless it blocks a native
+  acceptance case.
+
 ## Current High-Level Checklist
 
 - Done: byte foundation, object model, writer, major reader paths, page tree,
@@ -148,7 +162,11 @@ work changes.
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, strict revision-specific reads, and image extraction
   basics. Native async file wrappers cover read/write, password reads, revision
-  counting, revision reads, and incremental writes.
+  counting, revision reads, and incremental writes. A native black-box
+  acceptance suite now covers classic/xref-stream/compressed-xref one-page
+  read-write-reread, classic and xref-stream incremental revision reads,
+  object-stream page-tree normalization through the writer, partial stream
+  filter decompression, and AES-128 password-wrapper reads.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, remaining malformed-reader recovery, and example-level integration
   fixtures.

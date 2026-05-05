@@ -1351,6 +1351,27 @@ MoonBit consequences for this project:
     testing placeholder `Hello` output. A refreshed coverage pass reports no
     uncovered lines.
 
+## Active Native Acceptance Milestone
+
+The migration is now focused on a larger native reader compatibility milestone,
+rather than isolated small edge cases. The first acceptance layer is
+`pdf_native_acceptance_test.mbt`, a black-box suite that exercises public APIs
+end to end:
+
+- construct a one-page standard-font document and verify classic xref,
+  xref-stream, and compressed xref-stream read/write/reread invariants;
+- preserve a partially decoded stream-filter workflow through read/write/reread;
+- append and read classic and compressed-xref-stream incremental revisions,
+  including newest-versus-older revision checks;
+- read a valid page tree whose `/Pages` and `/Page` objects live inside an
+  object stream, then normalize it through the classic writer and reread it;
+- write AES-128 encrypted output and read it through the public password
+  wrapper with both user and owner passwords.
+
+Near-term work should extend this suite with the next visible compatibility
+case, then fix the reader/parser/encryption gap it exposes. Broader backend
+validation remains deferred until native feature parity is stable.
+
 ## Update Discipline
 
 Each migration slice should leave behind:
