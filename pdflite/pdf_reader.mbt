@@ -886,6 +886,22 @@ pub fn pdf_is_linearized(data : BytesView) -> Bool {
 }
 
 ///|
+fn pdf_reader_object_has_stream_before_endobj(
+  data : BytesView,
+  position : Int,
+) -> Bool {
+  let stream = pdf_find_ascii_from(data, position, [115, 116, 114, 101, 97, 109])
+  if stream < 0 {
+    false
+  } else {
+    let endobj = pdf_find_ascii_from(data, position, [
+      101, 110, 100, 111, 98, 106,
+    ])
+    endobj < 0 || stream < endobj
+  }
+}
+
+///|
 pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
   let cursor = byte_cursor_of_view(data)
   ignore(cursor.read_pdf_header())
@@ -929,8 +945,19 @@ fn ByteCursor::resolve_classic_stream_length(
         Some(xref) => {
           let saved_position = self.absolute_position()
           self.seek_pdf_absolute(xref.offset)
-          let parsed = self.read_plain_indirect_object_at_current()
+          if pdf_reader_object_has_stream_before_endobj(
+              self.data[:],
+              xref.offset,
+            ) {
+            self.seek_pdf_absolute(saved_position)
+            raise StreamLengthExpected
+          }
+          let parsed_result : Result[PdfParsedIndirectObject, Error] = try? self.read_plain_indirect_object_at_current()
           self.seek_pdf_absolute(saved_position)
+          let parsed = match parsed_result {
+            Ok(parsed) => parsed
+            Err(_) => raise StreamLengthExpected
+          }
           if parsed.number != number || parsed.generation != xref.generation {
             raise XRefEntryExpected
           }
@@ -957,8 +984,14 @@ fn ByteCursor::read_first_indirect_object_at_current(
   if complete {
     object
   } else {
-    let length = self.resolve_classic_stream_length(object.object, xrefs)
-    self.finish_pdf_stream_object_with_length(object, length)
+    let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
+      object.object,
+      xrefs,
+    )
+    match length_result {
+      Ok(length) => self.finish_pdf_stream_object_with_length(object, length)
+      Err(_) => self.finish_pdf_malformed_stream_object(object)
+    }
   }
 }
 
@@ -1520,8 +1553,6 @@ pub fn pdf_read_document_from_view(
     NumberExpected => pdf_read_reconstructed_or_raise(data, NumberExpected)
     ParseIndirectObjectExpected =>
       pdf_read_reconstructed_or_raise(data, ParseIndirectObjectExpected)
-    StreamLengthExpected =>
-      pdf_read_reconstructed_or_raise(data, StreamLengthExpected)
     ParseStreamExpected =>
       pdf_read_reconstructed_or_raise(data, ParseStreamExpected)
     ParseEndStreamExpected =>
@@ -1688,8 +1719,11 @@ fn ByteCursor::finish_pdf_stream_object(
   self : ByteCursor,
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
-  let length = pdf_stream_length(prefix.object)
-  self.finish_pdf_stream_object_with_length(prefix, length)
+  let length_result : Result[Int, Error] = try? pdf_stream_length(prefix.object)
+  match length_result {
+    Ok(length) => self.finish_pdf_stream_object_with_length(prefix, length)
+    Err(_) => self.finish_pdf_malformed_stream_object(prefix)
+  }
 }
 
 ///|

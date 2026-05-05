@@ -25,8 +25,8 @@ work changes.
    follow older `/Prev` state across classic and xref-stream update chains.
    Strict stream parsing also skips CamlPDF's ignored padding bytes after the
    `stream` keyword while preserving trailing stream bytes before `endstream`,
-   and falls back to CamlPDF-style `endstream` scanning when a declared
-   `/Length` lands away from the stream terminator.
+   and falls back to CamlPDF-style `endstream` scanning when `/Length` is
+   missing, unreadable, or lands away from the stream terminator.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

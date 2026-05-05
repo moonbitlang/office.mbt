@@ -292,6 +292,28 @@ fn reader_classic_pdf_with_non_integer_stream_length() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_unparseable_stream_length() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = reader_push_indirect_object(output, 2, 0, "]")
+  let catalog_offset = reader_push_indirect_object(
+    output, 3, 0, "<< /Type /Catalog /Payload 1 0 R >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 4\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_xref_entry(output, length_offset, 0)
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 3 0 R /Size 4 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_mismatched_stream_length_xref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -1381,16 +1403,20 @@ test "pdf_parse_stream_object_from_bytes ignores CamlPDF stream-start padding" {
 }
 
 ///|
-test "pdf_parse_stream_object_from_bytes reports missing stream length" {
-  let result : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
-    reader_bytes_for_test([
-      55, 32, 48, 32, 111, 98, 106, 10, 60, 60, 32, 62, 62, 10, 115, 116, 114, 101,
-      97, 109, 10,
-    ]),
+test "pdf_parse_stream_object_from_bytes recovers missing stream length" {
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_pdf_ascii("7 0 obj\n<< >>\nstream\nHello\nendstream\nendobj"),
   )
-  guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected StreamLengthExpected")
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
   }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(5)),
+  )
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
 }
 
 ///|
@@ -2007,18 +2033,35 @@ test "pdf_read_document_from_bytes reconstructs indirect stream lengths" {
 }
 
 ///|
-test "pdf_read_document_from_bytes reconstructs around unreadable stream lengths" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+fn reader_assert_document_has_recovered_hello_stream(
+  document : @pdflite.PdfDocument,
+) -> Unit raise Error {
+  guard document.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected recovered stream")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(5)),
+  )
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+}
+
+///|
+test "pdf_read_document_from_bytes recovers unreadable stream lengths" {
+  let strict = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_unreadable_stream_and_catalog(),
   )
-  guard strict is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected strict StreamLengthExpected")
-  }
+  @test.assert_eq(strict.first_xref(), 118)
+  @test.assert_eq(strict.root(), 2)
+  @test.assert_eq(strict.object_numbers(), [1, 2])
+  reader_assert_document_has_recovered_hello_stream(strict)
 
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_classic_pdf_with_unreadable_stream_and_catalog(),
   )
-  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.first_xref(), 118)
   @test.assert_eq(parsed.root(), 2)
   @test.assert_eq(parsed.object_numbers(), [1, 2])
   @test.assert_eq(
@@ -2031,16 +2074,15 @@ test "pdf_read_document_from_bytes reconstructs around unreadable stream lengths
       (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Payload")), PdfIndirect(1)),
     ]),
   )
-  guard parsed.lookup_object_or_null(1) is PdfStreamObject(stream) else {
-    fail("expected reconstructed stream")
-  }
-  @test.assert_eq(
-    stream.dictionary.lookup_immediate(
-      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
-    ),
-    Some(PdfInteger(5)),
+  reader_assert_document_has_recovered_hello_stream(parsed)
+
+  let unparseable = try! @pdflite.pdf_read_document_from_bytes(
+    reader_classic_pdf_with_unparseable_stream_length(),
   )
-  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+  @test.assert_eq(unparseable.first_xref(), 0)
+  @test.assert_eq(unparseable.root(), 3)
+  @test.assert_eq(unparseable.object_numbers(), [1, 3])
+  reader_assert_document_has_recovered_hello_stream(unparseable)
 }
 
 ///|
@@ -2660,20 +2702,16 @@ test "pdf_read_classic_document_from_bytes stops cyclic Prev chains" {
 }
 
 ///|
-test "pdf_read_classic_document_from_bytes reports indirect stream length errors" {
-  let missing_xref : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+test "pdf_read_classic_document_from_bytes recovers unreadable stream lengths" {
+  let missing_xref = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_missing_indirect_stream_length(),
   )
-  guard missing_xref is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected StreamLengthExpected")
-  }
+  reader_assert_document_has_recovered_hello_stream(missing_xref)
 
-  let non_integer : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+  let non_integer = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_non_integer_stream_length(),
   )
-  guard non_integer is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected StreamLengthExpected")
-  }
+  reader_assert_document_has_recovered_hello_stream(non_integer)
 
   let mismatched : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_mismatched_stream_length_xref(),
@@ -2682,19 +2720,15 @@ test "pdf_read_classic_document_from_bytes reports indirect stream length errors
     fail("expected XRefEntryExpected")
   }
 
-  let stream_length_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+  let stream_length_object = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_stream_length_stream_object(),
   )
-  guard stream_length_object is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected StreamLengthExpected")
-  }
+  reader_assert_document_has_recovered_hello_stream(stream_length_object)
 
-  let negative_direct : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+  let negative_direct = try! @pdflite.pdf_read_classic_document_from_bytes(
     reader_classic_pdf_with_negative_stream_length(),
   )
-  guard negative_direct is Err(@pdflite.PdfError::StreamLengthExpected) else {
-    fail("expected StreamLengthExpected")
-  }
+  reader_assert_document_has_recovered_hello_stream(negative_direct)
 }
 
 ///|
