@@ -1235,6 +1235,57 @@ fn reader_xref_stream_pdf_with_indirect_object_stream_filter() -> @pdflite.PdfBy
 }
 
 ///|
+fn reader_xref_stream_pdf_with_indirect_object_stream_bounds() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let count_offset = reader_push_indirect_object(output, 2, 0, "1")
+  let object_stream_data : Array[Byte] = []
+  reader_push_ascii(object_stream_data, "7 0 ")
+  let first = object_stream_data.length()
+  reader_push_ascii(object_stream_data, "<< /Answer 42 >>")
+  let object_stream_offset = output.length()
+  reader_push_ascii(
+    output, "3 0 obj\n<< /Type /ObjStm /N 2 0 R /First 5 0 R /Length ",
+  )
+  reader_push_ascii(output, object_stream_data.length().to_string())
+  reader_push_ascii(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let first_offset = reader_push_indirect_object(
+    output,
+    5,
+    0,
+    first.to_string(),
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, count_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, object_stream_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 0, 0, 0)
+  reader_push_xref_stream_entry(stream_data, 1, first_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 2, 3, 0)
+  reader_push_ascii(output, "6 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 8 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_mismatched_object_stream() -> @pdflite.PdfBytes {
   reader_xref_stream_pdf_with_object_stream_number(5)
 }
@@ -2445,6 +2496,20 @@ test "pdf_read_document_from_bytes decodes object streams with indirect filters"
       @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter")),
     ),
     Some(PdfIndirect(2)),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes resolves indirect object-stream bounds" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_indirect_object_stream_bounds(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3, 5, 7])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(7),
+    PdfDictionary([
+      (@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Answer")), PdfInteger(42)),
+    ]),
   )
 }
 

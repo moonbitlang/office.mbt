@@ -265,11 +265,12 @@ MoonBit consequences for this project:
    xref-stream dictionaries as trailer candidates after unusable `startxref`
    pointers.
    Object stream extraction is started for
-   direct/filter-decodable stream data with direct `/N` and `/First`
-   dictionaries, including malformed header, offset, index, and object-number
-   mismatch checks. Object-stream extraction now uses the document-aware stream
-   decoder once the containing object stream is loaded, so indirect `/Filter`
-   metadata on `/ObjStm` streams is honored. Strict stream-object parsing now
+   direct/filter-decodable stream data with direct or indirect `/N` and
+   `/First` dictionaries, including malformed header, offset, index, and
+   object-number mismatch checks. Object-stream extraction now uses the
+   document-aware stream decoder once the containing object stream is loaded,
+   so indirect `/Filter` metadata on `/ObjStm` streams is honored. Strict
+   stream-object parsing now
    mirrors CamlPDF's stream-start padding tolerance by skipping space, NUL,
    form-feed, and tab bytes between the `stream` keyword and the line break or
    first data byte, without applying that padding rule before `endstream`.

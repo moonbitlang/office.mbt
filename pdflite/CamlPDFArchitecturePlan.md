@@ -35,6 +35,9 @@ work changes.
    `/W`, while keeping explicit wrong `/Type` values rejected; the malformed
    reconstruction path applies the same rule when using xref-stream
    dictionaries as trailer candidates.
+   Object-stream extraction now resolves CamlPDF-style indirect `/N` and
+   `/First` metadata through the partially loaded document before slicing
+   embedded objects.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

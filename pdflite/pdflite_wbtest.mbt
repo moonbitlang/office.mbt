@@ -435,7 +435,7 @@ test "private object stream helpers cover malformed object streams" {
   let key_first = pdf_reader_name("/First")
   let key_length = pdf_reader_name("/Length")
 
-  let missing_required : Result[Int, Error] = try? pdf_object_stream_required_int(
+  let missing_required : Result[Int, Error] = try? pdf_document_empty().pdf_object_stream_required_int(
     PdfDictionary([]),
     key_n,
   )

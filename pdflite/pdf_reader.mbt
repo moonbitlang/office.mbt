@@ -700,11 +700,12 @@ fn pdf_xref_stream_entries(
 }
 
 ///|
-fn pdf_object_stream_required_int(
+fn PdfDocument::pdf_object_stream_required_int(
+  self : PdfDocument,
   dictionary : PdfObject,
   key : PdfName,
 ) -> Int raise PdfError {
-  match dictionary.lookup_immediate(key) {
+  match self.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) if value >= 0 => value
     _ => raise XRefEntryExpected
   }
@@ -769,11 +770,11 @@ fn PdfDocument::read_object_stream_reference(
         None => ()
       }
       let decoded_stream = self.pdf_decode_stream_value_direct(stream)
-      let count = pdf_object_stream_required_int(
+      let count = self.pdf_object_stream_required_int(
         decoded_stream.dictionary,
         pdf_reader_n_name(),
       )
-      let first = pdf_object_stream_required_int(
+      let first = self.pdf_object_stream_required_int(
         decoded_stream.dictionary,
         pdf_reader_first_name(),
       )
