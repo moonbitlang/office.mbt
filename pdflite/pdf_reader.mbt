@@ -1082,8 +1082,8 @@ pub fn pdf_revisions_from_view(data : BytesView) -> Int raise PdfError {
 }
 
 ///|
-pub fn pdf_revisions_from_bytes(data : BytesView) -> Int raise PdfError {
-  pdf_revisions_from_view(data)
+pub fn pdf_revisions_from_bytes(data : PdfBytes) -> Int raise PdfError {
+  pdf_revisions_from_view(data[:])
 }
 
 ///|

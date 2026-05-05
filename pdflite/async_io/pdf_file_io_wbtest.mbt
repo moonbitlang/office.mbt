@@ -108,6 +108,7 @@ async test "async file wrappers read incremental revisions" {
   pdf_write_document_incremental_update_to_file(
     original_path, updated, updated_path,
   )
+  let revision_count = pdf_revisions_from_file(updated_path)
   let latest = pdf_read_document_revision_from_file(updated_path, 1)
   let older = pdf_read_document_revision_from_file(updated_path, 2)
   guard pdf_read_document_revision_from_file_with_passwords(updated_path, 2)
@@ -116,6 +117,7 @@ async test "async file wrappers read incremental revisions" {
   }
   pdf_async_io_remove_if_exists_for_test(original_path)
   pdf_async_io_remove_if_exists_for_test(updated_path)
+  @test.assert_eq(revision_count, 2)
   @test.assert_eq(latest.lookup_object_or_null(22), added_object)
   @test.assert_eq(older.lookup_object_or_null(22), PdfNull)
   @test.assert_eq(

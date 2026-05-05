@@ -425,7 +425,7 @@ pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise PdfError
 
 pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(PdfName, Int)]
 
-pub fn pdf_revisions_from_bytes(BytesView) -> Int raise PdfError
+pub fn pdf_revisions_from_bytes(Bytes) -> Int raise PdfError
 
 pub fn pdf_revisions_from_view(BytesView) -> Int raise PdfError
 

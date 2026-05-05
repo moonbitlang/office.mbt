@@ -54,7 +54,9 @@ work changes.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.
-   Password-aware public read wrappers now also have revision-aware variants.
+   Password-aware public read wrappers now also have revision-aware variants,
+   and the public revision counter follows the same owned `Bytes` versus
+   borrowed `BytesView` split as the rest of the reader surface.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
 
@@ -144,8 +146,8 @@ work changes.
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, strict revision-specific reads, and image extraction
-  basics. Native async file wrappers cover read/write, password reads,
-  revision reads, and incremental writes.
+  basics. Native async file wrappers cover read/write, password reads, revision
+  counting, revision reads, and incremental writes.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, remaining malformed-reader recovery, and example-level integration
   fixtures.

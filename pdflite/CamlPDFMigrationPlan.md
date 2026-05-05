@@ -243,8 +243,9 @@ MoonBit consequences for this project:
    `/Prev` chains are started for classic xref tables, preserving newer entries
    over older ones, including newer free entries that hide older objects, and
    public `pdf_revisions_from_view`/`pdf_revisions_from_bytes` helpers count
-   those revisions from the xref metadata. Strict revision-specific document
-   reads are now started with
+   those revisions from the xref metadata, keeping the borrowed `BytesView`
+   entry point separate from the owned `Bytes` compatibility wrapper. Strict
+   revision-specific document reads are now started with
    `pdf_read_classic_document_revision_from_view`/`_from_bytes` and
    `pdf_read_document_revision_from_view`/`_from_bytes`: revision `1` is the
    newest xref section, larger revision numbers skip newer sections and read
@@ -1196,7 +1197,8 @@ MoonBit consequences for this project:
     Status: started with a native-only `async_io` package using
     `moonbitlang/async/fs`. It exposes `pdf_read_document_from_file` and
     `pdf_write_document_to_file` wrappers around the pure byte reader/writer,
-    plus revision-specific file reads, password-based encrypted reads,
+    plus file revision counting, revision-specific file reads,
+    password-based encrypted reads,
     revision-specific password reads, uncompressed and Flate-compressed
     xref-stream file writes, and classic/xref-stream incremental-update file
     writes. Native async tests cover plain round-trip, xref-stream round-trip,

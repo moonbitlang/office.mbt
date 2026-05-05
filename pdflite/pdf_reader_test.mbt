@@ -1936,25 +1936,21 @@ test "pdf_is_linearized probes byte input without full parsing" {
 test "pdf_revisions_from_bytes counts classic Prev chain revisions" {
   @test.assert_eq(
     try! @pdflite.pdf_revisions_from_bytes(
-      reader_classic_pdf_with_indirect_stream_length()[:],
+      reader_classic_pdf_with_indirect_stream_length(),
     ),
     1,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_revisions_from_bytes(
-      reader_classic_pdf_with_prev_xref()[:],
-    ),
+    try! @pdflite.pdf_revisions_from_bytes(reader_classic_pdf_with_prev_xref()),
     2,
   )
   @test.assert_eq(
-    try! @pdflite.pdf_revisions_from_bytes(
-      reader_linearized_classic_pdf("1")[:],
-    ),
+    try! @pdflite.pdf_revisions_from_bytes(reader_linearized_classic_pdf("1")),
     1,
   )
   @test.assert_eq(
     try! @pdflite.pdf_revisions_from_bytes(
-      reader_linearized_classic_pdf_with_prev_xref()[:],
+      reader_linearized_classic_pdf_with_prev_xref(),
     ),
     1,
   )
@@ -1964,7 +1960,7 @@ test "pdf_revisions_from_bytes counts classic Prev chain revisions" {
 test "pdf_revisions_from_bytes ignores trailing startxref junk after EOF" {
   @test.assert_eq(
     try! @pdflite.pdf_revisions_from_bytes(
-      reader_classic_pdf_with_trailing_startxref_junk()[:],
+      reader_classic_pdf_with_trailing_startxref_junk(),
     ),
     1,
   )
@@ -1974,7 +1970,7 @@ test "pdf_revisions_from_bytes ignores trailing startxref junk after EOF" {
 test "pdf_revisions_from_bytes skips non-digit startxref prefixes" {
   @test.assert_eq(
     try! @pdflite.pdf_revisions_from_bytes(
-      reader_classic_pdf_with_prefixed_startxref_pointer()[:],
+      reader_classic_pdf_with_prefixed_startxref_pointer(),
     ),
     1,
   )
@@ -1993,7 +1989,7 @@ test "pdf_revisions_from_view reads borrowed revision metadata slices" {
 ///|
 test "pdf_revisions_from_bytes reports malformed revision metadata" {
   let missing_startxref : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
-    reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n")[:],
+    reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n"),
   )
   guard missing_startxref is Err(@pdflite.PdfError::StartXRefExpected) else {
     fail("expected StartXRefExpected")
@@ -2002,14 +1998,14 @@ test "pdf_revisions_from_bytes reports malformed revision metadata" {
   let malformed_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
     reader_classic_pdf_with_xref_body(
       "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev /Bad >>",
-    )[:],
+    ),
   )
   guard malformed_prev is Err(@pdflite.PdfError::TrailerExpected) else {
     fail("expected TrailerExpected")
   }
 
   let cyclic_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
-    reader_classic_pdf_with_self_prev_xref()[:],
+    reader_classic_pdf_with_self_prev_xref(),
   )
   guard cyclic_prev is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected XRefExpected")

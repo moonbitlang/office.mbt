@@ -17,6 +17,11 @@ pub async fn pdf_read_document_revision_from_file(
 }
 
 ///|
+pub async fn pdf_revisions_from_file(path : StringView) -> Int {
+  @pdflite.pdf_revisions_from_bytes(@fs.read_file(path).binary())
+}
+
+///|
 pub async fn pdf_read_document_from_file_with_passwords(
   path : StringView,
   user_password? : BytesView? = None,
