@@ -368,6 +368,27 @@ fn pdf_text_predefined_cmap_uses_hkscs_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_cmap_uses_cns_euc_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  pdf_text_predefined_cmap_has_text_orientation(text) &&
+  text.contains("CNS-EUC")
+}
+
+///|
+fn pdf_text_predefined_cns_euc_cid_ranges(
+  name : PdfName,
+) -> Array[(Int, Int, Int)]? {
+  guard pdf_text_predefined_cmap_uses_cns_euc_charcodes(name) else {
+    return None
+  }
+  if pdf_text_predefined_cmap_is_vertical(name) {
+    Some(pdf_text_cns_euc_v_cid_ranges)
+  } else {
+    Some(pdf_text_cns_euc_h_cid_ranges)
+  }
+}
+
+///|
 fn pdf_text_predefined_cns1_b5_cid_ranges(
   name : PdfName,
 ) -> Array[(Int, Int, Int)]? {
@@ -939,6 +960,19 @@ fn pdf_text_predefined_cns1_codepoint(
 }
 
 ///|
+fn pdf_text_predefined_cns1_codepoint_linear(
+  ranges : Array[(Int, Int, Int)],
+  code : Int,
+) -> Int? {
+  for range in ranges {
+    if code >= range.0 && code <= range.1 {
+      return pdf_text_cns1_codepoint_of_cid(range.2 + code - range.0)
+    }
+  }
+  None
+}
+
+///|
 fn pdf_text_predefined_cns1_charcode(
   ranges : Array[(Int, Int, Int)],
   codepoint : Int,
@@ -952,6 +986,92 @@ fn pdf_text_predefined_cns1_charcode(
     }
   }
   None
+}
+
+///|
+fn pdf_text_predefined_cns1_builtin_codepoints(
+  name : PdfName,
+  code : Int,
+) -> Array[Int]? {
+  match
+    pdf_text_predefined_vertical_codepoint(
+      pdf_text_predefined_cns1_vertical_codepoint_table(name),
+      code,
+    ) {
+    Some(codepoint) => Some([codepoint])
+    None =>
+      match pdf_text_predefined_cns1_b5_cid_ranges(name) {
+        Some(ranges) =>
+          match pdf_text_predefined_cns1_codepoint(ranges, code) {
+            Some(codepoint) => Some([codepoint])
+            None => None
+          }
+        None =>
+          if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
+            match pdf_text_predefined_hkscs_codepoint(code) {
+              Some(codepoint) => Some([codepoint])
+              None => None
+            }
+          } else {
+            match pdf_text_predefined_cns_euc_cid_ranges(name) {
+              Some(ranges) =>
+                match pdf_text_predefined_cns1_codepoint_linear(ranges, code) {
+                  Some(codepoint) => Some([codepoint])
+                  None => None
+                }
+              None =>
+                if pdf_text_predefined_cmap_uses_b5pc_charcodes(name) {
+                  match pdf_text_predefined_b5pc_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else if pdf_text_predefined_cmap_uses_big5_charcodes(name) {
+                  match pdf_text_predefined_big5_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else {
+                  None
+                }
+            }
+          }
+      }
+  }
+}
+
+///|
+fn pdf_text_predefined_cns1_builtin_charcode(
+  name : PdfName,
+  codepoint : Int,
+) -> Int? {
+  match
+    pdf_text_predefined_vertical_charcode(
+      pdf_text_predefined_cns1_vertical_charcode_table(name),
+      codepoint,
+    ) {
+    Some(code) => Some(code)
+    None =>
+      match pdf_text_predefined_cns1_b5_cid_ranges(name) {
+        Some(ranges) => pdf_text_predefined_cns1_charcode(ranges, codepoint)
+        None =>
+          if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
+            pdf_text_predefined_hkscs_charcode(codepoint)
+          } else {
+            match pdf_text_predefined_cns_euc_cid_ranges(name) {
+              Some(ranges) =>
+                pdf_text_predefined_cns1_charcode(ranges, codepoint)
+              None =>
+                if pdf_text_predefined_cmap_uses_b5pc_charcodes(name) {
+                  pdf_text_predefined_b5pc_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_big5_charcodes(name) {
+                  pdf_text_predefined_big5_charcode(codepoint)
+                } else {
+                  None
+                }
+            }
+          }
+      }
+  }
 }
 
 ///|
@@ -8712,125 +8832,84 @@ fn PdfFont::pdf_text_predefined_builtin_codepoints(
                   None => pdf_text_predefined_gbpc_euc_codepoints(code)
                 }
               } else {
-                match
-                  pdf_text_predefined_vertical_codepoint(
-                    pdf_text_predefined_cns1_vertical_codepoint_table(name),
-                    code,
-                  ) {
-                  Some(codepoint) => Some([codepoint])
+                match pdf_text_predefined_cns1_builtin_codepoints(name, code) {
+                  Some(codepoints) => Some(codepoints)
                   None =>
-                    match pdf_text_predefined_cns1_b5_cid_ranges(name) {
-                      Some(ranges) =>
-                        match pdf_text_predefined_cns1_codepoint(ranges, code) {
-                          Some(codepoint) => Some([codepoint])
-                          None => None
-                        }
-                      None =>
-                        if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
-                          match pdf_text_predefined_hkscs_codepoint(code) {
+                    if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
+                      match
+                        pdf_text_predefined_vertical_codepoint(
+                          pdf_text_predefined_korea1_vertical_codepoint_table(
+                            name,
+                          ),
+                          code,
+                        ) {
+                        Some(codepoint) => Some([codepoint])
+                        None =>
+                          match pdf_text_predefined_uhc_codepoint(code) {
                             Some(codepoint) => Some([codepoint])
                             None => None
                           }
-                        } else if pdf_text_predefined_cmap_uses_b5pc_charcodes(
+                      }
+                    } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(
+                        name,
+                      ) {
+                      match
+                        pdf_text_predefined_vertical_codepoint(
+                          pdf_text_predefined_korea1_vertical_codepoint_table(
                             name,
-                          ) {
-                          match pdf_text_predefined_b5pc_codepoint(code) {
+                          ),
+                          code,
+                        ) {
+                        Some(codepoint) => Some([codepoint])
+                        None =>
+                          match pdf_text_predefined_ksc_euc_codepoint(code) {
                             Some(codepoint) => Some([codepoint])
                             None => None
                           }
-                        } else if pdf_text_predefined_cmap_uses_big5_charcodes(
+                      }
+                    } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
+                        name,
+                      ) {
+                      match
+                        pdf_text_predefined_vertical_codepoint(
+                          pdf_text_predefined_korea1_vertical_codepoint_table(
                             name,
-                          ) {
-                          match pdf_text_predefined_big5_codepoint(code) {
+                          ),
+                          code,
+                        ) {
+                        Some(codepoint) => Some([codepoint])
+                        None => pdf_text_predefined_kscpc_euc_codepoints(code)
+                      }
+                    } else if pdf_text_predefined_cmap_uses_gbk2k_charcodes(
+                        name,
+                      ) {
+                      match
+                        pdf_text_predefined_vertical_codepoint(
+                          pdf_text_predefined_gb1_vertical_codepoint_table(name),
+                          code,
+                        ) {
+                        Some(codepoint) => Some([codepoint])
+                        None =>
+                          match pdf_text_predefined_gbk2k_codepoint(code) {
                             Some(codepoint) => Some([codepoint])
                             None => None
                           }
-                        } else if pdf_text_predefined_cmap_uses_uhc_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_codepoint(
-                              pdf_text_predefined_korea1_vertical_codepoint_table(
-                                name,
-                              ),
-                              code,
-                            ) {
+                      }
+                    } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
+                      match
+                        pdf_text_predefined_vertical_codepoint(
+                          pdf_text_predefined_gb1_vertical_codepoint_table(name),
+                          code,
+                        ) {
+                        Some(codepoint) => Some([codepoint])
+                        None =>
+                          match pdf_text_predefined_gbk_codepoint(code) {
                             Some(codepoint) => Some([codepoint])
-                            None =>
-                              match pdf_text_predefined_uhc_codepoint(code) {
-                                Some(codepoint) => Some([codepoint])
-                                None => None
-                              }
+                            None => None
                           }
-                        } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_codepoint(
-                              pdf_text_predefined_korea1_vertical_codepoint_table(
-                                name,
-                              ),
-                              code,
-                            ) {
-                            Some(codepoint) => Some([codepoint])
-                            None =>
-                              match
-                                pdf_text_predefined_ksc_euc_codepoint(code) {
-                                Some(codepoint) => Some([codepoint])
-                                None => None
-                              }
-                          }
-                        } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_codepoint(
-                              pdf_text_predefined_korea1_vertical_codepoint_table(
-                                name,
-                              ),
-                              code,
-                            ) {
-                            Some(codepoint) => Some([codepoint])
-                            None =>
-                              pdf_text_predefined_kscpc_euc_codepoints(code)
-                          }
-                        } else if pdf_text_predefined_cmap_uses_gbk2k_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_codepoint(
-                              pdf_text_predefined_gb1_vertical_codepoint_table(
-                                name,
-                              ),
-                              code,
-                            ) {
-                            Some(codepoint) => Some([codepoint])
-                            None =>
-                              match pdf_text_predefined_gbk2k_codepoint(code) {
-                                Some(codepoint) => Some([codepoint])
-                                None => None
-                              }
-                          }
-                        } else if pdf_text_predefined_cmap_uses_gbk_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_codepoint(
-                              pdf_text_predefined_gb1_vertical_codepoint_table(
-                                name,
-                              ),
-                              code,
-                            ) {
-                            Some(codepoint) => Some([codepoint])
-                            None =>
-                              match pdf_text_predefined_gbk_codepoint(code) {
-                                Some(codepoint) => Some([codepoint])
-                                None => None
-                              }
-                          }
-                        } else {
-                          None
-                        }
+                      }
+                    } else {
+                      None
                     }
                 }
               }
@@ -8875,97 +8954,69 @@ fn PdfFont::pdf_text_predefined_builtin_charcode(
                 }
               } else {
                 match
-                  pdf_text_predefined_vertical_charcode(
-                    pdf_text_predefined_cns1_vertical_charcode_table(name),
-                    codepoint,
-                  ) {
+                  pdf_text_predefined_cns1_builtin_charcode(name, codepoint) {
                   Some(code) => Some(code)
                   None =>
-                    match pdf_text_predefined_cns1_b5_cid_ranges(name) {
-                      Some(ranges) =>
-                        pdf_text_predefined_cns1_charcode(ranges, codepoint)
-                      None =>
-                        if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
-                          pdf_text_predefined_hkscs_charcode(codepoint)
-                        } else if pdf_text_predefined_cmap_uses_b5pc_charcodes(
+                    if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
+                      match
+                        pdf_text_predefined_vertical_charcode(
+                          pdf_text_predefined_korea1_vertical_charcode_table(
                             name,
-                          ) {
-                          pdf_text_predefined_b5pc_charcode(codepoint)
-                        } else if pdf_text_predefined_cmap_uses_big5_charcodes(
+                          ),
+                          codepoint,
+                        ) {
+                        Some(code) => Some(code)
+                        None => pdf_text_predefined_uhc_charcode(codepoint)
+                      }
+                    } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(
+                        name,
+                      ) {
+                      match
+                        pdf_text_predefined_vertical_charcode(
+                          pdf_text_predefined_korea1_vertical_charcode_table(
                             name,
-                          ) {
-                          pdf_text_predefined_big5_charcode(codepoint)
-                        } else if pdf_text_predefined_cmap_uses_uhc_charcodes(
+                          ),
+                          codepoint,
+                        ) {
+                        Some(code) => Some(code)
+                        None => pdf_text_predefined_ksc_euc_charcode(codepoint)
+                      }
+                    } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
+                        name,
+                      ) {
+                      match
+                        pdf_text_predefined_vertical_charcode(
+                          pdf_text_predefined_korea1_vertical_charcode_table(
                             name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_charcode(
-                              pdf_text_predefined_korea1_vertical_charcode_table(
-                                name,
-                              ),
-                              codepoint,
-                            ) {
-                            Some(code) => Some(code)
-                            None => pdf_text_predefined_uhc_charcode(codepoint)
-                          }
-                        } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_charcode(
-                              pdf_text_predefined_korea1_vertical_charcode_table(
-                                name,
-                              ),
-                              codepoint,
-                            ) {
-                            Some(code) => Some(code)
-                            None =>
-                              pdf_text_predefined_ksc_euc_charcode(codepoint)
-                          }
-                        } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_charcode(
-                              pdf_text_predefined_korea1_vertical_charcode_table(
-                                name,
-                              ),
-                              codepoint,
-                            ) {
-                            Some(code) => Some(code)
-                            None =>
-                              pdf_text_predefined_kscpc_euc_charcode(codepoint)
-                          }
-                        } else if pdf_text_predefined_cmap_uses_gbk2k_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_charcode(
-                              pdf_text_predefined_gb1_vertical_charcode_table(
-                                name,
-                              ),
-                              codepoint,
-                            ) {
-                            Some(code) => Some(code)
-                            None =>
-                              pdf_text_predefined_gbk2k_charcode(codepoint)
-                          }
-                        } else if pdf_text_predefined_cmap_uses_gbk_charcodes(
-                            name,
-                          ) {
-                          match
-                            pdf_text_predefined_vertical_charcode(
-                              pdf_text_predefined_gb1_vertical_charcode_table(
-                                name,
-                              ),
-                              codepoint,
-                            ) {
-                            Some(code) => Some(code)
-                            None => pdf_text_predefined_gbk_charcode(codepoint)
-                          }
-                        } else {
-                          None
-                        }
+                          ),
+                          codepoint,
+                        ) {
+                        Some(code) => Some(code)
+                        None =>
+                          pdf_text_predefined_kscpc_euc_charcode(codepoint)
+                      }
+                    } else if pdf_text_predefined_cmap_uses_gbk2k_charcodes(
+                        name,
+                      ) {
+                      match
+                        pdf_text_predefined_vertical_charcode(
+                          pdf_text_predefined_gb1_vertical_charcode_table(name),
+                          codepoint,
+                        ) {
+                        Some(code) => Some(code)
+                        None => pdf_text_predefined_gbk2k_charcode(codepoint)
+                      }
+                    } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
+                      match
+                        pdf_text_predefined_vertical_charcode(
+                          pdf_text_predefined_gb1_vertical_charcode_table(name),
+                          codepoint,
+                        ) {
+                        Some(code) => Some(code)
+                        None => pdf_text_predefined_gbk_charcode(codepoint)
+                      }
+                    } else {
+                      None
                     }
                 }
               }
@@ -9070,6 +9121,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
   let b5pc = pdf_text_predefined_cmap_uses_b5pc_charcodes(name)
   let cns1_b5 = pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name)
+  let cns_euc = pdf_text_predefined_cmap_uses_cns_euc_charcodes(name)
   let hkscs = pdf_text_predefined_cmap_uses_hkscs_charcodes(name)
   let gbpc_euc = pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name)
   let hojo_euc = pdf_text_predefined_cmap_uses_hojo_euc_charcodes(name)
@@ -9093,7 +9145,10 @@ fn pdf_text_predefined_mixed_byte_charcodes(
       index + 1 < text.length() &&
       pdf_text_gbk2k_four_byte_prefix(first, text[index + 1].to_int()) {
       index = pdf_text_push_four_byte_charcode(output, text, index)
+    } else if cns_euc && first == 0x8E {
+      index = pdf_text_push_four_byte_charcode(output, text, index)
     } else if first < 0x80 ||
+      (cns_euc && first == 0x80) ||
       (
         b5pc &&
         (

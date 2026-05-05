@@ -4422,6 +4422,62 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard hkgccs_b5_truncated is Err(BadText) else {
     fail("expected BadText for truncated HKgccs-B5 charcode")
   }
+  let cns_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopCNSEUCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/CNS-EUC-H")),
+  })
+  let cns_euc_builtin_extractor = cns_euc_builtin_font.text_extractor()
+  @test.assert_eq(
+    cns_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x20, 0x80, 0xA1, 0xA1, 0xA1, 0xAC, 0x8E, 0xA2, 0xA1, 0xA1,
+      ])[:],
+    ),
+    [0x20, 0x80, 0x3000, 0x2026, 0x4E42],
+  )
+  @test.assert_eq(
+    cns_euc_builtin_extractor.charcode_of_codepoint(0x20),
+    Some(0x20),
+  )
+  @test.assert_eq(
+    cns_euc_builtin_extractor.charcode_of_codepoint(0x3000),
+    Some(0xA1A1),
+  )
+  @test.assert_eq(
+    cns_euc_builtin_extractor.charcode_of_codepoint(0x2026),
+    Some(0xA1AC),
+  )
+  @test.assert_eq(
+    cns_euc_builtin_extractor.charcode_of_codepoint(0x4E42),
+    Some(0x8EA2A1A1),
+  )
+  @test.assert_eq(
+    cns_euc_builtin_extractor.charcode_of_codepoint(0x1F600),
+    None,
+  )
+  let cns_euc_vertical_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopCNSEUCVerticalBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/CNS-EUC-V")),
+  })
+  let cns_euc_vertical_extractor = cns_euc_vertical_font.text_extractor()
+  @test.assert_eq(
+    cns_euc_vertical_extractor.codepoints_of_text(
+      text_bytes_for_test([0xA1, 0xAC, 0x8E, 0xA1, 0xA1, 0xAC])[:],
+    ),
+    [0xFE19, 0xFE19],
+  )
+  @test.assert_eq(
+    cns_euc_vertical_extractor.charcode_of_codepoint(0xFE19),
+    Some(0xA1AC),
+  )
+  let cns_euc_truncated = try? cns_euc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x8E, 0xA1, 0xA1])[:],
+  )
+  guard cns_euc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated CNS-EUC charcode")
+  }
   let uhc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopUHCBuiltin"),
     composite,

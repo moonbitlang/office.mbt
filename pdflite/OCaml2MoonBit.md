@@ -378,6 +378,19 @@ negative signed values. When the OCaml source used `int` as an unsigned
 before sorting, binary searching, or exposing values through the public API.
 
 ```sh
+moon run -c 'fn main { println(0x8EA2A1A1 < 0); println(0x8EA2A1A1); println(0x7FFFFFFF < 0x8EA2A1A1) }'
+# true
+# -1901944415
+# false
+```
+
+Packed four-byte keys that set the high bit compare before positive `Int`
+values. If a table is sorted by serialized unsigned byte order, it is not
+necessarily sorted for MoonBit `Int` binary search. Sort with the same ordering
+used by lookup, compare through `UInt`, use `Int64`/`UInt64`, or use a linear
+lookup when source order matters for duplicate precedence.
+
+```sh
 moon run -c 'fn rotr64(value : UInt64, bits : Int) -> UInt64 { (value >> bits) | (value << (64 - bits)) }
 fn main { let value : UInt64 = 0x0123456789abcdef; let full : UInt64 = UInt64::lnot(0); println(rotr64(value, 8).to_string()); println((full + (1 : UInt64)).to_string()); println(((0x80 : UInt64) >> 7).to_string()) }'
 # 17222085231038278605

@@ -158,9 +158,10 @@ work changes.
    common mixed-byte predefined CMap charcode segmentation for `/ToUnicode`
    extraction, RKSJ predefined-CMap ASCII and half-width Katakana built-in
    fallback, generated GB-EUC/GB2312, GBpc-EUC, Big5, UHC/CP949,
-   GBK-EUC-UCS2, GBK2K/Adobe-GB1, B5pc, ETenms-B5, HKSCS/Adobe-CNS1, Hong
-   Kong Big5 CID-range fallbacks, and KSC-EUC/Adobe-Korea1-UCS2 mapping-table
-   fallbacks, plus KSCpc-EUC multi-codepoint fallback and generated vertical
+   GBK-EUC-UCS2, GBK2K/Adobe-GB1, B5pc, ETenms-B5, HKSCS/Adobe-CNS1,
+   CNS-EUC-H/V Adobe-CNS1 CID-range fallbacks, Hong Kong Big5 CID-range
+   fallbacks, and KSC-EUC/Adobe-Korea1-UCS2 mapping-table fallbacks, plus
+   KSCpc-EUC multi-codepoint fallback and generated vertical
    predefined-CMap override fallbacks for supported Adobe-GB1, Adobe-CNS1, and
    Adobe-Korea1 families when `/ToUnicode` is absent, and generated
    Adobe-Japan1 fallbacks for 90ms/90pv RKSJ direct Unicode maps, JIS two-byte
@@ -322,11 +323,14 @@ and backend breadth, is about 81-86% complete.
   `/ToUnicode` is absent, GBK predefined-CMap GBK-EUC-UCS2 mapping fallback
   when `/ToUnicode` is absent, GBK2K predefined-CMap Adobe-GB1 CID-range
   fallback with packed four-byte signed-`Int` charcodes when `/ToUnicode` is
-  absent, KSC-EUC predefined-CMap mapping fallback composed through
-  Adobe-Korea1-UCS2 when `/ToUnicode` is absent, and a KSCpc-EUC
-  predefined-CMap fallback with multi-codepoint expansion when `/ToUnicode` is
-  absent, vertical predefined-CMap override fallbacks for supported Adobe-GB1,
-  Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, Japanese
+  absent, CNS-EUC-H/V predefined-CMap Adobe-CNS1 CID-range fallback with
+  one/two/four-byte segmentation and shorter duplicate reverse-lookup
+  preference when `/ToUnicode` is absent, KSC-EUC predefined-CMap mapping
+  fallback composed through Adobe-Korea1-UCS2 when `/ToUnicode` is absent, and
+  a KSCpc-EUC predefined-CMap fallback with multi-codepoint expansion when
+  `/ToUnicode` is absent, vertical predefined-CMap override fallbacks for
+  supported Adobe-GB1, Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode`
+  is absent, Japanese
   Adobe-Japan1 predefined-CMap fallbacks for 90ms/90pv RKSJ, JIS `/H`, EUC-H,
   and Hojo-EUC when `/ToUnicode` is absent, external CMap stream parsing for
   codespaces plus `begincidchar`/`begincidrange` Type0 `/Encoding` streams,

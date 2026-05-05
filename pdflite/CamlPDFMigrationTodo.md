@@ -159,6 +159,10 @@ Current estimate:
 - [x] ~~GBK2K predefined CMap built-in CID-range fallback using packed
   four-byte signed-`Int` charcodes, shared Adobe-GB1 CID-to-Unicode data,
   supplementary scalar handling, and reverse lookup.~~
+- [x] ~~CNS-EUC-H/V predefined CMap built-in CID-range fallback using
+  Adobe-CNS1 CID-to-Unicode data, one/two/four-byte segmentation, vertical
+  mapping, reverse lookup with shorter duplicate charcode preference, and
+  truncated four-byte error coverage.~~
 - [x] ~~Vertical predefined CMap override fallbacks for supported Adobe-GB1,
   Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, including
   reverse lookup.~~
@@ -342,6 +346,10 @@ Current estimate:
 - [x] ~~Add the next remaining text parity slice: apply parsed external CMap
   `bfchar`/`bfrange` Unicode maps for otherwise unmapped Type0 `/Encoding`
   charcodes before inherited fallbacks.~~
+- [x] ~~Add the next remaining text parity slice: CNS-EUC-H/V rare predefined
+  CMap fallback with one/two/four-byte segmentation, Adobe-CNS1 Unicode
+  fallback, vertical mapping, reverse lookup, and signed-`Int` packed-key
+  lookup coverage.~~
 - [ ] Add the next remaining text parity slice: broader external/general CMap
   parsing beyond codespace/CID-char/CID-range/notdef lookup, Identity
   `/UseCMap`, and stream `/UseCMap` composition, remaining rare predefined
