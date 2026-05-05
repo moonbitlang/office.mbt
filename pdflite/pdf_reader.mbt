@@ -1281,6 +1281,29 @@ fn pdf_read_reconstructed_or_raise(
 }
 
 ///|
+fn pdf_read_probe_page_tree_or_reconstruct(
+  data : BytesView,
+  document : PdfDocument,
+) -> PdfDocument raise PdfError {
+  let catalog = Some(document.catalog()) catch { _ => None }
+  match catalog {
+    Some(catalog) if catalog.lookup_immediate(pdf_page_pages_key()) is Some(_) =>
+      try {
+        ignore(document.endpage())
+        document
+      } catch {
+        error =>
+          pdf_read_reconstructed_or_raise(
+            data,
+            error,
+            include_xref_stream_trailers=true,
+          )
+      }
+    _ => document
+  }
+}
+
+///|
 fn pdf_read_reader_revision_target(revision : Int?) -> Int? raise PdfError {
   match revision {
     Some(value) if value < 1 => raise BadRevision
@@ -1459,7 +1482,10 @@ pub fn pdf_read_classic_document_revision_from_bytes(
 pub fn pdf_read_document_from_view(
   data : BytesView,
 ) -> PdfDocument raise PdfError {
-  pdf_read_classic_document_from_view(data) catch {
+  pdf_read_probe_page_tree_or_reconstruct(
+    data,
+    pdf_read_classic_document_from_view(data),
+  ) catch {
     StartXRefExpected => pdf_read_reconstructed_document_from_view(data)
     XRefExpected =>
       pdf_read_reconstructed_or_raise(

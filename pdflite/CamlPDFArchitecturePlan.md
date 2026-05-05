@@ -23,6 +23,9 @@ work changes.
    CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
    revision-specific reads where revision `1` is newest and larger numbers
    follow older `/Prev` state across classic and xref-stream update chains.
+   Public reads now also probe a parsed catalog page tree after strict loading
+   and fall back to reconstruction when xref omissions leave `/Pages` references
+   unresolved.
    Password-aware public read wrappers now also have revision-aware variants.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
@@ -108,7 +111,8 @@ work changes.
   basics. Native async file wrappers cover read/write, password reads,
   revision reads, and incremental writes.
 - In progress: image/filter parity, text CMap parity, encryption finishing
-  edges, malformed-reader recovery, and example-level integration fixtures.
+  edges, remaining malformed-reader recovery, and example-level integration
+  fixtures.
 - Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, default AES
   random source, broader predefined CMap coverage, and broad real-world PDF
   recovery behavior.

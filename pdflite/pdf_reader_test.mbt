@@ -605,6 +605,32 @@ fn reader_classic_pdf_with_leading_junk() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_page_tree_objects_missing_from_xref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+  )
+  ignore(
+    reader_push_indirect_object(
+      output, 2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    ),
+  )
+  ignore(
+    reader_push_indirect_object(
+      output, 3, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>",
+    ),
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_without_startxref() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -1639,6 +1665,24 @@ test "pdf_read_document_from_view reconstructs borrowed malformed slices" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1, 2])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs page trees missing from xref" {
+  let payload = reader_classic_pdf_with_page_tree_objects_missing_from_xref()
+  let strict = try! @pdflite.pdf_read_classic_document_from_bytes(payload)
+  @test.assert_eq(strict.root(), 1)
+  @test.assert_eq(strict.object_numbers(), [1])
+  let strict_pages : Result[Int, Error] = try? strict.endpage()
+  guard strict_pages is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(payload)
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2, 3])
+  @test.assert_eq(try! parsed.endpage(), 1)
 }
 
 ///|

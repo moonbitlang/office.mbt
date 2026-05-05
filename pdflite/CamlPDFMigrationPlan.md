@@ -283,6 +283,11 @@ MoonBit consequences for this project:
    parsed dictionary, sets `first_xref` to zero, and keeps stricter xref errors
    on the strict classic reader path. Reconstructed trailer scanning also
    accepts CamlPDF-style `trailer <<...>>` and `trailer<<...>>` dictionaries.
+   Public reads now also mirror CamlPDF's post-strict-read page-tree probe:
+   when a parsed catalog has `/Pages` but `endpage` fails because page-tree
+   objects were omitted from the xref, the public reader falls back to
+   reconstruction and recovers the body-scanned page objects while the strict
+   reader keeps exposing the xref-limited object map.
    Xref-stream trailer reconstruction is now
    started for missing or unusable `startxref` pointers, using `/Type /XRef`
    stream dictionaries as trailer candidates while stripping stream/xref-only
@@ -319,7 +324,8 @@ MoonBit consequences for this project:
    hardening now covers malformed headers, missing/bad `startxref`, CamlPDF-style
    non-digit prefixes before `startxref` offsets, malformed xref rows, malformed
    trailers, cyclic `/Prev` chains, CR/CRLF stream line breaks, indirect
-   stream-length failures, and xref/object mismatch errors.
+   stream-length failures, xref/object mismatch errors, and public fallback
+   reconstruction after a strict-read page-tree probe failure.
    A password-aware byte-reader wrapper is now started:
    `pdf_read_document_from_bytes_with_passwords` preserves the existing
    plain-reader API while returning a `PdfDecryptionResult?` for parsed classic
