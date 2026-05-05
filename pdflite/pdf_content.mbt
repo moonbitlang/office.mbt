@@ -1595,6 +1595,25 @@ fn pdf_content_named_color_operands_or_malformed_fallback(
 }
 
 ///|
+fn pdf_content_tj_array_from_operand(object : PdfObject) -> PdfObject? {
+  match object {
+    PdfArray(items) => {
+      let output : Array[PdfObject] = []
+      for item in items {
+        match item {
+          PdfString(bytes) => output.push(PdfString(bytes))
+          PdfInteger(value) => output.push(PdfReal(value.to_double()))
+          PdfReal(value) => output.push(PdfReal(value))
+          _ => ()
+        }
+      }
+      Some(PdfArray(output))
+    }
+    _ => None
+  }
+}
+
+///|
 fn pdf_content_section_unknown(
   operands : ArrayView[PdfObject],
   operator : PdfBytes,
@@ -1828,7 +1847,11 @@ fn pdf_content_parse_known_section(
         Some(text) => Some(Op_Tj(text))
         None => None
       }
-    "TJ" if operands.length() == 1 => Some(Op_TJ(operands[0]))
+    "TJ" if operands.length() == 1 =>
+      match pdf_content_tj_array_from_operand(operands[0]) {
+        Some(array) => Some(Op_TJ(array))
+        None => None
+      }
     "'" if operands.length() == 1 =>
       match pdf_content_operand_string(operands, 0) {
         Some(text) => Some(Op_quote(text))

@@ -890,6 +890,18 @@ test "private content helpers cover malformed operand fallbacks" {
     pdf_content_op_section(Op_Unknown(@ascii.encode("ZZ"))),
     ([], @ascii.encode("ZZ")),
   )
+  @test.assert_eq(
+    pdf_content_tj_array_from_operand(
+      PdfArray([
+        PdfString(@ascii.encode("A")),
+        PdfInteger(-3),
+        PdfArray([PdfInteger(1)]),
+        PdfReal(2.5),
+      ]),
+    ),
+    Some(PdfArray([PdfString(@ascii.encode("A")), PdfReal(-3.0), PdfReal(2.5)])),
+  )
+  @test.assert_eq(pdf_content_tj_array_from_operand(PdfInteger(1)), None)
 
   @test.assert_eq(
     pdf_content_read_complex_object(
@@ -1180,6 +1192,7 @@ test "private content helpers cover malformed operand fallbacks" {
   wbtest_assert_known_content_none("Ts", bad_number)
   wbtest_assert_known_content_none("Td", [PdfInteger(1), PdfNameObject(name)])
   wbtest_assert_known_content_none("TD", [PdfInteger(1), PdfNameObject(name)])
+  wbtest_assert_known_content_none("TJ", [PdfInteger(1)])
   wbtest_assert_known_content_none("'", bad_name)
   wbtest_assert_known_content_none("\"", [
     PdfInteger(1),

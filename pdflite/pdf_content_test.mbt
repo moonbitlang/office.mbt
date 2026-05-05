@@ -1503,7 +1503,7 @@ test "pdf_parse_content_ops_from_bytes parses text array operators" {
     Op_TJ(
       PdfArray([
         PdfString(content_bytes_for_test("A")),
-        PdfInteger(-20),
+        PdfReal(-20.0),
         PdfString(content_bytes_for_test("B")),
       ]),
     ),
@@ -1517,14 +1517,14 @@ test "pdf_parse_content_ops_from_bytes parses text array operators" {
 }
 
 ///|
-test "pdf_parse_content_ops_from_bytes parses nested text array objects" {
-  let data = content_bytes_for_test("[(A) [1] << /K 2 >>] TJ")
+test "pdf_parse_content_ops_from_bytes skips malformed text array members" {
+  let data = content_bytes_for_test("[(A) [1] << /K 2 >> -2 (B)] TJ")
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
     Op_TJ(
       PdfArray([
         PdfString(content_bytes_for_test("A")),
-        PdfArray([PdfInteger(1)]),
-        PdfDictionary([(content_name_for_test("/K"), PdfInteger(2))]),
+        PdfReal(-2.0),
+        PdfString(content_bytes_for_test("B")),
       ]),
     ),
   ])
@@ -1532,18 +1532,19 @@ test "pdf_parse_content_ops_from_bytes parses nested text array objects" {
     try! @pdflite.pdf_content_bytes_of_ops(
       try! @pdflite.pdf_parse_content_ops_from_bytes(data),
     ),
-    data,
+    content_bytes_for_test("[(A) -2 (B)] TJ"),
   )
 }
 
 ///|
 test "pdf_parse_content_ops_from_bytes preserves invalid known-operator operands" {
-  let data = content_bytes_for_test("true w /Bad J 1 ri /Bad Tj 1 Do")
+  let data = content_bytes_for_test("true w /Bad J 1 ri /Bad Tj 1 TJ 1 Do")
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
     Op_Unknown(content_bytes_for_test("true w")),
     Op_Unknown(content_bytes_for_test("/Bad J")),
     Op_Unknown(content_bytes_for_test("1 ri")),
     Op_Unknown(content_bytes_for_test("/Bad Tj")),
+    Op_Unknown(content_bytes_for_test("1 TJ")),
     Op_Unknown(content_bytes_for_test("1 Do")),
   ])
 }
