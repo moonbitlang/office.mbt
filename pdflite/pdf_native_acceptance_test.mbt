@@ -999,6 +999,202 @@ fn acceptance_assert_document_feature_lifecycle_for_test(
 }
 
 ///|
+fn acceptance_catalog_merge_document_for_test(
+  label : String,
+  title : String,
+  ocg_number : Int,
+  need_appearances : Bool,
+) -> @pdflite.PdfDocument raise {
+  let key_acroform = acceptance_name_for_test("/AcroForm")
+  let key_fields = acceptance_name_for_test("/Fields")
+  let key_t = acceptance_name_for_test("/T")
+  let key_need_appearances = acceptance_name_for_test("/NeedAppearances")
+  let key_info = acceptance_name_for_test("/Info")
+  let key_title = acceptance_name_for_test("/Title")
+  let key_struct_tree_root = acceptance_name_for_test("/StructTreeRoot")
+  let key_parent_tree = acceptance_name_for_test("/ParentTree")
+  let key_struct_parents = acceptance_name_for_test("/StructParents")
+  let key_k = acceptance_name_for_test("/K")
+  let key_pg = acceptance_name_for_test("/Pg")
+  let doc = acceptance_one_page_document_for_test()
+  doc.set_version(1, 6)
+  let page_numbers = doc.page_reference_numbers()
+  doc.add_object_given_number(
+    70,
+    PdfDictionary([(key_t, PdfString(acceptance_ascii_for_test(label)))]),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_acroform,
+    PdfDictionary([
+      (key_fields, PdfArray([PdfIndirect(70)])),
+      (key_need_appearances, PdfBoolean(need_appearances)),
+    ]),
+  )
+  doc.add_object_given_number(
+    page_numbers[0],
+    doc
+    .lookup_object_or_null(page_numbers[0])
+    .add_dict_entry(key_struct_parents, PdfInteger(0)),
+  )
+  doc.add_object_given_number(
+    80,
+    PdfDictionary([
+      (key_k, PdfIndirect(81)),
+      (key_parent_tree, doc.build_number_tree([(0, PdfIndirect(81))])),
+    ]),
+  )
+  doc.add_object_given_number(
+    81,
+    PdfDictionary([
+      (key_pg, PdfIndirect(page_numbers[0])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_struct_tree_root,
+    PdfIndirect(80),
+  )
+  let info_number = doc.add_object(
+    PdfDictionary([(key_title, PdfString(acceptance_ascii_for_test(title)))]),
+  )
+  doc.set_trailer_dict(
+    doc.trailer_dict().add_dict_entry(key_info, PdfIndirect(info_number)),
+  )
+  doc.write_optional_content_groups({
+    ocgs: [
+      (
+        ocg_number,
+        {
+          name: acceptance_ascii_for_test(label),
+          intent: [acceptance_name_for_test("/View")],
+          usage: None,
+        },
+      ),
+    ],
+    default_config: {
+      ..@pdflite.pdf_ocg_default_config(),
+      on: [ocg_number],
+      order: Some([(Some(acceptance_ascii_for_test(label)), [ocg_number])]),
+    },
+    configs: [],
+  })
+}
+
+///|
+fn acceptance_compressed_roundtrip_for_test(
+  doc : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  @pdflite.pdf_read_document_from_bytes(
+    @pdflite.pdf_write_document_with_compressed_xref_stream(doc),
+  )
+}
+
+///|
+fn acceptance_assert_catalog_merge_lifecycle_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let key_acroform = acceptance_name_for_test("/AcroForm")
+  let key_fields = acceptance_name_for_test("/Fields")
+  let key_t = acceptance_name_for_test("/T")
+  let key_need_appearances = acceptance_name_for_test("/NeedAppearances")
+  let key_info = acceptance_name_for_test("/Info")
+  let key_title = acceptance_name_for_test("/Title")
+  let key_struct_tree_root = acceptance_name_for_test("/StructTreeRoot")
+  let key_parent_tree = acceptance_name_for_test("/ParentTree")
+  let key_k = acceptance_name_for_test("/K")
+  let key_p = acceptance_name_for_test("/P")
+  let key_pg = acceptance_name_for_test("/Pg")
+  acceptance_assert_pages_have_hello_content_for_test(doc, 2)
+  @test.assert_eq(doc.version(), (1, 6))
+  guard doc.lookup_direct(key_acroform, doc.catalog()) is Some(form) else {
+    fail("expected merged AcroForm")
+  }
+  guard form.lookup_immediate(key_fields) is Some(PdfArray(fields)) else {
+    fail("expected AcroForm fields")
+  }
+  @test.assert_eq(fields.length(), 2)
+  guard fields[0] is PdfIndirect(first_field) else {
+    fail("expected first AcroForm field")
+  }
+  guard fields[1] is PdfIndirect(second_field) else {
+    fail("expected second AcroForm field")
+  }
+  @test.assert_eq(
+    doc.lookup_object_or_null(first_field).lookup_immediate(key_t),
+    Some(PdfString(acceptance_ascii_for_test("first-field"))),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(second_field).lookup_immediate(key_t),
+    Some(PdfString(acceptance_ascii_for_test("second-field"))),
+  )
+  @test.assert_eq(
+    form.lookup_immediate(key_need_appearances),
+    Some(PdfBoolean(true)),
+  )
+  guard doc.read_optional_content_groups() is Some(content) else {
+    fail("expected merged optional content")
+  }
+  @test.assert_eq(content.ocgs.length(), 2)
+  @test.assert_eq(
+    content.ocgs[0].1.name,
+    acceptance_ascii_for_test("first-field"),
+  )
+  @test.assert_eq(
+    content.ocgs[1].1.name,
+    acceptance_ascii_for_test("second-field"),
+  )
+  @test.assert_eq(content.default_config.on.length(), 2)
+  let catalog = doc.catalog()
+  guard catalog.lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(struct_root_number)) else {
+    fail("expected merged StructTreeRoot")
+  }
+  let struct_root = doc.lookup_object_or_null(struct_root_number)
+  guard struct_root.lookup_immediate(key_k) is Some(PdfArray(kids)) else {
+    fail("expected structure kids")
+  }
+  @test.assert_eq(kids.length(), 2)
+  guard kids[0] is PdfIndirect(first_kid) else {
+    fail("expected first structure child")
+  }
+  guard kids[1] is PdfIndirect(second_kid) else {
+    fail("expected second structure child")
+  }
+  let page_numbers = doc.page_reference_numbers()
+  @test.assert_eq(
+    doc.lookup_object_or_null(first_kid).lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(second_kid).lookup_immediate(key_p),
+    Some(PdfIndirect(struct_root_number)),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(first_kid).lookup_immediate(key_pg),
+    Some(PdfIndirect(page_numbers[0])),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(second_kid).lookup_immediate(key_pg),
+    Some(PdfIndirect(page_numbers[1])),
+  )
+  guard doc.lookup_direct(key_parent_tree, struct_root) is Some(parent_tree) else {
+    fail("expected merged ParentTree")
+  }
+  let parent_entries = doc.read_number_tree(parent_tree)
+  @test.assert_eq(parent_entries.length(), 2)
+  @test.assert_eq([ for entry in parent_entries => entry.0 ], [0, 1])
+  guard doc.lookup_direct(key_info, doc.trailer_dict()) is Some(info) else {
+    fail("expected retained Info dictionary")
+  }
+  @test.assert_eq(
+    info.lookup_immediate(key_title),
+    Some(PdfString(acceptance_ascii_for_test("first-title"))),
+  )
+}
+
+///|
 fn acceptance_draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
   [
     Op_q,
@@ -1523,6 +1719,23 @@ test "native acceptance suite preserves labels and bookmarks across merge bounda
   let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
   @test.assert_eq(reparsed.read_page_labels(), expected_labels)
   acceptance_assert_bookmarks_target_pages_for_test(reparsed, "First", "Second")
+}
+
+///|
+test "native acceptance suite merges catalog feature lifecycle" {
+  let first = acceptance_compressed_roundtrip_for_test(
+    acceptance_catalog_merge_document_for_test(
+      "first-field", "first-title", 90, false,
+    ),
+  )
+  let second = acceptance_compressed_roundtrip_for_test(
+    acceptance_catalog_merge_document_for_test(
+      "second-field", "second-title", 90, true,
+    ),
+  )
+  let merged = @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let reparsed = acceptance_compressed_roundtrip_for_test(merged)
+  acceptance_assert_catalog_merge_lifecycle_for_test(reparsed)
 }
 
 ///|

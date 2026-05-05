@@ -224,9 +224,11 @@ gates are solid; backend breadth follows after native feature parity.
   `change_pages` bookmark-reference and matrix rewriting after a compressed
   xref-stream read boundary; a document-feature lifecycle gate for page labels,
   link annotations, old-style destinations, name-tree destinations, and
-  `/OpenAction`; strict reading and writer normalization for CamlPDF-tolerated
-  malformed classic xref rows; and password decryption after malformed-xref
-  reconstruction of direct encrypted objects.
+  `/OpenAction`; a merge catalog-feature gate for AcroForm fields, optional
+  content groups, structure trees with parent trees, and trailer `/Info`; strict
+  reading and writer normalization for CamlPDF-tolerated malformed classic xref
+  rows; and password decryption after malformed-xref reconstruction of direct
+  encrypted objects.
   Native OS-random AESV2/AESV3 convenience writer output is covered with decrypt
   and output-variation checks, and AESV3 saved-state recrypt is covered through
   the default secure-random IV path.

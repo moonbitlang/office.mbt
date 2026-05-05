@@ -1429,6 +1429,10 @@ public APIs end to end:
   extract pages in a new order, and reread the extracted document.
 - retain merged page labels and bookmark targets through a public
   merge/write/read compressed xref-stream boundary.
+- merge documents that were first parsed through compressed xref streams while
+  retaining AcroForm fields, optional content groups, structure trees with
+  parent trees, and the first trailer `/Info` dictionary through the merged
+  compressed write/read boundary.
 - run a `pdfdecomp.ml`-style document-wide stream decompression workflow,
   preserve unsupported tail filter metadata, write compressed xref-stream
   output, and reread the decompressed stream.
