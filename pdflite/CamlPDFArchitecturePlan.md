@@ -272,9 +272,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 92-94% complete. Full
+Current estimate: native main-feature parity is about 94-95% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 81-86% complete.
+and backend breadth, is about 83-88% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -394,10 +394,11 @@ and backend breadth, is about 81-86% complete.
 
 ### Immediate Work Order
 
-- Next: add real-world CCITT image corpus coverage when a fixture is available;
-  otherwise continue widening real-file corpus gates beyond the checked-in
-  CamlPDF intro/logo files, while keeping JPEG/JBIG2 decoder decisions separate
-  from encoded image pass-through.
+- Next: prioritize broad native acceptance gates over isolated parser quirks:
+  real-file corpus expansion beyond the checked-in CamlPDF intro/logo fixtures,
+  additional Type3/TrueType glyph-program behavior, or real CCITT/DCT fixture
+  coverage when suitable files are available. Keep JPEG/JBIG2 decoder decisions
+  separate from encoded image pass-through.
 - Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist
