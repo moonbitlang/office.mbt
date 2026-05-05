@@ -1384,6 +1384,9 @@ end to end:
   update, and read both newest and older encrypted revisions.
 - merge two generated documents, write/read through a compressed xref stream,
   extract pages in a new order, and reread the extracted document.
+- run `change_pages` after a compressed xref-stream read boundary, rewrite
+  bookmark page references with a matrix transform, write/reread, and verify
+  the transformed bookmark target.
 - exercise native async file wrappers for encrypted incremental updates:
   encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
   xref-stream incremental write, revision count, and newest/older encrypted

@@ -178,7 +178,9 @@ vertical acceptance path at a time instead of isolated edge polishing:
   reads. Document-level merge and page extraction are also covered across a
   compressed xref-stream read boundary, and native async file wrappers cover
   encrypted incremental revision reads from disk. Password-aware native reads
-  now include an encrypted object-stream fixture.
+  now include an encrypted object-stream fixture. Native acceptance also covers
+  `change_pages` bookmark-reference and matrix rewriting after a compressed
+  xref-stream read boundary.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   encryption finishing edges, remaining malformed-reader recovery, and
   example-level integration fixtures.

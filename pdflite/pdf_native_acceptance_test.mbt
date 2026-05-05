@@ -796,6 +796,56 @@ test "native acceptance suite merges and extracts pages through reader boundarie
 }
 
 ///|
+test "native acceptance suite changes pages after compressed reader boundary" {
+  let doc = try! acceptance_one_page_document_for_test()
+  let old_numbers = try! doc.page_reference_numbers()
+  let bookmarked = try! doc.add_bookmarks([
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Acceptance"),
+      target: DestXYZ(
+        TargetPageObject(old_numbers[0]),
+        Some(12.0),
+        Some(34.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  let bytes = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
+    bookmarked,
+  )
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(bytes)
+  acceptance_assert_one_page_invariants_for_test(parsed, (1, 5))
+  let changed = try! parsed.change_pages(
+    try! parsed.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(5.0, -6.0))],
+  )
+  let rewritten = try! @pdflite.pdf_write_document(changed)
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(reparsed, (1, 5))
+  let new_numbers = try! reparsed.page_reference_numbers()
+  @test.assert_eq(try! reparsed.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Acceptance"),
+      target: DestXYZ(
+        TargetPageObject(new_numbers[0]),
+        Some(17.0),
+        Some(28.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 test "native acceptance suite reads encrypted AES128 documents through public wrapper" {
   let doc = try! acceptance_one_page_document_for_test()
   let secret = acceptance_secret_object_for_test("native-acceptance-secret")
