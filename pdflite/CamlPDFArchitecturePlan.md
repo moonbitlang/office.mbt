@@ -65,6 +65,10 @@ work changes.
    `startxref` pointer is invalid, loads their ordinary entries, and expands
    object-stream entries before selecting a trailer/root. This covers modern
    files whose catalog or page tree only exists inside `/ObjStm` storage.
+   Password-aware reconstruction now retries xref-stream object-stream
+   expansion after trailer selection, when `/Encrypt` and file IDs are
+   available, so encrypted `/ObjStm` payloads can be materialized during
+   malformed-startxref reads.
    Password-aware public read wrappers now also have revision-aware variants,
    and the public revision counter follows the same owned `Bytes` versus
    borrowed `BytesView` split as the rest of the reader surface.
@@ -77,7 +81,7 @@ work changes.
    stream bytes remain lazy until `stream_bytes` or `get_stream` forces
    plaintext materialization and `/Length` correction.
    Remaining focus: broader malformed xref-table recovery and encrypted
-   parser-state edge cases outside stream and object-stream data.
+   parser-state edge cases beyond current object-stream coverage.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.

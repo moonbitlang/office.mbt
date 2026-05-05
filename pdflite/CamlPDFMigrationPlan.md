@@ -345,6 +345,11 @@ MoonBit consequences for this project:
    A focused native gate also covers a multi-revision xref-stream file where
    the older revision has a top-level catalog and the newer malformed-startxref
    revision moves that catalog into an object stream.
+   Password-aware reconstruction now performs a second xref-stream
+   object-stream expansion after trailer selection, using the supplied
+   passwords once `/Encrypt` and `/ID` are available. This closes the native
+   acceptance path for AESV2 encrypted object streams behind a bad
+   `startxref` pointer.
    Startxref discovery now mirrors CamlPDF's EOF-centered lookup by ignoring
    trailing junk after the final `%%EOF` marker.
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
@@ -357,10 +362,10 @@ MoonBit consequences for this project:
    independently while the offset, generation, and `n`/`f` columns remain
    parseable, and classic trailers whose dictionary starts immediately after
    the `trailer` keyword without intervening whitespace.
-   Broader malformed xref-table and encrypted xref-stream/object-stream
-   recovery remains deferred. The reconstruction scan now builds a temporary
-   offset table before materializing objects, so recovered streams can resolve
-   plain indirect `/Length n 0 R` entries. Public
+   Broader malformed xref-table and encrypted parser-state recovery beyond the
+   current xref-stream/object-stream gates remains deferred. The reconstruction
+   scan now builds a temporary offset table before materializing objects, so
+   recovered streams can resolve plain indirect `/Length n 0 R` entries. Public
    reconstruction can now also recover stream objects with missing or unreadable
    `/Length` values by scanning through the following `endstream` marker and
    correcting `/Length`, and reconstructed object tokenization now skips raw

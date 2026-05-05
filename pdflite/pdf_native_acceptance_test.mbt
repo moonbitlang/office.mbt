@@ -3823,6 +3823,32 @@ test "native acceptance suite decrypts object streams during password reads" {
 }
 
 ///|
+test "native acceptance suite reconstructs encrypted object streams with bad startxref" {
+  let bytes = acceptance_corrupt_startxref_pointer_for_test(
+    acceptance_encrypted_object_stream_pdf_for_test(),
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    bytes,
+  )
+  guard strict is Err(_) else {
+    fail("expected bad startxref to require malformed reconstruction")
+  }
+  let partial = @pdflite.pdf_read_document_from_bytes(bytes)
+  @test.assert_eq(partial.first_xref(), 0)
+  @test.assert_eq(partial.lookup_object_or_null(2), PdfNull)
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      bytes,
+      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  acceptance_assert_decrypted_object_stream_payload_for_test(decrypted, [
+    PdfNoCopy,
+  ])
+}
+
+///|
 test "native acceptance suite decrypts object streams with blank user password" {
   let bytes = acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
     acceptance_ascii_for_test(""),

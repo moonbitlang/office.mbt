@@ -1602,6 +1602,36 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
 }
 
 ///|
+fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
+  self : PdfDocument,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+  user_password : BytesView?,
+  owner_password : BytesView?,
+) -> Unit {
+  for xref in xrefs {
+    match xref.object_stream {
+      Some(reference) =>
+        if xref.in_use && xref.object_number != 0 {
+          try {
+            let (object_number, object, _) = self.read_object_stream_reference_with_passwords(
+              reference, user_password, owner_password,
+            )
+            if object_number == xref.object_number {
+              self.load_object_given_number_already_decrypted(
+                xref.object_number,
+                object,
+              )
+            }
+          } catch {
+            _ => ()
+          }
+        }
+      None => ()
+    }
+  }
+}
+
+///|
 fn PdfDocument::load_reconstructed_xref_stream_objects(
   self : PdfDocument,
   data : BytesView,
@@ -1648,6 +1678,8 @@ fn PdfDocument::set_trailer_and_root(
 fn pdf_read_reconstructed_document_from_view(
   data : BytesView,
   include_xref_stream_trailers? : Bool = true,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
 ) -> PdfDocument raise PdfError {
   let cursor = byte_cursor_of_view(data)
   let version = cursor.read_pdf_header()
@@ -1687,6 +1719,13 @@ fn pdf_read_reconstructed_document_from_view(
       )[:],
     ),
   )
+  if include_xref_stream_trailers && document.is_encrypted() {
+    document.load_reconstructed_xref_stream_embedded_objects_with_passwords(
+      pdf_reconstructed_xref_stream_entries(xref_stream_sections[:])[:],
+      user_password,
+      owner_password,
+    )
+  }
   document.set_trailer_dict(
     pdf_reader_sanitize_trailer(
       document.trailer_dict(),
@@ -1701,8 +1740,15 @@ fn pdf_read_reconstructed_or_raise(
   data : BytesView,
   original_error : PdfError,
   include_xref_stream_trailers? : Bool = false,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
 ) -> PdfDocument raise PdfError {
-  pdf_read_reconstructed_document_from_view(data, include_xref_stream_trailers~) catch {
+  pdf_read_reconstructed_document_from_view(
+    data,
+    include_xref_stream_trailers~,
+    user_password~,
+    owner_password~,
+  ) catch {
     _ => raise original_error
   }
 }
@@ -2000,6 +2046,26 @@ pub fn pdf_read_document_from_bytes(
 }
 
 ///|
+fn pdf_reader_password_error_allows_reconstruction(error : PdfError) -> Bool {
+  match error {
+    StartXRefExpected
+    | XRefExpected
+    | TrailerExpected
+    | RootExpected
+    | NumberExpected
+    | ParseIndirectObjectExpected
+    | ParseStreamExpected
+    | ParseEndStreamExpected
+    | ParseEndObjectExpected
+    | EndOfInput
+    | ParseObjectExpected
+    | InvalidHexEscape
+    | InvalidCursorPosition(_) => true
+    _ => false
+  }
+}
+
+///|
 pub fn pdf_read_document_revision_from_view_with_passwords(
   data : BytesView,
   revision : Int,
@@ -2044,7 +2110,17 @@ pub fn pdf_read_document_from_view_with_passwords(
       owner_password~,
     ),
   ) catch {
-    _ => pdf_read_document_from_view(data)
+    error =>
+      if pdf_reader_password_error_allows_reconstruction(error) {
+        pdf_read_reconstructed_document_from_view(
+          data,
+          include_xref_stream_trailers=true,
+          user_password~,
+          owner_password~,
+        )
+      } else {
+        raise error
+      }
   }
   document.decrypt_with_passwords(user_password~, owner_password~)
 }

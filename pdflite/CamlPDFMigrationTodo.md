@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 86-89%.
+- Native main-feature parity: 87-90%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 74-79%.
+  breadth: 75-80%.
 
 ## P0: Native Main Workflows
 
@@ -75,6 +75,8 @@ Current estimate:
   and reread.~~
 - [x] ~~Multi-revision xref-stream/object-stream malformed-startxref recovery
   gate where the newest revision moves `/Root` into an object stream.~~
+- [x] ~~Password-aware xref-stream/object-stream malformed-startxref recovery
+  for encrypted object streams, including decrypted embedded payload materialization.~~
 - [ ] Broader predefined CMap semantics beyond Identity-H/V and more
   vertical-writing text behavior.
 - [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
@@ -83,8 +85,8 @@ Current estimate:
   validation.
 - [ ] Fuller zlib/Flate compression tuning parity.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
-  the current bad-startxref real-corpus and multi-revision gates, including
-  encrypted object streams.
+  the current bad-startxref real-corpus, multi-revision, and encrypted
+  object-stream gates.
 
 ## P2: Backend Breadth And Compatibility
 
