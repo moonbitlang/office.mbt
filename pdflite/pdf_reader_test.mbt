@@ -1230,6 +1230,34 @@ fn reader_xref_stream_pdf_with_object_stream_number(
 }
 
 ///|
+fn reader_encrypted_xref_stream_pdf_with_missing_object_stream_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 2, 7, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "3 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(
+    output, " /Size 4 /Root 1 0 R /Encrypt << /Filter /Standard >> /W [1 4 2] >>\nstream\n",
+  )
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_object_stream() -> @pdflite.PdfBytes {
   reader_xref_stream_pdf_with_object_stream_number(2)
 }
@@ -2692,6 +2720,16 @@ test "pdf_read_document_from_bytes decodes object streams with indirect filters"
     ),
     Some(PdfIndirect(2)),
   )
+}
+
+///|
+test "pdf_read_document_from_bytes_with_passwords rejects missing encrypted object streams" {
+  let result : Result[@pdflite.PdfDecryptionResult?, Error] = try? @pdflite.pdf_read_document_from_bytes_with_passwords(
+    reader_encrypted_xref_stream_pdf_with_missing_object_stream_for_test(),
+  )
+  guard result is Err(@pdflite.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
 }
 
 ///|

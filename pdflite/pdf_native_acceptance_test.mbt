@@ -523,7 +523,11 @@ fn acceptance_secret_object_for_test(text : String) -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_encrypted_object_stream_pdf_for_test() -> @pdflite.PdfBytes raise {
+fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
+  user_password : @pdflite.PdfBytes,
+  owner_password : @pdflite.PdfBytes,
+  denied_permissions : ArrayView[@pdflite.PdfPermission],
+) -> @pdflite.PdfBytes raise {
   let secret = acceptance_secret_object_for_test("encrypted object stream")
   let object_stream_data : Array[Byte] = []
   acceptance_push_ascii_for_test(object_stream_data, "2 0 ")
@@ -562,9 +566,9 @@ fn acceptance_encrypted_object_stream_pdf_for_test() -> @pdflite.PdfBytes raise 
   )
   doc.add_object_given_number(3, object_stream)
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    acceptance_ascii_for_test("user")[:],
-    acceptance_ascii_for_test("owner")[:],
-    [PdfNoCopy],
+    user_password[:],
+    owner_password[:],
+    denied_permissions,
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
       acceptance_ascii_for_test("object-stream-reader")[:],
     ),
@@ -659,6 +663,15 @@ fn acceptance_encrypted_object_stream_pdf_for_test() -> @pdflite.PdfBytes raise 
   acceptance_push_ascii_for_test(output, xref_offset.to_string())
   acceptance_push_ascii_for_test(output, "\n%%EOF\n")
   Bytes::from_array(output)
+}
+
+///|
+fn acceptance_encrypted_object_stream_pdf_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
+    acceptance_ascii_for_test("user"),
+    acceptance_ascii_for_test("owner"),
+    [PdfNoCopy],
+  )
 }
 
 ///|
@@ -1073,6 +1086,23 @@ fn acceptance_unwrap_decryption_for_test(
 }
 
 ///|
+fn acceptance_assert_decrypted_object_stream_payload_for_test(
+  decrypted : @pdflite.PdfDecryptionResult,
+  denied_permissions : Array[@pdflite.PdfPermission],
+) -> Unit raise {
+  @test.assert_eq(decrypted.denied_permissions, denied_permissions)
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(2),
+    acceptance_secret_object_for_test("encrypted object stream"),
+  )
+  let catalog = decrypted.document.catalog()
+  @test.assert_eq(
+    catalog.lookup_immediate(acceptance_name_for_test("/Payload")),
+    Some(PdfIndirect(2)),
+  )
+}
+
+///|
 test "native acceptance suite roundtrips classic and xref-stream documents" {
   acceptance_assert_public_read_write_for_test(
     try! @pdflite.pdf_write_document(
@@ -1214,16 +1244,34 @@ test "native acceptance suite decrypts object streams during password reads" {
       owner_password=Some(acceptance_ascii_for_test("owner")[:]),
     ),
   )
-  @test.assert_eq(decrypted.denied_permissions, [PdfNoCopy])
-  @test.assert_eq(
-    decrypted.document.lookup_object_or_null(2),
-    acceptance_secret_object_for_test("encrypted object stream"),
+  acceptance_assert_decrypted_object_stream_payload_for_test(decrypted, [
+    PdfNoCopy,
+  ])
+}
+
+///|
+test "native acceptance suite decrypts object streams with blank user password" {
+  let bytes = acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
+    acceptance_ascii_for_test(""),
+    acceptance_ascii_for_test("owner"),
+    [PdfNoCopy],
   )
-  let catalog = decrypted.document.catalog()
-  @test.assert_eq(
-    catalog.lookup_immediate(acceptance_name_for_test("/Payload")),
-    Some(PdfIndirect(2)),
+  let default_decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(bytes),
   )
+  acceptance_assert_decrypted_object_stream_payload_for_test(
+    default_decrypted,
+    [PdfNoCopy],
+  )
+  let owner_decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      bytes,
+      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+    ),
+  )
+  acceptance_assert_decrypted_object_stream_payload_for_test(owner_decrypted, [
+    PdfNoCopy,
+  ])
 }
 
 ///|

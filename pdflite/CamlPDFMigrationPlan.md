@@ -272,7 +272,8 @@ MoonBit consequences for this project:
    document-aware stream decoder once the containing object stream is loaded,
    so indirect `/Filter` metadata on `/ObjStm` streams is honored.
    Password-aware document reads now decrypt encrypted `/ObjStm` streams before
-   slicing embedded objects, then load the embedded objects as already
+   slicing embedded objects, including the absent-password path that falls back
+   to a blank user password, then load the embedded objects as already
    decrypted parser states so the later document-wide password decryption pass
    skips them. Strict
    stream-object parsing now
@@ -1091,8 +1092,8 @@ MoonBit consequences for this project:
     The document-level decryption entry points for parsed ARC4 and AESV2
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, and return CamlPDF-style denied permissions.
-    Deferred stream/object parser-state decryption and default random-IV AES
-    re-encryption remain deferred.
+    Remaining deferred parser-state decryption outside object-stream expansion
+    and default random-IV AES re-encryption remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
@@ -1423,9 +1424,10 @@ end to end:
   encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
   xref-stream incremental write, revision count, and newest/older encrypted
   revision reads.
-- read an AES-128 encrypted xref-stream document whose referenced object lives
+- read AES-128 encrypted xref-stream documents whose referenced object lives
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
-  and avoiding double decryption of the embedded object.
+  for explicit passwords and implicit blank user passwords while avoiding double
+  decryption of the embedded object.
 - read a minimal page tree through a CamlPDF-tolerated malformed classic xref
   table, then normalize it through the writer and reread it.
 - decrypt an AES-128 document after forcing malformed-xref reconstruction,

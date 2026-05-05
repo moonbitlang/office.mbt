@@ -954,35 +954,32 @@ fn PdfDocument::read_object_stream_reference_with_passwords(
   user_password : BytesView?,
   owner_password : BytesView?,
 ) -> (Int, PdfObject, Bool) raise PdfError {
-  match (user_password, owner_password) {
-    (None, None) => {
-      let (object_number, object) = self.read_object_stream_reference(reference)
-      (object_number, object, false)
+  if !self.is_encrypted() {
+    let (object_number, object) = self.read_object_stream_reference(reference)
+    (object_number, object, false)
+  } else {
+    let entry = match self.objects.get_entry(reference.object_stream_number) {
+      Some(entry) => entry
+      None => raise XRefEntryExpected
     }
-    _ => {
-      let entry = match self.objects.get_entry(reference.object_stream_number) {
-        Some(entry) => entry
-        None => raise XRefEntryExpected
-      }
-      let object_stream_object = self.lookup_object_or_null(
+    let object_stream_object = self.lookup_object_or_null(
+      reference.object_stream_number,
+    )
+    match
+      self.decrypt_single_stream(
         reference.object_stream_number,
-      )
-      match
-        self.decrypt_single_stream(
-          reference.object_stream_number,
-          entry.generation,
-          object_stream_object,
-          user_password~,
-          owner_password~,
-        ) {
-        Some(decrypted_stream) => {
-          let (object_number, object) = self.read_object_stream_reference_from_object(
-            reference, decrypted_stream,
-          )
-          (object_number, object, self.is_encrypted())
-        }
-        None => raise EncryptionAuthenticationUnsupported(PdfCryptAESV2)
+        entry.generation,
+        object_stream_object,
+        user_password~,
+        owner_password~,
+      ) {
+      Some(decrypted_stream) => {
+        let (object_number, object) = self.read_object_stream_reference_from_object(
+          reference, decrypted_stream,
+        )
+        (object_number, object, true)
       }
+      None => raise EncryptionAuthenticationUnsupported(PdfCryptAESV2)
     }
   }
 }

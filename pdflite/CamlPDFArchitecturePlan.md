@@ -65,11 +65,11 @@ work changes.
    and the public revision counter follows the same owned `Bytes` versus
    borrowed `BytesView` split as the rest of the reader surface.
    Password-aware reads now also decrypt `/ObjStm` streams just in time while
-   expanding object-stream xref entries, and embedded objects are marked as
-   already decrypted so the later full-document decryption pass does not apply
-   object crypt twice.
+   expanding object-stream xref entries, including the implicit blank user
+   password path, and embedded objects are marked as already decrypted so the
+   later full-document decryption pass does not apply object crypt twice.
    Remaining focus: broader malformed xref-table recovery and parser-state
-   behavior around encrypted/deferred plain objects.
+   behavior around encrypted/deferred plain objects outside object streams.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
@@ -200,7 +200,8 @@ vertical acceptance path at a time instead of isolated edge polishing:
   `pdfdraft.ml`-style image-replacement workflows through compressed
   xref-stream write/read. Native async file wrappers cover encrypted
   incremental revision reads from disk. Password-aware native reads now include
-  an encrypted object-stream fixture. Native acceptance also covers
+  encrypted object-stream fixtures for explicit passwords and the implicit blank
+  user password. Native acceptance also covers
   `change_pages` bookmark-reference and matrix rewriting after a compressed
   xref-stream read boundary, plus strict reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows, and password decryption after
