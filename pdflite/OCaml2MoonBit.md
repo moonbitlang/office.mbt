@@ -496,6 +496,19 @@ Use `ArrayView[T]` for read-only sequence parameters when callers should be
 able to pass `Array`, `FixedArray`, or read-only arrays without copying.
 
 ```sh
+moon run -c 'fn range_lookup(ranges : ArrayView[(Int, Int, Int)], key : Int) -> Int? { for range in ranges { if key >= range.0 && key <= range.1 { return Some(range.2 + key - range.0) } }; None }
+fn main { let ranges = [(0x21, 0x23, 100), (0x30, 0x30, 200)]; println(range_lookup(ranges, 0x22).unwrap()); println(range_lookup(ranges, 0x24) is None) }'
+# 101
+# true
+```
+
+When porting large OCaml mapping tables, prefer compact `ArrayView`-accepted
+range tables such as `(first, last, base)` plus small exception/sequence tables
+over mechanically expanding every entry. This keeps generated MoonBit sources
+smaller and makes native-first validation faster while preserving deterministic
+lookup behavior.
+
+```sh
 moon run -c 'fn main { let map : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new(); map[1] = 10; map[2] = 20; let mut total = 0; for key in map.keys() { total += key }; println(total) }'
 # 3
 ```

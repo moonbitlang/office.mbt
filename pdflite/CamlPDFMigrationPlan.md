@@ -1009,7 +1009,12 @@ MoonBit consequences for this project:
    deterministic. Supported Adobe-GB1, Adobe-CNS1, and Adobe-Korea1 vertical
    predefined CMaps now apply generated vertical CID override tables before the
    existing horizontal fallback when `/ToUnicode` is absent, with matching
-   reverse lookup. Other remaining predefined-CMap tables remain deferred.
+   reverse lookup. Japanese Adobe-Japan1 predefined-CMap extraction now has
+   generated 90ms/90pv RKSJ direct Unicode tables, generated CID-range routing
+   through `Adobe-Japan1-UCS2` for JIS `/H`, EUC-H, Hojo, NWP, Add, Ext, and
+   related RKSJ variants, three-byte Hojo-EUC charcode segmentation, and
+   reverse lookup for single-scalar entries. Other remaining predefined-CMap
+   tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1577,6 +1582,11 @@ reader or writer invariant is narrower than a whole-document workflow:
 - decode supported vertical no-`/ToUnicode` predefined-CMap text by applying
   generated Adobe-GB1, Adobe-CNS1, and Adobe-Korea1 vertical override tables
   before horizontal fallbacks, with reverse charcode lookup;
+- decode Japanese Adobe-Japan1 no-`/ToUnicode` predefined-CMap text through
+  generated 90ms/90pv RKSJ direct Unicode maps, generated CID ranges for JIS
+  `/H`, EUC-H, Hojo, NWP, Add, Ext, and related RKSJ variants, Hojo-EUC
+  three-byte charcode segmentation, multi-scalar expansion, single-scalar
+  reverse charcode lookup, and invalid-code fallback;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`

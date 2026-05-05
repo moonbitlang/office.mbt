@@ -4030,7 +4030,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     rksj_builtin_extractor.codepoints_of_text(
       text_bytes_for_test([0x41, 0xA6, 0x81, 0x40])[:],
     ),
-    [0x41, 0xFF66, 0x8140],
+    [0x41, 0xFF66, 0x3000],
   )
   @test.assert_eq(
     rksj_builtin_extractor.charcode_of_codepoint(0x41),
@@ -4040,12 +4040,109 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     rksj_builtin_extractor.charcode_of_codepoint(0xFF66),
     Some(0xA6),
   )
-  @test.assert_eq(rksj_builtin_extractor.charcode_of_codepoint(0x4E8C), None)
+  @test.assert_eq(
+    rksj_builtin_extractor.charcode_of_codepoint(0x20AC),
+    Some(0x80),
+  )
+  @test.assert_eq(
+    rksj_builtin_extractor.charcode_of_codepoint(0x3000),
+    Some(0x8140),
+  )
+  @test.assert_eq(
+    rksj_builtin_extractor.charcode_of_codepoint(0x4E8C),
+    Some(0x93F1),
+  )
   let rksj_truncated = try? rksj_builtin_extractor.codepoints_of_text(
     text_bytes_for_test([0x81])[:],
   )
   guard rksj_truncated is Err(_) else {
     fail("expected malformed RKSJ charcode")
+  }
+  let pv_rksj_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/Top90pvRKSJBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/90pv-RKSJ-H")),
+  })
+  let pv_rksj_builtin_extractor = pv_rksj_builtin_font.text_extractor()
+  @test.assert_eq(
+    pv_rksj_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x5C, 0x80, 0xA0, 0x81, 0x7C, 0x85, 0x91])[:],
+    ),
+    [0x00A5, 0x005C, 0x00A0, 0x2212, 0xF860, 0x0030, 0x002E],
+  )
+  @test.assert_eq(
+    pv_rksj_builtin_extractor.charcode_of_codepoint(0x00A5),
+    Some(0x5C),
+  )
+  @test.assert_eq(
+    pv_rksj_builtin_extractor.charcode_of_codepoint(0x005C),
+    Some(0x80),
+  )
+  @test.assert_eq(
+    pv_rksj_builtin_extractor.charcode_of_codepoint(0x2212),
+    Some(0x817C),
+  )
+  @test.assert_eq(pv_rksj_builtin_extractor.charcode_of_codepoint(0xF860), None)
+  let jis_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopJISBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/H")),
+  })
+  @test.assert_eq(jis_builtin_font.uses_two_byte_codes(), true)
+  let jis_builtin_extractor = jis_builtin_font.text_extractor()
+  @test.assert_eq(
+    jis_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x21, 0x21, 0x24, 0x22])[:],
+    ),
+    [0x3000, 0x3042],
+  )
+  @test.assert_eq(
+    jis_builtin_extractor.charcode_of_codepoint(0x3042),
+    Some(0x2422),
+  )
+  let jis_truncated = try? jis_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x21])[:],
+  )
+  guard jis_truncated is Err(BadText) else {
+    fail("expected BadText for truncated JIS charcode")
+  }
+  let japan_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopJapanEUCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/EUC-H")),
+  })
+  let japan_euc_builtin_extractor = japan_euc_builtin_font.text_extractor()
+  @test.assert_eq(
+    japan_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0xA1, 0xA1, 0xA4, 0xA2])[:],
+    ),
+    [0x3000, 0x3042],
+  )
+  @test.assert_eq(
+    japan_euc_builtin_extractor.charcode_of_codepoint(0x3042),
+    Some(0xA4A2),
+  )
+  let hojo_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopHojoEUCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/Hojo-EUC-H")),
+  })
+  let hojo_euc_builtin_extractor = hojo_euc_builtin_font.text_extractor()
+  @test.assert_eq(
+    hojo_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x8F, 0xB4, 0xAE])[:],
+    ),
+    [0x4EDD],
+  )
+  @test.assert_eq(
+    hojo_euc_builtin_extractor.charcode_of_codepoint(0x4EDD),
+    Some(0x8FB4AE),
+  )
+  let hojo_euc_truncated = try? hojo_euc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x8F, 0xB4])[:],
+  )
+  guard hojo_euc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated Hojo-EUC charcode")
   }
   let external_cmap_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/ExternalCMap"),

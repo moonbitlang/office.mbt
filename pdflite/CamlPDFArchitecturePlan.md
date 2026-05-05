@@ -162,7 +162,9 @@ work changes.
    Kong Big5 CID-range fallbacks, and KSC-EUC/Adobe-Korea1-UCS2 mapping-table
    fallbacks, plus KSCpc-EUC multi-codepoint fallback and generated vertical
    predefined-CMap override fallbacks for supported Adobe-GB1, Adobe-CNS1, and
-   Adobe-Korea1 families when `/ToUnicode` is absent,
+   Adobe-Korea1 families when `/ToUnicode` is absent, and generated
+   Adobe-Japan1 fallbacks for 90ms/90pv RKSJ direct Unicode maps, JIS two-byte
+   CMaps, EUC-H, and Hojo-EUC three-byte charcodes,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
@@ -184,10 +186,8 @@ work changes.
    objects. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
-   beyond the RKSJ single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, ETenms-B5,
-   HKSCS, Hong Kong Big5, UHC, GBK, GBK2K, KSC-EUC, and KSCpc-EUC fallbacks
-   when `/ToUnicode` is absent, especially Japanese multi-byte predefined
-   CMaps and broader external/general CMap parsing, plus JPEG pixel decode and
+   beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
+   fallbacks, broader external/general CMap parsing, plus JPEG pixel decode and
    remaining image filter families.
 
 6. Encryption.
@@ -251,9 +251,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 90-92% complete. Full
+Current estimate: native main-feature parity is about 91-93% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 79-84% complete.
+and backend breadth, is about 80-85% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -307,7 +307,9 @@ and backend breadth, is about 79-84% complete.
   Adobe-Korea1-UCS2 when `/ToUnicode` is absent, and a KSCpc-EUC
   predefined-CMap fallback with multi-codepoint expansion when `/ToUnicode` is
   absent, vertical predefined-CMap override fallbacks for supported Adobe-GB1,
-  Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, and an
+  Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, Japanese
+  Adobe-Japan1 predefined-CMap fallbacks for 90ms/90pv RKSJ, JIS `/H`, EUC-H,
+  and Hojo-EUC when `/ToUnicode` is absent, and an
   Identity-V native gate with vertical width metadata. Native image acceptance
   now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
@@ -321,11 +323,9 @@ and backend breadth, is about 79-84% complete.
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
-  beyond the RKSJ single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, ETenms-B5,
-  HKSCS, Hong Kong Big5, UHC, GBK, GBK2K, KSC-EUC, and KSCpc-EUC fallbacks
-  when `/ToUnicode` is absent, especially Japanese multi-byte predefined CMaps
-  and broader external/general CMap parsing, additional TrueType and Type3
-  glyph-program edge coverage, more real-world ToUnicode variations, and
+  beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
+  fallbacks, broader external/general CMap parsing, additional TrueType and
+  Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
   broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2

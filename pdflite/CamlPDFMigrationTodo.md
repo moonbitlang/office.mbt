@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 90-92%.
+- Native main-feature parity: 91-93%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 79-84%.
+  breadth: 80-85%.
 
 ## P0: Native Main Workflows
 
@@ -130,10 +130,13 @@ Current estimate:
 - [x] ~~Vertical predefined CMap override fallbacks for supported Adobe-GB1,
   Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, including
   reverse lookup.~~
-- [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
-  single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, ETenms-B5, HKSCS, Hong Kong
-  Big5, UHC, GBK, GBK2K, KSC-EUC, and KSCpc-EUC fallbacks, including Japanese
-  multi-byte predefined CMaps and broader external/general CMap parsing.
+- [x] ~~Japanese Adobe-Japan1 predefined-CMap fallback when `/ToUnicode` is
+  absent, including generated 90ms/90pv RKSJ direct Unicode tables, JIS
+  two-byte CMaps, EUC-H, Hojo-EUC three-byte charcodes, multi-scalar expansion,
+  and reverse lookup for single-scalar entries.~~
+- [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
+  current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
+  plus broader external/general CMap parsing.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -247,7 +250,10 @@ Current estimate:
 - [x] ~~Add the next remaining text parity slice: vertical no-`/ToUnicode`
   behavior, broader external predefined/general CMap parsing, or real-world
   ToUnicode variation coverage.~~
-- [ ] Add the next remaining text parity slice: Japanese multi-byte
+- [x] ~~Add the next remaining text parity slice: Japanese multi-byte
   predefined-CMap fallback, broader external predefined/general CMap parsing,
-  or real-world ToUnicode variation coverage.
+  or real-world ToUnicode variation coverage.~~
+- [ ] Add the next remaining text parity slice: broader external
+  predefined/general CMap parsing, remaining rare predefined CMap families, or
+  real-world ToUnicode variation coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.
