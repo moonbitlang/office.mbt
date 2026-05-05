@@ -2795,6 +2795,72 @@ test "PdfDocument applies external CMap Identity UseCMap fallback" {
 }
 
 ///|
+test "PdfDocument applies external CMap predefined UseCMap fallback" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, text_valid_cid_descendant_for_test([]))
+  let cmap_data = @ascii.encode(
+    "/GB-EUC-H usecmap\n" + "1 begincidchar\n" + "<A1A1> 99\n" + "endcidchar\n",
+  )
+  let cmap = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(cmap_data.length())),
+    ]),
+    StreamGot(cmap_data),
+  )
+  doc.add_object_given_number(5, cmap)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (text_name_for_test("/Encoding"), PdfIndirect(5)),
+  ])
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0xA1, 0xA1, 0xC4, 0xE3])[:],
+    ),
+    [0x41, 99, 0x4F60],
+  )
+  @test.assert_eq(
+    extractor.codepoints_of_text(text_bytes_for_test([0x81, 0x40])[:]),
+    [0x8140],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0xA1A1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4F60), Some(0xC4E3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x3000), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), None)
+
+  let one_byte_cmap_data = @ascii.encode("/NoSuch-H usecmap\n")
+  doc.add_object_given_number(
+    6,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(one_byte_cmap_data.length())),
+      ]),
+      StreamGot(one_byte_cmap_data),
+    ),
+  )
+  let one_byte_font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (text_name_for_test("/Encoding"), PdfIndirect(6)),
+  ])
+  @test.assert_eq(
+    (try! doc.text_extractor_of_font(one_byte_font)).codepoints_of_text(
+      text_bytes_for_test([0x41])[:],
+    ),
+    [0x41],
+  )
+}
+
+///|
 test "PdfDocument composes external CMap UseCMap stream bases" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(4, text_valid_cid_descendant_for_test([]))

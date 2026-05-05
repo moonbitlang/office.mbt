@@ -174,7 +174,8 @@ work changes.
    with Identity-H/V inherited segmentation and CID fallback, plus recursive
    stream `/UseCMap` composition with cycle protection, inherited codespaces,
    derived-entry map/CID/notdef/metadata overrides, inherited Identity
-   fallback, and ToUnicode inheritance through text extraction and reverse
+   fallback, named predefined `/UseCMap` fallback for streams without explicit
+   codespaces, and ToUnicode inheritance through text extraction and reverse
    Unicode lookup,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
@@ -199,9 +200,9 @@ work changes.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
    beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
    fallbacks, broader external/general CMap parsing beyond the current
-   codespace/CID/notdef sections, header metadata, Identity `/UseCMap`, and
-   stream `/UseCMap` composition subset, plus JPEG pixel decode and remaining
-   image filter families.
+   codespace/CID/notdef sections, header metadata, Identity and named
+   predefined `/UseCMap` fallbacks, and stream `/UseCMap` composition subset,
+   plus JPEG pixel decode and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.

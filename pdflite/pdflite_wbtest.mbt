@@ -2313,6 +2313,35 @@ test "private external CMap helpers cover malformed and compact sections" {
     true,
   )
   @test.assert_eq(
+    PdfExternalCMap(4, {
+      ..identity_base_parsed,
+      usecmap: Some(wbtest_text_name("/Identity-V")),
+    }).uses_two_byte_codes(),
+    true,
+  )
+  let ucs2_base_parsed : PdfParsedCMap = {
+    ..identity_base_parsed,
+    usecmap: Some(wbtest_text_name("/Adobe-Japan1-UCS2-H")),
+  }
+  @test.assert_eq(
+    PdfExternalCMap(4, ucs2_base_parsed).uses_two_byte_codes(),
+    true,
+  )
+  @test.assert_eq(
+    pdf_text_parsed_cmap_charcodes_of_text(
+      ucs2_base_parsed,
+      wbtest_text_bytes([0x12, 0x34])[:],
+    ),
+    [0x1234],
+  )
+  let truncated_ucs2 : Result[Array[Int], Error] = try? pdf_text_parsed_cmap_charcodes_of_text(
+    ucs2_base_parsed,
+    wbtest_text_bytes([0x12])[:],
+  )
+  guard truncated_ucs2 is Err(_) else {
+    fail("expected truncated external UCS2 UseCMap text to raise")
+  }
+  @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
       identity_base_parsed,
       wbtest_text_bytes([1, 2])[:],
