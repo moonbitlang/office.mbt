@@ -339,9 +339,13 @@ MoonBit consequences for this project:
    terminator. The reconstruction offset scan now also advances past complete
    indirect objects and recovered streams, avoiding false top-level objects from
    object-looking bytes inside stream payloads while retaining byte-wise
-   recovery after incomplete plain objects. It still skips stream objects with
-   malformed `stream`, `endstream`, or `endobj` markers, truncated stream data,
-   malformed object bodies, and invalid PDF name hex escapes when a later
+   recovery after incomplete plain objects. When a malformed object body starts
+   at a plausible indirect-object header, the scanner now mirrors CamlPDF's
+   line-oriented recovery by skipping to the next trimmed line beginning or
+   ending with `endobj`, so nested object-looking bytes inside that bad object
+   are not reconstructed as top-level objects. It still skips stream objects
+   with malformed `stream`, `endstream`, or `endobj` markers, truncated stream
+   data, malformed object bodies, and invalid PDF name hex escapes when a later
    reconstructed catalog remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started

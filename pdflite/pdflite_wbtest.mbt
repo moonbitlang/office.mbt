@@ -752,6 +752,46 @@ test "private reader xref helpers report malformed inputs" {
   )
   @test.assert_eq(incomplete_xrefs.length(), 1)
   @test.assert_eq(incomplete_xrefs[0].object_number, 3)
+  let nested_bad_object = @ascii.encode(
+    "1 0 obj\n]\n2 0 obj\n<< /Type /Catalog >>\nendobj\n3 0 obj\n42\nendobj\n",
+  )
+  let endobj = [101, 110, 100, 111, 98, 106]
+  let nested_endobj = pdf_find_ascii_from(nested_bad_object[:], 0, endobj)
+  @test.assert_eq(
+    pdf_reader_reconstruction_indirect_header_at(nested_bad_object[:], 0),
+    true,
+  )
+  @test.assert_eq(
+    pdf_reader_reconstruction_indirect_header_at(
+      @ascii.encode("1 0 object")[:],
+      0,
+    ),
+    false,
+  )
+  @test.assert_eq(
+    pdf_reader_reconstruction_skip_malformed_object(nested_bad_object[:], 0),
+    Some(nested_endobj + 7),
+  )
+  @test.assert_eq(
+    pdf_reader_reconstruction_skip_malformed_object(nested_bad_object[:], 1),
+    None,
+  )
+  let line_ending_endobj = @ascii.encode("1 0 obj\n]\nabcendobj\r\n4 0 obj\n")
+  let trailing_endobj = pdf_find_ascii_from(line_ending_endobj[:], 0, endobj)
+  @test.assert_eq(
+    pdf_reader_reconstruction_skip_malformed_object(line_ending_endobj[:], 0),
+    Some(trailing_endobj + 8),
+  )
+  let leading_trim_endobj = @ascii.encode("1 0 obj\n]\n  endobj\n")
+  @test.assert_eq(
+    pdf_reader_reconstruction_skip_malformed_object(leading_trim_endobj[:], 0),
+    Some(leading_trim_endobj.length()),
+  )
+  let no_endobj = @ascii.encode("1 0 obj\n]")
+  @test.assert_eq(
+    pdf_reader_reconstruction_skip_malformed_object(no_endobj[:], 0),
+    Some(no_endobj.length()),
+  )
   let objects_with_bad_resolved_length = try! pdf_read_reconstructed_objects(
     @ascii.encode(
       "1 0 obj\n<< /Length 2 0 R >>\nstream\nHi\nendstream\nendobj\n2 0 obj\n999999\nendobj\n",

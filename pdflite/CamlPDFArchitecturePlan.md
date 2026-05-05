@@ -46,7 +46,11 @@ work changes.
    Malformed-file reconstruction now advances past successfully parsed objects
    and recovered streams so object-like bytes inside stream payloads are not
    mistaken for top-level indirect objects, while incomplete plain objects still
-   leave the scanner in byte-wise recovery mode.
+   leave the scanner in byte-wise recovery mode. When a candidate indirect
+   object header is followed by malformed object syntax, reconstruction now
+   skips forward to the next trimmed line that starts or ends with `endobj`,
+   matching CamlPDF's malformed-object scan guard so nested object-looking bytes
+   inside the bad object are not loaded as top-level objects.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

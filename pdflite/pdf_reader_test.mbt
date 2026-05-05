@@ -980,6 +980,17 @@ fn reader_malformed_pdf_with_object_header_inside_stream() -> @pdflite.PdfBytes 
 }
 
 ///|
+fn reader_malformed_pdf_with_nested_object_header_in_bad_object() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  reader_push_ascii(output, "1 0 obj\n]\n")
+  reader_push_ascii(output, "2 0 obj\n<< /Type /Catalog >>\nendobj\n")
+  reader_push_ascii(output, "3 0 obj\n<< /Type /Catalog >>\nendobj\n")
+  reader_push_ascii(output, "trailer\n<< /Root 3 0 R /Size 4 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_unreadable_stream_and_catalog() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -2331,6 +2342,25 @@ test "pdf_read_document_from_bytes ignores object-looking stream data during rec
   @test.assert_eq(
     stream.data,
     StreamGot(reader_pdf_ascii("9 0 obj\n<< /Type /Catalog >>\nendobj")),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes skips nested object headers inside malformed objects" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_nested_object_header_in_bad_object(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 3)
+  @test.assert_eq(parsed.object_numbers(), [3])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(3),
+    @pdflite.pdf_dictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
   )
 }
 
