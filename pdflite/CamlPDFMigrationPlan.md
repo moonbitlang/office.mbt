@@ -1534,8 +1534,9 @@ public APIs end to end:
   xref-stream incremental write, revision count, and newest/older encrypted
   revision reads.
 - read the checked-in CamlPDF fixture PDFs from `.repos`, then compressed-write,
-  document-wide stream-decompress, first-page text-extract, and reread them
-  through native async file wrappers while preserving page counts.
+  document-wide stream-decompress, multi-page text-extract, and reread them
+  through native async file wrappers while preserving page counts and tutorial
+  text tokens.
 - read AES-128 encrypted xref-stream documents whose referenced object lives
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
   for explicit passwords and implicit blank user passwords while avoiding double

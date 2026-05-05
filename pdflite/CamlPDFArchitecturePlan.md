@@ -211,9 +211,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 83-86% complete. Full
+Current estimate: native main-feature parity is about 84-86% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 71-76% complete.
+and backend breadth, is about 72-76% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -269,8 +269,9 @@ and backend breadth, is about 71-76% complete.
 ### P2: Broaden Compatibility After Native
 
 - Covered: native target checks, native acceptance, native async file IO,
-  checked-in CamlPDF fixture PDF read/text-extract/write/stream-decompress/reread
-  through native async file wrappers, and full native test coverage.
+  checked-in CamlPDF fixture PDF read/multi-page text-extract/write/stream
+  decompression/reread through native async file wrappers, and full native test
+  coverage.
 - Deferred: all-backend stabilization. Native-only secure-random/encrypted
   writer APIs and `async_io` intentionally diverge from WasmGC today.
 - Deferred: larger real-world corpus testing, performance tuning, and optional

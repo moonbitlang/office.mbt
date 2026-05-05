@@ -84,26 +84,22 @@ fn pdf_async_io_push_text_codepoints_for_test(
 }
 
 ///|
-fn pdf_async_io_first_page_text_codepoints_for_test(
+fn pdf_async_io_page_text_codepoints_for_test(
   doc : @pdflite.PdfDocument,
+  page_index : Int,
 ) -> Array[Int] raise {
   let pages = doc.pages_of_pagetree()
-  guard pages.length() > 0 else { fail("expected at least one page") }
+  guard page_index >= 0 && page_index < pages.length() else {
+    fail("expected page index inside document")
+  }
+  let page = pages[page_index]
   let output : Array[Int] = []
   let mut extractor : @pdflite.PdfTextExtractor? = None
-  for
-    op in doc.parse_content_ops_with_resources(
-      pages[0].resources,
-      pages[0].content,
-    ) {
+  for op in doc.parse_content_ops_with_resources(page.resources, page.content) {
     match op {
       Op_Tf(font_name, _) =>
         match
-          pdf_async_io_font_resource_for_test(
-            doc,
-            pages[0].resources,
-            font_name,
-          ) {
+          pdf_async_io_font_resource_for_test(doc, page.resources, font_name) {
           Some(font) => extractor = Some(doc.text_extractor_of_font(font))
           None => extractor = None
         }
@@ -127,10 +123,64 @@ fn pdf_async_io_first_page_text_codepoints_for_test(
             }
           None => ()
         }
+      Op_quote(text) =>
+        match extractor {
+          Some(extractor) =>
+            pdf_async_io_push_text_codepoints_for_test(output, extractor, text)
+          None => ()
+        }
+      Op_double_quote(_, _, text) =>
+        match extractor {
+          Some(extractor) =>
+            pdf_async_io_push_text_codepoints_for_test(output, extractor, text)
+          None => ()
+        }
       _ => ()
     }
   }
   output
+}
+
+///|
+fn pdf_async_io_assert_page_text_contains_for_test(
+  doc : @pdflite.PdfDocument,
+  page_index : Int,
+  fragments : ArrayView[String],
+) -> Unit raise {
+  let text = pdf_async_io_page_text_codepoints_for_test(doc, page_index)
+  for fragment in fragments {
+    let matched = pdf_async_io_codepoints_contain_for_test(
+      text[:],
+      pdf_async_io_ascii_codepoints_for_test(fragment)[:],
+    )
+    @test.assert_eq(
+      matched,
+      true,
+      msg="page " + page_index.to_string() + " missing " + fragment,
+    )
+  }
+}
+
+///|
+fn pdf_async_io_assert_intro_fixture_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.endpage(), 10)
+  pdf_async_io_assert_page_text_contains_for_test(doc, 0, [
+    "CamlPDF", "Introduction",
+  ])
+  pdf_async_io_assert_page_text_contains_for_test(doc, 2, [
+    "AFirstProgram", "ocamlfind", "opaminstall",
+  ])
+  pdf_async_io_assert_page_text_contains_for_test(doc, 5, [
+    "NextSteps", "pdfobject", "Indirect",
+  ])
+  pdf_async_io_assert_page_text_contains_for_test(doc, 7, [
+    "GraphicsandText", "Pdfops", "Hello,World!",
+  ])
+  pdf_async_io_assert_page_text_contains_for_test(doc, 9, [
+    "pdfencrypt.ml", "FurtherReading",
+  ])
 }
 
 ///|
@@ -219,25 +269,10 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
 
   let intro = pdf_read_document_from_file(intro_path)
   @test.assert_eq(intro.version(), (1, 5))
-  @test.assert_eq(try! intro.endpage(), 10)
-  let first_page_text = pdf_async_io_first_page_text_codepoints_for_test(intro)
-  @test.assert_eq(
-    pdf_async_io_codepoints_contain_for_test(
-      first_page_text[:],
-      pdf_async_io_ascii_codepoints_for_test("CamlPDF")[:],
-    ),
-    true,
-  )
-  @test.assert_eq(
-    pdf_async_io_codepoints_contain_for_test(
-      first_page_text[:],
-      pdf_async_io_ascii_codepoints_for_test("Introduction")[:],
-    ),
-    true,
-  )
+  pdf_async_io_assert_intro_fixture_text_for_test(intro)
   pdf_write_document_to_file_with_compressed_xref_stream(intro, intro_roundtrip)
   let intro_reparsed = pdf_read_document_from_file(intro_roundtrip)
-  @test.assert_eq(try! intro_reparsed.endpage(), 10)
+  pdf_async_io_assert_intro_fixture_text_for_test(intro_reparsed)
 
   let intro_decompressed = intro.copy()
   intro_decompressed.pdf_decode_streams_until_unknown()
@@ -247,7 +282,7 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   let intro_decompressed_reparsed = pdf_read_document_from_file(
     intro_decompressed_roundtrip,
   )
-  @test.assert_eq(try! intro_decompressed_reparsed.endpage(), 10)
+  pdf_async_io_assert_intro_fixture_text_for_test(intro_decompressed_reparsed)
 
   pdf_async_io_remove_if_exists_for_test(logo_roundtrip)
   pdf_async_io_remove_if_exists_for_test(intro_roundtrip)

@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 83-86%.
+- Native main-feature parity: 84-86%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 71-76%.
+  breadth: 72-76%.
 
 ## P0: Native Main Workflows
 
@@ -87,7 +87,7 @@ Current estimate:
 - [x] ~~Known native-only interface divergence is documented for secure-random
   AES helpers and `async_io`.~~
 - [ ] All-backend validation after native parity is stable.
-- [x] ~~Checked-in CamlPDF fixture PDFs read, first-page text-extract,
+- [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
   compressed-write, document-wide stream-decompress, and reread through native
   async file wrappers.~~
 - [ ] Broader real-world PDF corpus testing.
@@ -110,5 +110,7 @@ Current estimate:
 - [x] ~~Add CCITT Group 3 encode parity for typed stream encoding.~~
 - [x] ~~Add a CCITT image XObject native acceptance gate.~~
 - [x] ~~Add a checked-in real PDF read/write corpus gate.~~
+- [x] ~~Widen checked-in real PDF text extraction across multiple pages and
+  compressed/decompressed reread boundaries.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.

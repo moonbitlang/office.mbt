@@ -1060,6 +1060,9 @@ Assertion style:
   `@test.assert_eq(condition, true)`, instead of assuming an
   `@test.assert_true` helper exists. Verified with
   `moon run -c 'fn helper() -> Unit raise Error { @test.assert_eq(true, true); @test.assert_eq([1, 2], [1, 2]) }\nfn main { try! helper() }'`.
+- `@test.assert_eq` accepts a named `msg` argument for stable diagnostic
+  context in shared assertion helpers. Verified with
+  `moon run -c 'import { "moonbitlang/core/test" }\nfn helper() -> Unit raise { @test.assert_eq(true, true, msg="named assertion") }\nfn main { try! helper(); println("ok") }'`.
 - Shared test helpers that call `@test.assert_eq`, `fail`, or fallible APIs
   should declare `-> Unit raise Error` unless they use a narrower project error
   type. Verified with
