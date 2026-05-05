@@ -159,10 +159,10 @@ work changes.
    ARC4/AESV2/AESV3 streams read from files, while already-owned stream data
    remains eager at the crypt boundary. Native acceptance now covers
    `/EncryptMetadata false` through compressed encrypted output, public password
-   read, plaintext metadata inspection in the encrypted bytes, and saved-state
-   AESV2 recrypt.
-   Remaining focus: non-stream encrypted parser-state edges and broader
-   encrypted malformed-reader compatibility.
+   read, plaintext metadata inspection in the encrypted bytes, saved-state
+   AESV2 recrypt, and recrypting non-stream payload objects extracted from
+   encrypted object streams.
+   Remaining focus: broader encrypted malformed-reader compatibility.
 
 7. Document-level features.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
@@ -198,9 +198,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 73-77% complete. Full
+Current estimate: native main-feature parity is about 74-78% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 62-67% complete.
+and backend breadth, is about 63-68% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -218,13 +218,13 @@ and backend breadth, is about 62-67% complete.
   `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
   decryption, native secure-random writer paths, saved-state recrypt,
-  encrypted object streams, lazy encrypted stream forcing, and
-  `/EncryptMetadata false`.
+  encrypted object streams, lazy encrypted stream forcing, non-stream
+  object-stream payload recrypt, and `/EncryptMetadata false`.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
   unusual inherited page data and broader real-world destination/action
   combinations.
-- Not covered enough: non-stream encrypted parser-state edges and encrypted
-  malformed-reader recovery outside the object-stream and stream-data paths.
+- Not covered enough: encrypted malformed-reader recovery outside the
+  object-stream and stream-data paths.
 
 ### P1: Deepen Format Parity
 
@@ -253,8 +253,8 @@ and backend breadth, is about 62-67% complete.
 
 ### Immediate Work Order
 
-- Next: target encrypted parser-state gaps with one public password-read or
-  recrypt workflow that exposes a non-stream encrypted-object edge.
+- Next: add one broader encrypted malformed-reader gate beyond stream and
+  object-stream data.
 - Then: deepen text/image parity with one predefined-CMap gate and one
   filter/image-family gate.
 - Later: expand malformed-reader recovery from realistic documents and only
@@ -294,9 +294,10 @@ and backend breadth, is about 62-67% complete.
   incremental revision reads from disk and native secure-random AESV2/AESV3 file
   writes. Password-aware native reads now include
   encrypted object-stream fixtures for explicit passwords and the implicit blank
-  user password, and password-aware parsed ARC4/AESV2/AESV3 stream reads now
-  keep deferred decryption until forcing materializes plaintext and corrects
-  `/Length`. Native acceptance also covers
+  user password, saved-state recrypt of non-stream payloads extracted from
+  encrypted object streams, and password-aware parsed ARC4/AESV2/AESV3 stream
+  reads now keep deferred decryption until forcing materializes plaintext and
+  corrects `/Length`. Native acceptance also covers
   `change_pages` bookmark-reference and matrix rewriting after a compressed
   xref-stream read boundary; a document-feature lifecycle gate for page labels,
   link annotations, old-style destinations, name-tree destinations, and

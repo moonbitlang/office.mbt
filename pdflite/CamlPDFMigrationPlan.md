@@ -1059,6 +1059,10 @@ MoonBit consequences for this project:
     future re-encryption after modification. Re-encryption is started for saved
     40-bit ARC4, 128-bit ARC4 revision 3, 128-bit ARC4 revision 4, and
     explicit-IV-provider AESV2 revision 4 and AESV3 revision 5 documents.
+    Saved-state recrypt now promotes `ObjectParsedAlreadyDecrypted` parser
+    entries back to ordinary parsed plaintext before encrypting, so non-stream
+    payload objects extracted from encrypted object streams are encrypted again
+    instead of being written as cleartext.
     AESV2 recrypt also has classic plus uncompressed and Flate-compressed
     xref-stream incremental update gates; AESV3 revision 5 and revision 6/ISO
     recrypt have a classic writer/read/decrypt round-trip gate plus classic,
@@ -1108,8 +1112,8 @@ MoonBit consequences for this project:
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, preserve deferred parsed stream decryption for
     file-backed streams, and return CamlPDF-style denied permissions. Remaining
-    encrypted parser-state edge cases outside streams and object-stream
-    expansion remain deferred.
+    encrypted malformed-reader compatibility outside streams and object-stream
+    expansion remains deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
@@ -1504,6 +1508,9 @@ public APIs end to end:
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
   for explicit passwords and implicit blank user passwords while avoiding double
   decryption of the embedded object.
+- recrypt a decrypted AESV2 document whose non-stream payload came from an
+  encrypted `/ObjStm`, proving saved-state recrypt encrypts
+  `ObjectParsedAlreadyDecrypted` plaintext before compressed write/read.
 - read a minimal page tree through a CamlPDF-tolerated malformed classic xref
   table, then normalize it through the writer and reread it.
 - decrypt an AES-128 document after forcing malformed-xref reconstruction,

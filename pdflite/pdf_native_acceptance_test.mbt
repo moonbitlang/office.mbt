@@ -3320,6 +3320,53 @@ test "native acceptance suite decrypts object streams with blank user password" 
 }
 
 ///|
+test "native acceptance suite recrypts non-stream encrypted object-stream payloads" {
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let bytes = acceptance_encrypted_object_stream_pdf_for_test()
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      bytes,
+      owner_password=Some(owner_password[:]),
+    ),
+  )
+  acceptance_assert_decrypted_object_stream_payload_for_test(decrypted, [
+    PdfNoCopy,
+  ])
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("object-stream-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(6, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password[:],
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 16)
+    },
+  )
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rendered[:],
+      acceptance_ascii_for_test("encrypted object stream")[:],
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(user_password[:]),
+    ),
+  )
+  acceptance_assert_decrypted_object_stream_payload_for_test(roundtrip, [
+    PdfNoCopy,
+  ])
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(6), added_object)
+}
+
+///|
 test "native acceptance suite reconstructs omitted page-tree xrefs" {
   let bytes = acceptance_pdf_with_omitted_page_tree_xrefs_for_test()
   let parsed = try! @pdflite.pdf_read_document_from_bytes(bytes)

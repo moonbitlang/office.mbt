@@ -1390,6 +1390,22 @@ fn PdfEncryptionValues::file_key_for_recrypt_password(
 }
 
 ///|
+fn PdfDocument::pdf_crypt_prepare_plaintext_for_recrypt(
+  self : PdfDocument,
+) -> Unit {
+  for number in self.object_numbers() {
+    match self.objects.get_entry(number) {
+      Some({ data: ObjectParsedAlreadyDecrypted(object), generation }) =>
+        self.objects.set_entry(number, {
+          data: ObjectParsed(object),
+          generation,
+        })
+      _ => ()
+    }
+  }
+}
+
+///|
 fn PdfDocument::recrypt_arc4_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
@@ -1398,6 +1414,7 @@ fn PdfDocument::recrypt_arc4_with_file_key(
   revision : Int,
 ) -> PdfDocument raise PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
   let encrypted = document.arc4_crypt_parsed_objects(
     file_key,
@@ -1425,6 +1442,7 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
   let encrypted = document.aesv2_encrypt_parsed_objects_with_iv_provider(
     file_key,
@@ -1451,6 +1469,7 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
   iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id[:])
+  document.pdf_crypt_prepare_plaintext_for_recrypt()
   document.set_saved_encryption(None)
   let encrypted = document.aesv3_encrypt_parsed_objects_with_iv_provider(
     file_key,
