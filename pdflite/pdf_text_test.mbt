@@ -2751,6 +2751,28 @@ test "pdf_parse_cmap_data keeps bfrange entries after multiline array close" {
 }
 
 ///|
+test "pdf_parse_cmap_data keeps bfrange entries before multiline array" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "3 beginbfrange\n" +
+      "<30><31><0061> <32><33>[\n" +
+      "<0063>\n" +
+      "<0064>]\n" +
+      "<34><35><0065>\n" +
+      "endbfrange\n",
+    )[:],
+  )
+  @test.assert_eq(parsed.map, [
+    (48, text_bytes_for_test([0x00, 0x61])),
+    (49, text_bytes_for_test([0x00, 0x62])),
+    (50, text_bytes_for_test([0x00, 0x63])),
+    (51, text_bytes_for_test([0x00, 0x64])),
+    (52, text_bytes_for_test([0x00, 0x65])),
+    (53, text_bytes_for_test([0x00, 0x66])),
+  ])
+}
+
+///|
 test "PdfDocument reads repeated inline bfrange arrays" {
   let doc = @pdflite.pdf_document_empty()
   let tounicode = @pdflite.pdf_stream(

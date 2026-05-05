@@ -1980,15 +1980,36 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   )
   @test.assert_eq(bfchar_entries, [])
 
-  guard pdf_text_cmap_bfrange_array_start(@ascii.encode("<02><01>[")[:]) is None else {
-    fail("expected invalid bfrange array start")
+  let invalid_bfrange_entries : Array[(Int, PdfBytes)] = []
+  guard pdf_text_append_tounicode_bfrange_line(
+      invalid_bfrange_entries,
+      @ascii.encode("<02><01>[")[:],
+    )
+    is None else {
+    fail("expected invalid bfrange line")
   }
-  guard pdf_text_cmap_bfrange_array_start(@ascii.encode("<01>[")[:]) is None else {
-    fail("expected incomplete bfrange array start")
+  guard pdf_text_append_tounicode_bfrange_line(
+      invalid_bfrange_entries,
+      @ascii.encode("<01>[")[:],
+    )
+    is None else {
+    fail("expected incomplete bfrange line")
   }
-  guard pdf_text_cmap_bfrange_array_header(@ascii.encode("<02><01>")[:]) is None else {
-    fail("expected invalid bfrange array header")
+  guard pdf_text_append_tounicode_bfrange_line(
+      invalid_bfrange_entries,
+      @ascii.encode("<01><02><FF>")[:],
+    )
+    is None else {
+    fail("expected overflow bfrange line")
   }
+  guard pdf_text_append_tounicode_bfrange_line(
+      invalid_bfrange_entries,
+      @ascii.encode("<01><02>plain")[:],
+    )
+    is None else {
+    fail("expected missing unicode bfrange line")
+  }
+  @test.assert_eq(invalid_bfrange_entries, [])
   let pending : PdfTextCMapBFRangeArray = { first: 1, last: 2, unicodes: [] }
   let pending_entries : Array[(Int, PdfBytes)] = []
   let append_result = pdf_text_append_pending_bfrange_array(
