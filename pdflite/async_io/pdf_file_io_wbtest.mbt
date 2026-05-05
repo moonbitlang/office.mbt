@@ -27,6 +27,18 @@ fn pdf_async_io_secret_object_for_test(text : String) -> @pdflite.PdfObject {
 }
 
 ///|
+fn pdf_async_io_secret_document_for_test(
+  text : String,
+) -> @pdflite.PdfDocument raise @pdflite.PdfError {
+  let document = @pdflite.pdf_minimum_valid_pdf()
+  document.add_object_given_number(
+    41,
+    pdf_async_io_secret_object_for_test(text),
+  )
+  document
+}
+
+///|
 fn pdf_async_io_decryption_result_for_test(
   result : @pdflite.PdfDecryptionResult?,
 ) -> @pdflite.PdfDecryptionResult raise {
@@ -34,6 +46,27 @@ fn pdf_async_io_decryption_result_for_test(
     Some(result) => result
     None => fail("expected decrypted async file")
   }
+}
+
+///|
+async fn pdf_async_io_assert_encrypted_file_secret_for_test(
+  path : String,
+  owner_password : String,
+  denied : Array[@pdflite.PdfPermission],
+  text : String,
+) -> Unit {
+  let decrypted = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_from_file_with_passwords(
+      path,
+      owner_password=Some(@ascii.encode(owner_password)[:]),
+    ),
+  )
+  @test.assert_eq(try! decrypted.document.endpage(), 1)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(41),
+    pdf_async_io_secret_object_for_test(text),
+  )
 }
 
 ///|
@@ -82,6 +115,137 @@ async test "async file wrappers write xref streams and read encrypted documents"
   pdf_async_io_remove_if_exists_for_test(encrypted_path)
   @test.assert_eq(try! decrypted.document.endpage(), 1)
   @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
+}
+
+///|
+async test "async file wrappers write mode-dispatched encrypted documents" {
+  let mode_path = pdf_async_io_test_path_for_test("mode_dispatch")
+  let arc4_40_path = pdf_async_io_test_path_for_test("encrypt_40")
+  let arc4_128_path = pdf_async_io_test_path_for_test("encrypt_128")
+  let arc4_r4_path = pdf_async_io_test_path_for_test("encrypt_r4")
+  let aesv2_path = pdf_async_io_test_path_for_test("encrypt_aesv2")
+  let aesv3_path = pdf_async_io_test_path_for_test("encrypt_aesv3")
+  let aesv3_iso_path = pdf_async_io_test_path_for_test("encrypt_aesv3_iso")
+  pdf_async_io_remove_if_exists_for_test(mode_path)
+  pdf_async_io_remove_if_exists_for_test(arc4_40_path)
+  pdf_async_io_remove_if_exists_for_test(arc4_128_path)
+  pdf_async_io_remove_if_exists_for_test(arc4_r4_path)
+  pdf_async_io_remove_if_exists_for_test(aesv2_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_iso_path)
+  let user = @ascii.encode("user")
+  let owner = @ascii.encode("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  pdf_write_document_to_file_with_mode(
+    try! @pdflite.pdf_minimum_valid_pdf(),
+    mode_path,
+    PdfWriteCompressedXRefStream,
+  )
+  @test.assert_eq(pdf_read_document_from_file(mode_path).version(), (1, 5))
+  pdf_write_encrypted_40bit_document_to_file(
+    try! pdf_async_io_secret_document_for_test("async-40"),
+    arc4_40_path,
+    user[:],
+    owner[:],
+    denied,
+    file_id=@ascii.encode("async-40-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    arc4_40_path, "owner", denied, "async-40",
+  )
+  pdf_write_encrypted_128bit_document_to_file(
+    try! pdf_async_io_secret_document_for_test("async-128"),
+    arc4_128_path,
+    user[:],
+    owner[:],
+    denied,
+    mode=PdfWriteXRefStream,
+    file_id=@ascii.encode("async-128-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    arc4_128_path, "owner", denied, "async-128",
+  )
+  pdf_write_encrypted_128bit_r4_document_to_file(
+    try! pdf_async_io_secret_document_for_test("async-r4"),
+    arc4_r4_path,
+    user[:],
+    owner[:],
+    denied,
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=@ascii.encode("async-r4-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    arc4_r4_path, "owner", denied, "async-r4",
+  )
+  pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
+    try! pdf_async_io_secret_document_for_test("async-aesv2"),
+    aesv2_path,
+    user[:],
+    owner[:],
+    [PdfNoCopy],
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async-aesv2-iv")[:],
+    ),
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=@ascii.encode("async-aesv2-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    aesv2_path,
+    "owner",
+    [PdfNoCopy],
+    "async-aesv2",
+  )
+  pdf_write_encrypted_aesv3_document_to_file_with_providers(
+    try! pdf_async_io_secret_document_for_test("async-aesv3"),
+    aesv3_path,
+    user[:],
+    owner[:],
+    [PdfNoExtract],
+    @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
+      @ascii.encode("async-aesv3-random")[:],
+    ),
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async-aesv3-iv")[:],
+    ),
+    mode=PdfWriteXRefStream,
+    file_id=@ascii.encode("async-aesv3-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    aesv3_path,
+    "owner",
+    [PdfNoExtract],
+    "async-aesv3",
+  )
+  pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
+    try! pdf_async_io_secret_document_for_test("async-aesv3-iso"),
+    aesv3_iso_path,
+    user[:],
+    owner[:],
+    [PdfNoAssemble],
+    @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
+      @ascii.encode("async-aesv3-iso-random")[:],
+    ),
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async-aesv3-iso-iv")[:],
+    ),
+    encrypt_metadata=false,
+    file_id=@ascii.encode("async-aesv3-iso-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    aesv3_iso_path,
+    "owner",
+    [PdfNoAssemble],
+    "async-aesv3-iso",
+  )
+  pdf_async_io_remove_if_exists_for_test(mode_path)
+  pdf_async_io_remove_if_exists_for_test(arc4_40_path)
+  pdf_async_io_remove_if_exists_for_test(arc4_128_path)
+  pdf_async_io_remove_if_exists_for_test(arc4_r4_path)
+  pdf_async_io_remove_if_exists_for_test(aesv2_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_iso_path)
 }
 
 ///|

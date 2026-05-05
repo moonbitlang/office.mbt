@@ -1217,9 +1217,12 @@ MoonBit consequences for this project:
     plus file revision counting, revision-specific file reads,
     password-based encrypted reads,
     revision-specific password reads, uncompressed and Flate-compressed
-    xref-stream file writes, and classic/xref-stream incremental-update file
-    writes. Native async tests cover plain round-trip, xref-stream round-trip,
-    encrypted password read, classic incremental readback, revision-specific
+    xref-stream file writes, mode-dispatched writes, direct encrypted
+    ARC4/AESV2/AESV3 file writes with provider-backed AES randomness, and
+    classic/xref-stream incremental-update file writes. Native async tests
+    cover plain round-trip, xref-stream round-trip, encrypted password read,
+    mode-dispatched compressed xref output, encrypted writer file output across
+    ARC4/AESV2/AESV3 variants, classic incremental readback, revision-specific
     incremental readback, and uncompressed plus compressed xref-stream
     incremental readback; test paths now use core
     `@env.current_dir` and `@env.now` to avoid fixed filename collisions under

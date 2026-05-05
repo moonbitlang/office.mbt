@@ -182,7 +182,8 @@ vertical acceptance path at a time instead of isolated edge polishing:
   basics. Public writer mode dispatch and encrypted-writer wrappers now cover
   CamlPDF-style encrypt-at-write workflows for ARC4, AESV2, AESV3, and AESV3
   ISO while keeping AES randomness provider-driven. Native async file wrappers
-  cover read/write, password reads, revision
+  cover read/write, mode-dispatched writes, encrypted writer file output,
+  password reads, revision
   counting, revision reads, and incremental writes. A native black-box
   acceptance suite now covers classic/xref-stream/compressed-xref one-page
   read-write-reread, classic and xref-stream incremental revision reads,
