@@ -96,9 +96,11 @@ Current estimate:
   when `/ToUnicode` is absent, including reverse charcode lookup.~~
 - [x] ~~GB-EUC predefined CMap built-in GB2312 mapping table when
   `/ToUnicode` is absent, including reverse charcode lookup.~~
+- [x] ~~Big5 predefined CMap built-in mapping table when `/ToUnicode` is
+  absent, including reverse charcode lookup.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
-  single-byte and GB-EUC fallbacks, plus more vertical-writing text behavior
-  when `/ToUnicode` is absent.
+  single-byte, GB-EUC, and Big5 fallbacks, plus more vertical-writing text
+  behavior when `/ToUnicode` is absent.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -185,5 +187,7 @@ Current estimate:
   coverage.~~
 - [x] ~~Add one broader non-UCS2 predefined-CMap mapping table beyond the RKSJ
   single-byte fallback.~~
-- [ ] Add another non-UCS2 predefined-CMap mapping table beyond RKSJ and GB-EUC.
+- [x] ~~Add another non-UCS2 predefined-CMap mapping table beyond RKSJ and
+  GB-EUC.~~
+- [ ] Add UHC or another remaining non-UCS2 predefined-CMap mapping table.
 - [ ] Revisit non-native backend validation after native parity is stable.

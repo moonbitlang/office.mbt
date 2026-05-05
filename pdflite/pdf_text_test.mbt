@@ -3336,6 +3336,49 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xA3C1),
   )
   @test.assert_eq(gb_euc_builtin_extractor.charcode_of_codepoint(0x20AC), None)
+  let big5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopBig5Builtin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/ETen-B5-H")),
+  })
+  let big5_builtin_extractor = big5_builtin_font.text_extractor()
+  @test.assert_eq(
+    big5_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0xA7, 0x41, 0xA6, 0x6E, 0xA4, 0x40, 0xA4, 0xA4, 0xA1, 0x40,
+      ])[:],
+    ),
+    [0x41, 0x4F60, 0x597D, 0x4E00, 0x4E2D, 0x3000],
+  )
+  @test.assert_eq(
+    big5_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x40])[:],
+    ),
+    [0x8140],
+  )
+  @test.assert_eq(
+    big5_builtin_extractor.charcode_of_codepoint(0x41),
+    Some(0x41),
+  )
+  @test.assert_eq(
+    big5_builtin_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xA741),
+  )
+  @test.assert_eq(
+    big5_builtin_extractor.charcode_of_codepoint(0x597D),
+    Some(0xA66E),
+  )
+  @test.assert_eq(
+    big5_builtin_extractor.charcode_of_codepoint(0x3000),
+    Some(0xA140),
+  )
+  @test.assert_eq(big5_builtin_extractor.charcode_of_codepoint(0x20AC), None)
+  let big5_truncated = try? big5_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0xA7])[:],
+  )
+  guard big5_truncated is Err(BadText) else {
+    fail("expected BadText for truncated Big5 charcode")
+  }
   let rksj_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
     ..text_font_descriptor_for_test(),
     tounicode: Some([
