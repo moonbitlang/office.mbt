@@ -28,6 +28,112 @@ fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn pdf_async_io_ascii_codepoints_for_test(text : String) -> Array[Int] {
+  [
+    for byte in @ascii.encode(text) => byte.to_int()
+  ]
+}
+
+///|
+fn pdf_async_io_codepoints_contain_for_test(
+  haystack : ArrayView[Int],
+  needle : ArrayView[Int],
+) -> Bool {
+  if needle.length() == 0 {
+    true
+  } else if needle.length() > haystack.length() {
+    false
+  } else {
+    for start in 0..<=(haystack.length() - needle.length()) {
+      let mut matched = true
+      for offset in 0..<needle.length() {
+        if haystack[start + offset] != needle[offset] {
+          matched = false
+        }
+      }
+      if matched {
+        break true
+      }
+    } nobreak {
+      false
+    }
+  }
+}
+
+///|
+fn pdf_async_io_font_resource_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  font_name : @pdflite.PdfName,
+) -> @pdflite.PdfObject? {
+  match doc.lookup_direct(pdf_async_io_name_for_test("/Font"), resources) {
+    Some(fonts) => doc.lookup_direct(font_name, fonts)
+    None => None
+  }
+}
+
+///|
+fn pdf_async_io_push_text_codepoints_for_test(
+  output : Array[Int],
+  extractor : @pdflite.PdfTextExtractor,
+  text : @pdflite.PdfBytes,
+) -> Unit raise {
+  for codepoint in extractor.codepoints_of_text(text[:]) {
+    output.push(codepoint)
+  }
+}
+
+///|
+fn pdf_async_io_first_page_text_codepoints_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Array[Int] raise {
+  let pages = doc.pages_of_pagetree()
+  guard pages.length() > 0 else { fail("expected at least one page") }
+  let output : Array[Int] = []
+  let mut extractor : @pdflite.PdfTextExtractor? = None
+  for
+    op in doc.parse_content_ops_with_resources(
+      pages[0].resources,
+      pages[0].content,
+    ) {
+    match op {
+      Op_Tf(font_name, _) =>
+        match
+          pdf_async_io_font_resource_for_test(
+            doc,
+            pages[0].resources,
+            font_name,
+          ) {
+          Some(font) => extractor = Some(doc.text_extractor_of_font(font))
+          None => extractor = None
+        }
+      Op_Tj(text) =>
+        match extractor {
+          Some(extractor) =>
+            pdf_async_io_push_text_codepoints_for_test(output, extractor, text)
+          None => ()
+        }
+      Op_TJ(PdfArray(items)) =>
+        match extractor {
+          Some(extractor) =>
+            for item in items {
+              match item {
+                PdfString(text) =>
+                  pdf_async_io_push_text_codepoints_for_test(
+                    output, extractor, text,
+                  )
+                _ => ()
+              }
+            }
+          None => ()
+        }
+      _ => ()
+    }
+  }
+  output
+}
+
+///|
 fn pdf_async_io_secret_object_for_test(text : String) -> @pdflite.PdfObject {
   PdfDictionary([
     (pdf_async_io_name_for_test("/Title"), PdfString(@ascii.encode(text))),
@@ -114,6 +220,21 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   let intro = pdf_read_document_from_file(intro_path)
   @test.assert_eq(intro.version(), (1, 5))
   @test.assert_eq(try! intro.endpage(), 10)
+  let first_page_text = pdf_async_io_first_page_text_codepoints_for_test(intro)
+  @test.assert_eq(
+    pdf_async_io_codepoints_contain_for_test(
+      first_page_text[:],
+      pdf_async_io_ascii_codepoints_for_test("CamlPDF")[:],
+    ),
+    true,
+  )
+  @test.assert_eq(
+    pdf_async_io_codepoints_contain_for_test(
+      first_page_text[:],
+      pdf_async_io_ascii_codepoints_for_test("Introduction")[:],
+    ),
+    true,
+  )
   pdf_write_document_to_file_with_compressed_xref_stream(intro, intro_roundtrip)
   let intro_reparsed = pdf_read_document_from_file(intro_roundtrip)
   @test.assert_eq(try! intro_reparsed.endpage(), 10)
