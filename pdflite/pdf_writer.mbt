@@ -1218,6 +1218,15 @@ pub fn pdf_write_document_with_mode(
 }
 
 ///|
+pub fn pdf_write_document_with_generated_id(
+  document : PdfDocument,
+  path : String,
+  mode? : PdfWriteMode = PdfWriteClassic,
+) -> PdfBytes raise PdfError {
+  pdf_write_document_with_mode(document.copy_with_current_id(path), mode)
+}
+
+///|
 pub fn pdf_write_encrypted_40bit_document(
   document : PdfDocument,
   user_password : BytesView,

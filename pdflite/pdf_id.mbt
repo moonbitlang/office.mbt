@@ -50,11 +50,21 @@ fn pdf_generate_current_id_bytes(path : String) -> PdfBytes {
 }
 
 ///|
+fn pdf_id_object(digest : PdfBytes) -> PdfObject {
+  PdfArray([PdfString(digest), PdfString(digest)])
+}
+
+///|
+fn pdf_generate_current_id(path : String) -> PdfObject {
+  pdf_id_object(pdf_generate_current_id_bytes(path))
+}
+
+///|
 pub fn pdf_generate_id(path : String, get_time : () -> Double) -> PdfObject {
   let digest = pdf_generate_id_bytes_from_text(path, fn() {
     pdf_id_ocaml_string_of_float(get_time())
   })
-  PdfArray([PdfString(digest), PdfString(digest)])
+  pdf_id_object(digest)
 }
 
 ///|
@@ -70,6 +80,25 @@ pub fn PdfDocument::change_id(
         .trailer_dict()
         .add_dict_entry(pdf_id_name(), pdf_generate_id(path, get_time)),
       )
+    _ => raise DictionaryExpected
+  }
+}
+
+///|
+fn PdfDocument::copy_with_current_id(
+  self : PdfDocument,
+  path : String,
+) -> PdfDocument raise PdfError {
+  let output = self.copy()
+  match output.trailer_dict() {
+    PdfDictionary(_) => {
+      output.set_trailer_dict(
+        output
+        .trailer_dict()
+        .add_dict_entry(pdf_id_name(), pdf_generate_current_id(path)),
+      )
+      output
+    }
     _ => raise DictionaryExpected
   }
 }

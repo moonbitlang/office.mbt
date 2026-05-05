@@ -6,6 +6,14 @@ async fn pdf_async_io_remove_if_exists_for_test(path : String) -> Unit {
 }
 
 ///|
+fn pdf_async_io_restore_env_for_test(previous : String?) -> Unit {
+  match previous {
+    Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
+    None => @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+  }
+}
+
+///|
 fn pdf_async_io_test_path_for_test(name : String) -> String {
   let directory = match @env.current_dir() {
     Some(current_dir) => current_dir + "/_build/"
@@ -372,6 +380,33 @@ async test "async file wrappers write and read PDF documents" {
   pdf_async_io_remove_if_exists_for_test(path)
   @test.assert_eq(try! loaded.endpage(), 1)
   @test.assert_eq(loaded.version(), original.version())
+}
+
+///|
+async test "async file wrappers can write generated trailer IDs" {
+  let path = pdf_async_io_test_path_for_test("generated_id")
+  pdf_async_io_remove_if_exists_for_test(path)
+  let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+  @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
+  let original = try! @pdflite.pdf_minimum_valid_pdf()
+  pdf_write_document_to_file_with_generated_id(
+    original,
+    path,
+    mode=PdfWriteCompressedXRefStream,
+  )
+  pdf_async_io_restore_env_for_test(previous)
+  let loaded = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf")[:])
+  @test.assert_eq(
+    loaded.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/ID")),
+    Some(PdfArray([PdfString(expected), PdfString(expected)])),
+  )
+  @test.assert_eq(
+    original.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/ID")),
+    None,
+  )
+  @test.assert_eq(try! loaded.endpage(), 1)
 }
 
 ///|

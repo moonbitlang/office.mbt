@@ -24,3 +24,15 @@ test "private current ID generation honors env and time source" {
   @test.assert_eq(reproducible, pdf_md5_digest(@ascii.encode("camlpdf")[:]))
   @test.assert_eq(called.val, false)
 }
+
+///|
+test "private current ID copy rejects malformed trailer dictionaries" {
+  let bad = pdf_document_empty()
+  bad.set_trailer_dict(PdfNull)
+  let result : Result[PdfDocument, Error] = try? bad.copy_with_current_id(
+    "bad.pdf",
+  )
+  guard result is Err(PdfError::DictionaryExpected) else {
+    fail("expected DictionaryExpected")
+  }
+}

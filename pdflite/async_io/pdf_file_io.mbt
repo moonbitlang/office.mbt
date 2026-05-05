@@ -99,6 +99,24 @@ pub async fn pdf_write_document_to_file_with_mode(
 }
 
 ///|
+pub async fn pdf_write_document_to_file_with_generated_id(
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_document_with_generated_id(
+      document,
+      path.to_owned(),
+      mode~,
+    ),
+    create=permission,
+  )
+}
+
+///|
 pub async fn pdf_write_encrypted_40bit_document_to_file(
   document : @pdflite.PdfDocument,
   path : StringView,

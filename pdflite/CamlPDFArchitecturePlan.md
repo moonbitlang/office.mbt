@@ -241,6 +241,10 @@ work changes.
    MoonBit `@env.now()` boundary, while `CAMLPDF_REPRODUCIBLE_IDS=true` forces
    the CamlPDF-compatible `md5("camlpdf")` seed; explicit `file_id=` values
    still take precedence.
+   Public byte output and native async file output can now opt into
+   CamlPDF-style generated trailer IDs with `pdf_write_document_with_generated_id`
+   and `pdf_write_document_to_file_with_generated_id`; both paths write a copied
+   document so the caller's in-memory object graph is not mutated by output.
    Native AESV2 and AESV3 convenience output now use a pdflite-owned OS
    random-byte FFI boundary for IVs, AESV3 file keys, salts, and permissions
    padding, with failure propagated as checked `PdfError`; the native async file
