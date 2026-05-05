@@ -157,9 +157,9 @@ work changes.
    and predefined UCS2 horizontal/vertical two-byte CID text extraction,
    common mixed-byte predefined CMap charcode segmentation for `/ToUnicode`
    extraction, RKSJ predefined-CMap ASCII and half-width Katakana built-in
-   fallback, a generated GB-EUC/GB2312 mapping-table fallback, and a generated
-   Big5 mapping-table fallback, and a generated UHC/CP949 mapping-table
-   fallback when `/ToUnicode` is absent,
+   fallback, generated GB-EUC/GB2312, Big5, UHC/CP949, and GBK-EUC-UCS2
+   mapping-table fallbacks when
+   `/ToUnicode` is absent,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
@@ -181,7 +181,7 @@ work changes.
    objects. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
-   beyond the RKSJ single-byte, GB-EUC, Big5, and UHC fallbacks when
+   beyond the RKSJ single-byte, GB-EUC, Big5, UHC, and GBK fallbacks when
    `/ToUnicode` is absent, JPEG pixel decode, and remaining image filter
    families.
 
@@ -287,8 +287,9 @@ and backend breadth, is about 79-84% complete.
   single-byte fallback, GB-EUC predefined-CMap GB2312 mapping fallback when
   `/ToUnicode` is absent, Big5 predefined-CMap mapping fallback when
   `/ToUnicode` is absent, UHC predefined-CMap CP949 mapping fallback when
-  `/ToUnicode` is absent, and an Identity-V native gate with vertical width
-  metadata. Native image acceptance now also covers
+  `/ToUnicode` is absent, GBK predefined-CMap GBK-EUC-UCS2 mapping fallback
+  when `/ToUnicode` is absent, and an Identity-V native gate with vertical
+  width metadata. Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
   images with `/JBIG2Globals`, and CCITT image XObjects through raw RGB
@@ -300,7 +301,7 @@ and backend breadth, is about 79-84% complete.
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
-  beyond the RKSJ single-byte, GB-EUC, Big5, and UHC fallbacks when
+  beyond the RKSJ single-byte, GB-EUC, Big5, UHC, and GBK fallbacks when
   `/ToUnicode` is absent, vertical-writing behavior beyond the current gates,
   additional TrueType and Type3 glyph-program edge coverage, more real-world
   ToUnicode variations, and broader real-world DCT/JPEG image payload corpus

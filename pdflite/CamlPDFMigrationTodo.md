@@ -100,9 +100,12 @@ Current estimate:
   absent, including reverse charcode lookup.~~
 - [x] ~~UHC predefined CMap built-in CP949 mapping table when `/ToUnicode` is
   absent, including reverse charcode lookup.~~
+- [x] ~~GBK predefined CMap built-in Adobe GBK-EUC-UCS2 mapping table when
+  `/ToUnicode` is absent, including reverse charcode lookup and the CMap's
+  single-byte `0x80`/`0xFF` behavior.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
-  single-byte, GB-EUC, Big5, and UHC fallbacks, plus more vertical-writing text
-  behavior when `/ToUnicode` is absent.
+  single-byte, GB-EUC, Big5, UHC, and GBK fallbacks, plus more
+  vertical-writing text behavior when `/ToUnicode` is absent.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -192,5 +195,7 @@ Current estimate:
 - [x] ~~Add another non-UCS2 predefined-CMap mapping table beyond RKSJ and
   GB-EUC.~~
 - [x] ~~Add UHC or another remaining non-UCS2 predefined-CMap mapping table.~~
-- [ ] Add GBK or another remaining non-UCS2 predefined-CMap mapping table.
+- [x] ~~Add GBK or another remaining non-UCS2 predefined-CMap mapping table.~~
+- [ ] Add another remaining non-UCS2 predefined-CMap mapping table, such as
+  KSC-EUC, HKSCS, or GBK2K, or a vertical no-`/ToUnicode` predefined-CMap gate.
 - [ ] Revisit non-native backend validation after native parity is stable.
