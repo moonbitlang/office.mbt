@@ -172,17 +172,22 @@ work changes.
 
 ## Active Large Milestone
 
-Native reader compatibility is the current focus. Work should move through one
-vertical acceptance path at a time instead of isolated edge polishing:
+Native feature parity is the current focus. Work should advance through broad
+public workflow gates instead of isolated parser quirks:
 
-- maintain a black-box native acceptance suite that reads, writes, rereads, and
-  checks stable invariants across classic xref, xref-stream, compressed
-  xref-stream, incremental update, object-stream, partially decoded filter, and
-  encrypted AES-128 workflows;
-- fix failures exposed by that suite in reader/parser/deferred-encryption
-  paths before moving to backend breadth;
-- keep unrelated image/CMap/JPEG/CCITT work deferred unless it blocks a native
-  acceptance case.
+- core file lifecycle: read, write, reread, incremental update, revision reads,
+  object streams, compressed xref streams, and encrypted documents;
+- page/content lifecycle: page tree reads, content parse/rewrite, `change_pages`,
+  merge, extraction, and object cleanup;
+- document-feature lifecycle: page labels, bookmarks, annotations, old-style and
+  name-tree destinations, open actions, optional content, and metadata surviving
+  read/edit/write boundaries;
+- media/text lifecycle: filters, predictors, text extraction, CMaps, images, and
+  example workflows such as `pdfdecomp.ml`, `pdftest.ml`, and `pdfdraft.ml`.
+
+An isolated recovery case belongs in the migration only when it is needed by one
+of those gates. Native remains the only stabilization target until these broad
+gates are solid; backend breadth follows after native feature parity.
 
 ## Current High-Level Checklist
 
@@ -217,9 +222,11 @@ vertical acceptance path at a time instead of isolated edge polishing:
   keep deferred decryption until forcing materializes plaintext and corrects
   `/Length`. Native acceptance also covers
   `change_pages` bookmark-reference and matrix rewriting after a compressed
-  xref-stream read boundary, plus strict reading and writer normalization for
-  CamlPDF-tolerated malformed classic xref rows, and password decryption after
-  malformed-xref reconstruction of direct encrypted objects.
+  xref-stream read boundary; a document-feature lifecycle gate for page labels,
+  link annotations, old-style destinations, name-tree destinations, and
+  `/OpenAction`; strict reading and writer normalization for CamlPDF-tolerated
+  malformed classic xref rows; and password decryption after malformed-xref
+  reconstruction of direct encrypted objects.
   Native OS-random AESV2/AESV3 convenience writer output is covered with decrypt
   and output-variation checks, and AESV3 saved-state recrypt is covered through
   the default secure-random IV path.
@@ -231,13 +238,15 @@ vertical acceptance path at a time instead of isolated edge polishing:
 
 ## Working Rule
 
-Pick one bounded compatibility slice at a time. Each slice should include:
+Pick one broad native workflow gate at a time, then make the smallest code
+changes required for that gate to pass. Each slice should include:
 
-- a narrow code change,
-- focused black-box or white-box tests,
-- `CamlPDFMigrationPlan.md` status updates when project behavior changes,
+- a named public workflow and the CamlPDF behavior it is meant to preserve;
+- black-box native acceptance coverage plus focused unit tests for any new
+  helper behavior;
+- `CamlPDFMigrationPlan.md` status updates when project behavior changes;
 - `OCaml2MoonBit.md` updates only when a reusable language/API fact is newly
-  verified,
+  verified;
 - native-target `moon check`/`moon test` during the inner loop, broader backend
   validation during stabilization or backend-sensitive work, coverage, and a
   regular commit.

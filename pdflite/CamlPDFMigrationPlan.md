@@ -1393,10 +1393,10 @@ MoonBit consequences for this project:
 
 ## Active Native Acceptance Milestone
 
-The migration is now focused on a larger native reader compatibility milestone,
-rather than isolated small edge cases. The first acceptance layer is
-`pdf_native_acceptance_test.mbt`, a black-box suite that exercises public APIs
-end to end:
+The migration is now focused on native feature parity through broad public
+workflow gates, rather than isolated small edge cases. The first acceptance
+layer is `pdf_native_acceptance_test.mbt`, a black-box suite that exercises
+public APIs end to end:
 
 - construct a one-page standard-font document and verify classic xref,
   xref-stream, and compressed xref-stream read/write/reread invariants;
@@ -1441,6 +1441,10 @@ end to end:
 - run `change_pages` after a compressed xref-stream read boundary, rewrite
   bookmark page references with a matrix transform, write/reread, and verify
   the transformed bookmark target.
+- preserve document-level feature state through a compressed xref-stream
+  read/edit/write/reread lifecycle: page labels, link annotations, old-style
+  destinations, name-tree destinations, open actions, and matrix-transformed page
+  targets.
 - exercise native async file wrappers for encrypted incremental updates:
   encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
   xref-stream incremental write, revision count, and newest/older encrypted
@@ -1455,9 +1459,11 @@ end to end:
   proving direct encrypted objects still pass through the public password
   wrapper after xref fallback.
 
-Near-term work should extend this suite with the next visible compatibility
-case, then fix the reader/parser/encryption gap it exposes. Broader backend
-validation remains deferred until native feature parity is stable.
+Near-term work should extend this suite with the next visible public workflow
+gate, then fix the reader/parser/encryption gap it exposes. Isolated malformed
+input quirks should be added only when they unblock one of the native gates.
+Broader backend validation remains deferred until native feature parity is
+stable.
 
 ## Update Discipline
 

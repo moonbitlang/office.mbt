@@ -831,6 +831,174 @@ fn acceptance_assert_bookmarks_target_pages_for_test(
 }
 
 ///|
+fn acceptance_add_catalog_entry_for_test(
+  doc : @pdflite.PdfDocument,
+  key : @pdflite.PdfName,
+  value : @pdflite.PdfObject,
+) -> Unit raise {
+  let root = doc.root()
+  doc.add_object_given_number(
+    root,
+    doc.lookup_object_or_null(root).add_dict_entry(key, value),
+  )
+}
+
+///|
+fn acceptance_document_feature_lifecycle_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_subtype = acceptance_name_for_test("/Subtype")
+  let key_rect = acceptance_name_for_test("/Rect")
+  let key_dest = acceptance_name_for_test("/Dest")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let key_dests = acceptance_name_for_test("/Dests")
+  let key_names = acceptance_name_for_test("/Names")
+  let type_link = acceptance_name_for_test("/Link")
+  let type_xyz = acceptance_name_for_test("/XYZ")
+  let type_fith = acceptance_name_for_test("/FitH")
+  let type_fitv = acceptance_name_for_test("/FitV")
+  let named_destination = acceptance_name_for_test("/Chapter")
+  let string_destination = acceptance_ascii_for_test("chapter-string")
+  let doc = acceptance_one_page_document_for_test().write_page_labels([
+    {
+      label_style: PageLabelLowercaseLetters,
+      label_prefix: Some(acceptance_ascii_for_test("gate-")),
+      start_page: 1,
+      start_value: 2,
+    },
+  ])
+  let page_numbers = doc.page_reference_numbers()
+  doc.add_object_given_number(
+    page_numbers[0],
+    doc
+    .lookup_object_or_null(page_numbers[0])
+    .add_dict_entry(
+      key_annots,
+      PdfArray([
+        @pdflite.pdf_dictionary([
+          (key_subtype, PdfNameObject(type_link)),
+          (
+            key_rect,
+            PdfArray([
+              PdfInteger(1),
+              PdfInteger(2),
+              PdfInteger(3),
+              PdfInteger(4),
+            ]),
+          ),
+          (
+            key_dest,
+            PdfArray([
+              PdfIndirect(page_numbers[0]),
+              PdfNameObject(type_xyz),
+              PdfInteger(10),
+              PdfInteger(20),
+              PdfNull,
+            ]),
+          ),
+        ]),
+      ]),
+    ),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_open_action,
+    PdfArray([
+      PdfIndirect(page_numbers[0]),
+      PdfNameObject(type_fith),
+      PdfInteger(50),
+    ]),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_dests,
+    PdfDictionary([
+      (
+        named_destination,
+        PdfArray([
+          PdfIndirect(page_numbers[0]),
+          PdfNameObject(type_fitv),
+          PdfInteger(40),
+        ]),
+      ),
+    ]),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_names,
+    PdfDictionary([
+      (
+        key_dests,
+        doc.build_name_tree([
+          (
+            string_destination,
+            PdfArray([
+              PdfIndirect(page_numbers[0]),
+              PdfNameObject(type_xyz),
+              PdfInteger(5),
+              PdfInteger(6),
+              PdfNull,
+            ]),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  doc
+}
+
+///|
+fn acceptance_assert_document_feature_lifecycle_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_dest = acceptance_name_for_test("/Dest")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let page_numbers = doc.page_reference_numbers()
+  @test.assert_eq(doc.read_page_labels(), [
+    {
+      label_style: PageLabelLowercaseLetters,
+      label_prefix: Some(acceptance_ascii_for_test("gate-")),
+      start_page: 1,
+      start_value: 2,
+    },
+  ])
+  let pages = doc.pages_of_pagetree()
+  match pages[0].rest.lookup_immediate(key_annots) {
+    Some(PdfArray([PdfDictionary(_) as annotation])) =>
+      match annotation.lookup_immediate(key_dest) {
+        Some(destination) =>
+          @test.assert_eq(
+            doc.read_destination(destination),
+            DestXYZ(
+              TargetPageObject(page_numbers[0]),
+              Some(15.0),
+              Some(14.0),
+              None,
+            ),
+          )
+        _ => fail("expected transformed link annotation destination")
+      }
+    _ => fail("expected link annotation")
+  }
+  match doc.catalog().lookup_immediate(key_open_action) {
+    Some(action) =>
+      @test.assert_eq(
+        doc.read_destination(action),
+        DestFitH(TargetPageObject(page_numbers[0]), Some(44.0)),
+      )
+    _ => fail("expected transformed OpenAction")
+  }
+  @test.assert_eq(
+    doc.read_destination(PdfNameObject(acceptance_name_for_test("/Chapter"))),
+    DestFitV(TargetPageObject(page_numbers[0]), Some(45.0)),
+  )
+  @test.assert_eq(
+    doc.read_destination(PdfString(acceptance_ascii_for_test("chapter-string"))),
+    DestXYZ(TargetPageObject(page_numbers[0]), Some(10.0), Some(0.0), None),
+  )
+}
+
+///|
 fn acceptance_draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
   [
     Op_q,
@@ -1454,6 +1622,24 @@ test "native acceptance suite changes pages after compressed reader boundary" {
       flags: 0,
     },
   ])
+}
+
+///|
+test "native acceptance suite preserves document feature lifecycle" {
+  let bytes = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    acceptance_document_feature_lifecycle_document_for_test(),
+  )
+  let parsed = @pdflite.pdf_read_document_from_bytes(bytes)
+  acceptance_assert_one_page_invariants_for_test(parsed, (1, 5))
+  let changed = parsed.change_pages(
+    parsed.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(5.0, -6.0))],
+  )
+  let rewritten = @pdflite.pdf_write_document(changed)
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(reparsed, (1, 5))
+  acceptance_assert_document_feature_lifecycle_for_test(reparsed)
 }
 
 ///|
