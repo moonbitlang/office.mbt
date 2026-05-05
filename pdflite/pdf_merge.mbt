@@ -784,7 +784,10 @@ fn pdf_merge_open_action(
 ) -> PdfObject? raise PdfError {
   for i in 0..<documents.length() {
     let document = documents[i]
-    match document.pdf_merge_open_action(retain_named_destinations) {
+    let candidate = document.pdf_merge_open_action(retain_named_destinations) catch {
+      _ => None
+    }
+    match candidate {
       Some(open_action) =>
         break Some(
           pdf_merge_rewrite_destination_callsite_object(

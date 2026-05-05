@@ -50,8 +50,9 @@ work changes.
    destinations plus integer page targets are left untransformed by matrix
    passes. Malformed annotation, `/OpenAction`, and catalog
    destination-definition matrix destinations keep renumbered page references
-   without aborting `change_pages`. Count-changing `change_pages` replacements
-   keep CamlPDF's no-mapping behavior and bookmark
+   without aborting `change_pages`; malformed merge `/OpenAction` entries are
+   ignored so later valid actions can still be retained. Count-changing
+   `change_pages` replacements keep CamlPDF's no-mapping behavior and bookmark
    matrix guard, while replacement preserves document metadata, trailer extras,
    and object-stream bookkeeping. Form XObject processing materializes deferred
    stream data before callbacks, matching CamlPDF's `Pdf.getstream` path.

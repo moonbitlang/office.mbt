@@ -1095,8 +1095,9 @@ MoonBit consequences for this project:
     retention is now started behind the same flag: the merge keeps the first
     valid destination/action that still targets a retained page, retargets its
     page reference to the merged page tree, rewrites named targets through
-    collision suffixes, and drops named-target actions when named destinations
-    are not retained. Duplicate-font removal is started with
+    collision suffixes, drops named-target actions when named destinations
+    are not retained, and ignores malformed actions instead of aborting the
+    merge. Duplicate-font removal is started with
     CamlPDF-style identical stream coalescing: references to duplicate
     `StreamGot`, deferred `StreamToGet`, or already-decrypted stream objects
     are rewritten to the first matching stream after comparing borrowed

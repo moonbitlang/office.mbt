@@ -1089,6 +1089,46 @@ test "pdf_merge_documents keeps first valid OpenAction action" {
 }
 
 ///|
+test "pdf_merge_documents ignores malformed OpenAction destinations" {
+  let key_open_action = merge_name_for_test("/OpenAction")
+  let type_fit = merge_name_for_test("/Fit")
+  let type_fitr = merge_name_for_test("/FitR")
+  let bad_coordinate = merge_name_for_test("/Bad")
+  let first = merge_one_page_doc_for_test(1, 4)
+  let first_page_refs = try! first.page_reference_numbers()
+  let malformed_open_action : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(first_page_refs[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  let first = merge_add_catalog_entry_for_test(
+    first, key_open_action, malformed_open_action,
+  )
+  let malformed_only = try! @pdflite.pdf_merge_documents([first], [[1]])
+  let root = malformed_only.lookup_object_or_null(malformed_only.root())
+  @test.assert_eq(root.lookup_immediate(key_open_action), None)
+  let second = merge_one_page_doc_for_test(1, 4)
+  let second_page_refs = try! second.page_reference_numbers()
+  let valid_open_action : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(second_page_refs[0]),
+    PdfNameObject(type_fit),
+  ])
+  let second = merge_add_catalog_entry_for_test(
+    second, key_open_action, valid_open_action,
+  )
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let merged_page_refs = try! merged.page_reference_numbers()
+  let root = merged.lookup_object_or_null(merged.root())
+  @test.assert_eq(
+    root.lookup_immediate(key_open_action),
+    Some(PdfArray([PdfIndirect(merged_page_refs[1]), PdfNameObject(type_fit)])),
+  )
+}
+
+///|
 test "pdf_merge_documents rewrites named OpenAction destinations" {
   let key_open_action = merge_name_for_test("/OpenAction")
   let key_s = merge_name_for_test("/S")
