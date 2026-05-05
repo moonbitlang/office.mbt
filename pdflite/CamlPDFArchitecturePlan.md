@@ -271,15 +271,15 @@ and backend breadth, is about 78-83% complete.
   predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, predefined UCS2
-  horizontal/vertical two-byte extraction, and an Identity-V native gate with
-  vertical width metadata. Native image acceptance now also covers structured
-  DCT/JPEG marker payloads through staged Flate-to-DCT image XObjects and DCT
-  inline images, JPX encoded images, staged Flate-to-JBIG2 images with
-  `/JBIG2Globals`, and CCITT image XObjects through raw RGB extraction; native
-  font acceptance covers Type3 `/ToUnicode` text with indirect CharProcs and
-  embedded TrueType `FontFile2` with generated `/ToUnicode` text extraction,
-  while focused font tests preserve direct Type3 `CharProcs` streams and parse
-  `d0`/`d1` glyph programs.
+  and UTF16 horizontal/vertical two-byte extraction, and an Identity-V native
+  gate with vertical width metadata. Native image acceptance now also covers
+  structured DCT/JPEG marker payloads through staged Flate-to-DCT image
+  XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
+  images with `/JBIG2Globals`, and CCITT image XObjects through raw RGB
+  extraction; native font acceptance covers Type3 `/ToUnicode` text with
+  indirect CharProcs and embedded TrueType `FontFile2` with generated
+  `/ToUnicode` text extraction, while focused font tests preserve direct Type3
+  `CharProcs` streams and parse `d0`/`d1` glyph programs.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.

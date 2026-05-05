@@ -85,6 +85,8 @@ Current estimate:
   the newest body-scanned catalog while sanitizing trailer xref keys.~~
 - [x] ~~Predefined UCS2 horizontal/vertical CMap two-byte text extraction gate
   through reader and extractor boundaries.~~
+- [x] ~~Predefined UTF16 horizontal/vertical CMap two-byte text extraction
+  through CID-keyed reader and extractor boundaries.~~
 - [ ] Broader non-UCS2 predefined CMap mapping tables and more vertical-writing
   text behavior.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,

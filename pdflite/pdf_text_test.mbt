@@ -1647,6 +1647,27 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
   @test.assert_eq(ucs2_cid_font.encoding.is_identity_h(), false)
   @test.assert_eq(ucs2_cid_font.encoding.is_identity_v(), false)
   @test.assert_eq(ucs2_cid_font.encoding.uses_two_byte_codes(), true)
+  let utf16_font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/TopFontUTF16")),
+    ),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(33)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/UniJIS-UTF16-V")),
+    ),
+  ])
+  guard (try! doc.read_font(utf16_font)) is PdfFontCIDKeyed(utf16_cid_font) else {
+    fail("expected UTF16 CID-keyed font")
+  }
+  @test.assert_eq(utf16_cid_font.encoding.is_identity_h(), false)
+  @test.assert_eq(utf16_cid_font.encoding.is_identity_v(), false)
+  @test.assert_eq(utf16_cid_font.encoding.uses_two_byte_codes(), true)
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
   )
@@ -3221,6 +3242,30 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     .text_extractor()
     .codepoints_of_text(text_bytes_for_test([0x00, 0x42, 0x4E, 0x8C])[:]),
     [0x42, 0x4E8C],
+  )
+  let utf16_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUTF16"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniJIS-UTF16-H")),
+  })
+  @test.assert_eq(utf16_cmap_font_h.uses_two_byte_codes(), true)
+  @test.assert_eq(
+    utf16_cmap_font_h
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x30, 0x42, 0x30, 0xA2])[:]),
+    [0x3042, 0x30A2],
+  )
+  let utf16_cmap_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUTF16Vertical"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniCNS-UTF16-V")),
+  })
+  @test.assert_eq(utf16_cmap_font_v.uses_two_byte_codes(), true)
+  @test.assert_eq(
+    utf16_cmap_font_v
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x4E, 0x00, 0x4E, 0x8C])[:]),
+    [0x4E00, 0x4E8C],
   )
   let non_ucs2_predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopGBEUC"),

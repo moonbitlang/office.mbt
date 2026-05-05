@@ -892,11 +892,12 @@ MoonBit consequences for this project:
    encoded bytes, and optional byte-pair kerning.
    A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings,
    `/Identity-H`/`/Identity-V` CID text, and predefined UCS2 horizontal/vertical
-   CMaps, including decoded glyph records, glyph-name extraction, flattened
-   codepoint extraction, odd-length composite string rejection, and reverse
-   ToUnicode charcode lookup for single Unicode codepoints. Native acceptance
-   now also covers Type3 `/ToUnicode` text extraction with indirect CharProcs,
-   custom encoding differences, Type3 metrics, compressed rewrite, and reread.
+   plus UTF16 horizontal/vertical CMaps, including decoded glyph records,
+   glyph-name extraction, flattened codepoint extraction, odd-length composite
+   string rejection, and reverse ToUnicode charcode lookup for single Unicode
+   codepoints. Native acceptance now also covers Type3 `/ToUnicode` text
+   extraction with indirect CharProcs, custom encoding differences, Type3
+   metrics, compressed rewrite, and reread.
    Focused Type3 reader coverage also preserves direct `CharProcs` streams and
    parses their `d0`/`d1` glyph programs while expanding font metrics.
    Basic Latin glyph-list-backed fallback is also started for
