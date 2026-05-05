@@ -2603,6 +2603,155 @@ test "PdfDocument change_pages leaves integer page destinations untransformed" {
 }
 
 ///|
+test "PdfDocument change_pages tolerates malformed matrix destinations" {
+  let key_annots = page_name_for_test("/Annots")
+  let key_subtype = page_name_for_test("/Subtype")
+  let key_dest = page_name_for_test("/Dest")
+  let key_open_action = page_name_for_test("/OpenAction")
+  let type_link = page_name_for_test("/Link")
+  let type_fitr = page_name_for_test("/FitR")
+  let bad_coordinate = page_name_for_test("/Bad")
+  let annotation_number = 20
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  let bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(old_numbers[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  doc.add_object_given_number(
+    old_numbers[0],
+    try! doc
+    .lookup_object_or_null(old_numbers[0])
+    .add_dict_entry(key_annots, PdfArray([PdfIndirect(annotation_number)])),
+  )
+  doc.add_object_given_number(
+    annotation_number,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(type_link)),
+      (key_dest, bad_destination),
+    ]),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_open_action, bad_destination),
+  )
+  let changed = try! doc.change_pages(
+    try! doc.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(new_numbers[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  @test.assert_eq(
+    changed.lookup_object_or_null(annotation_number).lookup_immediate(key_dest),
+    Some(renumbered_bad_destination),
+  )
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(renumbered_bad_destination),
+  )
+}
+
+///|
+test "PdfDocument change_pages tolerates malformed action matrix destinations" {
+  let key_annots = page_name_for_test("/Annots")
+  let key_subtype = page_name_for_test("/Subtype")
+  let key_action = page_name_for_test("/A")
+  let key_open_action = page_name_for_test("/OpenAction")
+  let key_s = page_name_for_test("/S")
+  let key_d = page_name_for_test("/D")
+  let type_link = page_name_for_test("/Link")
+  let type_goto = page_name_for_test("/GoTo")
+  let type_fitr = page_name_for_test("/FitR")
+  let bad_coordinate = page_name_for_test("/Bad")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  let bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(old_numbers[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  let bad_action : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+    (key_s, PdfNameObject(type_goto)),
+    (key_d, bad_destination),
+  ])
+  let bad_annotation : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+    (key_subtype, PdfNameObject(type_link)),
+    (key_action, bad_action),
+  ])
+  doc.add_object_given_number(
+    old_numbers[0],
+    try! doc
+    .lookup_object_or_null(old_numbers[0])
+    .add_dict_entry(key_annots, PdfArray([bad_annotation])),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_open_action, bad_action),
+  )
+  let changed = try! doc.change_pages(
+    try! doc.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(new_numbers[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  let renumbered_bad_action : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+    (key_s, PdfNameObject(type_goto)),
+    (key_d, renumbered_bad_destination),
+  ])
+  let renumbered_bad_annotation : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+    (key_subtype, PdfNameObject(type_link)),
+    (key_action, renumbered_bad_action),
+  ])
+  @test.assert_eq(
+    changed.lookup_object_or_null(new_numbers[0]).lookup_immediate(key_annots),
+    Some(PdfArray([renumbered_bad_annotation])),
+  )
+  @test.assert_eq(
+    changed
+    .lookup_object_or_null(changed.root())
+    .lookup_immediate(key_open_action),
+    Some(renumbered_bad_action),
+  )
+}
+
+///|
 test "PdfDocument change_pages transforms named destination definitions" {
   let key_names = page_name_for_test("/Names")
   let key_dests = page_name_for_test("/Dests")

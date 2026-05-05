@@ -1417,14 +1417,20 @@ fn PdfDocument::pdf_page_transform_link_annotations_for_matrices(
             PdfIndirect(annotation_number) =>
               self.pdf_page_transform_link_annotation_for_matrices(
                 annotation_number, matrices, page_reference_numbers,
-              )
+              ) catch {
+                _ => ()
+              }
             PdfDictionary(_) as annotation =>
-              match
-                self.pdf_page_transform_link_annotation_object_for_matrices(
-                  annotation, matrices, page_reference_numbers,
-                ) {
-                Some(updated) => annotations[index] = updated
-                None => ()
+              try {
+                match
+                  self.pdf_page_transform_link_annotation_object_for_matrices(
+                    annotation, matrices, page_reference_numbers,
+                  ) {
+                  Some(updated) => annotations[index] = updated
+                  None => ()
+                }
+              } catch {
+                _ => ()
               }
             _ => ()
           }
@@ -1439,39 +1445,47 @@ fn PdfDocument::pdf_page_transform_open_action_for_matrices(
   self : PdfDocument,
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> Unit raise PdfError {
+) -> Unit {
   match self.pdf_page_active_catalog() {
     Some((root_object, uses_trailer_root)) =>
       match root_object.lookup_immediate(pdf_page_open_action_key()) {
         Some(raw_open_action) =>
           match self.direct(raw_open_action) {
             PdfArray(_) as raw_destination =>
-              match
-                self.pdf_page_transform_destination_object(
-                  raw_destination, matrices, page_reference_numbers,
-                ) {
-                Some(destination) =>
-                  self.pdf_page_replace_active_catalog_entry(
-                    pdf_page_open_action_key(),
-                    destination,
-                    root_object,
-                    uses_trailer_root,
-                  )
-                None => ()
+              try {
+                match
+                  self.pdf_page_transform_destination_object(
+                    raw_destination, matrices, page_reference_numbers,
+                  ) {
+                  Some(destination) =>
+                    self.pdf_page_replace_active_catalog_entry(
+                      pdf_page_open_action_key(),
+                      destination,
+                      root_object,
+                      uses_trailer_root,
+                    )
+                  None => ()
+                }
+              } catch {
+                _ => ()
               }
             PdfDictionary(_) as raw_action =>
-              match
-                self.pdf_page_transform_action_object(
-                  raw_action, matrices, page_reference_numbers,
-                ) {
-                Some(action) =>
-                  self.pdf_page_replace_active_catalog_entry(
-                    pdf_page_open_action_key(),
-                    action,
-                    root_object,
-                    uses_trailer_root,
-                  )
-                None => ()
+              try {
+                match
+                  self.pdf_page_transform_action_object(
+                    raw_action, matrices, page_reference_numbers,
+                  ) {
+                  Some(action) =>
+                    self.pdf_page_replace_active_catalog_entry(
+                      pdf_page_open_action_key(),
+                      action,
+                      root_object,
+                      uses_trailer_root,
+                    )
+                  None => ()
+                }
+              } catch {
+                _ => ()
               }
             _ => ()
           }

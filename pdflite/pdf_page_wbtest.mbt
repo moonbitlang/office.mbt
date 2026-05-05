@@ -546,7 +546,7 @@ test "private page link and open-action transforms cover fallback branches" {
     .lookup_object_or_null(doc.root())
     .add_dict_entry(pdf_page_open_action_key(), destination),
   )
-  try! doc.pdf_page_transform_open_action_for_matrices([], page_numbers)
+  doc.pdf_page_transform_open_action_for_matrices([], page_numbers)
   @test.assert_eq(
     doc
     .lookup_object_or_null(doc.root())
@@ -563,7 +563,7 @@ test "private page link and open-action transforms cover fallback branches" {
     .lookup_object_or_null(doc.root())
     .add_dict_entry(pdf_page_open_action_key(), action),
   )
-  try! doc.pdf_page_transform_open_action_for_matrices(
+  doc.pdf_page_transform_open_action_for_matrices(
     [(1, transform_translate(10.0, 20.0))],
     page_numbers,
   )
@@ -595,7 +595,7 @@ test "private page link and open-action transforms cover fallback branches" {
     .lookup_object_or_null(doc.root())
     .add_dict_entry(pdf_page_open_action_key(), action),
   )
-  try! doc.pdf_page_transform_open_action_for_matrices([], page_numbers)
+  doc.pdf_page_transform_open_action_for_matrices([], page_numbers)
   @test.assert_eq(
     doc
     .lookup_object_or_null(doc.root())
@@ -608,7 +608,7 @@ test "private page link and open-action transforms cover fallback branches" {
     .lookup_object_or_null(doc.root())
     .add_dict_entry(pdf_page_open_action_key(), PdfInteger(1)),
   )
-  try! doc.pdf_page_transform_open_action_for_matrices(
+  doc.pdf_page_transform_open_action_for_matrices(
     [(1, transform_translate(10.0, 20.0))],
     page_numbers,
   )
@@ -616,7 +616,7 @@ test "private page link and open-action transforms cover fallback branches" {
   unresolved.set_trailer_dict(
     PdfDictionary([(pdf_page_root_key(), PdfIndirect(99))]),
   )
-  try! unresolved.pdf_page_transform_open_action_for_matrices([], [])
+  unresolved.pdf_page_transform_open_action_for_matrices([], [])
 }
 
 ///|
@@ -641,7 +641,7 @@ test "private page open-action transform uses trailer root catalog" {
   )
   doc.set_trailer_dict(PdfDictionary([(pdf_page_root_key(), PdfIndirect(10))]))
 
-  try! doc.pdf_page_transform_open_action_for_matrices(
+  doc.pdf_page_transform_open_action_for_matrices(
     [(1, transform_translate(10.0, 20.0))],
     page_numbers,
   )
