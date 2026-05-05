@@ -353,6 +353,19 @@ means overflow needs explicit tests when the source relied on arbitrary-size or
 64-bit integer behavior.
 
 ```sh
+moon run -c 'fn main { let x = 0x81308130; println(x); println(x.reinterpret_as_uint()); println((0x80000000).reinterpret_as_uint()) }'
+# -2127527632
+# 2167439664
+# 2147483648
+```
+
+MoonBit `Int` literals and packed byte accumulators above `0x7fffffff` are
+negative signed values. When the OCaml source used `int` as an unsigned
+32-bit serialized key, either compare through `UInt` using
+`.reinterpret_as_uint()` or switch the ported representation to `Int64`/`UInt`
+before sorting, binary searching, or exposing values through the public API.
+
+```sh
 moon run -c 'fn rotr64(value : UInt64, bits : Int) -> UInt64 { (value >> bits) | (value << (64 - bits)) }
 fn main { let value : UInt64 = 0x0123456789abcdef; let full : UInt64 = UInt64::lnot(0); println(rotr64(value, 8).to_string()); println((full + (1 : UInt64)).to_string()); println(((0x80 : UInt64) >> 7).to_string()) }'
 # 17222085231038278605
