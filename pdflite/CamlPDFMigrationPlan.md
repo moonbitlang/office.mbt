@@ -978,9 +978,12 @@ MoonBit consequences for this project:
    RKSJ predefined-CMap extraction now also has a built-in single-byte fallback
    for ASCII and half-width Katakana when `/ToUnicode` is absent, with matching
    reverse charcode lookup. GB-EUC predefined-CMap extraction now has a
-   generated GB2312 mapping-table fallback with matching reverse lookup; broader
-   Big5 predefined-CMap extraction now has a generated mapping-table fallback
-   with matching reverse lookup. UHC predefined-CMap extraction now has a
+   generated GB2312 mapping-table fallback with matching reverse lookup.
+   GBpc-EUC predefined-CMap extraction now has a generated `GBpc-EUC-UCS2`
+   fallback with PC single-byte handling, one multi-codepoint expansion, and
+   reverse lookup for single-scalar entries. Broader Big5 predefined-CMap
+   extraction now has a generated mapping-table fallback with matching reverse
+   lookup. UHC predefined-CMap extraction now has a
    generated CP949 mapping-table fallback with matching reverse lookup. GBK
    predefined-CMap extraction now has a generated Adobe GBK-EUC-UCS2 mapping
    fallback with matching reverse lookup and explicit single-byte `0x80`/`0xFF`
@@ -988,8 +991,8 @@ MoonBit consequences for this project:
    composed from `KSC-EUC-H` and `Adobe-Korea1-UCS2`, including deterministic
    reverse lookup for duplicated Unicode scalars. KSCpc-EUC predefined-CMap
    extraction now has a generated `KSCpc-EUC-UCS2` table with multi-codepoint
-   expansion and reverse lookup for single-scalar entries. HKSCS, GBpc-EUC,
-   GBK2K, and other remaining multibyte predefined-CMap tables remain deferred.
+   expansion and reverse lookup for single-scalar entries. HKSCS, GBK2K, B5pc,
+   and other remaining multibyte predefined-CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1515,6 +1518,10 @@ reader or writer invariant is narrower than a whole-document workflow:
   through a built-in fallback, including reverse charcode lookup;
 - decode GB-EUC no-`/ToUnicode` predefined-CMap GB2312 text through a generated
   mapping table, including reverse charcode lookup;
+- decode GBpc-EUC no-`/ToUnicode` predefined-CMap text through a generated
+  `GBpc-EUC-UCS2` mapping table, including PC single-byte behavior,
+  multi-codepoint expansion, single-scalar reverse charcode lookup, and
+  invalid-pair fallback;
 - decode Big5 no-`/ToUnicode` predefined-CMap text through a generated mapping
   table, including reverse charcode lookup and invalid-pair fallback;
 - decode UHC no-`/ToUnicode` predefined-CMap text through a generated CP949

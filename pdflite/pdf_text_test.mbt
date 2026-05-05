@@ -3336,6 +3336,72 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xA3C1),
   )
   @test.assert_eq(gb_euc_builtin_extractor.charcode_of_codepoint(0x20AC), None)
+  let gbpc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopGBpcEUCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/GBpc-EUC-H")),
+  })
+  let gbpc_euc_builtin_extractor = gbpc_euc_builtin_font.text_extractor()
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0xA1, 0xA1, 0xAB, 0xA8, 0xBF,
+        0xC4, 0xE3, 0xBA, 0xC3,
+      ])[:],
+    ),
+    [
+      0x41, 0x00FC, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x301C, 0x006E,
+      0x0300, 0x4F60, 0x597D,
+    ],
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x40])[:],
+    ),
+    [0x8140],
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x41),
+    Some(0x41),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x00FC),
+    Some(0x80),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x00A9),
+    Some(0xFD),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x2122),
+    Some(0xFE),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x2026),
+    Some(0xFF),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x301C),
+    Some(0xA1AB),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xC4E3),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x597D),
+    Some(0xBAC3),
+  )
+  @test.assert_eq(
+    gbpc_euc_builtin_extractor.charcode_of_codepoint(0x0300),
+    None,
+  )
+  let gbpc_euc_truncated = try? gbpc_euc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0xA1])[:],
+  )
+  guard gbpc_euc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated GBpc-EUC charcode")
+  }
   let big5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopBig5Builtin"),
     composite,
