@@ -2277,6 +2277,178 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
 }
 
 ///|
+test "private external CMap helpers cover malformed and compact sections" {
+  let empty_parsed : PdfParsedCMap = {
+    map: [],
+    cid_map: [],
+    codespaces: [],
+    wmode: None,
+  }
+  @test.assert_eq(PdfExternalCMap(1, empty_parsed).uses_two_byte_codes(), false)
+  @test.assert_eq(
+    pdf_text_parsed_cmap_charcodes_of_text(
+      empty_parsed,
+      wbtest_text_bytes([1, 2])[:],
+    ),
+    [1, 2],
+  )
+  let two_byte_parsed : PdfParsedCMap = {
+    map: [],
+    cid_map: [],
+    codespaces: [{ length: 2, first: 0x0000, last: 0xFFFF }],
+    wmode: None,
+  }
+  @test.assert_eq(
+    PdfExternalCMap(2, two_byte_parsed).uses_two_byte_codes(),
+    true,
+  )
+  let mixed_parsed : PdfParsedCMap = {
+    map: [],
+    cid_map: [],
+    codespaces: [
+      { length: 2, first: 0x4100, last: 0x41FF },
+      { length: 1, first: 0x00, last: 0x7F },
+    ],
+    wmode: None,
+  }
+  @test.assert_eq(PdfExternalCMap(3, mixed_parsed).uses_two_byte_codes(), false)
+  @test.assert_eq(
+    pdf_text_parsed_cmap_charcodes_of_text(
+      mixed_parsed,
+      wbtest_text_bytes([0x41, 0x00])[:],
+    ),
+    [0x4100],
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" 7x")[:], 0),
+    Some((7, 2)),
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +7x")[:], 0),
+    None,
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +x")[:], 0),
+    None,
+  )
+  let cidchar_entries : Array[(Int, Int)] = []
+  pdf_text_push_cmap_cidchar_entries(
+    cidchar_entries,
+    @ascii.encode("<> 1 <41> 7 <42> +")[:],
+  )
+  @test.assert_eq(cidchar_entries, [(0x41, 7)])
+  pdf_text_push_cmap_cidchar_entries(
+    cidchar_entries,
+    @ascii.encode("<43> +7")[:],
+  )
+  @test.assert_eq(cidchar_entries, [(0x41, 7)])
+
+  let cidrange_entries : Array[(Int, Int)] = []
+  pdf_text_push_cmap_cidrange_entries(
+    cidrange_entries,
+    @ascii.encode("<02><01> 5")[:],
+  )
+  @test.assert_eq(cidrange_entries, [])
+  pdf_text_push_cmap_cidrange_entries(
+    cidrange_entries,
+    @ascii.encode("<10><11>")[:],
+  )
+  @test.assert_eq(cidrange_entries, [])
+  pdf_text_push_cmap_cidrange_entries(
+    cidrange_entries,
+    @ascii.encode("<12> 8")[:],
+  )
+  @test.assert_eq(cidrange_entries, [])
+
+  let codespaces : Array[PdfCMapCodeSpace] = []
+  pdf_text_push_cmap_codespace_entries(
+    codespaces,
+    @ascii.encode("<00><FFFF>")[:],
+  )
+  @test.assert_eq(codespaces, [])
+  pdf_text_push_cmap_codespace_entries(codespaces, @ascii.encode("<00>")[:])
+  @test.assert_eq(codespaces, [])
+
+  @test.assert_eq(
+    pdf_text_parse_cmap_cids(
+      @ascii.encode("1 begin\n" + "cidchar\n" + "<41> 7\n" + "endcidchar\n")[:],
+    ),
+    Some([(0x41, 7)]),
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_cids(
+      @ascii.encode(
+        "1 begincidchar <41> 7 endcidchar\n" +
+        "1 begin\n" +
+        "cidchar\n" +
+        "<42> 8\n" +
+        "endcidchar\n",
+      )[:],
+    ),
+    Some([(0x41, 7), (0x42, 8)]),
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_codespaces(
+      @ascii.encode(
+        "1 begin\n" + "codespacerange\n" + "<00><7F>\n" + "endcodespacerange\n",
+      )[:],
+    ),
+    Some([{ length: 1, first: 0x00, last: 0x7F }]),
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_codespaces(
+      @ascii.encode(
+        "1 begincodespacerange <00><7F> endcodespacerange\n" +
+        "1 begin\n" +
+        "codespacerange\n" +
+        "<8100><81FF>\n" +
+        "endcodespacerange\n",
+      )[:],
+    ),
+    Some([
+      { length: 1, first: 0x00, last: 0x7F },
+      { length: 2, first: 0x8100, last: 0x81FF },
+    ]),
+  )
+
+  let fallback_doc = pdf_document_empty()
+  let descendant = pdf_dictionary([
+    (
+      wbtest_text_name("/CIDSystemInfo"),
+      pdf_dictionary([
+        (wbtest_text_name("/Registry"), PdfString(wbtest_text_bytes([82]))),
+        (wbtest_text_name("/Ordering"), PdfString(wbtest_text_bytes([79]))),
+        (wbtest_text_name("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      wbtest_text_name("/BaseFont"),
+      PdfNameObject(wbtest_text_name("/Descendant")),
+    ),
+    (wbtest_text_name("/FontDescriptor"), pdf_dictionary([])),
+  ])
+  fallback_doc.add_object_given_number(4, descendant)
+  let bad_cmap = pdf_stream(
+    pdf_dictionary([
+      (
+        wbtest_text_name("/Filter"),
+        PdfNameObject(wbtest_text_name("/NoSuchFilter")),
+      ),
+    ]),
+    StreamGot(wbtest_text_bytes([1])),
+  )
+  fallback_doc.add_object_given_number(5, bad_cmap)
+  let font = pdf_dictionary([
+    (wbtest_text_name("/BaseFont"), PdfNameObject(wbtest_text_name("/Top"))),
+    (wbtest_text_name("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (wbtest_text_name("/Encoding"), PdfIndirect(5)),
+  ])
+  guard (try! fallback_doc.read_cidkeyed_font(font)).encoding is PdfCMap(5) else {
+    fail("expected unparsed fallback CMap")
+  }
+}
+
+///|
 test "private text stream helpers treat malformed ToUnicode streams as absent" {
   let key = wbtest_text_name("/Missing")
   @test.assert_eq(pdf_text_dictionary_has_key(PdfInteger(1), key), false)

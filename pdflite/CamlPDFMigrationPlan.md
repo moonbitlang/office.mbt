@@ -1013,8 +1013,12 @@ MoonBit consequences for this project:
    generated 90ms/90pv RKSJ direct Unicode tables, generated CID-range routing
    through `Adobe-Japan1-UCS2` for JIS `/H`, EUC-H, Hojo, NWP, Add, Ext, and
    related RKSJ variants, three-byte Hojo-EUC charcode segmentation, and
-   reverse lookup for single-scalar entries. Other remaining predefined-CMap
-   tables remain deferred.
+   reverse lookup for single-scalar entries. Indirect external Type0
+   `/Encoding` CMap streams now parse `begincodespacerange`, `begincidchar`,
+   and `begincidrange`, preserve parsed data on the font encoding, segment
+   variable-length text through the parsed codespaces, and use CID mappings as
+   the no-`/ToUnicode` fallback with reverse CID lookup. Other remaining
+   predefined/general CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1587,6 +1591,10 @@ reader or writer invariant is narrower than a whole-document workflow:
   `/H`, EUC-H, Hojo, NWP, Add, Ext, and related RKSJ variants, Hojo-EUC
   three-byte charcode segmentation, multi-scalar expansion, single-scalar
   reverse charcode lookup, and invalid-code fallback;
+- parse indirect external Type0 `/Encoding` CMap streams for
+  `begincodespacerange`, `begincidchar`, and `begincidrange`, then use parsed
+  codespaces for variable-length text segmentation and parsed CID mappings for
+  no-`/ToUnicode` fallback plus reverse CID lookup;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`

@@ -917,9 +917,16 @@ pub(all) struct PdfCIDVerticalWidth {
   vy : Double
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfCMapCodeSpace {
+  length : Int
+  first : Int
+  last : Int
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfCMapEncoding {
   PdfPredefinedCMap(PdfName)
   PdfCMap(Int)
+  PdfExternalCMap(Int, PdfParsedCMap)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCMapEncoding::is_identity_h(Self) -> Bool
 pub fn PdfCMapEncoding::is_identity_v(Self) -> Bool
@@ -1582,6 +1589,8 @@ pub(all) enum PdfPageRotation {
 
 pub(all) struct PdfParsedCMap {
   map : Array[(Int, Bytes)]
+  cid_map : Array[(Int, Int)]
+  codespaces : Array[PdfCMapCodeSpace]
   wmode : Int?
 } derive(Eq, ToJson, @debug.Debug)
 

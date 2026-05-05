@@ -1761,7 +1761,12 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
       cid_default_width: 1000.0,
       cid_default_width2: [880.0, -1000.0],
     },
-    encoding: PdfCMap(5),
+    encoding: PdfExternalCMap(5, {
+      map: [],
+      cid_map: [],
+      codespaces: [],
+      wmode: None,
+    }),
   })
 }
 
@@ -2607,6 +2612,8 @@ test "PdfDocument parse_cmap decodes stream objects" {
       (48, text_bytes_for_test([0x00, 0x61])),
       (49, text_bytes_for_test([0x00, 0x62])),
     ],
+    cid_map: [],
+    codespaces: [],
     wmode: Some(0),
   })
   let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? doc.parse_cmap(
@@ -2615,6 +2622,35 @@ test "PdfDocument parse_cmap decodes stream objects" {
   guard non_stream is Err(@pdflite.PdfError::CMapEncodingExpected) else {
     fail("expected CMapEncodingExpected")
   }
+}
+
+///|
+test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "2 begincodespacerange\n" +
+      "<00><7F>\n" +
+      "<8100><81FF>\n" +
+      "endcodespacerange\n" +
+      "1 begincidchar\n" +
+      "<41> 100\n" +
+      "endcidchar\n" +
+      "1 begincidrange\n" +
+      "<8140><8142> 200\n" +
+      "endcidrange\n",
+    )[:],
+  )
+  @test.assert_eq(parsed.codespaces, [
+    { length: 1, first: 0x00, last: 0x7F },
+    { length: 2, first: 0x8100, last: 0x81FF },
+  ])
+  @test.assert_eq(parsed.cid_map, [
+    (0x41, 100),
+    (0x8140, 200),
+    (0x8141, 201),
+    (0x8142, 202),
+  ])
+  @test.assert_eq(parsed.map, [])
 }
 
 ///|
@@ -4157,6 +4193,63 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     [0x00, 0x42],
   )
   @test.assert_eq(external_extractor.charcode_of_codepoint(0x42), None)
+}
+
+///|
+test "PdfDocument applies indirect external CMap text segmentation and CID mapping" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, text_valid_cid_descendant_for_test([]))
+  let cmap_data = @ascii.encode(
+    "2 begincodespacerange\n" +
+    "<00><7F>\n" +
+    "<8100><81FF>\n" +
+    "endcodespacerange\n" +
+    "1 begincidchar\n" +
+    "<41> 100\n" +
+    "endcidchar\n" +
+    "1 begincidrange\n" +
+    "<8140><8142> 200\n" +
+    "endcidrange\n",
+  )
+  let cmap = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(cmap_data.length())),
+    ]),
+    StreamGot(cmap_data),
+  )
+  doc.add_object_given_number(5, cmap)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (text_name_for_test("/Encoding"), PdfIndirect(5)),
+  ])
+  guard (try! doc.read_cidkeyed_font(font)).encoding
+    is PdfExternalCMap(5, parsed) else {
+    fail("expected parsed external CMap")
+  }
+  @test.assert_eq(parsed.codespaces, [
+    { length: 1, first: 0x00, last: 0x7F },
+    { length: 2, first: 0x8100, last: 0x81FF },
+  ])
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0x81, 0x40, 0x81, 0x42, 0x30])[:],
+    ),
+    [100, 200, 202, 0x30],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(202), Some(0x8142))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x30), None)
+  let truncated : Result[Array[Int], Error] = try? extractor.codepoints_of_text(
+    text_bytes_for_test([0x81])[:],
+  )
+  guard truncated is Err(_) else {
+    fail("expected malformed external CMap code")
+  }
 }
 
 ///|

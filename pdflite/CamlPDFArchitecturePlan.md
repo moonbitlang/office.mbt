@@ -164,7 +164,9 @@ work changes.
    predefined-CMap override fallbacks for supported Adobe-GB1, Adobe-CNS1, and
    Adobe-Korea1 families when `/ToUnicode` is absent, and generated
    Adobe-Japan1 fallbacks for 90ms/90pv RKSJ direct Unicode maps, JIS two-byte
-   CMaps, EUC-H, and Hojo-EUC three-byte charcodes,
+   CMaps, EUC-H, and Hojo-EUC three-byte charcodes, external CMap stream
+   parsing for codespaces plus `begincidchar`/`begincidrange` Type0
+   `/Encoding` streams with variable-length text segmentation and CID fallback,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
@@ -187,8 +189,9 @@ work changes.
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
    beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
-   fallbacks, broader external/general CMap parsing, plus JPEG pixel decode and
-   remaining image filter families.
+   fallbacks, broader external/general CMap parsing beyond the current
+   codespace/CID-char/CID-range subset, plus JPEG pixel decode and remaining
+   image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -251,9 +254,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 91-93% complete. Full
+Current estimate: native main-feature parity is about 92-94% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 80-85% complete.
+and backend breadth, is about 81-86% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -309,7 +312,9 @@ and backend breadth, is about 80-85% complete.
   absent, vertical predefined-CMap override fallbacks for supported Adobe-GB1,
   Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, Japanese
   Adobe-Japan1 predefined-CMap fallbacks for 90ms/90pv RKSJ, JIS `/H`, EUC-H,
-  and Hojo-EUC when `/ToUnicode` is absent, and an
+  and Hojo-EUC when `/ToUnicode` is absent, external CMap stream parsing for
+  codespaces plus `begincidchar`/`begincidrange` Type0 `/Encoding` streams,
+  variable-length text segmentation, CID fallback, and reverse CID lookup, and an
   Identity-V native gate with vertical width metadata. Native image acceptance
   now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
@@ -324,8 +329,9 @@ and backend breadth, is about 80-85% complete.
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
   beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
-  fallbacks, broader external/general CMap parsing, additional TrueType and
-  Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
+  fallbacks, broader external/general CMap parsing beyond the current
+  codespace/CID-char/CID-range subset, additional TrueType and Type3
+  glyph-program edge coverage, more real-world ToUnicode variations, and
   broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2

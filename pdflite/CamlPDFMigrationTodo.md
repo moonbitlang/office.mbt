@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 91-93%.
+- Native main-feature parity: 92-94%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 80-85%.
+  breadth: 81-86%.
 
 ## P0: Native Main Workflows
 
@@ -134,9 +134,14 @@ Current estimate:
   absent, including generated 90ms/90pv RKSJ direct Unicode tables, JIS
   two-byte CMaps, EUC-H, Hojo-EUC three-byte charcodes, multi-scalar expansion,
   and reverse lookup for single-scalar entries.~~
+- [x] ~~External CMap stream parsing for `begincodespacerange`,
+  `begincidchar`, and `begincidrange`, including parsed indirect `/Encoding`
+  streams, variable-length text segmentation, CID fallback, reverse CID lookup,
+  and `/ToUnicode` coexistence by character code.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
-  plus broader external/general CMap parsing.
+  plus broader external/general CMap parsing beyond the current
+  codespace/CID-char/CID-range subset.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -253,7 +258,10 @@ Current estimate:
 - [x] ~~Add the next remaining text parity slice: Japanese multi-byte
   predefined-CMap fallback, broader external predefined/general CMap parsing,
   or real-world ToUnicode variation coverage.~~
-- [ ] Add the next remaining text parity slice: broader external
-  predefined/general CMap parsing, remaining rare predefined CMap families, or
-  real-world ToUnicode variation coverage.
+- [x] ~~Add the next remaining text parity slice: external CMap stream
+  codespace/CID mapping for indirect Type0 `/Encoding` streams, remaining rare
+  predefined CMap families, or real-world ToUnicode variation coverage.~~
+- [ ] Add the next remaining text parity slice: broader external/general CMap
+  parsing beyond codespace/CID-char/CID-range, remaining rare predefined CMap
+  families, or real-world ToUnicode variation coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.
