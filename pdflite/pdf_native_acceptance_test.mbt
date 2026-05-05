@@ -1375,6 +1375,110 @@ fn acceptance_identity_h_tounicode_text_document_for_test() -> @pdflite.PdfDocum
 }
 
 ///|
+fn acceptance_predefined_cmap_descendant_font_for_test(
+  basefont : String,
+  ordering : String,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/CIDFontType2")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test(basefont)),
+    ),
+    (
+      acceptance_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Registry"),
+          PdfString(acceptance_ascii_for_test("Adobe")),
+        ),
+        (
+          acceptance_name_for_test("/Ordering"),
+          PdfString(acceptance_ascii_for_test(ordering)),
+        ),
+        (acceptance_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/FontDescriptor"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Ascent"), PdfInteger(880)),
+        (acceptance_name_for_test("/Descent"), PdfInteger(-120)),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_gbk2k_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0x41, 0x81, 0x40, 0xC4, 0xE3, 0xFE, 0x51, 0x81, 0x30, 0x84, 0x36,
+  ])
+}
+
+///|
+fn acceptance_gbk2k_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type0")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/GBK2KTop")),
+    ),
+    (
+      acceptance_name_for_test("/Encoding"),
+      PdfNameObject(acceptance_name_for_test("/GBK2K-H")),
+    ),
+    (acceptance_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(92)])),
+  ])
+}
+
+///|
+fn acceptance_gbk2k_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    92,
+    acceptance_predefined_cmap_descendant_font_for_test(
+      "/GBK2KDescendant", "GB1",
+    ),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Fgbk2k"), acceptance_gbk2k_font_for_test()),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Fgbk2k"), 14.0),
+        Op_Tj(acceptance_gbk2k_text_for_test()),
+        Op_TJ(
+          PdfArray([
+            PdfString(acceptance_text_bytes_for_test([0x82, 0x36, 0x94, 0x35])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
 fn acceptance_font_object_by_name_for_test(
   resources : @pdflite.PdfObject,
   name : @pdflite.PdfName,
@@ -1515,6 +1619,50 @@ fn acceptance_assert_identity_h_tounicode_text_for_test(
   let extractor = doc.text_extractor_of_font(font)
   @test.assert_eq(extractor.charcode_of_codepoint(0x2603), Some(0x0041))
   @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(0x0042))
+}
+
+///|
+fn acceptance_assert_gbk2k_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Fgbk2k"),
+  )
+  let read = doc.read_font(font)
+  @test.assert_eq(read.is_identity_h(), false)
+  @test.assert_eq(read.is_identity_v(), false)
+  @test.assert_eq(read.uses_two_byte_codes(), false)
+  guard read is PdfFontCIDKeyed(cid_font) else {
+    fail("expected CID-keyed GBK2K font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(acceptance_name_for_test("/GBK2K-H")),
+  )
+  @test.assert_eq(
+    cid_font.composite.cid_system_info.ordering,
+    acceptance_ascii_for_test("GB1"),
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Fgbk2k"),
+    ),
+    [0x41, 0x4E02, 0x4F60, 0x20087, 0x00A5, 0xA4C6],
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4E02), Some(0x8140))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x4F60), Some(0xC4E3))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x20087), Some(0xFE51))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x00A5), Some(0x81308436))
+  @test.assert_eq(extractor.charcode_of_codepoint(0xA4C6), Some(0x82369435))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x1F600), None)
 }
 
 ///|
@@ -4257,6 +4405,16 @@ test "native acceptance suite extracts Identity-V CID text through reader bounda
   acceptance_assert_identity_v_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_identity_v_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts GBK2K predefined CMap text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_gbk2k_text_document_for_test(),
+  )
+  acceptance_assert_gbk2k_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_gbk2k_text_for_test(reparsed)
 }
 
 ///|

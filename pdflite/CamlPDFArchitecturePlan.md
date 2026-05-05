@@ -208,6 +208,8 @@ work changes.
    XObjects, structured DCT/JPEG marker payloads through staged Flate-then-DCT
    XObjects and DCT inline-image parsing, direct JPX encoded-image preservation,
    staged Flate-then-JBIG2 encoded-image preservation with `/JBIG2Globals`,
+   GBK2K-H predefined-CMap mixed 1/2/4-byte text extraction and reverse lookup
+   through compressed read/write/reread boundaries,
    Type3 `/ToUnicode` text extraction with indirect CharProcs and custom
    metrics, plus a Type3 glyph-program resource gate where a CharProc uses
    its Type3 `/Resources` for an XObject invocation and named inline-image
@@ -372,8 +374,9 @@ and backend breadth, is about 83-88% complete.
   `/UseCMap` composition, notdef-map extraction and reverse lookup before
   inherited predefined/Identity fallbacks, encoding-side `bfchar`/`bfrange`
   Unicode fallback for otherwise unmapped charcodes, ToUnicode stream
-  inheritance through extraction, comment-aware CMap parsing, and an
-  Identity-V native gate with vertical width metadata.
+  inheritance through extraction, comment-aware CMap parsing, an Identity-V
+  native gate with vertical width metadata, and a native GBK2K-H gate for mixed
+  1/2/4-byte predefined-CMap extraction and reverse lookup.
   Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2

@@ -41,8 +41,11 @@ Current estimate:
   when suitable fixtures are available.
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
-- [ ] Decide the next rare predefined CMap source-table slice or defer it until
-  better fixtures/source tables are available.
+- [x] ~~Add a native reader-boundary gate for the next available predefined CMap
+  source-table slice: GBK2K-H mixed 1/2/4-byte text extraction and reverse
+  charcode lookup.~~
+- [ ] Decide any further rare predefined CMap source-table slices only when
+  useful source tables or fixtures are available.
 - [ ] Improve zlib byte-output/performance parity beyond the explicit Flate
   level API.
 - [ ] Profile and tune large-file hot paths for object streams, filters, and
@@ -67,6 +70,9 @@ Current estimate:
   and stream-dictionary header metadata, Identity and named predefined
   `/UseCMap` fallbacks, parsed stream `/UseCMap` composition, and PDF comments
   in CMap programs.~~
+- [x] ~~Native predefined CMap reader-boundary gate for GBK2K-H mixed-byte
+  extraction and reverse lookup through compressed read/write/reread
+  boundaries.~~
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
 - [ ] Add further real-world Type3 glyph-program/resource coverage when
@@ -443,6 +449,8 @@ Current estimate:
 - [x] ~~Add a Type3 CharProc resource-use gate covering `/XObject` lookup and
   named inline-image `/ColorSpace` resolution from the Type3 resource
   dictionary.~~
+- [x] ~~Add a native GBK2K-H predefined-CMap reader-boundary gate for mixed
+  1/2/4-byte extraction and reverse lookup.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
