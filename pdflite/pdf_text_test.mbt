@@ -3533,6 +3533,68 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard ksc_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated KSC-EUC charcode")
   }
+  let kscpc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopKSCpcEUCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/KSCpc-EUC-H")),
+  })
+  let kscpc_euc_builtin_extractor = kscpc_euc_builtin_font.text_extractor()
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0x80, 0x81, 0x84, 0x9F, 0xFE, 0xFF, 0xA1, 0x41, 0xA1, 0x51, 0xA2, 0xE6,
+        0xA2, 0xEF, 0xB0, 0xA1, 0xC7, 0xD1,
+      ])[:],
+    ),
+    [
+      0x41, 0x00A0, 0x20A9, 0xFF3F, 0x9F, 0x2122, 0x22EF, 0x300C, 0x28, 0x28, 0x31,
+      0x20DE, 0x5B, 0x31, 0x30, 0x5D, 0xAC00, 0xD55C,
+    ],
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0xA1, 0x40])[:],
+    ),
+    [0xA140],
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0x28),
+    Some(0x28),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0x20A9),
+    Some(0x81),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0xFF3F),
+    Some(0x84),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0x2122),
+    Some(0xFE),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0x22EF),
+    Some(0xFF),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0x300C),
+    Some(0xA141),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0xAC00),
+    Some(0xB0A1),
+  )
+  @test.assert_eq(
+    kscpc_euc_builtin_extractor.charcode_of_codepoint(0x20DE),
+    None,
+  )
+  let kscpc_euc_truncated = try? kscpc_euc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0xA1])[:],
+  )
+  guard kscpc_euc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated KSCpc-EUC charcode")
+  }
   let rksj_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
     ..text_font_descriptor_for_test(),
     tounicode: Some([

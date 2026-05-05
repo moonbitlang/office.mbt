@@ -106,9 +106,12 @@ Current estimate:
 - [x] ~~KSC-EUC predefined CMap built-in mapping table composed from
   `KSC-EUC-H` and `Adobe-Korea1-UCS2` when `/ToUnicode` is absent, including
   reverse charcode lookup.~~
+- [x] ~~KSCpc-EUC predefined CMap built-in mapping table from
+  `KSCpc-EUC-UCS2`, including multi-codepoint expansion and single-codepoint
+  reverse lookup.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
-  single-byte, GB-EUC, Big5, UHC, GBK, and KSC-EUC fallbacks, plus more
-  vertical-writing text behavior when `/ToUnicode` is absent.
+  single-byte, GB-EUC, Big5, UHC, GBK, KSC-EUC, and KSCpc-EUC fallbacks, plus
+  more vertical-writing text behavior when `/ToUnicode` is absent.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -202,6 +205,8 @@ Current estimate:
 - [x] ~~Add another remaining non-UCS2 predefined-CMap mapping table, such as
   KSC-EUC, HKSCS, or GBK2K, or a vertical no-`/ToUnicode` predefined-CMap
   gate.~~
+- [x] ~~Add the next remaining non-UCS2 predefined-CMap table, such as HKSCS,
+  KSCpc-EUC, GBK2K, or a vertical no-`/ToUnicode` predefined-CMap gate.~~
 - [ ] Add the next remaining non-UCS2 predefined-CMap table, such as HKSCS,
-  KSCpc-EUC, GBK2K, or a vertical no-`/ToUnicode` predefined-CMap gate.
+  GBpc-EUC, GBK2K, or a vertical no-`/ToUnicode` predefined-CMap gate.
 - [ ] Revisit non-native backend validation after native parity is stable.
