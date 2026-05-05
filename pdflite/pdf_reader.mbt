@@ -1299,6 +1299,26 @@ fn pdf_read_probe_page_tree_or_reconstruct(
             include_xref_stream_trailers=true,
           )
       }
+    Some(_) => document
+    None => pdf_read_reconstruct_valid_page_tree_or_original(data, document)
+  }
+}
+
+///|
+fn pdf_read_reconstruct_valid_page_tree_or_original(
+  data : BytesView,
+  document : PdfDocument,
+) -> PdfDocument {
+  let reconstructed = pdf_read_reconstructed_document_from_view(
+    data,
+    include_xref_stream_trailers=true,
+  ) catch {
+    _ => document
+  }
+  try {
+    ignore(reconstructed.endpage())
+    reconstructed
+  } catch {
     _ => document
   }
 }

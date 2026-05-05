@@ -23,9 +23,9 @@ work changes.
    CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
    revision-specific reads where revision `1` is newest and larger numbers
    follow older `/Prev` state across classic and xref-stream update chains.
-   Public reads now also probe a parsed catalog page tree after strict loading
-   and fall back to reconstruction when xref omissions leave `/Pages` references
-   unresolved.
+   Public reads now also probe catalog/page-tree readability after strict
+   loading and fall back to reconstruction when xref omissions leave the root
+   catalog or `/Pages` references unresolved.
    Password-aware public read wrappers now also have revision-aware variants.
    Remaining focus: broader malformed xref-table recovery and parser-state
    behavior around encrypted/deferred objects.
