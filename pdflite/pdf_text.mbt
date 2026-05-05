@@ -327,12 +327,14 @@ fn pdf_text_predefined_cmap_uses_hkscs_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_text_predefined_hk_b5_cid_ranges(
+fn pdf_text_predefined_cns1_b5_cid_ranges(
   name : PdfName,
 ) -> Array[(Int, Int, Int)]? {
   let text = pdf_text_string_of_name(name)
   guard pdf_text_predefined_cmap_has_text_orientation(text) else { return None }
-  if text.contains("HKdla-B5") {
+  if text.contains("ETenms-B5") {
+    Some(pdf_text_etenms_b5_cid_ranges)
+  } else if text.contains("HKdla-B5") {
     Some(pdf_text_hkdla_b5_cid_ranges)
   } else if text.contains("HKdlb-B5") {
     Some(pdf_text_hkdlb_b5_cid_ranges)
@@ -348,8 +350,8 @@ fn pdf_text_predefined_hk_b5_cid_ranges(
 }
 
 ///|
-fn pdf_text_predefined_cmap_uses_hk_b5_charcodes(name : PdfName) -> Bool {
-  match pdf_text_predefined_hk_b5_cid_ranges(name) {
+fn pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name : PdfName) -> Bool {
+  match pdf_text_predefined_cns1_b5_cid_ranges(name) {
     Some(_) => true
     None => false
   }
@@ -7136,7 +7138,7 @@ fn PdfFont::pdf_text_predefined_builtin_codepoints(
           } else if pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name) {
             pdf_text_predefined_gbpc_euc_codepoints(code)
           } else {
-            match pdf_text_predefined_hk_b5_cid_ranges(name) {
+            match pdf_text_predefined_cns1_b5_cid_ranges(name) {
               Some(ranges) =>
                 match pdf_text_predefined_cns1_codepoint(ranges, code) {
                   Some(codepoint) => Some([codepoint])
@@ -7204,7 +7206,7 @@ fn PdfFont::pdf_text_predefined_builtin_charcode(
           } else if pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name) {
             pdf_text_predefined_gbpc_euc_charcode(codepoint)
           } else {
-            match pdf_text_predefined_hk_b5_cid_ranges(name) {
+            match pdf_text_predefined_cns1_b5_cid_ranges(name) {
               Some(ranges) =>
                 pdf_text_predefined_cns1_charcode(ranges, codepoint)
               None =>
@@ -7284,7 +7286,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
   let output : Array[Int] = []
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
   let b5pc = pdf_text_predefined_cmap_uses_b5pc_charcodes(name)
-  let hk_b5 = pdf_text_predefined_cmap_uses_hk_b5_charcodes(name)
+  let cns1_b5 = pdf_text_predefined_cmap_uses_cns1_b5_charcodes(name)
   let hkscs = pdf_text_predefined_cmap_uses_hkscs_charcodes(name)
   let gbpc_euc = pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name)
   let ksc_euc = pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name)
@@ -7322,7 +7324,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
         kscpc_euc &&
         ((first >= 0x80 && first <= 0x9F) || first == 0xFE || first == 0xFF)
       ) ||
-      (hk_b5 && first == 0x80) ||
+      (cns1_b5 && first == 0x80) ||
       (hkscs && first == 0x80) ||
       (gbk && (first == 0x80 || first == 0xFF)) {
       output.push(first)

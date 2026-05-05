@@ -3574,6 +3574,46 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard hkscs_truncated is Err(BadText) else {
     fail("expected BadText for truncated HKSCS charcode")
   }
+  let etenms_b5_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopETenmsBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/ETenms-B5-H")),
+  })
+  let etenms_b5_builtin_extractor = etenms_b5_builtin_font.text_extractor()
+  @test.assert_eq(
+    etenms_b5_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0xA1, 0xC2, 0xA2, 0x41, 0xC7, 0xFD, 0x80])[:],
+    ),
+    [0x41, 0x00AF, 0x2215, 0x0419, 0x80],
+  )
+  @test.assert_eq(
+    etenms_b5_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x40])[:],
+    ),
+    [0x8140],
+  )
+  @test.assert_eq(
+    etenms_b5_builtin_extractor.charcode_of_codepoint(0x00AF),
+    Some(0xA1C2),
+  )
+  @test.assert_eq(
+    etenms_b5_builtin_extractor.charcode_of_codepoint(0x2215),
+    Some(0xA241),
+  )
+  @test.assert_eq(
+    etenms_b5_builtin_extractor.charcode_of_codepoint(0x0419),
+    Some(0xC7FD),
+  )
+  @test.assert_eq(
+    etenms_b5_builtin_extractor.charcode_of_codepoint(0x1F600),
+    None,
+  )
+  let etenms_b5_truncated = try? etenms_b5_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0xA1])[:],
+  )
+  guard etenms_b5_truncated is Err(BadText) else {
+    fail("expected BadText for truncated ETenms-B5 charcode")
+  }
   let hk_b5_cases : Array[(String, Array[Int], Array[Int], Int, Int)] = [
     (
       "/HKdla-B5-H",

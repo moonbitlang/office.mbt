@@ -121,10 +121,13 @@ Current estimate:
   `HKdla-B5`, `HKdlb-B5`, `HKgccs-B5`, `HKm314-B5`, and `HKm471-B5`,
   sharing Adobe-CNS1 CID-to-Unicode data, supplementary scalar handling, and
   reverse lookup.~~
+- [x] ~~ETenms-B5 predefined CMap built-in CID-range fallback, including its
+  ETen-B5 base, Adobe-CNS1 symbol/Cyrillic differences, single-byte `0x80`
+  behavior, and reverse lookup.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
-  single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, HKSCS, Hong Kong Big5, UHC, GBK,
-  KSC-EUC, and KSCpc-EUC fallbacks, plus more vertical-writing text behavior
-  when `/ToUnicode` is absent.
+  single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, ETenms-B5, HKSCS, Hong Kong
+  Big5, UHC, GBK, KSC-EUC, and KSCpc-EUC fallbacks, plus more vertical-writing
+  text behavior when `/ToUnicode` is absent.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -229,7 +232,10 @@ Current estimate:
 - [x] ~~Add the next remaining non-UCS2 predefined-CMap table, such as GBK2K,
   ETenms-B5, HKdla/HKdlb/HKgccs/HKm, or a vertical no-`/ToUnicode`
   predefined-CMap gate.~~
-- [ ] Add the next remaining non-UCS2 predefined-CMap table, such as
+- [x] ~~Add the next remaining non-UCS2 predefined-CMap table, such as
   ETenms-B5 exact coverage, vertical no-`/ToUnicode` behavior, or GBK2K after
-  the four-byte charcode representation is made explicit.
+  the four-byte charcode representation is made explicit.~~
+- [ ] Add the next remaining text parity slice: vertical no-`/ToUnicode`
+  behavior or GBK2K after the four-byte charcode representation is made
+  explicit.
 - [ ] Revisit non-native backend validation after native parity is stable.
