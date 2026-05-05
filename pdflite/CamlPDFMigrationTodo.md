@@ -77,6 +77,8 @@ Current estimate:
   gate where the newest revision moves `/Root` into an object stream.~~
 - [x] ~~Password-aware xref-stream/object-stream malformed-startxref recovery
   for encrypted object streams, including decrypted embedded payload materialization.~~
+- [x] ~~Hybrid classic trailer `/XRefStm` malformed-startxref recovery, loading
+  both table and xref-stream objects while sanitizing trailer xref keys.~~
 - [x] ~~Predefined UCS2 horizontal/vertical CMap two-byte text extraction gate
   through reader and extractor boundaries.~~
 - [ ] Broader non-UCS2 predefined CMap mapping tables and more vertical-writing
@@ -136,6 +138,7 @@ Current estimate:
 - [x] ~~Add a checked-in real PDF malformed-startxref reconstruction gate.~~
 - [x] ~~Extend the real malformed-startxref gate to xref-stream/object-stream
   PDFs.~~
+- [x] ~~Add a hybrid classic `/XRefStm` malformed-startxref reconstruction gate.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~

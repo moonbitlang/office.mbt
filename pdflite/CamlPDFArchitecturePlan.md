@@ -65,6 +65,9 @@ work changes.
    `startxref` pointer is invalid, loads their ordinary entries, and expands
    object-stream entries before selecting a trailer/root. This covers modern
    files whose catalog or page tree only exists inside `/ObjStm` storage.
+   Hybrid classic trailers with `/XRefStm` are now covered on the same
+   malformed-startxref path, so table objects and the pointed-to xref-stream
+   entries are both recovered and trailer-only xref machinery is stripped.
    Password-aware reconstruction now retries xref-stream object-stream
    expansion after trailer selection, when `/Encrypt` and file IDs are
    available, so encrypted `/ObjStm` payloads can be materialized during
