@@ -1792,6 +1792,98 @@ fn acceptance_count_change_replacement_page_for_test() -> @pdflite.PdfPage raise
 }
 
 ///|
+fn acceptance_reused_annotation_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_subtype = acceptance_name_for_test("/Subtype")
+  let key_popup = acceptance_name_for_test("/Popup")
+  let key_parent = acceptance_name_for_test("/Parent")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(acceptance_name_for_test("/Text"))),
+      (key_popup, PdfIndirect(11)),
+    ]),
+  )
+  doc.add_object_given_number(
+    11,
+    @pdflite.pdf_dictionary([
+      (key_subtype, PdfNameObject(acceptance_name_for_test("/Popup"))),
+      (key_parent, PdfIndirect(10)),
+    ]),
+  )
+  let page = {
+    ..acceptance_text_page_for_test("annotated-page"),
+    rest: @pdflite.pdf_dictionary([
+      (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11)])),
+    ]),
+  }
+  let page_root = doc.add_pagetree([page, page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_annotation_numbers_for_test(
+  page : @pdflite.PdfPage,
+) -> Array[Int] raise {
+  match page.rest.lookup_immediate(acceptance_name_for_test("/Annots")) {
+    Some(PdfArray(items)) => {
+      let numbers : Array[Int] = []
+      for item in items {
+        match item {
+          PdfIndirect(number) => numbers.push(number)
+          _ => fail("expected indirect annotation")
+        }
+      }
+      numbers
+    }
+    _ => fail("expected page annotations")
+  }
+}
+
+///|
+fn acceptance_assert_annotation_pair_for_test(
+  doc : @pdflite.PdfDocument,
+  numbers : ArrayView[Int],
+) -> Unit raise {
+  let key_popup = acceptance_name_for_test("/Popup")
+  let key_parent = acceptance_name_for_test("/Parent")
+  @test.assert_eq(numbers.length(), 2)
+  @test.assert_eq(
+    doc.lookup_object_or_null(numbers[0]).lookup_immediate(key_popup),
+    Some(PdfIndirect(numbers[1])),
+  )
+  @test.assert_eq(
+    doc.lookup_object_or_null(numbers[1]).lookup_immediate(key_parent),
+    Some(PdfIndirect(numbers[0])),
+  )
+}
+
+///|
+fn acceptance_assert_extracted_reused_annotations_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 6))
+  @test.assert_eq(doc.endpage(), 2)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 2)
+  for page in pages {
+    @test.assert_eq(
+      doc.parse_content_ops(page.content),
+      acceptance_text_page_ops_for_test("annotated-page"),
+    )
+  }
+  let first_annots = acceptance_annotation_numbers_for_test(pages[0])
+  let second_annots = acceptance_annotation_numbers_for_test(pages[1])
+  acceptance_assert_annotation_pair_for_test(doc, first_annots)
+  acceptance_assert_annotation_pair_for_test(doc, second_annots)
+  @test.assert_eq(first_annots[0] == second_annots[0], false)
+  @test.assert_eq(first_annots[1] == second_annots[1], false)
+}
+
+///|
 fn acceptance_assert_count_changed_document_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2741,6 +2833,18 @@ test "native acceptance suite changes page count with explicit reference mapping
   acceptance_assert_count_changed_document_for_test(changed)
   let reparsed = acceptance_compressed_roundtrip_for_test(changed)
   acceptance_assert_count_changed_document_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts reused annotations with repaired links" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_reused_annotation_document_for_test(),
+  )
+  @test.assert_eq(parsed.endpage(), 2)
+  let extracted = parsed.pdf_of_pages([1, 2])
+  acceptance_assert_extracted_reused_annotations_for_test(extracted)
+  let reparsed = acceptance_compressed_roundtrip_for_test(extracted)
+  acceptance_assert_extracted_reused_annotations_for_test(reparsed)
 }
 
 ///|

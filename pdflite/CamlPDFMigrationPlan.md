@@ -1465,6 +1465,9 @@ public APIs end to end:
   boundary with explicit serial reference mapping, preserving trailer `/ID` and
   root metadata while retargeting bookmarks and transforming catalog
   `/OpenAction` destinations through write/reread.
+- extract pages that reuse annotation and popup objects after a compressed
+  xref-stream read boundary, duplicating the annotation pairs and repairing
+  `/Popup` and `/Parent` links through write/reread.
 - preserve document-level feature state through a compressed xref-stream
   read/edit/write/reread lifecycle: page labels, link annotations, old-style
   destinations, name-tree destinations, open actions, and matrix-transformed page

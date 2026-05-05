@@ -247,7 +247,9 @@ gates are solid; backend breadth follows after native feature parity.
   Count-changing `change_pages` is covered through compressed reader and writer
   boundaries with explicit serial reference mapping, bookmark retargeting,
   transformed catalog `/OpenAction`, trailer `/ID`, and root metadata
-  preservation.
+  preservation. Page extraction now also has a native gate for reused annotation
+  and popup objects, proving duplicated selected pages get distinct annotation
+  pairs with repaired `/Popup` and `/Parent` links through write/reread.
   Native OS-random AESV2/AESV3 convenience writer output is covered with decrypt
   and output-variation checks, and AESV3 saved-state recrypt is covered through
   the default secure-random IV path.
