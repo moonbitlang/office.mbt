@@ -132,12 +132,14 @@ work changes.
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
    extraction are started, including 1-, 2-, 4-, and 8-bit `/Indexed` raw
    image samples plus explicit `/Indexed` encoded-image `/Decode` metadata
-   preservation. Native acceptance now exercises image extraction through
+   preservation. Native acceptance now exercises Identity-H and Identity-V
+   predefined CMap extraction through compressed read/write boundaries,
+   including Identity-V vertical width metadata, plus image extraction through
    compressed read/write boundaries for Flate-decoded raw `/Indexed` image
    XObjects, staged Flate-then-DCT encoded-image pass-through, and Flate
    inline-image content parsing.
-   Remaining focus: broader predefined CMap semantics, JPEG pixel decode, and
-   remaining image filter families.
+   Remaining focus: broader predefined CMap semantics beyond Identity-H/V, JPEG
+   pixel decode, and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -233,10 +235,11 @@ and backend breadth, is about 64-69% complete.
 - Covered: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode,
   predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
-  UTF-16BE, ToUnicode CMaps, and Identity-H/V CID text basics.
-- Not covered enough: broader predefined CMap semantics, vertical-writing
-  behavior beyond the current gates, Type3/TrueType edge coverage, and more
-  real-world ToUnicode variations.
+  UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, and an Identity-V
+  native gate with vertical width metadata.
+- Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
+  vertical-writing behavior beyond the current gates, Type3/TrueType edge
+  coverage, and more real-world ToUnicode variations.
 - Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
   CCITT/JBIG2 external-style decode behavior, and remaining image filter
   families.
@@ -255,8 +258,7 @@ and backend breadth, is about 64-69% complete.
 
 ### Immediate Work Order
 
-- Next: deepen text/image parity with one predefined-CMap gate and one
-  filter/image-family gate.
+- Next: deepen image/filter parity with one remaining filter/image-family gate.
 - Later: expand malformed-reader recovery from realistic documents and only
   then widen backend validation beyond native.
 

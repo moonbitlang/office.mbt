@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 75-79%.
+- Native main-feature parity: 76-80%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 64-69%.
+  breadth: 65-70%.
 
 ## P0: Native Main Workflows
 
@@ -55,7 +55,10 @@ Current estimate:
   extraction gates.~~
 - [x] ~~Raw/encoded image extraction basics, including indexed raw samples,
   staged Flate-to-DCT pass-through, and inline image parsing gates.~~
-- [ ] Broader predefined CMap semantics and vertical-writing text behavior.
+- [x] ~~Identity-V predefined CMap native text gate with vertical width
+  metadata through compressed read/write/reread boundaries.~~
+- [ ] Broader predefined CMap semantics beyond Identity-H/V and more
+  vertical-writing text behavior.
 - [ ] More Type3/TrueType font edge coverage.
 - [ ] JPEG pixel decoding.
 - [ ] CCITT/JBIG2 external-style decode behavior and remaining image filter
@@ -82,7 +85,7 @@ Current estimate:
 - [x] ~~Add one broader `change_pages` compatibility gate.~~
 - [x] ~~Add one non-stream encrypted parser-state gate.~~
 - [x] ~~Add one broader encrypted malformed-reader gate beyond stream/object-stream data.~~
-- [ ] Add one predefined-CMap text gate.
+- [x] ~~Add one predefined-CMap text gate.~~
 - [ ] Add one remaining filter/image-family gate.
 - [ ] Expand malformed-reader recovery from realistic documents.
 - [ ] Revisit non-native backend validation after native parity is stable.

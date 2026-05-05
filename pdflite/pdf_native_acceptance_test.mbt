@@ -594,6 +594,88 @@ fn acceptance_identity_h_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn acceptance_identity_v_text_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0x00, 0x43, 0x30, 0xA2])
+}
+
+///|
+fn acceptance_identity_v_descendant_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/CIDFontType2")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/IdentityVerticalDescendant")),
+    ),
+    (
+      acceptance_name_for_test("/CIDSystemInfo"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Registry"),
+          PdfString(acceptance_ascii_for_test("Adobe")),
+        ),
+        (
+          acceptance_name_for_test("/Ordering"),
+          PdfString(acceptance_ascii_for_test("Identity")),
+        ),
+        (acceptance_name_for_test("/Supplement"), PdfInteger(0)),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/FontDescriptor"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Ascent"), PdfInteger(880)),
+        (acceptance_name_for_test("/Descent"), PdfInteger(-120)),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/W2"),
+      PdfArray([
+        PdfInteger(0x43),
+        PdfArray([
+          PdfInteger(1000),
+          PdfInteger(20),
+          PdfInteger(880),
+          PdfInteger(900),
+          PdfInteger(25),
+          PdfInteger(870),
+        ]),
+        PdfInteger(0x4E8C),
+        PdfInteger(0x4E8C),
+        PdfInteger(1200),
+        PdfInteger(30),
+        PdfInteger(860),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/DW2"),
+      PdfArray([PdfInteger(880), PdfInteger(-1000)]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_identity_v_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type0")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/IdentityVerticalTop")),
+    ),
+    (
+      acceptance_name_for_test("/Encoding"),
+      PdfNameObject(acceptance_name_for_test("/Identity-V")),
+    ),
+    (acceptance_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(72)])),
+  ])
+}
+
+///|
 fn acceptance_identity_h_text_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
@@ -624,6 +706,49 @@ fn acceptance_identity_h_text_document_for_test() -> @pdflite.PdfDocument raise 
             PdfString(acceptance_text_bytes_for_test([0x00, 0x42])),
             PdfInteger(-30),
             PdfString(acceptance_text_bytes_for_test([0x4E, 0x00])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_identity_v_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    72,
+    acceptance_identity_v_descendant_font_for_test(),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Fcid"),
+          acceptance_identity_v_font_for_test(),
+        ),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Fcid"), 14.0),
+        Op_Tj(acceptance_identity_v_text_for_test()),
+        Op_TJ(
+          PdfArray([
+            PdfString(acceptance_text_bytes_for_test([0x00, 0x44])),
+            PdfInteger(-30),
+            PdfString(acceptance_text_bytes_for_test([0x4E, 0x8C])),
           ]),
         ),
         Op_ET,
@@ -733,10 +858,21 @@ fn acceptance_font_object_by_name_for_test(
 fn acceptance_identity_h_codepoints_of_first_page_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Array[Int] raise {
+  acceptance_cid_codepoints_of_first_page_for_test(
+    doc,
+    acceptance_name_for_test("/Fcid"),
+  )
+}
+
+///|
+fn acceptance_cid_codepoints_of_first_page_for_test(
+  doc : @pdflite.PdfDocument,
+  font_name : @pdflite.PdfName,
+) -> Array[Int] raise {
   let pages = doc.pages_of_pagetree()
   let font = acceptance_font_object_by_name_for_test(
     pages[0].resources,
-    acceptance_name_for_test("/Fcid"),
+    font_name,
   )
   let extractor = doc.text_extractor_of_font(font)
   let output : Array[Int] = []
@@ -779,6 +915,46 @@ fn acceptance_assert_identity_h_text_for_test(
   )
   let extractor = doc.text_extractor_of_font(font)
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
+}
+
+///|
+fn acceptance_assert_identity_v_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Fcid"),
+  )
+  let read = doc.read_font(font)
+  @test.assert_eq(read.is_identity_h(), false)
+  @test.assert_eq(read.is_identity_v(), true)
+  @test.assert_eq(read.uses_two_byte_codes(), true)
+  guard read is PdfFontCIDKeyed(cid_font) else {
+    fail("expected CID-keyed font")
+  }
+  @test.assert_eq(
+    cid_font.encoding,
+    PdfPredefinedCMap(acceptance_name_for_test("/Identity-V")),
+  )
+  @test.assert_eq(cid_font.composite.cid_widths2, [
+    (0x43, { width: 1000.0, vx: 20.0, vy: 880.0 }),
+    (0x44, { width: 900.0, vx: 25.0, vy: 870.0 }),
+    (0x4E8C, { width: 1200.0, vx: 30.0, vy: 860.0 }),
+  ])
+  @test.assert_eq(cid_font.composite.cid_default_width2, [880.0, -1000.0])
+  @test.assert_eq(
+    acceptance_cid_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Fcid"),
+    ),
+    [0x43, 0x30A2, 0x44, 0x4E8C],
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x43), None)
 }
 
 ///|
@@ -3169,6 +3345,16 @@ test "native acceptance suite extracts Identity-H CID text through reader bounda
   acceptance_assert_identity_h_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_identity_h_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Identity-V CID text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_identity_v_text_document_for_test(),
+  )
+  acceptance_assert_identity_v_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_identity_v_text_for_test(reparsed)
 }
 
 ///|

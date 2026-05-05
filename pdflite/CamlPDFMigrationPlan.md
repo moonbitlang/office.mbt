@@ -1421,6 +1421,10 @@ public APIs end to end:
 - extract Type0 `/Identity-H` CID-keyed text from parsed page content after
   compressed xref-stream write/read boundaries, including two-byte `Tj`/`TJ`
   text and public font identity predicates;
+- extract Type0 `/Identity-V` CID-keyed text from parsed page content after
+  compressed xref-stream write/read boundaries, including two-byte `Tj`/`TJ`
+  text, public font identity predicates, and vertical `/W2` and `/DW2`
+  metadata;
 - extract Type0 `/Identity-H` CID-keyed text with a filtered `/ToUnicode` CMap
   after compressed xref-stream write/read boundaries, including two-byte
   `Tj`/`TJ` text remapping and reverse charcode lookup;
