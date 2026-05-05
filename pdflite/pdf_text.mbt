@@ -3608,6 +3608,84 @@ fn pdf_text_compose_parsed_cmap(
 }
 
 ///|
+fn pdf_text_cmap_stream_dictionary_wmode(stream_object : PdfObject) -> Int? {
+  match stream_object.lookup_immediate(pdf_text_name("/WMode")) {
+    Some(PdfInteger(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_cmap_stream_dictionary_cmap_name(
+  stream_object : PdfObject,
+) -> PdfName? {
+  match stream_object.lookup_immediate(pdf_text_name("/CMapName")) {
+    Some(PdfNameObject(name)) => Some(name)
+    _ => None
+  }
+}
+
+///|
+fn pdf_text_cmap_stream_dictionary_cmap_type(stream_object : PdfObject) -> Int? {
+  match stream_object.lookup_immediate(pdf_text_name("/CMapType")) {
+    Some(PdfInteger(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_cmap_stream_dictionary_cid_system_info(
+  self : PdfDocument,
+  stream_object : PdfObject,
+) -> PdfCIDSystemInfo? {
+  match stream_object.lookup_immediate(pdf_text_name("/CIDSystemInfo")) {
+    Some(value) =>
+      try self.read_cid_system_info(value) catch {
+        _ => None
+      } noraise {
+        info => Some(info)
+      }
+    None => None
+  }
+}
+
+///|
+fn PdfDocument::pdf_text_apply_cmap_stream_dictionary_metadata(
+  self : PdfDocument,
+  stream_object : PdfObject,
+  parsed : PdfParsedCMap,
+) -> PdfParsedCMap {
+  {
+    ..parsed,
+    usecmap: match parsed.usecmap {
+      Some(_) => parsed.usecmap
+      None =>
+        match stream_object.lookup_immediate(pdf_text_name("/UseCMap")) {
+          Some(PdfNameObject(name)) => Some(name)
+          _ => None
+        }
+    },
+    wmode: match parsed.wmode {
+      Some(_) => parsed.wmode
+      None => pdf_text_cmap_stream_dictionary_wmode(stream_object)
+    },
+    cmap_name: match parsed.cmap_name {
+      Some(_) => parsed.cmap_name
+      None => pdf_text_cmap_stream_dictionary_cmap_name(stream_object)
+    },
+    cmap_type: match parsed.cmap_type {
+      Some(_) => parsed.cmap_type
+      None => pdf_text_cmap_stream_dictionary_cmap_type(stream_object)
+    },
+    cid_system_info: match parsed.cid_system_info {
+      Some(_) => parsed.cid_system_info
+      None =>
+        self.pdf_text_cmap_stream_dictionary_cid_system_info(stream_object)
+    },
+  }
+}
+
+///|
 fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
   self : PdfDocument,
   object : PdfObject,
@@ -3643,13 +3721,13 @@ fn PdfDocument::parse_cmap_with_seen(
     _ => seen.to_owned()
   }
   let bytes = self.pdf_text_decoded_cmap_stream_data_direct(cmap)
-  let parsed = pdf_parse_cmap_data(bytes[:])
+  let stream_object = self.direct(cmap)
+  let parsed = self.pdf_text_apply_cmap_stream_dictionary_metadata(
+    stream_object,
+    pdf_parse_cmap_data(bytes[:]),
+  )
   match
-    (
-      parsed.usecmap,
-      self.direct(cmap).lookup_immediate(pdf_text_name("/UseCMap")),
-    ) {
-    (None, Some(PdfNameObject(name))) => { ..parsed, usecmap: Some(name) }
+    (parsed.usecmap, stream_object.lookup_immediate(pdf_text_name("/UseCMap"))) {
     (None, Some(base)) =>
       match base {
         PdfIndirect(_) | PdfStreamObject(_) =>

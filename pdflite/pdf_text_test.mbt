@@ -2716,6 +2716,125 @@ test "PdfDocument parse_cmap decodes stream objects" {
 }
 
 ///|
+test "PdfDocument parse_cmap reads stream dictionary metadata" {
+  let doc = @pdflite.pdf_document_empty()
+  let cmap_data = @ascii.encode(
+    "1 begincidchar\n" + "<41> 100\n" + "endcidchar\n",
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(cmap_data.length())),
+      (text_name_for_test("/WMode"), PdfInteger(1)),
+      (
+        text_name_for_test("/CMapName"),
+        PdfNameObject(text_name_for_test("/Dictionary-CMap")),
+      ),
+      (text_name_for_test("/CMapType"), PdfInteger(1)),
+      (
+        text_name_for_test("/CIDSystemInfo"),
+        @pdflite.pdf_dictionary([
+          (
+            text_name_for_test("/Registry"),
+            PdfString(@ascii.encode("DictRegistry")),
+          ),
+          (
+            text_name_for_test("/Ordering"),
+            PdfString(@ascii.encode("DictOrdering")),
+          ),
+          (text_name_for_test("/Supplement"), PdfInteger(4)),
+        ]),
+      ),
+      (
+        text_name_for_test("/UseCMap"),
+        PdfNameObject(text_name_for_test("/GB-EUC-H")),
+      ),
+    ]),
+    StreamGot(cmap_data),
+  )
+  doc.add_object_given_number(18, stream)
+  let parsed = try! doc.parse_cmap(PdfIndirect(18))
+  @test.assert_eq(parsed.cid_map, [(0x41, 100)])
+  @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/GB-EUC-H")))
+  @test.assert_eq(parsed.wmode, Some(1))
+  @test.assert_eq(
+    parsed.cmap_name,
+    Some(text_name_for_test("/Dictionary-CMap")),
+  )
+  @test.assert_eq(parsed.cmap_type, Some(1))
+  @test.assert_eq(
+    parsed.cid_system_info,
+    Some({
+      registry: @ascii.encode("DictRegistry"),
+      ordering: @ascii.encode("DictOrdering"),
+      supplement: 4,
+    }),
+  )
+
+  let overriding_data = @ascii.encode(
+    "/WMode 0 def\n" +
+    "/CMapName /Program-CMap def\n" +
+    "/CMapType 2 def\n" +
+    "/CIDSystemInfo << /Registry (ProgRegistry) /Ordering (ProgOrdering) /Supplement 5 >> def\n",
+  )
+  doc.add_object_given_number(
+    19,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(overriding_data.length())),
+        (text_name_for_test("/WMode"), PdfInteger(1)),
+        (
+          text_name_for_test("/CMapName"),
+          PdfNameObject(text_name_for_test("/Dictionary-CMap")),
+        ),
+        (text_name_for_test("/CMapType"), PdfInteger(1)),
+        (
+          text_name_for_test("/CIDSystemInfo"),
+          @pdflite.pdf_dictionary([
+            (
+              text_name_for_test("/Registry"),
+              PdfString(@ascii.encode("DictRegistry")),
+            ),
+            (
+              text_name_for_test("/Ordering"),
+              PdfString(@ascii.encode("DictOrdering")),
+            ),
+            (text_name_for_test("/Supplement"), PdfInteger(4)),
+          ]),
+        ),
+      ]),
+      StreamGot(overriding_data),
+    ),
+  )
+  let overridden = try! doc.parse_cmap(PdfIndirect(19))
+  @test.assert_eq(overridden.wmode, Some(0))
+  @test.assert_eq(
+    overridden.cmap_name,
+    Some(text_name_for_test("/Program-CMap")),
+  )
+  @test.assert_eq(overridden.cmap_type, Some(2))
+  @test.assert_eq(
+    overridden.cid_system_info,
+    Some({
+      registry: @ascii.encode("ProgRegistry"),
+      ordering: @ascii.encode("ProgOrdering"),
+      supplement: 5,
+    }),
+  )
+
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(0)),
+        (text_name_for_test("/CIDSystemInfo"), PdfInteger(1)),
+      ]),
+      StreamGot(Bytes::new(0)),
+    ),
+  )
+  @test.assert_eq((try! doc.parse_cmap(PdfIndirect(20))).cid_system_info, None)
+}
+
+///|
 test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
   let parsed = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
