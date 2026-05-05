@@ -209,14 +209,16 @@ work changes.
    XObjects and DCT inline-image parsing, direct JPX encoded-image preservation,
    staged Flate-then-JBIG2 encoded-image preservation with `/JBIG2Globals`,
    Type3 `/ToUnicode` text extraction with indirect CharProcs and custom
-   metrics, embedded TrueType `FontFile2` plus `/ToUnicode` text extraction
-   through compressed read/write boundaries, TrueType `/FontDescriptor`
-   metadata preservation through native read/write/reread boundaries, Type3
-   no-`/ToUnicode` custom-encoding fallback through AGL glyph names and
-   StandardEncoding fill-in, and Flate inline-image content parsing. Unit
-   coverage also preserves direct Type3 `CharProcs` streams,
-   parses their `d0`/`d1` glyph programs without allocating new indirect
-   objects, and round-trips Type3 writer output for `/FontBBox`,
+   metrics, plus a Type3 glyph-program resource gate where a CharProc uses
+   its Type3 `/Resources` for an XObject invocation and named inline-image
+   color space resolution. Embedded TrueType `FontFile2` plus `/ToUnicode`
+   text extraction through compressed read/write boundaries, TrueType
+   `/FontDescriptor` metadata preservation through native read/write/reread
+   boundaries, Type3 no-`/ToUnicode` custom-encoding fallback through AGL glyph
+   names and StandardEncoding fill-in, and Flate inline-image content parsing
+   are also covered. Unit coverage also preserves direct Type3 `CharProcs`
+   streams, parses their `d0`/`d1` glyph programs without allocating new
+   indirect objects, and round-trips Type3 writer output for `/FontBBox`,
    `/FontMatrix`, `CharProcs`, `/Resources`, and width metrics. Stream decode
    now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
@@ -377,18 +379,21 @@ and backend breadth, is about 83-88% complete.
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
   images with `/JBIG2Globals`, and CCITT image XObjects through raw RGB
   extraction; native font acceptance covers Type3 `/ToUnicode` text with
-  indirect CharProcs and embedded TrueType `FontFile2` with generated
-  `/ToUnicode` text extraction, while focused font tests preserve direct Type3
-  `CharProcs` streams, parse `d0`/`d1` glyph programs, and round-trip Type3
-  writer output without dropping bbox, matrix, resources, CharProcs, or width
-  metrics.
+  indirect CharProcs, resource-consuming Type3 glyph programs, and embedded
+  TrueType `FontFile2` with generated `/ToUnicode` text extraction, while
+  focused font tests preserve direct Type3 `CharProcs` streams, parse
+  `d0`/`d1` glyph programs, and round-trip Type3 writer output without dropping
+  bbox, matrix, resources, CharProcs, or width metrics.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: remaining rare predefined CMap family tables when source
-  tables or fixtures are available, additional fixture-driven Type3
+  tables or fixtures are available, real-world fixture-driven Type3
   resource/glyph-program coverage, more real-world ToUnicode variations, and
-  broader real-world DCT/JPEG image payload corpus files.
+  broader real-world DCT/JPEG image payload corpus files. The current checked-in
+  CamlPDF `logo.pdf` and `introduction_to_camlpdf.pdf` fixtures do not contain
+  extractable image entries, so image corpus expansion needs additional
+  licensed fixtures.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.

@@ -584,6 +584,54 @@ fn acceptance_type3_charproc_stream_for_test(
 }
 
 ///|
+fn acceptance_type3_glyph_inline_dictionary_for_test() -> @pdflite.PdfObject {
+  PdfDictionary([
+    (acceptance_name_for_test("/W"), PdfInteger(2)),
+    (acceptance_name_for_test("/H"), PdfInteger(1)),
+    (
+      acceptance_name_for_test("/CS"),
+      PdfNameObject(acceptance_name_for_test("/GlyphGray")),
+    ),
+    (acceptance_name_for_test("/BPC"), PdfInteger(1)),
+  ])
+}
+
+///|
+fn acceptance_type3_glyph_inline_data_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0x80])
+}
+
+///|
+fn acceptance_type3_resource_charproc_ops_for_test() -> Array[
+  @pdflite.PdfContentOp,
+] raise {
+  [
+    Op_d0(550.0, 0.0),
+    Op_Do(acceptance_name_for_test("/GlyphMark")),
+    Op_InlineImage(
+      acceptance_type3_glyph_inline_dictionary_for_test(),
+      None,
+      acceptance_type3_glyph_inline_data_for_test(),
+    ),
+  ]
+}
+
+///|
+fn acceptance_type3_glyph_mark_xobject_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_ascii_for_test("q Q")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Form")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
 fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
   @pdflite.pdf_dictionary([
     (
@@ -615,6 +663,7 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
       @pdflite.pdf_dictionary([
         (acceptance_name_for_test("/A"), PdfIndirect(64)),
         (acceptance_name_for_test("/B"), PdfIndirect(65)),
+        (acceptance_name_for_test("/C"), PdfIndirect(66)),
       ]),
     ),
     (
@@ -624,13 +673,28 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
           acceptance_name_for_test("/ProcSet"),
           PdfArray([PdfNameObject(acceptance_name_for_test("/PDF"))]),
         ),
+        (
+          acceptance_name_for_test("/ColorSpace"),
+          @pdflite.pdf_dictionary([
+            (
+              acceptance_name_for_test("/GlyphGray"),
+              PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+            ),
+          ]),
+        ),
+        (
+          acceptance_name_for_test("/XObject"),
+          @pdflite.pdf_dictionary([
+            (acceptance_name_for_test("/GlyphMark"), PdfIndirect(67)),
+          ]),
+        ),
       ]),
     ),
     (acceptance_name_for_test("/FirstChar"), PdfInteger(65)),
-    (acceptance_name_for_test("/LastChar"), PdfInteger(66)),
+    (acceptance_name_for_test("/LastChar"), PdfInteger(67)),
     (
       acceptance_name_for_test("/Widths"),
-      PdfArray([PdfInteger(500), PdfInteger(600)]),
+      PdfArray([PdfInteger(500), PdfInteger(600), PdfInteger(550)]),
     ),
     (acceptance_name_for_test("/MissingWidth"), PdfInteger(250)),
     (
@@ -642,6 +706,7 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
             PdfInteger(65),
             PdfNameObject(acceptance_name_for_test("/A")),
             PdfNameObject(acceptance_name_for_test("/B")),
+            PdfNameObject(acceptance_name_for_test("/C")),
           ]),
         ),
       ]),
@@ -664,6 +729,16 @@ fn acceptance_type3_text_document_for_test() -> @pdflite.PdfDocument raise {
     acceptance_type3_charproc_stream_for_test([
       Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0),
     ]),
+  )
+  doc.add_object_given_number(
+    66,
+    acceptance_type3_charproc_stream_for_test(
+      acceptance_type3_resource_charproc_ops_for_test(),
+    ),
+  )
+  doc.add_object_given_number(
+    67,
+    acceptance_type3_glyph_mark_xobject_for_test(),
   )
   let resources = @pdflite.pdf_dictionary([
     (
@@ -732,6 +807,7 @@ fn acceptance_assert_type3_text_for_test(
   @test.assert_eq(type3_data.charprocs, [
     (acceptance_name_for_test("/A"), PdfIndirect(64)),
     (acceptance_name_for_test("/B"), PdfIndirect(65)),
+    (acceptance_name_for_test("/C"), PdfIndirect(66)),
   ])
   @test.assert_eq(
     type3_data.resources,
@@ -740,7 +816,35 @@ fn acceptance_assert_type3_text_for_test(
         acceptance_name_for_test("/ProcSet"),
         PdfArray([PdfNameObject(acceptance_name_for_test("/PDF"))]),
       ),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        @pdflite.pdf_dictionary([
+          (
+            acceptance_name_for_test("/GlyphGray"),
+            PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+          ),
+        ]),
+      ),
+      (
+        acceptance_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([
+          (acceptance_name_for_test("/GlyphMark"), PdfIndirect(67)),
+        ]),
+      ),
     ]),
+  )
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(type3_data.resources, [
+      doc.direct(PdfIndirect(66)),
+    ]),
+    acceptance_type3_resource_charproc_ops_for_test(),
+  )
+  guard doc.direct(PdfIndirect(67)) is PdfStreamObject(glyph_mark) else {
+    fail("expected Type3 glyph XObject resource")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_stream(glyph_mark.dictionary, glyph_mark.data).stream_bytes(),
+    acceptance_ascii_for_test("q Q"),
   )
   guard simple.fontmetrics is Some(metrics) else {
     fail("expected Type3 font metrics")
@@ -748,7 +852,7 @@ fn acceptance_assert_type3_text_for_test(
   @test.assert_eq(metrics[64], 250.0)
   @test.assert_eq(metrics[65], 500.0)
   @test.assert_eq(metrics[66], 600.0)
-  @test.assert_eq(metrics[67], 250.0)
+  @test.assert_eq(metrics[67], 550.0)
   guard simple.fontdescriptor is Some(descriptor) else {
     fail("expected fabricated descriptor carrying ToUnicode")
   }
