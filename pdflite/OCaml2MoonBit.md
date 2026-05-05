@@ -207,6 +207,17 @@ called from `test` blocks. Keep this on shared assertion helpers so pattern
 checks can be factored without losing checked-error correctness.
 
 ```sh
+moon run -c $'fn parse(s : String) -> Int raise { @strconv.from_str(s) }\nfn helper() -> Int raise { parse("7") }\ntest "raising test body can propagate" { let value = parse("7"); @test.assert_eq(value, 7) }\nfn main { println((try! helper()).to_string()) }'
+# 7
+```
+
+Do not add explicit `try!` around every fallible call inside a raising function,
+test helper, or `test` body. MoonBit propagates checked errors from those
+contexts directly. Use `try?` for tests that intentionally inspect an error
+result, and use `try ... catch ... noraise` when success and error branches are
+both part of the expression.
+
+```sh
 moon run -c $'fn push_ascii(output : Array[Byte], text : String) -> Unit { for byte in @ascii.encode(text)[:] { output.push(byte) } }\nfn main { let output : Array[Byte] = []; push_ascii(output, "PDF"); output.push(10); let bytes = Bytes::from_array(output); println(bytes.length()); println(bytes[0].to_int()); println(bytes[3].to_int()) }'
 # 4
 # 80
@@ -976,7 +987,9 @@ MoonBit uses checked errors:
   ported.
 - Functions that can fail should declare `raise ProjectError` or plain `raise`
   if the error set is intentionally broad.
-- In tests, use `try? f()` and inspect or pattern-match the `Result`.
+- In tests and raising helpers, call fallible success-path APIs directly and let
+  errors propagate. Use `try? f()` only when the test is asserting or inspecting
+  the failure result.
 - In ordinary code, avoid `match (try? f()) { Ok(...) => ...; Err(...) => ... }`.
   MoonBit warns on that anti-pattern; prefer `try f() catch { ... } noraise
   { ... }`.
@@ -1022,9 +1035,9 @@ Assertion style:
   `@test.assert_eq(condition, true)`, instead of assuming an
   `@test.assert_true` helper exists. Verified with
   `moon run -c 'fn helper() -> Unit raise Error { @test.assert_eq(true, true); @test.assert_eq([1, 2], [1, 2]) }\nfn main { try! helper() }'`.
-- Shared test helpers that call `@test.assert_eq` or `try!` on fallible APIs
-  should declare `-> Unit raise Error` unless they use a narrower project
-  error type. Verified with
+- Shared test helpers that call `@test.assert_eq`, `fail`, or fallible APIs
+  should declare `-> Unit raise Error` unless they use a narrower project error
+  type. Verified with
   `moon run -c 'fn helper() -> Unit raise Error { @test.assert_eq(1, 1) }\nfn main { try! helper() }'`.
 - Use `assert_true(value is Pattern(...))` or `guard ... else { fail(...) }`
   for pattern checks.
@@ -1032,8 +1045,9 @@ Assertion style:
 - Use `json_inspect(value, content=...)` for complex values with `ToJson`.
 - If the expected snapshot is unknown, write `inspect(value)`, run
   `moon test --update`, then review the updated `content=...` diff.
-- For raising functions, use `let result : Result[T, Error] = try? f()` and
-  assert or inspect the result.
+- For success paths through raising functions, call the fallible API directly
+  and let the test fail on any error. For expected failures, use
+  `let result : Result[T, Error] = try? f()` and assert or inspect the result.
 - For parser/serializer, encoder/decoder, or loader/writer pairs, pair focused
   edge-case tests with at least one public API round-trip test when practical.
   This catches ownership, byte/text, and object-boundary mistakes that isolated
