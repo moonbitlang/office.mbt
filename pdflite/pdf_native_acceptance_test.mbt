@@ -2445,6 +2445,291 @@ fn acceptance_assert_resource_lifecycle_renumbered_for_test(
 }
 
 ///|
+fn acceptance_change_pages_form_for_test() -> @pdflite.PdfObject {
+  let bytes = acceptance_ascii_for_test("q Q")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Form")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(bytes.length())),
+    ]),
+    StreamGot(bytes),
+  )
+}
+
+///|
+fn acceptance_change_pages_resource_ops_for_test(
+  text : String,
+) -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_BT,
+    Op_Tf(acceptance_name_for_test("/F0"), 12.0),
+    Op_Tj(acceptance_ascii_for_test(text)),
+    Op_ET,
+    Op_Do(acceptance_name_for_test("/Fm1")),
+  ]
+}
+
+///|
+fn acceptance_change_pages_resource_page_for_test(
+  text : String,
+) -> @pdflite.PdfPage raise {
+  {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: acceptance_resource_lifecycle_resources_for_test(
+      acceptance_name_for_test("/F0"),
+      acceptance_name_for_test("/Fm1"),
+      70,
+    ),
+    content: [
+      @pdflite.pdf_content_stream_of_ops(
+        acceptance_change_pages_resource_ops_for_test(text),
+      ),
+    ],
+  }
+}
+
+///|
+fn acceptance_change_pages_xyz_for_test(
+  page_number : Int,
+  left : Int,
+  top : Int,
+) -> @pdflite.PdfObject {
+  PdfArray([
+    PdfIndirect(page_number),
+    PdfNameObject(acceptance_name_for_test("/XYZ")),
+    PdfInteger(left),
+    PdfInteger(top),
+    PdfNull,
+  ])
+}
+
+///|
+fn acceptance_change_pages_goto_for_test(
+  destination : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/S"),
+      PdfNameObject(acceptance_name_for_test("/GoTo")),
+    ),
+    (acceptance_name_for_test("/D"), destination),
+  ])
+}
+
+///|
+fn acceptance_resource_heavy_change_pages_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_subtype = acceptance_name_for_test("/Subtype")
+  let key_rect = acceptance_name_for_test("/Rect")
+  let key_dest = acceptance_name_for_test("/Dest")
+  let key_action = acceptance_name_for_test("/A")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let key_dests = acceptance_name_for_test("/Dests")
+  let key_names = acceptance_name_for_test("/Names")
+  let type_link = acceptance_name_for_test("/Link")
+  let named_destination = acceptance_name_for_test("/Chapter")
+  let string_destination = acceptance_ascii_for_test("chapter-action")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  doc.add_object_given_number(70, acceptance_change_pages_form_for_test())
+  let page_root = doc.add_pagetree([
+    acceptance_change_pages_resource_page_for_test("Before"),
+  ])
+  ignore(doc.add_root(page_root, []))
+  let page_numbers = doc.page_reference_numbers()
+  let page_number = page_numbers[0]
+  let indirect_annotation = @pdflite.pdf_dictionary([
+    (key_subtype, PdfNameObject(type_link)),
+    (
+      key_rect,
+      PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
+    ),
+    (key_dest, acceptance_change_pages_xyz_for_test(page_number, 1, 2)),
+  ])
+  let direct_action_annotation = @pdflite.pdf_dictionary([
+    (key_subtype, PdfNameObject(type_link)),
+    (
+      key_rect,
+      PdfArray([PdfInteger(10), PdfInteger(10), PdfInteger(20), PdfInteger(20)]),
+    ),
+    (
+      key_action,
+      acceptance_change_pages_goto_for_test(
+        acceptance_change_pages_xyz_for_test(page_number, 3, 4),
+      ),
+    ),
+  ])
+  doc.add_object_given_number(80, indirect_annotation)
+  doc.add_object_given_number(
+    page_number,
+    doc
+    .lookup_object_or_null(page_number)
+    .add_dict_entry(
+      key_annots,
+      PdfArray([PdfIndirect(80), direct_action_annotation]),
+    ),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_open_action,
+    acceptance_change_pages_goto_for_test(
+      acceptance_change_pages_xyz_for_test(page_number, 5, 6),
+    ),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_dests,
+    PdfDictionary([
+      (
+        named_destination,
+        PdfArray([
+          PdfIndirect(page_number),
+          PdfNameObject(acceptance_name_for_test("/FitH")),
+          PdfInteger(7),
+        ]),
+      ),
+    ]),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_names,
+    PdfDictionary([
+      (
+        key_dests,
+        doc.build_name_tree([
+          (
+            string_destination,
+            acceptance_change_pages_goto_for_test(
+              acceptance_change_pages_xyz_for_test(page_number, 8, 9),
+            ),
+          ),
+        ]),
+      ),
+    ]),
+  )
+  doc.add_bookmarks([
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Chapter"),
+      target: DestString(string_destination),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
+fn acceptance_assert_resource_heavy_change_pages_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let key_annots = acceptance_name_for_test("/Annots")
+  let key_dest = acceptance_name_for_test("/Dest")
+  let key_action = acceptance_name_for_test("/A")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let page_numbers = doc.page_reference_numbers()
+  @test.assert_eq(doc.version(), (1, 6))
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops(pages[0].content),
+    acceptance_change_pages_resource_ops_for_test("After"),
+  )
+  ignore(
+    acceptance_page_resource_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/Font"),
+      acceptance_name_for_test("/F0"),
+    ),
+  )
+  let form = acceptance_page_resource_for_test(
+    doc,
+    pages[0],
+    acceptance_name_for_test("/XObject"),
+    acceptance_name_for_test("/Fm1"),
+  )
+  guard doc.direct(form) is PdfStreamObject(_) else {
+    fail("expected retained form XObject")
+  }
+  match pages[0].rest.lookup_immediate(key_annots) {
+    Some(
+      PdfArray(
+        [
+          PdfIndirect(indirect_annotation),
+          PdfDictionary(_) as action_annotation,
+        ]
+      )
+    ) => {
+      match
+        doc
+        .lookup_object_or_null(indirect_annotation)
+        .lookup_immediate(key_dest) {
+        Some(destination) =>
+          @test.assert_eq(
+            doc.read_destination(destination),
+            DestXYZ(
+              TargetPageObject(page_numbers[0]),
+              Some(11.0),
+              Some(22.0),
+              None,
+            ),
+          )
+        _ => fail("expected transformed indirect annotation destination")
+      }
+      match action_annotation.lookup_immediate(key_action) {
+        Some(action) =>
+          @test.assert_eq(
+            doc.read_destination(action),
+            DestXYZ(
+              TargetPageObject(page_numbers[0]),
+              Some(13.0),
+              Some(24.0),
+              None,
+            ),
+          )
+        _ => fail("expected transformed direct action annotation")
+      }
+    }
+    _ => fail("expected mixed direct and indirect annotations")
+  }
+  match doc.catalog().lookup_immediate(key_open_action) {
+    Some(action) =>
+      @test.assert_eq(
+        doc.read_destination(action),
+        DestXYZ(TargetPageObject(page_numbers[0]), Some(15.0), Some(26.0), None),
+      )
+    _ => fail("expected transformed OpenAction action")
+  }
+  @test.assert_eq(
+    doc.read_destination(PdfNameObject(acceptance_name_for_test("/Chapter"))),
+    DestFitH(TargetPageObject(page_numbers[0]), Some(27.0)),
+  )
+  @test.assert_eq(
+    doc.read_destination(PdfString(acceptance_ascii_for_test("chapter-action"))),
+    DestXYZ(TargetPageObject(page_numbers[0]), Some(18.0), Some(29.0), None),
+  )
+  @test.assert_eq(doc.read_bookmarks(), [
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Chapter"),
+      target: DestXYZ(
+        TargetPageObject(page_numbers[0]),
+        Some(18.0),
+        Some(29.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
 fn acceptance_assert_catalog_merge_lifecycle_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -3199,6 +3484,31 @@ test "native acceptance suite runs page resource lifecycle workflow" {
   let changed = parsed.change_pages(renumbered_pages)
   let reparsed = acceptance_compressed_roundtrip_for_test(changed)
   acceptance_assert_resource_lifecycle_renumbered_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite changes resource-heavy pages with mixed references" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_resource_heavy_change_pages_document_for_test(),
+  )
+  let pages = parsed.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let changed = parsed.change_pages(
+    [
+      {
+        ..pages[0],
+        content: [
+          @pdflite.pdf_content_stream_of_ops(
+            acceptance_change_pages_resource_ops_for_test("After"),
+          ),
+        ],
+      },
+    ],
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let reparsed = acceptance_compressed_roundtrip_for_test(changed)
+  acceptance_assert_resource_heavy_change_pages_for_test(reparsed)
 }
 
 ///|

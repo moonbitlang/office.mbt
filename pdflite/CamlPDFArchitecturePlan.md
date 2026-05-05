@@ -118,7 +118,8 @@ work changes.
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
    members. Malformed numeric entries inside `d` dash arrays now raise instead
    of being preserved as unknown operations.
-   Remaining focus: additional `change_pages` compatibility fixtures.
+   Remaining focus: additional `change_pages` compatibility fixtures for
+   unusual inherited page data and real-world destination/action combinations.
 
 5. Text, font, color, function, and image layer.
    Owner modules: `pdf_text.mbt`, `pdf_space.mbt`, `pdf_fun.mbt`,
@@ -197,9 +198,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 72-76% complete. Full
+Current estimate: native main-feature parity is about 73-77% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 61-66% complete.
+and backend breadth, is about 62-67% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -212,14 +213,15 @@ and backend breadth, is about 61-66% complete.
   bookmarks, annotations, old-style and name-tree destinations, `/OpenAction`,
   optional content, structure-tree merge/pruning basics, page resource
   renumbering/prefixing/content merge/Form XObject processing through native
-  acceptance boundaries, and example workflows for `pdfdecomp.ml`,
+  acceptance boundaries, resource-heavy page replacement with mixed
+  destination/action references, and example workflows for `pdfdecomp.ml`,
   `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
   decryption, native secure-random writer paths, saved-state recrypt,
   encrypted object streams, lazy encrypted stream forcing, and
   `/EncryptMetadata false`.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
-  resource-heavy pages, unusual inherited page data, and more destination/action
+  unusual inherited page data and broader real-world destination/action
   combinations.
 - Not covered enough: non-stream encrypted parser-state edges and encrypted
   malformed-reader recovery outside the object-stream and stream-data paths.
@@ -251,9 +253,7 @@ and backend breadth, is about 61-66% complete.
 
 ### Immediate Work Order
 
-- Next: add one broader `change_pages` compatibility gate using resource-heavy
-  pages and mixed destination/action references.
-- Then: target encrypted parser-state gaps with one public password-read or
+- Next: target encrypted parser-state gaps with one public password-read or
   recrypt workflow that exposes a non-stream encrypted-object edge.
 - Then: deepen text/image parity with one predefined-CMap gate and one
   filter/image-family gate.
@@ -322,7 +322,11 @@ and backend breadth, is about 61-66% complete.
   pairs with repaired `/Popup` and `/Parent` links through write/reread.
   Native OS-random AESV2/AESV3 convenience writer output is covered with decrypt
   and output-variation checks, and AESV3 saved-state recrypt is covered through
-  the default secure-random IV path.
+  the default secure-random IV path. Resource-heavy `change_pages` replacement
+  is also covered after a compressed read boundary for preserved page resources,
+  direct and indirect link annotations, GoTo action annotations, catalog
+  `/OpenAction`, old-style `/Dests`, name-tree destinations, and bookmark
+  resolution through write/reread.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   remaining encryption edge cases, remaining malformed-reader recovery, and
   example-level integration fixtures.

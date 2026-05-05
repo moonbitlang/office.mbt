@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 72-76%.
+- Native main-feature parity: 73-77%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 61-66%.
+  breadth: 62-67%.
 
 ## P0: Native Main Workflows
 
@@ -40,8 +40,8 @@ Current estimate:
 - [x] ~~Page resource lifecycle native gate: `renumber_pages`, `add_prefix`,
   `merge_content_streams`, and `process_xobjects` through
   read/edit/write/reread boundaries.~~
-- [ ] Broader `change_pages` compatibility gate using resource-heavy pages and
-  mixed destination/action references.
+- [x] ~~Broader `change_pages` compatibility gate using resource-heavy pages and
+  mixed destination/action references.~~
 - [ ] Non-stream encrypted parser-state edge gate through public password-read
   or recrypt workflow.
 - [ ] Broader encrypted malformed-reader gate beyond stream/object-stream data.
@@ -79,7 +79,7 @@ Current estimate:
 ## Immediate Work Order
 
 - [x] ~~Add the page resource lifecycle native acceptance gate.~~
-- [ ] Add one broader `change_pages` compatibility gate.
+- [x] ~~Add one broader `change_pages` compatibility gate.~~
 - [ ] Add one non-stream encrypted parser-state gate.
 - [ ] Add one predefined-CMap text gate.
 - [ ] Add one remaining filter/image-family gate.

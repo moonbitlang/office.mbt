@@ -589,7 +589,12 @@ MoonBit consequences for this project:
    coordinate-bearing destination filter. Malformed annotation, `/OpenAction`,
    and catalog destination-definition entries no longer abort the matrix pass;
    their page references are still renumbered, but bad coordinates are left
-   unchanged like CamlPDF's logged failure path. A minimal `pdf_of_pages`
+   unchanged like CamlPDF's logged failure path. Native acceptance now also
+   covers a resource-heavy `change_pages` replacement after a compressed reader
+   boundary, preserving page resources while transforming mixed direct and
+   indirect link destinations, GoTo action annotations, catalog `/OpenAction`,
+   old-style `/Dests`, name-tree action destinations, and bookmark resolution
+   through write/reread. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
@@ -1469,6 +1474,11 @@ public APIs end to end:
   materialize and process Form XObjects, prefix resource dictionaries and
   content references while merging split content streams, duplicate and
   `renumber_pages`, then write/reread the renamed pages.
+- replace a resource-heavy page with `change_pages` after a compressed
+  xref-stream read while preserving page resources and transforming direct and
+  indirect link destinations, GoTo action annotations, catalog `/OpenAction`,
+  old-style `/Dests`, name-tree destinations, and bookmark resolution through
+  write/reread.
 - run `change_pages` after a compressed xref-stream read boundary, rewrite
   bookmark page references with a matrix transform, write/reread, and verify
   the transformed bookmark target.
