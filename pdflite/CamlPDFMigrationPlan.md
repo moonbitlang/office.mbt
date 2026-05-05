@@ -997,8 +997,13 @@ MoonBit consequences for this project:
    predefined-CMap extraction now has a generated table composed from
    `HKscs-B5-H` and `cidToUnicode/Adobe-CNS1`, including supplementary Unicode
    scalars, deterministic reverse lookup for duplicated Unicode scalars, and
-   the CMap's single-byte `0x80` behavior. GBK2K, ETenms-B5, and other
-   remaining multibyte predefined-CMap tables remain deferred.
+   the CMap's single-byte `0x80` behavior. The Hong Kong Big5 CMap family
+   (`HKdla-B5`, `HKdlb-B5`, `HKgccs-B5`, `HKm314-B5`, and `HKm471-B5`) now
+   uses compact generated CID ranges over shared Adobe-CNS1 Unicode data,
+   including supplementary Unicode scalars, single-byte `0x80` behavior, and
+   reverse lookup. GBK2K remains deferred until four-byte character codes have
+   an explicit representation strategy; ETenms-B5 and other remaining
+   predefined-CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1549,6 +1554,11 @@ reader or writer invariant is narrower than a whole-document workflow:
   `HKscs-B5-H` plus `cidToUnicode/Adobe-CNS1` mapping table, including
   supplementary Unicode scalar output, reverse charcode lookup, single-byte
   `0x80` behavior, and invalid-pair fallback;
+- decode Hong Kong Big5 no-`/ToUnicode` predefined-CMap text for `HKdla-B5`,
+  `HKdlb-B5`, `HKgccs-B5`, `HKm314-B5`, and `HKm471-B5` through generated
+  CID ranges over shared Adobe-CNS1 Unicode data, including supplementary
+  Unicode scalar output, reverse charcode lookup, single-byte `0x80` behavior,
+  and invalid-pair fallback;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`

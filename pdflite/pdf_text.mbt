@@ -327,6 +327,35 @@ fn pdf_text_predefined_cmap_uses_hkscs_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_hk_b5_cid_ranges(
+  name : PdfName,
+) -> Array[(Int, Int, Int)]? {
+  let text = pdf_text_string_of_name(name)
+  guard pdf_text_predefined_cmap_has_text_orientation(text) else { return None }
+  if text.contains("HKdla-B5") {
+    Some(pdf_text_hkdla_b5_cid_ranges)
+  } else if text.contains("HKdlb-B5") {
+    Some(pdf_text_hkdlb_b5_cid_ranges)
+  } else if text.contains("HKgccs-B5") {
+    Some(pdf_text_hkgccs_b5_cid_ranges)
+  } else if text.contains("HKm314-B5") {
+    Some(pdf_text_hkm314_b5_cid_ranges)
+  } else if text.contains("HKm471-B5") {
+    Some(pdf_text_hkm471_b5_cid_ranges)
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_text_predefined_cmap_uses_hk_b5_charcodes(name : PdfName) -> Bool {
+  match pdf_text_predefined_hk_b5_cid_ranges(name) {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
 fn pdf_text_predefined_cmap_uses_big5_charcodes(name : PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("B5")
@@ -438,6 +467,67 @@ fn pdf_text_predefined_pair_codepoints_table_lookup(
       low = mid + 1
     } else {
       return Some(entry.1.copy())
+    }
+  }
+  None
+}
+
+///|
+fn pdf_text_predefined_cid_range_lookup(
+  ranges : Array[(Int, Int, Int)],
+  code : Int,
+) -> Int? {
+  let mut low = 0
+  let mut high = ranges.length()
+  while low < high {
+    let mid = low + (high - low) / 2
+    let entry = ranges[mid]
+    if code < entry.0 {
+      high = mid
+    } else if code > entry.1 {
+      low = mid + 1
+    } else {
+      return Some(entry.2 + code - entry.0)
+    }
+  }
+  None
+}
+
+///|
+fn pdf_text_cns1_codepoint_of_cid(cid : Int) -> Int? {
+  guard cid >= 0 && cid < pdf_text_cns1_unicode_table.length() else {
+    return None
+  }
+  let codepoint = pdf_text_cns1_unicode_table[cid]
+  if codepoint == 0 {
+    None
+  } else {
+    Some(codepoint)
+  }
+}
+
+///|
+fn pdf_text_predefined_cns1_codepoint(
+  ranges : Array[(Int, Int, Int)],
+  code : Int,
+) -> Int? {
+  match pdf_text_predefined_cid_range_lookup(ranges, code) {
+    Some(cid) => pdf_text_cns1_codepoint_of_cid(cid)
+    None => None
+  }
+}
+
+///|
+fn pdf_text_predefined_cns1_charcode(
+  ranges : Array[(Int, Int, Int)],
+  codepoint : Int,
+) -> Int? {
+  for range in ranges {
+    for code in range.0..<=range.1 {
+      match pdf_text_cns1_codepoint_of_cid(range.2 + code - range.0) {
+        Some(candidate) if candidate == codepoint => return Some(code)
+        _ => ()
+      }
     }
   }
   None
@@ -7045,40 +7135,52 @@ fn PdfFont::pdf_text_predefined_builtin_codepoints(
             }
           } else if pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name) {
             pdf_text_predefined_gbpc_euc_codepoints(code)
-          } else if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
-            match pdf_text_predefined_hkscs_codepoint(code) {
-              Some(codepoint) => Some([codepoint])
-              None => None
-            }
-          } else if pdf_text_predefined_cmap_uses_b5pc_charcodes(name) {
-            match pdf_text_predefined_b5pc_codepoint(code) {
-              Some(codepoint) => Some([codepoint])
-              None => None
-            }
-          } else if pdf_text_predefined_cmap_uses_big5_charcodes(name) {
-            match pdf_text_predefined_big5_codepoint(code) {
-              Some(codepoint) => Some([codepoint])
-              None => None
-            }
-          } else if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
-            match pdf_text_predefined_uhc_codepoint(code) {
-              Some(codepoint) => Some([codepoint])
-              None => None
-            }
-          } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name) {
-            match pdf_text_predefined_ksc_euc_codepoint(code) {
-              Some(codepoint) => Some([codepoint])
-              None => None
-            }
-          } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(name) {
-            pdf_text_predefined_kscpc_euc_codepoints(code)
-          } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
-            match pdf_text_predefined_gbk_codepoint(code) {
-              Some(codepoint) => Some([codepoint])
-              None => None
-            }
           } else {
-            None
+            match pdf_text_predefined_hk_b5_cid_ranges(name) {
+              Some(ranges) =>
+                match pdf_text_predefined_cns1_codepoint(ranges, code) {
+                  Some(codepoint) => Some([codepoint])
+                  None => None
+                }
+              None =>
+                if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
+                  match pdf_text_predefined_hkscs_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else if pdf_text_predefined_cmap_uses_b5pc_charcodes(name) {
+                  match pdf_text_predefined_b5pc_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else if pdf_text_predefined_cmap_uses_big5_charcodes(name) {
+                  match pdf_text_predefined_big5_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
+                  match pdf_text_predefined_uhc_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name) {
+                  match pdf_text_predefined_ksc_euc_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
+                    name,
+                  ) {
+                  pdf_text_predefined_kscpc_euc_codepoints(code)
+                } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
+                  match pdf_text_predefined_gbk_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
+                } else {
+                  None
+                }
+            }
           }
         _ => None
       }
@@ -7101,22 +7203,31 @@ fn PdfFont::pdf_text_predefined_builtin_charcode(
             pdf_text_predefined_gb_euc_charcode(codepoint)
           } else if pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name) {
             pdf_text_predefined_gbpc_euc_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
-            pdf_text_predefined_hkscs_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_b5pc_charcodes(name) {
-            pdf_text_predefined_b5pc_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_big5_charcodes(name) {
-            pdf_text_predefined_big5_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
-            pdf_text_predefined_uhc_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name) {
-            pdf_text_predefined_ksc_euc_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(name) {
-            pdf_text_predefined_kscpc_euc_charcode(codepoint)
-          } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
-            pdf_text_predefined_gbk_charcode(codepoint)
           } else {
-            None
+            match pdf_text_predefined_hk_b5_cid_ranges(name) {
+              Some(ranges) =>
+                pdf_text_predefined_cns1_charcode(ranges, codepoint)
+              None =>
+                if pdf_text_predefined_cmap_uses_hkscs_charcodes(name) {
+                  pdf_text_predefined_hkscs_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_b5pc_charcodes(name) {
+                  pdf_text_predefined_b5pc_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_big5_charcodes(name) {
+                  pdf_text_predefined_big5_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
+                  pdf_text_predefined_uhc_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name) {
+                  pdf_text_predefined_ksc_euc_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(
+                    name,
+                  ) {
+                  pdf_text_predefined_kscpc_euc_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
+                  pdf_text_predefined_gbk_charcode(codepoint)
+                } else {
+                  None
+                }
+            }
           }
         _ => None
       }
@@ -7173,6 +7284,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
   let output : Array[Int] = []
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
   let b5pc = pdf_text_predefined_cmap_uses_b5pc_charcodes(name)
+  let hk_b5 = pdf_text_predefined_cmap_uses_hk_b5_charcodes(name)
   let hkscs = pdf_text_predefined_cmap_uses_hkscs_charcodes(name)
   let gbpc_euc = pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name)
   let ksc_euc = pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name)
@@ -7210,6 +7322,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
         kscpc_euc &&
         ((first >= 0x80 && first <= 0x9F) || first == 0xFE || first == 0xFF)
       ) ||
+      (hk_b5 && first == 0x80) ||
       (hkscs && first == 0x80) ||
       (gbk && (first == 0x80 || first == 0xFF)) {
       output.push(first)

@@ -3644,5 +3644,10 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     standard_font.pdf_text_with_tounicode(Some(tounicode)),
     standard_font,
   )
+  @test.assert_eq(pdf_text_cns1_codepoint_of_cid(-1), None)
+  @test.assert_eq(
+    pdf_text_cns1_codepoint_of_cid(pdf_text_cns1_unicode_table.length()),
+    None,
+  )
   @test.assert_eq(pdf_text_hex_int_min2(7), "07")
 }
