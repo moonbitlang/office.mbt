@@ -1537,6 +1537,9 @@ public APIs end to end:
   document-wide stream-decompress, multi-page text-extract, and reread them
   through native async file wrappers while preserving page counts and tutorial
   text tokens.
+- recover the checked-in CamlPDF logo fixture after corrupting its
+  `startxref` pointer, then compressed-write and reread it through native async
+  file wrappers while preserving the page count.
 - read AES-128 encrypted xref-stream documents whose referenced object lives
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
   for explicit passwords and implicit blank user passwords while avoiding double

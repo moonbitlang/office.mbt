@@ -211,9 +211,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 84-86% complete. Full
+Current estimate: native main-feature parity is about 84-87% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 72-76% complete.
+and backend breadth, is about 72-77% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -263,8 +263,8 @@ and backend breadth, is about 72-76% complete.
   optional external JBIG2 decoder integration. Actual JPEG pixel decoding is
   optional beyond CamlPDF image-extraction parity, which returns encoded JPEG
   payloads.
-- Not covered enough: broader malformed xref-table/object recovery driven by
-  real-world corpus files.
+- Not covered enough: broader malformed xref-table/xref-stream/object-stream
+  recovery driven by real-world corpus files.
 
 ### P2: Broaden Compatibility After Native
 
@@ -272,6 +272,8 @@ and backend breadth, is about 72-76% complete.
   checked-in CamlPDF fixture PDF read/multi-page text-extract/write/stream
   decompression/reread through native async file wrappers, and full native test
   coverage.
+- Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
+  through native async file wrappers, compressed rewrite, and reread.
 - Deferred: all-backend stabilization. Native-only secure-random/encrypted
   writer APIs and `async_io` intentionally diverge from WasmGC today.
 - Deferred: larger real-world corpus testing, performance tuning, and optional
@@ -281,8 +283,9 @@ and backend breadth, is about 72-76% complete.
 ### Immediate Work Order
 
 - Next: add real-world CCITT image corpus coverage when a fixture is available;
-  otherwise continue widening real-file corpus gates while keeping JPEG/JBIG2
-  decoder decisions separate from encoded image pass-through.
+  otherwise continue widening real-file corpus gates, especially malformed
+  xref-stream/object-stream recovery, while keeping JPEG/JBIG2 decoder
+  decisions separate from encoded image pass-through.
 - Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist

@@ -23,6 +23,93 @@ fn pdf_async_io_repo_path_for_test(path : String) -> String {
 }
 
 ///|
+fn pdf_async_io_bytes_start_with_at_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn pdf_async_io_find_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start in 0..<=(haystack.length() - needle.length()) {
+      if pdf_async_io_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn pdf_async_io_push_ascii_for_test(
+  output : Array[Byte],
+  text : String,
+) -> Unit {
+  for byte in @ascii.encode(text) {
+    output.push(byte)
+  }
+}
+
+///|
+fn pdf_async_io_is_pdf_whitespace_for_test(byte : Byte) -> Bool {
+  match byte.to_int() {
+    0 | 9 | 10 | 12 | 13 | 32 => true
+    _ => false
+  }
+}
+
+///|
+fn pdf_async_io_corrupt_startxref_pointer_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes raise {
+  let marker = @ascii.encode("startxref")
+  let marker_position = pdf_async_io_find_bytes_for_test(bytes[:], marker[:])
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let mut number_start = marker_position + marker.length()
+  while number_start < bytes.length() &&
+        pdf_async_io_is_pdf_whitespace_for_test(bytes[number_start]) {
+    number_start += 1
+  }
+  let mut number_end = number_start
+  while number_end < bytes.length() &&
+        !pdf_async_io_is_pdf_whitespace_for_test(bytes[number_end]) {
+    number_end += 1
+  }
+  let output : Array[Byte] = []
+  for index in 0..<number_start {
+    output.push(bytes[index])
+  }
+  pdf_async_io_push_ascii_for_test(output, (bytes.length() + 4096).to_string())
+  for index in number_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -287,6 +374,38 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   pdf_async_io_remove_if_exists_for_test(logo_roundtrip)
   pdf_async_io_remove_if_exists_for_test(intro_roundtrip)
   pdf_async_io_remove_if_exists_for_test(intro_decompressed_roundtrip)
+}
+
+///|
+async test "async file wrappers reconstruct checked-in CamlPDF logo fixture with bad startxref" {
+  let logo_path = pdf_async_io_repo_path_for_test(".repos/logo.pdf")
+  let corrupted_path = pdf_async_io_test_path_for_test(
+    "logo_bad_startxref_fixture",
+  )
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "logo_bad_startxref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(corrupted_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+
+  let corrupted = pdf_async_io_corrupt_startxref_pointer_for_test(
+    @fs.read_file(logo_path).binary(),
+  )
+  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  let recovered = pdf_read_document_from_file(corrupted_path)
+  @test.assert_eq(recovered.version(), (1, 4))
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.endpage(), 1)
+
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recovered, repaired_path,
+  )
+  let reparsed = pdf_read_document_from_file(repaired_path)
+  @test.assert_eq(reparsed.first_xref() > 0, true)
+  @test.assert_eq(reparsed.endpage(), 1)
+
+  pdf_async_io_remove_if_exists_for_test(corrupted_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
 }
 
 ///|

@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 84-86%.
+- Native main-feature parity: 84-87%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 72-76%.
+  breadth: 72-77%.
 
 ## P0: Native Main Workflows
 
@@ -77,8 +77,8 @@ Current estimate:
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [ ] Fuller zlib/Flate compression tuning parity.
-- [ ] Broader malformed xref-table/object recovery driven by public workflows
-  and real-world corpus files.
+- [ ] Broader malformed xref-table/xref-stream/object-stream recovery driven by
+  public workflows and real-world corpus files.
 
 ## P2: Backend Breadth And Compatibility
 
@@ -90,6 +90,8 @@ Current estimate:
 - [x] ~~Checked-in CamlPDF fixture PDFs read, multi-page text-extract,
   compressed-write, document-wide stream-decompress, and reread through native
   async file wrappers.~~
+- [x] ~~Checked-in CamlPDF logo fixture reconstructs from a bad `startxref`
+  pointer through native async file wrappers, compressed rewrite, and reread.~~
 - [ ] Broader real-world PDF corpus testing.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
@@ -112,5 +114,6 @@ Current estimate:
 - [x] ~~Add a checked-in real PDF read/write corpus gate.~~
 - [x] ~~Widen checked-in real PDF text extraction across multiple pages and
   compressed/decompressed reread boundaries.~~
+- [x] ~~Add a checked-in real PDF malformed-startxref reconstruction gate.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.
