@@ -265,6 +265,35 @@ pub async fn pdf_write_encrypted_aesv3_document_to_file_with_providers(
 }
 
 ///|
+pub async fn pdf_write_encrypted_aesv3_document_to_file(
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[@pdflite.PdfPermission],
+  iso? : Bool = false,
+  encrypt_metadata? : Bool = true,
+  mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
+  file_id? : BytesView = [],
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_encrypted_aesv3_document(
+      document,
+      user_password,
+      owner_password,
+      denied_permissions,
+      iso~,
+      encrypt_metadata~,
+      mode~,
+      file_id~,
+    ),
+    create=permission,
+  )
+}
+
+///|
 pub async fn pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
   document : @pdflite.PdfDocument,
   path : StringView,
@@ -287,6 +316,33 @@ pub async fn pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
       denied_permissions,
       random_provider,
       iv_provider,
+      encrypt_metadata~,
+      mode~,
+      file_id~,
+    ),
+    create=permission,
+  )
+}
+
+///|
+pub async fn pdf_write_encrypted_aesv3_iso_document_to_file(
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[@pdflite.PdfPermission],
+  encrypt_metadata? : Bool = true,
+  mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
+  file_id? : BytesView = [],
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_encrypted_aesv3_iso_document(
+      document,
+      user_password,
+      owner_password,
+      denied_permissions,
       encrypt_metadata~,
       mode~,
       file_id~,

@@ -38,6 +38,19 @@ fn random_native_unwrap_decryption_for_test(
 }
 
 ///|
+fn random_native_decrypt_owner_for_test(
+  rendered : @pdflite.PdfBytes,
+  owner_password : @pdflite.PdfBytes,
+) -> @pdflite.PdfDecryptionResult raise {
+  random_native_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      owner_password=Some(owner_password[:]),
+    ),
+  )
+}
+
+///|
 test "native secure random AESV2 writer decrypts and varies output" {
   let first_random = @pdflite.pdf_secure_random_bytes(16)
   let second_random = @pdflite.pdf_secure_random_bytes(16)
@@ -77,5 +90,70 @@ test "native secure random AESV2 writer decrypts and varies output" {
   @test.assert_eq(
     decrypted.document.lookup_object_or_null(50),
     random_native_secret_for_test("native random aes"),
+  )
+}
+
+///|
+test "native secure random AESV3 writers decrypt and recrypt" {
+  let user_password = random_native_ascii_for_test("user")
+  let owner_password = random_native_ascii_for_test("owner")
+  let file_id = random_native_ascii_for_test("native-random-aesv3-id")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoExtract]
+  let first = @pdflite.pdf_write_encrypted_aesv3_document(
+    random_native_document_for_test("native random aesv3"),
+    user_password[:],
+    owner_password[:],
+    denied,
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=file_id[:],
+  )
+  let second = @pdflite.pdf_write_encrypted_aesv3_document(
+    random_native_document_for_test("native random aesv3"),
+    user_password[:],
+    owner_password[:],
+    denied,
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=file_id[:],
+  )
+  @test.assert_eq(first == second, false)
+  let decrypted = random_native_decrypt_owner_for_test(first, owner_password)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(50),
+    random_native_secret_for_test("native random aesv3"),
+  )
+
+  decrypted.document.add_object_given_number(
+    50,
+    random_native_secret_for_test("native random aesv3 updated"),
+  )
+  let recrypted = decrypted.document.recrypt_with_password_aesv3(
+    owner_password[:],
+  )
+  let recrypted_decrypted = random_native_decrypt_owner_for_test(
+    @pdflite.pdf_write_document(recrypted),
+    owner_password,
+  )
+  @test.assert_eq(
+    recrypted_decrypted.document.lookup_object_or_null(50),
+    random_native_secret_for_test("native random aesv3 updated"),
+  )
+
+  let iso = @pdflite.pdf_write_encrypted_aesv3_iso_document(
+    random_native_document_for_test("native random aesv3 iso"),
+    user_password[:],
+    owner_password[:],
+    [PdfNoAssemble],
+    encrypt_metadata=false,
+    mode=PdfWriteXRefStream,
+    file_id=random_native_ascii_for_test("native-random-aesv3-iso-id")[:],
+  )
+  let iso_decrypted = random_native_decrypt_owner_for_test(iso, owner_password)
+  @test.assert_eq(iso_decrypted.denied_permissions, [PdfNoAssemble])
+  @test.assert_eq(
+    iso_decrypted.document.lookup_object_or_null(50),
+    random_native_secret_for_test("native random aesv3 iso"),
   )
 }

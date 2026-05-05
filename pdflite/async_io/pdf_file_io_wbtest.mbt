@@ -128,7 +128,13 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
     "encrypt_aesv2_default",
   )
   let aesv3_path = pdf_async_io_test_path_for_test("encrypt_aesv3")
+  let aesv3_default_path = pdf_async_io_test_path_for_test(
+    "encrypt_aesv3_default",
+  )
   let aesv3_iso_path = pdf_async_io_test_path_for_test("encrypt_aesv3_iso")
+  let aesv3_iso_default_path = pdf_async_io_test_path_for_test(
+    "encrypt_aesv3_iso_default",
+  )
   pdf_async_io_remove_if_exists_for_test(mode_path)
   pdf_async_io_remove_if_exists_for_test(arc4_40_path)
   pdf_async_io_remove_if_exists_for_test(arc4_128_path)
@@ -136,7 +142,9 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_async_io_remove_if_exists_for_test(aesv2_path)
   pdf_async_io_remove_if_exists_for_test(aesv2_default_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_default_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_iso_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_iso_default_path)
   let user = @ascii.encode("user")
   let owner = @ascii.encode("owner")
   let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
@@ -238,6 +246,22 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
     [PdfNoExtract],
     "async-aesv3",
   )
+  pdf_write_encrypted_aesv3_document_to_file(
+    try! pdf_async_io_secret_document_for_test("async-aesv3-default"),
+    aesv3_default_path,
+    user[:],
+    owner[:],
+    [PdfNoExtract],
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=@ascii.encode("async-aesv3-default-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    aesv3_default_path,
+    "owner",
+    [PdfNoExtract],
+    "async-aesv3-default",
+  )
   pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
     try! pdf_async_io_secret_document_for_test("async-aesv3-iso"),
     aesv3_iso_path,
@@ -259,6 +283,21 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
     [PdfNoAssemble],
     "async-aesv3-iso",
   )
+  pdf_write_encrypted_aesv3_iso_document_to_file(
+    try! pdf_async_io_secret_document_for_test("async-aesv3-iso-default"),
+    aesv3_iso_default_path,
+    user[:],
+    owner[:],
+    [PdfNoAssemble],
+    encrypt_metadata=false,
+    file_id=@ascii.encode("async-aesv3-iso-default-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    aesv3_iso_default_path,
+    "owner",
+    [PdfNoAssemble],
+    "async-aesv3-iso-default",
+  )
   pdf_async_io_remove_if_exists_for_test(mode_path)
   pdf_async_io_remove_if_exists_for_test(arc4_40_path)
   pdf_async_io_remove_if_exists_for_test(arc4_128_path)
@@ -266,7 +305,9 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_async_io_remove_if_exists_for_test(aesv2_path)
   pdf_async_io_remove_if_exists_for_test(aesv2_default_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_default_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_iso_path)
+  pdf_async_io_remove_if_exists_for_test(aesv3_iso_default_path)
 }
 
 ///|

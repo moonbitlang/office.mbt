@@ -35,6 +35,14 @@ fn pdf_secure_aes_iv_provider(
 }
 
 ///|
+fn pdf_secure_aesv3_random_provider(
+  _field : PdfAesV3RandomField,
+  length : Int,
+) -> PdfBytes raise PdfError {
+  pdf_secure_random_bytes(length)
+}
+
+///|
 pub fn PdfDocument::encrypt_128bit_aesv2(
   self : PdfDocument,
   user_password : BytesView,
@@ -69,6 +77,57 @@ pub fn PdfDocument::recrypt_with_password_aesv2(
 }
 
 ///|
+pub fn PdfDocument::encrypt_256bit_aesv3(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  iso? : Bool = false,
+  encrypt_metadata? : Bool = true,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  self.encrypt_256bit_aesv3_with_providers(
+    user_password,
+    owner_password,
+    denied_permissions,
+    pdf_secure_aesv3_random_provider,
+    pdf_secure_aes_iv_provider,
+    iso~,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn PdfDocument::encrypt_256bit_aesv3_iso(
+  self : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  encrypt_metadata? : Bool = true,
+  file_id? : BytesView = [],
+) -> PdfDocument raise PdfError {
+  self.encrypt_256bit_aesv3(
+    user_password,
+    owner_password,
+    denied_permissions,
+    iso=true,
+    encrypt_metadata~,
+    file_id~,
+  )
+}
+
+///|
+pub fn PdfDocument::recrypt_with_password_aesv3(
+  self : PdfDocument,
+  password : BytesView,
+) -> PdfDocument raise PdfError {
+  self.recrypt_with_password_aesv3_with_iv_provider(
+    password, pdf_secure_aes_iv_provider,
+  )
+}
+
+///|
 pub fn pdf_write_encrypted_aesv2_document(
   document : PdfDocument,
   user_password : BytesView,
@@ -87,5 +146,51 @@ pub fn pdf_write_encrypted_aesv2_document(
       file_id~,
     ),
     mode,
+  )
+}
+
+///|
+pub fn pdf_write_encrypted_aesv3_document(
+  document : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  iso? : Bool = false,
+  encrypt_metadata? : Bool = true,
+  mode? : PdfWriteMode = PdfWriteClassic,
+  file_id? : BytesView = [],
+) -> PdfBytes raise PdfError {
+  pdf_write_document_with_mode(
+    document.encrypt_256bit_aesv3(
+      user_password,
+      owner_password,
+      denied_permissions,
+      iso~,
+      encrypt_metadata~,
+      file_id~,
+    ),
+    mode,
+  )
+}
+
+///|
+pub fn pdf_write_encrypted_aesv3_iso_document(
+  document : PdfDocument,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[PdfPermission],
+  encrypt_metadata? : Bool = true,
+  mode? : PdfWriteMode = PdfWriteClassic,
+  file_id? : BytesView = [],
+) -> PdfBytes raise PdfError {
+  pdf_write_encrypted_aesv3_document(
+    document,
+    user_password,
+    owner_password,
+    denied_permissions,
+    iso=true,
+    encrypt_metadata~,
+    mode~,
+    file_id~,
   )
 }
