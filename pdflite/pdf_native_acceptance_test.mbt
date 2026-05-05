@@ -858,14 +858,14 @@ fn acceptance_font_object_by_name_for_test(
 fn acceptance_identity_h_codepoints_of_first_page_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Array[Int] raise {
-  acceptance_cid_codepoints_of_first_page_for_test(
+  acceptance_font_codepoints_of_first_page_for_test(
     doc,
     acceptance_name_for_test("/Fcid"),
   )
 }
 
 ///|
-fn acceptance_cid_codepoints_of_first_page_for_test(
+fn acceptance_font_codepoints_of_first_page_for_test(
   doc : @pdflite.PdfDocument,
   font_name : @pdflite.PdfName,
 ) -> Array[Int] raise {
@@ -947,7 +947,7 @@ fn acceptance_assert_identity_v_text_for_test(
   ])
   @test.assert_eq(cid_font.composite.cid_default_width2, [880.0, -1000.0])
   @test.assert_eq(
-    acceptance_cid_codepoints_of_first_page_for_test(
+    acceptance_font_codepoints_of_first_page_for_test(
       doc,
       acceptance_name_for_test("/Fcid"),
     ),
@@ -979,6 +979,143 @@ fn acceptance_assert_identity_h_tounicode_text_for_test(
   let extractor = doc.text_extractor_of_font(font)
   @test.assert_eq(extractor.charcode_of_codepoint(0x2603), Some(0x0041))
   @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(0x0042))
+}
+
+///|
+fn acceptance_truetype_font_file_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_ascii_for_test("minimal-ttf-data")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_truetype_descriptor_for_test() -> @pdflite.PdfFontDescriptor raise {
+  {
+    ascent: 720.0,
+    descent: -180.0,
+    avgwidth: 501.0,
+    maxwidth: 1000.0,
+    flags: 32,
+    fontbbox: { min_x: -10.0, min_y: -200.0, max_x: 500.0, max_y: 700.0 },
+    italicangle: -12.0,
+    capheight: 680.0,
+    xheight: 450.0,
+    stemv: 90.0,
+    fontfile: Some(PdfFontFile2(70)),
+    charset: None,
+    tounicode: Some([
+      (65, acceptance_text_bytes_for_test([0x26, 0x03])),
+      (66, acceptance_text_bytes_for_test([0x03, 0xA9])),
+    ]),
+  }
+}
+
+///|
+fn acceptance_truetype_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(70, acceptance_truetype_font_file_for_test())
+  let font_number = doc.write_font(
+    PdfFontSimple({
+      fonttype: PdfTrueType,
+      basefont: Some(acceptance_name_for_test("/Subset+NativeTT")),
+      firstchar: 33,
+      lastchar: 34,
+      widths: [500, 610],
+      fontdescriptor: Some(acceptance_truetype_descriptor_for_test()),
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+    objnum=Some(73),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Ftt"), PdfIndirect(font_number)),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Ftt"), 12.0),
+        Op_Tj(acceptance_text_bytes_for_test([33, 34])),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_truetype_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Ftt"),
+  )
+  guard doc.read_font(font) is PdfFontSimple(simple) else {
+    fail("expected simple TrueType font")
+  }
+  let font_object = doc.direct(font)
+  @test.assert_eq(simple.fonttype, PdfTrueType)
+  @test.assert_eq(
+    simple.basefont,
+    Some(acceptance_name_for_test("/Subset+NativeTT")),
+  )
+  @test.assert_eq(
+    font_object.lookup_immediate(acceptance_name_for_test("/FirstChar")),
+    Some(PdfInteger(33)),
+  )
+  @test.assert_eq(
+    font_object.lookup_immediate(acceptance_name_for_test("/LastChar")),
+    Some(PdfInteger(34)),
+  )
+  @test.assert_eq(
+    font_object.lookup_immediate(acceptance_name_for_test("/Widths")),
+    Some(PdfArray([PdfInteger(500), PdfInteger(610)])),
+  )
+  guard simple.fontmetrics is Some(metrics) else {
+    fail("expected TrueType font metrics")
+  }
+  @test.assert_eq(metrics[33], 500.0)
+  @test.assert_eq(metrics[34], 610.0)
+  guard simple.fontdescriptor is Some(descriptor) else {
+    fail("expected TrueType font descriptor")
+  }
+  @test.assert_eq(descriptor.fontfile, Some(PdfFontFile2(70)))
+  @test.assert_eq(
+    descriptor.tounicode,
+    Some([
+      (33, acceptance_text_bytes_for_test([0x26, 0x03])),
+      (34, acceptance_text_bytes_for_test([0x03, 0xA9])),
+    ]),
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Ftt"),
+    ),
+    [0x2603, 0x03A9],
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2603), Some(33))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x03A9), Some(34))
 }
 
 ///|
@@ -3474,6 +3611,16 @@ test "native acceptance suite extracts Type0 ToUnicode CID text through reader b
   acceptance_assert_identity_h_tounicode_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_identity_h_tounicode_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts embedded TrueType text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_truetype_text_document_for_test(),
+  )
+  acceptance_assert_truetype_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_truetype_text_for_test(reparsed)
 }
 
 ///|

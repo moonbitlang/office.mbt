@@ -138,7 +138,9 @@ work changes.
    compressed read/write boundaries for Flate-decoded raw `/Indexed` image
    XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
    encoded-image preservation, staged Flate-then-JBIG2 encoded-image
-   preservation with `/JBIG2Globals`, and Flate inline-image content parsing.
+   preservation with `/JBIG2Globals`, embedded TrueType `FontFile2` plus
+   `/ToUnicode` text extraction through compressed read/write boundaries, and
+   Flate inline-image content parsing.
    Remaining focus: broader predefined CMap semantics beyond Identity-H/V, JPEG
    pixel decode, and remaining image filter families.
 
@@ -241,10 +243,11 @@ and backend breadth, is about 64-69% complete.
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, and an Identity-V
   native gate with vertical width metadata. Native image acceptance now also
   covers JPX encoded images and staged Flate-to-JBIG2 images with
-  `/JBIG2Globals`.
+  `/JBIG2Globals`; native font acceptance covers embedded TrueType `FontFile2`
+  with generated `/ToUnicode` text extraction.
 - Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
-  vertical-writing behavior beyond the current gates, Type3/TrueType edge
-  coverage, and more real-world ToUnicode variations.
+  vertical-writing behavior beyond the current gates, additional Type3/TrueType
+  edge coverage, and more real-world ToUnicode variations.
 - Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
   CCITT decode, and optional external JBIG2 decoder integration.
 - Not covered enough: broader malformed xref-table/object recovery driven by
@@ -262,8 +265,7 @@ and backend breadth, is about 64-69% complete.
 
 ### Immediate Work Order
 
-- Next: add one Type3/TrueType font edge gate, then decide and start one
-  CCITT/JPEG decode implementation slice.
+- Next: decide and start one CCITT/JPEG decode implementation slice.
 - Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist

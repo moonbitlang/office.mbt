@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 78-82%.
+- Native main-feature parity: 79-83%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 67-72%.
+  breadth: 68-73%.
 
 ## P0: Native Main Workflows
 
@@ -62,9 +62,11 @@ Current estimate:
   metadata through compressed read/write/reread boundaries.~~
 - [x] ~~JPX and staged Flate-to-JBIG2 encoded image native gate with
   `/JBIG2Globals` through compressed read/write/decompress/reread boundaries.~~
+- [x] ~~Embedded TrueType `FontFile2` plus `/ToUnicode` native text gate through
+  compressed read/write/reread boundaries.~~
 - [ ] Broader predefined CMap semantics beyond Identity-H/V and more
   vertical-writing text behavior.
-- [ ] More Type3/TrueType font edge coverage.
+- [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
 - [ ] JPEG pixel decoding.
 - [ ] CCITT decode and optional external JBIG2 decoder integration.
 - [ ] Fuller zlib/Flate compression tuning parity.
@@ -93,6 +95,6 @@ Current estimate:
 - [x] ~~Add one predefined-CMap text gate.~~
 - [x] ~~Add one remaining filter/image-family gate.~~
 - [x] ~~Expand malformed-reader recovery from realistic documents.~~
-- [ ] Add one Type3/TrueType font edge gate.
+- [x] ~~Add one Type3/TrueType font edge gate.~~
 - [ ] Decide and start one CCITT/JPEG decode implementation slice.
 - [ ] Revisit non-native backend validation after native parity is stable.

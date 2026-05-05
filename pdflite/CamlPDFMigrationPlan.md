@@ -1428,6 +1428,10 @@ public APIs end to end:
 - extract Type0 `/Identity-H` CID-keyed text with a filtered `/ToUnicode` CMap
   after compressed xref-stream write/read boundaries, including two-byte
   `Tj`/`TJ` text remapping and reverse charcode lookup;
+- extract text with an embedded TrueType `FontFile2` and generated
+  `/ToUnicode` CMap after compressed xref-stream write/read boundaries,
+  including font descriptor retention, expanded width metrics, codepoint
+  extraction, and reverse charcode lookup;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
