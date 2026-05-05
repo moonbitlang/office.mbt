@@ -1275,6 +1275,39 @@ test "pdf_parse_stream_object_from_bytes parses direct-length stream objects" {
 }
 
 ///|
+test "pdf_parse_stream_object_from_bytes recovers CamlPDF mismatched stream lengths" {
+  let too_short = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_pdf_ascii(
+      "7 0 obj\n<< /Length 5 >>\nstream\nHello!\nendstream\nendobj",
+    ),
+  )
+  guard too_short.object is PdfStreamObject(too_short_stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(
+    too_short_stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(6)),
+  )
+  @test.assert_eq(too_short_stream.data, StreamGot(reader_pdf_ascii("Hello!")))
+
+  let too_long = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    reader_pdf_ascii("8 0 obj\n<< /Length 8 >>\nstream\nHi\nendstream\nendobj"),
+  )
+  guard too_long.object is PdfStreamObject(too_long_stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(
+    too_long_stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(too_long_stream.data, StreamGot(reader_pdf_ascii("Hi")))
+}
+
+///|
 test "pdf_parse_stream_object_from_view parses borrowed stream object slices" {
   let data = reader_pdf_ascii(
     "x\n7 0 obj\n<< /Length 5 >>\nstream\nHello\nendstream\nendobj\nx",
@@ -2034,7 +2067,7 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
   reader_assert_reconstructs_catalog(bad_stream)
 
   let bad_endstream = reader_classic_pdf_with_malformed_stream_and_catalog(
-    "<< /Length 5 >>\nstream\nHello\nnotendstream",
+    "<< /Length 5 >>\nstream\nHello\nnot_a_stream_end",
   )
   let strict_endstream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
     bad_endstream,

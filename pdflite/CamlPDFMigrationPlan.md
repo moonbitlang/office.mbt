@@ -267,6 +267,9 @@ MoonBit consequences for this project:
    mirrors CamlPDF's stream-start padding tolerance by skipping space, NUL,
    form-feed, and tab bytes between the `stream` keyword and the line break or
    first data byte, without applying that padding rule before `endstream`.
+   It also mirrors CamlPDF's mismatched `/Length` recovery by rewinding and
+   scanning through the following `endstream` marker when the declared length
+   does not land on a valid terminator boundary.
    Hybrid-reference files with a
    classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same
@@ -1251,7 +1254,8 @@ MoonBit consequences for this project:
    malformed startxref-number recovery, and by deleting two unreachable
    defensive branches around xref blank-line parsing and post-loop trailer
    presence. Stream-object coverage now also checks CamlPDF's ignored
-   stream-start padding bytes before newline or data.
+   stream-start padding bytes before newline or data, plus short and long
+   declared `/Length` values that recover through `endstream` scanning.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     stream materialization guards and by replacing impossible map-key `None`
