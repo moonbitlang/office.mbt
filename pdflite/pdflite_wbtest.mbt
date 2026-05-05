@@ -2282,6 +2282,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     map: [],
     cid_map: [],
     codespaces: [],
+    usecmap: None,
     wmode: None,
   }
   @test.assert_eq(PdfExternalCMap(1, empty_parsed).uses_two_byte_codes(), false)
@@ -2292,10 +2293,50 @@ test "private external CMap helpers cover malformed and compact sections" {
     ),
     [1, 2],
   )
+  let identity_base_parsed : PdfParsedCMap = {
+    map: [],
+    cid_map: [],
+    codespaces: [],
+    usecmap: Some(wbtest_text_name("/Identity-H")),
+    wmode: None,
+  }
+  @test.assert_eq(
+    PdfExternalCMap(4, identity_base_parsed).uses_two_byte_codes(),
+    true,
+  )
+  @test.assert_eq(
+    pdf_text_parsed_cmap_charcodes_of_text(
+      identity_base_parsed,
+      wbtest_text_bytes([1, 2])[:],
+    ),
+    [0x0102],
+  )
+  let odd_identity : Result[Array[Int], Error] = try? pdf_text_parsed_cmap_charcodes_of_text(
+    identity_base_parsed,
+    wbtest_text_bytes([1])[:],
+  )
+  guard odd_identity is Err(_) else {
+    fail("expected odd identity CMap text to raise")
+  }
+  let mixed_identity_base_parsed : PdfParsedCMap = {
+    map: [],
+    cid_map: [],
+    codespaces: [{ length: 1, first: 0x00, last: 0x7F }],
+    usecmap: Some(wbtest_text_name("/Identity-H")),
+    wmode: None,
+  }
+  @test.assert_eq(
+    pdf_text_parsed_cmap_charcodes_of_text(
+      mixed_identity_base_parsed,
+      wbtest_text_bytes([0x00, 0x41])[:],
+    ),
+    [0x0041],
+  )
   let two_byte_parsed : PdfParsedCMap = {
     map: [],
     cid_map: [],
     codespaces: [{ length: 2, first: 0x0000, last: 0xFFFF }],
+    usecmap: None,
     wmode: None,
   }
   @test.assert_eq(
@@ -2309,6 +2350,7 @@ test "private external CMap helpers cover malformed and compact sections" {
       { length: 2, first: 0x4100, last: 0x41FF },
       { length: 1, first: 0x00, last: 0x7F },
     ],
+    usecmap: None,
     wmode: None,
   }
   @test.assert_eq(PdfExternalCMap(3, mixed_parsed).uses_two_byte_codes(), false)

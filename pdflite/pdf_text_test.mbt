@@ -1765,6 +1765,7 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
       map: [],
       cid_map: [],
       codespaces: [],
+      usecmap: None,
       wmode: None,
     }),
   })
@@ -2545,6 +2546,7 @@ test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
   let parsed = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
       "/CIDInit /ProcSet findresource begin\n" +
+      "/Identity-H usecmap\n" +
       "/WMode 1 def\n" +
       "2 beginbfchar\n" +
       "<21><0041>\n" +
@@ -2557,6 +2559,7 @@ test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
     (33, text_bytes_for_test([0x00, 0x41])),
     (34, text_bytes_for_test([0x00, 0x42])),
   ])
+  @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-H")))
   let malformed_wmode = @pdflite.pdf_parse_cmap_data(
     @ascii.encode("/WMode invalid\n")[:],
   )
@@ -2590,6 +2593,26 @@ test "pdf_parse_cmap_data reads WMode across PDF whitespace" {
 }
 
 ///|
+test "pdf_parse_cmap_data reads UseCMap names across PDF whitespace" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode("/Identity-V\r\nusecmap\n")[:],
+  )
+  @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-V")))
+  @test.assert_eq(
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("usecmap\n")[:]).usecmap,
+    None,
+  )
+  @test.assert_eq(
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#2dName usecmap\n")[:]).usecmap,
+    Some(text_name_for_test("/Bad-Name")),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#xxName usecmap\n")[:]).usecmap,
+    None,
+  )
+}
+
+///|
 test "PdfDocument parse_cmap decodes stream objects" {
   let doc = @pdflite.pdf_document_empty()
   let cmap_data = @ascii.encode(
@@ -2603,6 +2626,10 @@ test "PdfDocument parse_cmap decodes stream objects" {
         text_name_for_test("/Filter"),
         PdfNameObject(text_name_for_test("/FlateDecode")),
       ),
+      (
+        text_name_for_test("/UseCMap"),
+        PdfNameObject(text_name_for_test("/Identity-V")),
+      ),
     ]),
     StreamGot(encoded_cmap),
   )
@@ -2614,6 +2641,7 @@ test "PdfDocument parse_cmap decodes stream objects" {
     ],
     cid_map: [],
     codespaces: [],
+    usecmap: Some(text_name_for_test("/Identity-V")),
     wmode: Some(0),
   })
   let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? doc.parse_cmap(
@@ -2651,6 +2679,49 @@ test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
     (0x8142, 202),
   ])
   @test.assert_eq(parsed.map, [])
+}
+
+///|
+test "PdfDocument applies external CMap Identity UseCMap fallback" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, text_valid_cid_descendant_for_test([]))
+  let cmap_data = @ascii.encode(
+    "/Identity-H usecmap\n" +
+    "1 begincidchar\n" +
+    "<0041> 99\n" +
+    "endcidchar\n",
+  )
+  let cmap = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(cmap_data.length())),
+    ]),
+    StreamGot(cmap_data),
+  )
+  doc.add_object_given_number(5, cmap)
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (text_name_for_test("/Encoding"), PdfIndirect(5)),
+  ])
+  guard (try! doc.read_cidkeyed_font(font)).encoding
+    is PdfExternalCMap(5, parsed) else {
+    fail("expected parsed external CMap")
+  }
+  @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-H")))
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x41, 0x00, 0x42])[:],
+    ),
+    [99, 0x42],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0x0041))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x42), Some(0x0042))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
 }
 
 ///|

@@ -138,6 +138,18 @@ generated package interface. Avoid deriving traits on private helpers unless a
 test or debug path actually uses those implementations, because unused derives
 can produce warnings under stricter project checks.
 
+```sh
+moon run -c 'struct S { a : Int; b : Int? } derive(Debug, Eq)
+fn main { let s = { a: 1, b: None }; let t = { ..s, b: Some(2) }; match t.b { Some(value) => println(value); None => println(0) } }'
+# 2
+```
+
+MoonBit supports record update syntax with `{ ..old_record, field: value }`.
+Use this when a port needs to preserve most fields while overlaying a parsed or
+validated value. Adding a field to a public struct is an API change: update all
+record literals and run `moon info` so the generated `.mbti` interface records
+the new field deliberately.
+
 When an OCaml function returns a broad variant and later code relies on an
 informal invariant, prefer a narrow private MoonBit enum for the post-checked
 state. This makes impossible fallback branches explicit at the type boundary

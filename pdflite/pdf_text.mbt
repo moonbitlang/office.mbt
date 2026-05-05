@@ -267,6 +267,7 @@ pub(all) struct PdfParsedCMap {
   map : Array[(Int, PdfBytes)]
   cid_map : Array[(Int, Int)]
   codespaces : Array[PdfCMapCodeSpace]
+  usecmap : PdfName?
   wmode : Int?
 } derive(Debug, Eq, ToJson)
 
@@ -1149,7 +1150,7 @@ pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
       pdf_text_predefined_cmap_uses_two_byte_charcodes(name)
     PdfExternalCMap(_, parsed) =>
       if parsed.codespaces.length() == 0 {
-        false
+        pdf_text_parsed_cmap_has_identity_base(parsed)
       } else {
         for codespace in parsed.codespaces {
           if codespace.length != 2 {
@@ -1204,17 +1205,61 @@ fn pdf_text_parsed_cmap_next_charcode(
 }
 
 ///|
+fn pdf_text_identity_codespace() -> PdfCMapCodeSpace {
+  { length: 2, first: 0x0000, last: 0xFFFF }
+}
+
+///|
+fn pdf_text_parsed_cmap_has_identity_base(parsed : PdfParsedCMap) -> Bool {
+  match parsed.usecmap {
+    Some(name) => {
+      let encoding = PdfPredefinedCMap(name)
+      encoding.is_identity_h() || encoding.is_identity_v()
+    }
+    None => false
+  }
+}
+
+///|
+fn pdf_text_parsed_cmap_identity_charcode(
+  parsed : PdfParsedCMap,
+  text : BytesView,
+  index : Int,
+) -> (Int, Int)? {
+  guard pdf_text_parsed_cmap_has_identity_base(parsed) else { return None }
+  match
+    pdf_text_parsed_cmap_codespace_charcode(
+      pdf_text_identity_codespace(),
+      text,
+      index,
+    ) {
+    Some(code) => Some((code, 2))
+    None => None
+  }
+}
+
+///|
 fn pdf_text_parsed_cmap_charcodes_of_text(
   parsed : PdfParsedCMap,
   text : BytesView,
 ) -> Array[Int] raise PdfError {
-  guard parsed.codespaces.length() > 0 else {
+  guard parsed.codespaces.length() > 0 ||
+    pdf_text_parsed_cmap_has_identity_base(parsed) else {
     return [ for byte in text => byte.to_int() ]
   }
   let output : Array[Int] = []
   let mut index = 0
   while index < text.length() {
-    match pdf_text_parsed_cmap_next_charcode(parsed, text, index) {
+    let next = match pdf_text_parsed_cmap_next_charcode(parsed, text, index) {
+      Some((local_code, length)) =>
+        match pdf_text_parsed_cmap_identity_charcode(parsed, text, index) {
+          Some((identity_code, identity_length)) if identity_length > length =>
+            Some((identity_code, identity_length))
+          _ => Some((local_code, length))
+        }
+      None => pdf_text_parsed_cmap_identity_charcode(parsed, text, index)
+    }
+    match next {
       Some((code, length)) => {
         output.push(code)
         index += length
@@ -2361,6 +2406,54 @@ fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
 }
 
 ///|
+fn pdf_text_parse_cmap_name_token(token : BytesView) -> PdfName? {
+  guard token.length() > 1 && token[0].to_int() == 47 else { return None }
+  let bytes : Array[Byte] = [47]
+  let mut index = 1
+  while index < token.length() {
+    let value = token[index].to_int()
+    if value == 35 {
+      guard index + 2 < token.length() else { return None }
+      match
+        (
+          pdf_hex_value(token[index + 1].to_int()),
+          pdf_hex_value(token[index + 2].to_int()),
+        ) {
+        (Some(high), Some(low)) => {
+          bytes.push((high * 16 + low).to_byte())
+          index += 3
+        }
+        _ => return None
+      }
+    } else {
+      bytes.push(token[index])
+      index += 1
+    }
+  }
+  Some(pdf_name_of_bytes(Bytes::from_array(bytes)))
+}
+
+///|
+fn pdf_text_parse_cmap_usecmap(data : BytesView) -> PdfName? {
+  let cursor = byte_cursor_of_view(data)
+  let mut previous_name : PdfName? = None
+  for line in cursor.read_line_views() {
+    let tokens = pdf_split_whitespace_tokens(line)
+    for token in tokens {
+      if pdf_text_view_equals_ascii(token, "usecmap") {
+        match previous_name {
+          Some(name) => return Some(name)
+          None => ()
+        }
+      }
+      previous_name = pdf_text_parse_cmap_name_token(token)
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
 fn pdf_text_cmap_end_marker(line : BytesView, start : Int) -> (Int, Int)? {
   let markers = [
     "endbfchar", "endbfrange", "endcidchar", "endcidrange", "endcodespacerange",
@@ -3180,6 +3273,7 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
       Some(entries) => entries
       None => []
     },
+    usecmap: pdf_text_parse_cmap_usecmap(data),
     wmode: pdf_text_parse_cmap_wmode(data),
   }
 }
@@ -3208,7 +3302,11 @@ pub fn PdfDocument::parse_cmap(
   cmap : PdfObject,
 ) -> PdfParsedCMap raise PdfError {
   let bytes = self.pdf_text_decoded_cmap_stream_data_direct(cmap)
-  pdf_parse_cmap_data(bytes[:])
+  let parsed = pdf_parse_cmap_data(bytes[:])
+  match (parsed.usecmap, self.lookup_direct(pdf_text_name("/UseCMap"), cmap)) {
+    (None, Some(PdfNameObject(name))) => { ..parsed, usecmap: Some(name) }
+    _ => parsed
+  }
 }
 
 ///|
@@ -7934,6 +8032,17 @@ fn pdf_text_reverse_lookup_cmap_cid(
 }
 
 ///|
+fn pdf_text_cmap_has_charcode(map : ArrayView[(Int, Int)], code : Int) -> Bool {
+  for entry in map {
+    if entry.0 == code {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
 fn PdfFont::pdf_text_external_cmap_codepoints(
   self : PdfFont,
   code : Int,
@@ -7944,7 +8053,14 @@ fn PdfFont::pdf_text_external_cmap_codepoints(
         PdfExternalCMap(_, parsed) =>
           match pdf_text_lookup_cmap_cid(parsed.cid_map[:], code) {
             Some(cid) => Some([cid])
-            None => None
+            None =>
+              if pdf_text_parsed_cmap_has_identity_base(parsed) &&
+                code >= 0 &&
+                code <= 0xFFFF {
+                Some([code])
+              } else {
+                None
+              }
           }
         _ => None
       }
@@ -7958,7 +8074,18 @@ fn PdfFont::pdf_text_external_cmap_charcode(self : PdfFont, cid : Int) -> Int? {
     PdfFontCIDKeyed(font) =>
       match font.encoding {
         PdfExternalCMap(_, parsed) =>
-          pdf_text_reverse_lookup_cmap_cid(parsed.cid_map[:], cid)
+          match pdf_text_reverse_lookup_cmap_cid(parsed.cid_map[:], cid) {
+            Some(code) => Some(code)
+            None =>
+              if pdf_text_parsed_cmap_has_identity_base(parsed) &&
+                cid >= 0 &&
+                cid <= 0xFFFF &&
+                !pdf_text_cmap_has_charcode(parsed.cid_map[:], cid) {
+                Some(cid)
+              } else {
+                None
+              }
+          }
         _ => None
       }
     _ => None
