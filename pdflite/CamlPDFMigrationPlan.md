@@ -1404,6 +1404,9 @@ end to end:
   extract pages in a new order, and reread the extracted document.
 - retain merged page labels and bookmark targets through a public
   merge/write/read compressed xref-stream boundary.
+- run a `pdfdecomp.ml`-style document-wide stream decompression workflow,
+  preserve unsupported tail filter metadata, write compressed xref-stream
+  output, and reread the decompressed stream.
 - run a `pdftest.ml`-style split-content parse/rewrite workflow through
   `change_pages`, remove stale objects, write compressed xref-stream output,
   and reread the normalized single-stream page content.

@@ -342,10 +342,20 @@ fn acceptance_assert_partial_filter_stream_for_test(
 ) -> Unit raise {
   let decoded_doc = doc.copy()
   decoded_doc.pdf_decode_streams_until_unknown()
-  guard decoded_doc.lookup_object_or_null(50) is PdfStreamObject(stream) else {
+  acceptance_assert_decompressed_partial_filter_stream_for_test(decoded_doc)
+}
+
+///|
+fn acceptance_assert_decompressed_partial_filter_stream_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  guard doc.lookup_object_or_null(50) is PdfStreamObject(stream) else {
     fail("expected partially decoded acceptance stream")
   }
-  @test.assert_eq(stream.data, StreamGot(acceptance_ascii_for_test("Hi")))
+  @test.assert_eq(
+    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    acceptance_ascii_for_test("Hi"),
+  )
   @test.assert_eq(
     stream.dictionary.lookup_immediate(acceptance_name_for_test("/Length")),
     Some(PdfInteger(2)),
@@ -1297,6 +1307,21 @@ test "native acceptance suite preserves labels and bookmarks across merge bounda
   let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
   @test.assert_eq(reparsed.read_page_labels(), expected_labels)
   acceptance_assert_bookmarks_target_pages_for_test(reparsed, "First", "Second")
+}
+
+///|
+test "native acceptance suite runs pdfdecomp stream decompression workflow" {
+  let source = @pdflite.pdf_write_document_with_xref_stream(
+    acceptance_one_page_document_for_test(),
+  )
+  let parsed = @pdflite.pdf_read_document_from_bytes(source)
+  acceptance_assert_one_page_invariants_for_test(parsed, (1, 5))
+  parsed.pdf_decode_streams_until_unknown()
+  acceptance_assert_decompressed_partial_filter_stream_for_test(parsed)
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(parsed)
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
+  acceptance_assert_one_page_invariants_for_test(reparsed, (1, 5))
+  acceptance_assert_decompressed_partial_filter_stream_for_test(reparsed)
 }
 
 ///|

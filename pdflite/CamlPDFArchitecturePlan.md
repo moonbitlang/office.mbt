@@ -194,7 +194,8 @@ vertical acceptance path at a time instead of isolated edge polishing:
   revision reads. Document-level merge and page extraction are also covered
   across a compressed xref-stream read boundary, including retained page labels
   and bookmark targets through a public merge/write/read workflow, and native
-  acceptance covers `pdftest.ml`-style split-content parse/rewrite and
+  acceptance covers `pdfdecomp.ml`-style document-wide stream decompression,
+  `pdftest.ml`-style split-content parse/rewrite, and
   `pdfdraft.ml`-style image-replacement workflows through compressed
   xref-stream write/read. Native async file wrappers cover encrypted
   incremental revision reads from disk. Password-aware native reads now include
