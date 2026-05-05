@@ -345,6 +345,9 @@ MoonBit consequences for this project:
    gate now also covers hybrid classic trailers with `/XRefStm` on the
    malformed-startxref path, recovering both the table entries and the
    pointed-to xref-stream entries while sanitizing xref-only trailer keys.
+   A focused native gate also covers classic multi-revision `/Prev` chains
+   with a bad final `startxref`, selecting the newest body-scanned catalog and
+   sanitizing `/Prev` out of the recovered trailer.
    A focused native gate also covers a multi-revision xref-stream file where
    the older revision has a top-level catalog and the newer malformed-startxref
    revision moves that catalog into an object stream.

@@ -1580,6 +1580,32 @@ fn reader_classic_pdf_with_prev_deleted_object() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_catalog_pdf_with_prev_xref_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let original_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Revision 1 >>",
+  )
+  let base_xref = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, original_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\nstartxref\n")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  let updated_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Revision 2 >>",
+  )
+  let second_offset = reader_push_indirect_object(output, 2, 0, "3")
+  reader_push_ascii(output, "xref\n1 2\n")
+  reader_push_xref_entry(output, updated_offset, 0)
+  reader_push_xref_entry(output, second_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 /Prev ")
+  reader_push_ascii(output, base_xref.to_string())
+  reader_push_ascii(output, " >>\nstartxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 test "ByteCursor read_pdf_header finds header and sets input offset" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     reader_bytes_for_test([0, 1, 2, 37, 80, 68, 70, 45, 49, 46, 55, 10, 65]),
@@ -2366,6 +2392,36 @@ test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs classic Prev chains with bad startxref" {
+  let payload = reader_classic_catalog_pdf_with_prev_xref_bad_startxref()
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    payload,
+  )
+  guard strict is Err(_) else {
+    fail("expected strict classic Prev bad-startxref read to fail")
+  }
+
+  let parsed = @pdflite.pdf_read_document_from_bytes(payload)
+  @test.assert_eq(parsed.version(), (1, 4))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(
+    parsed
+    .lookup_object_or_null(1)
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Revision"))),
+    Some(PdfInteger(2)),
+  )
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(3))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
 }
 
 ///|

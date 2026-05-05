@@ -68,6 +68,9 @@ work changes.
    Hybrid classic trailers with `/XRefStm` are now covered on the same
    malformed-startxref path, so table objects and the pointed-to xref-stream
    entries are both recovered and trailer-only xref machinery is stripped.
+   Classic multi-revision `/Prev` chains with a bad final `startxref` are also
+   covered by reconstruction, selecting the newest body-scanned catalog and
+   stripping `/Prev` from the recovered trailer.
    Password-aware reconstruction now retries xref-stream object-stream
    expansion after trailer selection, when `/Encrypt` and file IDs are
    available, so encrypted `/ObjStm` payloads can be materialized during

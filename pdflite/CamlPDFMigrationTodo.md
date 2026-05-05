@@ -79,6 +79,8 @@ Current estimate:
   for encrypted object streams, including decrypted embedded payload materialization.~~
 - [x] ~~Hybrid classic trailer `/XRefStm` malformed-startxref recovery, loading
   both table and xref-stream objects while sanitizing trailer xref keys.~~
+- [x] ~~Classic multi-revision `/Prev` malformed-startxref recovery, selecting
+  the newest body-scanned catalog while sanitizing trailer xref keys.~~
 - [x] ~~Predefined UCS2 horizontal/vertical CMap two-byte text extraction gate
   through reader and extractor boundaries.~~
 - [ ] Broader non-UCS2 predefined CMap mapping tables and more vertical-writing
@@ -142,6 +144,8 @@ Current estimate:
 - [x] ~~Extend the real malformed-startxref gate to xref-stream/object-stream
   PDFs.~~
 - [x] ~~Add a hybrid classic `/XRefStm` malformed-startxref reconstruction gate.~~
+- [x] ~~Add a classic multi-revision `/Prev` malformed-startxref reconstruction
+  gate.~~
 - [x] ~~Add explicit Flate compression-level encoding APIs.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
