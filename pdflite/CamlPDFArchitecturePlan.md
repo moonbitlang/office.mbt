@@ -161,8 +161,10 @@ work changes.
    `/EncryptMetadata false` through compressed encrypted output, public password
    read, plaintext metadata inspection in the encrypted bytes, saved-state
    AESV2 recrypt, and recrypting non-stream payload objects extracted from
-   encrypted object streams.
-   Remaining focus: broader encrypted malformed-reader compatibility.
+   encrypted object streams. Encrypted malformed-reader acceptance now covers
+   bad-startxref reconstruction followed by saved-state recrypt and compressed
+   write/reread.
+   Remaining focus: broader real-world encrypted malformed-reader compatibility.
 
 7. Document-level features.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
@@ -198,9 +200,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 74-78% complete. Full
+Current estimate: native main-feature parity is about 75-79% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 63-68% complete.
+and backend breadth, is about 64-69% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -219,12 +221,12 @@ and backend breadth, is about 63-68% complete.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
   decryption, native secure-random writer paths, saved-state recrypt,
   encrypted object streams, lazy encrypted stream forcing, non-stream
-  object-stream payload recrypt, and `/EncryptMetadata false`.
+  object-stream payload recrypt, bad-startxref encrypted reconstruction with
+  recrypt, and `/EncryptMetadata false`.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
   unusual inherited page data and broader real-world destination/action
   combinations.
-- Not covered enough: encrypted malformed-reader recovery outside the
-  object-stream and stream-data paths.
+- Not covered enough: broader real-world encrypted malformed-reader recovery.
 
 ### P1: Deepen Format Parity
 
@@ -253,9 +255,7 @@ and backend breadth, is about 63-68% complete.
 
 ### Immediate Work Order
 
-- Next: add one broader encrypted malformed-reader gate beyond stream and
-  object-stream data.
-- Then: deepen text/image parity with one predefined-CMap gate and one
+- Next: deepen text/image parity with one predefined-CMap gate and one
   filter/image-family gate.
 - Later: expand malformed-reader recovery from realistic documents and only
   then widen backend validation beyond native.
@@ -327,7 +327,9 @@ and backend breadth, is about 63-68% complete.
   is also covered after a compressed read boundary for preserved page resources,
   direct and indirect link annotations, GoTo action annotations, catalog
   `/OpenAction`, old-style `/Dests`, name-tree destinations, and bookmark
-  resolution through write/reread.
+  resolution through write/reread. Encrypted malformed-reader coverage now also
+  includes bad-startxref reconstruction followed by password read,
+  saved-state AESV2 recrypt, compressed write, and password reread.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   remaining encryption edge cases, remaining malformed-reader recovery, and
   example-level integration fixtures.

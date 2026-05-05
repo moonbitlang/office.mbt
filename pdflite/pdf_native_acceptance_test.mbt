@@ -95,6 +95,31 @@ fn acceptance_corrupt_first_in_use_xref_offset_for_test(
 }
 
 ///|
+fn acceptance_corrupt_startxref_pointer_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes raise {
+  let marker = acceptance_ascii_for_test("startxref\n")
+  let marker_position = acceptance_find_bytes_for_test(bytes[:], marker[:])
+  if marker_position < 0 {
+    fail("expected startxref marker")
+  }
+  let number_start = marker_position + marker.length()
+  let mut number_end = number_start
+  while number_end < bytes.length() && bytes[number_end] != b'\n' {
+    number_end += 1
+  }
+  let output : Array[Byte] = []
+  for index in 0..<number_start {
+    output.push(bytes[index])
+  }
+  acceptance_push_ascii_for_test(output, (bytes.length() + 4096).to_string())
+  for index in number_end..<bytes.length() {
+    output.push(bytes[index])
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_push_big_endian_for_test(
   output : Array[Byte],
   value : Int,
@@ -3911,6 +3936,77 @@ test "native acceptance suite decrypts reconstructed malformed xref documents" {
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite recrypts reconstructed bad-startxref encrypted documents" {
+  let doc = acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-bad-startxref-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoPrint]
+  let encrypted = doc.encrypt_128bit_aesv2_with_iv_provider(
+    user_password[:],
+    owner_password[:],
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 20)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-acceptance-bad-startxref-id")[:],
+  )
+  let rendered = @pdflite.pdf_write_document(encrypted)
+  let corrupted = acceptance_corrupt_startxref_pointer_for_test(rendered)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected bad startxref to require malformed reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      corrupted,
+      owner_password=Some(owner_password[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_pages_have_hello_content_for_test(decrypted.document, 1)
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("bad-startxref-recrypt-added"),
+  )
+  decrypted.document.add_object_given_number(61, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password[:],
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 24)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rerendered[:],
+      acceptance_ascii_for_test("native-acceptance-bad-startxref-secret")[:],
+    ) <
+    0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      user_password=Some(user_password[:]),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_pages_have_hello_content_for_test(roundtrip.document, 1)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(60), secret)
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(61), added_object)
 }
 
 ///|

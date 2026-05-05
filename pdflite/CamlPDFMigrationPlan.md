@@ -1112,8 +1112,11 @@ MoonBit consequences for this project:
     documents remove `/Encrypt` from the copied trailer, skip the indirect
     encryption dictionary object, preserve deferred parsed stream decryption for
     file-backed streams, and return CamlPDF-style denied permissions. Remaining
-    encrypted malformed-reader compatibility outside streams and object-stream
-    expansion remains deferred.
+    encrypted malformed-reader compatibility now has a native bad-startxref
+    reconstruction gate that password-reads, mutates, saved-state recrypts,
+    compressed-writes, and password-rereads a direct encrypted-object document.
+    Broader real-world encrypted malformed-reader compatibility remains
+    deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
@@ -1516,6 +1519,9 @@ public APIs end to end:
 - decrypt an AES-128 document after forcing malformed-xref reconstruction,
   proving direct encrypted objects still pass through the public password
   wrapper after xref fallback.
+- recover an AESV2 encrypted classic document with a bad `startxref` pointer,
+  password-read it through reconstruction, mutate and saved-state recrypt it,
+  then compressed write/reread it through the public password wrapper.
 
 Near-term work should extend this suite with the next visible public workflow
 gate, then fix the reader/parser/encryption gap it exposes. Isolated malformed
