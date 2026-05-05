@@ -487,14 +487,9 @@ pub fn ByteCursor::lex_pdf_token(self : ByteCursor) -> PdfLexeme raise PdfError 
       LexR
     }
     115 =>
-      if self.matches_pdf_ascii_at(position, [
-          115, 116, 97, 114, 116, 120, 114, 101, 102,
-        ]) ||
-        self.matches_pdf_ascii_at(position, [115, 116, 114, 101, 97, 109]) {
-        StopLexing
-      } else {
-        self.lex_pdf_keyword()
-      }
+      // `startxref` terminates object lexing; any other `s...` marker is left
+      // for the stream reader so malformed spellings report stream errors.
+      StopLexing
     73 => StopLexing
     value if pdf_is_lowercase_keyword_start_byte(value) =>
       self.lex_pdf_keyword()

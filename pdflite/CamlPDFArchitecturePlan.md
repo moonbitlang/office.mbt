@@ -39,7 +39,9 @@ work changes.
    `/First` metadata through the partially loaded document before slicing
    embedded objects.
    Empty indirect objects of the form `n gen obj endobj` now parse as `null`,
-   matching CamlPDF's malformed-object fallback.
+   and plain non-stream indirect objects may omit the final `endobj` when
+   parsing reaches following non-stream syntax, matching CamlPDF's
+   malformed-object fallback.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

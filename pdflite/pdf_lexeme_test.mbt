@@ -354,6 +354,7 @@ test "ByteCursor lex_pdf_token dispatches booleans hex strings and stop markers"
   let hex = try! cursor.lex_pdf_token()
   guard hex is LexString(bytes) else { fail("expected LexString") }
   @test.assert_eq(bytes, lexeme_bytes_for_test([65]))
-  @test.assert_eq(try! cursor.lex_pdf_token(), LexNone)
+  @test.assert_eq(try! cursor.lex_pdf_token(), StopLexing)
+  try! cursor.seek(16)
   @test.assert_eq(try! cursor.lex_pdf_token(), StopLexing)
 }

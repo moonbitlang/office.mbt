@@ -105,14 +105,22 @@ pub fn pdf_read_primitive_document_from_view(
       )
     }
     match prefix {
-      Some(prefix) => {
-        let stream = cursor.finish_pdf_stream_object(prefix)
-        document.load_object_given_number(
-          stream.number,
-          stream.object,
-          generation=stream.generation,
-        )
-      }
+      Some(prefix) =>
+        if cursor.stopped_at_pdf_stream_candidate() {
+          let stream = cursor.finish_pdf_stream_object(prefix)
+          document.load_object_given_number(
+            stream.number,
+            stream.object,
+            generation=stream.generation,
+          )
+        } else {
+          document.load_object_given_number(
+            prefix.number,
+            prefix.object,
+            generation=prefix.generation,
+          )
+          done = true
+        }
       None => done = true
     }
   }
@@ -862,10 +870,24 @@ fn ByteCursor::read_plain_indirect_object_at_current(
     objects[0]
   } else {
     match prefix {
-      Some(_) => raise StreamLengthExpected
+      Some(prefix) =>
+        if self.stopped_at_pdf_stream_candidate() {
+          raise StreamLengthExpected
+        } else {
+          prefix
+        }
       None => raise ParseIndirectObjectExpected
     }
   }
+}
+
+///|
+fn ByteCursor::stopped_at_pdf_stream_candidate(self : ByteCursor) -> Bool {
+  let position = self.absolute_position()
+  self.matches_pdf_ascii_at(position, [115]) &&
+  !self.matches_pdf_ascii_at(position, [
+    115, 116, 97, 114, 116, 120, 114, 101, 102,
+  ])
 }
 
 ///|
@@ -982,6 +1004,8 @@ fn ByteCursor::read_first_indirect_object_at_current(
     0,
   )
   if complete {
+    object
+  } else if !self.stopped_at_pdf_stream_candidate() {
     object
   } else {
     let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(

@@ -216,16 +216,15 @@ test "pdf_parse_indirect_object_lexemes reports malformed indirect objects" {
   guard missing_header is Err(@pdflite.PdfError::ParseIndirectObjectExpected) else {
     fail("expected ParseIndirectObjectExpected")
   }
-  let missing_end : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
+  @test.assert_eq(
+    try! @pdflite.pdf_parse_indirect_object_lexemes([
       LexInt(7),
       LexInt(0),
       LexObj,
       LexNull,
-    ],
+    ]),
+    { number: 7, generation: 0, object: PdfNull },
   )
-  guard missing_end is Err(@pdflite.PdfError::ParseEndObjectExpected) else {
-    fail("expected ParseEndObjectExpected")
-  }
   let missing_object : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_indirect_object_lexemes([
       LexInt(7),
       LexInt(0),

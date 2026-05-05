@@ -202,6 +202,19 @@ fn reader_classic_pdf_with_glued_trailer_dictionary() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_missing_endobj_catalog() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = output.length()
+  reader_push_ascii(output, "1 0 obj\n<< /Type /Catalog >>\n")
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_trailing_startxref_junk() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   for
@@ -1432,6 +1445,16 @@ test "pdf_parse_indirect_object_from_bytes treats empty objects as null" {
 }
 
 ///|
+test "pdf_parse_indirect_object_from_bytes accepts missing endobj" {
+  let parsed = try! @pdflite.pdf_parse_indirect_object_from_bytes(
+    reader_pdf_ascii("2 0 obj\n42\n"),
+  )
+  @test.assert_eq(parsed.number, 2)
+  @test.assert_eq(parsed.generation, 0)
+  @test.assert_eq(parsed.object, PdfInteger(42))
+}
+
+///|
 test "pdf_read_primitive_document_from_view loads borrowed slices" {
   let payload = reader_pdf_ascii("%PDF-1.4\n1 0 obj\n[1 2]\nendobj\nxref")
   let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")
@@ -1444,6 +1467,15 @@ test "pdf_read_primitive_document_from_view loads borrowed slices" {
     document.lookup_object_or_null(1),
     @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
   )
+}
+
+///|
+test "pdf_read_primitive_document_from_bytes accepts missing plain endobj" {
+  let document = try! @pdflite.pdf_read_primitive_document_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\n1 0 obj\n42\nxref"),
+  )
+  @test.assert_eq(document.object_numbers(), [1])
+  @test.assert_eq(document.lookup_object_or_null(1), PdfInteger(42))
 }
 
 ///|
@@ -2851,6 +2883,25 @@ test "pdf_read_classic_document_from_bytes accepts glued trailer dictionaries" {
   @test.assert_eq(parsed.first_xref() > 0, true)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_classic_document_from_bytes accepts missing plain endobj" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_missing_endobj_catalog(),
+  )
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
 }
 
 ///|

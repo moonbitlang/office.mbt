@@ -218,11 +218,8 @@ fn pdf_parse_indirect_object_at(
   let (object, next, complete) = pdf_parse_indirect_object_segment_at(
     lexemes, index,
   )
-  if complete {
-    (object, next)
-  } else {
-    raise ParseEndObjectExpected
-  }
+  ignore(complete)
+  (object, next)
 }
 
 ///|

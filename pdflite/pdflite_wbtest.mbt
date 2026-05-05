@@ -719,6 +719,10 @@ test "private reader xref helpers report malformed inputs" {
   guard no_plain_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected ParseIndirectObjectExpected")
   }
+  @test.assert_eq(
+    try! byte_cursor_of_bytes(@ascii.encode("2 0 obj\n42\n")).read_plain_indirect_object_at_current(),
+    { number: 2, generation: 0, object: PdfInteger(42) },
+  )
 
   let empty_prefix = byte_cursor_of_bytes(Bytes::new(0))
   let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? empty_prefix.read_reconstructed_indirect_prefix_at_current()
