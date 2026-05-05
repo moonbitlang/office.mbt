@@ -43,6 +43,10 @@ work changes.
    parsing reaches following non-stream syntax; primitive scans also continue
    across an adjacent `n gen obj` header after such a malformed plain object,
    matching CamlPDF's malformed-object fallback.
+   Malformed-file reconstruction now advances past successfully parsed objects
+   and recovered streams so object-like bytes inside stream payloads are not
+   mistaken for top-level indirect objects, while incomplete plain objects still
+   leave the scanner in byte-wise recovery mode.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

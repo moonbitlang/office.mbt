@@ -1124,26 +1124,40 @@ fn ByteCursor::read_reconstructed_indirect_prefix_at_current(
 }
 
 ///|
-fn ByteCursor::read_reconstructed_indirect_object_at_current(
+fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
   self : ByteCursor,
   xrefs : ArrayView[PdfClassicXRefEntry],
-) -> PdfParsedIndirectObject raise PdfError {
+) -> (PdfParsedIndirectObject, Int?) raise PdfError {
   let (object, _, complete) = pdf_parse_indirect_object_segment_at(
     self.lex_reconstructed_indirect_object_tokens_at_current(),
     0,
   )
   if complete {
-    object
-  } else {
+    (object, Some(self.absolute_position()))
+  } else if self.stopped_at_pdf_stream_candidate() {
     let length_result : Result[Int, Error] = try? self.resolve_classic_stream_length(
       object.object,
       xrefs,
     )
-    match length_result {
+    let stream = match length_result {
       Ok(length) => self.finish_pdf_stream_object_with_length(object, length)
       Err(_) => self.finish_pdf_malformed_stream_object(object)
     }
+    (stream, Some(self.absolute_position()))
+  } else {
+    (object, None)
   }
+}
+
+///|
+fn ByteCursor::read_reconstructed_indirect_object_at_current(
+  self : ByteCursor,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> PdfParsedIndirectObject raise PdfError {
+  let (object, _) = self.read_reconstructed_indirect_scan_candidate_at_current(
+    xrefs,
+  )
+  object
 }
 
 ///|
@@ -1151,13 +1165,16 @@ fn pdf_read_reconstructed_xrefs(
   data : BytesView,
 ) -> Array[PdfClassicXRefEntry] raise PdfError {
   let xrefs : Array[PdfClassicXRefEntry] = []
-  for position = 0; position < data.length(); position = position + 1 {
+  let mut position = 0
+  while position < data.length() {
     if pdf_is_digit_byte(data[position].to_int()) {
       let cursor = byte_cursor_of_view(data)
       cursor.seek_pdf_absolute(position)
-      let parsed : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_indirect_prefix_at_current()
+      let parsed : Result[(PdfParsedIndirectObject, Int?), Error] = try? cursor.read_reconstructed_indirect_scan_candidate_at_current(
+        xrefs[:],
+      )
       match parsed {
-        Ok(object) =>
+        Ok((object, next_position)) => {
           if object.number > 0 {
             xrefs.push({
               object_number: object.number,
@@ -1167,8 +1184,15 @@ fn pdf_read_reconstructed_xrefs(
               object_stream: None,
             })
           }
-        Err(_) => ()
+          match next_position {
+            Some(next) if next > position => position = next
+            _ => position += 1
+          }
+        }
+        Err(_) => position += 1
       }
+    } else {
+      position += 1
     }
   }
   xrefs

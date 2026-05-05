@@ -737,6 +737,28 @@ test "private reader xref helpers report malformed inputs" {
   guard empty_prefix_result is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected ParseIndirectObjectExpected")
   }
+  let incomplete_scan = byte_cursor_of_bytes(@ascii.encode("3 0 obj\n42\n"))
+  let (incomplete_candidate, incomplete_next) = try! incomplete_scan.read_reconstructed_indirect_scan_candidate_at_current(
+    empty_xrefs[:],
+  )
+  @test.assert_eq(incomplete_candidate, {
+    number: 3,
+    generation: 0,
+    object: PdfInteger(42),
+  })
+  @test.assert_eq(incomplete_next, None)
+  let incomplete_xrefs = try! pdf_read_reconstructed_xrefs(
+    @ascii.encode("3 0 obj\n42\n")[:],
+  )
+  @test.assert_eq(incomplete_xrefs.length(), 1)
+  @test.assert_eq(incomplete_xrefs[0].object_number, 3)
+  let objects_with_bad_resolved_length = try! pdf_read_reconstructed_objects(
+    @ascii.encode(
+      "1 0 obj\n<< /Length 2 0 R >>\nstream\nHi\nendstream\nendobj\n2 0 obj\n999999\nendobj\n",
+    )[:],
+  )
+  @test.assert_eq(objects_with_bad_resolved_length.length(), 1)
+  @test.assert_eq(objects_with_bad_resolved_length[0].number, 2)
 
   @test.assert_eq(
     pdf_reader_stream_data_end_before_marker(

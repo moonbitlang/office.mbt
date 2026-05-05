@@ -964,6 +964,22 @@ fn reader_malformed_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_malformed_pdf_with_object_header_inside_stream() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  ignore(
+    reader_push_indirect_object(
+      output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+    ),
+  )
+  reader_push_ascii(output, "2 0 obj\n<< /Length 35 >>\nstream\n")
+  reader_push_ascii(output, "9 0 obj\n<< /Type /Catalog >>\nendobj")
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 >>\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_unreadable_stream_and_catalog() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -2299,6 +2315,23 @@ test "pdf_read_document_from_bytes reconstructs indirect stream lengths" {
     Some(PdfInteger(7)),
   )
   @test.assert_eq(reconstructed.data, StreamGot(reader_pdf_ascii("Ignored")))
+}
+
+///|
+test "pdf_read_document_from_bytes ignores object-looking stream data during reconstruction" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_malformed_pdf_with_object_header_inside_stream(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  guard parsed.lookup_object_or_null(2) is PdfStreamObject(stream) else {
+    fail("expected recovered stream object")
+  }
+  @test.assert_eq(
+    stream.data,
+    StreamGot(reader_pdf_ascii("9 0 obj\n<< /Type /Catalog >>\nendobj")),
+  )
 }
 
 ///|

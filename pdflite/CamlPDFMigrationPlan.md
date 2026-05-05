@@ -329,18 +329,20 @@ MoonBit consequences for this project:
    independently while the offset, generation, and `n`/`f` columns remain
    parseable, and classic trailers whose dictionary starts immediately after
    the `trailer` keyword without intervening whitespace.
-   Broader malformed xref-table recovery remains deferred. The
-   reconstruction scan now
-   builds a temporary offset table before materializing objects, so recovered
-   streams can resolve plain indirect `/Length n 0 R` entries. Public
+   Broader malformed xref-table recovery remains deferred. The reconstruction
+   scan now builds a temporary offset table before materializing objects, so
+   recovered streams can resolve plain indirect `/Length n 0 R` entries. Public
    reconstruction can now also recover stream objects with missing or unreadable
    `/Length` values by scanning through the following `endstream` marker and
    correcting `/Length`, and reconstructed object tokenization now skips raw
    `endobj` byte sequences inside literal strings by retrying the next candidate
-   terminator. It still skips stream objects with malformed `stream`,
-   `endstream`, or `endobj` markers, truncated stream data, malformed object
-   bodies, and invalid PDF name hex escapes when a later reconstructed catalog
-   remains valid.
+   terminator. The reconstruction offset scan now also advances past complete
+   indirect objects and recovered streams, avoiding false top-level objects from
+   object-looking bytes inside stream payloads while retaining byte-wise
+   recovery after incomplete plain objects. It still skips stream objects with
+   malformed `stream`, `endstream`, or `endobj` markers, truncated stream data,
+   malformed object bodies, and invalid PDF name hex escapes when a later
+   reconstructed catalog remains valid.
    `pdf_read_document_from_bytes` is now the public
    byte-backed reader entry point and handles classic tables plus the started
    xref-stream/object-stream subset; borrowed `BytesView` entry points are now
