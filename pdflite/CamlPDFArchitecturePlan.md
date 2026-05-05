@@ -184,11 +184,12 @@ vertical acceptance path at a time instead of isolated edge polishing:
   password-wrapper reads plus AES-128 decrypt/recrypt incremental revision
   reads. Document-level merge and page extraction are also covered across a
   compressed xref-stream read boundary, and native async file wrappers cover
-  encrypted incremental revision reads from disk. Password-aware native reads
-  now include an encrypted object-stream fixture. Native acceptance also covers
-  `change_pages` bookmark-reference and matrix rewriting after a compressed
-  xref-stream read boundary, plus strict reading and writer normalization for
-  CamlPDF-tolerated malformed classic xref rows.
+   encrypted incremental revision reads from disk. Password-aware native reads
+   now include an encrypted object-stream fixture. Native acceptance also covers
+   `change_pages` bookmark-reference and matrix rewriting after a compressed
+   xref-stream read boundary, plus strict reading and writer normalization for
+  CamlPDF-tolerated malformed classic xref rows, and password decryption after
+  malformed-xref reconstruction of direct encrypted objects.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   encryption finishing edges, remaining malformed-reader recovery, and
   example-level integration fixtures.

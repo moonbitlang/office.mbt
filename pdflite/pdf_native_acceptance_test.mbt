@@ -31,6 +31,70 @@ fn acceptance_push_view_for_test(
 }
 
 ///|
+fn acceptance_bytes_start_with_at_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+  start : Int,
+) -> Bool {
+  if start < 0 || start + needle.length() > haystack.length() {
+    false
+  } else {
+    for index in 0..<needle.length() {
+      if haystack[start + index] != needle[index] {
+        break false
+      }
+    } nobreak {
+      true
+    }
+  }
+}
+
+///|
+fn acceptance_find_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    for start = 0
+        start <= haystack.length() - needle.length()
+        start = start + 1 {
+      if acceptance_bytes_start_with_at_for_test(haystack, needle, start) {
+        break start
+      }
+    } nobreak {
+      -1
+    }
+  }
+}
+
+///|
+fn acceptance_corrupt_first_in_use_xref_offset_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes raise {
+  let free_row = acceptance_ascii_for_test("0000000000 65535 f \n")
+  let free_row_position = acceptance_find_bytes_for_test(bytes[:], free_row[:])
+  if free_row_position < 0 {
+    fail("expected classic xref free row")
+  }
+  let row_start = free_row_position + free_row.length()
+  if row_start + 10 > bytes.length() {
+    fail("expected first in-use xref row")
+  }
+  let output : Array[Byte] = []
+  for byte in bytes {
+    output.push(byte)
+  }
+  for index in row_start..<(row_start + 10) {
+    output[index] = (57).to_byte()
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_push_big_endian_for_test(
   output : Array[Byte],
   value : Int,
@@ -929,6 +993,46 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
     (1, 4),
   )
   @test.assert_eq(owner_decrypted.document.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite decrypts reconstructed malformed xref documents" {
+  let doc = try! acceptance_one_page_document_for_test()
+  let secret = acceptance_secret_object_for_test(
+    "native-acceptance-reconstructed-secret",
+  )
+  doc.add_object_given_number(60, secret)
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    acceptance_ascii_for_test("user")[:],
+    acceptance_ascii_for_test("owner")[:],
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 3)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-acceptance-malformed-id")[:],
+  )
+  let rendered = try! @pdflite.pdf_write_document(encrypted)
+  let corrupted = try! acceptance_corrupt_first_in_use_xref_offset_for_test(
+    rendered,
+  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected corrupted xref to require malformed reconstruction")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      corrupted,
+      user_password=Some(acceptance_ascii_for_test("user")[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.document.first_xref(), 0)
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
+  @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
 }
 
 ///|

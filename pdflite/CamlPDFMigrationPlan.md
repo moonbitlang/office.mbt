@@ -1403,6 +1403,9 @@ end to end:
   and avoiding double decryption of the embedded object.
 - read a minimal page tree through a CamlPDF-tolerated malformed classic xref
   table, then normalize it through the writer and reread it.
+- decrypt an AES-128 document after forcing malformed-xref reconstruction,
+  proving direct encrypted objects still pass through the public password
+  wrapper after xref fallback.
 
 Near-term work should extend this suite with the next visible compatibility
 case, then fix the reader/parser/encryption gap it exposes. Broader backend
