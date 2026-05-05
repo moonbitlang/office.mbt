@@ -105,7 +105,8 @@ work changes.
    `pdfdecomp.ml` stream-decompression workflow, a `pdfmergeexample.ml`-style
    public workflow fixture, and a `pdfdraft.ml` image-replacement acceptance
    fixture are started. Page-label reads now preserve CamlPDF's tolerant range
-   handling for malformed keys and odd trailing `/Nums` entries.
+   handling for malformed keys and odd trailing `/Nums` entries while rejecting
+   empty malformed label trees.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

@@ -336,7 +336,10 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
     .lookup_object_or_null(1)
     .add_dict_entry(key_page_labels, PdfDictionary([])),
   )
-  @test.assert_eq(try! empty_doc.read_page_labels(), [])
+  let empty_result : Result[Array[@pdflite.PdfPageLabel], Error] = try? empty_doc.read_page_labels()
+  guard empty_result is Err(@pdflite.PdfError::PageTreeExpected) else {
+    fail("expected PageTreeExpected")
+  }
 }
 
 ///|

@@ -454,7 +454,7 @@ fn pdf_page_label_style_object(style : PdfPageLabelStyle) -> PdfObject? {
 fn PdfDocument::pdf_page_label_raw_entries(
   self : PdfDocument,
   tree : PdfObject,
-) -> Array[(PdfObject, PdfObject)] {
+) -> Array[(PdfObject, PdfObject)] raise PdfError {
   let output : Array[(PdfObject, PdfObject)] = []
   match
     self.lookup_direct_or_else(pdf_tree_names_key(), pdf_tree_nums_key(), tree) {
@@ -470,7 +470,7 @@ fn PdfDocument::pdf_page_label_raw_entries(
               output.push(entry)
             }
           }
-        _ => ()
+        _ => raise PageTreeExpected
       }
   }
   output

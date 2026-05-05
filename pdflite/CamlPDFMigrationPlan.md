@@ -1055,9 +1055,10 @@ MoonBit consequences for this project:
     merge-label construction for selected page ranges, CamlPDF-compatible
     label-style debug string parsing/rendering, byte-preserving page-label
     debug-line rendering, malformed page-label range key fallback to page 1
-    with odd trailing `/Nums` entries ignored like CamlPDF, and active-catalog
-    page-label read/write/remove through trailer `/Root` with document-root
-    fallback for synthetic fixtures. Annotation support is
+    with odd trailing `/Nums` entries ignored like CamlPDF, malformed empty
+    `/PageLabels` trees rejected, and active-catalog page-label
+    read/write/remove through trailer `/Root` with document-root fallback for
+    synthetic fixtures. Annotation support is
     started with typed subtypes, borders, colours, byte-preserving
     contents/subjects, page annotation reading with popup-parent filtering,
     page-record annotation insertion, CamlPDF-compatible `/Unknown`
