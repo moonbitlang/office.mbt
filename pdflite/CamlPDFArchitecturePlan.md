@@ -104,7 +104,8 @@ work changes.
    duplicate-font paths, malformed named-destination merge fallback, the
    `pdfdecomp.ml` stream-decompression workflow, a `pdfmergeexample.ml`-style
    public workflow fixture, and a `pdfdraft.ml` image-replacement acceptance
-   fixture are started.
+   fixture are started. Page-label reads now preserve CamlPDF's tolerant range
+   handling for malformed keys and odd trailing `/Nums` entries.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
    compatibility behavior for unusual real-world documents.
 

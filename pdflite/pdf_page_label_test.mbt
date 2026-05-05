@@ -252,6 +252,94 @@ test "PdfDocument read_page_labels decodes all label styles" {
 }
 
 ///|
+test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
+  let key_page_labels = page_label_name_for_test("/PageLabels")
+  let key_nums = page_label_name_for_test("/Nums")
+  let key_kids = page_label_name_for_test("/Kids")
+  let key_style = page_label_name_for_test("/S")
+  let key_prefix = page_label_name_for_test("/P")
+  let doc = page_label_catalog_document_for_test()
+  let label_tree : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_nums,
+      PdfArray([
+        PdfNameObject(page_label_name_for_test("/BadStart")),
+        PdfDictionary([
+          (key_style, PdfNameObject(page_label_name_for_test("/r"))),
+          (key_prefix, PdfString(page_label_bytes_for_test("bad-"))),
+        ]),
+        PdfInteger(2),
+        PdfDictionary([
+          (key_style, PdfNameObject(page_label_name_for_test("/D"))),
+        ]),
+        PdfInteger(99),
+      ]),
+    ),
+  ])
+  doc.add_object_given_number(
+    1,
+    try! doc
+    .lookup_object_or_null(1)
+    .add_dict_entry(key_page_labels, label_tree),
+  )
+  @test.assert_eq(try! doc.read_page_labels(), [
+    {
+      label_style: PageLabelLowercaseRoman,
+      label_prefix: Some(page_label_bytes_for_test("bad-")),
+      start_page: 1,
+      start_value: 1,
+    },
+    {
+      ..@pdflite.pdf_page_label_basic,
+      label_style: PageLabelDecimalArabic,
+      start_page: 3,
+    },
+  ])
+
+  let kids_doc = page_label_catalog_document_for_test()
+  let kids_label_tree : @pdflite.PdfObject = PdfDictionary([
+    (
+      key_kids,
+      PdfArray([
+        PdfDictionary([
+          (
+            key_nums,
+            PdfArray([
+              PdfInteger(0),
+              PdfDictionary([
+                (key_style, PdfNameObject(page_label_name_for_test("/A"))),
+              ]),
+            ]),
+          ),
+        ]),
+      ]),
+    ),
+  ])
+  kids_doc.add_object_given_number(
+    1,
+    try! kids_doc
+    .lookup_object_or_null(1)
+    .add_dict_entry(key_page_labels, kids_label_tree),
+  )
+  @test.assert_eq(try! kids_doc.read_page_labels(), [
+    {
+      ..@pdflite.pdf_page_label_basic,
+      label_style: PageLabelUppercaseLetters,
+      start_page: 1,
+    },
+  ])
+
+  let empty_doc = page_label_catalog_document_for_test()
+  empty_doc.add_object_given_number(
+    1,
+    try! empty_doc
+    .lookup_object_or_null(1)
+    .add_dict_entry(key_page_labels, PdfDictionary([])),
+  )
+  @test.assert_eq(try! empty_doc.read_page_labels(), [])
+}
+
+///|
 test "PdfDocument remove_page_labels and empty write drop labels" {
   let labels : Array[@pdflite.PdfPageLabel] = [
     {

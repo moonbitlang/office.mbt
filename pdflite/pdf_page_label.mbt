@@ -451,9 +451,35 @@ fn pdf_page_label_style_object(style : PdfPageLabelStyle) -> PdfObject? {
 }
 
 ///|
+fn PdfDocument::pdf_page_label_raw_entries(
+  self : PdfDocument,
+  tree : PdfObject,
+) -> Array[(PdfObject, PdfObject)] {
+  let output : Array[(PdfObject, PdfObject)] = []
+  match
+    self.lookup_direct_or_else(pdf_tree_names_key(), pdf_tree_nums_key(), tree) {
+    Some(PdfArray(items)) =>
+      for i in 0..<(items.length() / 2) {
+        output.push((items[i * 2], items[i * 2 + 1]))
+      }
+    _ =>
+      match self.lookup_direct(pdf_tree_kids_key(), tree) {
+        Some(PdfArray(kids)) =>
+          for kid in kids {
+            for entry in self.pdf_page_label_raw_entries(kid) {
+              output.push(entry)
+            }
+          }
+        _ => ()
+      }
+  }
+  output
+}
+
+///|
 fn PdfDocument::pdf_page_label_of_range(
   self : PdfDocument,
-  start_page_zero_based : Int,
+  start_page_object : PdfObject,
   object : PdfObject,
 ) -> PdfPageLabel {
   {
@@ -465,7 +491,10 @@ fn PdfDocument::pdf_page_label_of_range(
       Some(PdfString(prefix)) => Some(prefix)
       _ => None
     },
-    start_page: start_page_zero_based + 1,
+    start_page: match start_page_object {
+      PdfInteger(start_page_zero_based) => start_page_zero_based + 1
+      _ => 1
+    },
     start_value: match
       self.lookup_direct(pdf_page_label_start_value_key(), object) {
       Some(PdfInteger(value)) => value
@@ -509,7 +538,7 @@ pub fn PdfDocument::read_page_labels(
   match self.lookup_direct(pdf_page_label_page_labels_key(), root) {
     Some(label_tree) =>
       [
-        for entry in self.read_number_tree(label_tree) => {
+        for entry in self.pdf_page_label_raw_entries(label_tree) => {
           self.pdf_page_label_of_range(entry.0, entry.1)
         }
       ]
