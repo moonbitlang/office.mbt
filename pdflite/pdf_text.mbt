@@ -321,6 +321,28 @@ fn pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_rksj_single_byte_codepoint(code : Int) -> Int? {
+  if code >= 0x00 && code <= 0x7F {
+    Some(code)
+  } else if code >= 0xA1 && code <= 0xDF {
+    Some(0xFF61 + code - 0xA1)
+  } else {
+    None
+  }
+}
+
+///|
+fn pdf_text_predefined_rksj_single_byte_charcode(codepoint : Int) -> Int? {
+  if codepoint >= 0x00 && codepoint <= 0x7F {
+    Some(codepoint)
+  } else if codepoint >= 0xFF61 && codepoint <= 0xFF9F {
+    Some(0xA1 + codepoint - 0xFF61)
+  } else {
+    None
+  }
+}
+
+///|
 pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
   match self {
     PdfPredefinedCMap(name) =>
@@ -6756,6 +6778,49 @@ fn PdfTextExtractor::pdf_text_encoded_glyph_of_charcode(
 }
 
 ///|
+fn PdfFont::pdf_text_predefined_builtin_codepoints(
+  self : PdfFont,
+  code : Int,
+) -> Array[Int]? {
+  match self {
+    PdfFontCIDKeyed(font) =>
+      match font.encoding {
+        PdfPredefinedCMap(name) =>
+          if pdf_text_predefined_cmap_uses_shift_jis_charcodes(name) {
+            match pdf_text_predefined_rksj_single_byte_codepoint(code) {
+              Some(codepoint) => Some([codepoint])
+              None => None
+            }
+          } else {
+            None
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn PdfFont::pdf_text_predefined_builtin_charcode(
+  self : PdfFont,
+  codepoint : Int,
+) -> Int? {
+  match self {
+    PdfFontCIDKeyed(font) =>
+      match font.encoding {
+        PdfPredefinedCMap(name) =>
+          if pdf_text_predefined_cmap_uses_shift_jis_charcodes(name) {
+            pdf_text_predefined_rksj_single_byte_charcode(codepoint)
+          } else {
+            None
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
 fn PdfTextExtractor::pdf_text_glyph_of_charcode(
   self : PdfTextExtractor,
   code : Int,
@@ -6772,7 +6837,11 @@ fn PdfTextExtractor::pdf_text_glyph_of_charcode(
           }
         None => { glyphname: pdf_text_notdef_name(), codepoints: [code] }
       }
-    None => self.pdf_text_encoded_glyph_of_charcode(code)
+    None =>
+      match self.font.pdf_text_predefined_builtin_codepoints(code) {
+        Some(codepoints) => { glyphname: pdf_text_notdef_name(), codepoints }
+        None => self.pdf_text_encoded_glyph_of_charcode(code)
+      }
   }
 }
 
@@ -6913,18 +6982,22 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
         None
       }
     None =>
-      for code in 0..<256 {
-        match self.font.pdf_text_glyphname_of_charcode(code) {
-          Some(glyphname) =>
-            if self.font.pdf_text_glyphname_has_single_codepoint(
-                glyphname, codepoint,
-              ) {
-              break Some(code)
+      match self.font.pdf_text_predefined_builtin_charcode(codepoint) {
+        Some(code) => Some(code)
+        None =>
+          for code in 0..<256 {
+            match self.font.pdf_text_glyphname_of_charcode(code) {
+              Some(glyphname) =>
+                if self.font.pdf_text_glyphname_has_single_codepoint(
+                    glyphname, codepoint,
+                  ) {
+                  break Some(code)
+                }
+              _ => ()
             }
-          _ => ()
-        }
-      } nobreak {
-        self.font.pdf_text_macexpert_duplicate_charcode(codepoint)
+          } nobreak {
+            self.font.pdf_text_macexpert_duplicate_charcode(codepoint)
+          }
       }
   }
 }

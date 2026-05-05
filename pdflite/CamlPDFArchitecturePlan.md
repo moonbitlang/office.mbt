@@ -156,7 +156,8 @@ work changes.
    Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, Identity-H/V
    and predefined UCS2 horizontal/vertical two-byte CID text extraction,
    common mixed-byte predefined CMap charcode segmentation for `/ToUnicode`
-   extraction,
+   extraction, RKSJ predefined-CMap ASCII and half-width Katakana built-in
+   fallback when `/ToUnicode` is absent,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
@@ -178,8 +179,8 @@ work changes.
    objects. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
-   when `/ToUnicode` is absent, JPEG pixel decode, and remaining image filter
-   families.
+   beyond the RKSJ single-byte fallback when `/ToUnicode` is absent, JPEG pixel
+   decode, and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -279,7 +280,8 @@ and backend breadth, is about 79-84% complete.
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, predefined UCS2
   and UTF16 horizontal/vertical two-byte extraction, mixed-byte predefined CMap
-  charcode segmentation for `/ToUnicode` extraction, and an Identity-V native
+  charcode segmentation for `/ToUnicode` extraction, RKSJ predefined-CMap
+  single-byte fallback when `/ToUnicode` is absent, and an Identity-V native
   gate with vertical width metadata. Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
@@ -292,10 +294,10 @@ and backend breadth, is about 79-84% complete.
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
-  when `/ToUnicode` is absent, vertical-writing behavior beyond the current
-  gates, additional TrueType and Type3 glyph-program edge coverage, more
-  real-world ToUnicode variations, and broader real-world DCT/JPEG image
-  payload corpus files.
+  beyond the RKSJ single-byte fallback when `/ToUnicode` is absent,
+  vertical-writing behavior beyond the current gates, additional TrueType and
+  Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
+  broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.

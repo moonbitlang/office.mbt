@@ -3321,6 +3321,33 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     .codepoints_of_text(text_bytes_for_test([0x81, 0x40, 0xA6])[:]),
     [0x4E8C, 0xFF66],
   )
+  let rksj_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopRKSJBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/90ms-RKSJ-H")),
+  })
+  let rksj_builtin_extractor = rksj_builtin_font.text_extractor()
+  @test.assert_eq(
+    rksj_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0xA6, 0x81, 0x40])[:],
+    ),
+    [0x41, 0xFF66, 0x8140],
+  )
+  @test.assert_eq(
+    rksj_builtin_extractor.charcode_of_codepoint(0x41),
+    Some(0x41),
+  )
+  @test.assert_eq(
+    rksj_builtin_extractor.charcode_of_codepoint(0xFF66),
+    Some(0xA6),
+  )
+  @test.assert_eq(rksj_builtin_extractor.charcode_of_codepoint(0x4E8C), None)
+  let rksj_truncated = try? rksj_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x81])[:],
+  )
+  guard rksj_truncated is Err(_) else {
+    fail("expected malformed RKSJ charcode")
+  }
   let external_cmap_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/ExternalCMap"),
     composite,
@@ -3333,6 +3360,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ),
     [0x00, 0x42],
   )
+  @test.assert_eq(external_extractor.charcode_of_codepoint(0x42), None)
 }
 
 ///|

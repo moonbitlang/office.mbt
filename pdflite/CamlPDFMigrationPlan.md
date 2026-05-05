@@ -975,6 +975,10 @@ MoonBit consequences for this project:
    CID text extraction now also segments common mixed-byte predefined CMaps
    such as EUC, RKSJ, Big5, UHC, and GBK families before `/ToUnicode` lookup,
    so ASCII and multibyte charcodes in those encodings can share one extractor.
+   RKSJ predefined-CMap extraction now also has a built-in single-byte fallback
+   for ASCII and half-width Katakana when `/ToUnicode` is absent, with matching
+   reverse charcode lookup; broader multibyte predefined-CMap tables remain
+   deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1496,6 +1500,8 @@ reader or writer invariant is narrower than a whole-document workflow:
 - segment mixed-byte predefined CMaps such as `/GB-EUC-H` and `/90ms-RKSJ-H`
   before `/ToUnicode` lookup, including ASCII/single-byte text and truncated
   multibyte error handling;
+- decode RKSJ no-`/ToUnicode` predefined-CMap ASCII and half-width Katakana
+  through a built-in fallback, including reverse charcode lookup;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`
