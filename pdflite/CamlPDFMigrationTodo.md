@@ -90,8 +90,10 @@ Current estimate:
   through reader and extractor boundaries.~~
 - [x] ~~Predefined UTF16 horizontal/vertical CMap two-byte text extraction
   through CID-keyed reader and extractor boundaries.~~
-- [ ] Broader non-UCS2 predefined CMap mapping tables and more vertical-writing
-  text behavior.
+- [x] ~~Mixed-byte predefined CMap charcode segmentation for common EUC, RKSJ,
+  Big5, UHC, and GBK families through `/ToUnicode` text extraction.~~
+- [ ] Broader built-in non-UCS2 predefined CMap mapping tables and more
+  vertical-writing text behavior when `/ToUnicode` is absent.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -173,4 +175,5 @@ Current estimate:
   gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
 - [x] ~~Add a structured DCT/JPEG marker payload native gate.~~
+- [x] ~~Add mixed-byte predefined CMap `/ToUnicode` extraction coverage.~~
 - [ ] Revisit non-native backend validation after native parity is stable.

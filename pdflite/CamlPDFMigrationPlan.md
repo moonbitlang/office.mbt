@@ -972,6 +972,9 @@ MoonBit consequences for this project:
    supported stream filters first. `/WMode` parsing now follows PDF whitespace
    tokenization across physical line boundaries and skips malformed candidate
    values before accepting a later valid `/WMode`.
+   CID text extraction now also segments common mixed-byte predefined CMaps
+   such as EUC, RKSJ, Big5, UHC, and GBK families before `/ToUnicode` lookup,
+   so ASCII and multibyte charcodes in those encodings can share one extractor.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1490,6 +1493,9 @@ reader or writer invariant is narrower than a whole-document workflow:
   `/ToUnicode` CMap after compressed xref-stream write/read boundaries,
   including font descriptor retention, expanded width metrics, codepoint
   extraction, and reverse charcode lookup;
+- segment mixed-byte predefined CMaps such as `/GB-EUC-H` and `/90ms-RKSJ-H`
+  before `/ToUnicode` lookup, including ASCII/single-byte text and truncated
+  multibyte error handling;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`

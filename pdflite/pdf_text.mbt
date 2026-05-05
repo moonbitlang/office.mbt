@@ -296,6 +296,31 @@ fn pdf_text_predefined_cmap_uses_two_byte_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_cmap_has_text_orientation(text : String) -> Bool {
+  text.has_suffix("-H") || text.has_suffix("-V")
+}
+
+///|
+fn pdf_text_predefined_cmap_uses_shift_jis_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("RKSJ")
+}
+
+///|
+fn pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  pdf_text_predefined_cmap_has_text_orientation(text) &&
+  (
+    text.contains("-EUC-") ||
+    text.has_prefix("/EUC-") ||
+    text.contains("RKSJ") ||
+    text.contains("B5") ||
+    text.contains("UHC") ||
+    text.contains("GBK")
+  )
+}
+
+///|
 pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
   match self {
     PdfPredefinedCMap(name) =>
@@ -6752,25 +6777,98 @@ fn PdfTextExtractor::pdf_text_glyph_of_charcode(
 }
 
 ///|
+fn pdf_text_push_two_byte_charcode(
+  output : Array[Int],
+  text : BytesView,
+  index : Int,
+) -> Int raise PdfError {
+  guard index + 1 < text.length() else { raise BadText }
+  output.push((text[index].to_int() << 8) | text[index + 1].to_int())
+  index + 2
+}
+
+///|
+fn pdf_text_shift_jis_lead_byte(byte : Int) -> Bool {
+  (byte >= 0x81 && byte <= 0x9F) || (byte >= 0xE0 && byte <= 0xFC)
+}
+
+///|
+fn pdf_text_predefined_mixed_byte_charcodes(
+  name : PdfName,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  let output : Array[Int] = []
+  let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
+  let mut index = 0
+  while index < text.length() {
+    let first = text[index].to_int()
+    if shift_jis {
+      if pdf_text_shift_jis_lead_byte(first) {
+        index = pdf_text_push_two_byte_charcode(output, text, index)
+      } else {
+        output.push(first)
+        index += 1
+      }
+    } else if first < 0x80 {
+      output.push(first)
+      index += 1
+    } else {
+      index = pdf_text_push_two_byte_charcode(output, text, index)
+    }
+  }
+  output
+}
+
+///|
+fn PdfFont::pdf_text_charcodes_of_text(
+  self : PdfFont,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  match self {
+    PdfFontCIDKeyed(font) =>
+      match font.encoding {
+        PdfPredefinedCMap(name) =>
+          if pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name) {
+            pdf_text_predefined_mixed_byte_charcodes(name, text)
+          } else {
+            self.pdf_text_fixed_or_single_byte_charcodes_of_text(text)
+          }
+        _ => self.pdf_text_fixed_or_single_byte_charcodes_of_text(text)
+      }
+    _ => self.pdf_text_fixed_or_single_byte_charcodes_of_text(text)
+  }
+}
+
+///|
+fn PdfFont::pdf_text_fixed_or_single_byte_charcodes_of_text(
+  self : PdfFont,
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  let output : Array[Int] = []
+  if self.uses_two_byte_codes() {
+    guard text.length() % 2 == 0 else { raise BadText }
+    let mut index = 0
+    while index < text.length() {
+      index = pdf_text_push_two_byte_charcode(output, text, index)
+    }
+  } else {
+    for byte in text {
+      output.push(byte.to_int())
+    }
+  }
+  output
+}
+
+///|
 pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
 ) -> Array[PdfTextGlyph] raise PdfError {
-  let output : Array[PdfTextGlyph] = []
-  if self.font.uses_two_byte_codes() {
-    guard text.length() % 2 == 0 else { raise BadText }
-    let mut index = 0
-    while index < text.length() {
-      let code = (text[index].to_int() << 8) | text[index + 1].to_int()
-      output.push(self.pdf_text_glyph_of_charcode(code))
-      index += 2
+  [
+    for code in self.font.pdf_text_charcodes_of_text(text) => {
+      self.pdf_text_glyph_of_charcode(code)
     }
-  } else {
-    for byte in text {
-      output.push(self.pdf_text_glyph_of_charcode(byte.to_int()))
-    }
-  }
-  output
+  ]
 }
 
 ///|

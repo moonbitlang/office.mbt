@@ -3276,8 +3276,50 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   @test.assert_eq(
     try! non_ucs2_predefined_font
     .text_extractor()
-    .codepoints_of_text(text_bytes_for_test([0x00, 0x42])[:]),
-    [0x00, 0x42],
+    .codepoints_of_text(text_bytes_for_test([0x41, 0x81, 0x40])[:]),
+    [0x41, 0x8140],
+  )
+  let gb_euc_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
+    ..text_font_descriptor_for_test(),
+    tounicode: Some([
+      (0x41, text_bytes_for_test([0x00, 0x41])),
+      (0x8140, text_bytes_for_test([0x4E, 0x00])),
+    ]),
+  }
+  let gb_euc_tounicode_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopGBEUCToUnicode"),
+    composite: { ..composite, cid_fontdescriptor: gb_euc_tounicode_descriptor },
+    encoding: PdfPredefinedCMap(text_name_for_test("/GB-EUC-H")),
+  })
+  @test.assert_eq(
+    try! gb_euc_tounicode_font
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x41, 0x81, 0x40])[:]),
+    [0x41, 0x4E00],
+  )
+  let gb_euc_truncated = try? gb_euc_tounicode_font
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x81])[:])
+  guard gb_euc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated GB-EUC charcode")
+  }
+  let rksj_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
+    ..text_font_descriptor_for_test(),
+    tounicode: Some([
+      (0x8140, text_bytes_for_test([0x4E, 0x8C])),
+      (0xA6, text_bytes_for_test([0xFF, 0x66])),
+    ]),
+  }
+  let rksj_tounicode_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopRKSJToUnicode"),
+    composite: { ..composite, cid_fontdescriptor: rksj_tounicode_descriptor },
+    encoding: PdfPredefinedCMap(text_name_for_test("/90ms-RKSJ-H")),
+  })
+  @test.assert_eq(
+    try! rksj_tounicode_font
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x81, 0x40, 0xA6])[:]),
+    [0x4E8C, 0xFF66],
   )
   let external_cmap_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/ExternalCMap"),
