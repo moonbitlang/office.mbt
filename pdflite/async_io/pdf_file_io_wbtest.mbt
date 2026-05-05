@@ -15,6 +15,14 @@ fn pdf_async_io_test_path_for_test(name : String) -> String {
 }
 
 ///|
+fn pdf_async_io_repo_path_for_test(path : String) -> String {
+  match @env.current_dir() {
+    Some(current_dir) => current_dir + "/" + path
+    None => path
+  }
+}
+
+///|
 fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
   @pdflite.pdf_name_of_bytes(@ascii.encode(text))
 }
@@ -79,6 +87,35 @@ async test "async file wrappers write and read PDF documents" {
   pdf_async_io_remove_if_exists_for_test(path)
   @test.assert_eq(try! loaded.endpage(), 1)
   @test.assert_eq(loaded.version(), original.version())
+}
+
+///|
+async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
+  let logo_path = pdf_async_io_repo_path_for_test(".repos/logo.pdf")
+  let intro_path = pdf_async_io_repo_path_for_test(
+    ".repos/introduction_to_camlpdf.pdf",
+  )
+  let logo_roundtrip = pdf_async_io_test_path_for_test("logo_fixture")
+  let intro_roundtrip = pdf_async_io_test_path_for_test("intro_fixture")
+  pdf_async_io_remove_if_exists_for_test(logo_roundtrip)
+  pdf_async_io_remove_if_exists_for_test(intro_roundtrip)
+
+  let logo = pdf_read_document_from_file(logo_path)
+  @test.assert_eq(logo.version(), (1, 4))
+  @test.assert_eq(try! logo.endpage(), 1)
+  pdf_write_document_to_file_with_compressed_xref_stream(logo, logo_roundtrip)
+  let logo_reparsed = pdf_read_document_from_file(logo_roundtrip)
+  @test.assert_eq(try! logo_reparsed.endpage(), 1)
+
+  let intro = pdf_read_document_from_file(intro_path)
+  @test.assert_eq(intro.version(), (1, 5))
+  @test.assert_eq(try! intro.endpage(), 10)
+  pdf_write_document_to_file_with_compressed_xref_stream(intro, intro_roundtrip)
+  let intro_reparsed = pdf_read_document_from_file(intro_roundtrip)
+  @test.assert_eq(try! intro_reparsed.endpage(), 10)
+
+  pdf_async_io_remove_if_exists_for_test(logo_roundtrip)
+  pdf_async_io_remove_if_exists_for_test(intro_roundtrip)
 }
 
 ///|

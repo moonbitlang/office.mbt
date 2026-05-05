@@ -1533,6 +1533,9 @@ public APIs end to end:
   encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
   xref-stream incremental write, revision count, and newest/older encrypted
   revision reads.
+- read the checked-in CamlPDF fixture PDFs from `.repos`, then compressed-write
+  and reread them through native async file wrappers while preserving page
+  counts.
 - read AES-128 encrypted xref-stream documents whose referenced object lives
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
   for explicit passwords and implicit blank user passwords while avoiding double
