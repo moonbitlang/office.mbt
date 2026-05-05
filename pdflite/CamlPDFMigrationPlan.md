@@ -284,9 +284,11 @@ MoonBit consequences for this project:
    valid length object mentions `stream` in a PDF comment.
    Empty indirect object segments like `n gen obj endobj` now parse as `null`,
    and plain non-stream indirect objects may omit the final `endobj` when the
-   lexer stops before following non-stream syntax, matching CamlPDF's
-   `parse_finish` fallback for malformed objects. Stream-looking incomplete
-   objects still go through the stricter stream completion path.
+   lexer stops before following non-stream syntax. Primitive scans now also
+   continue across an adjacent `n gen obj` header after such a malformed plain
+   object, matching CamlPDF's `parse_finish` fallback for malformed objects.
+   Stream-looking incomplete objects still go through the stricter stream
+   completion path.
    Hybrid-reference files with a
    classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same

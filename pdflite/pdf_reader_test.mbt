@@ -1479,6 +1479,16 @@ test "pdf_read_primitive_document_from_bytes accepts missing plain endobj" {
 }
 
 ///|
+test "pdf_read_primitive_document_from_bytes continues after missing plain endobj" {
+  let document = try! @pdflite.pdf_read_primitive_document_from_bytes(
+    reader_pdf_ascii("%PDF-1.4\n1 0 obj\n42\n2 0 obj\n43\nxref"),
+  )
+  @test.assert_eq(document.object_numbers(), [1, 2])
+  @test.assert_eq(document.lookup_object_or_null(1), PdfInteger(42))
+  @test.assert_eq(document.lookup_object_or_null(2), PdfInteger(43))
+}
+
+///|
 test "pdf_parse_stream_object_from_bytes parses direct-length stream objects" {
   let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
     reader_bytes_for_test([

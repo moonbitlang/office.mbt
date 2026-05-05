@@ -27,6 +27,21 @@ fn pdf_lexeme_indirect_reference_number(
 }
 
 ///|
+fn pdf_lexeme_indirect_object_header_at(
+  lexemes : ArrayView[PdfLexeme],
+  index : Int,
+) -> Bool {
+  if index + 2 < lexemes.length() {
+    match (lexemes[index], lexemes[index + 1], lexemes[index + 2]) {
+      (LexInt(_), LexInt(_), LexObj) => true
+      _ => false
+    }
+  } else {
+    false
+  }
+}
+
+///|
 fn pdf_parse_array_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
@@ -331,8 +346,14 @@ fn pdf_parse_indirect_object_segments(
         objects.push(object)
         current = next
       } else {
-        prefix = Some(object)
-        done = true
+        let next_object = pdf_skip_comments(lexemes, next)
+        if pdf_lexeme_indirect_object_header_at(lexemes, next_object) {
+          objects.push(object)
+          current = next_object
+        } else {
+          prefix = Some(object)
+          done = true
+        }
       }
     }
   }

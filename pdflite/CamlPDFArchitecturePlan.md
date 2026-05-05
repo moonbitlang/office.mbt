@@ -40,8 +40,9 @@ work changes.
    embedded objects.
    Empty indirect objects of the form `n gen obj endobj` now parse as `null`,
    and plain non-stream indirect objects may omit the final `endobj` when
-   parsing reaches following non-stream syntax, matching CamlPDF's
-   malformed-object fallback.
+   parsing reaches following non-stream syntax; primitive scans also continue
+   across an adjacent `n gen obj` header after such a malformed plain object,
+   matching CamlPDF's malformed-object fallback.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

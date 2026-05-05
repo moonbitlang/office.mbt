@@ -631,6 +631,14 @@ test "private writer stream dictionary uses materialized deferred length" {
 
 ///|
 test "parser prefix helper reports malformed indirect prefixes" {
+  @test.assert_eq(
+    pdf_lexeme_indirect_object_header_at([LexInt(1), LexInt(0), LexObj], 0),
+    true,
+  )
+  @test.assert_eq(
+    pdf_lexeme_indirect_object_header_at([LexInt(1), LexInt(0), LexNull], 0),
+    false,
+  )
   let too_short : Result[PdfParsedIndirectObject, Error] = try? pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
       LexInt(0),
