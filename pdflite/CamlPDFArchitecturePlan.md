@@ -143,8 +143,12 @@ work changes.
    `PdfWriteMode` dispatch plus direct encrypted-writer wrappers for ARC4,
    AESV2, AESV3, and AESV3 ISO, so callers no longer need to manually
    encrypt-then-write for the main CamlPDF-style output workflow.
-   Remaining focus: selecting a true secure OS-entropy provider and deferred
-   parser-state encryption/decryption edges.
+   Native AESV2 convenience output now uses a pdflite-owned OS random-byte FFI
+   boundary for IV generation, with failure propagated as checked `PdfError`;
+   the native async file package exposes the same default AESV2 writer. AESV3
+   convenience salt/file-key random fields are still explicit-provider only.
+   Remaining focus: threading the secure random boundary through AESV3 defaults
+   and deferred parser-state encryption/decryption edges.
 
 7. Document-level features.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
@@ -199,19 +203,22 @@ vertical acceptance path at a time instead of isolated edge polishing:
   decompression, `pdftest.ml`-style split-content parse/rewrite, and
   `pdfdraft.ml`-style image-replacement workflows through compressed
   xref-stream write/read. Native async file wrappers cover encrypted
-  incremental revision reads from disk. Password-aware native reads now include
+  incremental revision reads from disk and native secure-random AESV2 file
+  writes. Password-aware native reads now include
   encrypted object-stream fixtures for explicit passwords and the implicit blank
   user password. Native acceptance also covers
   `change_pages` bookmark-reference and matrix rewriting after a compressed
   xref-stream read boundary, plus strict reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows, and password decryption after
   malformed-xref reconstruction of direct encrypted objects.
+  Native OS-random AESV2 convenience writer output is covered with decrypt and
+  output-variation checks.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   encryption finishing edges, remaining malformed-reader recovery, and
   example-level integration fixtures.
-- Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, default AES
-  random source, broader predefined CMap coverage, and broad real-world PDF
-  recovery behavior.
+- Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, AESV3 default
+  random-field convenience wrappers, broader predefined CMap coverage, and broad
+  real-world PDF recovery behavior.
 
 ## Working Rule
 

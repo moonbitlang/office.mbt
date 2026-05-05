@@ -599,34 +599,60 @@ fn pdf_crypt_deterministic_bytes(
 }
 
 ///|
+#warnings("-unused_error_type")
+fn pdf_deterministic_aes_iv_for_seed(
+  seed : BytesView,
+  object_number : Int,
+  generation : Int,
+  index : Int,
+) -> PdfBytes raise PdfError {
+  let purpose = @ascii.encode(
+    "aes-iv:" +
+    object_number.to_string() +
+    ":" +
+    generation.to_string() +
+    ":" +
+    index.to_string(),
+  )
+  pdf_crypt_deterministic_bytes(seed, purpose[:], 16)
+}
+
+///|
 pub fn pdf_deterministic_aes_iv_provider_from_seed(
   seed : BytesView,
-) -> (Int, Int, Int) -> PdfBytes {
+) -> (Int, Int, Int) -> PdfBytes raise PdfError {
   let owned_seed = seed.to_owned()
-  fn(object_number, generation, index) {
-    let purpose = @ascii.encode(
-      "aes-iv:" +
-      object_number.to_string() +
-      ":" +
-      generation.to_string() +
-      ":" +
-      index.to_string(),
+  fn(object_number, generation, index) raise PdfError {
+    pdf_deterministic_aes_iv_for_seed(
+      owned_seed[:],
+      object_number,
+      generation,
+      index,
     )
-    pdf_crypt_deterministic_bytes(owned_seed[:], purpose[:], 16)
   }
+}
+
+///|
+#warnings("-unused_error_type")
+fn pdf_deterministic_aesv3_random_for_seed(
+  seed : BytesView,
+  field : PdfAesV3RandomField,
+  length : Int,
+) -> PdfBytes raise PdfError {
+  pdf_crypt_deterministic_bytes(
+    seed,
+    pdf_aesv3_random_field_key(field).view(),
+    length,
+  )
 }
 
 ///|
 pub fn pdf_deterministic_aesv3_random_provider_from_seed(
   seed : BytesView,
-) -> (PdfAesV3RandomField, Int) -> PdfBytes {
+) -> (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError {
   let owned_seed = seed.to_owned()
-  fn(field, length) {
-    pdf_crypt_deterministic_bytes(
-      owned_seed[:],
-      pdf_aesv3_random_field_key(field).view(),
-      length,
-    )
+  fn(field, length) raise PdfError {
+    pdf_deterministic_aesv3_random_for_seed(owned_seed[:], field, length)
   }
 }
 
@@ -937,7 +963,7 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[PdfPermission],
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
@@ -1015,8 +1041,8 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[PdfPermission],
-  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   iso? : Bool = false,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
@@ -1113,8 +1139,8 @@ pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[PdfPermission],
-  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   encrypt_metadata? : Bool = true,
   file_id? : BytesView = [],
 ) -> PdfDocument raise PdfError {
@@ -1396,7 +1422,7 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
   file_key : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id[:])
   document.set_saved_encryption(None)
@@ -1422,7 +1448,7 @@ fn PdfDocument::recrypt_aesv3_with_file_key(
   self : PdfDocument,
   values : PdfEncryptionValues,
   file_key : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
   let (document, _) = self.with_file_id(file_id=values.file_id[:])
   document.set_saved_encryption(None)
@@ -1473,7 +1499,7 @@ pub fn PdfDocument::recrypt_with_password(
 pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
   self : PdfDocument,
   password : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
@@ -1493,7 +1519,7 @@ pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(
 pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(
   self : PdfDocument,
   password : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
 ) -> PdfDocument raise PdfError {
   let saved = match self.saved_encryption() {
     Some(saved) => saved
@@ -1707,7 +1733,7 @@ fn pdf_aesv3_random_field_key(field : PdfAesV3RandomField) -> PdfName {
 
 ///|
 fn pdf_aesv3_random_bytes(
-  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes,
+  random_provider : (PdfAesV3RandomField, Int) -> PdfBytes raise PdfError,
   field : PdfAesV3RandomField,
   length : Int,
 ) -> PdfBytes raise PdfError {
@@ -2362,9 +2388,9 @@ pub fn pdf_aesv3_encrypt_object_data(
 
 ///|
 fn pdf_aes_next_iv(
-  iv_provider : (Int) -> PdfBytes,
+  iv_provider : (Int) -> PdfBytes raise PdfError,
   iv_index : Ref[Int],
-) -> PdfBytes {
+) -> PdfBytes raise PdfError {
   let iv = iv_provider(iv_index.val)
   iv_index.val += 1
   iv
@@ -2374,7 +2400,7 @@ fn pdf_aes_next_iv(
 fn pdf_aes_encrypt_pdf_object_with_key(
   key : BytesView,
   object : PdfObject,
-  iv_provider : (Int) -> PdfBytes,
+  iv_provider : (Int) -> PdfBytes raise PdfError,
   iv_index : Ref[Int],
   no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
@@ -2450,7 +2476,7 @@ pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
   key_length_bits : Int,
   object : PdfObject,
-  iv_provider : (Int) -> PdfBytes,
+  iv_provider : (Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   let object_key = pdf_encryption_object_key(
@@ -2474,7 +2500,7 @@ pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
 pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
   object : PdfObject,
-  iv_provider : (Int) -> PdfBytes,
+  iv_provider : (Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
 ) -> PdfObject raise PdfError {
   let iv_index : Ref[Int] = { val: 0 }
@@ -2617,7 +2643,7 @@ pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
   key_length_bits : Int,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
   skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
@@ -2635,7 +2661,9 @@ pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(
                 file_key,
                 key_length_bits,
                 object,
-                fn(index) { iv_provider(number, entry.generation, index) },
+                fn(index) raise PdfError {
+                  iv_provider(number, entry.generation, index)
+                },
                 no_encrypt_metadata~,
               ),
             ),
@@ -2690,7 +2718,7 @@ pub fn PdfDocument::aesv2_decrypt_parsed_objects(
 pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
   self : PdfDocument,
   file_key : BytesView,
-  iv_provider : (Int, Int, Int) -> PdfBytes,
+  iv_provider : (Int, Int, Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata? : Bool = false,
   skip_object_number? : Int = 0,
 ) -> PdfDocument raise PdfError {
@@ -2705,7 +2733,9 @@ pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(
               pdf_aesv3_encrypt_pdf_object_with_iv_provider(
                 file_key,
                 object,
-                fn(index) { iv_provider(number, entry.generation, index) },
+                fn(index) raise PdfError {
+                  iv_provider(number, entry.generation, index)
+                },
                 no_encrypt_metadata~,
               ),
             ),

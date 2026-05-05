@@ -182,7 +182,7 @@ pub async fn pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@pdflite.PdfPermission],
-  iv_provider : (Int, Int, Int) -> @pdflite.PdfBytes,
+  iv_provider : (Int, Int, Int) -> @pdflite.PdfBytes raise @pdflite.PdfError,
   encrypt_metadata? : Bool = true,
   mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],
@@ -205,14 +205,41 @@ pub async fn pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
 }
 
 ///|
+pub async fn pdf_write_encrypted_aesv2_document_to_file(
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  user_password : BytesView,
+  owner_password : BytesView,
+  denied_permissions : ArrayView[@pdflite.PdfPermission],
+  encrypt_metadata? : Bool = true,
+  mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
+  file_id? : BytesView = [],
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_encrypted_aesv2_document(
+      document,
+      user_password,
+      owner_password,
+      denied_permissions,
+      encrypt_metadata~,
+      mode~,
+      file_id~,
+    ),
+    create=permission,
+  )
+}
+
+///|
 pub async fn pdf_write_encrypted_aesv3_document_to_file_with_providers(
   document : @pdflite.PdfDocument,
   path : StringView,
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@pdflite.PdfPermission],
-  random_provider : (@pdflite.PdfAesV3RandomField, Int) -> @pdflite.PdfBytes,
-  iv_provider : (Int, Int, Int) -> @pdflite.PdfBytes,
+  random_provider : (@pdflite.PdfAesV3RandomField, Int) -> @pdflite.PdfBytes raise @pdflite.PdfError,
+  iv_provider : (Int, Int, Int) -> @pdflite.PdfBytes raise @pdflite.PdfError,
   iso? : Bool = false,
   encrypt_metadata? : Bool = true,
   mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
@@ -244,8 +271,8 @@ pub async fn pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
   user_password : BytesView,
   owner_password : BytesView,
   denied_permissions : ArrayView[@pdflite.PdfPermission],
-  random_provider : (@pdflite.PdfAesV3RandomField, Int) -> @pdflite.PdfBytes,
-  iv_provider : (Int, Int, Int) -> @pdflite.PdfBytes,
+  random_provider : (@pdflite.PdfAesV3RandomField, Int) -> @pdflite.PdfBytes raise @pdflite.PdfError,
+  iv_provider : (Int, Int, Int) -> @pdflite.PdfBytes raise @pdflite.PdfError,
   encrypt_metadata? : Bool = true,
   mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
   file_id? : BytesView = [],

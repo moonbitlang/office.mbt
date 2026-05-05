@@ -65,7 +65,7 @@ pub fn pdf_aesv2_decrypt_pdf_object(Int, Int, BytesView, Int, PdfObject, no_encr
 
 pub fn pdf_aesv2_encrypt_object_data(Int, Int, BytesView, Int, BytesView, BytesView) -> Bytes raise PdfError
 
-pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(Int, Int, BytesView, Int, PdfObject, (Int) -> Bytes, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
+pub fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(Int, Int, BytesView, Int, PdfObject, (Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
 
 pub fn pdf_aesv3_decrypt_object_data(BytesView, BytesView) -> Bytes raise PdfError
 
@@ -73,7 +73,7 @@ pub fn pdf_aesv3_decrypt_pdf_object(BytesView, PdfObject, no_encrypt_metadata? :
 
 pub fn pdf_aesv3_encrypt_object_data(BytesView, BytesView, BytesView) -> Bytes raise PdfError
 
-pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(BytesView, PdfObject, (Int) -> Bytes, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
+pub fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(BytesView, PdfObject, (Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool) -> PdfObject raise PdfError
 
 pub fn pdf_annotation_make(PdfAnnotationSubtype, contents? : Bytes?, border? : PdfAnnotationBorder, rectangle? : PdfRectangle, colour? : PdfAnnotationColour?, subject? : Bytes?) -> PdfAnnotation
 
@@ -191,9 +191,9 @@ pub fn pdf_decode_stream_onestage(PdfObject) -> PdfObject raise PdfError
 
 pub let pdf_default_version : PdfVersion
 
-pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int) -> Bytes
+pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int) -> Bytes raise PdfError
 
-pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (PdfAesV3RandomField, Int) -> Bytes
+pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (PdfAesV3RandomField, Int) -> Bytes raise PdfError
 
 pub fn pdf_dictionary(ArrayView[(PdfName, PdfObject)]) -> PdfObject
 
@@ -509,11 +509,11 @@ pub fn pdf_write_encrypted_128bit_r4_document(PdfDocument, BytesView, BytesView,
 
 pub fn pdf_write_encrypted_40bit_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
-pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
-pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
-pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
 pub fn pdf_write_hex_string(BytesView) -> Bytes
 
@@ -636,6 +636,7 @@ pub(all) suberror PdfError {
   EncryptionRecryptFailed
   EncryptionPermissionsCorrupt
   EncryptionPermissionsMismatch(Int, Int)
+  RandomBytesUnavailable
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported
@@ -1130,9 +1131,9 @@ pub fn PdfDocument::add_pagetree(Self, ArrayView[PdfPage]) -> Int raise PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise PdfError
 pub fn PdfDocument::add_root(Self, Int, ArrayView[(PdfName, PdfObject)]) -> Int raise PdfError
 pub fn PdfDocument::aesv2_decrypt_parsed_objects(Self, BytesView, Int, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
-pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(Self, BytesView, Int, (Int, Int, Int) -> Bytes, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
+pub fn PdfDocument::aesv2_encrypt_parsed_objects_with_iv_provider(Self, BytesView, Int, (Int, Int, Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::aesv3_decrypt_parsed_objects(Self, BytesView, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
-pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
+pub fn PdfDocument::aesv3_encrypt_parsed_objects_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise PdfError, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::annotations_of_page(Self, PdfPage) -> Array[PdfAnnotation] raise PdfError
 pub fn PdfDocument::arc4_crypt_parsed_objects(Self, BytesView, Int, no_encrypt_metadata? : Bool, skip_object_number? : Int) -> Self raise PdfError
 pub fn PdfDocument::bpc(Self, PdfObject) -> PdfObject?
@@ -1151,10 +1152,10 @@ pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, ow
 pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
 pub fn PdfDocument::direct(Self, PdfObject) -> PdfObject
 pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
-pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
+pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
-pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
-pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes raise PdfError, (Int, Int, Int) -> Bytes raise PdfError, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[PdfPermission], file_id? : BytesView) -> Self raise PdfError
 pub fn PdfDocument::encryption_values(Self) -> PdfEncryptionValues raise PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise PdfError
@@ -1226,8 +1227,8 @@ pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise PdfError
 pub fn PdfDocument::read_simple_font(Self, PdfObject) -> PdfSimpleFont raise PdfError
 pub fn PdfDocument::read_standard14_font(Self, PdfObject) -> PdfStandardFontData raise PdfError
 pub fn PdfDocument::recrypt_with_password(Self, BytesView) -> Self raise PdfError
-pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes) -> Self raise PdfError
-pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes) -> Self raise PdfError
+pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise PdfError) -> Self raise PdfError
+pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise PdfError) -> Self raise PdfError
 pub fn PdfDocument::referenced_object_numbers(Self, PdfObject, no_follow_entries? : ArrayView[PdfName], no_follow_contains? : ArrayView[(PdfName, PdfObject)]) -> Array[Int]
 pub fn PdfDocument::remove_bookmarks(Self) -> Self raise PdfError
 pub fn PdfDocument::remove_chain(Self, ArrayView[PdfName]) -> Bool raise PdfError

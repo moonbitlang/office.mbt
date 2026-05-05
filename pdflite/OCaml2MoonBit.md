@@ -218,6 +218,16 @@ result, and use `try ... catch ... noraise` when success and error branches are
 both part of the expression.
 
 ```sh
+moon run -c $'fn may_fail(flag : Bool) -> Unit raise { if flag { fail("boom") } }\nfn main { let result : Result[Unit, Error] = try? may_fail(true); println((result is Err(_)).to_string()) }'
+# true
+```
+
+When porting OCaml exception tests, do not assert the exact MoonBit error
+constructor by default. Use `Err(_)` for ordinary "this should raise" behavior,
+and match a specific error variant only when that variant is itself part of the
+compatibility contract or a caller-visible API guarantee.
+
+```sh
 moon run -c $'fn push_ascii(output : Array[Byte], text : String) -> Unit { for byte in @ascii.encode(text)[:] { output.push(byte) } }\nfn main { let output : Array[Byte] = []; push_ascii(output, "PDF"); output.push(10); let bytes = Bytes::from_array(output); println(bytes.length()); println(bytes[0].to_int()); println(bytes[3].to_int()) }'
 # 4
 # 80
@@ -989,7 +999,8 @@ MoonBit uses checked errors:
   if the error set is intentionally broad.
 - In tests and raising helpers, call fallible success-path APIs directly and let
   errors propagate. Use `try? f()` only when the test is asserting or inspecting
-  the failure result.
+  the failure result. Prefer `Err(_)` unless the exact error type is the
+  behavior under test.
 - In ordinary code, avoid `match (try? f()) { Ok(...) => ...; Err(...) => ... }`.
   MoonBit warns on that anti-pattern; prefer `try f() catch { ... } noraise
   { ... }`.

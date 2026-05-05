@@ -17,3 +17,12 @@ import {
   "moonbitlang/core/hashmap",
   "moonbitlang/core/test",
 } for "wbtest"
+
+options(
+  "native-stub": [ "pdf_random_native.c" ],
+  targets: {
+    "pdf_random_native.mbt": [ "native" ],
+    "pdf_random_native_test.mbt": [ "native" ],
+    "pdf_random_native_wbtest.mbt": [ "native" ],
+  },
+)

@@ -152,10 +152,11 @@ fn crypt_aesv3_r5_permissions_for_test(
 }
 
 ///|
+#warnings("-unused_error_type")
 fn crypt_aesv3_r5_random_for_test(
   field : @pdflite.PdfAesV3RandomField,
   _length : Int,
-) -> @pdflite.PdfBytes {
+) -> @pdflite.PdfBytes raise @pdflite.PdfError {
   match field {
     PdfAesV3FileKey => crypt_aesv3_r5_file_key_for_test()
     PdfAesV3UserValidationSalt =>
@@ -3221,7 +3222,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   let bad_random = fn(
     field : @pdflite.PdfAesV3RandomField,
     length : Int,
-  ) -> @pdflite.PdfBytes {
+  ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
     match field {
       PdfAesV3UserKeySalt => Bytes::new(7)
       _ => crypt_aesv3_r5_random_for_test(field, length)

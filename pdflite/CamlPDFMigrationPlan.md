@@ -433,13 +433,15 @@ MoonBit consequences for this project:
    document writes and incremental-update writes, plus direct encrypted-writer
    wrappers for ARC4, AESV2, AESV3, and AESV3 ISO workflows, matching CamlPDF's
    main encrypt-at-write use case while keeping AES random material explicit
-   through provider callbacks. Default AES writers remain deferred until a
-   project-level random-byte source is selected. A MoonBit
-   effect-typing probe confirms that raising and
-   non-raising callback types are not interchangeable, so a fallible secure
-   random-byte provider cannot be passed through the current non-raising AES
-   provider callbacks without changing those public signatures or choosing a
-   non-raising target-specific provider.
+   through provider callbacks. Native-target AESV2 convenience output is now
+   started with a pdflite-owned OS random-byte FFI boundary (`/dev/urandom` on
+   POSIX, `BCryptGenRandom` on Windows) and covers default AESV2 full writes
+   plus saved-state recrypt IV generation; the native async file package also
+   exposes the default AESV2 encrypted-writer wrapper. Provider callback types
+   now allow `PdfError` propagation, matching MoonBit's checked-error model for
+   fallible entropy. AESV3 default salts/file-key fields remain provider-backed
+   until the same secure random boundary is threaded through the AESV3
+   convenience surface.
 
 7. Stream filters and predictors.
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
@@ -1012,9 +1014,10 @@ MoonBit consequences for this project:
     encryption/decryption is started with the unwrapped 32-byte file key.
     Deterministic AES IV and AESV3 random-field provider adapters are started
     for reproducible fixtures, backed by `moonbitlang/core/random` with an
-    explicit SHA-256-derived Chacha seed; true secure default entropy remains
-    deferred until a suitable OS-backed source is selected. Recursive ARC4 crypt
-    plus AESV2/AESV3
+    explicit SHA-256-derived Chacha seed. Native-target secure random bytes are
+    started through a pdflite-owned C FFI boundary and are used for AESV2
+    convenience writer/recrypt IVs; `@random` and `@env.now` remain excluded
+    from cryptographic IV/salt generation. Recursive ARC4 crypt plus AESV2/AESV3
     encrypt/decrypt object walks are started for PDF strings, arrays,
     dictionaries, and stream dictionaries/data, with stream data materialized at
     the crypt boundary and `/Length` refreshed. Stream crypt skipping now matches
@@ -1047,12 +1050,12 @@ MoonBit consequences for this project:
     recrypt have a classic writer/read/decrypt round-trip gate plus classic,
     uncompressed xref-stream, and Flate-compressed xref-stream incremental
     update gates, including `/EncryptMetadata false` metadata-stream skipping.
-    Default AES
-    recrypt remains deferred until a project-level cryptographic random-byte
-    source is selected; core `@random` is not being used for AES IVs or salts.
-    The current AES provider callbacks are intentionally non-raising. If the
-    selected secure provider is fallible, the AES API should grow raising
-    provider variants instead of wrapping the failure in an unchecked fallback.
+    Default AESV2 recrypt is now started on native through the same secure
+    random-byte boundary. Default AESV3 recrypt remains deferred until AESV3
+    random-field generation is wired to that boundary. Provider callbacks are
+    fallible where entropy can fail, so callers and tests can let `PdfError`
+    propagate rather than hiding random-source failures behind deterministic
+    fallbacks.
     Typed standard-encryption dictionary
     parsing is started with CamlPDF-compatible `/V`, `/R`, `/Length`,
     `/CF`/`/StdCF`/`/CFM`, `/O`, `/U`, `/P`, trailer `/ID`, `/OE`, and `/UE`
@@ -1221,10 +1224,11 @@ MoonBit consequences for this project:
     revision-specific password reads, uncompressed and Flate-compressed
     xref-stream file writes, mode-dispatched full and incremental writes,
     direct encrypted ARC4/AESV2/AESV3 file writes with provider-backed AES
-    randomness, and classic/xref-stream incremental-update file writes. Native
-    async tests cover plain round-trip, xref-stream round-trip, encrypted
-    password read, mode-dispatched compressed xref output, encrypted writer file
-    output across ARC4/AESV2/AESV3 variants, classic incremental readback,
+    randomness, native secure-random AESV2 file writes, and classic/xref-stream
+    incremental-update file writes. Native async tests cover plain round-trip,
+    xref-stream round-trip, encrypted password read, mode-dispatched compressed
+    xref output, encrypted writer file output across ARC4/AESV2/AESV3 variants
+    plus the native secure-random AESV2 wrapper, classic incremental readback,
     revision-specific incremental readback, uncompressed plus compressed
     xref-stream incremental readback, and mode-dispatched compressed
     incremental update readback; test paths now use core
@@ -1373,10 +1377,12 @@ MoonBit consequences for this project:
     removes `pdf_text.mbt` from the uncovered-line report by using the private
     stream-returning decoder for ToUnicode streams, simplifying CMap marker
     extraction, and covering malformed encodings, font descriptors, CID widths,
-    ToUnicode CMap parser guards, glyph fallback paths, and UTF-8 failure
-    modes. The unused template `cmd/main` executable was removed rather than
-    testing placeholder `Hello` output. A refreshed coverage pass reports no
-    uncovered lines.
+    ToUnicode CMap parser guards, glyph fallback paths, and UTF-8 failure modes.
+    Native-random coverage now exercises the secure-random wrapper's success,
+    negative-length raise, and provider-failure raise paths without asserting
+    incidental error constructors. The unused template `cmd/main` executable was
+    removed rather than testing placeholder `Hello` output. A refreshed coverage
+    pass reports no uncovered lines.
 
 ## Active Native Acceptance Milestone
 
@@ -1398,6 +1404,9 @@ end to end:
   object stream, then normalize it through the classic writer and reread it;
 - write AES-128 encrypted output and read it through the public password
   wrapper with both user and owner passwords.
+- write AESV2 encrypted output through the native secure-random convenience
+  writer, prove repeated writes differ with a fixed file ID, and decrypt the
+  result through the public password wrapper.
 - run a `pdfencrypt.ml`-style AES-128 encrypted writer workflow with blank user
   password, owner password, `NoEdit`/`NoPrint` denied permissions, and classic
   output readable by both default blank-user and owner-password paths.

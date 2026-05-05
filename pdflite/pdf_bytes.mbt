@@ -63,6 +63,7 @@ pub(all) suberror PdfError {
   EncryptionRecryptFailed
   EncryptionPermissionsCorrupt
   EncryptionPermissionsMismatch(Int, Int)
+  RandomBytesUnavailable
   EncodingExpected
   EncodingDifferencesMalformed
   EncodingWriteUnsupported

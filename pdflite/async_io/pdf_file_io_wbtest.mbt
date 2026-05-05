@@ -124,6 +124,9 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   let arc4_128_path = pdf_async_io_test_path_for_test("encrypt_128")
   let arc4_r4_path = pdf_async_io_test_path_for_test("encrypt_r4")
   let aesv2_path = pdf_async_io_test_path_for_test("encrypt_aesv2")
+  let aesv2_default_path = pdf_async_io_test_path_for_test(
+    "encrypt_aesv2_default",
+  )
   let aesv3_path = pdf_async_io_test_path_for_test("encrypt_aesv3")
   let aesv3_iso_path = pdf_async_io_test_path_for_test("encrypt_aesv3_iso")
   pdf_async_io_remove_if_exists_for_test(mode_path)
@@ -131,6 +134,7 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_async_io_remove_if_exists_for_test(arc4_128_path)
   pdf_async_io_remove_if_exists_for_test(arc4_r4_path)
   pdf_async_io_remove_if_exists_for_test(aesv2_path)
+  pdf_async_io_remove_if_exists_for_test(aesv2_default_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_iso_path)
   let user = @ascii.encode("user")
@@ -197,6 +201,22 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
     [PdfNoCopy],
     "async-aesv2",
   )
+  pdf_write_encrypted_aesv2_document_to_file(
+    try! pdf_async_io_secret_document_for_test("async-aesv2-default"),
+    aesv2_default_path,
+    user[:],
+    owner[:],
+    [PdfNoPrint],
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=@ascii.encode("async-aesv2-default-id")[:],
+  )
+  pdf_async_io_assert_encrypted_file_secret_for_test(
+    aesv2_default_path,
+    "owner",
+    [PdfNoPrint],
+    "async-aesv2-default",
+  )
   pdf_write_encrypted_aesv3_document_to_file_with_providers(
     try! pdf_async_io_secret_document_for_test("async-aesv3"),
     aesv3_path,
@@ -244,6 +264,7 @@ async test "async file wrappers write mode-dispatched encrypted documents" {
   pdf_async_io_remove_if_exists_for_test(arc4_128_path)
   pdf_async_io_remove_if_exists_for_test(arc4_r4_path)
   pdf_async_io_remove_if_exists_for_test(aesv2_path)
+  pdf_async_io_remove_if_exists_for_test(aesv2_default_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_path)
   pdf_async_io_remove_if_exists_for_test(aesv3_iso_path)
 }
