@@ -87,8 +87,8 @@ Current estimate:
 - [x] ~~Known native-only interface divergence is documented for secure-random
   AES helpers and `async_io`.~~
 - [ ] All-backend validation after native parity is stable.
-- [x] ~~Checked-in CamlPDF fixture PDFs read, compressed-write, and reread
-  through native async file wrappers.~~
+- [x] ~~Checked-in CamlPDF fixture PDFs read, compressed-write, document-wide
+  stream-decompress, and reread through native async file wrappers.~~
 - [ ] Broader real-world PDF corpus testing.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.

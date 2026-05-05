@@ -269,8 +269,8 @@ and backend breadth, is about 71-76% complete.
 ### P2: Broaden Compatibility After Native
 
 - Covered: native target checks, native acceptance, native async file IO,
-  checked-in CamlPDF fixture PDF read/write/reread through native async file
-  wrappers, and full native test coverage.
+  checked-in CamlPDF fixture PDF read/write/stream-decompress/reread through
+  native async file wrappers, and full native test coverage.
 - Deferred: all-backend stabilization. Native-only secure-random/encrypted
   writer APIs and `async_io` intentionally diverge from WasmGC today.
 - Deferred: larger real-world corpus testing, performance tuning, and optional

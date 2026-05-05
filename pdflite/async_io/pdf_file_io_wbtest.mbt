@@ -97,8 +97,12 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   )
   let logo_roundtrip = pdf_async_io_test_path_for_test("logo_fixture")
   let intro_roundtrip = pdf_async_io_test_path_for_test("intro_fixture")
+  let intro_decompressed_roundtrip = pdf_async_io_test_path_for_test(
+    "intro_decompressed_fixture",
+  )
   pdf_async_io_remove_if_exists_for_test(logo_roundtrip)
   pdf_async_io_remove_if_exists_for_test(intro_roundtrip)
+  pdf_async_io_remove_if_exists_for_test(intro_decompressed_roundtrip)
 
   let logo = pdf_read_document_from_file(logo_path)
   @test.assert_eq(logo.version(), (1, 4))
@@ -114,8 +118,19 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
   let intro_reparsed = pdf_read_document_from_file(intro_roundtrip)
   @test.assert_eq(try! intro_reparsed.endpage(), 10)
 
+  let intro_decompressed = intro.copy()
+  intro_decompressed.pdf_decode_streams_until_unknown()
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    intro_decompressed, intro_decompressed_roundtrip,
+  )
+  let intro_decompressed_reparsed = pdf_read_document_from_file(
+    intro_decompressed_roundtrip,
+  )
+  @test.assert_eq(try! intro_decompressed_reparsed.endpage(), 10)
+
   pdf_async_io_remove_if_exists_for_test(logo_roundtrip)
   pdf_async_io_remove_if_exists_for_test(intro_roundtrip)
+  pdf_async_io_remove_if_exists_for_test(intro_decompressed_roundtrip)
 }
 
 ///|
