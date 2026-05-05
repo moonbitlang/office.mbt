@@ -244,6 +244,10 @@ gates are solid; backend breadth follows after native feature parity.
   reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows; and password decryption after
   malformed-xref reconstruction of direct encrypted objects.
+  Count-changing `change_pages` is covered through compressed reader and writer
+  boundaries with explicit serial reference mapping, bookmark retargeting,
+  transformed catalog `/OpenAction`, trailer `/ID`, and root metadata
+  preservation.
   Native OS-random AESV2/AESV3 convenience writer output is covered with decrypt
   and output-variation checks, and AESV3 saved-state recrypt is covered through
   the default secure-random IV path.

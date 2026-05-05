@@ -1461,6 +1461,10 @@ public APIs end to end:
 - run `change_pages` after a compressed xref-stream read boundary, rewrite
   bookmark page references with a matrix transform, write/reread, and verify
   the transformed bookmark target.
+- run count-changing `change_pages` after a compressed xref-stream read
+  boundary with explicit serial reference mapping, preserving trailer `/ID` and
+  root metadata while retargeting bookmarks and transforming catalog
+  `/OpenAction` destinations through write/reread.
 - preserve document-level feature state through a compressed xref-stream
   read/edit/write/reread lifecycle: page labels, link annotations, old-style
   destinations, name-tree destinations, open actions, and matrix-transformed page

@@ -181,6 +181,31 @@ fn acceptance_one_page_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
+fn acceptance_text_page_ops_for_test(
+  text : String,
+) -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_BT,
+    Op_Tf(acceptance_name_for_test("/F0"), 12.0),
+    Op_Tj(acceptance_ascii_for_test(text)),
+    Op_ET,
+  ]
+}
+
+///|
+fn acceptance_text_page_for_test(text : String) -> @pdflite.PdfPage raise {
+  {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops(
+        acceptance_text_page_ops_for_test(text),
+      ),
+    ],
+    resources: acceptance_one_page_resources_for_test(),
+  }
+}
+
+///|
 fn acceptance_one_page_resources_for_test() -> @pdflite.PdfObject {
   let type_name = acceptance_name_for_test("/Type")
   let subtype = acceptance_name_for_test("/Subtype")
@@ -1705,6 +1730,121 @@ fn acceptance_assert_document_feature_lifecycle_for_test(
 }
 
 ///|
+fn acceptance_count_change_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_id = acceptance_name_for_test("/ID")
+  let key_lang = acceptance_name_for_test("/Lang")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  let type_xyz = acceptance_name_for_test("/XYZ")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  let page_root = doc.add_pagetree([
+    acceptance_text_page_for_test("first-page"),
+    acceptance_text_page_for_test("second-page"),
+  ])
+  ignore(
+    doc.add_root(page_root, [
+      (key_lang, PdfString(acceptance_ascii_for_test("en-US"))),
+    ]),
+  )
+  let old_numbers = doc.page_reference_numbers()
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_open_action,
+    PdfArray([
+      PdfIndirect(old_numbers[1]),
+      PdfNameObject(type_xyz),
+      PdfInteger(1),
+      PdfInteger(2),
+      PdfNull,
+    ]),
+  )
+  doc.set_trailer_dict(
+    doc
+    .trailer_dict()
+    .add_dict_entry(
+      key_id,
+      PdfArray([
+        PdfString(acceptance_ascii_for_test("first-id")),
+        PdfString(acceptance_ascii_for_test("second-id")),
+      ]),
+    ),
+  )
+  doc.add_bookmarks([
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Second"),
+      target: DestXYZ(
+        TargetPageObject(old_numbers[1]),
+        Some(5.0),
+        Some(6.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
+fn acceptance_count_change_replacement_page_for_test() -> @pdflite.PdfPage raise {
+  acceptance_text_page_for_test("replacement-page")
+}
+
+///|
+fn acceptance_assert_count_changed_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let key_id = acceptance_name_for_test("/ID")
+  let key_lang = acceptance_name_for_test("/Lang")
+  let key_open_action = acceptance_name_for_test("/OpenAction")
+  @test.assert_eq(doc.version(), (1, 6))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops(pages[0].content),
+    acceptance_text_page_ops_for_test("replacement-page"),
+  )
+  @test.assert_eq(
+    doc.trailer_dict().lookup_immediate(key_id),
+    Some(
+      PdfArray([
+        PdfString(acceptance_ascii_for_test("first-id")),
+        PdfString(acceptance_ascii_for_test("second-id")),
+      ]),
+    ),
+  )
+  @test.assert_eq(
+    doc.catalog().lookup_immediate(key_lang),
+    Some(PdfString(acceptance_ascii_for_test("en-US"))),
+  )
+  let new_numbers = doc.page_reference_numbers()
+  @test.assert_eq(doc.read_bookmarks(preserve_actions=true), [
+    {
+      level: 0,
+      text: acceptance_ascii_for_test("Second"),
+      target: DestXYZ(
+        TargetPageObject(new_numbers[0]),
+        Some(5.0),
+        Some(6.0),
+        None,
+      ),
+      is_open: false,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+  guard doc.catalog().lookup_immediate(key_open_action) is Some(open_action) else {
+    fail("expected OpenAction")
+  }
+  @test.assert_eq(
+    doc.read_destination(open_action),
+    DestXYZ(TargetPageObject(new_numbers[0]), Some(11.0), Some(22.0), None),
+  )
+}
+
+///|
 fn acceptance_catalog_merge_document_for_test(
   label : String,
   title : String,
@@ -2584,6 +2724,23 @@ test "native acceptance suite changes pages after compressed reader boundary" {
       flags: 0,
     },
   ])
+}
+
+///|
+test "native acceptance suite changes page count with explicit reference mapping" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_count_change_document_for_test(),
+  )
+  @test.assert_eq(parsed.endpage(), 2)
+  let changed = parsed.change_pages(
+    [acceptance_count_change_replacement_page_for_test()],
+    change_references=true,
+    changes=[(2, 1)],
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  acceptance_assert_count_changed_document_for_test(changed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(changed)
+  acceptance_assert_count_changed_document_for_test(reparsed)
 }
 
 ///|
