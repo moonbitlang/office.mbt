@@ -1134,6 +1134,15 @@ fn acceptance_expected_indexed_rgb24_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
+fn acceptance_expected_ccitt_rgb24_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0,
+  ])
+}
+
+///|
 fn acceptance_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
   let encoded = @pdflite.pdf_flate_encode(
     acceptance_indexed_image_sample_for_test(),
@@ -1163,6 +1172,45 @@ fn acceptance_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
       (
         acceptance_name_for_test("/Filter"),
         PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_image_ccitt_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = acceptance_text_bytes_for_test([
+    0xB6, 0x6A, 0x28, 0x00, 0x80, 0x08,
+  ])
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(8)),
+      (acceptance_name_for_test("/Height"), PdfInteger(2)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+      ),
+      (acceptance_name_for_test("/BitsPerComponent"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/CCITTFaxDecode")),
+      ),
+      (
+        acceptance_name_for_test("/DecodeParms"),
+        @pdflite.pdf_dictionary([
+          (acceptance_name_for_test("/Columns"), PdfInteger(8)),
+          (acceptance_name_for_test("/Rows"), PdfInteger(2)),
+        ]),
       ),
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
     ]),
@@ -1307,6 +1355,7 @@ fn acceptance_inline_image_data_for_test() -> @pdflite.PdfBytes raise {
 fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise {
   [
     Op_Do(acceptance_name_for_test("/ImRaw")),
+    Op_Do(acceptance_name_for_test("/ImCcitt")),
     Op_Do(acceptance_name_for_test("/ImJpeg")),
     Op_Do(acceptance_name_for_test("/ImJpx")),
     Op_Do(acceptance_name_for_test("/ImJbig2")),
@@ -1321,12 +1370,14 @@ fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise
 ///|
 fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise {
   let raw_name = acceptance_name_for_test("/ImRaw")
+  let ccitt_name = acceptance_name_for_test("/ImCcitt")
   let jpeg_name = acceptance_name_for_test("/ImJpeg")
   let jpx_name = acceptance_name_for_test("/ImJpx")
   let jbig2_name = acceptance_name_for_test("/ImJbig2")
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
   doc.add_object_given_number(70, acceptance_image_indexed_xobject_for_test())
+  doc.add_object_given_number(75, acceptance_image_ccitt_xobject_for_test())
   doc.add_object_given_number(71, acceptance_image_jpeg_xobject_for_test())
   doc.add_object_given_number(72, acceptance_image_jpx_xobject_for_test())
   doc.add_object_given_number(73, acceptance_image_jbig2_globals_for_test())
@@ -1336,6 +1387,7 @@ fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise 
       acceptance_name_for_test("/XObject"),
       @pdflite.pdf_dictionary([
         (raw_name, PdfIndirect(70)),
+        (ccitt_name, PdfIndirect(75)),
         (jpeg_name, PdfIndirect(71)),
         (jpx_name, PdfIndirect(72)),
         (jbig2_name, PdfIndirect(74)),
@@ -1392,6 +1444,15 @@ fn acceptance_assert_image_lifecycle_for_test(
   @test.assert_eq(
     doc.get_image_24bpp(pages[0].resources, raw_image),
     PdfRawImage(4, 1, PdfBPP24, acceptance_expected_indexed_rgb24_for_test()),
+  )
+  let ccitt_image = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImCcitt"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, ccitt_image),
+    PdfRawImage(8, 2, PdfBPP24, acceptance_expected_ccitt_rgb24_for_test()),
   )
   let jpeg_image = acceptance_image_xobject_for_test(
     doc,

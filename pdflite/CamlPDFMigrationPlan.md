@@ -455,7 +455,7 @@ MoonBit consequences for this project:
    pure MoonBit zlib/DEFLATE code, then layer predictors on decoded bytes.
    Keep DCT/JBIG2 pixel decode behavior behind explicit capability checks until
    image support needs them; CCITT stream decode is now part of the native
-   codec surface while CCITT encoding remains unsupported.
+   codec surface and typed Group 3 encoding is started.
    Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
    decoder skips PDF whitespace, accepts uppercase and lowercase hex digits,
    pads an odd final nibble before `>`, and reports malformed data with
@@ -990,7 +990,9 @@ MoonBit consequences for this project:
    now preserves `/JBIG2Globals` from direct `/DecodeParms`, short `/DP`, and
    first decode-parameter array entries, including after earlier filter stages
    have been decoded and the remaining decode-parameter array has shifted
-   forward.
+   forward. CCITT image XObjects now pass through the same staged image
+   decoder and raw RGB24 extraction path after compressed write/read,
+   document-wide decode, and reread boundaries.
    The raw-image decode path now has a borrowed
    `BytesView` helper for sliced inputs while preserving the owned fast path
    for no-op decode cases, so `.to_owned()` stays at borrowed-to-owned
@@ -1445,10 +1447,10 @@ public APIs end to end:
   with generated `/DecodeParms` and decode round-trip coverage;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
-  image XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
-  encoded-image preservation, staged Flate-then-JBIG2 encoded-image
-  preservation with `/JBIG2Globals`, and Flate inline images that survive
-  document-wide stream decompression and reread;
+  image XObjects, CCITT image XObjects decoded to RGB24, staged Flate-then-DCT
+  encoded-image pass-through, direct JPX encoded-image preservation, staged
+  Flate-then-JBIG2 encoded-image preservation with `/JBIG2Globals`, and Flate
+  inline images that survive document-wide stream decompression and reread;
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;

@@ -211,7 +211,7 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 81-85% complete. Full
+Current estimate: native main-feature parity is about 82-85% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
 and backend breadth, is about 70-75% complete.
 
@@ -248,11 +248,12 @@ and backend breadth, is about 70-75% complete.
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, and an Identity-V
   native gate with vertical width metadata. Native image acceptance now also
-  covers JPX encoded images and staged Flate-to-JBIG2 images with
-  `/JBIG2Globals`; native font acceptance covers embedded TrueType `FontFile2`
-  with generated `/ToUnicode` text extraction. Stream decode now covers CCITT
-  `/K 0` and `/K < 0` with `/DecodeParms` defaults and direct indirect params.
-  Typed stream encoding now covers CCITT Group 3 `/K 0` and round-trips through
+  covers JPX encoded images, staged Flate-to-JBIG2 images with
+  `/JBIG2Globals`, and CCITT image XObjects through raw RGB extraction; native
+  font acceptance covers embedded TrueType `FontFile2` with generated
+  `/ToUnicode` text extraction. Stream decode now covers CCITT `/K 0` and
+  `/K < 0` with `/DecodeParms` defaults and direct indirect params. Typed
+  stream encoding now covers CCITT Group 3 `/K 0` and round-trips through
   decode.
 - Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
   vertical-writing behavior beyond the current gates, additional Type3/TrueType
