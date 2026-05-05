@@ -194,9 +194,11 @@ work changes.
    Type3 `/ToUnicode` text extraction with indirect CharProcs and custom
    metrics, embedded TrueType `FontFile2` plus `/ToUnicode` text extraction
    through compressed read/write boundaries, and Flate inline-image content
-   parsing. Unit coverage also preserves direct Type3 `CharProcs` streams and
+   parsing. Unit coverage also preserves direct Type3 `CharProcs` streams,
    parses their `d0`/`d1` glyph programs without allocating new indirect
-   objects. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
+   objects, and round-trips Type3 writer output for `/FontBBox`,
+   `/FontMatrix`, `CharProcs`, `/Resources`, and width metrics. Stream decode
+   now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
    beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
@@ -338,7 +340,9 @@ and backend breadth, is about 81-86% complete.
   extraction; native font acceptance covers Type3 `/ToUnicode` text with
   indirect CharProcs and embedded TrueType `FontFile2` with generated
   `/ToUnicode` text extraction, while focused font tests preserve direct Type3
-  `CharProcs` streams and parse `d0`/`d1` glyph programs.
+  `CharProcs` streams, parse `d0`/`d1` glyph programs, and round-trip Type3
+  writer output without dropping bbox, matrix, resources, CharProcs, or width
+  metrics.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
@@ -347,8 +351,9 @@ and backend breadth, is about 81-86% complete.
   fallbacks, broader external/general CMap parsing beyond the current
   codespace/CID-char/CID-range, Identity `/UseCMap`, and stream `/UseCMap`
   composition subset, additional TrueType and Type3 glyph-program edge
-  coverage, more real-world ToUnicode variations, and broader real-world
-  DCT/JPEG image payload corpus files.
+  coverage beyond the current Type3 reader/writer gates, more real-world
+  ToUnicode variations, and broader real-world DCT/JPEG image payload corpus
+  files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.

@@ -2139,7 +2139,7 @@ test "pdf_make_font builds Type1 font dictionaries" {
 ///|
 test "PdfDocument write_font writes standard14 fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let number = try! doc.write_font(
+  let number = doc.write_font(
     PdfFontStandard(
       text_standard_font_data_for_test(PdfHelveticaBold, PdfWinAnsiEncoding),
     ),
@@ -2194,23 +2194,35 @@ test "PdfDocument write_font writes standard14 fonts" {
 ///|
 test "PdfDocument write_font writes Type3 fonts" {
   let doc = @pdflite.pdf_document_empty()
+  let d0_stream = text_type3_charproc_stream_for_test([Op_d0(500.0, 0.0)])
+  let d1_stream = text_type3_charproc_stream_for_test([
+    Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0),
+  ])
+  let fontmatrix : @pdflite.TransformMatrix = {
+    a: 0.001,
+    b: 0.0,
+    c: 0.0,
+    d: 0.001,
+    e: 2.0,
+    f: 3.0,
+  }
   let number = try! doc.write_font(
     PdfFontSimple({
       fonttype: PdfType3({
         fontbbox: { min_x: 1.0, min_y: 2.0, max_x: 3.0, max_y: 4.0 },
-        fontmatrix: @pdflite.transform_identity_matrix,
+        fontmatrix,
         charprocs: [
-          (text_name_for_test("/A"), PdfInteger(10)),
-          (text_name_for_test("/B"), PdfInteger(11)),
+          (text_name_for_test("/A"), d0_stream),
+          (text_name_for_test("/B"), d1_stream),
         ],
         resources: @pdflite.pdf_dictionary([
           (text_name_for_test("/ProcSet"), PdfArray([])),
         ]),
       }),
       basefont: None,
-      firstchar: 0,
-      lastchar: 0,
-      widths: [],
+      firstchar: 65,
+      lastchar: 66,
+      widths: [500, 600],
       fontdescriptor: Some(text_font_descriptor_for_test()),
       fontmetrics: None,
       encoding: PdfImplicitInFontFile,
@@ -2227,31 +2239,62 @@ test "PdfDocument write_font writes Type3 fonts" {
       ),
       (
         text_name_for_test("/FontBBox"),
-        PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(0.0), PdfReal(0.0)]),
+        PdfArray([PdfReal(1.0), PdfReal(2.0), PdfReal(3.0), PdfReal(4.0)]),
       ),
       (
         text_name_for_test("/FontMatrix"),
         PdfArray([
+          PdfReal(0.001),
           PdfReal(0.0),
           PdfReal(0.0),
-          PdfReal(0.0),
-          PdfReal(0.0),
-          PdfReal(0.0),
-          PdfReal(0.0),
+          PdfReal(0.001),
+          PdfReal(2.0),
+          PdfReal(3.0),
         ]),
       ),
       (
         text_name_for_test("/CharProcs"),
         @pdflite.pdf_dictionary([
-          (text_name_for_test("/A"), PdfNull),
-          (text_name_for_test("/B"), PdfNull),
+          (text_name_for_test("/A"), d0_stream),
+          (text_name_for_test("/B"), d1_stream),
         ]),
       ),
-      (text_name_for_test("/FirstChar"), PdfInteger(0)),
-      (text_name_for_test("/LastChar"), PdfInteger(0)),
-      (text_name_for_test("/Widths"), PdfArray([PdfReal(0.0)])),
+      (
+        text_name_for_test("/Resources"),
+        @pdflite.pdf_dictionary([(text_name_for_test("/ProcSet"), PdfArray([]))]),
+      ),
+      (text_name_for_test("/FirstChar"), PdfInteger(65)),
+      (text_name_for_test("/LastChar"), PdfInteger(66)),
+      (
+        text_name_for_test("/Widths"),
+        PdfArray([PdfInteger(500), PdfInteger(600)]),
+      ),
     ]),
   )
+  let simple = doc.read_simple_font(doc.lookup_object_or_null(number))
+  guard simple.fonttype is PdfType3(type3_data) else {
+    fail("expected Type3 font")
+  }
+  @test.assert_eq(type3_data.fontbbox, {
+    min_x: 1.0,
+    min_y: 2.0,
+    max_x: 3.0,
+    max_y: 4.0,
+  })
+  @test.assert_eq(type3_data.fontmatrix, fontmatrix)
+  @test.assert_eq(type3_data.charprocs, [
+    (text_name_for_test("/A"), d0_stream),
+    (text_name_for_test("/B"), d1_stream),
+  ])
+  @test.assert_eq(
+    type3_data.resources,
+    @pdflite.pdf_dictionary([(text_name_for_test("/ProcSet"), PdfArray([]))]),
+  )
+  guard simple.fontmetrics is Some(metrics) else {
+    fail("expected Type3 metrics")
+  }
+  @test.assert_eq(metrics[65], 500.0)
+  @test.assert_eq(metrics[66], 600.0)
 }
 
 ///|

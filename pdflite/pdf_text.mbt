@@ -9209,19 +9209,12 @@ pub fn pdf_make_font(
 }
 
 ///|
-fn pdf_text_zero_rectangle_object() -> PdfObject {
-  PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(0.0), PdfReal(0.0)])
-}
-
-///|
-fn pdf_text_zero_font_matrix_object() -> PdfObject {
+fn pdf_text_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
   PdfArray([
-    PdfReal(0.0),
-    PdfReal(0.0),
-    PdfReal(0.0),
-    PdfReal(0.0),
-    PdfReal(0.0),
-    PdfReal(0.0),
+    PdfReal(rectangle.min_x),
+    PdfReal(rectangle.min_y),
+    PdfReal(rectangle.max_x),
+    PdfReal(rectangle.max_y),
   ])
 }
 
@@ -9229,7 +9222,41 @@ fn pdf_text_zero_font_matrix_object() -> PdfObject {
 fn pdf_text_type3_charprocs_object(
   charprocs : ArrayView[(PdfName, PdfObject)],
 ) -> PdfObject {
-  PdfDictionary([ for entry in charprocs => (entry.0, PdfNull) ])
+  PdfDictionary([ for entry in charprocs => entry ])
+}
+
+///|
+fn pdf_text_type3_resources_entries(
+  resources : PdfObject,
+) -> Array[(PdfName, PdfObject)] {
+  match resources {
+    PdfDictionary(entries) if entries.length() == 0 => []
+    _ => [(pdf_text_name("/Resources"), resources)]
+  }
+}
+
+///|
+fn pdf_text_type3_metrics_entries(
+  firstchar : Int,
+  lastchar : Int,
+  widths : ArrayView[Int],
+) -> Array[(PdfName, PdfObject)] {
+  if widths.length() == 0 {
+    [
+      (pdf_text_name("/FirstChar"), PdfInteger(0)),
+      (pdf_text_name("/LastChar"), PdfInteger(0)),
+      (pdf_text_name("/Widths"), PdfArray([PdfReal(0.0)])),
+    ]
+  } else {
+    [
+      (pdf_text_name("/FirstChar"), PdfInteger(firstchar)),
+      (pdf_text_name("/LastChar"), PdfInteger(lastchar)),
+      (
+        pdf_text_name("/Widths"),
+        PdfArray([ for width in widths => PdfInteger(width) ]),
+      ),
+    ]
+  }
 }
 
 ///|
@@ -9248,21 +9275,23 @@ fn PdfDocument::pdf_text_type3_encoding_entries(
 fn PdfDocument::pdf_text_make_type3_font(
   self : PdfDocument,
   data : PdfType3Glyphs,
+  firstchar : Int,
+  lastchar : Int,
+  widths : ArrayView[Int],
   encoding : PdfEncoding,
 ) -> PdfObject raise PdfError {
   PdfDictionary(
     [
       (pdf_text_name("/Type"), PdfNameObject(pdf_text_name("/Font"))),
       (pdf_text_name("/Subtype"), PdfNameObject(pdf_text_name("/Type3"))),
-      (pdf_text_name("/FontBBox"), pdf_text_zero_rectangle_object()),
-      (pdf_text_name("/FontMatrix"), pdf_text_zero_font_matrix_object()),
+      (pdf_text_name("/FontBBox"), pdf_text_rectangle_object(data.fontbbox)),
+      (pdf_text_name("/FontMatrix"), pdf_object_of_matrix(data.fontmatrix)),
       (
         pdf_text_name("/CharProcs"),
         pdf_text_type3_charprocs_object(data.charprocs),
       ),
-      (pdf_text_name("/FirstChar"), PdfInteger(0)),
-      (pdf_text_name("/LastChar"), PdfInteger(0)),
-      (pdf_text_name("/Widths"), PdfArray([PdfReal(0.0)])),
+      ..pdf_text_type3_resources_entries(data.resources),
+      ..pdf_text_type3_metrics_entries(firstchar, lastchar, widths),
       ..self.pdf_text_type3_encoding_entries(encoding),
     ],
   )
@@ -9489,11 +9518,23 @@ pub fn PdfDocument::write_font(
         pdf_make_font(font.pdf_name(), encoding),
         objnum,
       )
-    PdfFontSimple({ fonttype: PdfType3(data), encoding, fontdescriptor, .. }) =>
+    PdfFontSimple(
+      {
+        fonttype: PdfType3(data),
+        firstchar,
+        lastchar,
+        widths,
+        encoding,
+        fontdescriptor,
+        ..,
+      }
+    ) =>
       match fontdescriptor {
         Some(_) =>
           self.pdf_text_add_font_object(
-            self.pdf_text_make_type3_font(data, encoding),
+            self.pdf_text_make_type3_font(
+              data, firstchar, lastchar, widths, encoding,
+            ),
             objnum,
           )
         None => raise FontWriteUnsupported

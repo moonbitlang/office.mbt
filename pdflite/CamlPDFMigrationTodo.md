@@ -31,7 +31,7 @@ Current estimate:
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
 - [ ] Add more TrueType and Type3 glyph-program edge coverage beyond current
-  Type3 CharProc and embedded TrueType gates.
+  Type3 CharProc, Type3 writer round-trip, and embedded TrueType gates.
 - [ ] Add broader real-world DCT/JPEG and CCITT image corpus coverage; keep
   optional JBIG2/JPEG pixel-decoder decisions explicit.
 - [ ] Improve byte-identical zlib strategy and performance parity beyond the
@@ -204,8 +204,11 @@ Current estimate:
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
   glyph programs and expanded Type3 metrics.~~
+- [x] ~~Type3 writer round-trip fidelity for `/FontBBox`, `/FontMatrix`,
+  actual `CharProcs` stream objects, `/Resources`, and non-empty
+  `FirstChar`/`LastChar`/`Widths` metrics.~~
 - [ ] More TrueType and Type3 glyph-program edge coverage beyond the current
-  Type3 and embedded TrueType gates.
+  Type3 reader/writer and embedded TrueType gates.
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
   XObjects and DCT inline images with embedded `EI` bytes before EOI.~~
 - [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
