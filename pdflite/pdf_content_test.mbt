@@ -979,6 +979,38 @@ test "pdf_parse_content_ops_from_bytes decodes leading inline filters before DCT
 }
 
 ///|
+test "pdf_parse_content_ops_from_bytes preserves deferred inline filters after leading decode" {
+  let encoded = @pdflite.pdf_ascii_hex_encode(content_bytes_for_test("abc"))
+  let data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 3 /H 1 /CS /G /BPC 1 /Filter [ /AHx /CCITTFaxDecode ] ID ",
+    ),
+    encoded,
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (
+          content_name_for_test("/Filter"),
+          PdfArray([PdfNameObject(content_name_for_test("/CCITTFaxDecode"))]),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (content_name_for_test("/W"), PdfInteger(3)),
+      ]),
+      None,
+      content_bytes_for_test("abc"),
+    ),
+    Op_Q,
+  ])
+}
+
+///|
 test "pdf_parse_content_ops_from_bytes recovers junk before inline image end" {
   @test.assert_eq(
     try! @pdflite.pdf_parse_content_ops_from_bytes(
