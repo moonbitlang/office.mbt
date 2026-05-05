@@ -575,6 +575,21 @@ it were a standalone expression; the parser expects `=>` after the pattern
 line.
 
 ```sh
+moon run -c 'enum C { Indexed; DeviceGray }
+fn f(c : C, bpc : Int) -> String { match (c, bpc) { (_, n) if n == 1 => "generic1"; (Indexed, 1) => "indexed1"; _ => "other" } }
+fn g(c : C, bpc : Int) -> String { match (c, bpc) { (Indexed, 1) => "indexed1"; (_, n) if n == 1 => "generic1"; _ => "other" } }
+fn main { println(f(Indexed, 1)); println(g(Indexed, 1)); println(g(DeviceGray, 1)) }'
+# generic1
+# indexed1
+# generic1
+```
+
+MoonBit match arms are tested top to bottom. Put specific tuple or variant
+cases before broad wildcard or guarded catch-all arms; otherwise the broad arm
+will shadow the later case. The compiler catches some fully unreachable arms,
+but guarded broad arms can still make a later specific case behaviorally dead.
+
+```sh
 moon run -c 'fn main { let xs = [(2, "b"), (1, "a")]; xs.sort_by(fn(a, b) { a.0.compare(b.0) }); println(xs[0].0) }'
 # 1
 ```
