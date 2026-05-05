@@ -67,6 +67,15 @@ fn codec_lzw_codes_for_test(
 }
 
 ///|
+fn codec_bits_for_test(bits : ArrayView[Int]) -> @pdflite.PdfBytes {
+  let writer = @pdflite.bit_writer_new()
+  for bit in bits {
+    try! writer.put_bit(bit)
+  }
+  writer.to_bytes()
+}
+
+///|
 test "pdf_ascii_hex_encode renders uppercase hex with terminator" {
   @test.assert_eq(
     @pdflite.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
@@ -1118,6 +1127,169 @@ test "PdfDocument pdf_decode_stream applies indirect lzw EarlyChange" {
     decoded_stream.data,
     StreamGot(codec_bytes_for_test([ for _ in 0..<255 => 65 ])),
   )
+}
+
+///|
+test "PdfDocument pdf_decode_stream decodes CCITT Group 3 one dimensional rows" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let columns = codec_name_for_test("/Columns")
+  let rows = codec_name_for_test("/Rows")
+  let doc = @pdflite.pdf_document_empty()
+  let encoded = codec_bits_for_test([
+    // white 4, black 4; then white 0, black 8
+    1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1,
+  ])
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(codec_name_for_test("/CCITTFaxDecode"))),
+      (
+        decodeparms,
+        @pdflite.pdf_dictionary([
+          (columns, PdfInteger(8)),
+          (rows, PdfInteger(2)),
+        ]),
+      ),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = doc.pdf_decode_stream(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(
+    decoded_stream.data,
+    StreamGot(codec_bytes_for_test([0xF0, 0x00])),
+  )
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "PdfDocument pdf_decode_stream decodes CCITT Group 4 rows" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let encoded = codec_bits_for_test([
+    // horizontal mode, white 4, black 4 against the initial all-white reference.
+    0, 0, 1, 1, 0, 1, 1, 0, 1, 1,
+  ])
+  let decoded = @pdflite.pdf_document_empty().pdf_decode_stream(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (length, PdfInteger(encoded.length())),
+        (filter, PdfNameObject(codec_name_for_test("/CCITTFaxDecode"))),
+        (
+          decodeparms,
+          @pdflite.pdf_dictionary([
+            (codec_name_for_test("/K"), PdfInteger(-1)),
+            (codec_name_for_test("/Columns"), PdfInteger(8)),
+            (codec_name_for_test("/Rows"), PdfInteger(1)),
+          ]),
+        ),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_bytes_for_test([0xF0])))
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "PdfDocument pdf_decode_stream decodes CCITT short filter and direct DecodeParms" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let columns = codec_name_for_test("/Columns")
+  let rows = codec_name_for_test("/Rows")
+  let black_is_1 = codec_name_for_test("/BlackIs1")
+  let encoded = codec_bits_for_test([
+    // white 0, black 4, white 4 with /BlackIs1 true.
+    0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1,
+  ])
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    20,
+    @pdflite.pdf_dictionary([
+      (columns, PdfInteger(8)),
+      (rows, PdfInteger(1)),
+      (black_is_1, PdfBoolean(true)),
+    ]),
+  )
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (length, PdfInteger(encoded.length())),
+      (filter, PdfNameObject(codec_name_for_test("/CCF"))),
+      (decodeparms, PdfIndirect(20)),
+    ]),
+    StreamGot(encoded),
+  )
+  let decoded = doc.pdf_decode_stream(stream)
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_bytes_for_test([0xF0])))
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(decodeparms), None)
+}
+
+///|
+test "PdfDocument pdf_decode_stream reports unsupported CCITT two dimensional K" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (length, PdfInteger(1)),
+        (filter, PdfNameObject(codec_name_for_test("/CCITTFaxDecode"))),
+        (
+          decodeparms,
+          @pdflite.pdf_dictionary([(codec_name_for_test("/K"), PdfInteger(1))]),
+        ),
+      ]),
+      StreamGot(codec_bytes_for_test([0])),
+    ),
+  )
+  guard result is Err(@pdflite.PdfError::CCITTNotSupported(_)) else {
+    fail("expected unsupported CCITT K")
+  }
+}
+
+///|
+test "PdfDocument pdf_decode_stream_until_unknown no longer stops at CCITT" {
+  let length = codec_name_for_test("/Length")
+  let filter = codec_name_for_test("/Filter")
+  let decodeparms = codec_name_for_test("/DecodeParms")
+  let encoded = codec_bits_for_test([1, 0, 1, 1])
+  let doc = @pdflite.pdf_document_empty()
+  let decoded = doc.pdf_decode_stream_until_unknown(
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (length, PdfInteger(encoded.length())),
+        (filter, PdfNameObject(codec_name_for_test("/CCITTFaxDecode"))),
+        (
+          decodeparms,
+          @pdflite.pdf_dictionary([
+            (codec_name_for_test("/Columns"), PdfInteger(4)),
+            (codec_name_for_test("/Rows"), PdfInteger(1)),
+          ]),
+        ),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  guard decoded is PdfStreamObject(decoded_stream) else {
+    fail("expected decoded stream")
+  }
+  @test.assert_eq(decoded_stream.data, StreamGot(codec_bytes_for_test([0xF0])))
+  @test.assert_eq(decoded_stream.dictionary.lookup_immediate(filter), None)
 }
 
 ///|

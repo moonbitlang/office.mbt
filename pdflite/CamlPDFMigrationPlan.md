@@ -453,8 +453,9 @@ MoonBit consequences for this project:
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
    ASCIIHex/ASCII85/RunLength because they are byte-local. Add flate through
    pure MoonBit zlib/DEFLATE code, then layer predictors on decoded bytes.
-   Keep DCT/JBIG2/CCITT behavior behind explicit capability checks until image
-   support needs them.
+   Keep DCT/JBIG2 pixel decode behavior behind explicit capability checks until
+   image support needs them; CCITT stream decode is now part of the native
+   codec surface while CCITT encoding remains unsupported.
    Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
    decoder skips PDF whitespace, accepts uppercase and lowercase hex digits,
    pads an odd final nibble before `>`, and reports malformed data with
@@ -506,9 +507,12 @@ MoonBit consequences for this project:
    `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over
    the existing filter/predictor implementation; CCITT names map to
    `/CCITTFaxDecode`, while actual CCITT encoding remains an explicit
-   unsupported-filter path. Stream filter
-   encode/decode now materializes `StreamToGet` data only at the owned-byte
-   boundary required by codec transforms. A
+   unsupported-filter path. Native CCITT decode is now started for
+   `/CCITTFaxDecode` and `/CCF`, covering Group 3 one-dimensional `/K 0`, Group
+   4 `/K < 0`, CamlPDF-compatible `/DecodeParms` defaults, `/BlackIs1`, and
+   direct indirect decode parameters. Stream filter encode/decode now
+   materializes `StreamToGet` data only at the owned-byte boundary required by
+   codec transforms. A
    document-aware `PdfDocument::pdf_decode_stream` path is now started for
    indirect `/Filter` and `/DecodeParms` entries, including array filters with
    indirect elements, short `/F` and `/DP` keys, predictor dictionaries reached
@@ -1432,6 +1436,8 @@ public APIs end to end:
   `/ToUnicode` CMap after compressed xref-stream write/read boundaries,
   including font descriptor retention, expanded width metrics, codepoint
   extraction, and reverse charcode lookup;
+- decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
+  `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX

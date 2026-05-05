@@ -79,10 +79,14 @@ work changes.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
    Status: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode
    including stored, fixed-Huffman, and dynamic-Huffman output choices,
-   predictors, filter arrays, document-aware stream decoding, document-wide
-   stop-at-unknown stream decompression, and JPEG data extraction are started.
-   Remaining focus: fuller zlib-style Flate tuning, CCITT/JBIG2 external-style
-   decode parity, and actual JPEG pixel decoding.
+   predictors, filter arrays, CCITT Group 3 one-dimensional and Group 4 decode,
+   document-aware stream decoding, document-wide stop-at-unknown stream
+   decompression, and JPEG data extraction are started. CCITT decode honors
+   CamlPDF-compatible `/DecodeParms` defaults, direct indirect parameters, and
+   the `/CCF` alias; CCITT encode remains unsupported like the prior typed
+   encoding path. Remaining focus: fuller zlib-style Flate tuning, optional
+   JBIG2 external-tool decode parity, broader CCITT corpus validation, and
+   actual JPEG pixel decoding.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
@@ -140,7 +144,8 @@ work changes.
    encoded-image preservation, staged Flate-then-JBIG2 encoded-image
    preservation with `/JBIG2Globals`, embedded TrueType `FontFile2` plus
    `/ToUnicode` text extraction through compressed read/write boundaries, and
-   Flate inline-image content parsing.
+   Flate inline-image content parsing. Stream decode now also covers CCITT
+   `/K 0` and `/K < 0` data through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader predefined CMap semantics beyond Identity-H/V, JPEG
    pixel decode, and remaining image filter families.
 
@@ -205,9 +210,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 75-79% complete. Full
+Current estimate: native main-feature parity is about 80-84% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 64-69% complete.
+and backend breadth, is about 69-74% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -244,12 +249,14 @@ and backend breadth, is about 64-69% complete.
   native gate with vertical width metadata. Native image acceptance now also
   covers JPX encoded images and staged Flate-to-JBIG2 images with
   `/JBIG2Globals`; native font acceptance covers embedded TrueType `FontFile2`
-  with generated `/ToUnicode` text extraction.
+  with generated `/ToUnicode` text extraction. Stream decode now covers CCITT
+  `/K 0` and `/K < 0` with `/DecodeParms` defaults and direct indirect params.
 - Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
   vertical-writing behavior beyond the current gates, additional Type3/TrueType
   edge coverage, and more real-world ToUnicode variations.
 - Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
-  CCITT decode, and optional external JBIG2 decoder integration.
+  broader CCITT corpus validation, and optional external JBIG2 decoder
+  integration.
 - Not covered enough: broader malformed xref-table/object recovery driven by
   real-world corpus files.
 
@@ -265,7 +272,8 @@ and backend breadth, is about 64-69% complete.
 
 ### Immediate Work Order
 
-- Next: decide and start one CCITT/JPEG decode implementation slice.
+- Next: add real-world CCITT image corpus coverage and keep JPEG/JBIG2 decoder
+  decisions separate from encoded image pass-through.
 - Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist
@@ -343,8 +351,9 @@ and backend breadth, is about 64-69% complete.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   remaining encryption edge cases, remaining malformed-reader recovery, and
   example-level integration fixtures.
-- Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, broader
-  predefined CMap coverage, and broad real-world PDF recovery behavior.
+- Deferred: optional JBIG2 external-style decode, JPEG pixel decode, broader
+  predefined CMap coverage, broader CCITT corpus validation, and broad
+  real-world PDF recovery behavior.
 
 ## Working Rule
 

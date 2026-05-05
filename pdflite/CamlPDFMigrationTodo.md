@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 79-83%.
+- Native main-feature parity: 80-84%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 68-73%.
+  breadth: 69-74%.
 
 ## P0: Native Main Workflows
 
@@ -64,11 +64,14 @@ Current estimate:
   `/JBIG2Globals` through compressed read/write/decompress/reread boundaries.~~
 - [x] ~~Embedded TrueType `FontFile2` plus `/ToUnicode` native text gate through
   compressed read/write/reread boundaries.~~
+- [x] ~~CCITT `/K 0` and `/K < 0` native stream decode with `/DecodeParms`
+  parsing and `/CCF` alias coverage.~~
 - [ ] Broader predefined CMap semantics beyond Identity-H/V and more
   vertical-writing text behavior.
 - [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
 - [ ] JPEG pixel decoding.
-- [ ] CCITT decode and optional external JBIG2 decoder integration.
+- [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
+  validation.
 - [ ] Fuller zlib/Flate compression tuning parity.
 - [ ] Broader malformed xref-table/object recovery driven by public workflows
   and real-world corpus files.
@@ -96,5 +99,6 @@ Current estimate:
 - [x] ~~Add one remaining filter/image-family gate.~~
 - [x] ~~Expand malformed-reader recovery from realistic documents.~~
 - [x] ~~Add one Type3/TrueType font edge gate.~~
-- [ ] Decide and start one CCITT/JPEG decode implementation slice.
+- [x] ~~Decide and start one CCITT/JPEG decode implementation slice.~~
+- [ ] Add real-world CCITT image corpus coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.

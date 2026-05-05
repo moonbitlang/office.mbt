@@ -979,11 +979,38 @@ test "pdf_parse_content_ops_from_bytes decodes leading inline filters before DCT
 }
 
 ///|
-test "pdf_parse_content_ops_from_bytes preserves deferred inline filters after leading decode" {
+test "pdf_parse_content_ops_from_bytes decodes leading inline filters before CCITT" {
+  let data = content_concat_for_test([
+    content_bytes_for_test(
+      "BI /W 4 /H 1 /CS /G /BPC 1 /Filter [ /AHx /CCITTFaxDecode ] /DecodeParms [ null << /Columns 4 /Rows 1 >> ] ID ",
+    ),
+    content_bytes_for_test("B0>"),
+    content_bytes_for_test("\nEI Q"),
+  ])
+  @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
+    Op_InlineImage(
+      PdfDictionary([
+        (content_name_for_test("/W"), PdfInteger(4)),
+        (content_name_for_test("/H"), PdfInteger(1)),
+        (
+          content_name_for_test("/CS"),
+          PdfNameObject(content_name_for_test("/G")),
+        ),
+        (content_name_for_test("/BPC"), PdfInteger(1)),
+      ]),
+      None,
+      try! @pdflite.pdf_bytes_of_int_array([0xF0]),
+    ),
+    Op_Q,
+  ])
+}
+
+///|
+test "pdf_parse_content_ops_from_bytes preserves unsupported deferred inline filters after leading decode" {
   let encoded = @pdflite.pdf_ascii_hex_encode(content_bytes_for_test("abc"))
   let data = content_concat_for_test([
     content_bytes_for_test(
-      "BI /W 3 /H 1 /CS /G /BPC 1 /Filter [ /AHx /CCITTFaxDecode ] ID ",
+      "BI /W 3 /H 1 /CS /G /BPC 1 /Filter [ /AHx /NoSuchFilter ] ID ",
     ),
     encoded,
     content_bytes_for_test("\nEI Q"),
@@ -993,7 +1020,7 @@ test "pdf_parse_content_ops_from_bytes preserves deferred inline filters after l
       PdfDictionary([
         (
           content_name_for_test("/Filter"),
-          PdfArray([PdfNameObject(content_name_for_test("/CCITTFaxDecode"))]),
+          PdfArray([PdfNameObject(content_name_for_test("/NoSuchFilter"))]),
         ),
         (content_name_for_test("/BPC"), PdfInteger(1)),
         (

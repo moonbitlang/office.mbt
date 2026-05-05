@@ -589,6 +589,9 @@ pub(all) suberror PdfError {
   InvalidASCII85Data
   FilterNotSupported(PdfName)
   FilterExpected
+  CCITTDecodeParmsExpected
+  CCITTNotSupported(String)
+  InvalidCCITTData
   PredictorExpected
   PredictorNotSupported(Int)
   InvalidLZWData
