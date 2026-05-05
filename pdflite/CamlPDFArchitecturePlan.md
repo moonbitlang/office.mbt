@@ -131,7 +131,10 @@ work changes.
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
    extraction are started, including 1-, 2-, 4-, and 8-bit `/Indexed` raw
    image samples plus explicit `/Indexed` encoded-image `/Decode` metadata
-   preservation.
+   preservation. Native acceptance now exercises image extraction through
+   compressed read/write boundaries for Flate-decoded raw `/Indexed` image
+   XObjects, staged Flate-then-DCT encoded-image pass-through, and Flate
+   inline-image content parsing.
    Remaining focus: broader predefined CMap semantics, JPEG pixel decode, and
    remaining image filter families.
 
@@ -227,7 +230,10 @@ gates are solid; backend breadth follows after native feature parity.
   `/OpenAction`; a merge catalog-feature gate for AcroForm fields, optional
   content groups, structure trees with parent trees, and trailer `/Info`; a
   ToUnicode text-extraction gate using filtered CMap streams through compressed
-  read/write boundaries; strict reading and writer normalization for
+  read/write boundaries; an image-extraction gate for Flate raw indexed image
+  XObjects, Flate-to-DCT encoded images, and Flate inline images through
+  compressed read/write and document-wide decompression boundaries; strict
+  reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows; and password decryption after
   malformed-xref reconstruction of direct encrypted objects.
   Native OS-random AESV2/AESV3 convenience writer output is covered with decrypt

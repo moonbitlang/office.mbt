@@ -1403,6 +1403,10 @@ public APIs end to end:
 - extract text from parsed page content with a filtered ToUnicode CMap stream
   after compressed xref-stream write/read boundaries, including `Tj` and `TJ`
   content operators and reverse charcode lookup;
+- extract images from page resources and parsed content after compressed
+  xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
+  image XObjects, staged Flate-then-DCT encoded-image pass-through, and Flate
+  inline images that survive document-wide stream decompression and reread;
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;

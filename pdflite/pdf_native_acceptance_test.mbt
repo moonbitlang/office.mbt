@@ -475,6 +475,204 @@ fn acceptance_assert_tounicode_text_for_test(
 }
 
 ///|
+fn acceptance_indexed_image_palette_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255])
+}
+
+///|
+fn acceptance_indexed_image_sample_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0x1B])
+}
+
+///|
+fn acceptance_expected_indexed_rgb24_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255])
+}
+
+///|
+fn acceptance_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = @pdflite.pdf_flate_encode(
+    acceptance_indexed_image_sample_for_test(),
+  )
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(4)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfArray([
+          PdfNameObject(acceptance_name_for_test("/Indexed")),
+          PdfNameObject(acceptance_name_for_test("/DeviceRGB")),
+          PdfInteger(3),
+          PdfString(acceptance_indexed_image_palette_for_test()),
+        ]),
+      ),
+      (acceptance_name_for_test("/BitsPerComponent"), PdfInteger(2)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject {
+  let encoded = @pdflite.pdf_flate_encode(acceptance_ascii_for_test("jpg-data"))
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(1)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+      ),
+      (
+        acceptance_name_for_test("/Decode"),
+        PdfArray([PdfInteger(1), PdfInteger(0)]),
+      ),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfArray([
+          PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+          PdfNameObject(acceptance_name_for_test("/DCTDecode")),
+        ]),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
+fn acceptance_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
+  PdfDictionary([
+    (acceptance_name_for_test("/W"), PdfInteger(3)),
+    (acceptance_name_for_test("/H"), PdfInteger(1)),
+    (
+      acceptance_name_for_test("/CS"),
+      PdfNameObject(acceptance_name_for_test("/G")),
+    ),
+    (acceptance_name_for_test("/BPC"), PdfInteger(1)),
+  ])
+}
+
+///|
+fn acceptance_inline_image_data_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([0xA0])
+}
+
+///|
+fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise {
+  [
+    Op_Do(acceptance_name_for_test("/ImRaw")),
+    Op_Do(acceptance_name_for_test("/ImJpeg")),
+    Op_InlineImage(
+      acceptance_inline_image_dictionary_for_test(),
+      None,
+      acceptance_inline_image_data_for_test(),
+    ),
+  ]
+}
+
+///|
+fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise {
+  let raw_name = acceptance_name_for_test("/ImRaw")
+  let jpeg_name = acceptance_name_for_test("/ImJpeg")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(70, acceptance_image_indexed_xobject_for_test())
+  doc.add_object_given_number(71, acceptance_image_jpeg_xobject_for_test())
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/XObject"),
+      @pdflite.pdf_dictionary([
+        (raw_name, PdfIndirect(70)),
+        (jpeg_name, PdfIndirect(71)),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops(
+        acceptance_image_content_ops_for_test(),
+      ),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_image_xobject_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  name : @pdflite.PdfName,
+) -> @pdflite.PdfObject raise {
+  guard doc.lookup_direct(acceptance_name_for_test("/XObject"), resources)
+    is Some(xobjects) else {
+    fail("expected XObject resources")
+  }
+  guard doc.lookup_direct(name, xobjects) is Some(image) else {
+    fail("expected image XObject")
+  }
+  image
+}
+
+///|
+fn acceptance_assert_image_lifecycle_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops_with_resources(pages[0].resources, pages[0].content),
+    acceptance_image_content_ops_for_test(),
+  )
+  let raw_image = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImRaw"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, raw_image),
+    PdfRawImage(4, 1, PdfBPP24, acceptance_expected_indexed_rgb24_for_test()),
+  )
+  let jpeg_image = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImJpeg"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, jpeg_image),
+    PdfJPEG(acceptance_ascii_for_test("jpg-data"), Some([1.0, 0.0])),
+  )
+}
+
+///|
 fn acceptance_assert_partial_filter_stream_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -1634,6 +1832,19 @@ test "native acceptance suite extracts ToUnicode text through reader boundaries"
   acceptance_assert_tounicode_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_tounicode_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts images through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_image_lifecycle_document_for_test(),
+  )
+  acceptance_assert_image_lifecycle_for_test(parsed)
+  let decompressed = parsed.copy()
+  decompressed.pdf_decode_streams_until_unknown()
+  acceptance_assert_image_lifecycle_for_test(decompressed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(decompressed)
+  acceptance_assert_image_lifecycle_for_test(reparsed)
 }
 
 ///|
