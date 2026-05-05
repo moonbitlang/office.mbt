@@ -156,7 +156,10 @@ work changes.
    package exposes the same default AES writer families.
    Parsed stream decryption now preserves CamlPDF's lazy stream state for
    ARC4/AESV2/AESV3 streams read from files, while already-owned stream data
-   remains eager at the crypt boundary.
+   remains eager at the crypt boundary. Native acceptance now covers
+   `/EncryptMetadata false` through compressed encrypted output, public password
+   read, plaintext metadata inspection in the encrypted bytes, and saved-state
+   AESV2 recrypt.
    Remaining focus: non-stream encrypted parser-state edges and broader
    encrypted malformed-reader compatibility.
 
@@ -232,7 +235,9 @@ gates are solid; backend breadth follows after native feature parity.
   ToUnicode text-extraction gate using filtered CMap streams through compressed
   read/write boundaries; an image-extraction gate for Flate raw indexed image
   XObjects, Flate-to-DCT encoded images, and Flate inline images through
-  compressed read/write and document-wide decompression boundaries; strict
+  compressed read/write and document-wide decompression boundaries; an AESV2
+  `/EncryptMetadata false` gate through compressed encrypted output and
+  saved-state recrypt; strict
   reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows; and password decryption after
   malformed-xref reconstruction of direct encrypted objects.

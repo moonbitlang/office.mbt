@@ -1432,6 +1432,9 @@ public APIs end to end:
 - decrypt AES-128 output through the public wrapper, mutate the decrypted
   document, recrypt with the saved encryption state, append an incremental
   update, and read both newest and older encrypted revisions.
+- preserve `/EncryptMetadata false` through compressed AESV2 encrypted output,
+  public password reads, plaintext metadata inspection in encrypted bytes,
+  saved-state recrypt, compressed rewrite, and owner-password reread.
 - merge two generated documents, write/read through a compressed xref stream,
   extract pages in a new order, and reread the extracted document.
 - retain merged page labels and bookmark targets through a public

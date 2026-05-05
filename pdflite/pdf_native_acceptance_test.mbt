@@ -859,6 +859,95 @@ fn acceptance_secret_object_for_test(text : String) -> @pdflite.PdfObject {
 }
 
 ///|
+fn acceptance_metadata_bytes_for_test() -> @pdflite.PdfBytes {
+  acceptance_ascii_for_test("<x:xmpmeta>native metadata gate</x:xmpmeta>")
+}
+
+///|
+fn acceptance_metadata_stream_for_test(
+  data : @pdflite.PdfBytes,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Metadata")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/XML")),
+      ),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_metadata_encryption_document_for_test(
+  metadata : @pdflite.PdfBytes,
+  secret : @pdflite.PdfObject,
+) -> @pdflite.PdfDocument raise {
+  let doc = acceptance_one_page_document_for_test()
+  doc.add_object_given_number(62, acceptance_metadata_stream_for_test(metadata))
+  doc.add_object_given_number(63, secret)
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    acceptance_name_for_test("/Metadata"),
+    PdfIndirect(62),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    acceptance_name_for_test("/Secret"),
+    PdfIndirect(63),
+  )
+  doc
+}
+
+///|
+fn acceptance_assert_metadata_stream_for_test(
+  doc : @pdflite.PdfDocument,
+  number : Int,
+  expected : @pdflite.PdfBytes,
+) -> Unit raise {
+  guard doc.lookup_object_or_null(number) is PdfStreamObject(stream) else {
+    fail("expected metadata stream")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Type")),
+    Some(PdfNameObject(acceptance_name_for_test("/Metadata"))),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Subtype")),
+    Some(PdfNameObject(acceptance_name_for_test("/XML"))),
+  )
+  @test.assert_eq(
+    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    expected,
+  )
+}
+
+///|
+fn acceptance_assert_metadata_encryption_for_test(
+  doc : @pdflite.PdfDocument,
+  metadata : @pdflite.PdfBytes,
+  secret : @pdflite.PdfObject,
+) -> Unit raise {
+  acceptance_assert_one_page_invariants_for_test(doc, (1, 5))
+  let catalog = doc.catalog()
+  @test.assert_eq(
+    catalog.lookup_immediate(acceptance_name_for_test("/Metadata")),
+    Some(PdfIndirect(62)),
+  )
+  @test.assert_eq(
+    catalog.lookup_immediate(acceptance_name_for_test("/Secret")),
+    Some(PdfIndirect(63)),
+  )
+  acceptance_assert_metadata_stream_for_test(doc, 62, metadata)
+  @test.assert_eq(doc.lookup_object_or_null(63), secret)
+}
+
+///|
 fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
   user_password : @pdflite.PdfBytes,
   owner_password : @pdflite.PdfBytes,
@@ -2255,6 +2344,82 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
     (1, 4),
   )
   @test.assert_eq(owner_decrypted.document.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite preserves unencrypted metadata through AES recrypt" {
+  let metadata = acceptance_metadata_bytes_for_test()
+  let secret = acceptance_secret_object_for_test("metadata-encrypted-secret")
+  let input = acceptance_metadata_encryption_document_for_test(metadata, secret)
+  let user_password = acceptance_ascii_for_test("user")
+  let owner_password = acceptance_ascii_for_test("owner")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoExtract, PdfNoCopy]
+  let rendered = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
+    input,
+    user_password[:],
+    owner_password[:],
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 8)
+    },
+    encrypt_metadata=false,
+    mode=PdfWriteCompressedXRefStream,
+    file_id=acceptance_ascii_for_test("native-metadata-encryption-id")[:],
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(rendered[:], metadata[:]) >= 0,
+    true,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rendered[:],
+      acceptance_ascii_for_test("metadata-encrypted-secret")[:],
+    ) <
+    0,
+    true,
+  )
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rendered,
+      user_password=Some(user_password[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.denied_permissions, denied)
+  acceptance_assert_metadata_encryption_for_test(
+    decrypted.document,
+    metadata,
+    secret,
+  )
+  let added_object : @pdflite.PdfObject = PdfString(
+    acceptance_ascii_for_test("metadata-added"),
+  )
+  decrypted.document.add_object_given_number(64, added_object)
+  let recrypted = decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    owner_password[:],
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 12)
+    },
+  )
+  let rerendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    recrypted,
+  )
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(rerendered[:], metadata[:]) >= 0,
+    true,
+  )
+  let roundtrip = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      rerendered,
+      owner_password=Some(owner_password[:]),
+    ),
+  )
+  @test.assert_eq(roundtrip.denied_permissions, denied)
+  acceptance_assert_metadata_encryption_for_test(
+    roundtrip.document,
+    metadata,
+    secret,
+  )
+  @test.assert_eq(roundtrip.document.lookup_object_or_null(64), added_object)
 }
 
 ///|
