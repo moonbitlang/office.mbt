@@ -1397,6 +1397,9 @@ end to end:
   object stream, then normalize it through the classic writer and reread it;
 - write AES-128 encrypted output and read it through the public password
   wrapper with both user and owner passwords.
+- run a `pdfencrypt.ml`-style AES-128 encrypted writer workflow with blank user
+  password, owner password, `NoEdit`/`NoPrint` denied permissions, and classic
+  output readable by both default blank-user and owner-password paths.
 - decrypt AES-128 output through the public wrapper, mutate the decrypted
   document, recrypt with the saved encryption state, append an incremental
   update, and read both newest and older encrypted revisions.

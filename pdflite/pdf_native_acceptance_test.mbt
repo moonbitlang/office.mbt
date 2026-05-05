@@ -1452,6 +1452,56 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
 }
 
 ///|
+test "native acceptance suite runs pdfencrypt owner-password workflow" {
+  let input = acceptance_one_page_document_for_test()
+  let user_password = acceptance_ascii_for_test("")
+  let owner_password = acceptance_ascii_for_test("owner-password")
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let encrypted = @pdflite.pdf_write_encrypted_aesv2_document_with_iv_provider(
+    input,
+    user_password[:],
+    owner_password[:],
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index)
+    },
+    encrypt_metadata=false,
+    mode=PdfWriteClassic,
+    file_id=acceptance_ascii_for_test("native-acceptance-pdfencrypt-id")[:],
+  )
+  let default_decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(encrypted),
+  )
+  @test.assert_eq(default_decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(
+    default_decrypted.document,
+    (1, 4),
+  )
+  let user_decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      encrypted,
+      user_password=Some(user_password[:]),
+    ),
+  )
+  @test.assert_eq(user_decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(
+    user_decrypted.document,
+    (1, 4),
+  )
+  let owner_decrypted = acceptance_unwrap_decryption_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      encrypted,
+      owner_password=Some(owner_password[:]),
+    ),
+  )
+  @test.assert_eq(owner_decrypted.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(
+    owner_decrypted.document,
+    (1, 4),
+  )
+}
+
+///|
 test "native acceptance suite decrypts reconstructed malformed xref documents" {
   let doc = try! acceptance_one_page_document_for_test()
   let secret = acceptance_secret_object_for_test(
