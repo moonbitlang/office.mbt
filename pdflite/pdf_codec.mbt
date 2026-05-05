@@ -2116,13 +2116,18 @@ fn pdf_add_decodeparms_to_dictionary(
 fn pdf_encode_stream_with_ccitt(
   columns : Int,
   rows : Int,
+  k : Int,
   object : PdfObject,
   only_if_smaller : Bool,
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = pdf_stream_data_bytes(stream.data)
-      let encoded = pdf_ccitt_encode_g3_1d_view(data[:], columns, rows)
+      let encoded = if k < 0 {
+        pdf_ccitt_encode_g4_view(data[:], columns, rows)
+      } else {
+        pdf_ccitt_encode_g3_1d_view(data[:], columns, rows)
+      }
       if only_if_smaller && !pdf_encoded_stream_is_smaller(encoded, data) {
         object
       } else {
@@ -2130,7 +2135,7 @@ fn pdf_encode_stream_with_ccitt(
           pdf_add_filter_to_dictionary(
             pdf_add_decodeparms_to_dictionary(
               stream.dictionary,
-              pdf_ccitt_encoding_decodeparms(0, columns, rows),
+              pdf_ccitt_encoding_decodeparms(k, columns, rows),
             ),
             pdf_filter_name("/CCITTFaxDecode"),
           ),
@@ -2201,11 +2206,19 @@ pub fn pdf_encode_stream_with_encoding(
     PdfStreamCCITT(columns, rows) =>
       match predictor {
         None =>
-          pdf_encode_stream_with_ccitt(columns, rows, object, only_if_smaller)
+          pdf_encode_stream_with_ccitt(
+            columns, rows, 0, object, only_if_smaller,
+          )
         Some(_) => raise PredictorExpected
       }
-    PdfStreamCCITTG4(_, _) =>
-      raise CCITTNotSupported("CCITT Group 4 encode requires external tool")
+    PdfStreamCCITTG4(columns, rows) =>
+      match predictor {
+        None =>
+          pdf_encode_stream_with_ccitt(
+            columns, rows, -1, object, only_if_smaller,
+          )
+        Some(_) => raise PredictorExpected
+      }
     _ =>
       match predictor {
         None =>

@@ -2210,12 +2210,60 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
     fail("expected CCITT encoding of a non-stream to raise")
   }
 
-  let unsupported : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
-    PdfStreamCCITTG4(1, 1),
-    stream,
+  let ccitt_g4_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(3))]),
+    StreamGot(codec_bytes_for_test([0xC0, 0xB0, 0x80])),
   )
-  guard unsupported is Err(@pdflite.PdfError::CCITTNotSupported(_)) else {
-    fail("expected unsupported typed CCITTG4 encoding")
+  let ccitt_g4 = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITTG4(4, 3),
+    ccitt_g4_stream,
+  )
+  guard ccitt_g4 is PdfStreamObject(ccitt_g4_encoded) else {
+    fail("expected CCITT G4 encoded stream")
+  }
+  @test.assert_eq(
+    ccitt_g4_encoded.dictionary.lookup_immediate(filter),
+    Some(PdfNameObject(codec_name_for_test("/CCITTFaxDecode"))),
+  )
+  guard ccitt_g4_encoded.dictionary.lookup_immediate(decodeparms)
+    is Some(PdfDictionary(g4_decodeparms)) else {
+    fail("expected CCITT G4 DecodeParms dictionary")
+  }
+  @test.assert_eq(g4_decodeparms, [
+    (codec_name_for_test("/K"), PdfInteger(-1)),
+    (codec_name_for_test("/Columns"), PdfInteger(4)),
+    (codec_name_for_test("/Rows"), PdfInteger(3)),
+  ])
+  let ccitt_g4_decoded = try! @pdflite.pdf_decode_stream(ccitt_g4)
+  guard ccitt_g4_decoded is PdfStreamObject(ccitt_g4_decoded_stream) else {
+    fail("expected CCITT G4 decoded stream")
+  }
+  @test.assert_eq(
+    ccitt_g4_decoded_stream.data,
+    StreamGot(codec_bytes_for_test([0xC0, 0xB0, 0x80])),
+  )
+
+  let skipped_g4 = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITTG4(4, 3),
+    ccitt_g4_stream,
+    only_if_smaller=true,
+  )
+  guard skipped_g4 is PdfStreamObject(skipped_g4_stream) else {
+    fail("expected skipped CCITT G4 stream")
+  }
+  @test.assert_eq(
+    skipped_g4_stream.data,
+    StreamGot(codec_bytes_for_test([0xC0, 0xB0, 0x80])),
+  )
+  @test.assert_eq(skipped_g4_stream.dictionary.lookup_immediate(filter), None)
+
+  let ccitt_g4_bad_predictor : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITTG4(4, 3),
+    ccitt_g4_stream,
+    predictor=Some(PdfStreamPredictorPNGUp),
+  )
+  guard ccitt_g4_bad_predictor is Err(_) else {
+    fail("expected CCITT G4 predictor encoding to raise")
   }
 }
 

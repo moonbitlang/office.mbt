@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 88-91%.
+- Native main-feature parity: 89-92%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 77-82%.
+  breadth: 78-83%.
 
 ## P0: Native Main Workflows
 
@@ -69,6 +69,8 @@ Current estimate:
 - [x] ~~CCITT `/K 0` and `/K < 0` native stream decode with `/DecodeParms`
   parsing and `/CCF` alias coverage.~~
 - [x] ~~Typed CCITT Group 3 `/K 0` stream encoding with `/DecodeParms`
+  round-trip coverage.~~
+- [x] ~~Typed CCITT Group 4 `/K < 0` stream encoding with `/DecodeParms`
   round-trip coverage.~~
 - [x] ~~Real xref-stream/object-stream malformed-startxref recovery through a
   checked-in CamlPDF fixture, multi-page text extraction, compressed rewrite,
@@ -139,6 +141,7 @@ Current estimate:
 - [x] ~~Add one Type3/TrueType font edge gate.~~
 - [x] ~~Decide and start one CCITT/JPEG decode implementation slice.~~
 - [x] ~~Add CCITT Group 3 encode parity for typed stream encoding.~~
+- [x] ~~Add CCITT Group 4 encode parity for typed stream encoding.~~
 - [x] ~~Add a CCITT image XObject native acceptance gate.~~
 - [x] ~~Add a checked-in real PDF read/write corpus gate.~~
 - [x] ~~Widen checked-in real PDF text extraction across multiple pages and

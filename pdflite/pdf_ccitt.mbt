@@ -371,6 +371,27 @@ fn pdf_ccitt_write_eol(output : BitWriter) -> Unit raise PdfError {
 }
 
 ///|
+fn pdf_ccitt_write_mode(
+  output : BitWriter,
+  mode : PdfCCITTModeKind,
+) -> Unit raise PdfError {
+  match mode {
+    CCITTPass => output.put_value_int(4, 0b0001)
+    CCITTHorizontal => output.put_value_int(3, 0b001)
+    CCITTVertical(0) => output.put_value_int(1, 0b1)
+    CCITTVertical(-1) => output.put_value_int(3, 0b011)
+    CCITTVertical(1) => output.put_value_int(3, 0b010)
+    CCITTVertical(-2) => output.put_value_int(6, 0b000011)
+    CCITTVertical(2) => output.put_value_int(6, 0b000010)
+    CCITTVertical(-3) => output.put_value_int(7, 0b0000011)
+    CCITTVertical(3) => output.put_value_int(7, 0b0000010)
+    CCITTEOFB => output.put_value_int(24, 0b000000000001000000000001)
+    CCITTUncompressed => raise CCITTNotSupported("CCITT Uncompressed")
+    CCITTVertical(_) => raise InvalidCCITTData
+  }
+}
+
+///|
 fn pdf_ccitt_write_run(
   output : BitWriter,
   white : Bool,
@@ -453,6 +474,87 @@ fn pdf_ccitt_encode_g3_1d_view(
   }
   pdf_ccitt_write_eol(output)
   pdf_ccitt_write_eol(output)
+  output.to_bytes()
+}
+
+///|
+fn pdf_ccitt_line_from_data(
+  data : BytesView,
+  columns : Int,
+  row : Int,
+) -> Array[Int] raise PdfError {
+  let row_bytes = (columns - 1) / 8 + 1
+  let row_start = row * row_bytes
+  if row_start + row_bytes > data.length() {
+    raise EndOfInput
+  }
+  let line : Array[Int] = []
+  for column in 0..<columns {
+    let byte = data[row_start + column / 8].to_int()
+    let shift = 7 - column % 8
+    line.push((byte >> shift) & 1)
+  }
+  line
+}
+
+///|
+fn pdf_ccitt_encode_g4_view(
+  data : BytesView,
+  columns : Int,
+  rows : Int,
+) -> PdfBytes raise PdfError {
+  if columns <= 0 || rows < 0 {
+    raise InvalidCCITTData
+  }
+  let row_bytes = (columns - 1) / 8 + 1
+  if rows > 0 && row_bytes > data.length() / rows {
+    raise InvalidCCITTData
+  }
+  let output = bit_writer_new()
+  let whiteval = 1
+  let blackval = 0
+  let mut reference = pdf_ccitt_blank_line(columns, whiteval)
+  for row in 0..<rows {
+    let line = pdf_ccitt_line_from_data(data, columns, row)
+    let mut column = 0
+    let mut white = true
+    while column < columns {
+      let a1 = pdf_ccitt_find_b1(line[:], column, white, whiteval, blackval)
+      let a2 = pdf_ccitt_find_b2(line[:], column, white, whiteval, blackval)
+      let b1 = pdf_ccitt_find_b1(
+        reference[:],
+        column,
+        white,
+        whiteval,
+        blackval,
+      )
+      let b2 = pdf_ccitt_find_b2(
+        reference[:],
+        column,
+        white,
+        whiteval,
+        blackval,
+      )
+      if b2 < a1 {
+        pdf_ccitt_write_mode(output, CCITTPass)
+        column = b2
+      } else {
+        let delta = b1 - a1
+        if delta >= -3 && delta <= 3 {
+          pdf_ccitt_write_mode(output, CCITTVertical(delta))
+          column = a1
+          white = !white
+        } else {
+          pdf_ccitt_write_mode(output, CCITTHorizontal)
+          pdf_ccitt_write_run(output, white, a1 - column)
+          pdf_ccitt_write_run(output, !white, a2 - a1)
+          column = a2
+        }
+      }
+    }
+    reference = line
+  }
+  pdf_ccitt_write_mode(output, CCITTEOFB)
   output.to_bytes()
 }
 

@@ -94,17 +94,19 @@ work changes.
    Status: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode
    including stored, fixed-Huffman, and dynamic-Huffman output choices,
    predictors, filter arrays, CCITT Group 3 one-dimensional and Group 4 decode,
-   typed CCITT Group 3 encode, document-aware stream decoding, document-wide
-   stop-at-unknown stream decompression, and JPEG data extraction are started.
+   typed CCITT Group 3 and Group 4 encode, document-aware stream decoding,
+   document-wide stop-at-unknown stream decompression, and JPEG data extraction
+   are started.
    CCITT decode honors CamlPDF-compatible `/DecodeParms` defaults, direct
-   indirect parameters, and the `/CCF` alias; typed CCITT Group 3 encode writes
-   `/DecodeParms` so encoded streams round-trip through pdflite's decoder.
+   indirect parameters, and the `/CCF` alias; typed CCITT Group 3 and Group 4
+   encoding writes `/DecodeParms` so encoded streams round-trip through
+   pdflite's decoder.
    Direct Flate, filter, and stream encoding APIs now accept explicit zlib-style
    levels 0 through 9, keeping the default compact encoder unchanged while
    exposing CamlPDF's `flate_level` workflow without global mutable state.
    Remaining focus: byte-identical zlib strategy/performance tuning, optional
-   JBIG2 external-tool decode parity, CCITT Group 4 external-tool encode policy,
-   broader CCITT corpus validation, and DCT/JPEG real-world payload coverage.
+   JBIG2 external-tool decode parity, broader CCITT corpus validation, and
+   DCT/JPEG real-world payload coverage.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
@@ -230,9 +232,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 88-91% complete. Full
+Current estimate: native main-feature parity is about 89-92% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 77-82% complete.
+and backend breadth, is about 78-83% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -275,14 +277,14 @@ and backend breadth, is about 77-82% complete.
   embedded TrueType `FontFile2` with generated `/ToUnicode` text extraction.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
-  Group 3 `/K 0` and round-trips through decode.
+  Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: broader non-UCS2 predefined CMap mapping tables,
   vertical-writing behavior beyond the current gates, additional TrueType and
   Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
   broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate tuning parity, broader DCT/JPEG and
-  CCITT corpus validation, CCITT Group 4 external-tool encode policy, and
-  optional external JBIG2 decoder integration. Actual JPEG pixel decoding is
+  CCITT corpus validation, and optional external JBIG2 decoder integration.
+  Actual JPEG pixel decoding is
   optional beyond CamlPDF image-extraction parity, which returns encoded JPEG
   payloads.
 - Not covered enough: broader malformed xref-table/xref-stream/object-stream
@@ -361,7 +363,8 @@ and backend breadth, is about 77-82% complete.
   boundaries; an image-extraction gate for Flate raw indexed image XObjects,
   structured Flate-to-DCT encoded images, DCT inline images, and Flate inline
   images through compressed read/write and document-wide decompression
-  boundaries; an AESV2
+  boundaries; native CCITT `/K 0` and `/K < 0` stream decode plus typed Group 3
+  and Group 4 stream encode with `/DecodeParms`; an AESV2
   `/EncryptMetadata false` gate through compressed encrypted output and
   saved-state recrypt; strict
   reading and writer normalization for

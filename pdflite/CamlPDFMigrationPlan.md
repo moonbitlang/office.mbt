@@ -530,15 +530,14 @@ MoonBit consequences for this project:
    a level. CamlPDF-style typed encoding and predictor choices are now exposed
    as `PdfStreamEncoding` and `PdfStreamPredictor`, with a
    `pdf_encode_stream_with_encoding` wrapper over the existing filter/predictor
-   implementation; CCITT names map to `/CCITTFaxDecode`, while actual CCITT
-   encoding remains an explicit unsupported-filter path. Native CCITT decode is
+   implementation; CCITT names map to `/CCITTFaxDecode`. Native CCITT decode is
    now started for
    `/CCITTFaxDecode` and `/CCF`, covering Group 3 one-dimensional `/K 0`, Group
    4 `/K < 0`, CamlPDF-compatible `/DecodeParms` defaults, `/BlackIs1`, and
-   direct indirect decode parameters. Typed CCITT Group 3 `/K 0` encoding is
-   also started for `PdfStreamCCITT(columns, rows)`, including generated
-   `/DecodeParms` and decode round-trip coverage; Group 4 encoding remains
-   deferred because CamlPDF delegates it to ImageMagick. Stream filter
+   direct indirect decode parameters. Typed CCITT Group 3 `/K 0` and Group 4
+   `/K < 0` encoding is also started for `PdfStreamCCITT(columns, rows)` and
+   `PdfStreamCCITTG4(columns, rows)`, including generated `/DecodeParms` and
+   decode round-trip coverage. Stream filter
    encode/decode now materializes `StreamToGet` data only at the owned-byte
    boundary required by codec transforms. A
    document-aware `PdfDocument::pdf_decode_stream` path is now started for
@@ -1481,6 +1480,9 @@ public APIs end to end:
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`
   with generated `/DecodeParms` and decode round-trip coverage;
+- encode CCITT Group 4 `/K < 0` streams through
+  `PdfStreamCCITTG4(columns, rows)` with generated `/DecodeParms` and decode
+  round-trip coverage;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, CCITT image XObjects decoded to RGB24, staged Flate-then-DCT

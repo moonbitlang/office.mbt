@@ -266,6 +266,107 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
 }
 
 ///|
+test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
+  let raw = ccitt_wb_bytes([0xC0, 0xB0, 0x80])
+  let encoded = pdf_ccitt_encode_g4_view(raw[:], 4, 3)
+  @test.assert_eq(
+    pdf_ccitt_decode_view(encoded[:], {
+      ..pdf_ccitt_default_params(),
+      k: -1,
+      columns: 4,
+      rows: 3,
+    }),
+    raw,
+  )
+
+  let horizontal = ccitt_wb_bytes([0x00])
+  @test.assert_eq(
+    pdf_ccitt_decode_view(pdf_ccitt_encode_g4_view(horizontal[:], 4, 1)[:], {
+      ..pdf_ccitt_default_params(),
+      k: -1,
+      columns: 4,
+      rows: 1,
+    }),
+    horizontal,
+  )
+
+  let pass = ccitt_wb_bytes([0x9F, 0xF0])
+  @test.assert_eq(
+    pdf_ccitt_decode_view(pdf_ccitt_encode_g4_view(pass[:], 8, 2)[:], {
+      ..pdf_ccitt_default_params(),
+      k: -1,
+      columns: 8,
+      rows: 2,
+    }),
+    pass,
+  )
+
+  let empty = pdf_ccitt_encode_g4_view(ccitt_wb_bytes([])[:], 4, 0)
+  @test.assert_eq(
+    pdf_ccitt_decode_view(empty[:], {
+      ..pdf_ccitt_default_params(),
+      k: -1,
+      columns: 4,
+      rows: 0,
+    }),
+    ccitt_wb_bytes([]),
+  )
+
+  let short : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
+    ccitt_wb_bytes([])[:],
+    4,
+    1,
+  )
+  guard short is Err(_) else {
+    fail("expected not enough CCITT Group 4 source data")
+  }
+
+  let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
+    ccitt_wb_bytes([])[:],
+    0,
+    1,
+  )
+  guard invalid is Err(_) else {
+    fail("expected invalid CCITT Group 4 encode params")
+  }
+
+  let modes = bit_writer_new()
+  pdf_ccitt_write_mode(modes, CCITTPass)
+  pdf_ccitt_write_mode(modes, CCITTVertical(-1))
+  pdf_ccitt_write_mode(modes, CCITTVertical(-3))
+  @test.assert_eq(modes.to_bytes(), ccitt_wb_bytes([0x16, 0x0C]))
+
+  let right_three = bit_writer_new()
+  pdf_ccitt_write_mode(right_three, CCITTVertical(3))
+  @test.assert_eq(right_three.to_bytes(), ccitt_wb_bytes([0x04]))
+
+  let unsupported_mode : Result[Unit, Error] = try? pdf_ccitt_write_mode(
+    bit_writer_new(),
+    CCITTUncompressed,
+  )
+  guard unsupported_mode is Err(_) else {
+    fail("expected unsupported Group 4 uncompressed write mode")
+  }
+
+  let invalid_mode : Result[Unit, Error] = try? pdf_ccitt_write_mode(
+    bit_writer_new(),
+    CCITTVertical(4),
+  )
+  guard invalid_mode is Err(_) else {
+    fail("expected invalid Group 4 vertical write mode")
+  }
+
+  let missing_row : Result[Array[Int], Error] = try? pdf_ccitt_line_from_data(
+    ccitt_wb_bytes([])[:],
+    4,
+    0,
+  )
+  guard missing_row is Err(_) else {
+    fail("expected missing CCITT Group 4 source row")
+  }
+}
+
+///|
 test "CCITT decode parameter parsing covers defaults arrays direct entries and malformed values" {
   @test.assert_eq(
     pdf_decode_filter_bytes(
