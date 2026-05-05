@@ -318,3 +318,22 @@ pub async fn pdf_write_document_incremental_update_with_compressed_xref_stream_t
     create=permission,
   )
 }
+
+///|
+pub async fn pdf_write_document_incremental_update_to_file_with_mode(
+  original_path : StringView,
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  mode : @pdflite.PdfWriteMode,
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_document_incremental_update_with_mode(
+      @fs.read_file(original_path).binary(),
+      document,
+      mode,
+    ),
+    create=permission,
+  )
+}

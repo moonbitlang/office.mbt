@@ -428,11 +428,12 @@ MoonBit consequences for this project:
    round-trip gates. AESV3 revision 5 full-document output is started behind
    explicit typed random-field and IV-provider callbacks, with classic-writer
    plus uncompressed and Flate-compressed xref-stream round-trip gates. The
-   public writer surface now has a `PdfWriteMode` dispatch API and direct
-   encrypted-writer wrappers for ARC4, AESV2, AESV3, and AESV3 ISO workflows,
-   matching CamlPDF's main encrypt-at-write use case while keeping AES random
-   material explicit through provider callbacks. Default AES writers remain
-   deferred until a project-level random-byte source is selected. A MoonBit
+   public writer surface now has a `PdfWriteMode` dispatch API for both full
+   document writes and incremental-update writes, plus direct encrypted-writer
+   wrappers for ARC4, AESV2, AESV3, and AESV3 ISO workflows, matching CamlPDF's
+   main encrypt-at-write use case while keeping AES random material explicit
+   through provider callbacks. Default AES writers remain deferred until a
+   project-level random-byte source is selected. A MoonBit
    effect-typing probe confirms that raising and
    non-raising callback types are not interchangeable, so a fallible secure
    random-byte provider cannot be passed through the current non-raising AES
@@ -1217,14 +1218,15 @@ MoonBit consequences for this project:
     plus file revision counting, revision-specific file reads,
     password-based encrypted reads,
     revision-specific password reads, uncompressed and Flate-compressed
-    xref-stream file writes, mode-dispatched writes, direct encrypted
-    ARC4/AESV2/AESV3 file writes with provider-backed AES randomness, and
-    classic/xref-stream incremental-update file writes. Native async tests
-    cover plain round-trip, xref-stream round-trip, encrypted password read,
-    mode-dispatched compressed xref output, encrypted writer file output across
-    ARC4/AESV2/AESV3 variants, classic incremental readback, revision-specific
-    incremental readback, and uncompressed plus compressed xref-stream
-    incremental readback; test paths now use core
+    xref-stream file writes, mode-dispatched full and incremental writes,
+    direct encrypted ARC4/AESV2/AESV3 file writes with provider-backed AES
+    randomness, and classic/xref-stream incremental-update file writes. Native
+    async tests cover plain round-trip, xref-stream round-trip, encrypted
+    password read, mode-dispatched compressed xref output, encrypted writer file
+    output across ARC4/AESV2/AESV3 variants, classic incremental readback,
+    revision-specific incremental readback, uncompressed plus compressed
+    xref-stream incremental readback, and mode-dispatched compressed
+    incremental update readback; test paths now use core
     `@env.current_dir` and `@env.now` to avoid fixed filename collisions under
     repeated or concurrent native test runs.
 

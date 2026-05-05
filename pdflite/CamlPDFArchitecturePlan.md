@@ -179,23 +179,24 @@ vertical acceptance path at a time instead of isolated edge polishing:
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, strict revision-specific reads, and image extraction
-  basics. Public writer mode dispatch and encrypted-writer wrappers now cover
-  CamlPDF-style encrypt-at-write workflows for ARC4, AESV2, AESV3, and AESV3
-  ISO while keeping AES randomness provider-driven. Native async file wrappers
-  cover read/write, mode-dispatched writes, encrypted writer file output,
-  password reads, revision
-  counting, revision reads, and incremental writes. A native black-box
-  acceptance suite now covers classic/xref-stream/compressed-xref one-page
-  read-write-reread, classic and xref-stream incremental revision reads,
-  omitted page-tree xref reconstruction, object-stream page-tree normalization
-  through the writer, partial stream filter decompression, and AES-128
-  password-wrapper reads plus AES-128 decrypt/recrypt incremental revision
-  reads. Document-level merge and page extraction are also covered across a
-  compressed xref-stream read boundary, and native async file wrappers cover
-   encrypted incremental revision reads from disk. Password-aware native reads
-   now include an encrypted object-stream fixture. Native acceptance also covers
-   `change_pages` bookmark-reference and matrix rewriting after a compressed
-   xref-stream read boundary, plus strict reading and writer normalization for
+  basics. Public writer mode dispatch now covers full writes and incremental
+  update writes, and encrypted-writer wrappers cover CamlPDF-style
+  encrypt-at-write workflows for ARC4, AESV2, AESV3, and AESV3 ISO while
+  keeping AES randomness provider-driven. Native async file wrappers cover
+  read/write, mode-dispatched full and incremental writes, encrypted writer
+  file output, password reads, revision counting, revision reads, and
+  incremental writes. A native black-box acceptance suite now covers
+  classic/xref-stream/compressed-xref one-page read-write-reread, classic and
+  xref-stream incremental revision reads, omitted page-tree xref reconstruction,
+  object-stream page-tree normalization through the writer, partial stream
+  filter decompression, and AES-128 password-wrapper reads plus AES-128
+  decrypt/recrypt incremental revision reads. Document-level merge and page
+  extraction are also covered across a compressed xref-stream read boundary,
+  and native async file wrappers cover encrypted incremental revision reads from
+  disk. Password-aware native reads now include an encrypted object-stream
+  fixture. Native acceptance also covers `change_pages` bookmark-reference and
+  matrix rewriting after a compressed xref-stream read boundary, plus strict
+  reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows, and password decryption after
   malformed-xref reconstruction of direct encrypted objects.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,

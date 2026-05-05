@@ -1188,6 +1188,23 @@ pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(
 }
 
 ///|
+pub fn pdf_write_document_incremental_update_with_mode(
+  original : PdfBytes,
+  document : PdfDocument,
+  mode : PdfWriteMode,
+) -> PdfBytes raise PdfError {
+  match mode {
+    PdfWriteClassic => pdf_write_document_incremental_update(original, document)
+    PdfWriteXRefStream =>
+      pdf_write_document_incremental_update_with_xref_stream(original, document)
+    PdfWriteCompressedXRefStream =>
+      pdf_write_document_incremental_update_with_compressed_xref_stream(
+        original, document,
+      )
+  }
+}
+
+///|
 pub fn pdf_write_document_with_mode(
   document : PdfDocument,
   mode : PdfWriteMode,

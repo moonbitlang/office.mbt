@@ -315,9 +315,11 @@ async test "async file wrappers write xref stream incremental updates" {
   let compressed_path = pdf_async_io_test_path_for_test(
     "xref_incremental_compressed",
   )
+  let mode_path = pdf_async_io_test_path_for_test("xref_incremental_mode")
   pdf_async_io_remove_if_exists_for_test(original_path)
   pdf_async_io_remove_if_exists_for_test(updated_path)
   pdf_async_io_remove_if_exists_for_test(compressed_path)
+  pdf_async_io_remove_if_exists_for_test(mode_path)
   let original = try! @pdflite.pdf_minimum_valid_pdf()
   pdf_write_document_to_file_with_xref_stream(original, original_path)
   let updated = pdf_read_document_from_file(original_path)
@@ -332,13 +334,22 @@ async test "async file wrappers write xref stream incremental updates" {
   pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
     original_path, updated, compressed_path,
   )
+  pdf_write_document_incremental_update_to_file_with_mode(
+    original_path,
+    updated,
+    mode_path,
+    PdfWriteCompressedXRefStream,
+  )
   let reparsed = pdf_read_document_from_file(updated_path)
   let compressed_reparsed = pdf_read_document_from_file(compressed_path)
+  let mode_reparsed = pdf_read_document_from_file(mode_path)
   pdf_async_io_remove_if_exists_for_test(original_path)
   pdf_async_io_remove_if_exists_for_test(updated_path)
   pdf_async_io_remove_if_exists_for_test(compressed_path)
+  pdf_async_io_remove_if_exists_for_test(mode_path)
   @test.assert_eq(reparsed.lookup_object_or_null(21), added_object)
   @test.assert_eq(compressed_reparsed.lookup_object_or_null(21), added_object)
+  @test.assert_eq(mode_reparsed.lookup_object_or_null(21), added_object)
 }
 
 ///|

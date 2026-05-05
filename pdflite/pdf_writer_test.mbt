@@ -783,6 +783,97 @@ test "pdf_write_document_incremental_update_with_compressed_xref_stream uses Fla
 }
 
 ///|
+test "pdf_write_document_incremental_update_with_mode dispatches public writer modes" {
+  let document = @pdflite.pdf_document_empty()
+  document.set_version(1, 5)
+  document.set_root(1)
+  let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
+  document.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+  )
+  let original = try! @pdflite.pdf_write_document(document)
+  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+
+  let classic_update = original_parsed.copy()
+  classic_update.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+  )
+  let classic = try! @pdflite.pdf_write_document_incremental_update_with_mode(
+    original,
+    classic_update,
+    PdfWriteClassic,
+  )
+  @test.assert_eq(writer_bytes_start_with_at(classic, original, 0), true)
+  @test.assert_eq(
+    writer_find_bytes_from(
+      classic,
+      writer_ascii_for_test("xref\n"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_read_document_from_bytes(classic).lookup_object_or_null(1),
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+  )
+
+  let xref_update = original_parsed.copy()
+  xref_update.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(3))]),
+  )
+  let xref_stream = try! @pdflite.pdf_write_document_incremental_update_with_mode(
+    original,
+    xref_update,
+    PdfWriteXRefStream,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      xref_stream,
+      writer_ascii_for_test("/Type /XRef"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_read_document_from_bytes(xref_stream).lookup_object_or_null(
+      1,
+    ),
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(3))]),
+  )
+
+  let compressed_update = original_parsed.copy()
+  compressed_update.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(4))]),
+  )
+  let compressed = try! @pdflite.pdf_write_document_incremental_update_with_mode(
+    original,
+    compressed_update,
+    PdfWriteCompressedXRefStream,
+  )
+  @test.assert_eq(
+    writer_find_bytes_from(
+      compressed,
+      writer_ascii_for_test("/FlateDecode"),
+      original.length(),
+    ) >
+    0,
+    true,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_read_document_from_bytes(compressed).lookup_object_or_null(
+      1,
+    ),
+    @pdflite.pdf_dictionary([(value_name, PdfInteger(4))]),
+  )
+}
+
+///|
 test "pdf_write_document_with_compressed_xref_stream uses Flate and round trips" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 7)

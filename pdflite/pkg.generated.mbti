@@ -493,6 +493,8 @@ pub fn pdf_write_document_incremental_update(Bytes, PdfDocument) -> Bytes raise 
 
 pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(Bytes, PdfDocument) -> Bytes raise PdfError
 
+pub fn pdf_write_document_incremental_update_with_mode(Bytes, PdfDocument, PdfWriteMode) -> Bytes raise PdfError
+
 pub fn pdf_write_document_incremental_update_with_xref_stream(Bytes, PdfDocument) -> Bytes raise PdfError
 
 pub fn pdf_write_document_with_compressed_xref_stream(PdfDocument) -> Bytes raise PdfError
