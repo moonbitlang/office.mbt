@@ -139,6 +139,10 @@ work changes.
    `pdfencrypt.ml`-style AES-128 acceptance fixture are started. Deterministic
    AES fixture providers now derive their Chacha seeds through SHA-256 so
    arbitrary seed/callsite byte lengths do not depend on MD5 padding behavior.
+   Writer-facing encrypted output is now available through public
+   `PdfWriteMode` dispatch plus direct encrypted-writer wrappers for ARC4,
+   AESV2, AESV3, and AESV3 ISO, so callers no longer need to manually
+   encrypt-then-write for the main CamlPDF-style output workflow.
    Remaining focus: selecting a true secure OS-entropy provider and deferred
    parser-state encryption/decryption edges.
 
@@ -175,7 +179,10 @@ vertical acceptance path at a time instead of isolated edge polishing:
   content parser/writer, standard filters, predictors, many encryption flows,
   text extraction basics, color spaces, functions, bookmarks, annotations,
   page labels, OCG, merge, strict revision-specific reads, and image extraction
-  basics. Native async file wrappers cover read/write, password reads, revision
+  basics. Public writer mode dispatch and encrypted-writer wrappers now cover
+  CamlPDF-style encrypt-at-write workflows for ARC4, AESV2, AESV3, and AESV3
+  ISO while keeping AES randomness provider-driven. Native async file wrappers
+  cover read/write, password reads, revision
   counting, revision reads, and incremental writes. A native black-box
   acceptance suite now covers classic/xref-stream/compressed-xref one-page
   read-write-reread, classic and xref-stream incremental revision reads,

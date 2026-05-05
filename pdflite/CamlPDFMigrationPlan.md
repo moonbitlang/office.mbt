@@ -427,9 +427,13 @@ MoonBit consequences for this project:
    has classic-writer plus uncompressed and Flate-compressed xref-stream
    round-trip gates. AESV3 revision 5 full-document output is started behind
    explicit typed random-field and IV-provider callbacks, with classic-writer
-   plus uncompressed and Flate-compressed xref-stream round-trip gates. Default
-   AES writers remain deferred until a project-level random-byte source is
-   selected. A MoonBit effect-typing probe confirms that raising and
+   plus uncompressed and Flate-compressed xref-stream round-trip gates. The
+   public writer surface now has a `PdfWriteMode` dispatch API and direct
+   encrypted-writer wrappers for ARC4, AESV2, AESV3, and AESV3 ISO workflows,
+   matching CamlPDF's main encrypt-at-write use case while keeping AES random
+   material explicit through provider callbacks. Default AES writers remain
+   deferred until a project-level random-byte source is selected. A MoonBit
+   effect-typing probe confirms that raising and
    non-raising callback types are not interchangeable, so a fallible secure
    random-byte provider cannot be passed through the current non-raising AES
    provider callbacks without changing those public signatures or choosing a

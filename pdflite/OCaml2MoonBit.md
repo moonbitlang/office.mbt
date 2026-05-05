@@ -25,7 +25,19 @@ OCaml `String.length` counts bytes. The first byte of the UTF-8 spelling of
 `𝄞` is 240.
 
 Run small language/API probes with `moon run -c '...'` before committing a
-porting pattern to the codebase. Useful verified probes:
+porting pattern to the codebase. For MBTX snippets that need packages beyond
+the default loaded set, put a MoonBit package import block at the beginning of
+the snippet:
+
+```sh
+moon run -c $'import { "moonbitlang/x/crypto" }\nfn main { let digest = @crypto.sha256(b"abc"); println(digest.length().to_string()) }'
+# 32
+```
+
+Use the imported package alias, for example `@crypto`; do not assume a
+fully-qualified package path works inside the snippet without an import.
+
+Useful verified probes:
 
 ```sh
 moon run -c 'fn main { let s = "𝄞"; println(s.length()); println(s.char_length()) }'

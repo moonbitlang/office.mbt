@@ -497,7 +497,21 @@ pub fn pdf_write_document_incremental_update_with_xref_stream(Bytes, PdfDocument
 
 pub fn pdf_write_document_with_compressed_xref_stream(PdfDocument) -> Bytes raise PdfError
 
+pub fn pdf_write_document_with_mode(PdfDocument, PdfWriteMode) -> Bytes raise PdfError
+
 pub fn pdf_write_document_with_xref_stream(PdfDocument) -> Bytes raise PdfError
+
+pub fn pdf_write_encrypted_128bit_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_encrypted_128bit_r4_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_encrypted_40bit_document(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, iso? : Bool, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
+
+pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[PdfPermission], (PdfAesV3RandomField, Int) -> Bytes, (Int, Int, Int) -> Bytes, encrypt_metadata? : Bool, mode? : PdfWriteMode, file_id? : BytesView) -> Bytes raise PdfError
 
 pub fn pdf_write_hex_string(BytesView) -> Bytes
 
@@ -1730,6 +1744,12 @@ pub(all) enum PdfUnit {
 pub(all) struct PdfVersion {
   major : Int
   minor : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfWriteMode {
+  PdfWriteClassic
+  PdfWriteXRefStream
+  PdfWriteCompressedXRefStream
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct Point2 {
