@@ -165,8 +165,9 @@ vertical acceptance path at a time instead of isolated edge polishing:
   counting, revision reads, and incremental writes. A native black-box
   acceptance suite now covers classic/xref-stream/compressed-xref one-page
   read-write-reread, classic and xref-stream incremental revision reads,
-  object-stream page-tree normalization through the writer, partial stream
-  filter decompression, and AES-128 password-wrapper reads.
+  omitted page-tree xref reconstruction, object-stream page-tree normalization
+  through the writer, partial stream filter decompression, and AES-128
+  password-wrapper reads.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, remaining malformed-reader recovery, and example-level integration
   fixtures.

@@ -40,6 +40,21 @@ fn acceptance_push_big_endian_for_test(
 }
 
 ///|
+fn acceptance_push_padded_decimal_for_test(
+  output : Array[Byte],
+  value : Int,
+  width : Int,
+) -> Unit {
+  let text = value.to_string()
+  if text.length() < width {
+    for _ in 0..<(width - text.length()) {
+      acceptance_push_byte_for_test(output, 48)
+    }
+  }
+  acceptance_push_ascii_for_test(output, text)
+}
+
+///|
 fn acceptance_push_xref_stream_entry_for_test(
   output : Array[Byte],
   kind : Int,
@@ -49,6 +64,18 @@ fn acceptance_push_xref_stream_entry_for_test(
   acceptance_push_byte_for_test(output, kind)
   acceptance_push_big_endian_for_test(output, field2, 4)
   acceptance_push_big_endian_for_test(output, field3, 2)
+}
+
+///|
+fn acceptance_push_xref_entry_for_test(
+  output : Array[Byte],
+  offset : Int,
+  generation : Int,
+) -> Unit {
+  acceptance_push_padded_decimal_for_test(output, offset, 10)
+  acceptance_push_byte_for_test(output, 32)
+  acceptance_push_padded_decimal_for_test(output, generation, 5)
+  acceptance_push_ascii_for_test(output, " n \n")
 }
 
 ///|
@@ -279,6 +306,54 @@ fn acceptance_assert_no_revision_marker_for_test(
 }
 
 ///|
+fn acceptance_pdf_with_omitted_page_tree_xrefs_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = acceptance_push_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+  )
+  ignore(
+    acceptance_push_indirect_object_for_test(
+      output, 2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    ),
+  )
+  ignore(
+    acceptance_push_indirect_object_for_test(
+      output, 3, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << >> >>",
+    ),
+  )
+  let xref_offset = output.length()
+  acceptance_push_ascii_for_test(output, "xref\n0 2\n0000000000 65535 f \n")
+  acceptance_push_xref_entry_for_test(output, catalog_offset, 0)
+  acceptance_push_ascii_for_test(
+    output, "trailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n",
+  )
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn acceptance_assert_minimal_page_tree_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 4))
+  @test.assert_eq(try! doc.endpage(), 1)
+  @test.assert_eq(try! doc.page_reference_numbers(), [3])
+  @test.assert_eq(
+    doc.lookup_object_or_null(2),
+    PdfDictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Pages")),
+      ),
+      (acceptance_name_for_test("/Kids"), PdfArray([PdfIndirect(3)])),
+      (acceptance_name_for_test("/Count"), PdfInteger(1)),
+    ]),
+  )
+}
+
+///|
 fn acceptance_object_stream_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -471,6 +546,17 @@ test "native acceptance suite normalizes object-stream pages through writer" {
   let normalized = try! @pdflite.pdf_write_document(parsed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
   acceptance_assert_object_stream_document_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite reconstructs omitted page-tree xrefs" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    acceptance_pdf_with_omitted_page_tree_xrefs_for_test(),
+  )
+  acceptance_assert_minimal_page_tree_for_test(parsed)
+  let normalized = try! @pdflite.pdf_write_document(parsed)
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
+  acceptance_assert_minimal_page_tree_for_test(reparsed)
 }
 
 ///|
