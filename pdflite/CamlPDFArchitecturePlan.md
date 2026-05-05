@@ -90,6 +90,10 @@ work changes.
    CamlPDF-style deferred decryption state on `ToGet`, so file-backed encrypted
    stream bytes remain lazy until `stream_bytes` or `get_stream` forces
    plaintext materialization and `/Length` correction.
+   Document object selection now walks parsed object entries directly, matching
+   the object iterators and avoiding false matches against parser-private
+   deferred placeholders that `lookup_object_or_null` intentionally exposes as
+   `null`.
    Remaining focus: broader malformed xref-table recovery and encrypted
    parser-state edge cases beyond current object-stream coverage.
 

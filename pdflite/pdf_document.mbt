@@ -421,10 +421,9 @@ pub fn PdfDocument::select_object_numbers(
   predicate : (PdfObject) -> Bool,
 ) -> Array[Int] {
   let selected : Array[Int] = []
-  for number in self.object_numbers() {
-    let object = self.lookup_object_or_null(number)
-    if predicate(object) {
-      selected.push(number)
+  for entry in self.parsed_object_entries() {
+    if predicate(entry.2) {
+      selected.push(entry.0)
     }
   }
   selected

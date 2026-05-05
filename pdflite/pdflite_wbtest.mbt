@@ -115,6 +115,22 @@ test "PdfDocument ARC4 crypt preserves parser-private object states" {
 }
 
 ///|
+test "PdfDocument select_object_numbers ignores deferred parser states" {
+  let doc = pdf_document_empty()
+  doc.add_object_given_number(1, PdfNull)
+  doc.objects.set_entry(2, pdf_object_entry(ObjectToParse))
+  doc.objects.set_entry(
+    3,
+    pdf_object_entry(
+      ObjectToParseFromObjectStream({ object_stream_number: 7, index: 0 }),
+    ),
+  )
+  @test.assert_eq(doc.select_object_numbers(fn(object) { object == PdfNull }), [
+    1,
+  ])
+}
+
+///|
 test "writer parses signed integer fragments for scientific reals" {
   @test.assert_eq(
     try! pdf_writer_parse_signed_int(@ascii.encode("+12")[:], 0),
