@@ -610,6 +610,13 @@ test "private stream data materialization reports invalid deferred slices" {
 }
 
 ///|
+test "private stream data no-crypt decrypt returns bytes" {
+  let source = @ascii.encode("abc")
+  let copied = PdfStreamDataNoCrypt.decrypt(source[:])
+  @test.assert_eq(copied, source)
+}
+
+///|
 test "pdf_write_document rejects deferred object states" {
   let doc = pdf_document_empty()
   doc.objects.set_entry(1, pdf_object_entry(ObjectToParse))

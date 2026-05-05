@@ -173,6 +173,18 @@ then append binary payloads as `Bytes`/`BytesView`. Do not build binary file
 formats through `String` concatenation.
 
 ```sh
+moon run -c "fn make() -> BytesView { let b = Bytes::from_array([b'a']); b[:] }\nfn main { println(make().length()) }" --target native
+# 1
+```
+
+A `BytesView` returned from a function can keep the newly allocated backing
+`Bytes` alive. This is useful when a read-only API must expose the result of a
+decode/decrypt operation as a view. The allocation has already happened,
+though, so prefer direct borrowed views for raw slices and call `.to_owned()` or
+other allocating transforms only at explicit ownership or transformation
+boundaries.
+
+```sh
 moon run -c 'fn main { println(@env.current_dir() is Some(_)); println(@env.now() > 0UL) }'
 # true
 # true

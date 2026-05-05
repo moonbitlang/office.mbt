@@ -68,8 +68,12 @@ work changes.
    expanding object-stream xref entries, including the implicit blank user
    password path, and embedded objects are marked as already decrypted so the
    later full-document decryption pass does not apply object crypt twice.
-   Remaining focus: broader malformed xref-table recovery and parser-state
-   behavior around encrypted/deferred plain objects outside object streams.
+   Password-aware parsed ARC4/AESV2/AESV3 stream objects now also carry
+   CamlPDF-style deferred decryption state on `ToGet`, so file-backed encrypted
+   stream bytes remain lazy until `stream_bytes` or `get_stream` forces
+   plaintext materialization and `/Length` correction.
+   Remaining focus: broader malformed xref-table recovery and encrypted
+   parser-state edge cases outside stream and object-stream data.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
@@ -147,7 +151,11 @@ work changes.
    random-byte FFI boundary for IVs, AESV3 file keys, salts, and permissions
    padding, with failure propagated as checked `PdfError`; the native async file
    package exposes the same default AES writer families.
-   Remaining focus: deferred parser-state encryption/decryption edges.
+   Parsed stream decryption now preserves CamlPDF's lazy stream state for
+   ARC4/AESV2/AESV3 streams read from files, while already-owned stream data
+   remains eager at the crypt boundary.
+   Remaining focus: non-stream encrypted parser-state edges and broader
+   encrypted malformed-reader compatibility.
 
 7. Document-level features.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
@@ -205,7 +213,9 @@ vertical acceptance path at a time instead of isolated edge polishing:
   incremental revision reads from disk and native secure-random AESV2/AESV3 file
   writes. Password-aware native reads now include
   encrypted object-stream fixtures for explicit passwords and the implicit blank
-  user password. Native acceptance also covers
+  user password, and password-aware parsed ARC4/AESV2/AESV3 stream reads now
+  keep deferred decryption until forcing materializes plaintext and corrects
+  `/Length`. Native acceptance also covers
   `change_pages` bookmark-reference and matrix rewriting after a compressed
   xref-stream read boundary, plus strict reading and writer normalization for
   CamlPDF-tolerated malformed classic xref rows, and password decryption after
@@ -214,7 +224,7 @@ vertical acceptance path at a time instead of isolated edge polishing:
   and output-variation checks, and AESV3 saved-state recrypt is covered through
   the default secure-random IV path.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
-  encryption finishing edges, remaining malformed-reader recovery, and
+  remaining encryption edge cases, remaining malformed-reader recovery, and
   example-level integration fixtures.
 - Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, broader
   predefined CMap coverage, and broad real-world PDF recovery behavior.

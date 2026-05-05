@@ -182,7 +182,10 @@ MoonBit consequences for this project:
    sorted referenced-object traversal with skipped keys and marker dictionaries,
    explicit change-table object renumbering, compact object renumbering,
    offset renumbering, and multi-document disjoint compact renumbering,
-   raw stream-byte extraction at the owned-byte boundary, CamlPDF-style trailer
+   raw stream-byte extraction at the owned-byte boundary, deferred stream
+   decryption markers on `ToGet` so parsed ARC4/AESV2/AESV3 encrypted stream
+   bytes can remain file-backed until `stream_bytes`/`get_stream` forces them,
+   CamlPDF-style trailer
    `/ID` generation/replacement with reproducible-ID environment handling, PDF
    numeric extraction, rectangle parsing, rectangle/QuadPoints transformation,
    matrix parsing, matrix object rendering, and document deep-copy isolation for
@@ -275,7 +278,9 @@ MoonBit consequences for this project:
    slicing embedded objects, including the absent-password path that falls back
    to a blank user password, then load the embedded objects as already
    decrypted parser states so the later document-wide password decryption pass
-   skips them. Strict
+   skips them. Password-aware parsed ARC4/AESV2/AESV3 stream objects now also
+   retain CamlPDF-style deferred decryption state on their `ToGet` records
+   until forcing materializes plaintext bytes and corrects `/Length`. Strict
    stream-object parsing now
    mirrors CamlPDF's stream-start padding tolerance by skipping space, NUL,
    form-feed, and tab bytes between the `stream` keyword and the line break or
@@ -1018,8 +1023,10 @@ MoonBit consequences for this project:
     permissions padding, and IVs; `@random` and `@env.now` remain excluded from
     cryptographic IV/salt generation. Recursive ARC4 crypt plus AESV2/AESV3
     encrypt/decrypt object walks are started for PDF strings, arrays,
-    dictionaries, and stream dictionaries/data, with stream data materialized at
-    the crypt boundary and `/Length` refreshed. Stream crypt skipping now matches
+    dictionaries, and stream dictionaries/data. Owned stream data is still
+    materialized at the crypt boundary with `/Length` refreshed, while parsed
+    `StreamToGet` data can carry deferred ARC4/AESV2/AESV3 decryption state and
+    materialize only when forced. Stream crypt skipping now matches
     the CamlPDF cases for `/Type /Metadata` when
     `no_encrypt_metadata=true` and identity `/Crypt` filters with absent,
     explicit `/Identity`, or nameless first `/DecodeParms`; non-identity crypt
@@ -1089,11 +1096,12 @@ MoonBit consequences for this project:
     Revision 6/ISO `shamix` now uses the local SHA-256/SHA-384/SHA-512 helpers
     plus the CamlPDF AES-CBC loop, and AESV3 revision 6 parsed-object crypt now
     shares the existing AESV3 file-key object crypt path.
-    The document-level decryption entry points for parsed ARC4 and AESV2
+    The document-level decryption entry points for parsed ARC4, AESV2, and AESV3
     documents remove `/Encrypt` from the copied trailer, skip the indirect
-    encryption dictionary object, and return CamlPDF-style denied permissions.
-    Remaining deferred parser-state decryption outside object-stream expansion
-    and default random-IV AES re-encryption remain deferred.
+    encryption dictionary object, preserve deferred parsed stream decryption for
+    file-backed streams, and return CamlPDF-style denied permissions. Remaining
+    encrypted parser-state edge cases outside streams and object-stream
+    expansion remain deferred.
 
 11. Higher-level document features.
     Continue bookmarks/marks, page labels, annotations, optional content
@@ -1403,6 +1411,8 @@ end to end:
   object stream, then normalize it through the classic writer and reread it;
 - write AES-128 encrypted output and read it through the public password
   wrapper with both user and owner passwords.
+- preserve deferred ARC4/AESV2/AESV3 stream decryption when password-aware reads
+  parse file-backed streams, then force plaintext and `/Length` correction.
 - write AESV2 encrypted output through the native secure-random convenience
   writer, prove repeated writes differ with a fixed file ID, and decrypt the
   result through the public password wrapper.

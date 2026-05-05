@@ -1685,6 +1685,13 @@ pub(all) enum PdfStreamData {
   StreamToGet(ToGet)
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) enum PdfStreamDataCrypt {
+  PdfStreamDataNoCrypt
+  PdfStreamDataArc4Decrypt(Int, Int, Bytes, Int)
+  PdfStreamDataAesV2Decrypt(Int, Int, Bytes, Int)
+  PdfStreamDataAesV3Decrypt(Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfStreamEncoding {
   PdfStreamASCIIHex
   PdfStreamASCII85
@@ -1764,7 +1771,9 @@ pub(all) struct ToGet {
   input : ByteCursor
   position : Int
   length : Int
+  crypt : PdfStreamDataCrypt
 } derive(Eq, ToJson, @debug.Debug)
+pub fn ToGet::crypt(Self) -> PdfStreamDataCrypt
 pub fn ToGet::input(Self) -> ByteCursor
 pub fn ToGet::length(Self) -> Int
 pub fn ToGet::position(Self) -> Int

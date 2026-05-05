@@ -36,6 +36,26 @@ fn crypt_bytes_start_with_at(
 }
 
 ///|
+fn crypt_bytes_contain_for_test(
+  haystack : @pdflite.PdfBytes,
+  needle : @pdflite.PdfBytes,
+) -> Bool {
+  if needle.length() == 0 {
+    true
+  } else if needle.length() > haystack.length() {
+    false
+  } else {
+    for start in 0..<=(haystack.length() - needle.length()) {
+      if crypt_bytes_start_with_at(haystack, needle, start) {
+        break true
+      }
+    } nobreak {
+      false
+    }
+  }
+}
+
+///|
 fn crypt_aesv2_encrypt_data_for_test(
   object_number : Int,
   generation : Int,
@@ -388,6 +408,67 @@ fn crypt_stream_object_bytes_for_test(
   stream : @pdflite.PdfStream,
 ) -> @pdflite.PdfBytes raise {
   @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes()
+}
+
+///|
+fn crypt_document_with_stream_for_test(
+  major : Int,
+  minor : Int,
+  object_number : Int,
+  data : @pdflite.PdfBytes,
+) -> @pdflite.PdfDocument {
+  let doc = crypt_minimal_catalog_document_for_test(major, minor)
+  doc.add_object_given_number(
+    object_number,
+    crypt_stream_for_test(
+      [(crypt_name_for_test("/Length"), PdfInteger(data.length()))],
+      data,
+    ),
+  )
+  doc
+}
+
+///|
+fn crypt_assert_deferred_stream_for_test(
+  object : @pdflite.PdfObject,
+  expected_crypt : (@pdflite.PdfStreamDataCrypt) -> Bool,
+  expected_data : @pdflite.PdfBytes,
+) -> Unit raise {
+  guard object is PdfStreamObject(stream) else {
+    fail("expected stream object")
+  }
+  guard stream.data is StreamToGet(to_get) else {
+    fail("expected deferred stream data")
+  }
+  if !expected_crypt(to_get.crypt()) {
+    fail("unexpected deferred stream crypt state")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    expected_data,
+  )
+  @test.assert_eq(
+    crypt_bytes_contain_for_test(
+      @pdflite.pdf_write_object(
+        @pdflite.pdf_stream(stream.dictionary, stream.data),
+      ),
+      expected_data,
+    ),
+    true,
+  )
+  let forced = @pdflite.pdf_stream(stream.dictionary, stream.data)
+  forced.get_stream()
+  guard forced is PdfStreamObject(forced_stream) else {
+    fail("expected forced stream object")
+  }
+  guard forced_stream.data is StreamGot(forced_data) else {
+    fail("expected materialized stream data")
+  }
+  @test.assert_eq(forced_data, expected_data)
+  @test.assert_eq(
+    forced_stream.dictionary.lookup_immediate(crypt_name_for_test("/Length")),
+    Some(PdfInteger(expected_data.length())),
+  )
 }
 
 ///|
@@ -2183,6 +2264,93 @@ test "PdfDocument encrypt_256bit_aesv3_iso_with_providers mirrors ISO AESV3 opti
     owner_password=Some(@ascii.encode("owner")[:]),
   )
   @test.assert_eq(single_stream, Some(secret_object))
+}
+
+///|
+test "PdfDocument password reader keeps parsed encrypted streams deferred" {
+  let object_number = 5
+
+  let arc4_plain = @ascii.encode("lazy arc4 stream")
+  let arc4_doc = crypt_document_with_stream_for_test(
+    1, 4, object_number, arc4_plain,
+  )
+  let arc4_encrypted = arc4_doc.encrypt_40bit(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoPrint],
+    file_id=@ascii.encode("arc4-id")[:],
+  )
+  let arc4_rendered = @pdflite.pdf_write_document(arc4_encrypted)
+  let arc4_decrypted = crypt_unwrap_decryption_result_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      arc4_rendered,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  crypt_assert_deferred_stream_for_test(
+    arc4_decrypted.document.lookup_object_or_null(object_number),
+    fn(crypt) { crypt is PdfStreamDataArc4Decrypt(_, _, _, _) },
+    arc4_plain,
+  )
+  let arc4_copy = arc4_decrypted.document.copy()
+  crypt_assert_deferred_stream_for_test(
+    arc4_copy.lookup_object_or_null(object_number),
+    fn(crypt) { crypt is PdfStreamDataArc4Decrypt(_, _, _, _) },
+    arc4_plain,
+  )
+
+  let aesv2_plain = @ascii.encode("lazy aesv2 stream")
+  let aesv2_doc = crypt_document_with_stream_for_test(
+    1, 5, object_number, aesv2_plain,
+  )
+  let aesv2_encrypted = aesv2_doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoExtract],
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    file_id=@ascii.encode("aesv2-id")[:],
+  )
+  let aesv2_rendered = @pdflite.pdf_write_document(aesv2_encrypted)
+  let aesv2_decrypted = crypt_unwrap_decryption_result_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      aesv2_rendered,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  crypt_assert_deferred_stream_for_test(
+    aesv2_decrypted.document.lookup_object_or_null(object_number),
+    fn(crypt) { crypt is PdfStreamDataAesV2Decrypt(_, _, _, _) },
+    aesv2_plain,
+  )
+
+  let aesv3_plain = @ascii.encode("lazy aesv3 stream")
+  let aesv3_doc = crypt_document_with_stream_for_test(
+    1, 7, object_number, aesv3_plain,
+  )
+  let aesv3_encrypted = aesv3_doc.encrypt_256bit_aesv3_with_providers(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    [PdfNoCopy],
+    crypt_aesv3_r5_random_for_test,
+    fn(object_number, generation, index) {
+      crypt_aes_document_iv_for_test(object_number, generation, index)
+    },
+    file_id=@ascii.encode("aesv3-id")[:],
+  )
+  let aesv3_rendered = @pdflite.pdf_write_document(aesv3_encrypted)
+  let aesv3_decrypted = crypt_unwrap_decryption_result_for_test(
+    @pdflite.pdf_read_document_from_bytes_with_passwords(
+      aesv3_rendered,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  crypt_assert_deferred_stream_for_test(
+    aesv3_decrypted.document.lookup_object_or_null(object_number),
+    fn(crypt) { crypt is PdfStreamDataAesV3Decrypt(_) },
+    aesv3_plain,
+  )
 }
 
 ///|

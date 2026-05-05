@@ -3,12 +3,21 @@ pub(all) struct ToGet {
   input : ByteCursor
   position : Int
   length : Int
+  crypt : PdfStreamDataCrypt
 } derive(Debug, Eq, ToJson)
 
 ///|
 pub(all) enum PdfStreamData {
   StreamGot(PdfBytes)
   StreamToGet(ToGet)
+} derive(Debug, Eq, ToJson)
+
+///|
+pub(all) enum PdfStreamDataCrypt {
+  PdfStreamDataNoCrypt
+  PdfStreamDataArc4Decrypt(Int, Int, PdfBytes, Int)
+  PdfStreamDataAesV2Decrypt(Int, Int, PdfBytes, Int)
+  PdfStreamDataAesV3Decrypt(PdfBytes)
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -47,6 +56,41 @@ fn ByteCursor::deep_copy(self : ByteCursor) -> ByteCursor {
 }
 
 ///|
+fn PdfStreamDataCrypt::deep_copy(
+  self : PdfStreamDataCrypt,
+) -> PdfStreamDataCrypt {
+  match self {
+    PdfStreamDataNoCrypt => PdfStreamDataNoCrypt
+    PdfStreamDataArc4Decrypt(
+      object_number,
+      generation,
+      file_key,
+      key_length_bits
+    ) =>
+      PdfStreamDataArc4Decrypt(
+        object_number,
+        generation,
+        pdf_bytes_physical_copy(file_key),
+        key_length_bits,
+      )
+    PdfStreamDataAesV2Decrypt(
+      object_number,
+      generation,
+      file_key,
+      key_length_bits
+    ) =>
+      PdfStreamDataAesV2Decrypt(
+        object_number,
+        generation,
+        pdf_bytes_physical_copy(file_key),
+        key_length_bits,
+      )
+    PdfStreamDataAesV3Decrypt(file_key) =>
+      PdfStreamDataAesV3Decrypt(pdf_bytes_physical_copy(file_key))
+  }
+}
+
+///|
 fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
   match self {
     StreamGot(bytes) => StreamGot(pdf_bytes_physical_copy(bytes))
@@ -55,6 +99,7 @@ fn PdfStreamData::deep_copy(self : PdfStreamData) -> PdfStreamData {
         input: to_get.input.deep_copy(),
         position: to_get.position,
         length: to_get.length,
+        crypt: to_get.crypt.deep_copy(),
       })
   }
 }
@@ -115,7 +160,7 @@ pub fn pdf_stream(dictionary : PdfObject, data : PdfStreamData) -> PdfObject {
 
 ///|
 pub fn stream_to_get(input : ByteCursor, position : Int, length : Int) -> ToGet {
-  { input, position, length }
+  { input, position, length, crypt: PdfStreamDataNoCrypt }
 }
 
 ///|
@@ -124,24 +169,80 @@ fn pdf_object_length_name() -> PdfName {
 }
 
 ///|
+fn PdfStreamDataCrypt::is_identity(self : PdfStreamDataCrypt) -> Bool {
+  match self {
+    PdfStreamDataNoCrypt => true
+    _ => false
+  }
+}
+
+///|
+fn PdfStreamDataCrypt::decrypt(
+  self : PdfStreamDataCrypt,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  match self {
+    PdfStreamDataNoCrypt => data.to_owned()
+    PdfStreamDataArc4Decrypt(
+      object_number,
+      generation,
+      file_key,
+      key_length_bits
+    ) =>
+      pdf_arc4_crypt_object(
+        object_number,
+        generation,
+        file_key[:],
+        key_length_bits,
+        data,
+      )
+    PdfStreamDataAesV2Decrypt(
+      object_number,
+      generation,
+      file_key,
+      key_length_bits
+    ) =>
+      pdf_aesv2_decrypt_object_data(
+        object_number,
+        generation,
+        file_key[:],
+        key_length_bits,
+        data,
+      )
+    PdfStreamDataAesV3Decrypt(file_key) =>
+      pdf_aesv3_decrypt_object_data(file_key[:], data)
+  }
+}
+
+///|
+fn pdf_stream_to_get_raw_view(to_get : ToGet) -> BytesView raise PdfError {
+  let input = to_get.input()
+  let start = to_get.position() + input.offset
+  let length = to_get.length()
+  if start < 0 {
+    raise InvalidCursorPosition(to_get.position())
+  }
+  if length < 0 {
+    raise InvalidReadLength(length)
+  }
+  let end = start + length
+  if end > input.data.length() {
+    raise EndOfInput
+  }
+  input.data[start:end]
+}
+
+///|
 fn pdf_stream_data_view(data : PdfStreamData) -> BytesView raise PdfError {
   match data {
     StreamGot(bytes) => bytes[:]
     StreamToGet(to_get) => {
-      let input = to_get.input()
-      let start = to_get.position() + input.offset
-      let length = to_get.length()
-      if start < 0 {
-        raise InvalidCursorPosition(to_get.position())
+      let raw = pdf_stream_to_get_raw_view(to_get)
+      if to_get.crypt().is_identity() {
+        raw
+      } else {
+        to_get.crypt().decrypt(raw)[:]
       }
-      if length < 0 {
-        raise InvalidReadLength(length)
-      }
-      let end = start + length
-      if end > input.data.length() {
-        raise EndOfInput
-      }
-      input.data[start:end]
     }
   }
 }
@@ -150,7 +251,14 @@ fn pdf_stream_data_view(data : PdfStreamData) -> BytesView raise PdfError {
 fn pdf_stream_data_bytes(data : PdfStreamData) -> PdfBytes raise PdfError {
   match data {
     StreamGot(bytes) => bytes
-    StreamToGet(_) => pdf_stream_data_view(data).to_owned()
+    StreamToGet(to_get) => {
+      let raw = pdf_stream_to_get_raw_view(to_get)
+      if to_get.crypt().is_identity() {
+        raw.to_owned()
+      } else {
+        to_get.crypt().decrypt(raw)
+      }
+    }
   }
 }
 
@@ -198,6 +306,11 @@ pub fn ToGet::position(self : ToGet) -> Int {
 ///|
 pub fn ToGet::length(self : ToGet) -> Int {
   self.length
+}
+
+///|
+pub fn ToGet::crypt(self : ToGet) -> PdfStreamDataCrypt {
+  self.crypt
 }
 
 ///|
