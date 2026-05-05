@@ -1404,6 +1404,9 @@ end to end:
   extract pages in a new order, and reread the extracted document.
 - retain merged page labels and bookmark targets through a public
   merge/write/read compressed xref-stream boundary.
+- run a `pdfdraft.ml`-style image replacement workflow that removes image
+  XObjects and inline images, preserves form XObjects, writes compressed
+  xref-stream output, and rereads the transformed content.
 - run `change_pages` after a compressed xref-stream read boundary, rewrite
   bookmark page references with a matrix transform, write/reread, and verify
   the transformed bookmark target.

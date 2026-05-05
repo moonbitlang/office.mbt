@@ -752,6 +752,236 @@ fn acceptance_assert_bookmarks_target_pages_for_test(
 }
 
 ///|
+fn acceptance_draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_q,
+    Op_w(0.0),
+    Op_G(0.0),
+    Op_re(0.0, 0.0, 1.0, 1.0),
+    Op_m(0.0, 0.0),
+    Op_l(1.0, 1.0),
+    Op_m(0.0, 1.0),
+    Op_l(1.0, 0.0),
+    Op_S,
+    Op_Q,
+  ]
+}
+
+///|
+fn acceptance_draft_xobject_is_image_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  name : @pdflite.PdfName,
+) -> Bool {
+  match doc.lookup_direct(acceptance_name_for_test("/XObject"), resources) {
+    Some(xobjects) =>
+      match doc.lookup_direct(name, xobjects) {
+        Some(xobject) =>
+          match
+            doc.lookup_direct(acceptance_name_for_test("/Subtype"), xobject) {
+            Some(PdfNameObject(subtype)) =>
+              subtype == acceptance_name_for_test("/Image")
+            _ => false
+          }
+        None => false
+      }
+    None => false
+  }
+}
+
+///|
+fn acceptance_draft_remove_image_xobjects_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+) -> @pdflite.PdfObject {
+  let key_xobject = acceptance_name_for_test("/XObject")
+  match resources {
+    PdfDictionary(entries) => {
+      let retained : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+      for entry in entries {
+        let (key, value) = entry
+        if key == key_xobject {
+          match doc.direct(value) {
+            PdfDictionary(xobjects) => {
+              let kept : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+              for xobject_entry in xobjects {
+                let (resource_name, _) = xobject_entry
+                if !acceptance_draft_xobject_is_image_for_test(
+                    doc, resources, resource_name,
+                  ) {
+                  kept.push(xobject_entry)
+                }
+              }
+              retained.push((key, PdfDictionary(kept)))
+            }
+            _ => retained.push(entry)
+          }
+        } else {
+          retained.push(entry)
+        }
+      }
+      PdfDictionary(retained)
+    }
+    _ => resources
+  }
+}
+
+///|
+fn acceptance_draft_ops_for_test(
+  doc : @pdflite.PdfDocument,
+  resources : @pdflite.PdfObject,
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> Array[@pdflite.PdfContentOp] {
+  let output : Array[@pdflite.PdfContentOp] = []
+  for op in ops {
+    match op {
+      Op_Do(name) if acceptance_draft_xobject_is_image_for_test(
+          doc, resources, name,
+        ) =>
+        for replacement in acceptance_draft_substitute_ops_for_test() {
+          output.push(replacement)
+        }
+      Op_InlineImage(_, _, _) =>
+        for replacement in acceptance_draft_substitute_ops_for_test() {
+          output.push(replacement)
+        }
+      _ => output.push(op)
+    }
+  }
+  output
+}
+
+///|
+fn acceptance_draft_page_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+) -> @pdflite.PdfPage raise {
+  let ops = doc.parse_content_ops(page.content)
+  let stream = @pdflite.pdf_content_stream_of_ops(
+    acceptance_draft_ops_for_test(doc, page.resources, ops),
+  )
+  let encoded = @pdflite.pdf_encode_stream_with_filter(
+    acceptance_name_for_test("/FlateDecode"),
+    stream,
+  )
+  {
+    ..page,
+    content: [encoded],
+    resources: acceptance_draft_remove_image_xobjects_for_test(
+      doc,
+      page.resources,
+    ),
+  }
+}
+
+///|
+fn acceptance_draft_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let pages = doc.pages_of_pagetree()
+  let rewritten : Array[@pdflite.PdfPage] = []
+  for page in pages {
+    rewritten.push(acceptance_draft_page_for_test(doc, page))
+  }
+  let page_root = doc.add_pagetree(rewritten)
+  ignore(doc.add_root(page_root, []))
+  doc.remove_unreferenced()
+  doc
+}
+
+///|
+fn acceptance_draft_source_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_length = acceptance_name_for_test("/Length")
+  let key_subtype = acceptance_name_for_test("/Subtype")
+  let image_name = acceptance_name_for_test("/Im1")
+  let form_name = acceptance_name_for_test("/Fm1")
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    7,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(acceptance_name_for_test("/Image"))),
+        (key_length, PdfInteger(0)),
+      ]),
+      StreamGot([]),
+    ),
+  )
+  doc.add_object_given_number(
+    8,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (key_subtype, PdfNameObject(acceptance_name_for_test("/Form"))),
+        (key_length, PdfInteger(3)),
+      ]),
+      StreamGot(acceptance_ascii_for_test("q Q")),
+    ),
+  )
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/XObject"),
+        @pdflite.pdf_dictionary([
+          (image_name, PdfIndirect(7)),
+          (form_name, PdfIndirect(8)),
+        ]),
+      ),
+    ]),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_Do(image_name),
+        Op_Do(form_name),
+        Op_InlineImage(
+          PdfDictionary([
+            (acceptance_name_for_test("/W"), PdfInteger(1)),
+            (acceptance_name_for_test("/H"), PdfInteger(1)),
+            (
+              acceptance_name_for_test("/CS"),
+              PdfNameObject(acceptance_name_for_test("/DeviceGray")),
+            ),
+            (acceptance_name_for_test("/BPC"), PdfInteger(1)),
+          ]),
+          None,
+          Bytes::from_array([0]),
+        ),
+      ]),
+    ],
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_drafted_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let form_name = acceptance_name_for_test("/Fm1")
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops(pages[0].content),
+    [
+      ..acceptance_draft_substitute_ops_for_test(),
+      Op_Do(form_name),
+      ..acceptance_draft_substitute_ops_for_test(),
+    ],
+  )
+  @test.assert_eq(doc.lookup_object_or_null(7), PdfNull)
+  guard doc.lookup_object_or_null(8) is PdfStreamObject(_) else {
+    fail("expected form xobject to remain")
+  }
+  guard doc.lookup_direct(
+      acceptance_name_for_test("/XObject"),
+      pages[0].resources,
+    )
+    is Some(PdfDictionary(xobjects)) else {
+    fail("expected retained XObject dictionary")
+  }
+  @test.assert_eq(xobjects, [(form_name, PdfIndirect(8))])
+}
+
+///|
 fn acceptance_aes_iv_for_test(
   object_number : Int,
   generation : Int,
@@ -1011,6 +1241,19 @@ test "native acceptance suite preserves labels and bookmarks across merge bounda
   let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
   @test.assert_eq(reparsed.read_page_labels(), expected_labels)
   acceptance_assert_bookmarks_target_pages_for_test(reparsed, "First", "Second")
+}
+
+///|
+test "native acceptance suite runs pdfdraft image replacement workflow" {
+  let drafted = acceptance_draft_document_for_test(
+    acceptance_draft_source_document_for_test(),
+  )
+  acceptance_assert_drafted_document_for_test(drafted)
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    drafted,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
+  acceptance_assert_drafted_document_for_test(reparsed)
 }
 
 ///|
