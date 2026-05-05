@@ -31,8 +31,8 @@ Current estimate:
   composition subset.
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
-- [ ] Add more Type3 glyph-program edge coverage beyond current Type3
-  CharProc and Type3 writer round-trip gates.
+- [ ] Add further real-world Type3 glyph-program/resource coverage when
+  suitable fixtures are available.
 - [ ] Add broader real-world DCT/JPEG and CCITT image corpus coverage; keep
   optional JBIG2/JPEG pixel-decoder decisions explicit.
 - [ ] Improve byte-identical zlib strategy and performance parity beyond the
@@ -227,8 +227,11 @@ Current estimate:
 - [x] ~~Type3 writer round-trip fidelity for `/FontBBox`, `/FontMatrix`,
   actual `CharProcs` stream objects, `/Resources`, and non-empty
   `FirstChar`/`LastChar`/`Widths` metrics.~~
-- [ ] More Type3 glyph-program edge coverage beyond the current Type3
-  reader/writer gates.
+- [x] ~~Type3 no-`/ToUnicode` custom-encoding fallback through AGL glyph names,
+  StandardEncoding fill-in, reverse lookup, and preserved CharProc streams
+  through native compressed read/write/reread boundaries.~~
+- [ ] Further real-world Type3 glyph-program/resource coverage when suitable
+  fixtures are available.
 - [x] ~~TrueType descriptor metadata survives read_font_descriptor and embedded
   TrueType native read/write/reread gates.~~
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
@@ -307,6 +310,8 @@ Current estimate:
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
 - [x] ~~Preserve TrueType descriptor metadata through the embedded TrueType
   native acceptance gate.~~
+- [x] ~~Add a Type3 no-`/ToUnicode` custom-encoding fallback native acceptance
+  gate.~~
 - [x] ~~Add a structured DCT/JPEG marker payload native gate.~~
 - [x] ~~Add mixed-byte predefined CMap `/ToUnicode` extraction coverage.~~
 - [x] ~~Add RKSJ no-`/ToUnicode` predefined-CMap single-byte fallback
@@ -368,6 +373,6 @@ Current estimate:
 - [ ] Add the next remaining format parity slice: broader external/general CMap
   parsing beyond codespace/CID-char/CID-range/notdef lookup, Identity
   `/UseCMap`, and stream `/UseCMap` composition, remaining rare predefined
-  CMap families, real-world ToUnicode variation coverage, or Type3
-  glyph-program behavior.
+  CMap families, real-world ToUnicode variation coverage, or fixture-driven
+  Type3 resource/glyph-program behavior.
 - [ ] Revisit non-native backend validation after native parity is stable.

@@ -762,6 +762,179 @@ fn acceptance_assert_type3_text_for_test(
 }
 
 ///|
+fn acceptance_type3_encoded_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type3")),
+    ),
+    (
+      acceptance_name_for_test("/FontBBox"),
+      PdfArray([
+        PdfInteger(0),
+        PdfInteger(-20),
+        PdfInteger(600),
+        PdfInteger(700),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/FontMatrix"),
+      PdfArray([
+        PdfReal(0.001),
+        PdfInteger(0),
+        PdfInteger(0),
+        PdfReal(0.001),
+        PdfInteger(0),
+        PdfInteger(0),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/CharProcs"),
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/A"), PdfIndirect(84)),
+        (acceptance_name_for_test("/Omega"), PdfIndirect(85)),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/Resources"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/ProcSet"),
+          PdfArray([PdfNameObject(acceptance_name_for_test("/PDF"))]),
+        ),
+      ]),
+    ),
+    (acceptance_name_for_test("/FirstChar"), PdfInteger(65)),
+    (acceptance_name_for_test("/LastChar"), PdfInteger(66)),
+    (
+      acceptance_name_for_test("/Widths"),
+      PdfArray([PdfInteger(500), PdfInteger(620)]),
+    ),
+    (acceptance_name_for_test("/MissingWidth"), PdfInteger(250)),
+    (
+      acceptance_name_for_test("/Encoding"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Differences"),
+          PdfArray([
+            PdfInteger(65),
+            PdfNameObject(acceptance_name_for_test("/A")),
+            PdfNameObject(acceptance_name_for_test("/Omega")),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_type3_encoded_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    84,
+    acceptance_type3_charproc_stream_for_test([Op_d0(500.0, 0.0)]),
+  )
+  doc.add_object_given_number(
+    85,
+    acceptance_type3_charproc_stream_for_test([
+      Op_d1(620.0, 0.0, 0.0, -20.0, 620.0, 700.0),
+    ]),
+  )
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (
+          acceptance_name_for_test("/Ft3Enc"),
+          acceptance_type3_encoded_font_for_test(),
+        ),
+      ]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/Ft3Enc"), 12.0),
+        Op_Tj(acceptance_text_bytes_for_test([65, 66])),
+        Op_TJ(
+          PdfArray([
+            PdfString(acceptance_text_bytes_for_test([67])),
+            PdfInteger(-20),
+            PdfString(acceptance_text_bytes_for_test([65])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_assert_type3_encoded_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  let font = acceptance_font_object_by_name_for_test(
+    pages[0].resources,
+    acceptance_name_for_test("/Ft3Enc"),
+  )
+  guard doc.read_font(font) is PdfFontSimple(simple) else {
+    fail("expected simple Type3 font")
+  }
+  guard simple.fonttype is PdfType3(type3_data) else {
+    fail("expected Type3 data")
+  }
+  @test.assert_eq(simple.fontdescriptor, None)
+  @test.assert_eq(type3_data.charprocs, [
+    (acceptance_name_for_test("/A"), PdfIndirect(84)),
+    (acceptance_name_for_test("/Omega"), PdfIndirect(85)),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      doc.direct(PdfIndirect(84)).stream_bytes(),
+    ),
+    [Op_d0(500.0, 0.0)],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      doc.direct(PdfIndirect(85)).stream_bytes(),
+    ),
+    [Op_d1(620.0, 0.0, 0.0, -20.0, 620.0, 700.0)],
+  )
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    try! extractor.glyphnames_of_text(
+      acceptance_text_bytes_for_test([65, 66, 67, 65])[:],
+    ),
+    [
+      acceptance_name_for_test("/A"),
+      acceptance_name_for_test("/Omega"),
+      acceptance_name_for_test("/C"),
+      acceptance_name_for_test("/A"),
+    ],
+  )
+  @test.assert_eq(
+    acceptance_font_codepoints_of_first_page_for_test(
+      doc,
+      acceptance_name_for_test("/Ft3Enc"),
+    ),
+    [0x41, 0x2126, 67, 0x41],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x2126), Some(66))
+}
+
+///|
 fn acceptance_identity_h_text_for_test() -> @pdflite.PdfBytes raise {
   acceptance_text_bytes_for_test([0x00, 0x41, 0x20, 0xAC])
 }
@@ -3928,6 +4101,16 @@ test "native acceptance suite extracts Type3 ToUnicode text through reader bound
   acceptance_assert_type3_text_for_test(parsed)
   let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
   acceptance_assert_type3_text_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts Type3 encoded glyph text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_type3_encoded_text_document_for_test(),
+  )
+  acceptance_assert_type3_encoded_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_type3_encoded_text_for_test(reparsed)
 }
 
 ///|

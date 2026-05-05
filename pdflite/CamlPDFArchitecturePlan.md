@@ -197,9 +197,10 @@ work changes.
    Type3 `/ToUnicode` text extraction with indirect CharProcs and custom
    metrics, embedded TrueType `FontFile2` plus `/ToUnicode` text extraction
    through compressed read/write boundaries, TrueType `/FontDescriptor`
-   metadata preservation through native read/write/reread boundaries, and Flate
-   inline-image content parsing. Unit coverage also preserves direct Type3
-   `CharProcs` streams,
+   metadata preservation through native read/write/reread boundaries, Type3
+   no-`/ToUnicode` custom-encoding fallback through AGL glyph names and
+   StandardEncoding fill-in, and Flate inline-image content parsing. Unit
+   coverage also preserves direct Type3 `CharProcs` streams,
    parses their `d0`/`d1` glyph programs without allocating new indirect
    objects, and round-trips Type3 writer output for `/FontBBox`,
    `/FontMatrix`, `CharProcs`, `/Resources`, and width metrics. Stream decode
@@ -363,9 +364,9 @@ and backend breadth, is about 83-88% complete.
   fallbacks, broader external/general CMap parsing beyond the current
   codespace/CID-char/CID-range/notdef lookup, encoding-side Unicode map
   fallback, Identity `/UseCMap`, and stream `/UseCMap` composition subset,
-  additional Type3 glyph-program edge coverage beyond the current Type3
-  reader/writer gates, more real-world ToUnicode variations, and broader
-  real-world DCT/JPEG image payload corpus files.
+  additional fixture-driven Type3 resource/glyph-program coverage, more
+  real-world ToUnicode variations, and broader real-world DCT/JPEG image
+  payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.
@@ -398,9 +399,9 @@ and backend breadth, is about 83-88% complete.
 
 - Next: prioritize broad native acceptance gates over isolated parser quirks:
   real-file corpus expansion beyond the checked-in CamlPDF intro/logo fixtures,
-  additional Type3 glyph-program behavior, or real CCITT/DCT fixture coverage
-  when suitable files are available. Keep JPEG/JBIG2 decoder decisions separate
-  from encoded image pass-through.
+  fixture-driven Type3 resource/glyph-program behavior, or real CCITT/DCT
+  fixture coverage when suitable files are available. Keep JPEG/JBIG2 decoder
+  decisions separate from encoded image pass-through.
 - Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist
