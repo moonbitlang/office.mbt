@@ -307,6 +307,12 @@ fn pdf_text_predefined_cmap_uses_shift_jis_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_cmap_uses_gb_euc_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("GB-EUC")
+}
+
+///|
 fn pdf_text_predefined_cmap_uses_mixed_byte_charcodes(name : PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
@@ -339,6 +345,47 @@ fn pdf_text_predefined_rksj_single_byte_charcode(codepoint : Int) -> Int? {
     Some(0xA1 + codepoint - 0xFF61)
   } else {
     None
+  }
+}
+
+///|
+fn pdf_text_predefined_pair_table_lookup(
+  table : Array[(Int, Int)],
+  key : Int,
+) -> Int? {
+  let mut low = 0
+  let mut high = table.length()
+  while low < high {
+    let mid = low + (high - low) / 2
+    let entry = table[mid]
+    if key < entry.0 {
+      high = mid
+    } else if key > entry.0 {
+      low = mid + 1
+    } else {
+      return Some(entry.1)
+    }
+  }
+  None
+}
+
+///|
+fn pdf_text_predefined_gb_euc_codepoint(code : Int) -> Int? {
+  if code >= 0x00 && code <= 0x7F {
+    Some(code)
+  } else {
+    pdf_text_predefined_pair_table_lookup(pdf_text_gb_euc_codepoint_table, code)
+  }
+}
+
+///|
+fn pdf_text_predefined_gb_euc_charcode(codepoint : Int) -> Int? {
+  if codepoint >= 0x00 && codepoint <= 0x7F {
+    Some(codepoint)
+  } else {
+    pdf_text_predefined_pair_table_lookup(
+      pdf_text_gb_euc_charcode_table, codepoint,
+    )
   }
 }
 
@@ -6791,6 +6838,11 @@ fn PdfFont::pdf_text_predefined_builtin_codepoints(
               Some(codepoint) => Some([codepoint])
               None => None
             }
+          } else if pdf_text_predefined_cmap_uses_gb_euc_charcodes(name) {
+            match pdf_text_predefined_gb_euc_codepoint(code) {
+              Some(codepoint) => Some([codepoint])
+              None => None
+            }
           } else {
             None
           }
@@ -6811,6 +6863,8 @@ fn PdfFont::pdf_text_predefined_builtin_charcode(
         PdfPredefinedCMap(name) =>
           if pdf_text_predefined_cmap_uses_shift_jis_charcodes(name) {
             pdf_text_predefined_rksj_single_byte_charcode(codepoint)
+          } else if pdf_text_predefined_cmap_uses_gb_euc_charcodes(name) {
+            pdf_text_predefined_gb_euc_charcode(codepoint)
           } else {
             None
           }

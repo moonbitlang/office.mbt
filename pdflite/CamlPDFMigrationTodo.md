@@ -94,9 +94,11 @@ Current estimate:
   Big5, UHC, and GBK families through `/ToUnicode` text extraction.~~
 - [x] ~~RKSJ predefined CMap built-in ASCII and half-width Katakana fallback
   when `/ToUnicode` is absent, including reverse charcode lookup.~~
+- [x] ~~GB-EUC predefined CMap built-in GB2312 mapping table when
+  `/ToUnicode` is absent, including reverse charcode lookup.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
-  single-byte fallback, plus more vertical-writing text behavior when
-  `/ToUnicode` is absent.
+  single-byte and GB-EUC fallbacks, plus more vertical-writing text behavior
+  when `/ToUnicode` is absent.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -181,6 +183,7 @@ Current estimate:
 - [x] ~~Add mixed-byte predefined CMap `/ToUnicode` extraction coverage.~~
 - [x] ~~Add RKSJ no-`/ToUnicode` predefined-CMap single-byte fallback
   coverage.~~
-- [ ] Add one broader non-UCS2 predefined-CMap mapping table beyond the RKSJ
-  single-byte fallback.
+- [x] ~~Add one broader non-UCS2 predefined-CMap mapping table beyond the RKSJ
+  single-byte fallback.~~
+- [ ] Add another non-UCS2 predefined-CMap mapping table beyond RKSJ and GB-EUC.
 - [ ] Revisit non-native backend validation after native parity is stable.
