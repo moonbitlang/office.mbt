@@ -383,6 +383,30 @@ fn crypt_stream_for_test(
 }
 
 ///|
+fn crypt_stream_object_bytes_for_test(
+  stream : @pdflite.PdfStream,
+) -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes()
+}
+
+///|
+fn crypt_assert_equivalent_object_for_test(
+  actual : @pdflite.PdfObject,
+  expected : @pdflite.PdfObject,
+) -> Unit raise {
+  match (actual, expected) {
+    (PdfStreamObject(actual), PdfStreamObject(expected)) => {
+      @test.assert_eq(actual.dictionary, expected.dictionary)
+      @test.assert_eq(
+        crypt_stream_object_bytes_for_test(actual),
+        crypt_stream_object_bytes_for_test(expected),
+      )
+    }
+    _ => @test.assert_eq(actual, expected)
+  }
+}
+
+///|
 fn crypt_repeated_bytes_for_test(
   value : Int,
   length : Int,
@@ -1885,7 +1909,7 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
     read_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     read_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -2002,7 +2026,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
     read_decrypted.document.lookup_object_or_null(5),
     updated_secret,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     read_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -3026,7 +3050,7 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
     read_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     read_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -3189,7 +3213,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
     read_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     read_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -3264,7 +3288,10 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
     try! parsed.decrypt_with_user_password(@ascii.encode("user")[:]),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
-  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  try! crypt_assert_equivalent_object_for_test(
+    decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
   @test.assert_eq(decrypted.denied_permissions, denied_permissions)
 
   let compressed = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
@@ -3281,7 +3308,7 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
     compressed_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     compressed_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -3330,7 +3357,10 @@ test "PdfDocument encrypted AESV2 output round trips through xref stream writers
     try! parsed.decrypt_with_user_password(@ascii.encode("user")[:]),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
-  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  try! crypt_assert_equivalent_object_for_test(
+    decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
   @test.assert_eq(decrypted.denied_permissions, [PdfNoCopy])
 
   let compressed = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
@@ -3347,7 +3377,7 @@ test "PdfDocument encrypted AESV2 output round trips through xref stream writers
     compressed_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     compressed_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -3414,7 +3444,10 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
   )
   @test.assert_eq(decrypted.document.is_encrypted(), false)
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
-  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  try! crypt_assert_equivalent_object_for_test(
+    decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
   @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
   let read_owner_decrypted = crypt_unwrap_decryption_result_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
@@ -3427,7 +3460,7 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
     read_owner_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     read_owner_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )
@@ -3501,7 +3534,10 @@ test "PdfDocument encrypted ARC4 output round trips through xref stream writers"
     try! parsed.decrypt_with_user_password(@ascii.encode("user")[:]),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
-  @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
+  try! crypt_assert_equivalent_object_for_test(
+    decrypted.document.lookup_object_or_null(6),
+    metadata_stream,
+  )
   @test.assert_eq(decrypted.denied_permissions, [PdfNoPrint])
 
   let compressed = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
@@ -3518,7 +3554,7 @@ test "PdfDocument encrypted ARC4 output round trips through xref stream writers"
     compressed_decrypted.document.lookup_object_or_null(5),
     secret_object,
   )
-  @test.assert_eq(
+  try! crypt_assert_equivalent_object_for_test(
     compressed_decrypted.document.lookup_object_or_null(6),
     metadata_stream,
   )

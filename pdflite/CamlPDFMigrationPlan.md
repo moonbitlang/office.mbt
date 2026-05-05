@@ -282,11 +282,15 @@ MoonBit consequences for this project:
    It also mirrors CamlPDF's unreadable and mismatched `/Length` recovery by
    rewinding and scanning through the following `endstream` marker when the
    length is missing, indirect-unavailable, non-integer, unparseable, negative,
-   a stream object, or does not land on a valid terminator boundary. Indirect
-   stream-length resolution now parses only the referenced object segment and
-   uses its complete/incomplete state to distinguish plain integer length
-   providers from stream objects, avoiding raw byte false positives when a
-   valid length object mentions `stream` in a PDF comment.
+   a stream object, or does not land on a valid terminator boundary. Valid
+   strict-reader `/Length` streams now preserve lazy CamlPDF-style stream
+   loading by storing `StreamToGet` cursor slices until an owned-byte boundary
+   materializes them; malformed recovered streams still store eager
+   `StreamGot` bytes because their boundaries are discovered by repair
+   scanning. Indirect stream-length resolution now parses only the referenced
+   object segment and uses its complete/incomplete state to distinguish plain
+   integer length providers from stream objects, avoiding raw byte false
+   positives when a valid length object mentions `stream` in a PDF comment.
    Empty indirect object segments like `n gen obj endobj` now parse as `null`,
    and plain non-stream indirect objects may omit the final `endobj` when the
    lexer stops before following non-stream syntax. Primitive scans now also

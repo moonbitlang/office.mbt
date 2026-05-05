@@ -1193,7 +1193,12 @@ fn ByteCursor::read_first_indirect_object_at_current(
       xrefs,
     )
     match length_result {
-      Ok(length) => self.finish_pdf_stream_object_with_length(object, length)
+      Ok(length) =>
+        self.finish_pdf_stream_object_with_length(
+          object,
+          length,
+          defer_stream_data=true,
+        )
       Err(_) => self.finish_pdf_malformed_stream_object(object)
     }
   }
@@ -1320,7 +1325,12 @@ fn ByteCursor::read_reconstructed_indirect_scan_candidate_at_current(
       xrefs,
     )
     let stream = match length_result {
-      Ok(length) => self.finish_pdf_stream_object_with_length(object, length)
+      Ok(length) =>
+        self.finish_pdf_stream_object_with_length(
+          object,
+          length,
+          defer_stream_data=true,
+        )
       Err(_) => self.finish_pdf_malformed_stream_object(object)
     }
     (stream, Some(self.absolute_position()))
@@ -1987,11 +1997,21 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
   self : ByteCursor,
   prefix : PdfParsedIndirectObject,
   length : Int,
+  defer_stream_data? : Bool = false,
 ) -> PdfParsedIndirectObject raise PdfError {
   let stream_keyword_position = self.absolute_position()
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
   self.consume_pdf_stream_start_line_break()
-  let stream_data = self.read_bytes(length)
+  let data_position = self.position()
+  if self.absolute_position() + length > self.data.length() {
+    raise EndOfInput
+  }
+  let stream_data = if defer_stream_data {
+    self.seek_pdf_absolute(self.absolute_position() + length)
+    StreamToGet(stream_to_get(self.deep_copy(), data_position, length))
+  } else {
+    StreamGot(self.read_bytes(length))
+  }
   if !pdf_reader_stream_end_marker_at(self.data[:], self.absolute_position()) {
     self.seek_pdf_absolute(stream_keyword_position)
     self.finish_pdf_malformed_stream_object(prefix)
@@ -2010,7 +2030,7 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
     {
       number: prefix.number,
       generation: prefix.generation,
-      object: pdf_stream(prefix.object, StreamGot(stream_data)),
+      object: pdf_stream(prefix.object, stream_data),
     }
   }
 }

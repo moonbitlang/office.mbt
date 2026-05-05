@@ -4,6 +4,24 @@ fn reader_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_stream_bytes_for_test(
+  stream : @pdflite.PdfStream,
+) -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes()
+}
+
+///|
+fn reader_assert_deferred_stream_data_for_test(
+  stream : @pdflite.PdfStream,
+  expected : @pdflite.PdfBytes,
+) -> Unit raise {
+  guard stream.data is StreamToGet(_) else {
+    fail("expected deferred stream data")
+  }
+  @test.assert_eq(reader_stream_bytes_for_test(stream), expected)
+}
+
+///|
 fn reader_push_byte(output : Array[Byte], value : Int) -> Unit {
   output.push(value.to_byte())
 }
@@ -1829,9 +1847,9 @@ test "pdf_read_classic_document_from_bytes reads stream objects by xref" {
     ),
     Some(PdfInteger(5)),
   )
-  @test.assert_eq(
-    parsed_stream.data,
-    StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
+  try! reader_assert_deferred_stream_data_for_test(
+    parsed_stream,
+    reader_bytes_for_test([72, 101, 108, 108, 111]),
   )
 }
 
@@ -2374,7 +2392,10 @@ test "pdf_read_document_from_bytes reconstructs indirect stream lengths" {
     ),
     Some(PdfIndirect(2)),
   )
-  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+  try! reader_assert_deferred_stream_data_for_test(
+    stream,
+    reader_pdf_ascii("Hello"),
+  )
   guard parsed.lookup_object_or_null(4) is PdfStreamObject(reconstructed) else {
     fail("expected reconstructed stream object")
   }
@@ -2398,9 +2419,9 @@ test "pdf_read_document_from_bytes ignores object-looking stream data during rec
   guard parsed.lookup_object_or_null(2) is PdfStreamObject(stream) else {
     fail("expected recovered stream object")
   }
-  @test.assert_eq(
-    stream.data,
-    StreamGot(reader_pdf_ascii("9 0 obj\n<< /Type /Catalog >>\nendobj")),
+  try! reader_assert_deferred_stream_data_for_test(
+    stream,
+    reader_pdf_ascii("9 0 obj\n<< /Type /Catalog >>\nendobj"),
   )
 }
 
@@ -2755,9 +2776,9 @@ test "pdf_read_classic_document_from_bytes resolves indirect stream length" {
     ),
     Some(PdfIndirect(2)),
   )
-  @test.assert_eq(
-    stream.data,
-    StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
+  try! reader_assert_deferred_stream_data_for_test(
+    stream,
+    reader_bytes_for_test([72, 101, 108, 108, 111]),
   )
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
 }
@@ -2777,7 +2798,10 @@ test "pdf_read_classic_document_from_bytes resolves commented indirect stream le
     ),
     Some(PdfIndirect(2)),
   )
-  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
+  try! reader_assert_deferred_stream_data_for_test(
+    stream,
+    reader_pdf_ascii("Hello"),
+  )
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
 }
 

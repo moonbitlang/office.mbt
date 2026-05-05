@@ -27,10 +27,15 @@ work changes.
    Strict stream parsing also skips CamlPDF's ignored padding bytes after the
    `stream` keyword while preserving trailing stream bytes before `endstream`,
    and falls back to CamlPDF-style `endstream` scanning when `/Length` is
-   missing, unreadable, or lands away from the stream terminator. Indirect
-   stream-length providers are now classified by parsing the referenced object
-   segment, so ordinary length objects containing the word `stream` in comments
-   do not get mistaken for stream objects.
+   missing, unreadable, or lands away from the stream terminator. Valid
+   strict-reader `/Length` streams now keep their payloads as `StreamToGet`
+   cursor slices and materialize only at owned-byte boundaries such as
+   `stream_bytes`, writer output, filter decoding, and crypt transforms;
+   malformed recovered streams remain eager `StreamGot` data because their
+   boundaries come from a repair scan. Indirect stream-length providers are now
+   classified by parsing the referenced object segment, so ordinary length
+   objects containing the word `stream` in comments do not get mistaken for
+   stream objects.
    Xref-stream reading now also mirrors CamlPDF's tolerance for missing
    `/Type /XRef` when the stream still carries xref-stream structure such as
    `/W`, while keeping explicit wrong `/Type` values rejected; the malformed

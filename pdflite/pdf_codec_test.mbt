@@ -1433,7 +1433,13 @@ test "pdfdecomp-style stream decompression survives writer reader round trip" {
   guard parsed.lookup_object_or_null(2) is PdfStreamObject(stream) else {
     fail("expected decompressed stream")
   }
-  @test.assert_eq(stream.data, StreamGot(codec_ascii_for_test("Hi")))
+  guard stream.data is StreamToGet(_) else {
+    fail("expected deferred decompressed stream")
+  }
+  @test.assert_eq(
+    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    codec_ascii_for_test("Hi"),
+  )
   @test.assert_eq(
     stream.dictionary.lookup_immediate(length),
     Some(PdfInteger(2)),

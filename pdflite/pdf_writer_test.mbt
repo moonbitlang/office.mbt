@@ -567,9 +567,12 @@ test "pdf_write_document_with_xref_stream round trips through public reader" {
   guard parsed.lookup_object_or_null(4) is PdfStreamObject(stream) else {
     fail("expected stream payload")
   }
+  guard stream.data is StreamToGet(_) else {
+    fail("expected deferred stream payload")
+  }
   @test.assert_eq(
-    stream.data,
-    StreamGot(writer_ascii_for_test("xref-stream payload")),
+    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    writer_ascii_for_test("xref-stream payload"),
   )
 
   document.set_version(2, 0)
