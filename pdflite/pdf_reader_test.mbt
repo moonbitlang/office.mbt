@@ -1230,6 +1230,43 @@ fn reader_xref_stream_pdf_with_object_stream_number(
 }
 
 ///|
+fn reader_xref_stream_pdf_with_object_stream_root_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let object_stream_data : Array[Byte] = []
+  reader_push_ascii(object_stream_data, "1 0 ")
+  let first = object_stream_data.length()
+  reader_push_ascii(object_stream_data, "<< /Type /Catalog >>")
+  let object_stream_offset = output.length()
+  reader_push_ascii(output, "3 0 obj\n<< /Type /ObjStm /N 1 /First ")
+  reader_push_ascii(output, first.to_string())
+  reader_push_ascii(output, " /Length ")
+  reader_push_ascii(output, object_stream_data.length().to_string())
+  reader_push_ascii(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 2, 3, 0)
+  reader_push_xref_stream_entry(stream_data, 1, 999999, 0)
+  reader_push_xref_stream_entry(stream_data, 1, object_stream_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 2, 99, 0)
+  reader_push_ascii(output, "4 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 6 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_encrypted_xref_stream_pdf_with_missing_object_stream_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -2260,7 +2297,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers" {
   @test.assert_eq(parsed.version(), (1, 5))
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
-  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.object_numbers(), [1])
   @test.assert_eq(
     parsed
     .trailer_dict()
@@ -2289,7 +2326,7 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers without Typ
   @test.assert_eq(parsed.version(), (1, 5))
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
-  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(parsed.object_numbers(), [1])
   @test.assert_eq(
     parsed
     .trailer_dict()
@@ -2301,6 +2338,42 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers without Typ
     .trailer_dict()
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs xref stream object-stream roots" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_object_stream_root_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_object_stream_root_bad_startxref(),
+  )
+  @test.assert_eq(parsed.version(), (1, 5))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 3])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
+  guard parsed.lookup_object_or_null(3) is PdfStreamObject(object_stream) else {
+    fail("expected retained object stream")
+  }
+  @test.assert_eq(
+    object_stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+    ),
+    Some(PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/ObjStm")))),
   )
 }
 

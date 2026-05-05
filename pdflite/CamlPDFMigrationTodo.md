@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 84-87%.
+- Native main-feature parity: 85-88%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 72-77%.
+  breadth: 73-78%.
 
 ## P0: Native Main Workflows
 
@@ -70,6 +70,9 @@ Current estimate:
   parsing and `/CCF` alias coverage.~~
 - [x] ~~Typed CCITT Group 3 `/K 0` stream encoding with `/DecodeParms`
   round-trip coverage.~~
+- [x] ~~Real xref-stream/object-stream malformed-startxref recovery through a
+  checked-in CamlPDF fixture, multi-page text extraction, compressed rewrite,
+  and reread.~~
 - [ ] Broader predefined CMap semantics beyond Identity-H/V and more
   vertical-writing text behavior.
 - [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
@@ -77,8 +80,9 @@ Current estimate:
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [ ] Fuller zlib/Flate compression tuning parity.
-- [ ] Broader malformed xref-table/xref-stream/object-stream recovery driven by
-  public workflows and real-world corpus files.
+- [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
+  the current bad-startxref real-corpus gates, including multi-revision chains
+  and encrypted object streams.
 
 ## P2: Backend Breadth And Compatibility
 
@@ -92,6 +96,9 @@ Current estimate:
   async file wrappers.~~
 - [x] ~~Checked-in CamlPDF logo fixture reconstructs from a bad `startxref`
   pointer through native async file wrappers, compressed rewrite, and reread.~~
+- [x] ~~Checked-in CamlPDF intro fixture reconstructs from a bad `startxref`
+  pointer despite xref-stream/object-stream storage, then compressed rewrites
+  and rereads with multi-page text extraction intact.~~
 - [ ] Broader real-world PDF corpus testing.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
@@ -115,5 +122,8 @@ Current estimate:
 - [x] ~~Widen checked-in real PDF text extraction across multiple pages and
   compressed/decompressed reread boundaries.~~
 - [x] ~~Add a checked-in real PDF malformed-startxref reconstruction gate.~~
+- [x] ~~Extend the real malformed-startxref gate to xref-stream/object-stream
+  PDFs.~~
 - [ ] Add real-world CCITT image corpus coverage.
+- [ ] Add a multi-revision malformed xref-stream/object-stream recovery gate.
 - [ ] Revisit non-native backend validation after native parity is stable.

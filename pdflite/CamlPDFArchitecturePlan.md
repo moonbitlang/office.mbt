@@ -61,6 +61,10 @@ work changes.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.
+   Reconstruction now also scans recoverable xref-stream sections when the
+   `startxref` pointer is invalid, loads their ordinary entries, and expands
+   object-stream entries before selecting a trailer/root. This covers modern
+   files whose catalog or page tree only exists inside `/ObjStm` storage.
    Password-aware public read wrappers now also have revision-aware variants,
    and the public revision counter follows the same owned `Bytes` versus
    borrowed `BytesView` split as the rest of the reader surface.
@@ -72,8 +76,9 @@ work changes.
    CamlPDF-style deferred decryption state on `ToGet`, so file-backed encrypted
    stream bytes remain lazy until `stream_bytes` or `get_stream` forces
    plaintext materialization and `/Length` correction.
-   Remaining focus: broader malformed xref-table recovery and encrypted
-   parser-state edge cases outside stream and object-stream data.
+   Remaining focus: multi-revision malformed xref-stream/object-stream
+   recovery, broader malformed xref-table recovery, and encrypted parser-state
+   edge cases outside stream and object-stream data.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.

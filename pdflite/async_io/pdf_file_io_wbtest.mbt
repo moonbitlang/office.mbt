@@ -409,6 +409,40 @@ async test "async file wrappers reconstruct checked-in CamlPDF logo fixture with
 }
 
 ///|
+async test "async file wrappers reconstruct checked-in CamlPDF intro fixture with bad startxref" {
+  let intro_path = pdf_async_io_repo_path_for_test(
+    ".repos/introduction_to_camlpdf.pdf",
+  )
+  let corrupted_path = pdf_async_io_test_path_for_test(
+    "intro_bad_startxref_fixture",
+  )
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "intro_bad_startxref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(corrupted_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+
+  let corrupted = pdf_async_io_corrupt_startxref_pointer_for_test(
+    @fs.read_file(intro_path).binary(),
+  )
+  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  let recovered = pdf_read_document_from_file(corrupted_path)
+  @test.assert_eq(recovered.version(), (1, 5))
+  @test.assert_eq(recovered.first_xref(), 0)
+  pdf_async_io_assert_intro_fixture_text_for_test(recovered)
+
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recovered, repaired_path,
+  )
+  let reparsed = pdf_read_document_from_file(repaired_path)
+  @test.assert_eq(reparsed.first_xref() > 0, true)
+  pdf_async_io_assert_intro_fixture_text_for_test(reparsed)
+
+  pdf_async_io_remove_if_exists_for_test(corrupted_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+}
+
+///|
 async test "async file wrappers write xref streams and read encrypted documents" {
   let xref_path = pdf_async_io_test_path_for_test("xref")
   let encrypted_path = pdf_async_io_test_path_for_test("encrypted_xref")

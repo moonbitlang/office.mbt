@@ -1475,6 +1475,144 @@ fn pdf_read_reconstructed_trailers(
 }
 
 ///|
+fn pdf_reconstructed_xref_stream_section_at(
+  data : BytesView,
+  position : Int,
+) -> (PdfXRefSection, Int) raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  cursor.seek_pdf_absolute(position)
+  let section = cursor.read_pdf_xref_stream_section()
+  (section, cursor.absolute_position())
+}
+
+///|
+fn pdf_read_reconstructed_xref_stream_sections(
+  data : BytesView,
+) -> Array[PdfXRefSection] {
+  let sections : Array[PdfXRefSection] = []
+  let mut position = 0
+  while position < data.length() {
+    if pdf_reader_reconstruction_indirect_header_at(data, position) {
+      let parsed : Result[(PdfXRefSection, Int), Error] = try? pdf_reconstructed_xref_stream_section_at(
+        data, position,
+      )
+      match parsed {
+        Ok((section, next_position)) => {
+          sections.push(section)
+          position = next_position
+        }
+        Err(_) =>
+          position = pdf_reader_reconstruction_skip_malformed_object(
+            data, position,
+          ).unwrap()
+      }
+    } else {
+      position += 1
+    }
+  }
+  sections
+}
+
+///|
+fn pdf_reconstructed_xref_stream_entries(
+  sections : ArrayView[PdfXRefSection],
+) -> Array[PdfClassicXRefEntry] {
+  let xrefs : Array[PdfClassicXRefEntry] = []
+  for index = sections.length() - 1; index >= 0; index = index - 1 {
+    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].entries[:])
+  }
+  xrefs
+}
+
+///|
+fn pdf_reconstructed_xref_stream_sections_contain_object(
+  sections : ArrayView[PdfXRefSection],
+  object_number : Int,
+) -> Bool {
+  for section in sections {
+    match section.stream_object_number {
+      Some(number) if number == object_number => break true
+      _ => ()
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
+  self : PdfDocument,
+  data : BytesView,
+  sections : ArrayView[PdfXRefSection],
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> Unit {
+  let cursor = byte_cursor_of_view(data)
+  for xref in xrefs {
+    match xref.object_stream {
+      Some(_) => ()
+      None =>
+        if xref.in_use &&
+          xref.object_number != 0 &&
+          !pdf_reconstructed_xref_stream_sections_contain_object(
+            sections,
+            xref.object_number,
+          ) {
+          try {
+            cursor.seek_pdf_absolute(xref.offset)
+            let parsed = cursor.read_first_indirect_object_at_current(xrefs)
+            if parsed.number == xref.object_number &&
+              parsed.generation == xref.generation {
+              self.load_object_given_number(
+                parsed.number,
+                parsed.object,
+                generation=parsed.generation,
+              )
+            }
+          } catch {
+            _ => ()
+          }
+        }
+    }
+  }
+}
+
+///|
+fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
+  self : PdfDocument,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> Unit {
+  for xref in xrefs {
+    match xref.object_stream {
+      Some(reference) =>
+        if xref.in_use && xref.object_number != 0 {
+          try {
+            let (object_number, object) = self.read_object_stream_reference(
+              reference,
+            )
+            if object_number == xref.object_number {
+              self.load_object_given_number(xref.object_number, object)
+            }
+          } catch {
+            _ => ()
+          }
+        }
+      None => ()
+    }
+  }
+}
+
+///|
+fn PdfDocument::load_reconstructed_xref_stream_objects(
+  self : PdfDocument,
+  data : BytesView,
+  sections : ArrayView[PdfXRefSection],
+) -> Unit {
+  let xrefs = pdf_reconstructed_xref_stream_entries(sections)
+  self.load_reconstructed_xref_stream_plain_objects(data, sections, xrefs[:])
+  self.load_reconstructed_xref_stream_embedded_objects(xrefs[:])
+}
+
+///|
 fn PdfDocument::select_reconstructed_trailer(
   self : PdfDocument,
   trailers : ArrayView[PdfObject],
@@ -1517,14 +1655,29 @@ fn pdf_read_reconstructed_document_from_view(
   document.set_version(version.major, version.minor)
   document.set_first_xref(0)
   document.set_was_linearized(pdf_read_was_linearized(data))
+  let xref_stream_sections : Array[PdfXRefSection] = if include_xref_stream_trailers {
+    pdf_read_reconstructed_xref_stream_sections(data)
+  } else {
+    []
+  }
   for parsed in pdf_read_reconstructed_objects(data) {
-    if parsed.number > 0 {
+    if parsed.number > 0 &&
+      !pdf_reconstructed_xref_stream_sections_contain_object(
+        xref_stream_sections[:],
+        parsed.number,
+      ) {
       document.load_object_given_number(
         parsed.number,
         parsed.object,
         generation=parsed.generation,
       )
     }
+  }
+  if include_xref_stream_trailers {
+    document.load_reconstructed_xref_stream_objects(
+      data,
+      xref_stream_sections[:],
+    )
   }
   document.set_trailer_and_root(
     document.select_reconstructed_trailer(

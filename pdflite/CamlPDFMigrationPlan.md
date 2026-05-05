@@ -337,6 +337,11 @@ MoonBit consequences for this project:
    stream dictionaries as trailer candidates while stripping stream/xref-only
    keys; object-stream integrity errors still propagate instead of being hidden
    by this recovery.
+   Reconstruction now also parses recoverable xref-stream sections, merges
+   their entries newer-first, loads ordinary objects by offset, and expands
+   type-2 object-stream entries before trailer selection. This lets public reads
+   recover modern files whose `/Root` catalog or page tree is only present
+   inside an object stream after `startxref` has gone bad.
    Startxref discovery now mirrors CamlPDF's EOF-centered lookup by ignoring
    trailing junk after the final `%%EOF` marker.
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
@@ -349,9 +354,10 @@ MoonBit consequences for this project:
    independently while the offset, generation, and `n`/`f` columns remain
    parseable, and classic trailers whose dictionary starts immediately after
    the `trailer` keyword without intervening whitespace.
-   Broader malformed xref-table recovery remains deferred. The reconstruction
-   scan now builds a temporary offset table before materializing objects, so
-   recovered streams can resolve plain indirect `/Length n 0 R` entries. Public
+   Broader malformed xref-table and multi-revision xref-stream recovery remains
+   deferred. The reconstruction scan now builds a temporary offset table before
+   materializing objects, so recovered streams can resolve plain indirect
+   `/Length n 0 R` entries. Public
    reconstruction can now also recover stream objects with missing or unreadable
    `/Length` values by scanning through the following `endstream` marker and
    correcting `/Length`, and reconstructed object tokenization now skips raw

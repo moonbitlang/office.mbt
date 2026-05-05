@@ -35,7 +35,10 @@ moon run -c $'import { "moonbitlang/x/crypto" }\nfn main { let digest = @crypto.
 ```
 
 Use the imported package alias, for example `@crypto`; do not assume a
-fully-qualified package path works inside the snippet without an import.
+fully-qualified package path works inside the snippet without an import. The
+MBTX import block form is required for `moon run -c`; a source-file-style
+single package import such as `import "moonbitlang/core/encoding/ascii"` is
+rejected in command snippets.
 
 Useful verified probes:
 
