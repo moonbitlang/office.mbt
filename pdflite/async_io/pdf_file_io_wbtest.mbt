@@ -20,6 +20,23 @@ fn pdf_async_io_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn pdf_async_io_secret_object_for_test(text : String) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (pdf_async_io_name_for_test("/Title"), PdfString(@ascii.encode(text))),
+  ])
+}
+
+///|
+fn pdf_async_io_decryption_result_for_test(
+  result : @pdflite.PdfDecryptionResult?,
+) -> @pdflite.PdfDecryptionResult raise {
+  match result {
+    Some(result) => result
+    None => fail("expected decrypted async file")
+  }
+}
+
+///|
 async test "async file wrappers write and read PDF documents" {
   let path = pdf_async_io_test_path_for_test("roundtrip")
   pdf_async_io_remove_if_exists_for_test(path)
@@ -158,4 +175,74 @@ async test "async file wrappers write xref stream incremental updates" {
   pdf_async_io_remove_if_exists_for_test(compressed_path)
   @test.assert_eq(reparsed.lookup_object_or_null(21), added_object)
   @test.assert_eq(compressed_reparsed.lookup_object_or_null(21), added_object)
+}
+
+///|
+async test "async file wrappers read encrypted incremental revisions" {
+  let original_path = pdf_async_io_test_path_for_test(
+    "encrypted_revision_original",
+  )
+  let updated_path = pdf_async_io_test_path_for_test(
+    "encrypted_revision_incremental",
+  )
+  pdf_async_io_remove_if_exists_for_test(original_path)
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  let original_secret = pdf_async_io_secret_object_for_test(
+    "async encrypted original",
+  )
+  let updated_secret = pdf_async_io_secret_object_for_test(
+    "async encrypted updated",
+  )
+  let doc = try! @pdflite.pdf_minimum_valid_pdf()
+  doc.add_object_given_number(30, original_secret)
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoCopy]
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    @ascii.encode("user")[:],
+    @ascii.encode("owner")[:],
+    denied,
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async encrypted revision iv")[:],
+    ),
+    encrypt_metadata=false,
+    file_id=@ascii.encode("async-encrypted-revision-id")[:],
+  )
+  pdf_write_document_to_file(encrypted, original_path)
+  let decrypted = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_from_file_with_passwords(
+      original_path,
+      user_password=Some(@ascii.encode("user")[:]),
+    ),
+  )
+  decrypted.document.add_object_given_number(30, updated_secret)
+  let recrypted = try! decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    @ascii.encode("owner")[:],
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      @ascii.encode("async encrypted revision recrypt iv")[:],
+    ),
+  )
+  pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
+    original_path, recrypted, updated_path,
+  )
+  let revision_count = pdf_revisions_from_file(updated_path)
+  let newest = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_revision_from_file_with_passwords(
+      updated_path,
+      1,
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  let older = pdf_async_io_decryption_result_for_test(
+    pdf_read_document_revision_from_file_with_passwords(
+      updated_path,
+      2,
+      owner_password=Some(@ascii.encode("owner")[:]),
+    ),
+  )
+  pdf_async_io_remove_if_exists_for_test(original_path)
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  @test.assert_eq(revision_count, 2)
+  @test.assert_eq(newest.denied_permissions, denied)
+  @test.assert_eq(newest.document.lookup_object_or_null(30), updated_secret)
+  @test.assert_eq(older.denied_permissions, denied)
+  @test.assert_eq(older.document.lookup_object_or_null(30), original_secret)
 }

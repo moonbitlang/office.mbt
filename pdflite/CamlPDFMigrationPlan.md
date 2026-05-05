@@ -994,8 +994,9 @@ MoonBit consequences for this project:
     encryption/decryption is started with the unwrapped 32-byte file key.
     Deterministic AES IV and AESV3 random-field provider adapters are started
     for reproducible fixtures, backed by `moonbitlang/core/random` with an
-    explicit seed; true secure default entropy remains deferred until a
-    suitable OS-backed source is selected. Recursive ARC4 crypt plus AESV2/AESV3
+    explicit SHA-256-derived Chacha seed; true secure default entropy remains
+    deferred until a suitable OS-backed source is selected. Recursive ARC4 crypt
+    plus AESV2/AESV3
     encrypt/decrypt object walks are started for PDF strings, arrays,
     dictionaries, and stream dictionaries/data, with stream data materialized at
     the crypt boundary and `/Length` refreshed. Stream crypt skipping now matches
@@ -1374,6 +1375,10 @@ end to end:
   update, and read both newest and older encrypted revisions.
 - merge two generated documents, write/read through a compressed xref stream,
   extract pages in a new order, and reread the extracted document.
+- exercise native async file wrappers for encrypted incremental updates:
+  encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
+  xref-stream incremental write, revision count, and newest/older encrypted
+  revision reads.
 
 Near-term work should extend this suite with the next visible compatibility
 case, then fix the reader/parser/encryption gap it exposes. Broader backend

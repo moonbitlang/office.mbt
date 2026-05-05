@@ -573,9 +573,13 @@ fn pdf_crypt_deterministic_seed32(
   seed : BytesView,
   purpose : BytesView,
 ) -> PdfBytes {
-  let first = pdf_md5_digest(pdf_crypt_concat_bytes([seed, purpose]))
-  let second = pdf_md5_digest(pdf_crypt_concat_bytes([purpose, seed, first[:]]))
-  pdf_crypt_concat_bytes([first[:], second[:]])
+  pdf_sha256_digest(
+    pdf_crypt_concat_bytes([
+      @ascii.encode("pdflite-deterministic-aes-provider")[:],
+      seed,
+      purpose,
+    ]),
+  )
 }
 
 ///|

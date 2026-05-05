@@ -124,7 +124,9 @@ work changes.
    Status: ARC4, hashes, AES primitives, R2/R3/R4/R5/R6 authentication,
    object/string/stream crypt, decryption, deterministic provider adapters,
    provider-backed encryption, deterministic recrypt paths, and a
-   `pdfencrypt.ml`-style AES-128 acceptance fixture are started.
+   `pdfencrypt.ml`-style AES-128 acceptance fixture are started. Deterministic
+   AES fixture providers now derive their Chacha seeds through SHA-256 so
+   arbitrary seed/callsite byte lengths do not depend on MD5 padding behavior.
    Remaining focus: selecting a true secure OS-entropy provider and deferred
    parser-state encryption/decryption edges.
 
@@ -169,7 +171,8 @@ vertical acceptance path at a time instead of isolated edge polishing:
   through the writer, partial stream filter decompression, and AES-128
   password-wrapper reads plus AES-128 decrypt/recrypt incremental revision
   reads. Document-level merge and page extraction are also covered across a
-  compressed xref-stream read boundary.
+  compressed xref-stream read boundary, and native async file wrappers cover
+  encrypted incremental revision reads from disk.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, remaining malformed-reader recovery, and example-level integration
   fixtures.

@@ -254,6 +254,10 @@ test "deterministic AES providers derive stable bytes from seed and callsite" {
   @test.assert_eq(iv, same_iv_provider(5, 0, 1))
   @test.assert_eq(iv == iv_provider(5, 0, 2), false)
   @test.assert_eq(iv == other_iv_provider(5, 0, 1), false)
+  let boundary_iv_provider = @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+    @ascii.encode("async encrypted revision iv")[:],
+  )
+  @test.assert_eq(boundary_iv_provider(30, 0, 0).length(), 16)
   let random_provider = @pdflite.pdf_deterministic_aesv3_random_provider_from_seed(
     seed[:],
   )
