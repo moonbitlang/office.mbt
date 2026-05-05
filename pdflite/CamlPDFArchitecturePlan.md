@@ -168,7 +168,9 @@ work changes.
    parsing for codespaces plus `begincidchar`/`begincidrange` Type0
    `/Encoding` streams with variable-length text segmentation and CID fallback,
    plus `/UseCMap` name parsing from CMap programs and stream dictionaries
-   with Identity-H/V inherited segmentation and CID fallback,
+   with Identity-H/V inherited segmentation and CID fallback, plus recursive
+   stream `/UseCMap` composition with cycle protection, inherited codespaces,
+   derived-entry map/CID overrides, and inherited Identity fallback,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
@@ -192,8 +194,9 @@ work changes.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
    beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
    fallbacks, broader external/general CMap parsing beyond the current
-   codespace/CID-char/CID-range and Identity `/UseCMap` subset, plus JPEG pixel
-   decode and remaining image filter families.
+   codespace/CID-char/CID-range, Identity `/UseCMap`, and stream `/UseCMap`
+   composition subset, plus JPEG pixel decode and remaining image filter
+   families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -317,8 +320,9 @@ and backend breadth, is about 81-86% complete.
   and Hojo-EUC when `/ToUnicode` is absent, external CMap stream parsing for
   codespaces plus `begincidchar`/`begincidrange` Type0 `/Encoding` streams,
   variable-length text segmentation, CID fallback, reverse CID lookup, and
-  Identity-H/V `/UseCMap` base-name inheritance, and an Identity-V native gate
-  with vertical width metadata. Native image acceptance now also covers
+  Identity-H/V `/UseCMap` base-name inheritance plus recursive stream
+  `/UseCMap` composition, and an Identity-V native gate with vertical width
+  metadata. Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
   images with `/JBIG2Globals`, and CCITT image XObjects through raw RGB
@@ -332,9 +336,10 @@ and backend breadth, is about 81-86% complete.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
   beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
   fallbacks, broader external/general CMap parsing beyond the current
-  codespace/CID-char/CID-range and Identity `/UseCMap` subset, additional
-  TrueType and Type3 glyph-program edge coverage, more real-world ToUnicode
-  variations, and broader real-world DCT/JPEG image payload corpus files.
+  codespace/CID-char/CID-range, Identity `/UseCMap`, and stream `/UseCMap`
+  composition subset, additional TrueType and Type3 glyph-program edge
+  coverage, more real-world ToUnicode variations, and broader real-world
+  DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.

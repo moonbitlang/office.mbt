@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 93-95%.
+- Native main-feature parity: 94-95%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 82-87%.
+  breadth: 83-88%.
 
 ## P0: Native Main Workflows
 
@@ -141,10 +141,15 @@ Current estimate:
 - [x] ~~External CMap `/UseCMap` name parsing from CMap programs and stream
   dictionaries, including Identity-H/V inherited two-byte segmentation,
   explicit CID-map override behavior, CID fallback, and reverse CID lookup.~~
+- [x] ~~External CMap stream `/UseCMap` composition, including recursive parsed
+  stream bases, cycle protection, inherited codespaces, map/CID inheritance,
+  key-based derived-entry override behavior, inherited Identity fallback, and
+  reverse CID lookup.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus broader external/general CMap parsing beyond the current
-  codespace/CID-char/CID-range and Identity `/UseCMap` subset.
+  codespace/CID-char/CID-range, Identity `/UseCMap`, and parsed stream
+  `/UseCMap` composition subset.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -266,7 +271,10 @@ Current estimate:
   predefined CMap families, or real-world ToUnicode variation coverage.~~
 - [x] ~~Add the next remaining text parity slice: external CMap Identity
   `/UseCMap` parsing and inherited segmentation/CID fallback.~~
+- [x] ~~Add the next remaining text parity slice: external CMap stream
+  `/UseCMap` composition with derived-entry overrides and cycle protection.~~
 - [ ] Add the next remaining text parity slice: broader external/general CMap
-  parsing beyond codespace/CID-char/CID-range and Identity `/UseCMap`, remaining
-  rare predefined CMap families, or real-world ToUnicode variation coverage.
+  parsing beyond codespace/CID-char/CID-range, Identity `/UseCMap`, and stream
+  `/UseCMap` composition, remaining rare predefined CMap families, or
+  real-world ToUnicode variation coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.

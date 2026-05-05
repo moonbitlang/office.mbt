@@ -3279,6 +3279,106 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
 }
 
 ///|
+fn pdf_text_cmap_seen_contains(seen : ArrayView[Int], number : Int) -> Bool {
+  for seen_number in seen {
+    if seen_number == number {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_text_tounicode_has_charcode(
+  entries : ArrayView[(Int, PdfBytes)],
+  code : Int,
+) -> Bool {
+  for entry in entries {
+    if entry.0 == code {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
+fn pdf_text_compose_tounicode_entries(
+  current : ArrayView[(Int, PdfBytes)],
+  inherited : ArrayView[(Int, PdfBytes)],
+) -> Array[(Int, PdfBytes)] {
+  let output : Array[(Int, PdfBytes)] = []
+  for entry in current {
+    output.push(entry)
+  }
+  for entry in inherited {
+    if !pdf_text_tounicode_has_charcode(output[:], entry.0) {
+      output.push(entry)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_text_compose_cid_entries(
+  current : ArrayView[(Int, Int)],
+  inherited : ArrayView[(Int, Int)],
+) -> Array[(Int, Int)] {
+  let output : Array[(Int, Int)] = []
+  for entry in current {
+    output.push(entry)
+  }
+  for entry in inherited {
+    if !pdf_text_cmap_has_charcode(output[:], entry.0) {
+      output.push(entry)
+    }
+  }
+  output
+}
+
+///|
+fn pdf_text_compose_codespaces(
+  current : ArrayView[PdfCMapCodeSpace],
+  inherited : ArrayView[PdfCMapCodeSpace],
+) -> Array[PdfCMapCodeSpace] {
+  let output : Array[PdfCMapCodeSpace] = []
+  for entry in current {
+    output.push(entry)
+  }
+  for entry in inherited {
+    output.push(entry)
+  }
+  output
+}
+
+///|
+fn pdf_text_compose_parsed_cmap(
+  current : PdfParsedCMap,
+  inherited : PdfParsedCMap,
+) -> PdfParsedCMap {
+  {
+    map: pdf_text_compose_tounicode_entries(current.map[:], inherited.map[:]),
+    cid_map: pdf_text_compose_cid_entries(
+      current.cid_map[:],
+      inherited.cid_map[:],
+    ),
+    codespaces: pdf_text_compose_codespaces(
+      current.codespaces[:],
+      inherited.codespaces[:],
+    ),
+    usecmap: match current.usecmap {
+      Some(_) => current.usecmap
+      None => inherited.usecmap
+    },
+    wmode: match current.wmode {
+      Some(_) => current.wmode
+      None => inherited.wmode
+    },
+  }
+}
+
+///|
 fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
   self : PdfDocument,
   object : PdfObject,
@@ -3297,16 +3397,50 @@ fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
 }
 
 ///|
+fn PdfDocument::parse_cmap_with_seen(
+  self : PdfDocument,
+  cmap : PdfObject,
+  seen : ArrayView[Int],
+) -> PdfParsedCMap raise PdfError {
+  let next_seen = match cmap {
+    PdfIndirect(number) => {
+      guard !pdf_text_cmap_seen_contains(seen, number) else {
+        raise CMapEncodingExpected
+      }
+      let output = seen.to_owned()
+      output.push(number)
+      output
+    }
+    _ => seen.to_owned()
+  }
+  let bytes = self.pdf_text_decoded_cmap_stream_data_direct(cmap)
+  let parsed = pdf_parse_cmap_data(bytes[:])
+  match
+    (
+      parsed.usecmap,
+      self.direct(cmap).lookup_immediate(pdf_text_name("/UseCMap")),
+    ) {
+    (None, Some(PdfNameObject(name))) => { ..parsed, usecmap: Some(name) }
+    (None, Some(base)) =>
+      match base {
+        PdfIndirect(_) | PdfStreamObject(_) =>
+          try self.parse_cmap_with_seen(base, next_seen[:]) catch {
+            _ => parsed
+          } noraise {
+            inherited => pdf_text_compose_parsed_cmap(parsed, inherited)
+          }
+        _ => parsed
+      }
+    _ => parsed
+  }
+}
+
+///|
 pub fn PdfDocument::parse_cmap(
   self : PdfDocument,
   cmap : PdfObject,
 ) -> PdfParsedCMap raise PdfError {
-  let bytes = self.pdf_text_decoded_cmap_stream_data_direct(cmap)
-  let parsed = pdf_parse_cmap_data(bytes[:])
-  match (parsed.usecmap, self.lookup_direct(pdf_text_name("/UseCMap"), cmap)) {
-    (None, Some(PdfNameObject(name))) => { ..parsed, usecmap: Some(name) }
-    _ => parsed
-  }
+  self.parse_cmap_with_seen(cmap, [])
 }
 
 ///|

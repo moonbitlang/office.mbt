@@ -2361,6 +2361,48 @@ test "private external CMap helpers cover malformed and compact sections" {
     ),
     [0x4100],
   )
+  let composed = pdf_text_compose_parsed_cmap(
+    {
+      map: [(1, wbtest_text_bytes([0x00, 0x41]))],
+      cid_map: [(1, 10)],
+      codespaces: [{ length: 1, first: 1, last: 1 }],
+      usecmap: Some(wbtest_text_name("/Identity-V")),
+      wmode: Some(1),
+    },
+    {
+      map: [
+        (1, wbtest_text_bytes([0x00, 0x42])),
+        (2, wbtest_text_bytes([0x00, 0x43])),
+      ],
+      cid_map: [(1, 11), (2, 12)],
+      codespaces: [{ length: 2, first: 0, last: 0xFFFF }],
+      usecmap: Some(wbtest_text_name("/Identity-H")),
+      wmode: Some(0),
+    },
+  )
+  @test.assert_eq(composed.map, [
+    (1, wbtest_text_bytes([0x00, 0x41])),
+    (2, wbtest_text_bytes([0x00, 0x43])),
+  ])
+  @test.assert_eq(composed.cid_map, [(1, 10), (2, 12)])
+  @test.assert_eq(composed.codespaces, [
+    { length: 1, first: 1, last: 1 },
+    { length: 2, first: 0, last: 0xFFFF },
+  ])
+  @test.assert_eq(composed.usecmap, Some(wbtest_text_name("/Identity-V")))
+  @test.assert_eq(composed.wmode, Some(1))
+  let inherited_metadata = pdf_text_compose_parsed_cmap(empty_parsed, {
+    map: [],
+    cid_map: [],
+    codespaces: [],
+    usecmap: Some(wbtest_text_name("/Identity-H")),
+    wmode: Some(0),
+  })
+  @test.assert_eq(
+    inherited_metadata.usecmap,
+    Some(wbtest_text_name("/Identity-H")),
+  )
+  @test.assert_eq(inherited_metadata.wmode, Some(0))
   @test.assert_eq(
     pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" 7x")[:], 0),
     Some((7, 2)),

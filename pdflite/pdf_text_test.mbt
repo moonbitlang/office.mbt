@@ -2725,6 +2725,120 @@ test "PdfDocument applies external CMap Identity UseCMap fallback" {
 }
 
 ///|
+test "PdfDocument composes external CMap UseCMap stream bases" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(4, text_valid_cid_descendant_for_test([]))
+  let base_data = @ascii.encode(
+    "/Identity-H usecmap\n" +
+    "/WMode 0 def\n" +
+    "1 begincodespacerange\n" +
+    "<0000><00FF>\n" +
+    "endcodespacerange\n" +
+    "1 begincidrange\n" +
+    "<0040><0042> 500\n" +
+    "endcidrange\n" +
+    "2 beginbfchar\n" +
+    "<0041><0042>\n" +
+    "<0042><0043>\n" +
+    "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    6,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(base_data.length())),
+      ]),
+      StreamGot(base_data),
+    ),
+  )
+  let derived_data = @ascii.encode(
+    "/WMode 1 def\n" +
+    "1 begincidchar\n" +
+    "<0041> 99\n" +
+    "endcidchar\n" +
+    "1 beginbfchar\n" +
+    "<0041><0041>\n" +
+    "endbfchar\n",
+  )
+  let derived_cmap = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(derived_data.length())),
+      (text_name_for_test("/UseCMap"), PdfIndirect(6)),
+    ]),
+    StreamGot(derived_data),
+  )
+  doc.add_object_given_number(5, derived_cmap)
+  let parsed = try! doc.parse_cmap(PdfIndirect(5))
+  @test.assert_eq(parsed.wmode, Some(1))
+  @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-H")))
+  @test.assert_eq(parsed.codespaces, [
+    { length: 2, first: 0x0000, last: 0x00FF },
+  ])
+  @test.assert_eq(parsed.cid_map, [(0x0041, 99), (0x0040, 500), (0x0042, 502)])
+  @test.assert_eq(parsed.map, [
+    (0x0041, text_bytes_for_test([0x00, 0x41])),
+    (0x0042, text_bytes_for_test([0x00, 0x43])),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (text_name_for_test("/BaseFont"), PdfNameObject(text_name_for_test("/T"))),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(4)])),
+    (text_name_for_test("/Encoding"), PdfIndirect(5)),
+  ])
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x40, 0x00, 0x41, 0x00, 0x42])[:],
+    ),
+    [500, 99, 502],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0x0041))
+  @test.assert_eq(extractor.charcode_of_codepoint(500), Some(0x0040))
+  @test.assert_eq(extractor.charcode_of_codepoint(501), Some(0x01F5))
+}
+
+///|
+test "PdfDocument ignores cyclic external CMap UseCMap stream bases" {
+  let doc = @pdflite.pdf_document_empty()
+  let cmap_data = @ascii.encode(
+    "1 begincidchar\n" + "<41> 7\n" + "endcidchar\n",
+  )
+  doc.add_object_given_number(
+    9,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(cmap_data.length())),
+        (text_name_for_test("/UseCMap"), PdfIndirect(9)),
+      ]),
+      StreamGot(cmap_data),
+    ),
+  )
+  @test.assert_eq((try! doc.parse_cmap(PdfIndirect(9))).cid_map, [(0x41, 7)])
+}
+
+///|
+test "PdfDocument ignores malformed external CMap UseCMap values" {
+  let doc = @pdflite.pdf_document_empty()
+  let cmap_data = @ascii.encode(
+    "1 begincidchar\n" + "<41> 7\n" + "endcidchar\n",
+  )
+  doc.add_object_given_number(
+    10,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(cmap_data.length())),
+        (text_name_for_test("/UseCMap"), PdfInteger(1)),
+      ]),
+      StreamGot(cmap_data),
+    ),
+  )
+  @test.assert_eq((try! doc.parse_cmap(PdfIndirect(10))).cid_map, [(0x41, 7)])
+}
+
+///|
 test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
   let tounicode = @pdflite.pdf_stream(
