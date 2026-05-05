@@ -1150,8 +1150,44 @@ fn pdf_flate_push_adler32(output : Array[Byte], data : BytesView) -> Unit {
 }
 
 ///|
-fn pdf_flate_encode_stored_view(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = [0x78, 0x01]
+fn pdf_flate_default_header() -> Array[Byte] {
+  [0x78, 0x01]
+}
+
+///|
+fn pdf_flate_header_for_level(level : Int) -> Array[Byte] raise PdfError {
+  guard level >= 0 && level <= 9 else { raise InvalidFlateData }
+  let compression_hint = if level <= 1 {
+    0
+  } else if level <= 5 {
+    1
+  } else if level == 6 {
+    2
+  } else {
+    3
+  }
+  let cmf = 0x78
+  let flg_without_check = compression_hint << 6
+  let remainder = ((cmf << 8) + flg_without_check) % 31
+  let fcheck = if remainder == 0 { 0 } else { 31 - remainder }
+  [cmf.to_byte(), (flg_without_check + fcheck).to_byte()]
+}
+
+///|
+fn pdf_flate_output_with_header(header : ArrayView[Byte]) -> Array[Byte] {
+  let output : Array[Byte] = []
+  for byte in header {
+    output.push(byte)
+  }
+  output
+}
+
+///|
+fn pdf_flate_encode_stored_view_with_header(
+  data : BytesView,
+  header : ArrayView[Byte],
+) -> PdfBytes {
+  let output = pdf_flate_output_with_header(header)
   if data.length() == 0 {
     pdf_flate_push_stored_block(output, data, 0, 0, true)
   } else {
@@ -1174,38 +1210,44 @@ fn pdf_flate_encode_stored_view(data : BytesView) -> PdfBytes {
 }
 
 ///|
-fn pdf_flate_encode_fixed_literal_view(data : BytesView) -> PdfBytes {
-  let output : Array[Byte] = [0x78, 0x01]
+fn pdf_flate_encode_fixed_literal_view_with_header(
+  data : BytesView,
+  header : ArrayView[Byte],
+) -> PdfBytes {
+  let output = pdf_flate_output_with_header(header)
   pdf_flate_push_fixed_literal_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
 }
 
 ///|
-fn pdf_flate_encode_fixed_repeat_view(
+fn pdf_flate_encode_fixed_repeat_view_with_header(
   data : BytesView,
+  header : ArrayView[Byte],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = [0x78, 0x01]
+  let output = pdf_flate_output_with_header(header)
   pdf_flate_push_fixed_repeat_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
 }
 
 ///|
-fn pdf_flate_encode_fixed_match_view(
+fn pdf_flate_encode_fixed_match_view_with_header(
   data : BytesView,
+  header : ArrayView[Byte],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = [0x78, 0x01]
+  let output = pdf_flate_output_with_header(header)
   pdf_flate_push_fixed_match_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
 }
 
 ///|
-fn pdf_flate_encode_dynamic_match_view(
+fn pdf_flate_encode_dynamic_match_view_with_header(
   data : BytesView,
+  header : ArrayView[Byte],
 ) -> PdfBytes raise PdfError {
-  let output : Array[Byte] = [0x78, 0x01]
+  let output = pdf_flate_output_with_header(header)
   pdf_flate_push_dynamic_match_block(output, data, true)
   pdf_flate_push_adler32(output, data)
   Bytes::from_array(output)
@@ -1221,23 +1263,67 @@ fn pdf_flate_shortest(a : PdfBytes, b : PdfBytes) -> PdfBytes {
 }
 
 ///|
-pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
-  let stored = pdf_flate_encode_stored_view(data)
-  let fixed = pdf_flate_encode_fixed_literal_view(data)
-  let repeat = try! pdf_flate_encode_fixed_repeat_view(data)
-  let matched = try! pdf_flate_encode_fixed_match_view(data)
-  let dynamic = try pdf_flate_encode_dynamic_match_view(data) catch {
-    _ => None
-  } noraise {
-    bytes => Some(bytes)
+fn pdf_flate_shortest_result(
+  current : PdfBytes,
+  candidate : Result[PdfBytes, Error],
+) -> PdfBytes {
+  match candidate {
+    Ok(bytes) => pdf_flate_shortest(current, bytes)
+    Err(_) => current
   }
+}
+
+///|
+fn pdf_flate_encode_shortest_view_with_header(
+  data : BytesView,
+  header : ArrayView[Byte],
+) -> PdfBytes {
+  let stored = pdf_flate_encode_stored_view_with_header(data, header)
+  let fixed = pdf_flate_encode_fixed_literal_view_with_header(data, header)
   let mut shortest = pdf_flate_shortest(stored, fixed)
-  shortest = pdf_flate_shortest(shortest, repeat)
-  shortest = pdf_flate_shortest(shortest, matched)
-  match dynamic {
-    Some(dynamic) => pdf_flate_shortest(shortest, dynamic)
-    None => shortest
+  let repeat : Result[PdfBytes, Error] = try? pdf_flate_encode_fixed_repeat_view_with_header(
+    data, header,
+  )
+  shortest = pdf_flate_shortest_result(shortest, repeat)
+  let matched : Result[PdfBytes, Error] = try? pdf_flate_encode_fixed_match_view_with_header(
+    data, header,
+  )
+  shortest = pdf_flate_shortest_result(shortest, matched)
+  let dynamic : Result[PdfBytes, Error] = try? pdf_flate_encode_dynamic_match_view_with_header(
+    data, header,
+  )
+  pdf_flate_shortest_result(shortest, dynamic)
+}
+
+///|
+pub fn pdf_flate_encode_view_with_level(
+  data : BytesView,
+  level : Int,
+) -> PdfBytes raise PdfError {
+  let header = pdf_flate_header_for_level(level)
+  if level == 0 {
+    pdf_flate_encode_stored_view_with_header(data, header[:])
+  } else if level <= 3 {
+    pdf_flate_encode_fixed_match_view_with_header(data, header[:])
+  } else {
+    pdf_flate_encode_shortest_view_with_header(data, header[:])
   }
+}
+
+///|
+pub fn pdf_flate_encode_view(data : BytesView) -> PdfBytes {
+  pdf_flate_encode_shortest_view_with_header(
+    data,
+    pdf_flate_default_header()[:],
+  )
+}
+
+///|
+pub fn pdf_flate_encode_with_level(
+  data : PdfBytes,
+  level : Int,
+) -> PdfBytes raise PdfError {
+  pdf_flate_encode_view_with_level(data[:], level)
 }
 
 ///|

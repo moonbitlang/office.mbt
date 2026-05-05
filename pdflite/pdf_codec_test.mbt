@@ -452,6 +452,38 @@ test "pdf_flate_encode chooses compact zlib blocks" {
 }
 
 ///|
+test "pdf_flate_encode_with_level exposes zlib level choices" {
+  let repeated = @ascii.encode("ABC".repeat(80))
+  let stored = @pdflite.pdf_flate_encode_with_level(repeated, 0)
+  @test.assert_eq(stored[0].to_int(), 120)
+  @test.assert_eq(stored[1].to_int(), 1)
+  @test.assert_eq(stored[2].to_int() & 0x07, 1)
+  @test.assert_eq(@pdflite.pdf_flate_decode(stored), repeated)
+
+  let fast = @pdflite.pdf_flate_encode_with_level(repeated, 1)
+  @test.assert_eq(fast[1].to_int(), 1)
+  @test.assert_eq(fast.length() < stored.length(), true)
+  @test.assert_eq(@pdflite.pdf_flate_decode(fast), repeated)
+
+  let default_level = @pdflite.pdf_flate_encode_with_level(repeated, 6)
+  @test.assert_eq(default_level[1].to_int(), 156)
+  @test.assert_eq(@pdflite.pdf_flate_decode(default_level), repeated)
+
+  let balanced = @pdflite.pdf_flate_encode_with_level(repeated, 4)
+  @test.assert_eq(balanced[1].to_int(), 94)
+  @test.assert_eq(@pdflite.pdf_flate_decode(balanced), repeated)
+
+  let best = @pdflite.pdf_flate_encode_view_with_level(repeated[:], 9)
+  @test.assert_eq(best[1].to_int(), 218)
+  @test.assert_eq(@pdflite.pdf_flate_decode(best), repeated)
+
+  let invalid : Result[@pdflite.PdfBytes, Error] = try? @pdflite.pdf_flate_encode_with_level(
+    repeated, 10,
+  )
+  guard invalid is Err(_) else { fail("expected invalid Flate level to raise") }
+}
+
+///|
 test "pdf_flate view codecs read borrowed slices" {
   let plain = codec_ascii_for_test("Hi")
   let wrapped_plain = codec_wrap_view_for_test("xx", plain[:], "yy")
@@ -574,6 +606,69 @@ test "pdf_encode_filter_bytes dispatches supported filter names" {
     ),
     codec_bytes_for_test([120, 1, 243, 200, 4, 0, 0, 251, 0, 178]),
   )
+}
+
+///|
+test "pdf encode filter and stream APIs accept explicit Flate levels" {
+  let flate = codec_name_for_test("/FlateDecode")
+  let data = codec_ascii_for_test("ABCABCABCABCABCABC")
+  let encoded = @pdflite.pdf_encode_filter_bytes_with_flate_level(
+    flate, data, 6,
+  )
+  @test.assert_eq(encoded[1].to_int(), 156)
+  @test.assert_eq(@pdflite.pdf_decode_filter_bytes(flate, encoded), data)
+
+  let length = codec_name_for_test("/Length")
+  let stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(data.length()))]),
+    StreamGot(data),
+  )
+  let stored = @pdflite.pdf_encode_stream_with_filter(
+    flate,
+    stream,
+    flate_level=Some(0),
+  )
+  guard stored is PdfStreamObject(stored_stream) else {
+    fail("expected Flate-encoded stream")
+  }
+  guard stored_stream.data is StreamGot(stored_data) else {
+    fail("expected owned encoded stream")
+  }
+  @test.assert_eq(stored_data[1].to_int(), 1)
+  @test.assert_eq(
+    stored_stream.dictionary.lookup_immediate(length),
+    Some(PdfInteger(stored_data.length())),
+  )
+
+  let tuned = @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamFlate,
+    stream,
+    flate_level=Some(9),
+  )
+  guard tuned is PdfStreamObject(tuned_stream) else {
+    fail("expected tuned Flate stream")
+  }
+  guard tuned_stream.data is StreamGot(tuned_data) else {
+    fail("expected owned tuned stream")
+  }
+  @test.assert_eq(tuned_data[1].to_int(), 218)
+
+  let predicted = @pdflite.pdf_encode_stream_with_filter_and_predictor(
+    flate,
+    10,
+    1,
+    8,
+    data.length(),
+    stream,
+    flate_level=Some(4),
+  )
+  guard predicted is PdfStreamObject(predicted_stream) else {
+    fail("expected predictor Flate stream")
+  }
+  guard predicted_stream.data is StreamGot(predicted_data) else {
+    fail("expected owned predictor stream")
+  }
+  @test.assert_eq(predicted_data[1].to_int(), 94)
 }
 
 ///|

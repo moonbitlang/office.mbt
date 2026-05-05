@@ -520,12 +520,16 @@ MoonBit consequences for this project:
    `/DecodeParms` predictor dictionary and round-trip through owned stream
    decode. Stream encoding now supports CamlPDF-style
    `only_if_smaller` gating, leaving streams unchanged unless the encoded data
-   plus overhead is smaller than the original bytes. CamlPDF-style typed
-   encoding and predictor choices are now exposed as `PdfStreamEncoding` and
-   `PdfStreamPredictor`, with a `pdf_encode_stream_with_encoding` wrapper over
-   the existing filter/predictor implementation; CCITT names map to
-   `/CCITTFaxDecode`, while actual CCITT encoding remains an explicit
-   unsupported-filter path. Native CCITT decode is now started for
+   plus overhead is smaller than the original bytes. Direct Flate, filter, and
+   stream encoding paths now expose explicit zlib-style levels 0 through 9 as
+   the MoonBit replacement for CamlPDF's mutable global `flate_level`, while
+   preserving the existing default compact encoder for callers that do not pass
+   a level. CamlPDF-style typed encoding and predictor choices are now exposed
+   as `PdfStreamEncoding` and `PdfStreamPredictor`, with a
+   `pdf_encode_stream_with_encoding` wrapper over the existing filter/predictor
+   implementation; CCITT names map to `/CCITTFaxDecode`, while actual CCITT
+   encoding remains an explicit unsupported-filter path. Native CCITT decode is
+   now started for
    `/CCITTFaxDecode` and `/CCF`, covering Group 3 one-dimensional `/K 0`, Group
    4 `/K < 0`, CamlPDF-compatible `/DecodeParms` defaults, `/BlackIs1`, and
    direct indirect decode parameters. Typed CCITT Group 3 `/K 0` encoding is

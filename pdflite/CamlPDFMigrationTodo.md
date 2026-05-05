@@ -92,7 +92,10 @@ Current estimate:
 - [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
-- [ ] Fuller zlib/Flate compression tuning parity.
+- [x] ~~Explicit zlib-style Flate level API across direct Flate, filter, and
+  stream encoding surfaces.~~
+- [ ] Byte-identical zlib strategy and performance parity beyond explicit
+  Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.
@@ -139,6 +142,7 @@ Current estimate:
 - [x] ~~Extend the real malformed-startxref gate to xref-stream/object-stream
   PDFs.~~
 - [x] ~~Add a hybrid classic `/XRefStm` malformed-startxref reconstruction gate.~~
+- [x] ~~Add explicit Flate compression-level encoding APIs.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~

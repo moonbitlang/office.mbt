@@ -96,8 +96,11 @@ work changes.
    CCITT decode honors CamlPDF-compatible `/DecodeParms` defaults, direct
    indirect parameters, and the `/CCF` alias; typed CCITT Group 3 encode writes
    `/DecodeParms` so encoded streams round-trip through pdflite's decoder.
-   Remaining focus: fuller zlib-style Flate tuning, optional JBIG2
-   external-tool decode parity, CCITT Group 4 external-tool encode policy,
+   Direct Flate, filter, and stream encoding APIs now accept explicit zlib-style
+   levels 0 through 9, keeping the default compact encoder unchanged while
+   exposing CamlPDF's `flate_level` workflow without global mutable state.
+   Remaining focus: byte-identical zlib strategy/performance tuning, optional
+   JBIG2 external-tool decode parity, CCITT Group 4 external-tool encode policy,
    broader CCITT corpus validation, and DCT/JPEG real-world payload coverage.
 
 4. Page and content layer.

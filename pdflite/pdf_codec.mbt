@@ -574,6 +574,28 @@ pub fn pdf_encode_filter_view(
   filter : PdfName,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
+  pdf_encode_filter_view_with_optional_flate_level(filter, data, None)
+}
+
+///|
+pub fn pdf_encode_filter_view_with_flate_level(
+  filter : PdfName,
+  data : BytesView,
+  flate_level : Int,
+) -> PdfBytes raise PdfError {
+  pdf_encode_filter_view_with_optional_flate_level(
+    filter,
+    data,
+    Some(flate_level),
+  )
+}
+
+///|
+fn pdf_encode_filter_view_with_optional_flate_level(
+  filter : PdfName,
+  data : BytesView,
+  flate_level : Int?,
+) -> PdfBytes raise PdfError {
   if pdf_filter_is_name(filter, "/Crypt") {
     data.to_owned()
   } else if pdf_filter_is_one_of(filter, "/ASCIIHexDecode", "/AHx") {
@@ -583,7 +605,10 @@ pub fn pdf_encode_filter_view(
   } else if pdf_filter_is_one_of(filter, "/RunLengthDecode", "/RL") {
     pdf_run_length_encode_view(data)
   } else if pdf_filter_is_one_of(filter, "/FlateDecode", "/Fl") {
-    pdf_flate_encode_view(data)
+    match flate_level {
+      Some(level) => pdf_flate_encode_view_with_level(data, level)
+      None => pdf_flate_encode_view(data)
+    }
   } else {
     raise FilterNotSupported(filter)
   }
@@ -595,6 +620,15 @@ pub fn pdf_encode_filter_bytes(
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   pdf_encode_filter_view(filter, data[:])
+}
+
+///|
+pub fn pdf_encode_filter_bytes_with_flate_level(
+  filter : PdfName,
+  data : PdfBytes,
+  flate_level : Int,
+) -> PdfBytes raise PdfError {
+  pdf_encode_filter_view_with_flate_level(filter, data[:], flate_level)
 }
 
 ///|
@@ -2000,11 +2034,16 @@ pub fn pdf_encode_stream_with_filter(
   filter : PdfName,
   object : PdfObject,
   only_if_smaller? : Bool = false,
+  flate_level? : Int? = None,
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = pdf_stream_data_bytes(stream.data)
-      let encoded = pdf_encode_filter_bytes(filter, data)
+      let encoded = match flate_level {
+        Some(level) =>
+          pdf_encode_filter_bytes_with_flate_level(filter, data, level)
+        None => pdf_encode_filter_bytes(filter, data)
+      }
       if only_if_smaller && !pdf_encoded_stream_is_smaller(encoded, data) {
         object
       } else {
@@ -2113,6 +2152,7 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
   columns : Int,
   object : PdfObject,
   only_if_smaller? : Bool = false,
+  flate_level? : Int? = None,
 ) -> PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
@@ -2120,7 +2160,11 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
       let predicted = pdf_encode_predictor(
         predictor, colors, bits_per_component, columns, data,
       )
-      let encoded = pdf_encode_filter_bytes(filter, predicted)
+      let encoded = match flate_level {
+        Some(level) =>
+          pdf_encode_filter_bytes_with_flate_level(filter, predicted, level)
+        None => pdf_encode_filter_bytes(filter, predicted)
+      }
       if only_if_smaller && !pdf_encoded_stream_is_smaller(encoded, data) {
         object
       } else {
@@ -2150,6 +2194,7 @@ pub fn pdf_encode_stream_with_encoding(
   only_if_smaller? : Bool = false,
   predictor? : PdfStreamPredictor? = None,
   predictor_columns? : Int = 1,
+  flate_level? : Int? = None,
 ) -> PdfObject raise PdfError {
   let filter = encoding.filter_name()
   match encoding {
@@ -2163,7 +2208,13 @@ pub fn pdf_encode_stream_with_encoding(
       raise CCITTNotSupported("CCITT Group 4 encode requires external tool")
     _ =>
       match predictor {
-        None => pdf_encode_stream_with_filter(filter, object, only_if_smaller~)
+        None =>
+          pdf_encode_stream_with_filter(
+            filter,
+            object,
+            only_if_smaller~,
+            flate_level~,
+          )
         Some(predictor) =>
           pdf_encode_stream_with_filter_and_predictor(
             filter,
@@ -2173,6 +2224,7 @@ pub fn pdf_encode_stream_with_encoding(
             predictor_columns,
             object,
             only_if_smaller~,
+            flate_level~,
           )
       }
   }

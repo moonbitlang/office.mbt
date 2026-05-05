@@ -203,17 +203,21 @@ pub fn pdf_document_of_parsed_indirect_objects(ArrayView[PdfParsedIndirectObject
 
 pub fn pdf_encode_filter_bytes(PdfName, Bytes) -> Bytes raise PdfError
 
+pub fn pdf_encode_filter_bytes_with_flate_level(PdfName, Bytes, Int) -> Bytes raise PdfError
+
 pub fn pdf_encode_filter_view(PdfName, BytesView) -> Bytes raise PdfError
+
+pub fn pdf_encode_filter_view_with_flate_level(PdfName, BytesView, Int) -> Bytes raise PdfError
 
 pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise PdfError
 
 pub fn pdf_encode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise PdfError
 
-pub fn pdf_encode_stream_with_encoding(PdfStreamEncoding, PdfObject, only_if_smaller? : Bool, predictor? : PdfStreamPredictor?, predictor_columns? : Int) -> PdfObject raise PdfError
+pub fn pdf_encode_stream_with_encoding(PdfStreamEncoding, PdfObject, only_if_smaller? : Bool, predictor? : PdfStreamPredictor?, predictor_columns? : Int, flate_level? : Int?) -> PdfObject raise PdfError
 
-pub fn pdf_encode_stream_with_filter(PdfName, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
+pub fn pdf_encode_stream_with_filter(PdfName, PdfObject, only_if_smaller? : Bool, flate_level? : Int?) -> PdfObject raise PdfError
 
-pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject, only_if_smaller? : Bool) -> PdfObject raise PdfError
+pub fn pdf_encode_stream_with_filter_and_predictor(PdfName, Int, Int, Int, Int, PdfObject, only_if_smaller? : Bool, flate_level? : Int?) -> PdfObject raise PdfError
 
 pub fn pdf_encoding_of_name(PdfName) -> PdfEncoding?
 
@@ -228,6 +232,10 @@ pub fn pdf_flate_decode_view(BytesView) -> Bytes raise PdfError
 pub fn pdf_flate_encode(Bytes) -> Bytes
 
 pub fn pdf_flate_encode_view(BytesView) -> Bytes
+
+pub fn pdf_flate_encode_view_with_level(BytesView, Int) -> Bytes raise PdfError
+
+pub fn pdf_flate_encode_with_level(Bytes, Int) -> Bytes raise PdfError
 
 pub fn pdf_format_real(Double) -> Bytes raise PdfError
 
