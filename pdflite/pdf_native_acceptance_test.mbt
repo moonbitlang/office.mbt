@@ -337,6 +337,144 @@ fn acceptance_assert_one_page_invariants_for_test(
 }
 
 ///|
+fn acceptance_text_bytes_for_test(
+  values : ArrayView[Int],
+) -> @pdflite.PdfBytes raise {
+  @pdflite.pdf_bytes_of_int_array(values)
+}
+
+///|
+fn acceptance_tounicode_text_document_for_test() -> @pdflite.PdfDocument raise {
+  let cmap = acceptance_ascii_for_test(
+    "1 begincodespacerange\n" +
+    "<00><FF>\n" +
+    "endcodespacerange\n" +
+    "1 beginbfchar\n" +
+    "<41><005A>\n" +
+    "endbfchar\n" +
+    "1 beginbfrange\n" +
+    "<43><44><0061>\n" +
+    "endbfrange\n",
+  )
+  let encoded = @pdflite.pdf_ascii_hex_encode(cmap)
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  doc.add_object_given_number(
+    61,
+    PdfNameObject(acceptance_name_for_test("/ASCIIHexDecode")),
+  )
+  doc.add_object_given_number(
+    60,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+        (acceptance_name_for_test("/Filter"), PdfIndirect(61)),
+      ]),
+      StreamGot(encoded),
+    ),
+  )
+  let font = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type1")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/Custom")),
+    ),
+    (acceptance_name_for_test("/ToUnicode"), PdfIndirect(60)),
+  ])
+  let resources = @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([(acceptance_name_for_test("/F0"), font)]),
+    ),
+  ])
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops([
+        Op_BT,
+        Op_Tf(acceptance_name_for_test("/F0"), 12.0),
+        Op_Tj(acceptance_text_bytes_for_test([65, 66])),
+        Op_TJ(
+          PdfArray([
+            PdfString(acceptance_text_bytes_for_test([67])),
+            PdfInteger(-20),
+            PdfString(acceptance_text_bytes_for_test([68])),
+          ]),
+        ),
+        Op_ET,
+      ]),
+    ],
+    resources,
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(
+    doc.add_root(page_root, [
+      (
+        acceptance_name_for_test("/Lang"),
+        PdfString(acceptance_ascii_for_test("en-US")),
+      ),
+    ]),
+  )
+  doc
+}
+
+///|
+fn acceptance_push_text_codepoints_for_test(
+  output : Array[Int],
+  extractor : @pdflite.PdfTextExtractor,
+  text : @pdflite.PdfBytes,
+) -> Unit raise {
+  for codepoint in extractor.codepoints_of_text(text[:]) {
+    output.push(codepoint)
+  }
+}
+
+///|
+fn acceptance_text_codepoints_of_first_page_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Array[Int] raise {
+  let pages = doc.pages_of_pagetree()
+  let font = acceptance_font_object_for_test(pages[0].resources)
+  let extractor = doc.text_extractor_of_font(font)
+  let output : Array[Int] = []
+  for op in doc.parse_content_ops(pages[0].content) {
+    match op {
+      Op_Tj(text) =>
+        acceptance_push_text_codepoints_for_test(output, extractor, text)
+      Op_TJ(PdfArray(items)) =>
+        for item in items {
+          match item {
+            PdfString(text) =>
+              acceptance_push_text_codepoints_for_test(output, extractor, text)
+            _ => ()
+          }
+        }
+      _ => ()
+    }
+  }
+  output
+}
+
+///|
+fn acceptance_assert_tounicode_text_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 5))
+  @test.assert_eq(doc.endpage(), 1)
+  @test.assert_eq(acceptance_text_codepoints_of_first_page_for_test(doc), [
+    0x5A, 66, 0x61, 0x62,
+  ])
+  let pages = doc.pages_of_pagetree()
+  let font = acceptance_font_object_for_test(pages[0].resources)
+  let extractor = doc.text_extractor_of_font(font)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x61), Some(67))
+}
+
+///|
 fn acceptance_assert_partial_filter_stream_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -1486,6 +1624,16 @@ test "native acceptance suite roundtrips classic and xref-stream documents" {
     ),
     (1, 5),
   )
+}
+
+///|
+test "native acceptance suite extracts ToUnicode text through reader boundaries" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_tounicode_text_document_for_test(),
+  )
+  acceptance_assert_tounicode_text_for_test(parsed)
+  let reparsed = acceptance_compressed_roundtrip_for_test(parsed)
+  acceptance_assert_tounicode_text_for_test(reparsed)
 }
 
 ///|

@@ -1400,6 +1400,9 @@ public APIs end to end:
 
 - construct a one-page standard-font document and verify classic xref,
   xref-stream, and compressed xref-stream read/write/reread invariants;
+- extract text from parsed page content with a filtered ToUnicode CMap stream
+  after compressed xref-stream write/read boundaries, including `Tj` and `TJ`
+  content operators and reverse charcode lookup;
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;
