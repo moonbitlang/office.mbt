@@ -708,6 +708,50 @@ fn acceptance_assert_pages_have_hello_content_for_test(
 }
 
 ///|
+fn acceptance_labelled_bookmarked_document_for_test(
+  prefix : String,
+  bookmark_text : String,
+  style : @pdflite.PdfPageLabelStyle,
+  start_value : Int,
+) -> @pdflite.PdfDocument raise {
+  let labelled = acceptance_one_page_document_for_test().write_page_labels([
+    {
+      label_style: style,
+      label_prefix: Some(acceptance_ascii_for_test(prefix)),
+      start_page: 1,
+      start_value,
+    },
+  ])
+  let page_refs = labelled.page_reference_numbers()
+  labelled.add_bookmarks([
+    {
+      level: 0,
+      text: acceptance_ascii_for_test(bookmark_text),
+      target: DestFit(TargetPageObject(page_refs[0])),
+      is_open: true,
+      colour: @pdflite.pdf_bookmark_black,
+      flags: 0,
+    },
+  ])
+}
+
+///|
+fn acceptance_assert_bookmarks_target_pages_for_test(
+  doc : @pdflite.PdfDocument,
+  first_text : String,
+  second_text : String,
+) -> Unit raise {
+  let bookmarks = doc.read_bookmarks()
+  @test.assert_eq(bookmarks.length(), 2)
+  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [
+    acceptance_ascii_for_test(first_text),
+    acceptance_ascii_for_test(second_text),
+  ])
+  @test.assert_eq(doc.page_number_of_target(bookmarks[0].target), 1)
+  @test.assert_eq(doc.page_number_of_target(bookmarks[1].target), 2)
+}
+
+///|
 fn acceptance_aes_iv_for_test(
   object_number : Int,
   generation : Int,
@@ -936,6 +980,37 @@ test "native acceptance suite merges and extracts pages through reader boundarie
   let page_refs = try! reparsed.page_reference_numbers()
   @test.assert_eq(page_refs.length(), 2)
   @test.assert_eq(page_refs[0] != page_refs[1], true)
+}
+
+///|
+test "native acceptance suite preserves labels and bookmarks across merge boundary" {
+  let first = acceptance_labelled_bookmarked_document_for_test(
+    "A-",
+    "First",
+    PageLabelDecimalArabic,
+    1,
+  )
+  let second = acceptance_labelled_bookmarked_document_for_test(
+    "B-",
+    "Second",
+    PageLabelLowercaseRoman,
+    4,
+  )
+  let expected_labels = @pdflite.pdf_page_label_merge([first, second], [
+    [1],
+    [1],
+  ])
+  let merged = @pdflite.pdf_merge_documents(
+    [first, second],
+    [[1], [1]],
+    retain_numbering=true,
+  )
+  @test.assert_eq(merged.read_page_labels(), expected_labels)
+  acceptance_assert_bookmarks_target_pages_for_test(merged, "First", "Second")
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(merged)
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(reparsed.read_page_labels(), expected_labels)
+  acceptance_assert_bookmarks_target_pages_for_test(reparsed, "First", "Second")
 }
 
 ///|
