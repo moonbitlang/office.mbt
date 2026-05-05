@@ -31,8 +31,8 @@ Current estimate:
   composition subset.
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
-- [ ] Add more TrueType and Type3 glyph-program edge coverage beyond current
-  Type3 CharProc, Type3 writer round-trip, and embedded TrueType gates.
+- [ ] Add more Type3 glyph-program edge coverage beyond current Type3
+  CharProc and Type3 writer round-trip gates.
 - [ ] Add broader real-world DCT/JPEG and CCITT image corpus coverage; keep
   optional JBIG2/JPEG pixel-decoder decisions explicit.
 - [ ] Improve byte-identical zlib strategy and performance parity beyond the
@@ -98,6 +98,9 @@ Current estimate:
   read/write/decompress/reread boundaries.~~
 - [x] ~~Embedded TrueType `FontFile2` plus `/ToUnicode` native text gate through
   compressed read/write/reread boundaries.~~
+- [x] ~~Embedded TrueType `/FontDescriptor` metadata preservation for `/Flags`,
+  `/ItalicAngle`, `/CapHeight`, `/XHeight`, and `/StemV` through reader and
+  native read/write/reread boundaries.~~
 - [x] ~~CCITT `/K 0` and `/K < 0` native stream decode with `/DecodeParms`
   parsing and `/CCF` alias coverage.~~
 - [x] ~~Typed CCITT Group 3 `/K 0` stream encoding with `/DecodeParms`
@@ -224,8 +227,10 @@ Current estimate:
 - [x] ~~Type3 writer round-trip fidelity for `/FontBBox`, `/FontMatrix`,
   actual `CharProcs` stream objects, `/Resources`, and non-empty
   `FirstChar`/`LastChar`/`Widths` metrics.~~
-- [ ] More TrueType and Type3 glyph-program edge coverage beyond the current
-  Type3 reader/writer and embedded TrueType gates.
+- [ ] More Type3 glyph-program edge coverage beyond the current Type3
+  reader/writer gates.
+- [x] ~~TrueType descriptor metadata survives read_font_descriptor and embedded
+  TrueType native read/write/reread gates.~~
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
   XObjects and DCT inline images with embedded `EI` bytes before EOI.~~
 - [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
@@ -300,6 +305,8 @@ Current estimate:
 - [x] ~~Add a real-file malformed compressed-xref incremental update recovery
   gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
+- [x] ~~Preserve TrueType descriptor metadata through the embedded TrueType
+  native acceptance gate.~~
 - [x] ~~Add a structured DCT/JPEG marker payload native gate.~~
 - [x] ~~Add mixed-byte predefined CMap `/ToUnicode` extraction coverage.~~
 - [x] ~~Add RKSJ no-`/ToUnicode` predefined-CMap single-byte fallback
@@ -358,8 +365,9 @@ Current estimate:
   CMap handling for UTF8/UTF16/UTF32 names, including variable-length
   segmentation, supplementary-plane reverse lookup, and malformed scalar
   coverage.~~
-- [ ] Add the next remaining text parity slice: broader external/general CMap
+- [ ] Add the next remaining format parity slice: broader external/general CMap
   parsing beyond codespace/CID-char/CID-range/notdef lookup, Identity
   `/UseCMap`, and stream `/UseCMap` composition, remaining rare predefined
-  CMap families, or real-world ToUnicode variation coverage.
+  CMap families, real-world ToUnicode variation coverage, or Type3
+  glyph-program behavior.
 - [ ] Revisit non-native backend validation after native parity is stable.

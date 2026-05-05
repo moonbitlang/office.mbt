@@ -917,6 +917,10 @@ test "PdfDocument read_font_descriptor parses metrics font files and charset" {
     (text_name_for_test("/AvgWidth"), PdfInteger(501)),
     (text_name_for_test("/MaxWidth"), PdfInteger(1000)),
     (text_name_for_test("/Flags"), PdfInteger(4)),
+    (text_name_for_test("/ItalicAngle"), PdfReal(-12.5)),
+    (text_name_for_test("/CapHeight"), PdfInteger(680)),
+    (text_name_for_test("/XHeight"), PdfInteger(450)),
+    (text_name_for_test("/StemV"), PdfInteger(90)),
     (text_name_for_test("/FontFile2"), PdfIndirect(42)),
     (
       text_name_for_test("/CharSet"),
@@ -935,7 +939,11 @@ test "PdfDocument read_font_descriptor parses metrics font files and charset" {
   @test.assert_eq(read_descriptor.descent, -180.5)
   @test.assert_eq(read_descriptor.avgwidth, 501.0)
   @test.assert_eq(read_descriptor.maxwidth, 1000.0)
-  @test.assert_eq(read_descriptor.flags, 0)
+  @test.assert_eq(read_descriptor.flags, 4)
+  @test.assert_eq(read_descriptor.italicangle, -12.5)
+  @test.assert_eq(read_descriptor.capheight, 680.0)
+  @test.assert_eq(read_descriptor.xheight, 450.0)
+  @test.assert_eq(read_descriptor.stemv, 90.0)
   @test.assert_eq(read_descriptor.fontbbox, {
     min_x: -10.0,
     min_y: -200.0,

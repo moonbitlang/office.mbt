@@ -1335,6 +1335,21 @@ fn acceptance_assert_truetype_text_for_test(
   guard simple.fontdescriptor is Some(descriptor) else {
     fail("expected TrueType font descriptor")
   }
+  @test.assert_eq(descriptor.ascent, 720.0)
+  @test.assert_eq(descriptor.descent, -180.0)
+  @test.assert_eq(descriptor.avgwidth, 501.0)
+  @test.assert_eq(descriptor.maxwidth, 1000.0)
+  @test.assert_eq(descriptor.flags, 32)
+  @test.assert_eq(descriptor.fontbbox, {
+    min_x: -10.0,
+    min_y: -200.0,
+    max_x: 500.0,
+    max_y: 700.0,
+  })
+  @test.assert_eq(descriptor.italicangle, -12.0)
+  @test.assert_eq(descriptor.capheight, 680.0)
+  @test.assert_eq(descriptor.xheight, 450.0)
+  @test.assert_eq(descriptor.stemv, 90.0)
   @test.assert_eq(descriptor.fontfile, Some(PdfFontFile2(70)))
   @test.assert_eq(
     descriptor.tounicode,

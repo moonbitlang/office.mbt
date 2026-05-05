@@ -1898,6 +1898,18 @@ fn PdfDocument::pdf_text_optional_number(
 }
 
 ///|
+fn PdfDocument::pdf_text_optional_integer(
+  self : PdfDocument,
+  key : PdfName,
+  object : PdfObject,
+) -> Int raise PdfError {
+  match self.lookup_direct(key, object) {
+    Some(value) => self.get_number(value).to_int()
+    None => 0
+  }
+}
+
+///|
 fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
   let cursor = byte_cursor_of_view(bytes)
   let names : Array[PdfName] = []
@@ -1960,6 +1972,26 @@ pub fn PdfDocument::read_font_descriptor(
           descriptor,
         ),
         fontbbox,
+        flags: self.pdf_text_optional_integer(
+          pdf_text_name("/Flags"),
+          descriptor,
+        ),
+        italicangle: self.pdf_text_optional_number(
+          pdf_text_name("/ItalicAngle"),
+          descriptor,
+        ),
+        capheight: self.pdf_text_optional_number(
+          pdf_text_name("/CapHeight"),
+          descriptor,
+        ),
+        xheight: self.pdf_text_optional_number(
+          pdf_text_name("/XHeight"),
+          descriptor,
+        ),
+        stemv: self.pdf_text_optional_number(
+          pdf_text_name("/StemV"),
+          descriptor,
+        ),
         fontfile: pdf_text_fontfile_of_descriptor(descriptor),
         charset: self.pdf_text_font_charset(descriptor),
       })
