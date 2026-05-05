@@ -3791,6 +3791,68 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard gbk_truncated is Err(BadText) else {
     fail("expected BadText for truncated GBK charcode")
   }
+  let gbk2k_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopGBK2KBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/GBK2K-H")),
+  })
+  let gbk2k_builtin_extractor = gbk2k_builtin_font.text_extractor()
+  @test.assert_eq(
+    gbk2k_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0x81, 0x40, 0xC4, 0xE3, 0xBA, 0xC3, 0xFE, 0x51, 0x81, 0x30, 0x84, 0x36,
+        0x82, 0x36, 0x94, 0x35,
+      ])[:],
+    ),
+    [0x41, 0x4E02, 0x4F60, 0x597D, 0x20087, 0x00A5, 0xA4C6],
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x30, 0x81, 0x30])[:],
+    ),
+    [0x81308130],
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x80, 0x40])[:],
+    ),
+    [0x8040],
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0x41),
+    Some(0x41),
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0x4E02),
+    Some(0x8140),
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xC4E3),
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0x597D),
+    Some(0xBAC3),
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0x20087),
+    Some(0xFE51),
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0x00A5),
+    Some(0x81308436),
+  )
+  @test.assert_eq(
+    gbk2k_builtin_extractor.charcode_of_codepoint(0xA4C6),
+    Some(0x82369435),
+  )
+  @test.assert_eq(gbk2k_builtin_extractor.charcode_of_codepoint(0x1F600), None)
+  let gbk2k_truncated = try? gbk2k_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x81, 0x30, 0x81])[:],
+  )
+  guard gbk2k_truncated is Err(BadText) else {
+    fail("expected BadText for truncated GBK2K charcode")
+  }
   let ksc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopKSCEUCBuiltin"),
     composite,

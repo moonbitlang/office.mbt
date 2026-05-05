@@ -390,6 +390,12 @@ fn pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_cmap_uses_gbk2k_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  pdf_text_predefined_cmap_has_text_orientation(text) && text.contains("GBK2K")
+}
+
+///|
 fn pdf_text_predefined_cmap_uses_gbk_charcodes(name : PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
@@ -509,6 +515,19 @@ fn pdf_text_cns1_codepoint_of_cid(cid : Int) -> Int? {
 }
 
 ///|
+fn pdf_text_gb1_codepoint_of_cid(cid : Int) -> Int? {
+  guard cid >= 0 && cid < pdf_text_gb1_unicode_table.length() else {
+    return None
+  }
+  let codepoint = pdf_text_gb1_unicode_table[cid]
+  if codepoint == 0 {
+    None
+  } else {
+    Some(codepoint)
+  }
+}
+
+///|
 fn pdf_text_predefined_cns1_codepoint(
   ranges : Array[(Int, Int, Int)],
   code : Int,
@@ -533,6 +552,51 @@ fn pdf_text_predefined_cns1_charcode(
     }
   }
   None
+}
+
+///|
+fn pdf_text_predefined_gb1_codepoint(
+  ranges : Array[(Int, Int, Int)],
+  code : Int,
+) -> Int? {
+  match pdf_text_predefined_cid_range_lookup(ranges, code) {
+    Some(cid) => pdf_text_gb1_codepoint_of_cid(cid)
+    None => None
+  }
+}
+
+///|
+fn pdf_text_predefined_gb1_charcode(
+  ranges : Array[(Int, Int, Int)],
+  codepoint : Int,
+) -> Int? {
+  let mut found : Int? = None
+  for range in ranges {
+    for code in range.0..<=range.1 {
+      match pdf_text_gb1_codepoint_of_cid(range.2 + code - range.0) {
+        Some(candidate) if candidate == codepoint =>
+          match found {
+            Some(current) =>
+              if code.reinterpret_as_uint() < current.reinterpret_as_uint() {
+                found = Some(code)
+              }
+            None => found = Some(code)
+          }
+        _ => ()
+      }
+    }
+  }
+  found
+}
+
+///|
+fn pdf_text_predefined_gbk2k_codepoint(code : Int) -> Int? {
+  pdf_text_predefined_gb1_codepoint(pdf_text_gbk2k_cid_ranges, code)
+}
+
+///|
+fn pdf_text_predefined_gbk2k_charcode(codepoint : Int) -> Int? {
+  pdf_text_predefined_gb1_charcode(pdf_text_gbk2k_cid_ranges, codepoint)
 }
 
 ///|
@@ -7174,6 +7238,11 @@ fn PdfFont::pdf_text_predefined_builtin_codepoints(
                     name,
                   ) {
                   pdf_text_predefined_kscpc_euc_codepoints(code)
+                } else if pdf_text_predefined_cmap_uses_gbk2k_charcodes(name) {
+                  match pdf_text_predefined_gbk2k_codepoint(code) {
+                    Some(codepoint) => Some([codepoint])
+                    None => None
+                  }
                 } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
                   match pdf_text_predefined_gbk_codepoint(code) {
                     Some(codepoint) => Some([codepoint])
@@ -7224,6 +7293,8 @@ fn PdfFont::pdf_text_predefined_builtin_charcode(
                     name,
                   ) {
                   pdf_text_predefined_kscpc_euc_charcode(codepoint)
+                } else if pdf_text_predefined_cmap_uses_gbk2k_charcodes(name) {
+                  pdf_text_predefined_gbk2k_charcode(codepoint)
                 } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
                   pdf_text_predefined_gbk_charcode(codepoint)
                 } else {
@@ -7274,8 +7345,33 @@ fn pdf_text_push_two_byte_charcode(
 }
 
 ///|
+fn pdf_text_push_four_byte_charcode(
+  output : Array[Int],
+  text : BytesView,
+  index : Int,
+) -> Int raise PdfError {
+  guard index + 3 < text.length() else { raise BadText }
+  output.push(
+    (
+      (
+        (((text[index].to_int() << 8) | text[index + 1].to_int()) << 8) |
+        text[index + 2].to_int()
+      ) <<
+      8
+    ) |
+    text[index + 3].to_int(),
+  )
+  index + 4
+}
+
+///|
 fn pdf_text_shift_jis_lead_byte(byte : Int) -> Bool {
   (byte >= 0x81 && byte <= 0x9F) || (byte >= 0xE0 && byte <= 0xFC)
+}
+
+///|
+fn pdf_text_gbk2k_four_byte_prefix(first : Int, second : Int) -> Bool {
+  first >= 0x81 && first <= 0xFE && second >= 0x30 && second <= 0x39
 }
 
 ///|
@@ -7291,6 +7387,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
   let gbpc_euc = pdf_text_predefined_cmap_uses_gbpc_euc_charcodes(name)
   let ksc_euc = pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name)
   let kscpc_euc = pdf_text_predefined_cmap_uses_kscpc_euc_charcodes(name)
+  let gbk2k = pdf_text_predefined_cmap_uses_gbk2k_charcodes(name)
   let gbk = pdf_text_predefined_cmap_uses_gbk_charcodes(name)
   let mut index = 0
   while index < text.length() {
@@ -7302,6 +7399,10 @@ fn pdf_text_predefined_mixed_byte_charcodes(
         output.push(first)
         index += 1
       }
+    } else if gbk2k &&
+      index + 1 < text.length() &&
+      pdf_text_gbk2k_four_byte_prefix(first, text[index + 1].to_int()) {
+      index = pdf_text_push_four_byte_charcode(output, text, index)
     } else if first < 0x80 ||
       (
         b5pc &&
