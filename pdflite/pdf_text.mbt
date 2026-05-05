@@ -3896,6 +3896,51 @@ fn pdf_text_lookup_tounicode(
 }
 
 ///|
+fn pdf_text_codepoints_of_tounicode_bytes_or_charcode(
+  bytes : PdfBytes,
+  code : Int,
+) -> Array[Int] {
+  try pdf_codepoints_of_utf16be(bytes[:]) catch {
+    _ => [code]
+  } noraise {
+    codepoints => codepoints
+  }
+}
+
+///|
+fn pdf_text_lookup_tounicode_codepoints(
+  tounicode : ArrayView[(Int, PdfBytes)],
+  code : Int,
+) -> Array[Int]? {
+  match pdf_text_lookup_tounicode(tounicode, code) {
+    Some(bytes) =>
+      Some(pdf_text_codepoints_of_tounicode_bytes_or_charcode(bytes, code))
+    None => None
+  }
+}
+
+///|
+fn pdf_text_reverse_lookup_tounicode_charcode(
+  tounicode : ArrayView[(Int, PdfBytes)],
+  codepoint : Int,
+  shadow_first : ArrayView[(Int, Int)],
+  shadow_second : ArrayView[(Int, Int)],
+) -> Int? {
+  for entry in tounicode {
+    try pdf_codepoints_of_utf16be(entry.1[:]) catch {
+      _ => ()
+    } noraise {
+      [single] if single == codepoint &&
+        !pdf_text_cmap_has_charcode_in_any(shadow_first, shadow_second, entry.0) =>
+        break Some(entry.0)
+      _ => ()
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
 fn pdf_text_single_byte_glyphname(value : Int) -> PdfName {
   let output : Array[Byte] = [47, value.to_byte()]
   pdf_name_of_bytes(Bytes::from_array(output))
@@ -8497,6 +8542,19 @@ fn pdf_text_cmap_has_charcode_in_any(
 }
 
 ///|
+fn pdf_text_parsed_cmap_has_explicit_charcode(
+  parsed : PdfParsedCMap,
+  code : Int,
+) -> Bool {
+  pdf_text_tounicode_has_charcode(parsed.map[:], code) ||
+  pdf_text_cmap_has_charcode_in_any(
+    parsed.cid_map[:],
+    parsed.notdef_map[:],
+    code,
+  )
+}
+
+///|
 fn PdfFont::pdf_text_external_cmap_codepoints(
   self : PdfFont,
   code : Int,
@@ -8511,25 +8569,32 @@ fn PdfFont::pdf_text_external_cmap_codepoints(
               match pdf_text_lookup_cmap_cid(parsed.notdef_map[:], code) {
                 Some(cid) => Some([cid])
                 None =>
-                  match pdf_text_parsed_cmap_predefined_base(parsed) {
-                    Some(name) => {
-                      let base_font : PdfFont = PdfFontCIDKeyed({
-                        ..font,
-                        encoding: PdfPredefinedCMap(name),
-                      })
-                      match
-                        base_font.pdf_text_predefined_builtin_codepoints(code) {
-                        Some(codepoints) => Some(codepoints)
-                        None => None
-                      }
-                    }
+                  match
+                    pdf_text_lookup_tounicode_codepoints(parsed.map[:], code) {
+                    Some(codepoints) => Some(codepoints)
                     None =>
-                      if pdf_text_parsed_cmap_has_identity_base(parsed) &&
-                        code >= 0 &&
-                        code <= 0xFFFF {
-                        Some([code])
-                      } else {
-                        None
+                      match pdf_text_parsed_cmap_predefined_base(parsed) {
+                        Some(name) => {
+                          let base_font : PdfFont = PdfFontCIDKeyed({
+                            ..font,
+                            encoding: PdfPredefinedCMap(name),
+                          })
+                          match
+                            base_font.pdf_text_predefined_builtin_codepoints(
+                              code,
+                            ) {
+                            Some(codepoints) => Some(codepoints)
+                            None => None
+                          }
+                        }
+                        None =>
+                          if pdf_text_parsed_cmap_has_identity_base(parsed) &&
+                            code >= 0 &&
+                            code <= 0xFFFF {
+                            Some([code])
+                          } else {
+                            None
+                          }
                       }
                   }
               }
@@ -8558,39 +8623,45 @@ fn PdfFont::pdf_text_external_cmap_charcode(self : PdfFont, cid : Int) -> Int? {
                     Some(code)
                   }
                 None =>
-                  match pdf_text_parsed_cmap_predefined_base(parsed) {
-                    Some(name) => {
-                      let base_font : PdfFont = PdfFontCIDKeyed({
-                        ..font,
-                        encoding: PdfPredefinedCMap(name),
-                      })
-                      match
-                        base_font.pdf_text_predefined_builtin_charcode(cid) {
-                        Some(code) =>
-                          if pdf_text_cmap_has_charcode_in_any(
-                              parsed.cid_map[:],
-                              parsed.notdef_map[:],
-                              code,
-                            ) {
-                            None
-                          } else {
-                            Some(code)
-                          }
-                        None => None
-                      }
-                    }
+                  match
+                    pdf_text_reverse_lookup_tounicode_charcode(
+                      parsed.map[:],
+                      cid,
+                      parsed.cid_map[:],
+                      parsed.notdef_map[:],
+                    ) {
+                    Some(code) => Some(code)
                     None =>
-                      if pdf_text_parsed_cmap_has_identity_base(parsed) &&
-                        cid >= 0 &&
-                        cid <= 0xFFFF &&
-                        !pdf_text_cmap_has_charcode_in_any(
-                          parsed.cid_map[:],
-                          parsed.notdef_map[:],
-                          cid,
-                        ) {
-                        Some(cid)
-                      } else {
-                        None
+                      match pdf_text_parsed_cmap_predefined_base(parsed) {
+                        Some(name) => {
+                          let base_font : PdfFont = PdfFontCIDKeyed({
+                            ..font,
+                            encoding: PdfPredefinedCMap(name),
+                          })
+                          match
+                            base_font.pdf_text_predefined_builtin_charcode(cid) {
+                            Some(code) =>
+                              if pdf_text_parsed_cmap_has_explicit_charcode(
+                                  parsed, code,
+                                ) {
+                                None
+                              } else {
+                                Some(code)
+                              }
+                            None => None
+                          }
+                        }
+                        None =>
+                          if pdf_text_parsed_cmap_has_identity_base(parsed) &&
+                            cid >= 0 &&
+                            cid <= 0xFFFF &&
+                            !pdf_text_parsed_cmap_has_explicit_charcode(
+                              parsed, cid,
+                            ) {
+                            Some(cid)
+                          } else {
+                            None
+                          }
                       }
                   }
               }

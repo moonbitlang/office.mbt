@@ -167,10 +167,11 @@ work changes.
    CMaps, EUC-H, and Hojo-EUC three-byte charcodes, external CMap stream
    parsing for codespaces plus `begincidchar`/`begincidrange` and
    `beginnotdefchar`/`beginnotdefrange` Type0 `/Encoding` streams with
-   variable-length text segmentation, CID fallback, applied notdef maps, and
-   parsed CMap program and stream-dictionary header metadata for `/WMode`,
-   `/CMapName`, `/CMapType`, `/CIDSystemInfo`, and name `/UseCMap`, including
-   indirect dictionary values,
+   variable-length text segmentation, CID fallback, applied notdef maps,
+   encoding-side `bfchar`/`bfrange` Unicode fallback for otherwise unmapped
+   charcodes, and parsed CMap program and stream-dictionary header metadata for
+   `/WMode`, `/CMapName`, `/CMapType`, `/CIDSystemInfo`, and name `/UseCMap`,
+   including indirect dictionary values,
    plus `/UseCMap` name parsing from CMap programs and stream dictionaries
    with Identity-H/V inherited segmentation and CID fallback, plus recursive
    stream `/UseCMap` composition with cycle protection, inherited codespaces,
@@ -203,10 +204,10 @@ work changes.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
    beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
    fallbacks, broader external/general CMap parsing beyond the current
-   codespace/CID/notdef sections, notdef lookup, program and stream-dictionary
-   header metadata, Identity and named predefined `/UseCMap` fallbacks, and
-   stream `/UseCMap` composition subset, plus JPEG pixel decode and remaining
-   image filter families.
+   codespace/CID/notdef sections, encoding-side Unicode map fallback, notdef
+   lookup, program and stream-dictionary header metadata, Identity and named
+   predefined `/UseCMap` fallbacks, and stream `/UseCMap` composition subset,
+   plus JPEG pixel decode and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -332,8 +333,10 @@ and backend breadth, is about 81-86% complete.
   variable-length text segmentation, CID fallback, reverse CID lookup, and
   Identity-H/V `/UseCMap` base-name inheritance plus recursive stream
   `/UseCMap` composition, notdef-map extraction and reverse lookup before
-  inherited predefined/Identity fallbacks, ToUnicode stream inheritance through
-  extraction, and an Identity-V native gate with vertical width metadata.
+  inherited predefined/Identity fallbacks, encoding-side `bfchar`/`bfrange`
+  Unicode fallback for otherwise unmapped charcodes, ToUnicode stream
+  inheritance through extraction, and an Identity-V native gate with vertical
+  width metadata.
   Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
@@ -350,11 +353,11 @@ and backend breadth, is about 81-86% complete.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
   beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
   fallbacks, broader external/general CMap parsing beyond the current
-  codespace/CID-char/CID-range/notdef lookup, Identity `/UseCMap`, and stream
-  `/UseCMap` composition subset, additional TrueType and Type3 glyph-program
-  edge coverage beyond the current Type3 reader/writer gates, more real-world
-  ToUnicode variations, and broader real-world DCT/JPEG image payload corpus
-  files.
+  codespace/CID-char/CID-range/notdef lookup, encoding-side Unicode map
+  fallback, Identity `/UseCMap`, and stream `/UseCMap` composition subset,
+  additional TrueType and Type3 glyph-program edge coverage beyond the current
+  Type3 reader/writer gates, more real-world ToUnicode variations, and broader
+  real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.
