@@ -1267,6 +1267,63 @@ fn reader_xref_stream_pdf_with_object_stream_root_bad_startxref() -> @pdflite.Pd
 }
 
 ///|
+fn reader_xref_stream_prev_update_with_object_stream_root_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let old_catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Old true >>",
+  )
+  let first_xref_offset = output.length()
+  let first_xref_data : Array[Byte] = []
+  reader_push_xref_stream_entry(first_xref_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(first_xref_data, 1, old_catalog_offset, 0)
+  reader_push_xref_stream_entry(first_xref_data, 1, first_xref_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, first_xref_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in first_xref_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, first_xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+
+  let object_stream_data : Array[Byte] = []
+  reader_push_ascii(object_stream_data, "1 0 ")
+  let first = object_stream_data.length()
+  reader_push_ascii(object_stream_data, "<< /Type /Catalog /New true >>")
+  let object_stream_offset = output.length()
+  reader_push_ascii(output, "3 0 obj\n<< /Type /ObjStm /N 1 /First ")
+  reader_push_ascii(output, first.to_string())
+  reader_push_ascii(output, " /Length ")
+  reader_push_ascii(output, object_stream_data.length().to_string())
+  reader_push_ascii(output, " >>\nstream\n")
+  for byte in object_stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\n")
+  let second_xref_offset = output.length()
+  let second_xref_data : Array[Byte] = []
+  reader_push_xref_stream_entry(second_xref_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(second_xref_data, 2, 3, 0)
+  reader_push_xref_stream_entry(second_xref_data, 0, 0, 0)
+  reader_push_xref_stream_entry(second_xref_data, 1, object_stream_offset, 0)
+  reader_push_xref_stream_entry(second_xref_data, 1, second_xref_offset, 0)
+  reader_push_ascii(output, "4 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, second_xref_data.length().to_string())
+  reader_push_ascii(output, " /Size 5 /Root 1 0 R /Prev ")
+  reader_push_ascii(output, first_xref_offset.to_string())
+  reader_push_ascii(output, " /W [1 4 2] >>\nstream\n")
+  for byte in second_xref_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_encrypted_xref_stream_pdf_with_missing_object_stream_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -2374,6 +2431,42 @@ test "pdf_read_document_from_bytes reconstructs xref stream object-stream roots"
       @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
     ),
     Some(PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/ObjStm")))),
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs multi-revision xref stream object-stream roots" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_prev_update_with_object_stream_root_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_prev_update_with_object_stream_root_bad_startxref(),
+  )
+  @test.assert_eq(parsed.version(), (1, 5))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 3])
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Prev"))),
+    None,
+  )
+  @test.assert_eq(
+    parsed
+    .lookup_object_or_null(1)
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/New"))),
+    Some(PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    parsed
+    .lookup_object_or_null(1)
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Old"))),
+    None,
   )
 }
 

@@ -76,9 +76,8 @@ work changes.
    CamlPDF-style deferred decryption state on `ToGet`, so file-backed encrypted
    stream bytes remain lazy until `stream_bytes` or `get_stream` forces
    plaintext materialization and `/Length` correction.
-   Remaining focus: multi-revision malformed xref-stream/object-stream
-   recovery, broader malformed xref-table recovery, and encrypted parser-state
-   edge cases outside stream and object-stream data.
+   Remaining focus: broader malformed xref-table recovery and encrypted
+   parser-state edge cases outside stream and object-stream data.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
