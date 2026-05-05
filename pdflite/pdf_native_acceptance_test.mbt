@@ -450,6 +450,22 @@ fn acceptance_assert_object_stream_document_for_test(
 }
 
 ///|
+fn acceptance_assert_pages_have_hello_content_for_test(
+  doc : @pdflite.PdfDocument,
+  expected_count : Int,
+) -> Unit raise {
+  @test.assert_eq(try! doc.endpage(), expected_count)
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), expected_count)
+  for page in pages {
+    @test.assert_eq(
+      doc.parse_content_ops(page.content),
+      acceptance_one_page_ops_for_test(),
+    )
+  }
+}
+
+///|
 fn acceptance_aes_iv_for_test(
   object_number : Int,
   generation : Int,
@@ -567,6 +583,29 @@ test "native acceptance suite reconstructs omitted page-tree xrefs" {
   let normalized = try! @pdflite.pdf_write_document(parsed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
   acceptance_assert_minimal_page_tree_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite merges and extracts pages through reader boundaries" {
+  let first = try! acceptance_one_page_document_for_test()
+  let second = try! acceptance_one_page_document_for_test()
+  second.set_version(1, 7)
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  @test.assert_eq(merged.version(), (1, 7))
+  acceptance_assert_pages_have_hello_content_for_test(merged, 2)
+  let merged_bytes = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
+    merged,
+  )
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(merged_bytes)
+  @test.assert_eq(parsed.version(), (1, 7))
+  acceptance_assert_pages_have_hello_content_for_test(parsed, 2)
+  let extracted = try! parsed.pdf_of_pages([2, 1])
+  let extracted_bytes = try! @pdflite.pdf_write_document(extracted)
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(extracted_bytes)
+  acceptance_assert_pages_have_hello_content_for_test(reparsed, 2)
+  let page_refs = try! reparsed.page_reference_numbers()
+  @test.assert_eq(page_refs.length(), 2)
+  @test.assert_eq(page_refs[0] != page_refs[1], true)
 }
 
 ///|

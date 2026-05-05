@@ -168,7 +168,8 @@ vertical acceptance path at a time instead of isolated edge polishing:
   omitted page-tree xref reconstruction, object-stream page-tree normalization
   through the writer, partial stream filter decompression, and AES-128
   password-wrapper reads plus AES-128 decrypt/recrypt incremental revision
-  reads.
+  reads. Document-level merge and page extraction are also covered across a
+  compressed xref-stream read boundary.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, remaining malformed-reader recovery, and example-level integration
   fixtures.
