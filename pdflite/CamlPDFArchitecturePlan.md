@@ -23,6 +23,8 @@ work changes.
    CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
    revision-specific reads where revision `1` is newest and larger numbers
    follow older `/Prev` state across classic and xref-stream update chains.
+   Strict stream parsing also skips CamlPDF's ignored padding bytes after the
+   `stream` keyword while preserving trailing stream bytes before `endstream`.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

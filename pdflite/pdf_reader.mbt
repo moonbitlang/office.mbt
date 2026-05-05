@@ -1655,6 +1655,19 @@ fn ByteCursor::consume_pdf_stream_line_break(self : ByteCursor) -> Unit {
 }
 
 ///|
+fn pdf_stream_start_padding_byte(value : Int) -> Bool {
+  value == 32 || value == 0 || value == 12 || value == 9
+}
+
+///|
+fn ByteCursor::consume_pdf_stream_start_line_break(self : ByteCursor) -> Unit {
+  while pdf_stream_start_padding_byte(self.peek_byte()) {
+    self.nudge()
+  }
+  self.consume_pdf_stream_line_break()
+}
+
+///|
 fn ByteCursor::finish_pdf_stream_object(
   self : ByteCursor,
   prefix : PdfParsedIndirectObject,
@@ -1670,7 +1683,7 @@ fn ByteCursor::finish_pdf_stream_object_with_length(
   length : Int,
 ) -> PdfParsedIndirectObject raise PdfError {
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
-  self.consume_pdf_stream_line_break()
+  self.consume_pdf_stream_start_line_break()
   let stream_data = self.read_bytes(length)
   self.consume_pdf_stream_line_break()
   self.drop_pdf_whitespace()
@@ -1713,7 +1726,7 @@ fn ByteCursor::finish_pdf_malformed_stream_object(
   prefix : PdfParsedIndirectObject,
 ) -> PdfParsedIndirectObject raise PdfError {
   self.consume_pdf_ascii([115, 116, 114, 101, 97, 109], ParseStreamExpected)
-  self.consume_pdf_stream_line_break()
+  self.consume_pdf_stream_start_line_break()
   let data_start = self.absolute_position()
   let endstream = pdf_find_ascii_from(self.data, data_start, [
     101, 110, 100, 115, 116, 114, 101, 97, 109,

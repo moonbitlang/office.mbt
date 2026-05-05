@@ -1313,6 +1313,41 @@ test "pdf_parse_stream_object_from_bytes accepts CR and CRLF stream line breaks"
 }
 
 ///|
+test "pdf_parse_stream_object_from_bytes ignores CamlPDF stream-start padding" {
+  let padded : Array[Byte] = []
+  reader_push_ascii(padded, "9 0 obj\n<< /Length 5 >>\nstream")
+  reader_push_byte(padded, 32)
+  reader_push_byte(padded, 9)
+  reader_push_byte(padded, 0)
+  reader_push_byte(padded, 12)
+  reader_push_byte(padded, 10)
+  reader_push_ascii(padded, "Space\nendstream\nendobj")
+  let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    Bytes::from_array(padded),
+  )
+  guard parsed.object is PdfStreamObject(stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Space")))
+
+  let no_line_break : Array[Byte] = []
+  reader_push_ascii(no_line_break, "10 0 obj\n<< /Length 5 >>\nstream")
+  reader_push_byte(no_line_break, 32)
+  reader_push_byte(no_line_break, 9)
+  reader_push_ascii(no_line_break, "Helloendstream\nendobj")
+  let parsed_no_line_break = try! @pdflite.pdf_parse_stream_object_from_bytes(
+    Bytes::from_array(no_line_break),
+  )
+  guard parsed_no_line_break.object is PdfStreamObject(no_line_break_stream) else {
+    fail("expected PdfStreamObject")
+  }
+  @test.assert_eq(
+    no_line_break_stream.data,
+    StreamGot(reader_pdf_ascii("Hello")),
+  )
+}
+
+///|
 test "pdf_parse_stream_object_from_bytes reports missing stream length" {
   let result : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
     reader_bytes_for_test([

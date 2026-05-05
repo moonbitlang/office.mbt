@@ -263,7 +263,11 @@ MoonBit consequences for this project:
    dictionaries, including malformed header, offset, index, and object-number
    mismatch checks. Object-stream extraction now uses the document-aware stream
    decoder once the containing object stream is loaded, so indirect `/Filter`
-   metadata on `/ObjStm` streams is honored. Hybrid-reference files with a
+   metadata on `/ObjStm` streams is honored. Strict stream-object parsing now
+   mirrors CamlPDF's stream-start padding tolerance by skipping space, NUL,
+   form-feed, and tab bytes between the `stream` keyword and the line break or
+   first data byte, without applying that padding rule before `endstream`.
+   Hybrid-reference files with a
    classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same
    revision while preserving the classic trailer as the document trailer.
@@ -1246,7 +1250,8 @@ MoonBit consequences for this project:
    handling, repeated xref section markers, trailing startxref junk after EOF,
    malformed startxref-number recovery, and by deleting two unreachable
    defensive branches around xref blank-line parsing and post-loop trailer
-   presence.
+   presence. Stream-object coverage now also checks CamlPDF's ignored
+   stream-start padding bytes before newline or data.
     Date, document-copy, renumbering, and writer coverage now remove those
     files from the uncovered-line report by covering private short-date and
     stream materialization guards and by replacing impossible map-key `None`
