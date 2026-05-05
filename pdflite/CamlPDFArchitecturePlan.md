@@ -65,6 +65,10 @@ work changes.
    `startxref` pointer is invalid, loads their ordinary entries, and expands
    object-stream entries before selecting a trailer/root. This covers modern
    files whose catalog or page tree only exists inside `/ObjStm` storage.
+   Reconstructed xref-stream loading now skips xref-stream objects by exact
+   `(object number, offset)` identity instead of by object number alone, so an
+   incremental update can reuse an older xref-stream object number for ordinary
+   payload data and still recover the newest revision.
    Hybrid classic trailers with `/XRefStm` are now covered on the same
    malformed-startxref path, so table objects and the pointed-to xref-stream
    entries are both recovered and trailer-only xref machinery is stripped.
@@ -235,9 +239,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 89-92% complete. Full
+Current estimate: native main-feature parity is about 90-92% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 78-83% complete.
+and backend breadth, is about 79-84% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -305,6 +309,10 @@ and backend breadth, is about 78-83% complete.
   coverage.
 - Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
   through native async file wrappers, compressed rewrite, and reread.
+- Covered: checked-in CamlPDF intro fixture compressed-xref incremental update
+  recovery after corrupting the final `startxref`, including reused
+  object-number payload recovery, compressed rewrite/reread, and multi-page
+  text extraction.
 - Deferred: all-backend stabilization. Native-only secure-random/encrypted
   writer APIs and `async_io` intentionally diverge from WasmGC today.
 - Deferred: larger real-world corpus testing, performance tuning, and optional
@@ -314,9 +322,9 @@ and backend breadth, is about 78-83% complete.
 ### Immediate Work Order
 
 - Next: add real-world CCITT image corpus coverage when a fixture is available;
-  otherwise continue widening real-file corpus gates, especially malformed
-  xref-stream/object-stream recovery, while keeping JPEG/JBIG2 decoder
-  decisions separate from encoded image pass-through.
+  otherwise continue widening real-file corpus gates beyond the checked-in
+  CamlPDF intro/logo files, while keeping JPEG/JBIG2 decoder decisions separate
+  from encoded image pass-through.
 - Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist

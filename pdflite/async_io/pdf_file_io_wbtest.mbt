@@ -62,6 +62,26 @@ fn pdf_async_io_find_bytes_for_test(
 }
 
 ///|
+fn pdf_async_io_find_last_bytes_for_test(
+  haystack : BytesView,
+  needle : BytesView,
+) -> Int {
+  if needle.length() == 0 {
+    0
+  } else if haystack.length() < needle.length() {
+    -1
+  } else {
+    let mut found = -1
+    for start in 0..<=(haystack.length() - needle.length()) {
+      if pdf_async_io_bytes_start_with_at_for_test(haystack, needle, start) {
+        found = start
+      }
+    }
+    found
+  }
+}
+
+///|
 fn pdf_async_io_push_ascii_for_test(
   output : Array[Byte],
   text : String,
@@ -80,11 +100,11 @@ fn pdf_async_io_is_pdf_whitespace_for_test(byte : Byte) -> Bool {
 }
 
 ///|
-fn pdf_async_io_corrupt_startxref_pointer_for_test(
+fn pdf_async_io_corrupt_startxref_pointer_at_for_test(
   bytes : @pdflite.PdfBytes,
+  marker_position : Int,
 ) -> @pdflite.PdfBytes raise {
   let marker = @ascii.encode("startxref")
-  let marker_position = pdf_async_io_find_bytes_for_test(bytes[:], marker[:])
   if marker_position < 0 {
     fail("expected startxref marker")
   }
@@ -107,6 +127,28 @@ fn pdf_async_io_corrupt_startxref_pointer_for_test(
     output.push(bytes[index])
   }
   Bytes::from_array(output)
+}
+
+///|
+fn pdf_async_io_corrupt_startxref_pointer_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes raise {
+  let marker = @ascii.encode("startxref")
+  pdf_async_io_corrupt_startxref_pointer_at_for_test(
+    bytes,
+    pdf_async_io_find_bytes_for_test(bytes[:], marker[:]),
+  )
+}
+
+///|
+fn pdf_async_io_corrupt_final_startxref_pointer_for_test(
+  bytes : @pdflite.PdfBytes,
+) -> @pdflite.PdfBytes raise {
+  let marker = @ascii.encode("startxref")
+  pdf_async_io_corrupt_startxref_pointer_at_for_test(
+    bytes,
+    pdf_async_io_find_last_bytes_for_test(bytes[:], marker[:]),
+  )
 }
 
 ///|
@@ -407,6 +449,92 @@ async test "async file wrappers incrementally update checked-in CamlPDF intro fi
   @test.assert_eq(older.lookup_object_or_null(added_number), PdfNull)
   pdf_async_io_assert_intro_fixture_text_for_test(newest)
   pdf_async_io_assert_intro_fixture_text_for_test(older)
+}
+
+///|
+async test "async file wrappers reconstruct malformed incremental CamlPDF intro fixture" {
+  let intro_path = pdf_async_io_repo_path_for_test(
+    ".repos/introduction_to_camlpdf.pdf",
+  )
+  let updated_path = pdf_async_io_test_path_for_test(
+    "intro_incremental_bad_startxref_source",
+  )
+  let corrupted_path = pdf_async_io_test_path_for_test(
+    "intro_incremental_bad_startxref_fixture",
+  )
+  let repaired_path = pdf_async_io_test_path_for_test(
+    "intro_incremental_bad_startxref_repaired",
+  )
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  pdf_async_io_remove_if_exists_for_test(corrupted_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
+
+  let updated = pdf_read_document_from_file(intro_path)
+  let key_root = pdf_async_io_name_for_test("/Root")
+  let key_payload = pdf_async_io_name_for_test("/Payload")
+  let added_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      pdf_async_io_name_for_test("/Title"),
+      PdfString(@ascii.encode("intro fixture malformed incremental")),
+    ),
+  ])
+  let added_number = updated.add_object(added_object)
+  let new_root_number = updated.add_object(
+    updated.catalog().add_dict_entry(key_payload, PdfIndirect(added_number)),
+  )
+  updated.set_root(new_root_number)
+  updated.set_trailer_dict(
+    updated
+    .trailer_dict()
+    .add_dict_entry(key_root, PdfIndirect(new_root_number)),
+  )
+  pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
+    intro_path, updated, updated_path,
+  )
+  @test.assert_eq(pdf_revisions_from_file(updated_path), 2)
+  let newest = pdf_read_document_revision_from_file(updated_path, 1)
+  @test.assert_eq(newest.lookup_object_or_null(added_number), added_object)
+  @test.assert_eq(
+    newest.lookup_object_or_null(new_root_number),
+    updated.catalog(),
+  )
+  @test.assert_eq(
+    newest.catalog().lookup_immediate(key_payload),
+    Some(PdfIndirect(added_number)),
+  )
+  let older = pdf_read_document_revision_from_file(updated_path, 2)
+  @test.assert_eq(older.lookup_object_or_null(added_number), PdfNull)
+  @test.assert_eq(older.lookup_object_or_null(new_root_number), PdfNull)
+  pdf_async_io_assert_intro_fixture_text_for_test(older)
+
+  let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
+    @fs.read_file(updated_path).binary(),
+  )
+  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  let recovered = pdf_read_document_from_file(corrupted_path)
+  @test.assert_eq(recovered.first_xref(), 0)
+  @test.assert_eq(recovered.lookup_object_or_null(added_number), added_object)
+  @test.assert_eq(
+    recovered.catalog().lookup_immediate(key_payload),
+    Some(PdfIndirect(added_number)),
+  )
+  pdf_async_io_assert_intro_fixture_text_for_test(recovered)
+
+  pdf_write_document_to_file_with_compressed_xref_stream(
+    recovered, repaired_path,
+  )
+  let reparsed = pdf_read_document_from_file(repaired_path)
+  @test.assert_eq(reparsed.first_xref() > 0, true)
+  @test.assert_eq(reparsed.lookup_object_or_null(added_number), added_object)
+  @test.assert_eq(
+    reparsed.catalog().lookup_immediate(key_payload),
+    Some(PdfIndirect(added_number)),
+  )
+  pdf_async_io_assert_intro_fixture_text_for_test(reparsed)
+
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+  pdf_async_io_remove_if_exists_for_test(corrupted_path)
+  pdf_async_io_remove_if_exists_for_test(repaired_path)
 }
 
 ///|

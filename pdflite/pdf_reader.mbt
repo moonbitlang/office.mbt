@@ -148,6 +148,7 @@ priv struct PdfXRefSection {
   entries : Array[PdfClassicXRefEntry]
   trailer : PdfObject
   stream_object_number : Int?
+  stream_object_offset : Int?
 }
 
 ///|
@@ -690,6 +691,14 @@ fn pdf_reader_xref_stream_type_ok(dictionary : PdfObject) -> Bool {
 }
 
 ///|
+fn pdf_reader_object_is_xref_stream(object : PdfObject) -> Bool {
+  match object {
+    PdfStreamObject(stream) => pdf_reader_xref_stream_type_ok(stream.dictionary)
+    _ => false
+  }
+}
+
+///|
 fn pdf_xref_stream_int_array(
   dictionary : PdfObject,
   key : PdfName,
@@ -988,6 +997,7 @@ fn PdfDocument::read_object_stream_reference_with_passwords(
 fn ByteCursor::read_pdf_xref_stream_section(
   self : ByteCursor,
 ) -> PdfXRefSection raise PdfError {
+  let stream_object_offset = self.absolute_position()
   if !pdf_is_digit_byte(self.peek_byte()) {
     raise XRefExpected
   }
@@ -1006,6 +1016,7 @@ fn ByteCursor::read_pdf_xref_stream_section(
       decoded_stream.dictionary,
     ),
     stream_object_number: Some(parsed.number),
+    stream_object_offset: Some(stream_object_offset),
   }
 }
 
@@ -1017,7 +1028,7 @@ fn ByteCursor::read_pdf_xref_section(
   if self.matches_pdf_ascii_at(position, [120, 114, 101, 102]) {
     let entries = self.read_pdf_classic_xref_entries()
     let trailer = self.read_pdf_trailer_dictionary()
-    { entries, trailer, stream_object_number: None }
+    { entries, trailer, stream_object_number: None, stream_object_offset: None }
   } else {
     self.read_pdf_xref_stream_section()
   }
@@ -1525,18 +1536,19 @@ fn pdf_reconstructed_xref_stream_entries(
 }
 
 ///|
-fn pdf_reconstructed_xref_stream_sections_contain_object(
+fn pdf_reconstructed_xref_stream_refs(
   sections : ArrayView[PdfXRefSection],
-  object_number : Int,
-) -> Bool {
+) -> Array[(Int, Int)] {
+  let refs : Array[(Int, Int)] = []
   for section in sections {
-    match section.stream_object_number {
-      Some(number) if number == object_number => break true
-      _ => ()
-    }
-  } nobreak {
-    false
+    refs.push(
+      (
+        section.stream_object_number.unwrap(),
+        section.stream_object_offset.unwrap(),
+      ),
+    )
   }
+  refs
 }
 
 ///|
@@ -1547,15 +1559,17 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
+  let xref_stream_refs = pdf_reconstructed_xref_stream_refs(sections)
   for xref in xrefs {
     match xref.object_stream {
       Some(_) => ()
       None =>
         if xref.in_use &&
           xref.object_number != 0 &&
-          !pdf_reconstructed_xref_stream_sections_contain_object(
-            sections,
+          !pdf_reader_xref_stream_refs_contain(
+            xref_stream_refs[:],
             xref.object_number,
+            xref.offset,
           ) {
           try {
             cursor.seek_pdf_absolute(xref.offset)
@@ -1693,11 +1707,7 @@ fn pdf_read_reconstructed_document_from_view(
     []
   }
   for parsed in pdf_read_reconstructed_objects(data) {
-    if parsed.number > 0 &&
-      !pdf_reconstructed_xref_stream_sections_contain_object(
-        xref_stream_sections[:],
-        parsed.number,
-      ) {
+    if parsed.number > 0 && !pdf_reader_object_is_xref_stream(parsed.object) {
       document.load_object_given_number(
         parsed.number,
         parsed.object,

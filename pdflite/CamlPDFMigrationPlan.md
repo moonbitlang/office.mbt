@@ -342,6 +342,10 @@ MoonBit consequences for this project:
    type-2 object-stream entries before trailer selection. This lets public reads
    recover modern files whose `/Root` catalog or page tree is only present
    inside an object stream after `startxref` has gone bad. The native reader
+   now skips xref-stream objects by exact `(object number, offset)` identity
+   during reconstructed xref-stream loading, matching the strict reader and
+   preserving incremental updates that reuse an older xref-stream object number
+   for ordinary payload data. The native reader
    gate now also covers hybrid classic trailers with `/XRefStm` on the
    malformed-startxref path, recovering both the table entries and the
    pointed-to xref-stream entries while sanitizing xref-only trailer keys.
@@ -1506,6 +1510,11 @@ reader or writer invariant is narrower than a whole-document workflow:
 - append a compressed-xref-stream incremental revision to the checked-in
   CamlPDF introduction fixture through native async file wrappers, then read
   newest and older revisions while preserving multi-page tutorial text;
+- recover that checked-in CamlPDF introduction incremental fixture after
+  corrupting the final `startxref`, including the case where the newest update
+  reuses an older xref-stream object number for ordinary payload data, then
+  compressed-write/reread while preserving the payload and multi-page tutorial
+  text;
 - append and read a mode-dispatched compressed-xref-stream incremental revision
   through the public `PdfWriteMode` API;
 - recover a valid page tree when the strict xref table omits `/Pages` and page

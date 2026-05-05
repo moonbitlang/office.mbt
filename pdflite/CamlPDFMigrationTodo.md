@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 89-92%.
+- Native main-feature parity: 90-92%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 78-83%.
+  breadth: 79-84%.
 
 ## P0: Native Main Workflows
 
@@ -77,6 +77,9 @@ Current estimate:
   and reread.~~
 - [x] ~~Multi-revision xref-stream/object-stream malformed-startxref recovery
   gate where the newest revision moves `/Root` into an object stream.~~
+- [x] ~~Real CamlPDF intro compressed-xref incremental malformed-startxref
+  recovery where the newest revision reuses an older xref-stream object number
+  for ordinary payload data.~~
 - [x] ~~Password-aware xref-stream/object-stream malformed-startxref recovery
   for encrypted object streams, including decrypted embedded payload materialization.~~
 - [x] ~~Hybrid classic trailer `/XRefStm` malformed-startxref recovery, loading
@@ -128,6 +131,9 @@ Current estimate:
 - [x] ~~Checked-in CamlPDF intro fixture accepts a compressed-xref-stream
   incremental update through native async file wrappers, with newest/older
   revision reads preserving tutorial text.~~
+- [x] ~~Checked-in CamlPDF intro fixture recovers the newest compressed-xref
+  incremental update after corrupting the final `startxref`, including reused
+  object-number payloads, compressed rewrite, reread, and text extraction.~~
 - [ ] Broader real-world PDF corpus testing.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
@@ -163,6 +169,8 @@ Current estimate:
 - [x] ~~Improve fast Flate-level behavior for incompressible streams.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
+- [x] ~~Add a real-file malformed compressed-xref incremental update recovery
+  gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
 - [x] ~~Add a structured DCT/JPEG marker payload native gate.~~
 - [ ] Revisit non-native backend validation after native parity is stable.
