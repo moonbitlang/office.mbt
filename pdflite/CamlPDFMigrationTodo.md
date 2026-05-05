@@ -11,6 +11,35 @@ Current estimate:
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 83-88%.
 
+## Tracking Rules
+
+- [x] ~~Keep this file as the canonical migration checklist.~~
+- [x] ~~Use checked, struck-through text for completed items so finished work
+  remains visible in history.~~
+- [x] ~~Update this file whenever a substantial migration slice lands, and keep
+  project architecture details in `CamlPDFArchitecturePlan.md`.~~
+- [ ] When a remaining item becomes too broad, split it into a fixture- or
+  feature-sized checklist entry before implementing it.
+
+## Current Priority Checklist
+
+- [x] ~~Stabilize native-first core architecture and main workflows.~~
+- [x] ~~Share CamlPDF-style trailer `/ID` generation across `change_id`,
+  encryption, and merge.~~
+- [ ] Add fixture-driven real-world image corpus coverage, prioritizing CCITT
+  and DCT/JPEG encoded payload compatibility before optional pixel decoders.
+- [ ] Add fixture-driven Type3 glyph-program/resource coverage beyond the
+  synthetic acceptance gates.
+- [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
+  from real-world PDFs.
+- [ ] Decide the next rare predefined CMap source-table slice or defer it until
+  better fixtures/source tables are available.
+- [ ] Improve zlib byte-output/performance parity beyond the explicit Flate
+  level API.
+- [ ] Profile and tune large-file hot paths for object streams, filters, and
+  text/image extraction.
+- [ ] Revisit all-backend validation after native parity is stable.
+
 ## Big Picture Checklist
 
 - [x] ~~P0 native core workflows: object graph, reader/writer, page tree,
