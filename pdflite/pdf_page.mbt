@@ -2161,7 +2161,9 @@ pub fn PdfDocument::pdf_of_pages(
   }
   let has_bookmarks = source.pdf_bookmark_has_outlines()
   let retained_bookmarks = if has_bookmarks {
-    source.pdf_bookmarks_for_pages(page_numbers)
+    source.pdf_bookmarks_for_pages(page_numbers) catch {
+      _ => []
+    }
   } else {
     []
   }

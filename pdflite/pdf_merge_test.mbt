@@ -543,6 +543,54 @@ test "pdf_merge_documents retargets retained bookmarks to merged pages" {
 }
 
 ///|
+test "pdf_merge_documents ignores malformed source bookmarks" {
+  let key_dest = merge_name_for_test("/Dest")
+  let key_first = merge_name_for_test("/First")
+  let key_last = merge_name_for_test("/Last")
+  let key_outlines = merge_name_for_test("/Outlines")
+  let key_parent = merge_name_for_test("/Parent")
+  let key_title = merge_name_for_test("/Title")
+  let type_fitr = merge_name_for_test("/FitR")
+  let bad_coordinate = merge_name_for_test("/Bad")
+  let first = merge_one_page_doc_for_test(1, 4)
+  let first_page_refs = try! first.page_reference_numbers()
+  first.add_object_given_number(
+    40,
+    PdfDictionary([(key_first, PdfIndirect(41)), (key_last, PdfIndirect(41))]),
+  )
+  first.add_object_given_number(
+    41,
+    PdfDictionary([
+      (key_parent, PdfIndirect(40)),
+      (key_title, PdfString(@ascii.encode("bad"))),
+      (
+        key_dest,
+        PdfArray([
+          PdfIndirect(first_page_refs[0]),
+          PdfNameObject(type_fitr),
+          PdfNameObject(bad_coordinate),
+          PdfInteger(2),
+          PdfInteger(3),
+          PdfInteger(4),
+        ]),
+      ),
+    ]),
+  )
+  let first = merge_add_catalog_entry_for_test(
+    first,
+    key_outlines,
+    PdfIndirect(40),
+  )
+  let second = merge_bookmarked_doc_for_test("B")
+  let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
+  let bookmarks = try! merged.read_bookmarks()
+  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [
+    @ascii.encode("B"),
+  ])
+  @test.assert_eq(try! merged.page_number_of_target(bookmarks[0].target), 2)
+}
+
+///|
 test "pdf_merge_documents retains optional content groups before pruning" {
   let first = merge_ocg_doc_for_test(20, "Layer A")
   let second = merge_ocg_doc_for_test(20, "Layer B")

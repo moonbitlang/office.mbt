@@ -42,8 +42,10 @@ work changes.
    `pdfhello.ml`-style standard-font document round-trip fixtures,
    `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
    bookmarks, annotations, page labels, duplicate annotation fixups, and
-   destination pruning are started with direct tests. Direct annotation
-   dictionaries in `/Annots` arrays now participate in geometry transforms and
+   destination pruning are started with direct tests. Malformed bookmark sets
+   are dropped during page extraction and merge instead of aborting the
+   document operation. Direct annotation dictionaries in `/Annots` arrays now
+   participate in geometry transforms and
    `change_pages` link-destination matrix transforms; transformed annotation,
    GoTo action, and `/OpenAction` destinations are allocated as indirect
    destination objects like CamlPDF, while full-page `/Fit` and `/FitB`

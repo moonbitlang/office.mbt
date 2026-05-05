@@ -547,7 +547,8 @@ MoonBit consequences for this project:
    filtered to selected target pages, named and string destination targets are
    resolved for page-membership checks while preserving their original target
    syntax, ancestor outline context is retained, and selected page targets are
-   renumbered with the extracted page tree. Structure
+   renumbered with the extracted page tree; malformed bookmark sets are treated
+   as absent instead of aborting extraction. Structure
    tree trimming is started behind `process_struct_tree=true`: structure nodes
    whose `/Pg` points to removed pages are deleted and ancestor `/K` child
    lists are pruned until stable. Broader retained-numbering behavior remains
@@ -1069,10 +1070,13 @@ MoonBit consequences for this project:
     through the existing page-label merge helper behind an explicit option.
     Merge bookmark retention now reuses per-document page extraction to filter
     bookmarks, then retargets retained page-object destinations to the merged
-    page tree. Merge optional-content retention now combines already-renumbered
-    OCG metadata before unreferenced imported OCG objects are pruned, and a
-    malformed optional-content merge is treated as absent merged OCG metadata
-    instead of aborting the document merge. Basic
+    page tree. Malformed source bookmark sets are ignored during extraction and
+    merge, matching CamlPDF's warning-and-continue merge behavior while
+    preserving valid bookmarks from other inputs. Merge optional-content
+    retention now combines already-renumbered OCG metadata before unreferenced
+    imported OCG objects are pruned, and a malformed optional-content merge is
+    treated as absent merged OCG metadata instead of aborting the document
+    merge. Basic
     AcroForm merge support now flattens retained `/Fields` arrays, retains
     non-field form entries with later entries replacing earlier duplicate keys,
     and preserves referenced field objects through the final cleanup. Named
