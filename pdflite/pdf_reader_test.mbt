@@ -2948,6 +2948,13 @@ test "pdf_read_classic_document_from_bytes accepts malformed zero-offset xref ro
   )
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [])
+  let marker_suffix = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_xref_body(
+      "0 1\n0000000000 abcde nJunk\n", "<< /Root 1 0 R /Size 1 >>",
+    ),
+  )
+  @test.assert_eq(marker_suffix.root(), 1)
+  @test.assert_eq(marker_suffix.object_numbers(), [])
 }
 
 ///|

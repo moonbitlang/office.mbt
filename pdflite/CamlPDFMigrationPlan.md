@@ -332,8 +332,9 @@ MoonBit consequences for this project:
    trailing junk after the final `%%EOF` marker.
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
    workaround that treats `0000000000 _____ n` rows as free entries instead of
-   failing the table, and accepts repeated `xref` marker lines plus
-   `xref n m` section headers inside or at the start of a classic table.
+   failing the table, including marker tokens with suffix junk after the
+   leading `n`, and accepts repeated `xref` marker lines plus `xref n m`
+   section headers inside or at the start of a classic table.
    `startxref n` pointers on one line are covered too. It also accepts
    CamlPDF-style fixed-width xref rows whose separator columns are malformed
    independently while the offset, generation, and `n`/`f` columns remain

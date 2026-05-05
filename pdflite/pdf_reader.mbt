@@ -398,7 +398,8 @@ fn pdf_xref_malformed_zero_offset_in_use_free(
 ) -> Bool {
   tokens.length() >= 3 &&
   pdf_view_equals_ascii(tokens[0], [48, 48, 48, 48, 48, 48, 48, 48, 48, 48]) &&
-  pdf_view_equals_ascii(tokens[2], [110])
+  tokens[2].length() > 0 &&
+  tokens[2][0].to_int() == 110
 }
 
 ///|
