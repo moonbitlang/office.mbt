@@ -245,6 +245,52 @@ fn acceptance_one_page_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
+fn acceptance_split_content_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 4)
+  let ops = acceptance_one_page_ops_for_test()
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    content: [
+      @pdflite.pdf_content_stream_of_ops(ops[0:3]),
+      @pdflite.pdf_content_stream_of_ops(ops[3:ops.length()]),
+    ],
+    resources: acceptance_one_page_resources_for_test(),
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(
+    doc.add_root(page_root, [
+      (
+        acceptance_name_for_test("/Lang"),
+        PdfString(acceptance_ascii_for_test("en-US")),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    77,
+    PdfString(acceptance_ascii_for_test("pdftest-stale-object")),
+  )
+  doc
+}
+
+///|
+fn acceptance_pdftest_rewrite_document_for_test(
+  doc : @pdflite.PdfDocument,
+) -> @pdflite.PdfDocument raise {
+  let rewritten_pages : Array[@pdflite.PdfPage] = []
+  for page in doc.pages_of_pagetree() {
+    let parsed_ops = doc.parse_content_ops(page.content)
+    rewritten_pages.push({
+      ..page,
+      content: [@pdflite.pdf_content_stream_of_ops(parsed_ops)],
+    })
+  }
+  let changed = doc.change_pages(rewritten_pages)
+  changed.remove_unreferenced()
+  changed
+}
+
+///|
 fn acceptance_font_object_for_test(
   resources : @pdflite.PdfObject,
 ) -> @pdflite.PdfObject raise {
@@ -705,6 +751,16 @@ fn acceptance_assert_pages_have_hello_content_for_test(
       acceptance_one_page_ops_for_test(),
     )
   }
+}
+
+///|
+fn acceptance_assert_pdftest_rewrite_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  acceptance_assert_one_page_invariants_for_test(doc, (1, 5))
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages[0].content.length(), 1)
+  @test.assert_eq(doc.lookup_object_or_null(77), PdfNull)
 }
 
 ///|
@@ -1241,6 +1297,27 @@ test "native acceptance suite preserves labels and bookmarks across merge bounda
   let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
   @test.assert_eq(reparsed.read_page_labels(), expected_labels)
   acceptance_assert_bookmarks_target_pages_for_test(reparsed, "First", "Second")
+}
+
+///|
+test "native acceptance suite runs pdftest content rewrite workflow" {
+  let source = acceptance_split_content_document_for_test()
+  let bytes = @pdflite.pdf_write_document_with_xref_stream(source)
+  let parsed = @pdflite.pdf_read_document_from_bytes(bytes)
+  let source_pages = parsed.pages_of_pagetree()
+  @test.assert_eq(source_pages.length(), 1)
+  @test.assert_eq(source_pages[0].content.length(), 2)
+  @test.assert_eq(
+    parsed.parse_content_ops(source_pages[0].content),
+    acceptance_one_page_ops_for_test(),
+  )
+  let rewritten = acceptance_pdftest_rewrite_document_for_test(parsed)
+  acceptance_assert_pdftest_rewrite_for_test(rewritten)
+  let rendered = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    rewritten,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rendered)
+  acceptance_assert_pdftest_rewrite_for_test(reparsed)
 }
 
 ///|
