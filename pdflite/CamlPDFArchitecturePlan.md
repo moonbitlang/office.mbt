@@ -169,7 +169,8 @@ work changes.
    `beginnotdefchar`/`beginnotdefrange` Type0 `/Encoding` streams with
    variable-length text segmentation, CID fallback, stored notdef maps, and
    parsed CMap program and stream-dictionary header metadata for `/WMode`,
-   `/CMapName`, `/CMapType`, `/CIDSystemInfo`, and name `/UseCMap`,
+   `/CMapName`, `/CMapType`, `/CIDSystemInfo`, and name `/UseCMap`, including
+   indirect dictionary values,
    plus `/UseCMap` name parsing from CMap programs and stream dictionaries
    with Identity-H/V inherited segmentation and CID fallback, plus recursive
    stream `/UseCMap` composition with cycle protection, inherited codespaces,

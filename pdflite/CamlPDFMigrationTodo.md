@@ -192,7 +192,8 @@ Current estimate:
   CID-entry override behavior.~~
 - [x] ~~External CMap stream-dictionary metadata fallback for `/WMode`,
   `/CMapName`, `/CMapType`, `/CIDSystemInfo`, and name `/UseCMap`, with CMap
-  program metadata taking precedence and malformed dictionary metadata ignored.~~
+  program metadata taking precedence, indirect dictionary values resolved, and
+  malformed dictionary metadata ignored.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus broader external/general CMap parsing beyond the current

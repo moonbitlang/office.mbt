@@ -2832,6 +2832,61 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
     ),
   )
   @test.assert_eq((try! doc.parse_cmap(PdfIndirect(20))).cid_system_info, None)
+
+  doc.add_object_given_number(21, PdfInteger(1))
+  doc.add_object_given_number(
+    22,
+    PdfNameObject(text_name_for_test("/Indirect-CMap")),
+  )
+  doc.add_object_given_number(23, PdfInteger(2))
+  doc.add_object_given_number(
+    24,
+    @pdflite.pdf_dictionary([
+      (
+        text_name_for_test("/Registry"),
+        PdfString(@ascii.encode("IndirectRegistry")),
+      ),
+      (
+        text_name_for_test("/Ordering"),
+        PdfString(@ascii.encode("IndirectOrdering")),
+      ),
+      (text_name_for_test("/Supplement"), PdfInteger(6)),
+    ]),
+  )
+  doc.add_object_given_number(
+    25,
+    PdfNameObject(text_name_for_test("/Identity-V")),
+  )
+  doc.add_object_given_number(
+    26,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(0)),
+        (text_name_for_test("/WMode"), PdfIndirect(21)),
+        (text_name_for_test("/CMapName"), PdfIndirect(22)),
+        (text_name_for_test("/CMapType"), PdfIndirect(23)),
+        (text_name_for_test("/CIDSystemInfo"), PdfIndirect(24)),
+        (text_name_for_test("/UseCMap"), PdfIndirect(25)),
+      ]),
+      StreamGot(Bytes::new(0)),
+    ),
+  )
+  let indirect = try! doc.parse_cmap(PdfIndirect(26))
+  @test.assert_eq(indirect.wmode, Some(1))
+  @test.assert_eq(
+    indirect.cmap_name,
+    Some(text_name_for_test("/Indirect-CMap")),
+  )
+  @test.assert_eq(indirect.cmap_type, Some(2))
+  @test.assert_eq(indirect.usecmap, Some(text_name_for_test("/Identity-V")))
+  @test.assert_eq(
+    indirect.cid_system_info,
+    Some({
+      registry: @ascii.encode("IndirectRegistry"),
+      ordering: @ascii.encode("IndirectOrdering"),
+      supplement: 6,
+    }),
+  )
 }
 
 ///|
