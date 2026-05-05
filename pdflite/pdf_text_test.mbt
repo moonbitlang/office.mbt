@@ -3379,6 +3379,50 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard big5_truncated is Err(BadText) else {
     fail("expected BadText for truncated Big5 charcode")
   }
+  let uhc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUHCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/KSCms-UHC-H")),
+  })
+  let uhc_builtin_extractor = uhc_builtin_font.text_extractor()
+  @test.assert_eq(
+    uhc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0xB0, 0xA1, 0xC7, 0xD1, 0xB1, 0xDB, 0x81, 0x41, 0xA4, 0xD4,
+      ])[:],
+    ),
+    [0x41, 0xAC00, 0xD55C, 0xAE00, 0xAC02, 0x3164],
+  )
+  @test.assert_eq(
+    uhc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x40])[:],
+    ),
+    [0x8140],
+  )
+  @test.assert_eq(uhc_builtin_extractor.charcode_of_codepoint(0x41), Some(0x41))
+  @test.assert_eq(
+    uhc_builtin_extractor.charcode_of_codepoint(0xAC00),
+    Some(0xB0A1),
+  )
+  @test.assert_eq(
+    uhc_builtin_extractor.charcode_of_codepoint(0xD55C),
+    Some(0xC7D1),
+  )
+  @test.assert_eq(
+    uhc_builtin_extractor.charcode_of_codepoint(0xAC02),
+    Some(0x8141),
+  )
+  @test.assert_eq(
+    uhc_builtin_extractor.charcode_of_codepoint(0x3164),
+    Some(0xA4D4),
+  )
+  @test.assert_eq(uhc_builtin_extractor.charcode_of_codepoint(0x1F600), None)
+  let uhc_truncated = try? uhc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x81])[:],
+  )
+  guard uhc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated UHC charcode")
+  }
   let rksj_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
     ..text_font_descriptor_for_test(),
     tounicode: Some([
