@@ -354,6 +354,16 @@ fn acceptance_assert_minimal_page_tree_for_test(
 }
 
 ///|
+fn acceptance_secret_object_for_test(text : String) -> @pdflite.PdfObject {
+  PdfDictionary([
+    (
+      acceptance_name_for_test("/Title"),
+      PdfString(acceptance_ascii_for_test(text)),
+    ),
+  ])
+}
+
+///|
 fn acceptance_object_stream_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -562,12 +572,7 @@ test "native acceptance suite reconstructs omitted page-tree xrefs" {
 ///|
 test "native acceptance suite reads encrypted AES128 documents through public wrapper" {
   let doc = try! acceptance_one_page_document_for_test()
-  let secret : @pdflite.PdfObject = PdfDictionary([
-    (
-      acceptance_name_for_test("/Title"),
-      PdfString(acceptance_ascii_for_test("native-acceptance-secret")),
-    ),
-  ])
+  let secret = acceptance_secret_object_for_test("native-acceptance-secret")
   doc.add_object_given_number(60, secret)
   let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
@@ -605,4 +610,65 @@ test "native acceptance suite reads encrypted AES128 documents through public wr
     (1, 4),
   )
   @test.assert_eq(owner_decrypted.document.lookup_object_or_null(60), secret)
+}
+
+///|
+test "native acceptance suite recrypts encrypted incremental revisions" {
+  let original_secret = acceptance_secret_object_for_test(
+    "native-acceptance-original",
+  )
+  let updated_secret = acceptance_secret_object_for_test(
+    "native-acceptance-updated",
+  )
+  let doc = try! acceptance_one_page_document_for_test()
+  doc.add_object_given_number(60, original_secret)
+  let denied : Array[@pdflite.PdfPermission] = [PdfNoEdit, PdfNoPrint]
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    acceptance_ascii_for_test("user")[:],
+    acceptance_ascii_for_test("owner")[:],
+    denied,
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 1)
+    },
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("native-acceptance-recrypt-id")[:],
+  )
+  let original = try! @pdflite.pdf_write_document(encrypted)
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      original,
+      user_password=Some(acceptance_ascii_for_test("user")[:]),
+    ),
+  )
+  decrypted.document.add_object_given_number(60, updated_secret)
+  let recrypted = try! decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+    acceptance_ascii_for_test("owner")[:],
+    fn(object_number, generation, index) {
+      acceptance_aes_iv_for_test(object_number, generation, index + 2)
+    },
+  )
+  let updated = try! @pdflite.pdf_write_document_incremental_update(
+    original, recrypted,
+  )
+  @test.assert_eq(try! @pdflite.pdf_revisions_from_bytes(updated), 2)
+  let newest = acceptance_unwrap_decryption_for_test(
+    try! @pdflite.pdf_read_document_revision_from_bytes_with_passwords(
+      updated,
+      1,
+      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+    ),
+  )
+  @test.assert_eq(newest.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(newest.document, (1, 4))
+  @test.assert_eq(newest.document.lookup_object_or_null(60), updated_secret)
+  let older = acceptance_unwrap_decryption_for_test(
+    try! @pdflite.pdf_read_document_revision_from_bytes_with_passwords(
+      updated,
+      2,
+      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+    ),
+  )
+  @test.assert_eq(older.denied_permissions, denied)
+  acceptance_assert_one_page_invariants_for_test(older.document, (1, 4))
+  @test.assert_eq(older.document.lookup_object_or_null(60), original_secret)
 }

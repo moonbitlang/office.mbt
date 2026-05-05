@@ -1369,6 +1369,9 @@ end to end:
   object stream, then normalize it through the classic writer and reread it;
 - write AES-128 encrypted output and read it through the public password
   wrapper with both user and owner passwords.
+- decrypt AES-128 output through the public wrapper, mutate the decrypted
+  document, recrypt with the saved encryption state, append an incremental
+  update, and read both newest and older encrypted revisions.
 
 Near-term work should extend this suite with the next visible compatibility
 case, then fix the reader/parser/encryption gap it exposes. Broader backend
