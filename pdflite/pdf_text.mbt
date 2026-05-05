@@ -1167,10 +1167,36 @@ fn pdf_text_predefined_utf8_codepoints(code : Int) -> Array[Int]? {
 ///|
 fn pdf_text_predefined_utf8_charcode(codepoint : Int) -> Int? {
   guard pdf_text_valid_unicode_codepoint(codepoint) else { return None }
-  let bytes = try? pdf_utf8_of_codepoints([codepoint])
-  match bytes {
-    Ok(bytes) => Some(pdf_text_pack_bytes_as_charcode(bytes[:]))
-    Err(_) => None
+  if codepoint <= 0x7F {
+    Some(codepoint)
+  } else if codepoint <= 0x7FF {
+    Some(
+      pdf_text_pack_two_bytes(
+        0xC0 | (codepoint >> 6),
+        0x80 | (codepoint & 0x3F),
+      ),
+    )
+  } else if codepoint <= 0xFFFF {
+    Some(
+      pdf_text_pack_bytes_as_charcode(
+        Bytes::makei(3, fn(index) {
+          match index {
+            0 => (0xE0 | (codepoint >> 12)).to_byte()
+            1 => (0x80 | ((codepoint >> 6) & 0x3F)).to_byte()
+            _ => (0x80 | (codepoint & 0x3F)).to_byte()
+          }
+        })[:],
+      ),
+    )
+  } else {
+    Some(
+      pdf_text_pack_four_bytes(
+        0xF0 | (codepoint >> 18),
+        0x80 | ((codepoint >> 12) & 0x3F),
+        0x80 | ((codepoint >> 6) & 0x3F),
+        0x80 | (codepoint & 0x3F),
+      ),
+    )
   }
 }
 

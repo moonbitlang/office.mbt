@@ -2650,6 +2650,99 @@ test "private external CMap helpers cover malformed and compact sections" {
 }
 
 ///|
+test "private direct Unicode predefined CMap helpers cover malformed scalars" {
+  let utf8_name = wbtest_text_name("/UniJIS-UTF8-H")
+  @test.assert_eq(
+    pdf_text_predefined_cmap_charcodes_of_text(
+      utf8_name,
+      wbtest_text_bytes([0xC2, 0xA2])[:],
+    ),
+    [0xC2A2],
+  )
+  @test.assert_eq(pdf_text_predefined_utf8_charcode(0x41), Some(0x41))
+  @test.assert_eq(pdf_text_predefined_utf8_charcode(0xA2), Some(0xC2A2))
+  @test.assert_eq(pdf_text_predefined_utf8_charcode(0xD800), None)
+  let truncated_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
+    utf8_name,
+    wbtest_text_bytes([0xC2])[:],
+  )
+  guard truncated_utf8 is Err(_) else {
+    fail("expected truncated UTF8 predefined CMap text to raise")
+  }
+  let invalid_lead_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
+    utf8_name,
+    wbtest_text_bytes([0xFF])[:],
+  )
+  guard invalid_lead_utf8 is Err(_) else {
+    fail("expected invalid leading UTF8 predefined CMap text to raise")
+  }
+  let invalid_continuation_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
+    utf8_name,
+    wbtest_text_bytes([0xC2, 0x41])[:],
+  )
+  guard invalid_continuation_utf8 is Err(_) else {
+    fail("expected invalid UTF8 predefined CMap text to raise")
+  }
+
+  @test.assert_eq(pdf_text_predefined_utf16_codepoints(0xD800), None)
+  @test.assert_eq(
+    pdf_text_predefined_utf16_codepoints(
+      pdf_text_pack_four_bytes(0xD8, 0x00, 0x00, 0x41),
+    ),
+    None,
+  )
+  @test.assert_eq(pdf_text_predefined_utf16_codepoints(0x123456), None)
+  let low_surrogate_utf16 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
+    wbtest_text_name("/UniJIS-UTF16-H"),
+    wbtest_text_bytes([0xDC, 0x00])[:],
+  )
+  guard low_surrogate_utf16 is Err(_) else {
+    fail("expected low-surrogate UTF16 predefined CMap text to raise")
+  }
+
+  @test.assert_eq(pdf_text_predefined_utf32_codepoints(0xD800), None)
+  @test.assert_eq(pdf_text_predefined_utf32_charcode(0x110000), None)
+  @test.assert_eq(
+    pdf_text_predefined_direct_unicode_charcode(
+      wbtest_text_name("/UniJIS-UCS2-H"),
+      0x1D11E,
+    ),
+    None,
+  )
+
+  let composite : PdfCompositeCIDFont = {
+    cid_system_info: {
+      registry: wbtest_text_bytes([82]),
+      ordering: wbtest_text_bytes([79]),
+      supplement: 0,
+    },
+    cid_basefont: wbtest_text_name("/Descendant"),
+    cid_fontdescriptor: pdf_text_empty_font_descriptor(),
+    cid_widths: [],
+    cid_widths2: [],
+    cid_default_width: 1000.0,
+    cid_default_width2: [880.0, -1000.0],
+  }
+  let two_byte_font : PdfFont = PdfFontCIDKeyed({
+    basefont: wbtest_text_name("/Top"),
+    composite,
+    encoding: PdfPredefinedCMap(wbtest_text_name("/Identity-H")),
+  })
+  @test.assert_eq(
+    two_byte_font.pdf_text_fixed_or_single_byte_charcodes_of_text(
+      wbtest_text_bytes([0x00, 0x41])[:],
+    ),
+    [0x41],
+  )
+  let odd_fixed : Result[Array[Int], Error] = try? two_byte_font.pdf_text_fixed_or_single_byte_charcodes_of_text(
+    wbtest_text_bytes([0])[:],
+  )
+  guard odd_fixed is Err(_) else {
+    fail("expected odd fixed-width CID text to raise")
+  }
+}
+
+///|
 test "private text stream helpers treat malformed ToUnicode streams as absent" {
   let key = wbtest_text_name("/Missing")
   @test.assert_eq(pdf_text_dictionary_has_key(PdfInteger(1), key), false)
