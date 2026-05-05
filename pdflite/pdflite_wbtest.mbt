@@ -3661,5 +3661,26 @@ test "private text glyph helpers cover fallback and CID ToUnicode branches" {
     ),
     Some(0x0000FE51),
   )
+  let unknown_vertical_cmap = wbtest_text_name("/Unknown-V")
+  guard pdf_text_predefined_gb1_vertical_codepoint_table(unknown_vertical_cmap)
+    is None else {
+    fail("expected no GB1 vertical table")
+  }
+  guard pdf_text_predefined_gb1_vertical_charcode_table(unknown_vertical_cmap)
+    is None else {
+    fail("expected no GB1 vertical reverse table")
+  }
+  guard pdf_text_predefined_korea1_vertical_codepoint_table(
+      unknown_vertical_cmap,
+    )
+    is None else {
+    fail("expected no Korea1 vertical table")
+  }
+  guard pdf_text_predefined_korea1_vertical_charcode_table(
+      unknown_vertical_cmap,
+    )
+    is None else {
+    fail("expected no Korea1 vertical reverse table")
+  }
   @test.assert_eq(pdf_text_hex_int_min2(7), "07")
 }

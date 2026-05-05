@@ -127,10 +127,13 @@ Current estimate:
 - [x] ~~GBK2K predefined CMap built-in CID-range fallback using packed
   four-byte signed-`Int` charcodes, shared Adobe-GB1 CID-to-Unicode data,
   supplementary scalar handling, and reverse lookup.~~
+- [x] ~~Vertical predefined CMap override fallbacks for supported Adobe-GB1,
+  Adobe-CNS1, and Adobe-Korea1 families when `/ToUnicode` is absent, including
+  reverse lookup.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the RKSJ
   single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, ETenms-B5, HKSCS, Hong Kong
-  Big5, UHC, GBK, GBK2K, KSC-EUC, and KSCpc-EUC fallbacks, plus more
-  vertical-writing text behavior when `/ToUnicode` is absent.
+  Big5, UHC, GBK, GBK2K, KSC-EUC, and KSCpc-EUC fallbacks, including Japanese
+  multi-byte predefined CMaps and broader external/general CMap parsing.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -241,7 +244,10 @@ Current estimate:
 - [x] ~~Add the next remaining text parity slice: vertical no-`/ToUnicode`
   behavior or GBK2K after the four-byte charcode representation is made
   explicit.~~
-- [ ] Add the next remaining text parity slice: vertical no-`/ToUnicode`
+- [x] ~~Add the next remaining text parity slice: vertical no-`/ToUnicode`
   behavior, broader external predefined/general CMap parsing, or real-world
-  ToUnicode variation coverage.
+  ToUnicode variation coverage.~~
+- [ ] Add the next remaining text parity slice: Japanese multi-byte
+  predefined-CMap fallback, broader external predefined/general CMap parsing,
+  or real-world ToUnicode variation coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.

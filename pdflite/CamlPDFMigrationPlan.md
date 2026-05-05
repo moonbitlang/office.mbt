@@ -1006,7 +1006,10 @@ MoonBit consequences for this project:
    generic Big5. GBK2K now uses generated Adobe-GB1 CID ranges and packs
    four-byte character codes into MoonBit signed `Int` values, matching the
    bit pattern of the PDF byte sequence while keeping reverse lookup
-   deterministic. Other remaining predefined-CMap tables remain deferred.
+   deterministic. Supported Adobe-GB1, Adobe-CNS1, and Adobe-Korea1 vertical
+   predefined CMaps now apply generated vertical CID override tables before the
+   existing horizontal fallback when `/ToUnicode` is absent, with matching
+   reverse lookup. Other remaining predefined-CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1571,6 +1574,9 @@ reader or writer invariant is narrower than a whole-document workflow:
   charcode segmentation, packed signed-`Int` four-byte charcodes, reverse
   charcode lookup, supplementary Unicode scalar output, and invalid-code
   fallback;
+- decode supported vertical no-`/ToUnicode` predefined-CMap text by applying
+  generated Adobe-GB1, Adobe-CNS1, and Adobe-Korea1 vertical override tables
+  before horizontal fallbacks, with reverse charcode lookup;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`

@@ -3964,6 +3964,44 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard kscpc_euc_truncated is Err(BadText) else {
     fail("expected BadText for truncated KSCpc-EUC charcode")
   }
+  let vertical_builtin_cases : Array[(String, Array[Int], Array[Int], Int, Int)] = [
+    ("/GB-EUC-V", [0xA1, 0xA2], [0x3001], 0x3001, 0xA1A2),
+    ("/GBpc-EUC-V", [0xA1, 0xA2], [0x3001], 0x3001, 0xA1A2),
+    ("/GBK-EUC-V", [0xA1, 0xA2], [0x3001], 0x3001, 0xA1A2),
+    ("/GBKp-EUC-V", [0xA1, 0xA2], [0x3001], 0x3001, 0xA1A2),
+    ("/GBK2K-V", [0xA4, 0xC3], [0x3064], 0x3064, 0xA4C3),
+    ("/B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/B5pc-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/ETen-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/ETenms-B5-V", [0xA1, 0x4C], [0xFE30], 0xFE30, 0xA14C),
+    ("/HKdla-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/HKdlb-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/HKgccs-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/HKm314-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/HKm471-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/HKscs-B5-V", [0xA1, 0x4B], [0xFE19], 0xFE19, 0xA14B),
+    ("/KSC-EUC-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
+    ("/KSCpc-EUC-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
+    ("/KSCms-UHC-V", [0xA1, 0xA6], [0x22EF], 0x22EF, 0xA1A6),
+  ]
+  for case in vertical_builtin_cases {
+    let vertical_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+      basefont: text_name_for_test("/TopVerticalBuiltin"),
+      composite,
+      encoding: PdfPredefinedCMap(text_name_for_test(case.0)),
+    })
+    let vertical_builtin_extractor = vertical_builtin_font.text_extractor()
+    @test.assert_eq(
+      vertical_builtin_extractor.codepoints_of_text(
+        text_bytes_for_test(case.1[:])[:],
+      ),
+      case.2,
+    )
+    @test.assert_eq(
+      vertical_builtin_extractor.charcode_of_codepoint(case.3),
+      Some(case.4),
+    )
+  }
   let rksj_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
     ..text_font_descriptor_for_test(),
     tounicode: Some([
