@@ -258,7 +258,10 @@ MoonBit consequences for this project:
    default `/Size` ranges, explicit `/Index` ranges, and ordinary type-1
    entries; xref stream objects are omitted from the loaded object map, and
    type-2 object-stream entries are now resolved after their containing
-   `/ObjStm` object has been loaded. Object stream extraction is started for
+   `/ObjStm` object has been loaded. Missing `/Type /XRef` is now tolerated
+   for xref streams with real xref-stream structure such as `/W`, matching
+   CamlPDF's parser, while explicit wrong `/Type` values remain rejected.
+   Object stream extraction is started for
    direct/filter-decodable stream data with direct `/N` and `/First`
    dictionaries, including malformed header, offset, index, and object-number
    mismatch checks. Object-stream extraction now uses the document-aware stream

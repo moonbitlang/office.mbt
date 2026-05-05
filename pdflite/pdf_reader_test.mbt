@@ -452,6 +452,81 @@ fn reader_xref_stream_pdf() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_xref_stream_pdf_without_type() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_wrong_type() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Type /Catalog /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_non_name_type() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Type 99 /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_short_entry_data() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -1592,6 +1667,31 @@ test "pdf_read_document_from_bytes reads default-index xref streams" {
 }
 
 ///|
+test "pdf_read_document_from_bytes accepts xref streams without Type" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_without_type(),
+  )
+  @test.assert_eq(parsed.version(), (1, 5))
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type"))),
+    None,
+  )
+}
+
+///|
 test "pdf_read_document_from_bytes reads xref stream Index ranges" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     reader_xref_stream_pdf_with_index(),
@@ -2336,6 +2436,20 @@ test "pdf_read_document_from_bytes rejects non-xref startxref objects" {
   )
   guard wrong_stream_type is Err(@pdflite.PdfError::XRefExpected) else {
     fail("expected XRefExpected")
+  }
+
+  let explicit_wrong_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_wrong_type(),
+  )
+  guard explicit_wrong_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected explicit xref stream type rejection")
+  }
+
+  let non_name_type : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_non_name_type(),
+  )
+  guard non_name_type is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected non-name xref stream type rejection")
   }
 }
 

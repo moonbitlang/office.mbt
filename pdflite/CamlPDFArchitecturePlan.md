@@ -30,6 +30,9 @@ work changes.
    stream-length providers are now classified by parsing the referenced object
    segment, so ordinary length objects containing the word `stream` in comments
    do not get mistaken for stream objects.
+   Xref-stream reading now also mirrors CamlPDF's tolerance for missing
+   `/Type /XRef` when the stream still carries xref-stream structure such as
+   `/W`, while keeping explicit wrong `/Type` values rejected.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.

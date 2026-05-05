@@ -544,6 +544,15 @@ fn pdf_reader_stream_dictionary_without_xref_keys(
 }
 
 ///|
+fn pdf_reader_xref_stream_type_ok(dictionary : PdfObject) -> Bool {
+  match dictionary.lookup_immediate(pdf_reader_type_name()) {
+    Some(PdfNameObject(name)) => name == pdf_reader_xref_name()
+    Some(_) => false
+    None => dictionary.lookup_immediate(pdf_reader_w_name()) != None
+  }
+}
+
+///|
 fn pdf_xref_stream_int_array(
   dictionary : PdfObject,
   key : PdfName,
@@ -797,9 +806,8 @@ fn ByteCursor::read_pdf_xref_stream_section(
   }
   let parsed = self.read_first_indirect_object_at_current([])
   guard parsed.object is PdfStreamObject(stream) else { raise XRefExpected }
-  match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
-    Some(PdfNameObject(name)) if name == pdf_reader_xref_name() => ()
-    _ => raise XRefExpected
+  if !pdf_reader_xref_stream_type_ok(stream.dictionary) {
+    raise XRefExpected
   }
   let decoded_stream = pdf_decode_stream_value(stream)
   let widths = pdf_xref_stream_widths(decoded_stream.dictionary)
