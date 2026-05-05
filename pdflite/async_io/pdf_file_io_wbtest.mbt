@@ -6,11 +6,14 @@ async fn pdf_async_io_remove_if_exists_for_test(path : String) -> Unit {
 }
 
 ///|
-fn pdf_async_io_restore_env_for_test(previous : String?) -> Unit {
-  match previous {
-    Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
-    None => @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+fn pdf_async_io_assert_generated_id_for_test(
+  id : @pdflite.PdfObject?,
+) -> Unit raise {
+  guard id is Some(PdfArray([PdfString(first), PdfString(second)])) else {
+    fail("expected generated trailer ID")
   }
+  @test.assert_eq(first.length(), 16)
+  @test.assert_eq(second, first)
 }
 
 ///|
@@ -386,21 +389,45 @@ async test "async file wrappers write and read PDF documents" {
 async test "async file wrappers can write generated trailer IDs" {
   let path = pdf_async_io_test_path_for_test("generated_id")
   pdf_async_io_remove_if_exists_for_test(path)
-  let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
-  @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
   let original = try! @pdflite.pdf_minimum_valid_pdf()
   pdf_write_document_to_file_with_generated_id(
     original,
     path,
     mode=PdfWriteCompressedXRefStream,
   )
-  pdf_async_io_restore_env_for_test(previous)
   let loaded = pdf_read_document_from_file(path)
   pdf_async_io_remove_if_exists_for_test(path)
-  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf")[:])
-  @test.assert_eq(
+  pdf_async_io_assert_generated_id_for_test(
     loaded.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/ID")),
-    Some(PdfArray([PdfString(expected), PdfString(expected)])),
+  )
+  @test.assert_eq(
+    original.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/ID")),
+    None,
+  )
+  @test.assert_eq(try! loaded.endpage(), 1)
+}
+
+///|
+async test "async file wrappers can incrementally write generated trailer IDs" {
+  let original_path = pdf_async_io_test_path_for_test("generated_id_original")
+  let path = pdf_async_io_test_path_for_test("generated_id_update")
+  pdf_async_io_remove_if_exists_for_test(original_path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  let original = try! @pdflite.pdf_minimum_valid_pdf()
+  pdf_write_document_to_file(original, original_path)
+  pdf_write_document_incremental_update_to_file_with_generated_id(
+    original_path,
+    original,
+    path,
+    mode=PdfWriteCompressedXRefStream,
+  )
+  let rendered = @fs.read_file(path).binary()
+  let loaded = pdf_read_document_from_file(path)
+  pdf_async_io_remove_if_exists_for_test(original_path)
+  pdf_async_io_remove_if_exists_for_test(path)
+  @test.assert_eq(try! @pdflite.pdf_revisions_from_bytes(rendered), 2)
+  pdf_async_io_assert_generated_id_for_test(
+    loaded.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/ID")),
   )
   @test.assert_eq(
     original.trailer_dict().lookup_immediate(pdf_async_io_name_for_test("/ID")),

@@ -438,3 +438,23 @@ pub async fn pdf_write_document_incremental_update_to_file_with_mode(
     create=permission,
   )
 }
+
+///|
+pub async fn pdf_write_document_incremental_update_to_file_with_generated_id(
+  original_path : StringView,
+  document : @pdflite.PdfDocument,
+  path : StringView,
+  mode? : @pdflite.PdfWriteMode = PdfWriteClassic,
+  permission? : Int = 0o644,
+) -> Unit {
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_document_incremental_update_with_generated_id(
+      @fs.read_file(original_path).binary(),
+      document,
+      path.to_owned(),
+      mode~,
+    ),
+    create=permission,
+  )
+}

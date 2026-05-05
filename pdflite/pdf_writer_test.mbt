@@ -9,11 +9,12 @@ fn writer_ascii_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn writer_restore_env_for_test(previous : String?) -> Unit {
-  match previous {
-    Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
-    None => @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+fn writer_assert_generated_id_for_test(id : @pdflite.PdfObject?) -> Unit raise {
+  guard id is Some(PdfArray([PdfString(first), PdfString(second)])) else {
+    fail("expected generated trailer ID")
   }
+  @test.assert_eq(first.length(), 16)
+  @test.assert_eq(second, first)
 }
 
 ///|
@@ -947,8 +948,6 @@ test "pdf_write_document_with_mode dispatches public writer modes" {
 
 ///|
 test "pdf_write_document_with_generated_id writes copy with trailer ID" {
-  let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
-  @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
   let key_id = writer_name_for_test([47, 73, 68])
   let document = try! @pdflite.pdf_minimum_valid_pdf()
   let rendered = try! @pdflite.pdf_write_document_with_generated_id(
@@ -956,12 +955,29 @@ test "pdf_write_document_with_generated_id writes copy with trailer ID" {
     "writer-out.pdf",
     mode=PdfWriteCompressedXRefStream,
   )
-  writer_restore_env_for_test(previous)
-  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf")[:])
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
-  @test.assert_eq(
+  writer_assert_generated_id_for_test(
     parsed.trailer_dict().lookup_immediate(key_id),
-    Some(PdfArray([PdfString(expected), PdfString(expected)])),
+  )
+  @test.assert_eq(document.trailer_dict().lookup_immediate(key_id), None)
+  @test.assert_eq(try! parsed.endpage(), 1)
+}
+
+///|
+test "pdf_write_document_incremental_update_with_generated_id appends trailer ID" {
+  let key_id = writer_name_for_test([47, 73, 68])
+  let document = try! @pdflite.pdf_minimum_valid_pdf()
+  let original = try! @pdflite.pdf_write_document(document)
+  let rendered = try! @pdflite.pdf_write_document_incremental_update_with_generated_id(
+    original,
+    document,
+    "writer-update.pdf",
+    mode=PdfWriteCompressedXRefStream,
+  )
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
+  @test.assert_eq(try! @pdflite.pdf_revisions_from_bytes(rendered), 2)
+  writer_assert_generated_id_for_test(
+    parsed.trailer_dict().lookup_immediate(key_id),
   )
   @test.assert_eq(document.trailer_dict().lookup_immediate(key_id), None)
   @test.assert_eq(try! parsed.endpage(), 1)

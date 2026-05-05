@@ -245,6 +245,10 @@ work changes.
    CamlPDF-style generated trailer IDs with `pdf_write_document_with_generated_id`
    and `pdf_write_document_to_file_with_generated_id`; both paths write a copied
    document so the caller's in-memory object graph is not mutated by output.
+   The same generated-ID behavior is available for incremental update output via
+   `pdf_write_document_incremental_update_with_generated_id` and the native
+   async file wrapper, so appended trailers can refresh `/ID` without mutating
+   the caller's document.
    Native AESV2 and AESV3 convenience output now use a pdflite-owned OS
    random-byte FFI boundary for IVs, AESV3 file keys, salts, and permissions
    padding, with failure propagated as checked `PdfError`; the native async file

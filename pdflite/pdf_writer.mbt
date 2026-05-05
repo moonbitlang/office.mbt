@@ -1205,6 +1205,20 @@ pub fn pdf_write_document_incremental_update_with_mode(
 }
 
 ///|
+pub fn pdf_write_document_incremental_update_with_generated_id(
+  original : PdfBytes,
+  document : PdfDocument,
+  path : String,
+  mode? : PdfWriteMode = PdfWriteClassic,
+) -> PdfBytes raise PdfError {
+  pdf_write_document_incremental_update_with_mode(
+    original,
+    document.copy_with_current_id(path),
+    mode,
+  )
+}
+
+///|
 pub fn pdf_write_document_with_mode(
   document : PdfDocument,
   mode : PdfWriteMode,

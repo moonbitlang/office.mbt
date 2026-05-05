@@ -28,6 +28,8 @@ Current estimate:
   encryption, and merge.~~
 - [x] ~~Add CamlPDF-style generated trailer `/ID` writer output for byte and
   async file writes without mutating the source document.~~
+- [x] ~~Add CamlPDF-style generated trailer `/ID` incremental-update output for
+  byte and async file writes without mutating the source document.~~
 - [ ] Add fixture-driven real-world image corpus coverage, prioritizing CCITT
   and DCT/JPEG encoded payload compatibility before optional pixel decoders.
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage beyond the
@@ -107,6 +109,8 @@ Current estimate:
   preserving explicit `file_id=` overrides.~~
 - [x] ~~CamlPDF-style generated trailer `/ID` writer path for bytes and native
   async file output, preserving the original document object graph.~~
+- [x] ~~CamlPDF-style generated trailer `/ID` incremental writer path for bytes
+  and native async file output, preserving the original document object graph.~~
 - [x] ~~Page resource lifecycle native gate: `renumber_pages`, `add_prefix`,
   `merge_content_streams`, and `process_xobjects` through
   read/edit/write/reread boundaries.~~
@@ -426,6 +430,8 @@ Current estimate:
   env-aware CamlPDF-style ID generator.~~
 - [x] ~~Add generated trailer `/ID` write helpers for byte and async file
   output.~~
+- [x] ~~Add generated trailer `/ID` incremental-update helpers for byte and
+  async file output.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.
