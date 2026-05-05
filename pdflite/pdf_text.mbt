@@ -1701,6 +1701,16 @@ fn pdf_text_tounicode_bfrange_entries_of_line(
 }
 
 ///|
+fn pdf_text_push_tounicode_bfrange_entries(
+  entries : Array[(Int, PdfBytes)],
+  line_entries : ArrayView[(Int, PdfBytes)],
+) -> Unit {
+  for entry in line_entries {
+    entries.push(entry)
+  }
+}
+
+///|
 priv struct PdfTextCMapBFRangeArray {
   first : Int
   last : Int
@@ -1766,11 +1776,17 @@ fn pdf_text_cmap_bfrange_array_line(line : BytesView) -> BytesView {
 }
 
 ///|
+priv enum PdfTextCMapBFRangeArrayAppend {
+  PdfTextCMapBFRangeArrayPending(PdfTextCMapBFRangeArray)
+  PdfTextCMapBFRangeArrayClosed(BytesView)
+}
+
+///|
 fn pdf_text_append_pending_bfrange_array(
   entries : Array[(Int, PdfBytes)],
   pending : PdfTextCMapBFRangeArray,
   line : BytesView,
-) -> Bool {
+) -> PdfTextCMapBFRangeArrayAppend {
   let content = pdf_text_cmap_bfrange_array_line(line)
   match pdf_text_index_of_byte(content, 93, 0) {
     Some(close) => {
@@ -1782,18 +1798,51 @@ fn pdf_text_append_pending_bfrange_array(
           pending.unicodes[:],
         ) {
         Some(line_entries) =>
-          for entry in line_entries {
-            entries.push(entry)
-          }
+          pdf_text_push_tounicode_bfrange_entries(entries, line_entries[:])
         None => ()
       }
-      true
+      PdfTextCMapBFRangeArrayClosed(content[close + 1:])
     }
     None => {
       pdf_text_extend_cmap_hex_groups(pending.unicodes, content)
-      false
+      PdfTextCMapBFRangeArrayPending(pending)
     }
   }
+}
+
+///|
+fn pdf_text_append_tounicode_bfrange_line(
+  entries : Array[(Int, PdfBytes)],
+  line : BytesView,
+) -> PdfTextCMapBFRangeArray? {
+  let mut current = line
+  while current.length() > 0 {
+    match pdf_text_tounicode_bfrange_entries_of_line(current) {
+      Some(line_entries) => {
+        pdf_text_push_tounicode_bfrange_entries(entries, line_entries[:])
+        return None
+      }
+      None =>
+        match pdf_text_cmap_bfrange_array_start(current) {
+          Some((pending, open)) =>
+            match
+              pdf_text_append_pending_bfrange_array(
+                entries,
+                pending,
+                current[open + 1:],
+              ) {
+              PdfTextCMapBFRangeArrayClosed(rest) => current = rest
+              PdfTextCMapBFRangeArrayPending(pending) => return Some(pending)
+            }
+          None =>
+            match pdf_text_cmap_bfrange_array_header(current) {
+              Some(pending) => return Some(pending)
+              None => return None
+            }
+        }
+    }
+  }
+  None
 }
 
 ///|
@@ -1854,16 +1903,15 @@ fn pdf_text_parse_tounicode_sections(
       let end_bfchar = pdf_text_line_contains_ascii(line, "endbfchar")
       let end_bfrange = pdf_text_line_contains_ascii(line, "endbfrange")
       match pending_bfrange_array {
-        Some(pending) => {
-          let closed = pdf_text_append_pending_bfrange_array(
-            entries, pending, line,
-          )
-          if closed {
-            pending_bfrange_array = None
-          } else {
-            pending_bfrange_array = Some(pending)
+        Some(pending) =>
+          match pdf_text_append_pending_bfrange_array(entries, pending, line) {
+            PdfTextCMapBFRangeArrayClosed(rest) =>
+              pending_bfrange_array = pdf_text_append_tounicode_bfrange_line(
+                entries, rest,
+              )
+            PdfTextCMapBFRangeArrayPending(pending) =>
+              pending_bfrange_array = Some(pending)
           }
-        }
         None =>
           match section {
             PdfTextCMapBFChar =>
@@ -1871,32 +1919,9 @@ fn pdf_text_parse_tounicode_sections(
                 entries, pending_bfchar_source, line,
               )
             PdfTextCMapBFRange =>
-              match pdf_text_tounicode_bfrange_entries_of_line(line) {
-                Some(line_entries) =>
-                  for entry in line_entries {
-                    entries.push(entry)
-                  }
-                None =>
-                  match pdf_text_cmap_bfrange_array_start(line) {
-                    Some((pending, open)) => {
-                      let closed = pdf_text_append_pending_bfrange_array(
-                        entries,
-                        pending,
-                        line[open + 1:],
-                      )
-                      if closed {
-                        pending_bfrange_array = None
-                      } else {
-                        pending_bfrange_array = Some(pending)
-                      }
-                    }
-                    None =>
-                      match pdf_text_cmap_bfrange_array_header(line) {
-                        Some(pending) => pending_bfrange_array = Some(pending)
-                        None => ()
-                      }
-                  }
-              }
+              pending_bfrange_array = pdf_text_append_tounicode_bfrange_line(
+                entries, line,
+              )
             PdfTextCMapNone => ()
           }
       }

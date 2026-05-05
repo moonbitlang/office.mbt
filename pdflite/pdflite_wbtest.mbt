@@ -1991,14 +1991,15 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   }
   let pending : PdfTextCMapBFRangeArray = { first: 1, last: 2, unicodes: [] }
   let pending_entries : Array[(Int, PdfBytes)] = []
-  @test.assert_eq(
-    pdf_text_append_pending_bfrange_array(
-      pending_entries,
-      pending,
-      @ascii.encode("<0041>]")[:],
-    ),
-    true,
+  let append_result = pdf_text_append_pending_bfrange_array(
+    pending_entries,
+    pending,
+    @ascii.encode("<0041>]")[:],
   )
+  guard append_result is PdfTextCMapBFRangeArrayClosed(rest) else {
+    fail("expected closed bfrange array")
+  }
+  @test.assert_eq(rest.length(), 0)
   @test.assert_eq(pending_entries, [])
   @test.assert_eq(pdf_text_parse_tounicode(@ascii.encode("plain")[:]), None)
   @test.assert_eq(

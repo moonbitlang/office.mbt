@@ -848,7 +848,9 @@ MoonBit consequences for this project:
    whitespace-split `beginbfchar`/`endbfchar` and
    `beginbfrange`/`endbfrange` markers are accepted. Inline `bfrange` parsing
    now consumes repeated array-form and sequential entries from one line
-   instead of stopping after the first array mapping. A small
+   instead of stopping after the first array mapping. Multiline `bfrange`
+   arrays now also resume parsing after the closing `]`, so trailing same-line
+   range entries are retained like CamlPDF's whitespace-elided pass. A small
    public parsed-CMap API is also started: borrowed CMap bytes and direct or
    indirect stream objects can now return a typed map plus `/WMode`, decoding
    supported stream filters first. `/WMode` parsing now follows PDF whitespace

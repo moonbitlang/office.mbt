@@ -75,7 +75,8 @@ work changes.
    `pdf_image.mbt`.
    Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, Identity-H/V
    two-byte CID text extraction, CamlPDF-style whitespace-elided ToUnicode CMap
-   section scanning, `/WMode` token parsing across PDF whitespace,
+   section scanning, multiline `bfrange` tail parsing, `/WMode` token parsing
+   across PDF whitespace,
    standard-font extraction, color spaces,
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
    extraction are started, including explicit `/Indexed` encoded-image
