@@ -672,6 +672,55 @@ test "pdf_merge_documents retains and retargets named destinations" {
 }
 
 ///|
+test "pdf_merge_documents tolerates malformed named destinations" {
+  let key_names = merge_name_for_test("/Names")
+  let key_dests = merge_name_for_test("/Dests")
+  let type_fitr = merge_name_for_test("/FitR")
+  let bad_coordinate = merge_name_for_test("/Bad")
+  let catalog_name = merge_name_for_test("/BadCatalog")
+  let string_name = @ascii.encode("bad-string")
+  let doc = merge_one_page_doc_for_test(1, 4)
+  let page_refs = try! doc.page_reference_numbers()
+  let bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(page_refs[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  let with_names = merge_add_catalog_entry_for_test(
+    doc,
+    key_names,
+    PdfDictionary([
+      (key_dests, doc.build_name_tree([(string_name, bad_destination)])),
+    ]),
+  )
+  let with_destinations = merge_add_catalog_entry_for_test(
+    with_names,
+    key_dests,
+    PdfDictionary([(catalog_name, bad_destination)]),
+  )
+  let merged = try! @pdflite.pdf_merge_documents([with_destinations], [[1]])
+  let merged_page_refs = try! merged.page_reference_numbers()
+  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(merged_page_refs[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  @test.assert_eq(
+    merge_catalog_destination_for_test(merged, catalog_name),
+    Some(renumbered_bad_destination),
+  )
+  @test.assert_eq(merge_destination_name_entries_for_test(merged), [
+    (string_name, renumbered_bad_destination),
+  ])
+}
+
+///|
 test "pdf_merge_documents renames colliding string destinations" {
   let first = merge_nametree_dest_callsite_doc_for_test("shared", "First")
   let second = merge_nametree_dest_callsite_doc_for_test("shared", "Second")

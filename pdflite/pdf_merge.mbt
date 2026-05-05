@@ -1255,17 +1255,18 @@ fn PdfDocument::pdf_merge_oldstyle_destinations(
       let output : Array[(PdfName, PdfObject)] = []
       for entry in entries {
         let (key, destination) = entry
-        output.push(
-          (
-            pdf_merge_changed_catalog_destination_name(key, name_changes),
-            pdf_object_of_destination(
-              pdf_merge_renumber_destination(
-                self.read_destination(destination, shallow=true),
-                changes,
-              ),
-            ),
-          ),
+        let renamed_key = pdf_merge_changed_catalog_destination_name(
+          key, name_changes,
         )
+        let renamed_destination = pdf_object_of_destination(
+          pdf_merge_renumber_destination(
+            self.read_destination(destination, shallow=true),
+            changes,
+          ),
+        ) catch {
+          _ => pdf_page_renumber_object(destination, changes)
+        }
+        output.push((renamed_key, renamed_destination))
       }
       output
     }
@@ -1286,17 +1287,18 @@ fn PdfDocument::pdf_merge_nametree_destinations(
           let output : Array[(PdfBytes, PdfObject)] = []
           for entry in self.read_name_tree(dests_tree) {
             let (key, destination) = entry
-            output.push(
-              (
-                pdf_merge_changed_destination_name(key, name_changes),
-                pdf_object_of_destination(
-                  pdf_merge_renumber_destination(
-                    self.read_destination(destination, shallow=true),
-                    changes,
-                  ),
-                ),
-              ),
+            let renamed_key = pdf_merge_changed_destination_name(
+              key, name_changes,
             )
+            let renamed_destination = pdf_object_of_destination(
+              pdf_merge_renumber_destination(
+                self.read_destination(destination, shallow=true),
+                changes,
+              ),
+            ) catch {
+              _ => pdf_page_renumber_object(destination, changes)
+            }
+            output.push((renamed_key, renamed_destination))
           }
           output
         }

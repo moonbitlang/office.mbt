@@ -1078,9 +1078,12 @@ MoonBit consequences for this project:
     and preserves referenced field objects through the final cleanup. Named
     destination retention now merges old-style catalog `/Dests` and name-tree
     `/Names` `/Dests`, retargeting page-object destinations to the merged page
-    tree. Destination-name collisions across merged `/Names/Dests` trees and
-    old-style catalog `/Dests` dictionaries are now disambiguated with
-    CamlPDF-style `-fN` suffixes. String and name destination callsites such as
+    tree. Malformed retained destination definitions fall back to raw
+    object-level page-reference renumbering instead of aborting the merge,
+    matching CamlPDF's dictionary/name-tree merge path. Destination-name
+    collisions across merged `/Names/Dests` trees and old-style catalog
+    `/Dests` dictionaries are now disambiguated with CamlPDF-style `-fN`
+    suffixes. String and name destination callsites such as
     link annotation `/Dest` entries, GoTo action `/D` entries, and retained
     named/string-target bookmarks are rewritten to the renamed keys, including
     cross-document callsites that fall back to the first global renamed target.
