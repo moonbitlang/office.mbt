@@ -476,8 +476,8 @@ test "pdf_write_document_incremental_update appends classic xref revisions" {
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
   let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
   document.add_object_given_number(1, catalog)
-  let original = try! @pdflite.pdf_write_document(document)
-  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+  let original = @pdflite.pdf_write_document(document)
+  let original_parsed = @pdflite.pdf_read_document_from_bytes(original)
 
   let updated = original_parsed.copy()
   let updated_catalog = @pdflite.pdf_dictionary([
@@ -540,8 +540,8 @@ test "pdf_write_document_incremental_update writes only changed classic objects"
   let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
   document.add_object_given_number(1, catalog)
   document.add_object_given_number(2, PdfInteger(20))
-  let original = try! @pdflite.pdf_write_document(document)
-  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+  let original = @pdflite.pdf_write_document(document)
+  let original_parsed = @pdflite.pdf_read_document_from_bytes(original)
   @test.assert_eq(original_parsed.event_log(), [])
 
   let updated = original_parsed.copy()
@@ -792,15 +792,15 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
     1,
     @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
   )
-  let original = try! @pdflite.pdf_write_document(document)
-  let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
+  let original = @pdflite.pdf_write_document(document)
+  let original_parsed = @pdflite.pdf_read_document_from_bytes(original)
 
   let classic_update = original_parsed.copy()
   classic_update.add_object_given_number(
     1,
     @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
   )
-  let classic = try! @pdflite.pdf_write_document_incremental_update_with_mode(
+  let classic = @pdflite.pdf_write_document_incremental_update_with_mode(
     original,
     classic_update,
     PdfWriteClassic,
@@ -815,8 +815,9 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
     0,
     true,
   )
+  let classic_parsed = @pdflite.pdf_read_document_from_bytes(classic)
   @test.assert_eq(
-    try! @pdflite.pdf_read_document_from_bytes(classic).lookup_object_or_null(1),
+    classic_parsed.lookup_object_or_null(1),
     @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
   )
 
@@ -825,7 +826,7 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
     1,
     @pdflite.pdf_dictionary([(value_name, PdfInteger(3))]),
   )
-  let xref_stream = try! @pdflite.pdf_write_document_incremental_update_with_mode(
+  let xref_stream = @pdflite.pdf_write_document_incremental_update_with_mode(
     original,
     xref_update,
     PdfWriteXRefStream,
@@ -839,10 +840,9 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
     0,
     true,
   )
+  let xref_parsed = @pdflite.pdf_read_document_from_bytes(xref_stream)
   @test.assert_eq(
-    try! @pdflite.pdf_read_document_from_bytes(xref_stream).lookup_object_or_null(
-      1,
-    ),
+    xref_parsed.lookup_object_or_null(1),
     @pdflite.pdf_dictionary([(value_name, PdfInteger(3))]),
   )
 
@@ -851,7 +851,7 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
     1,
     @pdflite.pdf_dictionary([(value_name, PdfInteger(4))]),
   )
-  let compressed = try! @pdflite.pdf_write_document_incremental_update_with_mode(
+  let compressed = @pdflite.pdf_write_document_incremental_update_with_mode(
     original,
     compressed_update,
     PdfWriteCompressedXRefStream,
@@ -865,10 +865,9 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
     0,
     true,
   )
+  let compressed_parsed = @pdflite.pdf_read_document_from_bytes(compressed)
   @test.assert_eq(
-    try! @pdflite.pdf_read_document_from_bytes(compressed).lookup_object_or_null(
-      1,
-    ),
+    compressed_parsed.lookup_object_or_null(1),
     @pdflite.pdf_dictionary([(value_name, PdfInteger(4))]),
   )
 }

@@ -806,6 +806,42 @@ test "native acceptance suite reads classic and xref-stream incremental revision
 }
 
 ///|
+test "native acceptance suite updates documents through public writer modes" {
+  let original = @pdflite.pdf_write_document_with_mode(
+    acceptance_one_page_document_for_test(),
+    PdfWriteXRefStream,
+  )
+  let original_parsed = @pdflite.pdf_read_document_from_bytes(original)
+  acceptance_assert_one_page_invariants_for_test(original_parsed, (1, 5))
+
+  let updated = acceptance_add_revision_marker_for_test(
+    original_parsed, 92, "mode-dispatched-update",
+  )
+  let rendered = @pdflite.pdf_write_document_incremental_update_with_mode(
+    original,
+    updated,
+    PdfWriteCompressedXRefStream,
+  )
+  @test.assert_eq(@pdflite.pdf_revisions_from_bytes(rendered), 2)
+  @test.assert_eq(
+    acceptance_find_bytes_for_test(
+      rendered[:],
+      acceptance_ascii_for_test("/FlateDecode")[:],
+    ) >
+    original.length(),
+    true,
+  )
+  let newest = @pdflite.pdf_read_document_revision_from_bytes(rendered, 1)
+  acceptance_assert_one_page_invariants_for_test(newest, (1, 5))
+  acceptance_assert_revision_marker_for_test(
+    newest, 92, "mode-dispatched-update",
+  )
+  let older = @pdflite.pdf_read_document_revision_from_bytes(rendered, 2)
+  acceptance_assert_one_page_invariants_for_test(older, (1, 5))
+  acceptance_assert_no_revision_marker_for_test(older, 92)
+}
+
+///|
 test "native acceptance suite normalizes object-stream pages through writer" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(
     acceptance_object_stream_pdf_for_test(),

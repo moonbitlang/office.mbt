@@ -1389,6 +1389,8 @@ end to end:
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;
+- append and read a mode-dispatched compressed-xref-stream incremental revision
+  through the public `PdfWriteMode` API;
 - recover a valid page tree when the strict xref table omits `/Pages` and page
   objects, then normalize the reconstructed document through the writer;
 - read a valid page tree whose `/Pages` and `/Page` objects live inside an
