@@ -3,10 +3,13 @@
 This is the project-specific plan for porting the vendored CamlPDF code in
 `.repos/` to MoonBit. The general, library-agnostic OCaml-to-MoonBit rules live
 in `OCaml2MoonBit.md`. The separate high-level architecture checklist lives in
-`CamlPDFArchitecturePlan.md`.
+`CamlPDFArchitecturePlan.md`, and the active prioritized progress checklist
+lives in `CamlPDFMigrationTodo.md`.
 
 Update this file whenever the CamlPDF architecture understanding, migration
-ordering, acceptance criteria, or deferred behavior changes.
+ordering, acceptance criteria, or deferred behavior changes. Update
+`CamlPDFMigrationTodo.md` whenever substantial migration work changes what is
+covered or what should be prioritized next.
 
 ## Source Snapshot
 
