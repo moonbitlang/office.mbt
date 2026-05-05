@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 88-90%.
+- Native main-feature parity: 88-91%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 76-81%.
+  breadth: 77-82%.
 
 ## P0: Native Main Workflows
 
@@ -81,7 +81,10 @@ Current estimate:
   through reader and extractor boundaries.~~
 - [ ] Broader non-UCS2 predefined CMap mapping tables and more vertical-writing
   text behavior.
-- [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
+- [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
+  custom encoding, metrics, compressed rewrite, and reread.~~
+- [ ] More TrueType and Type3 glyph-program edge coverage beyond the current
+  Type3 and embedded TrueType gates.
 - [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
@@ -133,4 +136,5 @@ Current estimate:
   PDFs.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
+- [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
 - [ ] Revisit non-native backend validation after native parity is stable.

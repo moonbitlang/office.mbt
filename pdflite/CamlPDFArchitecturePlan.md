@@ -151,10 +151,11 @@ work changes.
    compressed read/write boundaries for Flate-decoded raw `/Indexed` image
    XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
    encoded-image preservation, staged Flate-then-JBIG2 encoded-image
-   preservation with `/JBIG2Globals`, embedded TrueType `FontFile2` plus
+   preservation with `/JBIG2Globals`, Type3 `/ToUnicode` text extraction with
+   indirect CharProcs and custom metrics, embedded TrueType `FontFile2` plus
    `/ToUnicode` text extraction through compressed read/write boundaries, and
-   Flate inline-image content parsing. Stream decode now also covers CCITT
-   `/K 0` and `/K < 0` data through `/CCITTFaxDecode` and `/CCF`.
+   Flate inline-image content parsing. Stream decode now also covers CCITT `/K
+   0` and `/K < 0` data through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader non-UCS2 predefined CMap mapping tables, JPEG pixel
    decode, and remaining image filter families.
 
@@ -219,9 +220,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 88-90% complete. Full
+Current estimate: native main-feature parity is about 88-91% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 76-81% complete.
+and backend breadth, is about 77-82% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -259,14 +260,14 @@ and backend breadth, is about 76-81% complete.
   vertical width metadata. Native image acceptance now also
   covers JPX encoded images, staged Flate-to-JBIG2 images with
   `/JBIG2Globals`, and CCITT image XObjects through raw RGB extraction; native
-  font acceptance covers embedded TrueType `FontFile2` with generated
-  `/ToUnicode` text extraction. Stream decode now covers CCITT `/K 0` and
-  `/K < 0` with `/DecodeParms` defaults and direct indirect params. Typed
-  stream encoding now covers CCITT Group 3 `/K 0` and round-trips through
-  decode.
+  font acceptance covers Type3 `/ToUnicode` text with indirect CharProcs and
+  embedded TrueType `FontFile2` with generated `/ToUnicode` text extraction.
+  Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
+  defaults and direct indirect params. Typed stream encoding now covers CCITT
+  Group 3 `/K 0` and round-trips through decode.
 - Not covered enough: broader non-UCS2 predefined CMap mapping tables,
-  vertical-writing behavior beyond the current gates, additional Type3/TrueType
-  edge coverage, and more real-world ToUnicode variations.
+  vertical-writing behavior beyond the current gates, additional TrueType and
+  Type3 glyph-program edge coverage, and more real-world ToUnicode variations.
 - Not covered enough: fuller zlib/Flate tuning parity, broader DCT/JPEG and
   CCITT corpus validation, CCITT Group 4 external-tool encode policy, and
   optional external JBIG2 decoder integration. Actual JPEG pixel decoding is

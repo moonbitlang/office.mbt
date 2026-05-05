@@ -881,8 +881,10 @@ MoonBit consequences for this project:
    `/Identity-H`/`/Identity-V` CID text, and predefined UCS2 horizontal/vertical
    CMaps, including decoded glyph records, glyph-name extraction, flattened
    codepoint extraction, odd-length composite string rejection, and reverse
-   ToUnicode charcode lookup for single Unicode codepoints. Basic Latin
-   glyph-list-backed fallback is also started for
+   ToUnicode charcode lookup for single Unicode codepoints. Native acceptance
+   now also covers Type3 `/ToUnicode` text extraction with indirect CharProcs,
+   custom encoding differences, Type3 metrics, compressed rewrite, and reread.
+   Basic Latin glyph-list-backed fallback is also started for
    StandardEncoding, MacRomanEncoding, WinAnsiEncoding, custom encoding
    differences, effective encoding-table/reverse-table export, and reverse
    charcode lookup over that subset.
@@ -1447,6 +1449,10 @@ public APIs end to end:
 - extract text from parsed page content with a filtered ToUnicode CMap stream
   after compressed xref-stream write/read boundaries, including `Tj` and `TJ`
   content operators and reverse charcode lookup;
+- extract Type3 `/ToUnicode` text from parsed page content after compressed
+  xref-stream write/read boundaries, including indirect CharProcs streams,
+  custom encoding differences, Type3 metrics, fabricated descriptor
+  ToUnicode storage, and glyph-program content parsing;
 - extract Type0 `/Identity-H` CID-keyed text from parsed page content after
   compressed xref-stream write/read boundaries, including two-byte `Tj`/`TJ`
   text and public font identity predicates;
