@@ -1685,6 +1685,13 @@ pub fn PdfDocument::pdf_decode_stream_until_unknown(
 }
 
 ///|
+fn pdf_decode_stream_until_unknown_value(
+  stream : PdfStream,
+) -> PdfStream raise PdfError {
+  pdf_document_empty().pdf_decode_stream_until_unknown_value_direct(stream)
+}
+
+///|
 pub fn PdfDocument::pdf_decode_streams_until_unknown(
   self : PdfDocument,
 ) -> Unit raise PdfError {

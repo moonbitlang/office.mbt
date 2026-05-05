@@ -623,14 +623,17 @@ MoonBit consequences for this project:
    filter metadata, including supported multi-filter arrays such as
    ASCII85-plus-Flate and RunLength-plus-ASCIIHex where the first filter
    supplies the inline-image data boundary. DCT inline image filter arrays are
-   now treated as JPEG
-   payloads whenever DCT is the first filter, so byte sequences such as `EI`
-   inside JPEG data do not terminate parsing early; the DCT dictionary metadata
-   is preserved because JPEG decoding remains deferred. Inline image rendering
-   now mirrors CamlPDF's safer default for unfiltered images by emitting Flate
-   inline data with `/F /Fl` and `/L`, while filtered inline images such as DCT
-   remain byte-preserving. Re-parsing decoded inline images also strips stale
-   `/Length`/`/L` metadata alongside filter and decode-parameter keys.
+   now treated as JPEG payloads whenever DCT is the first filter, so byte
+   sequences such as `EI` inside JPEG data do not terminate parsing early; the
+   DCT dictionary metadata is preserved because JPEG decoding remains deferred.
+   Inline image streams with leading supported filters before a deferred DCT
+   stage, such as `/Filter [ /A85 /DCT ]`, now decode the supported wrapper and
+   preserve the remaining DCT filter plus JPEG bytes instead of attempting to
+   decode the JPEG stage. Inline image rendering now mirrors CamlPDF's safer
+   default for unfiltered images by emitting Flate inline data with `/F /Fl`
+   and `/L`, while filtered inline images such as DCT remain byte-preserving.
+   Re-parsing decoded inline images also strips stale `/Length`/`/L` metadata
+   alongside filter and decode-parameter keys.
    Inline images now honor declared `/L` or `/Length` byte counts before
    falling back to marker scanning when filter or colour-space metadata is not
    enough to compute a size, preserving opaque binary payloads that contain

@@ -42,8 +42,11 @@ work changes.
    `pdfhello.ml`-style standard-font document round-trip fixtures,
    `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
    bookmarks, annotations, page labels, duplicate annotation fixups, and
-   destination pruning are started with direct tests. Malformed bookmark sets
-   are dropped during page extraction and merge instead of aborting the
+   destination pruning are started with direct tests. Inline-image parsing now
+   consumes known encoded payload boundaries, treats DCT as a deferred JPEG
+   stage, and can decode leading supported filters before preserving a remaining
+   DCT stage. Malformed bookmark sets are dropped during page extraction and
+   merge instead of aborting the
    document operation. Direct annotation dictionaries in `/Annots` arrays now
    participate in geometry transforms and
    `change_pages` link-destination matrix transforms; transformed annotation,

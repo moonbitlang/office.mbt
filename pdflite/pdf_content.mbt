@@ -1252,20 +1252,30 @@ fn pdf_content_decode_inline_image_data(
     pdf_content_length_name(),
     PdfInteger(encoded.length()),
   )
-  let decoded = pdf_decode_stream_value({
+  let decoded = pdf_decode_stream_until_unknown_value({
     dictionary: stream_dictionary,
     data: StreamGot(encoded),
   })
-  (
-    dictionary
-    .remove_dict_entry(pdf_content_inline_filter_name())
-    .remove_dict_entry(pdf_content_inline_f_name())
-    .remove_dict_entry(pdf_content_inline_decode_parms_name())
-    .remove_dict_entry(pdf_content_inline_dp_name())
-    .remove_dict_entry(pdf_content_length_name())
-    .remove_dict_entry(pdf_content_inline_l_name()),
-    pdf_stream_data_bytes(decoded.data),
-  )
+  let decoded_data = pdf_stream_data_bytes(decoded.data)
+  if pdf_stream_has_filter_value(decoded) {
+    (
+      decoded.dictionary
+      .remove_dict_entry(pdf_content_length_name())
+      .remove_dict_entry(pdf_content_inline_l_name()),
+      decoded_data,
+    )
+  } else {
+    (
+      dictionary
+      .remove_dict_entry(pdf_content_inline_filter_name())
+      .remove_dict_entry(pdf_content_inline_f_name())
+      .remove_dict_entry(pdf_content_inline_decode_parms_name())
+      .remove_dict_entry(pdf_content_inline_dp_name())
+      .remove_dict_entry(pdf_content_length_name())
+      .remove_dict_entry(pdf_content_inline_l_name()),
+      decoded_data,
+    )
+  }
 }
 
 ///|
