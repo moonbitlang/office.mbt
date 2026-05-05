@@ -64,6 +64,8 @@ Current estimate:
   old-style destinations, name-tree destinations, `/OpenAction`, optional
   content, AcroForm merge basics, trailer `/Info`, and structure-tree
   merge/pruning basics.~~
+- [x] ~~Name/number tree API parity for raw contents and typed lookup helpers,
+  including nested `/Kids` traversal and `/Limits` pruning.~~
 - [x] ~~`change_pages` bookmark/destination matrix rewriting and count-changing
   replacement with explicit reference mapping.~~
 - [x] ~~ARC4/AESV2/AESV3 authentication, encryption, decryption, native
@@ -373,6 +375,8 @@ Current estimate:
 - [x] ~~Add the next remaining format parity slice: comment-aware CMap parsing
   for metadata, `/UseCMap`, ToUnicode maps, CID maps, notdef maps, and
   codespaces.~~
+- [x] ~~Add the next remaining API parity slice: name/number tree contents and
+  lookup helpers.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

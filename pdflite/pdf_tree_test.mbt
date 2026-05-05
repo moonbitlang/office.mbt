@@ -125,6 +125,81 @@ test "PdfDocument build_name_tree creates nested child limits for large trees" {
 }
 
 ///|
+test "PdfDocument name_tree_lookup finds nested name entries by limits" {
+  let doc = @pdflite.pdf_document_empty()
+  let entries : Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] = [
+    for i in 0..<12 => (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
+  ]
+  let tree = doc.build_name_tree(entries)
+  @test.assert_eq(
+    doc.name_tree_lookup(tree_bytes_for_test("k0")[:], tree),
+    Some(PdfInteger(0)),
+  )
+  @test.assert_eq(
+    doc.name_tree_lookup(tree_bytes_for_test("k11")[:], tree),
+    Some(PdfInteger(11)),
+  )
+  @test.assert_eq(
+    doc.name_tree_lookup(tree_bytes_for_test("missing")[:], tree),
+    None,
+  )
+  @test.assert_eq(
+    doc.name_tree_lookup_object(PdfString(tree_bytes_for_test("k5")), tree),
+    Some(PdfInteger(5)),
+  )
+}
+
+///|
+test "PdfDocument name_tree_lookup handles leaf misses and malformed trees" {
+  let doc = @pdflite.pdf_document_empty()
+  let leaf : @pdflite.PdfObject = PdfDictionary([
+    (
+      tree_name_for_test("/Names"),
+      PdfArray([PdfString(tree_bytes_for_test("a")), PdfInteger(1)]),
+    ),
+  ])
+  @test.assert_eq(doc.name_tree_lookup(tree_bytes_for_test("z")[:], leaf), None)
+  let mismatched_limits : @pdflite.PdfObject = PdfDictionary([
+    (
+      tree_name_for_test("/Limits"),
+      PdfArray([
+        PdfString(tree_bytes_for_test("a")),
+        PdfString(tree_bytes_for_test("z")),
+      ]),
+    ),
+    (
+      tree_name_for_test("/Names"),
+      PdfArray([PdfString(tree_bytes_for_test("a")), PdfInteger(1)]),
+    ),
+  ])
+  @test.assert_eq(
+    doc.name_tree_lookup_object(PdfInteger(1), mismatched_limits),
+    None,
+  )
+  @test.assert_eq(
+    doc.name_tree_lookup_object(
+      PdfString(tree_bytes_for_test("a")),
+      PdfDictionary([(tree_name_for_test("/Limits"), PdfInteger(1))]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    doc.name_tree_lookup_object(
+      PdfString(tree_bytes_for_test("a")),
+      PdfDictionary([(tree_name_for_test("/Kids"), PdfInteger(1))]),
+    ),
+    None,
+  )
+  @test.assert_eq(
+    doc.name_tree_lookup_object(
+      PdfString(tree_bytes_for_test("a")),
+      PdfDictionary([]),
+    ),
+    None,
+  )
+}
+
+///|
 test "PdfDocument build_number_tree sorts and round trips entries" {
   let doc = @pdflite.pdf_document_empty()
   let tree = doc.build_number_tree([
@@ -156,6 +231,23 @@ test "PdfDocument build_number_tree sorts and round trips entries" {
     (1, PdfString(tree_bytes_for_test("one"))),
     (2, PdfString(tree_bytes_for_test("new"))),
   ])
+}
+
+///|
+test "PdfDocument number_tree_lookup finds nested number entries by limits" {
+  let doc = @pdflite.pdf_document_empty()
+  let tree = doc.build_number_tree(
+    [
+      for i in 0..<21 => (i * 2, PdfInteger(i))
+    ],
+  )
+  @test.assert_eq(doc.number_tree_lookup(0, tree), Some(PdfInteger(0)))
+  @test.assert_eq(doc.number_tree_lookup(40, tree), Some(PdfInteger(20)))
+  @test.assert_eq(doc.number_tree_lookup(41, tree), None)
+  @test.assert_eq(
+    doc.name_tree_lookup_object(PdfInteger(18), tree),
+    Some(PdfInteger(9)),
+  )
 }
 
 ///|
@@ -195,6 +287,41 @@ test "PdfDocument build empty name and number trees" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(doc.read_name_tree(doc.build_name_tree([])), [])
   @test.assert_eq(doc.read_number_tree(doc.build_number_tree([])), [])
+}
+
+///|
+test "PdfDocument contents_of_name_tree returns raw name and number tree pairs" {
+  let doc = @pdflite.pdf_document_empty()
+  doc.add_object_given_number(
+    5,
+    PdfDictionary([
+      (
+        tree_name_for_test("/Nums"),
+        PdfArray([PdfInteger(2), PdfString(tree_bytes_for_test("two"))]),
+      ),
+    ]),
+  )
+  let tree : @pdflite.PdfObject = PdfDictionary([
+    (
+      tree_name_for_test("/Nums"),
+      PdfArray([
+        PdfInteger(1),
+        PdfString(tree_bytes_for_test("one")),
+        PdfInteger(99),
+      ]),
+    ),
+    (tree_name_for_test("/Kids"), PdfArray([PdfIndirect(5)])),
+  ])
+  @test.assert_eq(doc.contents_of_name_tree(tree), [
+    (PdfInteger(1), PdfString(tree_bytes_for_test("one"))),
+  ])
+  @test.assert_eq(
+    doc.contents_of_name_tree(
+      PdfDictionary([(tree_name_for_test("/Kids"), PdfArray([PdfIndirect(5)]))]),
+    ),
+    [(PdfInteger(2), PdfString(tree_bytes_for_test("two")))],
+  )
+  @test.assert_eq(doc.contents_of_name_tree(PdfDictionary([])), [])
 }
 
 ///|

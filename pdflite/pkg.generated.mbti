@@ -1163,6 +1163,7 @@ pub fn PdfDocument::change_pages(Self, ArrayView[PdfPage], change_references? : 
 pub fn PdfDocument::colour_space_components(Self, PdfObject, PdfObject) -> Int raise PdfError
 pub fn PdfDocument::colspace(Self, PdfObject, PdfObject) -> PdfColourSpace raise PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, PdfObject, PdfObject) -> PdfObject
+pub fn PdfDocument::contents_of_name_tree(Self, PdfObject) -> Array[(PdfObject, PdfObject)]
 pub fn PdfDocument::copy(Self) -> Self
 pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfObject? raise PdfError
 pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise PdfError
@@ -1203,6 +1204,9 @@ pub fn PdfDocument::map_objects_in_place(Self, (PdfObject) -> PdfObject) -> Unit
 pub fn PdfDocument::merge_content_streams(Self) -> Unit raise PdfError
 pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
 pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[PdfObject]) -> PdfObject
+pub fn PdfDocument::name_tree_lookup(Self, BytesView, PdfObject) -> PdfObject?
+pub fn PdfDocument::name_tree_lookup_object(Self, PdfObject, PdfObject) -> PdfObject?
+pub fn PdfDocument::number_tree_lookup(Self, Int, PdfObject) -> PdfObject?
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
 pub fn PdfDocument::page_number_of_target(Self, PdfDestination) -> Int raise PdfError

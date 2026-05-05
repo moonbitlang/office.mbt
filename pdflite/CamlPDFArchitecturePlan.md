@@ -115,12 +115,16 @@ work changes.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
-   `pdf_bookmark.mbt`, `pdf_annot.mbt`, `pdf_page_label.mbt`.
+   `pdf_bookmark.mbt`, `pdf_annot.mbt`, `pdf_page_label.mbt`,
+   `pdf_tree.mbt`.
    Status: page tree read/write/change/extract flows, content operators,
    `pdfhello.ml`-style standard-font document round-trip fixtures,
    `pdftest.ml`-style content rewrite fixtures, inline images, destinations,
    bookmarks, annotations, page labels, duplicate annotation fixups, and
-   destination pruning are started with direct tests. Inline-image parsing now
+   destination pruning are started with direct tests. Name/number tree support
+   now includes read/build/merge helpers plus raw contents and typed lookup
+   APIs with nested `/Kids` traversal and `/Limits` pruning. Inline-image
+   parsing now
    consumes known encoded payload boundaries, treats DCT as a deferred JPEG
    stage, and can decode leading supported filters before preserving remaining
    deferred image filters such as DCT or CCITT. Malformed bookmark sets are
