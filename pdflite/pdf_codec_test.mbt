@@ -416,12 +416,30 @@ test "pdf_flate_encode chooses compact zlib blocks" {
       for i in 0..<40 => 216 + i
     ],
   )
-  let stored = @pdflite.pdf_flate_encode(non_repeating_high)
-  @test.assert_eq(stored.length(), 51)
-  @test.assert_eq(@pdflite.pdf_int_array_of_bytes(stored[:7]), [
-    120, 1, 1, 40, 0, 215, 255,
-  ])
-  @test.assert_eq(try! @pdflite.pdf_flate_decode(stored), non_repeating_high)
+  let compact_non_repeating = @pdflite.pdf_flate_encode(non_repeating_high)
+  @test.assert_eq(compact_non_repeating.length() <= 51, true)
+  @test.assert_eq(
+    try! @pdflite.pdf_flate_decode(compact_non_repeating),
+    non_repeating_high,
+  )
+  let skewed_literals = try! @pdflite.pdf_bytes_of_int_array(
+    [
+      for i in 0..<4096 => {
+        let bucket = ((i * 73 + i / 11 * 29 + i / 97) & 0x7fffffff) % 32
+        if bucket < 25 {
+          65
+        } else if bucket < 30 {
+          66
+        } else {
+          67
+        }
+      }
+    ],
+  )
+  let dynamic = @pdflite.pdf_flate_encode(skewed_literals)
+  @test.assert_eq(dynamic[2].to_int() & 0x07, 5)
+  @test.assert_eq(dynamic.length() < skewed_literals.length() / 3, true)
+  @test.assert_eq(try! @pdflite.pdf_flate_decode(dynamic), skewed_literals)
 }
 
 ///|

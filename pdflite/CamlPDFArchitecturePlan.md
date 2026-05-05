@@ -66,11 +66,12 @@ work changes.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
-   Status: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode,
+   Status: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode
+   including stored, fixed-Huffman, and dynamic-Huffman output choices,
    predictors, filter arrays, document-aware stream decoding, document-wide
    stop-at-unknown stream decompression, and JPEG data extraction are started.
-   Remaining focus: higher-ratio dynamic-Huffman Flate output, CCITT/JBIG2
-   external-style decode parity, and actual JPEG pixel decoding.
+   Remaining focus: fuller zlib-style Flate tuning, CCITT/JBIG2 external-style
+   decode parity, and actual JPEG pixel decoding.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
@@ -178,9 +179,9 @@ vertical acceptance path at a time instead of isolated edge polishing:
   compressed xref-stream read boundary, and native async file wrappers cover
   encrypted incremental revision reads from disk. Password-aware native reads
   now include an encrypted object-stream fixture.
-- In progress: image/filter parity, text CMap parity, encryption finishing
-  edges, remaining malformed-reader recovery, and example-level integration
-  fixtures.
+- In progress: image/filter parity, Flate compression tuning, text CMap parity,
+  encryption finishing edges, remaining malformed-reader recovery, and
+  example-level integration fixtures.
 - Deferred: CCITT/JBIG2 external-style decode, JPEG pixel decode, default AES
   random source, broader predefined CMap coverage, and broad real-world PDF
   recovery behavior.

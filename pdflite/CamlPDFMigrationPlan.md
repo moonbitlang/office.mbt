@@ -454,11 +454,14 @@ MoonBit consequences for this project:
    Flate encode now chooses between zlib stored blocks, compact fixed-Huffman
    literal blocks, a conservative fixed-Huffman length/distance path for
    distance-1 repeated-byte runs, and a bounded fixed-Huffman prior-prefix
-   match path for short LZ77-style matches, keeping stored blocks as the
-  fallback for data where Huffman output would be larger. The fixed-Huffman
-  path now keeps a bounded hash chain per byte prefix so a short recent match
-  does not hide a longer older match. Unbounded full match search and
-  higher-ratio dynamic-Huffman output remain deferred.
+   match path for short LZ77-style matches. Flate encode now also builds a
+   dynamic-Huffman block over the same bounded token stream, RLE-compresses the
+   code-length alphabet, validates the result through decode round trips, and
+   keeps the shortest of stored, fixed, repeat, match, and dynamic outputs so
+   incompressible data can still fall back safely. The fixed/dynamic paths now
+   keep a bounded hash chain per byte prefix so a short recent match does not
+   hide a longer older match. Unbounded full match search and zlib-level tuning
+   remain deferred.
    Low-level LZW decode is started with clear/EOD handling and default
    EarlyChange 1; owned stream decode reads direct first-stage `/EarlyChange`
    from `/DecodeParms` or `/DP` for `/LZWDecode`/`/LZW`. Owned `StreamGot`
@@ -502,8 +505,7 @@ MoonBit consequences for this project:
    image decoding now use the document-aware stream decoder internally, so
    indirect filter metadata is honored across those callers. Reader
    object-stream extraction also uses document-aware decoding after the object
-   map is loaded. Higher-ratio Flate compression and other filters remain
-   deferred.
+   map is loaded. Further Flate tuning and other filters remain deferred.
 
 8. Page tree and content streams.
    Port `pdfpage`, `pdfops`, `pdftree`, and `pdfst` enough to reproduce the
@@ -1347,7 +1349,10 @@ MoonBit consequences for this project:
     removes `pdf_fun.mbt` from the uncovered-line report by exercising sampled
     function option/default/error paths, interpolation and stitching dictionary
     validation, calculator parser errors, calculator evaluator stack/type
-    errors, and private sampled/stitching guard paths. Text coverage now
+    errors, and private sampled/stitching guard paths. Flate coverage now
+    includes dynamic-Huffman code-length generation, canonical code emission,
+    code-length RLE branches, empty/error fallback paths, and a black-box
+    dynamic block round trip. Text coverage now
     removes `pdf_text.mbt` from the uncovered-line report by using the private
     stream-returning decoder for ToUnicode streams, simplifying CMap marker
     extraction, and covering malformed encodings, font descriptors, CID widths,

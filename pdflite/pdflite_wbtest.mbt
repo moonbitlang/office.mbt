@@ -1714,6 +1714,99 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
 }
 
 ///|
+test "private flate dynamic encoder helpers cover RLE and guards" {
+  @test.assert_eq(pdf_flate_huffman_code_lengths([0, 9, 0], 15), [0, 1, 0])
+  let no_frequency : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
+    [0, 0],
+    15,
+  )
+  guard no_frequency is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData for empty huffman frequencies")
+  }
+  let negative_frequency : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
+    [-1],
+    15,
+  )
+  guard negative_frequency is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData for negative huffman frequency")
+  }
+  let too_deep : Result[Array[Int], Error] = try? pdf_flate_huffman_code_lengths(
+    [1, 1, 1],
+    1,
+  )
+  guard too_deep is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData for over-deep huffman tree")
+  }
+  @test.assert_eq(pdf_flate_canonical_codes([1, 2, 2]), [0, 2, 3])
+  @test.assert_eq(pdf_flate_last_nonzero_length([0, 0]), -1)
+  @test.assert_eq(pdf_flate_last_nonzero_length([0, 3, 0]), 1)
+  @test.assert_eq(pdf_flate_trim_length_count([0, 0, 2, 0], 2), 3)
+  @test.assert_eq(pdf_flate_trim_length_count([0, 0], 4), 4)
+
+  let zero_tokens = pdf_flate_code_length_tokens(Array::make(150, 0)[:])
+  @test.assert_eq(zero_tokens.length(), 2)
+  @test.assert_eq(zero_tokens[0].symbol, 18)
+  @test.assert_eq(zero_tokens[0].extra, 127)
+  @test.assert_eq(zero_tokens[0].extra_width, 7)
+  @test.assert_eq(zero_tokens[1].symbol, 18)
+  @test.assert_eq(zero_tokens[1].extra, 1)
+  let repeat_tokens = pdf_flate_code_length_tokens([5, 5, 5, 5, 5, 5, 5, 5])
+  @test.assert_eq(repeat_tokens.length(), 3)
+  @test.assert_eq(repeat_tokens[0].symbol, 5)
+  @test.assert_eq(repeat_tokens[1].symbol, 16)
+  @test.assert_eq(repeat_tokens[1].extra, 3)
+  @test.assert_eq(repeat_tokens[2].symbol, 5)
+  @test.assert_eq(pdf_flate_code_length_frequencies(repeat_tokens[:])[16], 1)
+  let order = pdf_flate_code_length_order()
+  @test.assert_eq(order[0], 16)
+  @test.assert_eq(pdf_flate_code_length_order_count(Array::make(19, 0)[:]), 4)
+  let order_lengths = Array::make(19, 0)
+  order_lengths[15] = 1
+  @test.assert_eq(pdf_flate_code_length_order_count(order_lengths[:]), 19)
+
+  let literal_tokens : Array[PdfFlateToken] = [PdfFlateLiteral(65)]
+  let (literal_frequencies, distance_frequencies) = try! pdf_flate_count_dynamic_frequencies(
+    literal_tokens[:],
+  )
+  @test.assert_eq(literal_frequencies[65], 1)
+  @test.assert_eq(literal_frequencies[256], 1)
+  @test.assert_eq(distance_frequencies[0], 1)
+  let match_tokens : Array[PdfFlateToken] = [PdfFlateLengthDistance(3, 1)]
+  let (match_frequencies, match_distance_frequencies) = try! pdf_flate_count_dynamic_frequencies(
+    match_tokens[:],
+  )
+  @test.assert_eq(match_frequencies[257], 1)
+  @test.assert_eq(match_distance_frequencies[0], 1)
+  let data = @ascii.encode("ABCDABCDABCD")
+  let tokens = pdf_flate_match_tokens(data[:])
+  guard tokens[4] is PdfFlateLengthDistance(length, distance) else {
+    fail("expected a length-distance token")
+  }
+  @test.assert_eq(length >= 3, true)
+  @test.assert_eq(distance, 4)
+
+  let output : Array[Byte] = []
+  let writer = FlateBitWriter::new(output)
+  let missing_symbol : Result[Unit, Error] = try? pdf_flate_write_canonical_symbol(
+    writer,
+    0,
+    [0],
+    [0],
+  )
+  guard missing_symbol is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData for missing canonical symbol")
+  }
+  let empty_dynamic : Result[Unit, Error] = try? pdf_flate_push_dynamic_match_block(
+    [],
+    Bytes::new(0)[:],
+    true,
+  )
+  guard empty_dynamic is Err(PdfError::InvalidFlateData) else {
+    fail("expected InvalidFlateData for empty dynamic block")
+  }
+}
+
+///|
 test "private image decode helpers cover scalar edge behavior" {
   @test.assert_eq(pdf_image_decode_is_identity([]), true)
   let odd_decode : Result[Bool, Error] = try? pdf_image_decode_is_identity([0.0])
