@@ -1954,6 +1954,18 @@ test "pdf_revisions_from_bytes counts classic Prev chain revisions" {
     ),
     1,
   )
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_xref_stream_pdf_with_prev_update(),
+    ),
+    2,
+  )
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_xref_stream_pdf_with_prev_deleted_object(),
+    ),
+    2,
+  )
 }
 
 ///|
