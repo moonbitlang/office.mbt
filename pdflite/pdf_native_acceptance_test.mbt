@@ -21,6 +21,16 @@ fn acceptance_push_ascii_for_test(output : Array[Byte], text : String) -> Unit {
 }
 
 ///|
+fn acceptance_push_view_for_test(
+  output : Array[Byte],
+  view : BytesView,
+) -> Unit {
+  for byte in view {
+    output.push(byte)
+  }
+}
+
+///|
 fn acceptance_push_big_endian_for_test(
   output : Array[Byte],
   value : Int,
@@ -364,6 +374,145 @@ fn acceptance_secret_object_for_test(text : String) -> @pdflite.PdfObject {
 }
 
 ///|
+fn acceptance_encrypted_object_stream_pdf_for_test() -> @pdflite.PdfBytes raise {
+  let secret = acceptance_secret_object_for_test("encrypted object stream")
+  let object_stream_data : Array[Byte] = []
+  acceptance_push_ascii_for_test(object_stream_data, "2 0 ")
+  let first = object_stream_data.length()
+  acceptance_push_view_for_test(
+    object_stream_data,
+    @pdflite.pdf_write_object(secret)[:],
+  )
+  let object_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/ObjStm")),
+      ),
+      (acceptance_name_for_test("/N"), PdfInteger(1)),
+      (acceptance_name_for_test("/First"), PdfInteger(first)),
+      (
+        acceptance_name_for_test("/Length"),
+        PdfInteger(object_stream_data.length()),
+      ),
+    ]),
+    StreamGot(Bytes::from_array(object_stream_data)),
+  )
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 5)
+  doc.set_root(1)
+  doc.add_object_given_number(
+    1,
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/Catalog")),
+      ),
+      (acceptance_name_for_test("/Payload"), PdfIndirect(2)),
+    ]),
+  )
+  doc.add_object_given_number(3, object_stream)
+  let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
+    acceptance_ascii_for_test("user")[:],
+    acceptance_ascii_for_test("owner")[:],
+    [PdfNoCopy],
+    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+      acceptance_ascii_for_test("object-stream-reader")[:],
+    ),
+    encrypt_metadata=false,
+    file_id=acceptance_ascii_for_test("object-stream-reader-id")[:],
+  )
+  let encrypt_number = match
+    encrypted
+    .trailer_dict()
+    .lookup_immediate(acceptance_name_for_test("/Encrypt")) {
+    Some(PdfIndirect(number)) => number
+    _ => fail("expected encrypted object reference")
+  }
+  @test.assert_eq(encrypt_number, 4)
+  let trailer_id = match
+    encrypted.trailer_dict().lookup_immediate(acceptance_name_for_test("/ID")) {
+    Some(id) => id
+    None => fail("expected encrypted trailer ID")
+  }
+
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
+  let catalog_offset = output.length()
+  acceptance_push_view_for_test(
+    output,
+    @pdflite.pdf_write_indirect_object({
+      number: 1,
+      generation: 0,
+      object: encrypted.lookup_object_or_null(1),
+    })[:],
+  )
+  acceptance_push_byte_for_test(output, 10)
+  let object_stream_offset = output.length()
+  acceptance_push_view_for_test(
+    output,
+    @pdflite.pdf_write_indirect_object({
+      number: 3,
+      generation: 0,
+      object: encrypted.lookup_object_or_null(3),
+    })[:],
+  )
+  acceptance_push_byte_for_test(output, 10)
+  let encrypt_offset = output.length()
+  acceptance_push_view_for_test(
+    output,
+    @pdflite.pdf_write_indirect_object({
+      number: encrypt_number,
+      generation: 0,
+      object: encrypted.lookup_object_or_null(encrypt_number),
+    })[:],
+  )
+  acceptance_push_byte_for_test(output, 10)
+
+  let xref_stream_number = 5
+  let xref_offset = output.length()
+  let xref_data : Array[Byte] = []
+  acceptance_push_xref_stream_entry_for_test(xref_data, 0, 0, 65535)
+  acceptance_push_xref_stream_entry_for_test(xref_data, 1, catalog_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
+  acceptance_push_xref_stream_entry_for_test(
+    xref_data, 1, object_stream_offset, 0,
+  )
+  acceptance_push_xref_stream_entry_for_test(xref_data, 1, encrypt_offset, 0)
+  acceptance_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
+  let xref_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XRef")),
+      ),
+      (acceptance_name_for_test("/Size"), PdfInteger(6)),
+      (acceptance_name_for_test("/Root"), PdfIndirect(1)),
+      (acceptance_name_for_test("/Encrypt"), PdfIndirect(encrypt_number)),
+      (acceptance_name_for_test("/ID"), trailer_id),
+      (
+        acceptance_name_for_test("/W"),
+        PdfArray([PdfInteger(1), PdfInteger(4), PdfInteger(2)]),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(xref_data.length())),
+    ]),
+    StreamGot(Bytes::from_array(xref_data)),
+  )
+  acceptance_push_view_for_test(
+    output,
+    @pdflite.pdf_write_indirect_object({
+      number: xref_stream_number,
+      generation: 0,
+      object: xref_stream,
+    })[:],
+  )
+  acceptance_push_ascii_for_test(output, "\nstartxref\n")
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_object_stream_pdf_for_test() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   acceptance_push_ascii_for_test(output, "%PDF-1.5\n")
@@ -575,11 +724,49 @@ test "native acceptance suite normalizes object-stream pages through writer" {
 }
 
 ///|
-test "native acceptance suite reconstructs omitted page-tree xrefs" {
-  let parsed = try! @pdflite.pdf_read_document_from_bytes(
-    acceptance_pdf_with_omitted_page_tree_xrefs_for_test(),
+test "native acceptance suite decrypts object streams during password reads" {
+  let bytes = try! acceptance_encrypted_object_stream_pdf_for_test()
+  let no_password : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
+    bytes,
   )
+  guard no_password is Err(_) else {
+    fail("expected encrypted object stream to require password-aware reading")
+  }
+  let bad_password : Result[@pdflite.PdfDecryptionResult?, Error] = try? @pdflite.pdf_read_document_from_bytes_with_passwords(
+    bytes,
+    owner_password=Some(acceptance_ascii_for_test("bad-owner")[:]),
+  )
+  guard bad_password is Err(_) else {
+    fail("expected bad password to fail encrypted object-stream expansion")
+  }
+  let decrypted = acceptance_unwrap_decryption_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(
+      bytes,
+      owner_password=Some(acceptance_ascii_for_test("owner")[:]),
+    ),
+  )
+  @test.assert_eq(decrypted.denied_permissions, [PdfNoCopy])
+  @test.assert_eq(
+    decrypted.document.lookup_object_or_null(2),
+    acceptance_secret_object_for_test("encrypted object stream"),
+  )
+  let catalog = decrypted.document.catalog()
+  @test.assert_eq(
+    catalog.lookup_immediate(acceptance_name_for_test("/Payload")),
+    Some(PdfIndirect(2)),
+  )
+}
+
+///|
+test "native acceptance suite reconstructs omitted page-tree xrefs" {
+  let bytes = acceptance_pdf_with_omitted_page_tree_xrefs_for_test()
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(bytes)
   acceptance_assert_minimal_page_tree_for_test(parsed)
+  let password_wrapper = acceptance_unwrap_decryption_for_test(
+    try! @pdflite.pdf_read_document_from_bytes_with_passwords(bytes),
+  )
+  @test.assert_eq(password_wrapper.denied_permissions, [])
+  acceptance_assert_minimal_page_tree_for_test(password_wrapper.document)
   let normalized = try! @pdflite.pdf_write_document(parsed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
   acceptance_assert_minimal_page_tree_for_test(reparsed)

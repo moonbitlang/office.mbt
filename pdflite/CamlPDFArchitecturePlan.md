@@ -57,8 +57,12 @@ work changes.
    Password-aware public read wrappers now also have revision-aware variants,
    and the public revision counter follows the same owned `Bytes` versus
    borrowed `BytesView` split as the rest of the reader surface.
+   Password-aware reads now also decrypt `/ObjStm` streams just in time while
+   expanding object-stream xref entries, and embedded objects are marked as
+   already decrypted so the later full-document decryption pass does not apply
+   object crypt twice.
    Remaining focus: broader malformed xref-table recovery and parser-state
-   behavior around encrypted/deferred objects.
+   behavior around encrypted/deferred plain objects.
 
 3. Filters, predictors, and codecs.
    Owner modules: `pdf_codec.mbt`, `pdf_flate.mbt`, `pdf_jpeg.mbt`.
@@ -172,7 +176,8 @@ vertical acceptance path at a time instead of isolated edge polishing:
   password-wrapper reads plus AES-128 decrypt/recrypt incremental revision
   reads. Document-level merge and page extraction are also covered across a
   compressed xref-stream read boundary, and native async file wrappers cover
-  encrypted incremental revision reads from disk.
+  encrypted incremental revision reads from disk. Password-aware native reads
+  now include an encrypted object-stream fixture.
 - In progress: image/filter parity, text CMap parity, encryption finishing
   edges, remaining malformed-reader recovery, and example-level integration
   fixtures.

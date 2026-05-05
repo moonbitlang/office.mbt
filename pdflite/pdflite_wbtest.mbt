@@ -552,6 +552,15 @@ test "private object stream helpers cover malformed object streams" {
     fail("expected XRefEntryExpected")
   }
 
+  let missing_encrypted_stream : Result[(Int, PdfObject, Bool), Error] = try? doc.read_object_stream_reference_with_passwords(
+    { object_stream_number: 99, index: 0 },
+    Some(@ascii.encode("user")[:]),
+    None,
+  )
+  guard missing_encrypted_stream is Err(PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+
   let bad_offset_doc = pdf_document_empty()
   bad_offset_doc.add_object_given_number(
     9,

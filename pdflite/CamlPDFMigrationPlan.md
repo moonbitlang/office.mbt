@@ -270,7 +270,11 @@ MoonBit consequences for this project:
    `/First` dictionaries, including malformed header, offset, index, and
    object-number mismatch checks. Object-stream extraction now uses the
    document-aware stream decoder once the containing object stream is loaded,
-   so indirect `/Filter` metadata on `/ObjStm` streams is honored. Strict
+   so indirect `/Filter` metadata on `/ObjStm` streams is honored.
+   Password-aware document reads now decrypt encrypted `/ObjStm` streams before
+   slicing embedded objects, then load the embedded objects as already
+   decrypted parser states so the later document-wide password decryption pass
+   skips them. Strict
    stream-object parsing now
    mirrors CamlPDF's stream-start padding tolerance by skipping space, NUL,
    form-feed, and tab bytes between the `stream` keyword and the line break or
@@ -1379,6 +1383,9 @@ end to end:
   encrypted write to disk, password read, decrypt/mutate/recrypt, compressed
   xref-stream incremental write, revision count, and newest/older encrypted
   revision reads.
+- read an AES-128 encrypted xref-stream document whose referenced object lives
+  inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
+  and avoiding double decryption of the embedded object.
 
 Near-term work should extend this suite with the next visible compatibility
 case, then fix the reader/parser/encryption gap it exposes. Broader backend

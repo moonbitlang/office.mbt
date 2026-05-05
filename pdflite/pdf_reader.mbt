@@ -894,11 +894,12 @@ fn pdf_object_stream_next_offset(
 }
 
 ///|
-fn PdfDocument::read_object_stream_reference(
+fn PdfDocument::read_object_stream_reference_from_object(
   self : PdfDocument,
   reference : ObjectStreamReference,
+  object_stream_object : PdfObject,
 ) -> (Int, PdfObject) raise PdfError {
-  match self.lookup_object_or_null(reference.object_stream_number) {
+  match object_stream_object {
     PdfStreamObject(stream) => {
       match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
         Some(PdfNameObject(name)) if name == pdf_reader_objstm_name() => ()
@@ -931,6 +932,57 @@ fn PdfDocument::read_object_stream_reference(
       (object_number, pdf_parse_object_from_bytes(data[start:end].to_owned()))
     }
     _ => raise XRefEntryExpected
+  }
+}
+
+///|
+fn PdfDocument::read_object_stream_reference(
+  self : PdfDocument,
+  reference : ObjectStreamReference,
+) -> (Int, PdfObject) raise PdfError {
+  self.read_object_stream_reference_from_object(
+    reference,
+    self.lookup_object_or_null(reference.object_stream_number),
+  )
+}
+
+///|
+fn PdfDocument::read_object_stream_reference_with_passwords(
+  self : PdfDocument,
+  reference : ObjectStreamReference,
+  user_password : BytesView?,
+  owner_password : BytesView?,
+) -> (Int, PdfObject, Bool) raise PdfError {
+  match (user_password, owner_password) {
+    (None, None) => {
+      let (object_number, object) = self.read_object_stream_reference(reference)
+      (object_number, object, false)
+    }
+    _ => {
+      let entry = match self.objects.get_entry(reference.object_stream_number) {
+        Some(entry) => entry
+        None => raise XRefEntryExpected
+      }
+      let object_stream_object = self.lookup_object_or_null(
+        reference.object_stream_number,
+      )
+      match
+        self.decrypt_single_stream(
+          reference.object_stream_number,
+          entry.generation,
+          object_stream_object,
+          user_password~,
+          owner_password~,
+        ) {
+        Some(decrypted_stream) => {
+          let (object_number, object) = self.read_object_stream_reference_from_object(
+            reference, decrypted_stream,
+          )
+          (object_number, object, self.is_encrypted())
+        }
+        None => raise EncryptionAuthenticationUnsupported(PdfCryptAESV2)
+      }
+    }
   }
 }
 
@@ -1572,6 +1624,8 @@ fn pdf_reader_revision_selects_trailer(
 fn pdf_read_classic_document_from_view_at_revision(
   data : BytesView,
   revision? : Int? = None,
+  user_password? : BytesView? = None,
+  owner_password? : BytesView? = None,
 ) -> PdfDocument raise PdfError {
   let revision = pdf_read_reader_revision_target(revision)
   let was_linearized = pdf_read_was_linearized(data)
@@ -1662,13 +1716,20 @@ fn pdf_read_classic_document_from_view_at_revision(
     match xref.object_stream {
       Some(reference) =>
         if xref.in_use && xref.object_number != 0 {
-          let (object_number, object) = document.read_object_stream_reference(
-            reference,
+          let (object_number, object, already_decrypted) = document.read_object_stream_reference_with_passwords(
+            reference, user_password, owner_password,
           )
           if object_number != xref.object_number {
             raise XRefEntryExpected
           }
-          document.load_object_given_number(xref.object_number, object)
+          if already_decrypted {
+            document.load_object_given_number_already_decrypted(
+              xref.object_number,
+              object,
+            )
+          } else {
+            document.load_object_given_number(xref.object_number, object)
+          }
         }
       None => ()
     }
@@ -1784,7 +1845,12 @@ pub fn pdf_read_document_revision_from_view_with_passwords(
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
 ) -> PdfDecryptionResult? raise PdfError {
-  let document = pdf_read_document_revision_from_view(data, revision)
+  let document = pdf_read_classic_document_from_view_at_revision(
+    data,
+    revision=Some(revision),
+    user_password~,
+    owner_password~,
+  )
   document.decrypt_with_passwords(user_password~, owner_password~)
 }
 
@@ -1809,7 +1875,16 @@ pub fn pdf_read_document_from_view_with_passwords(
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
 ) -> PdfDecryptionResult? raise PdfError {
-  let document = pdf_read_document_from_view(data)
+  let document = pdf_read_probe_page_tree_or_reconstruct(
+    data,
+    pdf_read_classic_document_from_view_at_revision(
+      data,
+      user_password~,
+      owner_password~,
+    ),
+  ) catch {
+    _ => pdf_read_document_from_view(data)
+  }
   document.decrypt_with_passwords(user_password~, owner_password~)
 }
 
