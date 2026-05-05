@@ -860,6 +860,17 @@ fn ByteCursor::read_plain_indirect_object_at_current(
 }
 
 ///|
+fn ByteCursor::read_first_indirect_object_segment_at_current(
+  self : ByteCursor,
+) -> (PdfParsedIndirectObject, Bool) raise PdfError {
+  let (object, _, complete) = pdf_parse_indirect_object_segment_at(
+    self.lex_pdf_tokens(),
+    0,
+  )
+  (object, complete)
+}
+
+///|
 fn ByteCursor::read_pdf_linearized_marker(
   self : ByteCursor,
 ) -> Bool raise PdfError {
@@ -883,22 +894,6 @@ fn pdf_read_was_linearized(data : BytesView) -> Bool {
 ///|
 pub fn pdf_is_linearized(data : BytesView) -> Bool {
   pdf_read_was_linearized(data)
-}
-
-///|
-fn pdf_reader_object_has_stream_before_endobj(
-  data : BytesView,
-  position : Int,
-) -> Bool {
-  let stream = pdf_find_ascii_from(data, position, [115, 116, 114, 101, 97, 109])
-  if stream < 0 {
-    false
-  } else {
-    let endobj = pdf_find_ascii_from(data, position, [
-      101, 110, 100, 111, 98, 106,
-    ])
-    endobj < 0 || stream < endobj
-  }
 }
 
 ///|
@@ -945,21 +940,17 @@ fn ByteCursor::resolve_classic_stream_length(
         Some(xref) => {
           let saved_position = self.absolute_position()
           self.seek_pdf_absolute(xref.offset)
-          if pdf_reader_object_has_stream_before_endobj(
-              self.data[:],
-              xref.offset,
-            ) {
-            self.seek_pdf_absolute(saved_position)
-            raise StreamLengthExpected
-          }
-          let parsed_result : Result[PdfParsedIndirectObject, Error] = try? self.read_plain_indirect_object_at_current()
+          let parsed_result : Result[(PdfParsedIndirectObject, Bool), Error] = try? self.read_first_indirect_object_segment_at_current()
           self.seek_pdf_absolute(saved_position)
-          let parsed = match parsed_result {
+          let (parsed, complete) = match parsed_result {
             Ok(parsed) => parsed
             Err(_) => raise StreamLengthExpected
           }
           if parsed.number != number || parsed.generation != xref.generation {
             raise XRefEntryExpected
+          }
+          if !complete {
+            raise StreamLengthExpected
           }
           match parsed.object {
             PdfInteger(length) if length >= 0 => length

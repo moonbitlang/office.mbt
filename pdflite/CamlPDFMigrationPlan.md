@@ -270,7 +270,11 @@ MoonBit consequences for this project:
    It also mirrors CamlPDF's unreadable and mismatched `/Length` recovery by
    rewinding and scanning through the following `endstream` marker when the
    length is missing, indirect-unavailable, non-integer, unparseable, negative,
-   a stream object, or does not land on a valid terminator boundary.
+   a stream object, or does not land on a valid terminator boundary. Indirect
+   stream-length resolution now parses only the referenced object segment and
+   uses its complete/incomplete state to distinguish plain integer length
+   providers from stream objects, avoiding raw byte false positives when a
+   valid length object mentions `stream` in a PDF comment.
    Hybrid-reference files with a
    classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same

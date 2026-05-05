@@ -407,6 +407,26 @@ fn reader_classic_pdf_with_indirect_stream_length() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_comment_stream_indirect_length() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let stream_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Length 2 0 R >>\nstream\nHello\nendstream",
+  )
+  let length_offset = reader_push_indirect_object(
+    output, 2, 0, "5 % stream appears only in this comment",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, stream_offset, 0)
+  reader_push_xref_entry(output, length_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -2340,6 +2360,25 @@ test "pdf_read_classic_document_from_bytes resolves indirect stream length" {
     stream.data,
     StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
   )
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
+}
+
+///|
+test "pdf_read_classic_document_from_bytes resolves commented indirect stream length" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_comment_stream_indirect_length(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  guard parsed.lookup_object_or_null(1) is PdfStreamObject(stream) else {
+    fail("expected stream object")
+  }
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(
+      @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length")),
+    ),
+    Some(PdfIndirect(2)),
+  )
+  @test.assert_eq(stream.data, StreamGot(reader_pdf_ascii("Hello")))
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
 }
 

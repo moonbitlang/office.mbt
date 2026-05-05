@@ -26,7 +26,10 @@ work changes.
    Strict stream parsing also skips CamlPDF's ignored padding bytes after the
    `stream` keyword while preserving trailing stream bytes before `endstream`,
    and falls back to CamlPDF-style `endstream` scanning when `/Length` is
-   missing, unreadable, or lands away from the stream terminator.
+   missing, unreadable, or lands away from the stream terminator. Indirect
+   stream-length providers are now classified by parsing the referenced object
+   segment, so ordinary length objects containing the word `stream` in comments
+   do not get mistaken for stream objects.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.
