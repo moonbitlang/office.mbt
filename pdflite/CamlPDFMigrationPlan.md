@@ -502,8 +502,11 @@ MoonBit consequences for this project:
    keeps the shortest of stored, fixed, repeat, match, and dynamic outputs so
    incompressible data can still fall back safely. The fixed/dynamic paths now
    keep a bounded hash chain per byte prefix so a short recent match does not
-   hide a longer older match. Unbounded full match search and zlib-level tuning
-   remain deferred.
+   hide a longer older match. Explicit fast levels 1 through 3 now also compare
+   the fixed-Huffman match path against stored-block output, matching zlib's
+   practical behavior of avoiding larger compressed data for incompressible
+   streams while keeping the path cheap. Unbounded full match search and
+   byte-identical zlib tuning remain deferred.
    Low-level LZW decode is started with clear/EOD handling and default
    EarlyChange 1; owned stream decode reads direct first-stage `/EarlyChange`
    from `/DecodeParms` or `/DP` for `/LZWDecode`/`/LZW`. Owned `StreamGot`
@@ -527,8 +530,9 @@ MoonBit consequences for this project:
    stream encoding paths now expose explicit zlib-style levels 0 through 9 as
    the MoonBit replacement for CamlPDF's mutable global `flate_level`, while
    preserving the existing default compact encoder for callers that do not pass
-   a level. CamlPDF-style typed encoding and predictor choices are now exposed
-   as `PdfStreamEncoding` and `PdfStreamPredictor`, with a
+   a level; fast explicit levels retain a stored-block fallback for
+   incompressible input. CamlPDF-style typed encoding and predictor choices are
+   now exposed as `PdfStreamEncoding` and `PdfStreamPredictor`, with a
    `pdf_encode_stream_with_encoding` wrapper over the existing filter/predictor
    implementation; CCITT names map to `/CCITTFaxDecode`. Native CCITT decode is
    now started for

@@ -1296,6 +1296,18 @@ fn pdf_flate_encode_shortest_view_with_header(
 }
 
 ///|
+fn pdf_flate_encode_fast_view_with_header(
+  data : BytesView,
+  header : ArrayView[Byte],
+) -> PdfBytes {
+  let stored = pdf_flate_encode_stored_view_with_header(data, header)
+  let matched : Result[PdfBytes, Error] = try? pdf_flate_encode_fixed_match_view_with_header(
+    data, header,
+  )
+  pdf_flate_shortest_result(stored, matched)
+}
+
+///|
 pub fn pdf_flate_encode_view_with_level(
   data : BytesView,
   level : Int,
@@ -1304,7 +1316,7 @@ pub fn pdf_flate_encode_view_with_level(
   if level == 0 {
     pdf_flate_encode_stored_view_with_header(data, header[:])
   } else if level <= 3 {
-    pdf_flate_encode_fixed_match_view_with_header(data, header[:])
+    pdf_flate_encode_fast_view_with_header(data, header[:])
   } else {
     pdf_flate_encode_shortest_view_with_header(data, header[:])
   }

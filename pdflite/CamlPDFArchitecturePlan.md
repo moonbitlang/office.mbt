@@ -103,7 +103,8 @@ work changes.
    pdflite's decoder.
    Direct Flate, filter, and stream encoding APIs now accept explicit zlib-style
    levels 0 through 9, keeping the default compact encoder unchanged while
-   exposing CamlPDF's `flate_level` workflow without global mutable state.
+   exposing CamlPDF's `flate_level` workflow without global mutable state; fast
+   levels now still fall back to stored blocks for incompressible data.
    Remaining focus: byte-identical zlib strategy/performance tuning, optional
    JBIG2 external-tool decode parity, broader CCITT corpus validation, and
    DCT/JPEG real-world payload coverage.
@@ -282,8 +283,9 @@ and backend breadth, is about 78-83% complete.
   vertical-writing behavior beyond the current gates, additional TrueType and
   Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
   broader real-world DCT/JPEG image payload corpus files.
-- Not covered enough: fuller zlib/Flate tuning parity, broader DCT/JPEG and
-  CCITT corpus validation, and optional external JBIG2 decoder integration.
+- Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
+  broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
+  decoder integration.
   Actual JPEG pixel decoding is
   optional beyond CamlPDF image-extraction parity, which returns encoded JPEG
   payloads.

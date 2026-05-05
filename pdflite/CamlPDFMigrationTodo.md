@@ -98,6 +98,8 @@ Current estimate:
   validation.
 - [x] ~~Explicit zlib-style Flate level API across direct Flate, filter, and
   stream encoding surfaces.~~
+- [x] ~~Fast explicit Flate levels fall back to stored blocks for incompressible
+  data instead of forcing larger fixed-Huffman output.~~
 - [ ] Byte-identical zlib strategy and performance parity beyond explicit
   Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
@@ -154,6 +156,7 @@ Current estimate:
 - [x] ~~Add a classic multi-revision `/Prev` malformed-startxref reconstruction
   gate.~~
 - [x] ~~Add explicit Flate compression-level encoding APIs.~~
+- [x] ~~Improve fast Flate-level behavior for incompressible streams.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~

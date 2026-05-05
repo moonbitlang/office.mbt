@@ -465,6 +465,20 @@ test "pdf_flate_encode_with_level exposes zlib level choices" {
   @test.assert_eq(fast.length() < stored.length(), true)
   @test.assert_eq(@pdflite.pdf_flate_decode(fast), repeated)
 
+  let fast_incompressible = try! @pdflite.pdf_bytes_of_int_array(
+    [
+      for i in 0..<100 => 144 + i
+    ],
+  )
+  let fast_incompressible_encoded = @pdflite.pdf_flate_encode_with_level(
+    fast_incompressible, 1,
+  )
+  @test.assert_eq(fast_incompressible_encoded[2].to_int() & 0x07, 1)
+  @test.assert_eq(
+    @pdflite.pdf_flate_decode(fast_incompressible_encoded),
+    fast_incompressible,
+  )
+
   let default_level = @pdflite.pdf_flate_encode_with_level(repeated, 6)
   @test.assert_eq(default_level[1].to_int(), 156)
   @test.assert_eq(@pdflite.pdf_flate_decode(default_level), repeated)
