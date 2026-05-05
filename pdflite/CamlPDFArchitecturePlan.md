@@ -138,9 +138,9 @@ work changes.
    Owner modules: `pdf_text.mbt`, `pdf_space.mbt`, `pdf_fun.mbt`,
    `pdf_image.mbt`.
    Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, Identity-H/V
-   two-byte CID text extraction, CamlPDF-style whitespace-elided ToUnicode CMap
-   section scanning, mixed multiline `bfrange` parsing, `/WMode` token parsing
-   across PDF whitespace,
+   and predefined UCS2 horizontal/vertical two-byte CID text extraction,
+   CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
+   multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
    extraction are started, including 1-, 2-, 4-, and 8-bit `/Indexed` raw
@@ -155,8 +155,8 @@ work changes.
    `/ToUnicode` text extraction through compressed read/write boundaries, and
    Flate inline-image content parsing. Stream decode now also covers CCITT
    `/K 0` and `/K < 0` data through `/CCITTFaxDecode` and `/CCF`.
-   Remaining focus: broader predefined CMap semantics beyond Identity-H/V, JPEG
-   pixel decode, and remaining image filter families.
+   Remaining focus: broader non-UCS2 predefined CMap mapping tables, JPEG pixel
+   decode, and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -219,9 +219,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 84-87% complete. Full
+Current estimate: native main-feature parity is about 88-90% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 72-77% complete.
+and backend breadth, is about 76-81% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -254,8 +254,9 @@ and backend breadth, is about 72-77% complete.
 - Covered: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode,
   predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
-  UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, and an Identity-V
-  native gate with vertical width metadata. Native image acceptance now also
+  UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, predefined UCS2
+  horizontal/vertical two-byte extraction, and an Identity-V native gate with
+  vertical width metadata. Native image acceptance now also
   covers JPX encoded images, staged Flate-to-JBIG2 images with
   `/JBIG2Globals`, and CCITT image XObjects through raw RGB extraction; native
   font acceptance covers embedded TrueType `FontFile2` with generated
@@ -263,7 +264,7 @@ and backend breadth, is about 72-77% complete.
   `/K < 0` with `/DecodeParms` defaults and direct indirect params. Typed
   stream encoding now covers CCITT Group 3 `/K 0` and round-trips through
   decode.
-- Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
+- Not covered enough: broader non-UCS2 predefined CMap mapping tables,
   vertical-writing behavior beyond the current gates, additional Type3/TrueType
   edge coverage, and more real-world ToUnicode variations.
 - Not covered enough: fuller zlib/Flate tuning parity, broader DCT/JPEG and
@@ -368,12 +369,12 @@ and backend breadth, is about 72-77% complete.
   resolution through write/reread. Encrypted malformed-reader coverage now also
   includes bad-startxref reconstruction followed by password read,
   saved-state AESV2 recrypt, compressed write, and password reread.
-- In progress: image/filter parity, Flate compression tuning, text CMap parity,
-  remaining encryption edge cases, remaining malformed-reader recovery, and
-  example-level integration fixtures.
+- In progress: image/filter parity, Flate compression tuning, non-UCS2 text
+  CMap parity, remaining encryption edge cases, remaining malformed-reader
+  recovery, and example-level integration fixtures.
 - Deferred: optional JBIG2 external-style decode, optional JPEG pixel decode
-  beyond CamlPDF parity, broader predefined CMap coverage, broader CCITT corpus
-  validation, and broad
+  beyond CamlPDF parity, broader non-UCS2 predefined CMap coverage, broader
+  CCITT corpus validation, and broad
   real-world PDF recovery behavior.
 
 ## Working Rule

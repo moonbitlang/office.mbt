@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 87-90%.
+- Native main-feature parity: 88-90%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 75-80%.
+  breadth: 76-81%.
 
 ## P0: Native Main Workflows
 
@@ -77,8 +77,10 @@ Current estimate:
   gate where the newest revision moves `/Root` into an object stream.~~
 - [x] ~~Password-aware xref-stream/object-stream malformed-startxref recovery
   for encrypted object streams, including decrypted embedded payload materialization.~~
-- [ ] Broader predefined CMap semantics beyond Identity-H/V and more
-  vertical-writing text behavior.
+- [x] ~~Predefined UCS2 horizontal/vertical CMap two-byte text extraction gate
+  through reader and extractor boundaries.~~
+- [ ] Broader non-UCS2 predefined CMap mapping tables and more vertical-writing
+  text behavior.
 - [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
 - [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
@@ -116,6 +118,7 @@ Current estimate:
 - [x] ~~Add one non-stream encrypted parser-state gate.~~
 - [x] ~~Add one broader encrypted malformed-reader gate beyond stream/object-stream data.~~
 - [x] ~~Add one predefined-CMap text gate.~~
+- [x] ~~Add a predefined UCS2 CMap reader/extractor gate.~~
 - [x] ~~Add one remaining filter/image-family gate.~~
 - [x] ~~Expand malformed-reader recovery from realistic documents.~~
 - [x] ~~Add one Type3/TrueType font edge gate.~~

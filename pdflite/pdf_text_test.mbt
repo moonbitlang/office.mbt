@@ -1560,6 +1560,27 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
   @test.assert_eq(identity_v.is_identity_h(), false)
   @test.assert_eq(identity_v.is_identity_v(), true)
   @test.assert_eq(identity_v.uses_two_byte_codes(), true)
+  let ucs2_font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type0")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/TopFontUCS2")),
+    ),
+    (text_name_for_test("/DescendantFonts"), PdfArray([PdfIndirect(33)])),
+    (
+      text_name_for_test("/Encoding"),
+      PdfNameObject(text_name_for_test("/UniJIS-UCS2-H")),
+    ),
+  ])
+  guard (try! doc.read_font(ucs2_font)) is PdfFontCIDKeyed(ucs2_cid_font) else {
+    fail("expected UCS2 CID-keyed font")
+  }
+  @test.assert_eq(ucs2_cid_font.encoding.is_identity_h(), false)
+  @test.assert_eq(ucs2_cid_font.encoding.is_identity_v(), false)
+  @test.assert_eq(ucs2_cid_font.encoding.uses_two_byte_codes(), true)
   let standard_font : @pdflite.PdfFont = PdfFontStandard(
     text_standard_font_data_for_test(PdfHelvetica, PdfWinAnsiEncoding),
   )
@@ -3104,6 +3125,49 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     text_bytes_for_test([0x4E])[:],
   )
   guard vertical_odd is Err(BadText) else { fail("expected BadText") }
+  let ucs2_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUCS2"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniJIS-UCS2-H")),
+  })
+  @test.assert_eq(ucs2_cmap_font_h.is_identity_h(), false)
+  @test.assert_eq(ucs2_cmap_font_h.is_identity_v(), false)
+  @test.assert_eq(ucs2_cmap_font_h.uses_two_byte_codes(), true)
+  let ucs2_h_extractor = ucs2_cmap_font_h.text_extractor()
+  @test.assert_eq(
+    try! ucs2_h_extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x41, 0x4E, 0x00])[:],
+    ),
+    [0x41, 0x4E00],
+  )
+  let ucs2_odd = try? ucs2_h_extractor.codepoints_of_text(
+    text_bytes_for_test([0x00, 0x41, 0x4E])[:],
+  )
+  guard ucs2_odd is Err(_) else { fail("expected malformed UCS2 text error") }
+  let ucs2_cmap_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUCS2Vertical"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniCNS-UCS2-V")),
+  })
+  @test.assert_eq(ucs2_cmap_font_v.uses_two_byte_codes(), true)
+  @test.assert_eq(
+    try! ucs2_cmap_font_v
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x00, 0x42, 0x4E, 0x8C])[:]),
+    [0x42, 0x4E8C],
+  )
+  let non_ucs2_predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopGBEUC"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/GB-EUC-H")),
+  })
+  @test.assert_eq(non_ucs2_predefined_font.uses_two_byte_codes(), false)
+  @test.assert_eq(
+    try! non_ucs2_predefined_font
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x00, 0x42])[:]),
+    [0x00, 0x42],
+  )
   let external_cmap_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/ExternalCMap"),
     composite,

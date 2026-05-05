@@ -289,8 +289,20 @@ pub fn PdfCMapEncoding::is_identity_v(self : PdfCMapEncoding) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_cmap_uses_ucs2_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  text.contains("-UCS2-") && (text.has_suffix("-H") || text.has_suffix("-V"))
+}
+
+///|
 pub fn PdfCMapEncoding::uses_two_byte_codes(self : PdfCMapEncoding) -> Bool {
-  self.is_identity_h() || self.is_identity_v()
+  match self {
+    PdfPredefinedCMap(name) =>
+      self.is_identity_h() ||
+      self.is_identity_v() ||
+      pdf_text_predefined_cmap_uses_ucs2_charcodes(name)
+    _ => false
+  }
 }
 
 ///|

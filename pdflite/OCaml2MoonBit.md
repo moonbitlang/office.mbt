@@ -64,6 +64,17 @@ validated ASCII grammar tokens or text-level parsing; use `BytesView` slices
 for byte-oriented formats.
 
 ```sh
+moon run -c 'fn main { let s = "/UniJIS-UCS2-H"; println(s.contains("-UCS2-")); println(s.has_suffix("-H")) }'
+# true
+# true
+```
+
+MoonBit strings also provide substring and suffix predicates such as
+`String::contains` and `String::has_suffix`. These are convenient for
+ASCII-only symbolic names or command flags. Do not use string predicates to
+classify arbitrary binary format bytes; stay in `Bytes`/`BytesView` for that.
+
+```sh
 moon run -c 'fn main { let raw : Array[Byte] = [65, 0, 255]; let b = Bytes::from_array(raw); println(b.length()); println(b[2].to_int()) }'
 # 3
 # 255

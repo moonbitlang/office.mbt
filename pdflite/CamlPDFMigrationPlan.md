@@ -842,8 +842,10 @@ MoonBit consequences for this project:
    descriptors, horizontal `/W` widths, vertical `/W2` widths, and default CID
    widths. The `Identity-H` and `Identity-V` predicates are also started over
    the typed CMap encoding model, with a separate public two-byte-code
-   predicate for `/Identity-H` and `/Identity-V` CID text so callers do not
-   have to treat vertical writing as horizontal identity encoding. Font-writing
+   predicate for `/Identity-H`, `/Identity-V`, and predefined UCS2
+   horizontal/vertical CMaps so callers do not have to treat vertical writing as
+   horizontal identity encoding or assume every named CMap is direct Unicode.
+   Font-writing
    groundwork is started with custom encoding
    dictionary emission and a Type1 font dictionary helper for predefined
    encodings. Standard-14 font writing is started through `write_font`, with
@@ -875,11 +877,12 @@ MoonBit consequences for this project:
    `text_width` helpers that use character-code widths for implicit encodings,
    glyph-name widths for explicit encodings, `/space` fallback for undefined
    encoded bytes, and optional byte-pair kerning.
-   A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings
-   and `/Identity-H`/`/Identity-V` CID text, including decoded glyph records,
-   glyph-name extraction, flattened codepoint extraction, odd-length composite
-   string rejection, and reverse ToUnicode charcode lookup for single Unicode
-   codepoints. Basic Latin glyph-list-backed fallback is also started for
+   A first `PdfTextExtractor` API is started for ToUnicode-backed byte strings,
+   `/Identity-H`/`/Identity-V` CID text, and predefined UCS2 horizontal/vertical
+   CMaps, including decoded glyph records, glyph-name extraction, flattened
+   codepoint extraction, odd-length composite string rejection, and reverse
+   ToUnicode charcode lookup for single Unicode codepoints. Basic Latin
+   glyph-list-backed fallback is also started for
    StandardEncoding, MacRomanEncoding, WinAnsiEncoding, custom encoding
    differences, effective encoding-table/reverse-table export, and reverse
    charcode lookup over that subset.
