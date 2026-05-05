@@ -1465,6 +1465,10 @@ public APIs end to end:
 - run a `pdfdraft.ml`-style image replacement workflow that removes image
   XObjects and inline images, preserves form XObjects, writes compressed
   xref-stream output, and rereads the transformed content.
+- run a page resource lifecycle workflow after a compressed xref-stream read:
+  materialize and process Form XObjects, prefix resource dictionaries and
+  content references while merging split content streams, duplicate and
+  `renumber_pages`, then write/reread the renamed pages.
 - run `change_pages` after a compressed xref-stream read boundary, rewrite
   bookmark page references with a matrix transform, write/reread, and verify
   the transformed bookmark target.

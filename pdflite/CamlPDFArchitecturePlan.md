@@ -197,9 +197,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 70-75% complete. Full
+Current estimate: native main-feature parity is about 72-76% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 60-65% complete.
+and backend breadth, is about 61-66% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -210,17 +210,14 @@ and backend breadth, is about 60-65% complete.
 - Covered: page tree construction, reading, writing, page extraction,
   `change_pages`, merge, object cleanup, inherited page attributes, page labels,
   bookmarks, annotations, old-style and name-tree destinations, `/OpenAction`,
-  optional content, structure-tree merge/pruning basics, and example workflows
-  for `pdfdecomp.ml`, `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and
-  `pdfmergeexample.ml`.
+  optional content, structure-tree merge/pruning basics, page resource
+  renumbering/prefixing/content merge/Form XObject processing through native
+  acceptance boundaries, and example workflows for `pdfdecomp.ml`,
+  `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
   decryption, native secure-random writer paths, saved-state recrypt,
   encrypted object streams, lazy encrypted stream forcing, and
   `/EncryptMetadata false`.
-- Not covered enough: page resource lifecycle through native acceptance
-  boundaries, especially `renumber_pages`, `add_prefix`,
-  `merge_content_streams`, and `process_xobjects` together with read/edit/write
-  flows.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
   resource-heavy pages, unusual inherited page data, and more destination/action
   combinations.
@@ -254,10 +251,7 @@ and backend breadth, is about 60-65% complete.
 
 ### Immediate Work Order
 
-- Next: add a native page/resource lifecycle gate covering resource renumbering,
-  prefixing, split-content merging, and Form XObject processing through
-  compressed read/write/reread boundaries.
-- Then: add one broader `change_pages` compatibility gate using resource-heavy
+- Next: add one broader `change_pages` compatibility gate using resource-heavy
   pages and mixed destination/action references.
 - Then: target encrypted parser-state gaps with one public password-read or
   recrypt workflow that exposes a non-stream encrypted-object edge.
@@ -289,8 +283,10 @@ and backend breadth, is about 60-65% complete.
   covered across a compressed xref-stream read boundary, including retained
   page labels and bookmark targets through a public merge/write/read workflow,
   a `pdfmergeexample.ml`-style manual merge workflow using public renumber,
-  page-tree rebuild, and cleanup APIs, and structure-tree pruning during page
-  extraction with `process_struct_tree=true`. Native acceptance covers
+  page-tree rebuild, and cleanup APIs, structure-tree pruning during page
+  extraction with `process_struct_tree=true`, and a page resource lifecycle gate
+  covering `process_xobjects`, `add_prefix`, split content merging, and
+  `renumber_pages`. Native acceptance covers
   `pdfdecomp.ml`-style document-wide stream
   decompression, `pdftest.ml`-style split-content parse/rewrite, and
   `pdfdraft.ml`-style image-replacement workflows through compressed

@@ -2060,6 +2060,17 @@ fn acceptance_compressed_roundtrip_for_test(
 }
 
 ///|
+fn acceptance_raw_stream_for_test(text : String) -> @pdflite.PdfObject {
+  let bytes = acceptance_ascii_for_test(text)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(bytes.length())),
+    ]),
+    StreamGot(bytes),
+  )
+}
+
+///|
 fn acceptance_pdfmergeexample_document_for_test(
   text : String,
   minor_version : Int,
@@ -2182,6 +2193,255 @@ fn acceptance_assert_structure_extraction_for_test(
     Some(PdfIndirect(page_numbers[0])),
   )
   @test.assert_eq(doc.lookup_object_or_null(92), PdfNull)
+}
+
+///|
+fn acceptance_resource_lifecycle_font_for_test() -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Type"),
+      PdfNameObject(acceptance_name_for_test("/Font")),
+    ),
+    (
+      acceptance_name_for_test("/Subtype"),
+      PdfNameObject(acceptance_name_for_test("/Type1")),
+    ),
+    (
+      acceptance_name_for_test("/BaseFont"),
+      PdfNameObject(acceptance_name_for_test("/Times-Italic")),
+    ),
+  ])
+}
+
+///|
+fn acceptance_resource_lifecycle_resources_for_test(
+  font_name : @pdflite.PdfName,
+  form_name : @pdflite.PdfName,
+  form_number : Int,
+) -> @pdflite.PdfObject {
+  @pdflite.pdf_dictionary([
+    (
+      acceptance_name_for_test("/Font"),
+      @pdflite.pdf_dictionary([
+        (font_name, acceptance_resource_lifecycle_font_for_test()),
+      ]),
+    ),
+    (
+      acceptance_name_for_test("/XObject"),
+      @pdflite.pdf_dictionary([(form_name, PdfIndirect(form_number))]),
+    ),
+  ])
+}
+
+///|
+fn acceptance_resource_lifecycle_form_for_test() -> @pdflite.PdfObject {
+  let bytes = acceptance_ascii_for_test("FORM-OLD")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Form")),
+      ),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(bytes.length())),
+      (acceptance_name_for_test("/Keep"), PdfInteger(1)),
+    ]),
+    StreamGot(bytes),
+  )
+}
+
+///|
+fn acceptance_resource_lifecycle_document_for_test() -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  doc.add_object_given_number(70, acceptance_resource_lifecycle_form_for_test())
+  let page = {
+    ..@pdflite.pdf_page_blank(@pdflite.paper_a4),
+    resources: acceptance_resource_lifecycle_resources_for_test(
+      acceptance_name_for_test("/F0"),
+      acceptance_name_for_test("/Fm1"),
+      70,
+    ),
+    content: [
+      acceptance_raw_stream_for_test("BT /F0"),
+      acceptance_raw_stream_for_test("12 Tf (Lifecycle) Tj ET /Fm1 Do"),
+    ],
+  }
+  let page_root = doc.add_pagetree([page])
+  ignore(doc.add_root(page_root, []))
+  doc
+}
+
+///|
+fn acceptance_page_resource_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  resource_key : @pdflite.PdfName,
+  name : @pdflite.PdfName,
+) -> @pdflite.PdfObject raise {
+  guard doc.lookup_direct(resource_key, page.resources) is Some(resources) else {
+    fail("expected resource dictionary")
+  }
+  guard doc.lookup_direct(name, resources) is Some(value) else {
+    fail("expected named resource")
+  }
+  value
+}
+
+///|
+fn acceptance_assert_resource_form_for_test(
+  doc : @pdflite.PdfDocument,
+  page : @pdflite.PdfPage,
+  name : @pdflite.PdfName,
+) -> Unit raise {
+  let value = acceptance_page_resource_for_test(
+    doc,
+    page,
+    acceptance_name_for_test("/XObject"),
+    name,
+  )
+  guard doc.direct(value) is PdfStreamObject(stream) else {
+    fail("expected form stream")
+  }
+  @test.assert_eq(
+    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    acceptance_ascii_for_test("FORM-LIFECYCLE"),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Filter")),
+    None,
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Keep")),
+    Some(PdfInteger(1)),
+  )
+  @test.assert_eq(
+    stream.dictionary.lookup_immediate(acceptance_name_for_test("/Processed")),
+    Some(PdfBoolean(true)),
+  )
+}
+
+///|
+fn acceptance_resource_lifecycle_ops_for_test(
+  font_name : @pdflite.PdfName,
+  form_name : @pdflite.PdfName,
+) -> Array[@pdflite.PdfContentOp] {
+  [
+    Op_BT,
+    Op_Tf(font_name, 12.0),
+    Op_Tj(acceptance_ascii_for_test("Lifecycle")),
+    Op_ET,
+    Op_Do(form_name),
+  ]
+}
+
+///|
+fn acceptance_process_resource_lifecycle_forms_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  for page in doc.pages_of_pagetree() {
+    doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
+      if streams.length() != 1 {
+        raise ParseStreamExpected
+      }
+      let bytes = acceptance_ascii_for_test("FORM-LIFECYCLE")
+      [
+        @pdflite.pdf_stream(
+          @pdflite.pdf_dictionary([
+            (
+              acceptance_name_for_test("/Filter"),
+              PdfNameObject(acceptance_name_for_test("/ASCIIHexDecode")),
+            ),
+            (acceptance_name_for_test("/Length"), PdfInteger(bytes.length())),
+            (acceptance_name_for_test("/Processed"), PdfBoolean(true)),
+          ]),
+          StreamGot(bytes),
+        ),
+      ]
+    })
+  }
+}
+
+///|
+fn acceptance_assert_resource_lifecycle_prefixed_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 6))
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 1)
+  @test.assert_eq(pages[0].content.length(), 1)
+  @test.assert_eq(
+    doc.parse_content_ops(pages[0].content),
+    acceptance_resource_lifecycle_ops_for_test(
+      acceptance_name_for_test("/pF0"),
+      acceptance_name_for_test("/pFm1"),
+    ),
+  )
+  ignore(
+    acceptance_page_resource_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/Font"),
+      acceptance_name_for_test("/pF0"),
+    ),
+  )
+  acceptance_assert_resource_form_for_test(
+    doc,
+    pages[0],
+    acceptance_name_for_test("/pFm1"),
+  )
+}
+
+///|
+fn acceptance_assert_resource_lifecycle_renumbered_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  @test.assert_eq(doc.version(), (1, 6))
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), 2)
+  @test.assert_eq(
+    doc.parse_content_ops(pages[0].content),
+    acceptance_resource_lifecycle_ops_for_test(
+      acceptance_name_for_test("/r1"),
+      acceptance_name_for_test("/r3"),
+    ),
+  )
+  @test.assert_eq(
+    doc.parse_content_ops(pages[1].content),
+    acceptance_resource_lifecycle_ops_for_test(
+      acceptance_name_for_test("/r2"),
+      acceptance_name_for_test("/r4"),
+    ),
+  )
+  ignore(
+    acceptance_page_resource_for_test(
+      doc,
+      pages[0],
+      acceptance_name_for_test("/Font"),
+      acceptance_name_for_test("/r1"),
+    ),
+  )
+  ignore(
+    acceptance_page_resource_for_test(
+      doc,
+      pages[1],
+      acceptance_name_for_test("/Font"),
+      acceptance_name_for_test("/r2"),
+    ),
+  )
+  acceptance_assert_resource_form_for_test(
+    doc,
+    pages[0],
+    acceptance_name_for_test("/r3"),
+  )
+  acceptance_assert_resource_form_for_test(
+    doc,
+    pages[1],
+    acceptance_name_for_test("/r4"),
+  )
 }
 
 ///|
@@ -2921,6 +3181,24 @@ test "native acceptance suite extracts pages with structure tree pruning" {
   acceptance_assert_structure_extraction_for_test(extracted)
   let reparsed = acceptance_compressed_roundtrip_for_test(extracted)
   acceptance_assert_structure_extraction_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite runs page resource lifecycle workflow" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_resource_lifecycle_document_for_test(),
+  )
+  acceptance_process_resource_lifecycle_forms_for_test(parsed)
+  parsed.add_prefix("p")
+  acceptance_assert_resource_lifecycle_prefixed_for_test(parsed)
+  let prefixed_pages = parsed.pages_of_pagetree()
+  let renumbered_pages = parsed.renumber_pages([
+    prefixed_pages[0],
+    prefixed_pages[0],
+  ])
+  let changed = parsed.change_pages(renumbered_pages)
+  let reparsed = acceptance_compressed_roundtrip_for_test(changed)
+  acceptance_assert_resource_lifecycle_renumbered_for_test(reparsed)
 }
 
 ///|
