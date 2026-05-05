@@ -1106,22 +1106,26 @@ fn PdfDocument::pdf_page_transform_catalog_destinations_object(
   dests : PdfObject,
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> PdfObject? raise PdfError {
+) -> PdfObject? {
   match dests {
     PdfDictionary(entries) => {
       let output : Array[(PdfName, PdfObject)] = []
       let mut changed = false
       for entry in entries {
         let (key, destination) = entry
-        match
-          self.pdf_page_transform_destination_object_with_shallow(
-            destination, matrices, page_reference_numbers, true,
-          ) {
-          Some(transformed) => {
-            output.push((key, transformed))
-            changed = true
+        try {
+          match
+            self.pdf_page_transform_destination_object_with_shallow(
+              destination, matrices, page_reference_numbers, true,
+            ) {
+            Some(transformed) => {
+              output.push((key, transformed))
+              changed = true
+            }
+            None => output.push(entry)
           }
-          None => output.push(entry)
+        } catch {
+          _ => output.push(entry)
         }
       }
       if changed {
@@ -1210,20 +1214,24 @@ fn PdfDocument::pdf_page_transform_name_tree_destination_entries(
   dests_tree : PdfObject,
   matrices : ArrayView[(Int, TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> Array[(PdfBytes, PdfObject)]? raise PdfError {
+) -> Array[(PdfBytes, PdfObject)]? {
   let output : Array[(PdfBytes, PdfObject)] = []
   let mut changed = false
   for entry in self.read_name_tree(dests_tree) {
     let (key, destination) = entry
-    match
-      self.pdf_page_transform_destination_object_with_shallow(
-        destination, matrices, page_reference_numbers, true,
-      ) {
-      Some(transformed) => {
-        output.push((key, transformed))
-        changed = true
+    try {
+      match
+        self.pdf_page_transform_destination_object_with_shallow(
+          destination, matrices, page_reference_numbers, true,
+        ) {
+        Some(transformed) => {
+          output.push((key, transformed))
+          changed = true
+        }
+        None => output.push(entry)
       }
-      None => output.push(entry)
+    } catch {
+      _ => output.push(entry)
     }
   }
   if changed {

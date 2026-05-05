@@ -48,9 +48,10 @@ work changes.
    GoTo action, and `/OpenAction` destinations are allocated as indirect
    destination objects like CamlPDF, while full-page `/Fit` and `/FitB`
    destinations plus integer page targets are left untransformed by matrix
-   passes. Malformed annotation and `/OpenAction` matrix destinations keep
-   renumbered page references without aborting `change_pages`. Count-changing
-   `change_pages` replacements keep CamlPDF's no-mapping behavior and bookmark
+   passes. Malformed annotation, `/OpenAction`, and catalog
+   destination-definition matrix destinations keep renumbered page references
+   without aborting `change_pages`. Count-changing `change_pages` replacements
+   keep CamlPDF's no-mapping behavior and bookmark
    matrix guard, while replacement preserves document metadata, trailer extras,
    and object-stream bookkeeping. Form XObject processing materializes deferred
    stream data before callbacks, matching CamlPDF's `Pdf.getstream` path.

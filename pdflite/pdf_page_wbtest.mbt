@@ -876,7 +876,7 @@ test "private page named destination transforms cover indirect containers" {
   let doc = page_wb_document_with_pages([pdf_page_blank(paper_a4)])
   let page_numbers = try! doc.page_reference_numbers()
   @test.assert_eq(
-    try! doc.pdf_page_transform_catalog_destinations_object(
+    doc.pdf_page_transform_catalog_destinations_object(
       PdfInteger(1),
       [(1, transform_translate(10.0, 20.0))],
       page_numbers,
@@ -884,7 +884,7 @@ test "private page named destination transforms cover indirect containers" {
     None,
   )
   @test.assert_eq(
-    try! doc.pdf_page_transform_catalog_destinations_object(
+    doc.pdf_page_transform_catalog_destinations_object(
       PdfDictionary([
         (pdf_page_name("/Keep"), page_wb_fit_destination(page_numbers[0])),
       ]),
@@ -1000,7 +1000,7 @@ test "private page named destination transforms cover indirect containers" {
     (page_wb_text("keep"), page_wb_xyz_destination(names_page_numbers[0], 3, 4)),
   ])
   @test.assert_eq(
-    try! names_doc.pdf_page_transform_name_tree_destination_entries(
+    names_doc.pdf_page_transform_name_tree_destination_entries(
       dest_tree,
       [],
       names_page_numbers,

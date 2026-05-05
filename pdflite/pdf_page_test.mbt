@@ -2752,6 +2752,67 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
 }
 
 ///|
+test "PdfDocument change_pages tolerates malformed catalog matrix destinations" {
+  let key_names = page_name_for_test("/Names")
+  let key_dests = page_name_for_test("/Dests")
+  let type_fitr = page_name_for_test("/FitR")
+  let bad_coordinate = page_name_for_test("/Bad")
+  let named_destination = page_name_for_test("/BadChapter")
+  let string_destination = @ascii.encode("bad-chapter")
+  let doc = @pdflite.pdf_document_empty()
+  let page_root = try! doc.add_pagetree([
+    @pdflite.pdf_page_blank(@pdflite.paper_a4),
+  ])
+  ignore(try! doc.add_root(page_root, []))
+  let old_numbers = try! doc.page_reference_numbers()
+  let bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(old_numbers[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  let dest_tree = doc.build_name_tree([(string_destination, bad_destination)])
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(key_names, PdfDictionary([(key_dests, dest_tree)])),
+  )
+  doc.add_object_given_number(
+    doc.root(),
+    try! doc
+    .lookup_object_or_null(doc.root())
+    .add_dict_entry(
+      key_dests,
+      PdfDictionary([(named_destination, bad_destination)]),
+    ),
+  )
+  let changed = try! doc.change_pages(
+    try! doc.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+  )
+  let new_numbers = try! changed.page_reference_numbers()
+  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+    PdfIndirect(new_numbers[0]),
+    PdfNameObject(type_fitr),
+    PdfNameObject(bad_coordinate),
+    PdfInteger(2),
+    PdfInteger(3),
+    PdfInteger(4),
+  ])
+  @test.assert_eq(page_destination_entries_for_test(changed), [
+    (string_destination, renumbered_bad_destination),
+  ])
+  @test.assert_eq(
+    page_catalog_destination_for_test(changed, "/BadChapter"),
+    Some(renumbered_bad_destination),
+  )
+}
+
+///|
 test "PdfDocument change_pages transforms named destination definitions" {
   let key_names = page_name_for_test("/Names")
   let key_dests = page_name_for_test("/Dests")

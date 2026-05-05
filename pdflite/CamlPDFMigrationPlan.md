@@ -521,10 +521,10 @@ MoonBit consequences for this project:
    annotation arrays still participate in the MoonBit port's broader transform
    coverage. Matrix rewrites also now skip full-page `/Fit` and `/FitB`
    destinations and integer page targets, matching CamlPDF's page-object-only,
-   coordinate-bearing destination filter. Malformed annotation and `/OpenAction`
-   destinations no longer abort the matrix pass; their page references are still
-   renumbered, but bad coordinates are left unchanged like CamlPDF's logged
-   failure path. A minimal `pdf_of_pages`
+   coordinate-bearing destination filter. Malformed annotation, `/OpenAction`,
+   and catalog destination-definition entries no longer abort the matrix pass;
+   their page references are still renumbered, but bad coordinates are left
+   unchanged like CamlPDF's logged failure path. A minimal `pdf_of_pages`
    is started for 1-based page extraction and reordering by composing
    `pages_of_pagetree`, `change_pages`, and
    `remove_unreferenced`; references to selected old page objects are rewritten
