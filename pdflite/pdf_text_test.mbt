@@ -3508,6 +3508,72 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard b5pc_truncated is Err(BadText) else {
     fail("expected BadText for truncated B5pc charcode")
   }
+  let hkscs_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopHKscsBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/HKscs-B5-H")),
+  })
+  let hkscs_builtin_extractor = hkscs_builtin_font.text_extractor()
+  @test.assert_eq(
+    hkscs_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0x87, 0x40, 0x87, 0x45, 0x89, 0x43, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
+        0xC6, 0xE4, 0xFE, 0xFE, 0x80,
+      ])[:],
+    ),
+    [
+      0x41, 0x43F0, 0x27267, 0x650A, 0x3000, 0x4F60, 0x597D, 0xFF3B, 0x79D4, 0x80,
+    ],
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x40])[:],
+    ),
+    [0x8140],
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x41),
+    Some(0x41),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x43F0),
+    Some(0x8740),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x27267),
+    Some(0x8745),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x650A),
+    Some(0x8943),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x3000),
+    Some(0xA140),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xA741),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x597D),
+    Some(0xA66E),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0xFF3B),
+    Some(0xC6E4),
+  )
+  @test.assert_eq(
+    hkscs_builtin_extractor.charcode_of_codepoint(0x79D4),
+    Some(0xFEFE),
+  )
+  @test.assert_eq(hkscs_builtin_extractor.charcode_of_codepoint(0x1F600), None)
+  let hkscs_truncated = try? hkscs_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0x87])[:],
+  )
+  guard hkscs_truncated is Err(BadText) else {
+    fail("expected BadText for truncated HKSCS charcode")
+  }
   let uhc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopUHCBuiltin"),
     composite,
