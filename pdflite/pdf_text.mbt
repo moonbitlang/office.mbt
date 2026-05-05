@@ -1398,21 +1398,24 @@ fn pdf_text_view_equals_ascii(view : BytesView, text : String) -> Bool {
 ///|
 fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
   let cursor = byte_cursor_of_view(data)
+  let mut expect_value = false
   for line in cursor.read_line_views() {
     let tokens = pdf_split_whitespace_tokens(line)
-    if tokens.length() >= 2 {
-      for index in 0..<(tokens.length() - 1) {
-        if pdf_text_view_equals_ascii(tokens[index], "/WMode") {
-          let parsed = try pdf_parse_ascii_int_view(tokens[index + 1]) catch {
-            _ => None
-          } noraise {
-            value => Some(value)
-          }
-          match parsed {
-            Some(value) => return Some(value)
-            None => ()
-          }
+    for token in tokens {
+      if expect_value {
+        expect_value = false
+        let parsed = try pdf_parse_ascii_int_view(token) catch {
+          _ => None
+        } noraise {
+          value => Some(value)
         }
+        match parsed {
+          Some(value) => return Some(value)
+          None => ()
+        }
+      }
+      if pdf_text_view_equals_ascii(token, "/WMode") {
+        expect_value = true
       }
     }
   } nobreak {

@@ -851,7 +851,9 @@ MoonBit consequences for this project:
    instead of stopping after the first array mapping. A small
    public parsed-CMap API is also started: borrowed CMap bytes and direct or
    indirect stream objects can now return a typed map plus `/WMode`, decoding
-   supported stream filters first.
+   supported stream filters first. `/WMode` parsing now follows PDF whitespace
+   tokenization across physical line boundaries and skips malformed candidate
+   values before accepting a later valid `/WMode`.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol

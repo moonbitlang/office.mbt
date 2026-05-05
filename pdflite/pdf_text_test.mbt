@@ -2456,6 +2456,27 @@ test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
 }
 
 ///|
+test "pdf_parse_cmap_data reads WMode across PDF whitespace" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "/CIDInit /ProcSet findresource begin\n" +
+      "/WMode\r\n1 def\n" +
+      "1 beginbfchar\n" +
+      "<21><0041>\n" +
+      "endbfchar\n",
+    )[:],
+  )
+  @test.assert_eq(parsed.wmode, Some(1))
+  @test.assert_eq(parsed.map, [(33, text_bytes_for_test([0x00, 0x41]))])
+  @test.assert_eq(
+    @pdflite.pdf_parse_cmap_data(
+      @ascii.encode("/WMode\nbad\n/WMode\t0 def\n")[:],
+    ).wmode,
+    Some(0),
+  )
+}
+
+///|
 test "PdfDocument parse_cmap decodes stream objects" {
   let doc = @pdflite.pdf_document_empty()
   let cmap_data = @ascii.encode(
