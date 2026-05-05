@@ -158,8 +158,8 @@ work changes.
    common mixed-byte predefined CMap charcode segmentation for `/ToUnicode`
    extraction, RKSJ predefined-CMap ASCII and half-width Katakana built-in
    fallback, generated GB-EUC/GB2312, GBpc-EUC, Big5, UHC/CP949,
-   GBK-EUC-UCS2, and KSC-EUC/Adobe-Korea1-UCS2 mapping-table fallbacks, plus
-   KSCpc-EUC multi-codepoint fallback when
+   GBK-EUC-UCS2, B5pc, and KSC-EUC/Adobe-Korea1-UCS2 mapping-table fallbacks,
+   plus KSCpc-EUC multi-codepoint fallback when
    `/ToUnicode` is absent,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
@@ -182,9 +182,9 @@ work changes.
    objects. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
-   beyond the RKSJ single-byte, GB-EUC, GBpc-EUC, Big5, UHC, GBK, KSC-EUC, and
-   KSCpc-EUC fallbacks when `/ToUnicode` is absent, JPEG pixel decode, and
-   remaining image filter families.
+   beyond the RKSJ single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, UHC, GBK,
+   KSC-EUC, and KSCpc-EUC fallbacks when `/ToUnicode` is absent, JPEG pixel
+   decode, and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -289,8 +289,9 @@ and backend breadth, is about 79-84% complete.
   `/ToUnicode` is absent, GBpc-EUC predefined-CMap mapping fallback with PC
   single-byte handling and one multi-codepoint expansion when `/ToUnicode` is
   absent, Big5 predefined-CMap mapping fallback when `/ToUnicode` is absent,
-  UHC predefined-CMap CP949 mapping fallback when `/ToUnicode` is absent, GBK
-  predefined-CMap GBK-EUC-UCS2 mapping fallback
+  B5pc predefined-CMap mapping fallback with PC single-byte handling when
+  `/ToUnicode` is absent, UHC predefined-CMap CP949 mapping fallback when
+  `/ToUnicode` is absent, GBK predefined-CMap GBK-EUC-UCS2 mapping fallback
   when `/ToUnicode` is absent, KSC-EUC predefined-CMap mapping fallback
   composed through Adobe-Korea1-UCS2 when `/ToUnicode` is absent, and an
   KSCpc-EUC predefined-CMap fallback with multi-codepoint expansion when
@@ -307,11 +308,11 @@ and backend breadth, is about 79-84% complete.
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
 - Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
-  beyond the RKSJ single-byte, GB-EUC, GBpc-EUC, Big5, UHC, GBK, KSC-EUC, and
-  KSCpc-EUC fallbacks when `/ToUnicode` is absent, vertical-writing behavior
-  beyond the current gates, additional TrueType and Type3 glyph-program edge
-  coverage, more real-world ToUnicode variations, and broader real-world
-  DCT/JPEG image payload corpus files.
+  beyond the RKSJ single-byte, GB-EUC, GBpc-EUC, Big5, B5pc, UHC, GBK,
+  KSC-EUC, and KSCpc-EUC fallbacks when `/ToUnicode` is absent,
+  vertical-writing behavior beyond the current gates, additional TrueType and
+  Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
+  broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.

@@ -3445,6 +3445,69 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard big5_truncated is Err(BadText) else {
     fail("expected BadText for truncated Big5 charcode")
   }
+  let b5pc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopB5pcBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/B5pc-H")),
+  })
+  let b5pc_builtin_extractor = b5pc_builtin_font.text_extractor()
+  @test.assert_eq(
+    b5pc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([
+        0x41, 0x80, 0x83, 0xA0, 0xFD, 0xFE, 0xFF, 0xA1, 0x40, 0xA7, 0x41, 0xA6, 0x6E,
+        0xA1, 0x4B, 0xA1, 0x51,
+      ])[:],
+    ),
+    [
+      0x41, 0x005C, 0x83, 0x00A0, 0x00A9, 0x2122, 0x2026, 0x3000, 0x4F60, 0x597D,
+      0x22EF, 0xFE54,
+    ],
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x81, 0x40])[:],
+    ),
+    [0x8140],
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x005C),
+    Some(0x5C),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x00A9),
+    Some(0xFD),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x2122),
+    Some(0xFE),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x2026),
+    Some(0xFF),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x22EF),
+    Some(0xA14B),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0xFE54),
+    Some(0xA151),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x4F60),
+    Some(0xA741),
+  )
+  @test.assert_eq(
+    b5pc_builtin_extractor.charcode_of_codepoint(0x597D),
+    Some(0xA66E),
+  )
+  @test.assert_eq(b5pc_builtin_extractor.charcode_of_codepoint(0x20AC), None)
+  let b5pc_truncated = try? b5pc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0xA1])[:],
+  )
+  guard b5pc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated B5pc charcode")
+  }
   let uhc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopUHCBuiltin"),
     composite,
