@@ -1269,6 +1269,24 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
     try! doc.get_image_24bpp(empty_resources, rgb8_with_decode),
     PdfRawImage(1, 1, PdfBPP24, image_bytes_for_test([10, 20, 30])),
   )
+  let rgb1 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(3)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_rgb),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(1)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0100_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, rgb1),
+    PdfRawImage(
+      3,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([10, 20, 30, 40, 50, 60, 10, 20, 30]),
+    ),
+  )
   let indexed_rgb4 : @pdflite.PdfObject = PdfArray([
     PdfNameObject(image_name_for_test("/Indexed")),
     PdfNameObject(image_name_for_test("/DeviceRGB")),
@@ -1314,6 +1332,24 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(empty_resources, cmyk4),
+    PdfRawImage(
+      2,
+      1,
+      PdfBPP24,
+      image_bytes_for_test([255, 255, 255, 255, 0, 0]),
+    ),
+  )
+  let cmyk1 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_cmyk),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(1)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0100_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(empty_resources, cmyk1),
     PdfRawImage(
       2,
       1,
@@ -1527,6 +1563,19 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
         0, 0, 0, 141, 141, 141, 255, 104, 47, 25, 178, 235, 141, 141, 141,
       ]),
     ),
+  )
+  let image1 = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (image_name_for_test("/ColorSpace"), indexed_lab),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(1)),
+    ]),
+    StreamGot(image_bytes_for_test([0b0100_0000])),
+  )
+  @test.assert_eq(
+    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image1),
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([0, 0, 0, 141, 141, 141])),
   )
 }
 

@@ -936,6 +936,19 @@ fn pdf_image_lab_indexed_2bpp_as_rgb24(
 }
 
 ///|
+fn pdf_image_lab_indexed_1bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  white : PdfTristimulusPoint,
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_lab_indexed_packed_bpp_as_rgb24(
+    width, height, 1, table, white, data,
+  )
+}
+
+///|
 fn pdf_image_cmyk_indexed_8bpp_as_rgb24(
   width : Int,
   height : Int,
@@ -952,23 +965,36 @@ fn pdf_image_cmyk_indexed_8bpp_as_rgb24(
 }
 
 ///|
+fn pdf_image_indexed_packed_bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  bits_per_component : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
+  pdf_image_require_size(data, bytes_per_row * height)
+  let output : Array[Byte] = []
+  for row in 0..<height {
+    let row_offset = row * bytes_per_row
+    for column in 0..<width {
+      let index = pdf_image_packed_sample(
+        data, row_offset, column, bits_per_component,
+      )
+      pdf_image_rgb_indexed_value(output, table, index)
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
 fn pdf_image_indexed_4bpp_as_rgb24(
   width : Int,
   height : Int,
   table : ArrayView[(Int, Array[Int])],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 4)
-  pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
-  for row in 0..<height {
-    let row_offset = row * bytes_per_row
-    for column in 0..<width {
-      let index = pdf_image_packed_sample(data, row_offset, column, 4)
-      pdf_image_rgb_indexed_value(output, table, index)
-    }
-  }
-  Bytes::from_array(output)
+  pdf_image_indexed_packed_bpp_as_rgb24(width, height, 4, table, data)
 }
 
 ///|
@@ -978,14 +1004,37 @@ fn pdf_image_indexed_2bpp_as_rgb24(
   table : ArrayView[(Int, Array[Int])],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 2)
+  pdf_image_indexed_packed_bpp_as_rgb24(width, height, 2, table, data)
+}
+
+///|
+fn pdf_image_indexed_1bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_indexed_packed_bpp_as_rgb24(width, height, 1, table, data)
+}
+
+///|
+fn pdf_image_cmyk_indexed_packed_bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  bits_per_component : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  let bytes_per_row = pdf_image_packed_bytes_per_row(width, bits_per_component)
   pdf_image_require_size(data, bytes_per_row * height)
   let output : Array[Byte] = []
   for row in 0..<height {
     let row_offset = row * bytes_per_row
     for column in 0..<width {
-      let index = pdf_image_packed_sample(data, row_offset, column, 2)
-      pdf_image_rgb_indexed_value(output, table, index)
+      let index = pdf_image_packed_sample(
+        data, row_offset, column, bits_per_component,
+      )
+      pdf_image_cmyk_indexed_value(output, table, index)
     }
   }
   Bytes::from_array(output)
@@ -998,17 +1047,7 @@ fn pdf_image_cmyk_indexed_4bpp_as_rgb24(
   table : ArrayView[(Int, Array[Int])],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 4)
-  pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
-  for row in 0..<height {
-    let row_offset = row * bytes_per_row
-    for column in 0..<width {
-      let index = pdf_image_packed_sample(data, row_offset, column, 4)
-      pdf_image_cmyk_indexed_value(output, table, index)
-    }
-  }
-  Bytes::from_array(output)
+  pdf_image_cmyk_indexed_packed_bpp_as_rgb24(width, height, 4, table, data)
 }
 
 ///|
@@ -1018,17 +1057,17 @@ fn pdf_image_cmyk_indexed_2bpp_as_rgb24(
   table : ArrayView[(Int, Array[Int])],
   data : BytesView,
 ) -> PdfBytes raise PdfError {
-  let bytes_per_row = pdf_image_packed_bytes_per_row(width, 2)
-  pdf_image_require_size(data, bytes_per_row * height)
-  let output : Array[Byte] = []
-  for row in 0..<height {
-    let row_offset = row * bytes_per_row
-    for column in 0..<width {
-      let index = pdf_image_packed_sample(data, row_offset, column, 2)
-      pdf_image_cmyk_indexed_value(output, table, index)
-    }
-  }
-  Bytes::from_array(output)
+  pdf_image_cmyk_indexed_packed_bpp_as_rgb24(width, height, 2, table, data)
+}
+
+///|
+fn pdf_image_cmyk_indexed_1bpp_as_rgb24(
+  width : Int,
+  height : Int,
+  table : ArrayView[(Int, Array[Int])],
+  data : BytesView,
+) -> PdfBytes raise PdfError {
+  pdf_image_cmyk_indexed_packed_bpp_as_rgb24(width, height, 1, table, data)
 }
 
 ///|
@@ -1085,11 +1124,20 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
       pdf_image_gray_8bpp_as_rgb24(width, height, data)
     (PdfDeviceCMYK, Some(8)) =>
       pdf_image_cmyk_8bpp_as_rgb24(width, height, data)
-    (_, Some(1)) => pdf_image_1bpp_as_rgb24(width, height, data)
     (PdfDeviceGray | PdfCalGray(_, _, _), Some(2)) =>
       pdf_image_gray_2bpp_as_rgb24(width, height, data)
     (PdfDeviceGray | PdfCalGray(_, _, _), Some(4)) =>
       pdf_image_gray_4bpp_as_rgb24(width, height, data)
+    (PdfIndexed(base, table), Some(1)) =>
+      match pdf_space_basic_table_colour_space(base) {
+        PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
+          pdf_image_indexed_1bpp_as_rgb24(width, height, table, data)
+        PdfDeviceCMYK =>
+          pdf_image_cmyk_indexed_1bpp_as_rgb24(width, height, table, data)
+        PdfLab(white, _, _) =>
+          pdf_image_lab_indexed_1bpp_as_rgb24(width, height, table, white, data)
+        _ => raise FilterExpected
+      }
     (PdfIndexed(base, table), Some(8)) =>
       match pdf_space_basic_table_colour_space(base) {
         PdfDeviceRGB | PdfCalRGB(_, _, _, _) =>
@@ -1120,6 +1168,7 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
           pdf_image_lab_indexed_4bpp_as_rgb24(width, height, table, white, data)
         _ => raise FilterExpected
       }
+    (_, Some(1)) => pdf_image_1bpp_as_rgb24(width, height, data)
     (PdfSeparation(_, PdfDeviceCMYK, tint), Some(8)) =>
       self.pdf_image_separation_cmyk_8bpp_as_rgb24(width, height, tint, data)
     (PdfICCBased(_, alternate, _, _, _), _) =>

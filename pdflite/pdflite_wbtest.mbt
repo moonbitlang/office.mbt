@@ -1810,6 +1810,16 @@ test "private image decode helpers cover scalar edge behavior" {
   guard unsupported2 is Err(PdfError::FilterExpected) else {
     fail("expected unsupported indexed 2bpp base")
   }
+  let unsupported1 : Result[PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
+    1,
+    1,
+    unsupported_indexed,
+    Some(1),
+    sample[:],
+  )
+  guard unsupported1 is Err(PdfError::FilterExpected) else {
+    fail("expected unsupported indexed 1bpp base")
+  }
 
   let filters : Array[PdfObject] = []
   for _ in 0..<1025 {

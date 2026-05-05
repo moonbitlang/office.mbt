@@ -113,8 +113,9 @@ work changes.
    across PDF whitespace,
    standard-font extraction, color spaces,
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
-   extraction are started, including explicit `/Indexed` encoded-image
-   `/Decode` metadata preservation.
+   extraction are started, including 1-, 2-, 4-, and 8-bit `/Indexed` raw
+   image samples plus explicit `/Indexed` encoded-image `/Decode` metadata
+   preservation.
    Remaining focus: broader predefined CMap semantics, JPEG pixel decode, and
    remaining image filter families.
 
