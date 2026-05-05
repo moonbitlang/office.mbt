@@ -1443,6 +1443,10 @@ public APIs end to end:
   saved-state recrypt, compressed rewrite, and owner-password reread.
 - merge two generated documents, write/read through a compressed xref stream,
   extract pages in a new order, and reread the extracted document.
+- run a `pdfmergeexample.ml`-style manual merge workflow over documents that
+  were first parsed through compressed xref streams, using public renumber,
+  page-tree rebuild, root creation, and unreferenced-object cleanup APIs, then
+  compressed write/reread the merged output.
 - retain merged page labels and bookmark targets through a public
   merge/write/read compressed xref-stream boundary.
 - merge documents that were first parsed through compressed xref streams while
@@ -1468,6 +1472,9 @@ public APIs end to end:
 - extract pages that reuse annotation and popup objects after a compressed
   xref-stream read boundary, duplicating the annotation pairs and repairing
   `/Popup` and `/Parent` links through write/reread.
+- extract a selected page with `process_struct_tree=true` after a compressed
+  xref-stream read boundary, pruning structure tree kids that target dropped
+  pages while retargeting the surviving kid through write/reread.
 - preserve document-level feature state through a compressed xref-stream
   read/edit/write/reread lifecycle: page labels, link annotations, old-style
   destinations, name-tree destinations, open actions, and matrix-transformed page

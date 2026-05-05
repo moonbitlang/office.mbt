@@ -217,7 +217,10 @@ gates are solid; backend breadth follows after native feature parity.
   incremental revision reads. Document-level merge and page extraction are also
   covered across a compressed xref-stream read boundary, including retained
   page labels and bookmark targets through a public merge/write/read workflow,
-  and native acceptance covers `pdfdecomp.ml`-style document-wide stream
+  a `pdfmergeexample.ml`-style manual merge workflow using public renumber,
+  page-tree rebuild, and cleanup APIs, and structure-tree pruning during page
+  extraction with `process_struct_tree=true`. Native acceptance covers
+  `pdfdecomp.ml`-style document-wide stream
   decompression, `pdftest.ml`-style split-content parse/rewrite, and
   `pdfdraft.ml`-style image-replacement workflows through compressed
   xref-stream write/read. Native async file wrappers cover encrypted

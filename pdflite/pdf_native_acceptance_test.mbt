@@ -1508,6 +1508,36 @@ fn acceptance_assert_pages_have_hello_content_for_test(
 }
 
 ///|
+fn acceptance_assert_text_pages_for_test(
+  doc : @pdflite.PdfDocument,
+  expected_texts : ArrayView[String],
+) -> Unit raise {
+  @test.assert_eq(doc.endpage(), expected_texts.length())
+  let pages = doc.pages_of_pagetree()
+  @test.assert_eq(pages.length(), expected_texts.length())
+  for index, text in expected_texts {
+    @test.assert_eq(
+      doc.parse_content_ops(pages[index].content),
+      acceptance_text_page_ops_for_test(text),
+    )
+  }
+}
+
+///|
+fn acceptance_document_contains_object_for_test(
+  doc : @pdflite.PdfDocument,
+  object : @pdflite.PdfObject,
+) -> Bool {
+  for number in doc.object_numbers() {
+    if doc.lookup_object_or_null(number) == object {
+      break true
+    }
+  } nobreak {
+    false
+  }
+}
+
+///|
 fn acceptance_assert_pdftest_rewrite_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -2027,6 +2057,131 @@ fn acceptance_compressed_roundtrip_for_test(
   @pdflite.pdf_read_document_from_bytes(
     @pdflite.pdf_write_document_with_compressed_xref_stream(doc),
   )
+}
+
+///|
+fn acceptance_pdfmergeexample_document_for_test(
+  text : String,
+  minor_version : Int,
+  detached_number : Int,
+) -> @pdflite.PdfDocument raise {
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, minor_version)
+  let page_root = doc.add_pagetree([acceptance_text_page_for_test(text)])
+  ignore(doc.add_root(page_root, []))
+  doc.add_object_given_number(
+    detached_number,
+    PdfString(acceptance_ascii_for_test("detached-" + text)),
+  )
+  doc
+}
+
+///|
+fn acceptance_pdfmergeexample_workflow_for_test(
+  documents : ArrayView[@pdflite.PdfDocument],
+) -> @pdflite.PdfDocument raise {
+  let renumbered = @pdflite.pdf_renumber_documents(documents)
+  let merged = @pdflite.pdf_document_empty()
+  let pages : Array[@pdflite.PdfPage] = []
+  let mut max_minor = 0
+  for document in renumbered {
+    let (_, minor) = document.version()
+    if minor > max_minor {
+      max_minor = minor
+    }
+    for number in document.object_numbers() {
+      merged.add_object_given_number(
+        number,
+        document.lookup_object_or_null(number),
+      )
+    }
+    for page in document.pages_of_pagetree() {
+      pages.push(page)
+    }
+  }
+  let page_root = merged.add_pagetree(pages)
+  ignore(merged.add_root(page_root, []))
+  merged.set_version(1, max_minor)
+  merged.remove_unreferenced()
+  merged
+}
+
+///|
+fn acceptance_structure_extraction_document_for_test() -> @pdflite.PdfDocument raise {
+  let key_struct_tree_root = acceptance_name_for_test("/StructTreeRoot")
+  let key_parent_tree = acceptance_name_for_test("/ParentTree")
+  let key_struct_parents = acceptance_name_for_test("/StructParents")
+  let key_k = acceptance_name_for_test("/K")
+  let key_pg = acceptance_name_for_test("/Pg")
+  let doc = @pdflite.pdf_document_empty()
+  doc.set_version(1, 6)
+  let page_root = doc.add_pagetree([
+    acceptance_text_page_for_test("structured-keep"),
+    acceptance_text_page_for_test("structured-drop"),
+  ])
+  ignore(doc.add_root(page_root, []))
+  let page_numbers = doc.page_reference_numbers()
+  for index, page_number in page_numbers {
+    doc.add_object_given_number(
+      page_number,
+      doc
+      .lookup_object_or_null(page_number)
+      .add_dict_entry(key_struct_parents, PdfInteger(index)),
+    )
+  }
+  doc.add_object_given_number(
+    90,
+    PdfDictionary([
+      (key_k, PdfArray([PdfIndirect(91), PdfIndirect(92)])),
+      (
+        key_parent_tree,
+        doc.build_number_tree([(0, PdfIndirect(91)), (1, PdfIndirect(92))]),
+      ),
+    ]),
+  )
+  doc.add_object_given_number(
+    91,
+    PdfDictionary([
+      (key_pg, PdfIndirect(page_numbers[0])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  doc.add_object_given_number(
+    92,
+    PdfDictionary([
+      (key_pg, PdfIndirect(page_numbers[1])),
+      (key_k, PdfInteger(0)),
+    ]),
+  )
+  acceptance_add_catalog_entry_for_test(
+    doc,
+    key_struct_tree_root,
+    PdfIndirect(90),
+  )
+  doc
+}
+
+///|
+fn acceptance_assert_structure_extraction_for_test(
+  doc : @pdflite.PdfDocument,
+) -> Unit raise {
+  let key_struct_tree_root = acceptance_name_for_test("/StructTreeRoot")
+  let key_k = acceptance_name_for_test("/K")
+  let key_pg = acceptance_name_for_test("/Pg")
+  @test.assert_eq(doc.version(), (1, 6))
+  acceptance_assert_text_pages_for_test(doc, ["structured-keep"])
+  let page_numbers = doc.page_reference_numbers()
+  guard doc.catalog().lookup_immediate(key_struct_tree_root)
+    is Some(PdfIndirect(struct_root_number)) else {
+    fail("expected extracted StructTreeRoot")
+  }
+  let struct_root = doc.lookup_object_or_null(struct_root_number)
+  @test.assert_eq(struct_root.lookup_immediate(key_k), Some(PdfIndirect(91)))
+  @test.assert_eq(
+    doc.lookup_object_or_null(91).lookup_immediate(key_pg),
+    Some(PdfIndirect(page_numbers[0])),
+  )
+  @test.assert_eq(doc.lookup_object_or_null(92), PdfNull)
 }
 
 ///|
@@ -2672,6 +2827,43 @@ test "native acceptance suite merges and extracts pages through reader boundarie
 }
 
 ///|
+test "native acceptance suite runs pdfmergeexample manual merge workflow" {
+  let first = acceptance_compressed_roundtrip_for_test(
+    acceptance_pdfmergeexample_document_for_test("manual-first", 4, 88),
+  )
+  let second = acceptance_compressed_roundtrip_for_test(
+    acceptance_pdfmergeexample_document_for_test("manual-second", 7, 89),
+  )
+  let merged = acceptance_pdfmergeexample_workflow_for_test([first, second])
+  @test.assert_eq(merged.version(), (1, 7))
+  acceptance_assert_text_pages_for_test(merged, [
+    "manual-first", "manual-second",
+  ])
+  @test.assert_eq(
+    acceptance_document_contains_object_for_test(
+      merged,
+      PdfString(acceptance_ascii_for_test("detached-manual-first")),
+    ),
+    false,
+  )
+  @test.assert_eq(
+    acceptance_document_contains_object_for_test(
+      merged,
+      PdfString(acceptance_ascii_for_test("detached-manual-second")),
+    ),
+    false,
+  )
+  let reparsed = acceptance_compressed_roundtrip_for_test(merged)
+  @test.assert_eq(reparsed.version(), (1, 7))
+  acceptance_assert_text_pages_for_test(reparsed, [
+    "manual-first", "manual-second",
+  ])
+  let page_refs = reparsed.page_reference_numbers()
+  @test.assert_eq(page_refs.length(), 2)
+  @test.assert_eq(page_refs[0] != page_refs[1], true)
+}
+
+///|
 test "native acceptance suite preserves labels and bookmarks across merge boundary" {
   let first = acceptance_labelled_bookmarked_document_for_test(
     "A-",
@@ -2717,6 +2909,18 @@ test "native acceptance suite merges catalog feature lifecycle" {
   let merged = @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   let reparsed = acceptance_compressed_roundtrip_for_test(merged)
   acceptance_assert_catalog_merge_lifecycle_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite extracts pages with structure tree pruning" {
+  let parsed = acceptance_compressed_roundtrip_for_test(
+    acceptance_structure_extraction_document_for_test(),
+  )
+  @test.assert_eq(parsed.endpage(), 2)
+  let extracted = parsed.pdf_of_pages([1], process_struct_tree=true)
+  acceptance_assert_structure_extraction_for_test(extracted)
+  let reparsed = acceptance_compressed_roundtrip_for_test(extracted)
+  acceptance_assert_structure_extraction_for_test(reparsed)
 }
 
 ///|
