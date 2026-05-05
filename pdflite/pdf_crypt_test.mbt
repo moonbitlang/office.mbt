@@ -17,6 +17,14 @@ fn crypt_concat_bytes_for_test(
 }
 
 ///|
+fn crypt_restore_env_for_test(previous : String?) -> Unit {
+  match previous {
+    Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
+    None => @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+  }
+}
+
+///|
 fn crypt_bytes_start_with_at(
   haystack : @pdflite.PdfBytes,
   needle : @pdflite.PdfBytes,
@@ -1778,12 +1786,15 @@ test "PdfDocument encrypt_40bit adds a file id when missing" {
   let key_id = crypt_name_for_test("/ID")
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, PdfString(@ascii.encode("plain")))
+  let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+  @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
   let generated = try! doc.encrypt_40bit(
     @ascii.encode("user")[:],
     @ascii.encode("owner")[:],
     [],
   )
-  let generated_id = @pdflite.pdf_md5_digest(@ascii.encode("pdflite")[:])
+  crypt_restore_env_for_test(previous)
+  let generated_id = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf")[:])
   @test.assert_eq(
     generated.trailer_dict().lookup_immediate(key_id),
     Some(PdfArray([PdfString(generated_id), PdfString(generated_id)])),

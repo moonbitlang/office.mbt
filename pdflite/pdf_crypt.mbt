@@ -534,11 +534,6 @@ fn PdfDocument::encryption_object_number(self : PdfDocument) -> Int {
 }
 
 ///|
-fn pdf_crypt_generated_id() -> PdfBytes {
-  pdf_md5_digest(@ascii.encode("pdflite")[:])
-}
-
-///|
 fn pdf_crypt_file_id_object(file_id : BytesView) -> PdfObject {
   let owned = file_id.to_owned()
   PdfArray([PdfString(owned), PdfString(owned)])
@@ -555,7 +550,7 @@ fn PdfDocument::with_file_id(
       let id = if file_id.length() > 0 {
         file_id.to_owned()
       } else {
-        pdf_crypt_generated_id()
+        pdf_generate_current_id_bytes("")
       }
       let output = self.copy()
       output.set_trailer_dict(

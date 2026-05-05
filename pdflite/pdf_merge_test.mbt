@@ -30,6 +30,14 @@ fn merge_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
+fn merge_restore_env_for_test(previous : String?) -> Unit {
+  match previous {
+    Some(value) => @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", value)
+    None => @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+  }
+}
+
+///|
 fn merge_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
   key : @pdflite.PdfName,
@@ -987,8 +995,11 @@ test "pdf_merge_documents installs trailer file id" {
   let key_id = merge_name_for_test("/ID")
   let first = merge_one_page_doc_for_test(1, 4)
   let second = merge_one_page_doc_for_test(2, 4)
+  let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
+  @env.set_env_var("CAMLPDF_REPRODUCIBLE_IDS", "true")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
-  let expected = @pdflite.pdf_md5_digest(@ascii.encode("pdflite")[:])
+  merge_restore_env_for_test(previous)
+  let expected = @pdflite.pdf_md5_digest(@ascii.encode("camlpdf")[:])
   @test.assert_eq(
     merged.trailer_dict().lookup_immediate(key_id),
     Some(PdfArray([PdfString(expected), PdfString(expected)])),

@@ -7,7 +7,7 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 94-95%.
+- Native main-feature parity: 95%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
   breadth: 83-88%.
 
@@ -71,6 +71,9 @@ Current estimate:
 - [x] ~~ARC4/AESV2/AESV3 authentication, encryption, decryption, native
   secure-random writer paths, saved-state recrypt, encrypted object streams,
   lazy encrypted streams, and `/EncryptMetadata false`.~~
+- [x] ~~Shared CamlPDF-style file-ID generation across `change_id`, encryption,
+  and merge missing-ID paths, honoring `CAMLPDF_REPRODUCIBLE_IDS` while
+  preserving explicit `file_id=` overrides.~~
 - [x] ~~Page resource lifecycle native gate: `renumber_pages`, `add_prefix`,
   `merge_content_streams`, and `process_xobjects` through
   read/edit/write/reread boundaries.~~
@@ -386,6 +389,8 @@ Current estimate:
   not treated as selectable `null` objects.~~
 - [x] ~~Route password-aware malformed classic xref-entry errors through
   reconstruction before decryption.~~
+- [x] ~~Route encryption and merge missing file IDs through the shared
+  env-aware CamlPDF-style ID generator.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

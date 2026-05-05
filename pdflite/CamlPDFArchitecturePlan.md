@@ -236,6 +236,11 @@ work changes.
    `PdfWriteMode` dispatch plus direct encrypted-writer wrappers for ARC4,
    AESV2, AESV3, and AESV3 ISO, so callers no longer need to manually
    encrypt-then-write for the main CamlPDF-style output workflow.
+   Missing trailer file IDs now flow through the shared `pdf_id.mbt` generator
+   for `change_id`, encryption, and merge. Ordinary generation uses the
+   MoonBit `@env.now()` boundary, while `CAMLPDF_REPRODUCIBLE_IDS=true` forces
+   the CamlPDF-compatible `md5("camlpdf")` seed; explicit `file_id=` values
+   still take precedence.
    Native AESV2 and AESV3 convenience output now use a pdflite-owned OS
    random-byte FFI boundary for IVs, AESV3 file keys, salts, and permissions
    padding, with failure propagated as checked `PdfError`; the native async file
@@ -256,10 +261,11 @@ work changes.
    Owner modules: `pdf_merge.mbt`, `pdf_ocg.mbt`, `pdf_date.mbt`, plus feature
    helpers in page/text modules.
    Status: merge, optional content groups, dates, page labels, bookmarks,
-   duplicate-font paths, malformed named-destination merge fallback, the
-   `pdfdecomp.ml` stream-decompression workflow, a `pdfmergeexample.ml`-style
-   public workflow fixture, and a `pdfdraft.ml` image-replacement acceptance
-   fixture are started. Page-label reads now preserve CamlPDF's tolerant range
+   duplicate-font paths, env-aware trailer file-ID installation, malformed
+   named-destination merge fallback, the `pdfdecomp.ml` stream-decompression
+   workflow, a `pdfmergeexample.ml`-style public workflow fixture, and a
+   `pdfdraft.ml` image-replacement acceptance fixture are started. Page-label
+   reads now preserve CamlPDF's tolerant range
    handling for malformed keys and odd trailing `/Nums` entries while rejecting
    empty malformed label trees.
    Remaining focus: more CamlPDF example-level acceptance fixtures and
@@ -305,10 +311,11 @@ and backend breadth, is about 83-88% complete.
   destination/action references, and example workflows for `pdfdecomp.ml`,
   `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and `pdfmergeexample.ml`.
 - Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
-  decryption, native secure-random writer paths, saved-state recrypt,
-  encrypted object streams, lazy encrypted stream forcing, non-stream
-  object-stream payload recrypt, bad-startxref encrypted reconstruction with
-  recrypt, feature-rich classic malformed-xref reconstruction through labels,
+  decryption, shared env-aware file-ID generation for missing encryption and
+  merge IDs, native secure-random writer paths, saved-state recrypt, encrypted
+  object streams, lazy encrypted stream forcing, non-stream object-stream
+  payload recrypt, bad-startxref encrypted reconstruction with recrypt,
+  feature-rich classic malformed-xref reconstruction through labels,
   annotations, destinations, name-tree destinations, catalog actions,
   `change_pages`, and compressed rewrite/reread, and `/EncryptMetadata false`.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
