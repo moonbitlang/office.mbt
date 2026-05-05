@@ -25,9 +25,9 @@ Current estimate:
   Adobe-Japan1, and Adobe-Korea1 predefined CMap fallbacks, plus external CMap
   codespace/CID parsing and `/UseCMap` stream composition through ToUnicode.~~
 - [ ] Finish broader external/general CMap parsing beyond the current
-  codespace/CID/notdef sections, program and stream-dictionary header
-  metadata, Identity and named predefined `/UseCMap` fallbacks, and parsed
-  stream `/UseCMap` composition subset.
+  codespace/CID/notdef sections, notdef text/reverse lookup, program and
+  stream-dictionary header metadata, Identity and named predefined `/UseCMap`
+  fallbacks, and parsed stream `/UseCMap` composition subset.
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
 - [ ] Add more TrueType and Type3 glyph-program edge coverage beyond current
@@ -182,6 +182,9 @@ Current estimate:
 - [x] ~~External/general CMap `beginnotdefchar` and `beginnotdefrange`
   parsing, including compact-section recovery and `/UseCMap` composition
   inheritance with derived-entry override behavior.~~
+- [x] ~~External/general CMap notdef maps applied in Type0 text extraction and
+  reverse lookup after explicit CID mappings and before inherited
+  predefined/Identity fallbacks.~~
 - [x] ~~External/general CMap header metadata parsing for `/CMapName`,
   `/CMapType`, and `/CIDSystemInfo`, including dictionary-style and
   `dict dup begin` CID system syntax plus `/UseCMap` composition inheritance
@@ -197,9 +200,9 @@ Current estimate:
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus broader external/general CMap parsing beyond the current
-  codespace/CID/notdef sections, program and stream-dictionary header
-  metadata, Identity and named predefined `/UseCMap` fallbacks, and parsed
-  stream `/UseCMap` composition subset.
+  codespace/CID/notdef sections, notdef text/reverse lookup, program and
+  stream-dictionary header metadata, Identity and named predefined `/UseCMap`
+  fallbacks, and parsed stream `/UseCMap` composition subset.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
@@ -328,8 +331,10 @@ Current estimate:
   `/UseCMap` composition with derived-entry overrides and cycle protection.~~
 - [x] ~~Add the next remaining text parity slice: ToUnicode stream `/UseCMap`
   composition through extractor and reverse lookup.~~
+- [x] ~~Add the next remaining text parity slice: apply parsed external CMap
+  notdef sections during Type0 extraction and reverse lookup.~~
 - [ ] Add the next remaining text parity slice: broader external/general CMap
-  parsing beyond codespace/CID-char/CID-range, Identity `/UseCMap`, and stream
-  `/UseCMap` composition, remaining rare predefined CMap families, or
-  real-world ToUnicode variation coverage.
+  parsing beyond codespace/CID-char/CID-range/notdef lookup, Identity
+  `/UseCMap`, and stream `/UseCMap` composition, remaining rare predefined
+  CMap families, or real-world ToUnicode variation coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.

@@ -2976,7 +2976,10 @@ test "PdfDocument applies external CMap Identity UseCMap fallback" {
     "/Identity-H usecmap\n" +
     "1 begincidchar\n" +
     "<0041> 99\n" +
-    "endcidchar\n",
+    "endcidchar\n" +
+    "1 beginnotdefchar\n" +
+    "<0041> 77\n" +
+    "endnotdefchar\n",
   )
   let cmap = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
@@ -3007,6 +3010,7 @@ test "PdfDocument applies external CMap Identity UseCMap fallback" {
     [99, 0x42],
   )
   @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0x0041))
+  @test.assert_eq(extractor.charcode_of_codepoint(77), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0x42), Some(0x0042))
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
 }
@@ -3169,9 +3173,19 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
     ),
     [500, 99, 502],
   )
+  @test.assert_eq(
+    extractor.codepoints_of_text(
+      text_bytes_for_test([0x00, 0x50, 0x00, 0x51, 0x00, 0x52])[:],
+    ),
+    [77, 701, 0x52],
+  )
   @test.assert_eq(extractor.charcode_of_codepoint(99), Some(0x0041))
   @test.assert_eq(extractor.charcode_of_codepoint(500), Some(0x0040))
   @test.assert_eq(extractor.charcode_of_codepoint(501), Some(0x01F5))
+  @test.assert_eq(extractor.charcode_of_codepoint(77), Some(0x0050))
+  @test.assert_eq(extractor.charcode_of_codepoint(701), Some(0x0051))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x51), None)
+  @test.assert_eq(extractor.charcode_of_codepoint(0x52), Some(0x0052))
 }
 
 ///|
