@@ -1456,8 +1456,15 @@ fn acceptance_image_ccitt_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject {
-  let encoded = @pdflite.pdf_flate_encode(acceptance_ascii_for_test("jpg-data"))
+fn acceptance_jpeg_payload_for_test() -> @pdflite.PdfBytes raise {
+  acceptance_text_bytes_for_test([
+    0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x04, 0x45, 0x49, 0xFF, 0x00, 0xFF, 0xD9,
+  ])
+}
+
+///|
+fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject raise {
+  let encoded = @pdflite.pdf_flate_encode(acceptance_jpeg_payload_for_test())
   @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (
@@ -1589,6 +1596,18 @@ fn acceptance_inline_image_data_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
+fn acceptance_inline_jpeg_dictionary_for_test() -> @pdflite.PdfObject {
+  PdfDictionary([
+    (acceptance_name_for_test("/W"), PdfInteger(1)),
+    (acceptance_name_for_test("/H"), PdfInteger(1)),
+    (
+      acceptance_name_for_test("/F"),
+      PdfNameObject(acceptance_name_for_test("/DCT")),
+    ),
+  ])
+}
+
+///|
 fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise {
   [
     Op_Do(acceptance_name_for_test("/ImRaw")),
@@ -1600,6 +1619,11 @@ fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise
       acceptance_inline_image_dictionary_for_test(),
       None,
       acceptance_inline_image_data_for_test(),
+    ),
+    Op_InlineImage(
+      acceptance_inline_jpeg_dictionary_for_test(),
+      None,
+      acceptance_jpeg_payload_for_test(),
     ),
   ]
 }
@@ -1698,7 +1722,7 @@ fn acceptance_assert_image_lifecycle_for_test(
   )
   @test.assert_eq(
     doc.get_image_24bpp(pages[0].resources, jpeg_image),
-    PdfJPEG(acceptance_ascii_for_test("jpg-data"), Some([1.0, 0.0])),
+    PdfJPEG(acceptance_jpeg_payload_for_test(), Some([1.0, 0.0])),
   )
   let jpx_image = acceptance_image_xobject_for_test(
     doc,

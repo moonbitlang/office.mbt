@@ -1474,7 +1474,8 @@ public APIs end to end:
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, CCITT image XObjects decoded to RGB24, staged Flate-then-DCT
-  encoded-image pass-through, direct JPX encoded-image preservation, staged
+  marker-payload preservation, DCT inline images whose payloads contain `EI`
+  bytes before JPEG EOI, direct JPX encoded-image preservation, staged
   Flate-then-JBIG2 encoded-image preservation with `/JBIG2Globals`, and Flate
   inline images that survive document-wide stream decompression and reread;
 - preserve a partially decoded stream-filter workflow through read/write/reread;

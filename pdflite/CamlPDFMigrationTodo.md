@@ -85,6 +85,8 @@ Current estimate:
   custom encoding, metrics, compressed rewrite, and reread.~~
 - [ ] More TrueType and Type3 glyph-program edge coverage beyond the current
   Type3 and embedded TrueType gates.
+- [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
+  XObjects and DCT inline images with embedded `EI` bytes before EOI.~~
 - [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
@@ -137,4 +139,5 @@ Current estimate:
 - [ ] Add real-world CCITT image corpus coverage.
 - [x] ~~Add a multi-revision malformed xref-stream/object-stream recovery gate.~~
 - [x] ~~Add a Type3 `/ToUnicode` native acceptance gate.~~
+- [x] ~~Add a structured DCT/JPEG marker payload native gate.~~
 - [ ] Revisit non-native backend validation after native parity is stable.

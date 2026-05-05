@@ -149,13 +149,14 @@ work changes.
    predefined CMap extraction through compressed read/write boundaries,
    including Identity-V vertical width metadata, plus image extraction through
    compressed read/write boundaries for Flate-decoded raw `/Indexed` image
-   XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
-   encoded-image preservation, staged Flate-then-JBIG2 encoded-image
-   preservation with `/JBIG2Globals`, Type3 `/ToUnicode` text extraction with
-   indirect CharProcs and custom metrics, embedded TrueType `FontFile2` plus
-   `/ToUnicode` text extraction through compressed read/write boundaries, and
-   Flate inline-image content parsing. Stream decode now also covers CCITT `/K
-   0` and `/K < 0` data through `/CCITTFaxDecode` and `/CCF`.
+   XObjects, structured DCT/JPEG marker payloads through staged Flate-then-DCT
+   XObjects and DCT inline-image parsing, direct JPX encoded-image preservation,
+   staged Flate-then-JBIG2 encoded-image preservation with `/JBIG2Globals`,
+   Type3 `/ToUnicode` text extraction with indirect CharProcs and custom
+   metrics, embedded TrueType `FontFile2` plus `/ToUnicode` text extraction
+   through compressed read/write boundaries, and Flate inline-image content
+   parsing. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
+   through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader non-UCS2 predefined CMap mapping tables, JPEG pixel
    decode, and remaining image filter families.
 
@@ -257,8 +258,9 @@ and backend breadth, is about 77-82% complete.
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, predefined UCS2
   horizontal/vertical two-byte extraction, and an Identity-V native gate with
-  vertical width metadata. Native image acceptance now also
-  covers JPX encoded images, staged Flate-to-JBIG2 images with
+  vertical width metadata. Native image acceptance now also covers structured
+  DCT/JPEG marker payloads through staged Flate-to-DCT image XObjects and DCT
+  inline images, JPX encoded images, staged Flate-to-JBIG2 images with
   `/JBIG2Globals`, and CCITT image XObjects through raw RGB extraction; native
   font acceptance covers Type3 `/ToUnicode` text with indirect CharProcs and
   embedded TrueType `FontFile2` with generated `/ToUnicode` text extraction.
@@ -267,7 +269,8 @@ and backend breadth, is about 77-82% complete.
   Group 3 `/K 0` and round-trips through decode.
 - Not covered enough: broader non-UCS2 predefined CMap mapping tables,
   vertical-writing behavior beyond the current gates, additional TrueType and
-  Type3 glyph-program edge coverage, and more real-world ToUnicode variations.
+  Type3 glyph-program edge coverage, more real-world ToUnicode variations, and
+  broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate tuning parity, broader DCT/JPEG and
   CCITT corpus validation, CCITT Group 4 external-tool encode policy, and
   optional external JBIG2 decoder integration. Actual JPEG pixel decoding is
@@ -346,8 +349,9 @@ and backend breadth, is about 77-82% complete.
   through compressed read/write boundaries; a Type0 `/Identity-H` plus filtered
   `/ToUnicode` CID text-extraction gate through compressed read/write
   boundaries; an image-extraction gate for Flate raw indexed image XObjects,
-  Flate-to-DCT encoded images, and Flate inline images through compressed
-  read/write and document-wide decompression boundaries; an AESV2
+  structured Flate-to-DCT encoded images, DCT inline images, and Flate inline
+  images through compressed read/write and document-wide decompression
+  boundaries; an AESV2
   `/EncryptMetadata false` gate through compressed encrypted output and
   saved-state recrypt; strict
   reading and writer normalization for
