@@ -2773,7 +2773,8 @@ fn pdf_text_parse_cmap_int_after_token(data : BytesView, key : String) -> Int? {
   let cursor = byte_cursor_of_view(data)
   let mut expect_value = false
   for line in cursor.read_line_views() {
-    let tokens = pdf_split_whitespace_tokens(line)
+    let uncommented = pdf_text_cmap_line_without_comment(line)
+    let tokens = pdf_split_whitespace_tokens(uncommented[:])
     for token in tokens {
       if expect_value {
         expect_value = false
@@ -2837,7 +2838,8 @@ fn pdf_text_parse_cmap_name_after_token(
   let cursor = byte_cursor_of_view(data)
   let mut expect_value = false
   for line in cursor.read_line_views() {
-    let tokens = pdf_split_whitespace_tokens(line)
+    let uncommented = pdf_text_cmap_line_without_comment(line)
+    let tokens = pdf_split_whitespace_tokens(uncommented[:])
     for token in tokens {
       if expect_value {
         expect_value = false
@@ -2899,7 +2901,8 @@ fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
   let mut seen_cid_system_info = false
   let mut expect_value : PdfTextCMapCIDSystemInfoKey? = None
   for line in cursor.read_line_views() {
-    let tokens = pdf_split_whitespace_tokens(line)
+    let uncommented = pdf_text_cmap_line_without_comment(line)
+    let tokens = pdf_split_whitespace_tokens(uncommented[:])
     for token in tokens {
       if !seen_cid_system_info {
         if pdf_text_view_equals_ascii(token, "/CIDSystemInfo") {
@@ -2943,7 +2946,8 @@ fn pdf_text_parse_cmap_usecmap(data : BytesView) -> PdfName? {
   let cursor = byte_cursor_of_view(data)
   let mut previous_name : PdfName? = None
   for line in cursor.read_line_views() {
-    let tokens = pdf_split_whitespace_tokens(line)
+    let uncommented = pdf_text_cmap_line_without_comment(line)
+    let tokens = pdf_split_whitespace_tokens(uncommented[:])
     for token in tokens {
       if pdf_text_view_equals_ascii(token, "usecmap") {
         match previous_name {
@@ -2998,6 +3002,43 @@ fn pdf_text_cmap_section_line_views(line : BytesView) -> Array[BytesView] {
     }
   }
   views
+}
+
+///|
+fn pdf_text_cmap_line_without_comment(line : BytesView) -> PdfBytes {
+  let output : Array[Byte] = []
+  let mut in_literal = false
+  let mut escaped = false
+  let mut literal_depth = 0
+  for byte in line {
+    let value = byte.to_int()
+    if in_literal {
+      output.push(byte)
+      if escaped {
+        escaped = false
+      } else if value == 92 {
+        escaped = true
+      } else if value == 40 {
+        literal_depth += 1
+      } else if value == 41 {
+        literal_depth -= 1
+        if literal_depth <= 0 {
+          in_literal = false
+          literal_depth = 0
+        }
+      }
+    } else if value == 37 {
+      break
+    } else {
+      output.push(byte)
+      if value == 40 {
+        in_literal = true
+        literal_depth = 1
+        escaped = false
+      }
+    }
+  }
+  Bytes::from_array(output)
 }
 
 ///|
@@ -3480,7 +3521,8 @@ fn pdf_text_parse_tounicode_sections(
   let mut pending_bfchar_source : PdfBytes? = None
   let mut pending_bfrange_array : PdfTextCMapBFRangeArray? = None
   for raw_line in cursor.read_line_views() {
-    for raw_segment in pdf_text_cmap_section_line_views(raw_line) {
+    let uncommented = pdf_text_cmap_line_without_comment(raw_line)
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "beginbfchar") {
         Some(rest) => {
@@ -3629,7 +3671,8 @@ fn pdf_text_parse_cmap_cid_sections(data : BytesView) -> Array[(Int, Int)]? {
   let entries : Array[(Int, Int)] = []
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
-    for raw_segment in pdf_text_cmap_section_line_views(raw_line) {
+    let uncommented = pdf_text_cmap_line_without_comment(raw_line)
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "begincidchar") {
         Some(rest) => {
@@ -3674,7 +3717,8 @@ fn pdf_text_parse_cmap_notdef_sections(data : BytesView) -> Array[(Int, Int)]? {
   let entries : Array[(Int, Int)] = []
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
-    for raw_segment in pdf_text_cmap_section_line_views(raw_line) {
+    let uncommented = pdf_text_cmap_line_without_comment(raw_line)
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "beginnotdefchar") {
         Some(rest) => {
@@ -3722,7 +3766,8 @@ fn pdf_text_parse_cmap_codespace_sections(
   let entries : Array[PdfCMapCodeSpace] = []
   let mut section = PdfTextCMapNone
   for raw_line in cursor.read_line_views() {
-    for raw_segment in pdf_text_cmap_section_line_views(raw_line) {
+    let uncommented = pdf_text_cmap_line_without_comment(raw_line)
+    for raw_segment in pdf_text_cmap_section_line_views(uncommented[:]) {
       let mut line = raw_segment
       match pdf_text_after_ascii(raw_segment, "begincodespacerange") {
         Some(rest) => {

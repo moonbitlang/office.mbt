@@ -3831,6 +3831,72 @@ test "pdf_parse_cmap_data augments partial CMap marker parsing" {
 }
 
 ///|
+test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "% /Identity-H usecmap\n" +
+      "/Identity-V usecmap % /Identity-H usecmap\n" +
+      "/WMode 1 def % /WMode 0 def\n" +
+      "/CMapName /Real-CMap def % /CMapName /Fake-CMap def\n" +
+      "/CMapType 2 def % /CMapType 1 def\n" +
+      "/CIDSystemInfo << /Registry (Ad%obe) /Ordering (UCS) /Supplement 0 >> def % /Ordering (Fake)\n" +
+      "1 begincodespacerange\n" +
+      "<00><7F> % <8100><81FF>\n" +
+      "endcodespacerange\n" +
+      "1 beginbfchar\n" +
+      "<41><0041> % <42><0042> endbfchar\n" +
+      "<42><0042>\n" +
+      "endbfchar\n" +
+      "1 beginbfrange\n" +
+      "<43><44>[<0043> % <9999> ] endbfrange\n" +
+      "<0044>] % endbfrange\n" +
+      "endbfrange\n" +
+      "1 begincidchar\n" +
+      "<45> 100 % <46> 900 endcidchar\n" +
+      "<46> 101\n" +
+      "endcidchar\n" +
+      "1 beginnotdefrange\n" +
+      "<47><48> 200 % <49><4A> 300\n" +
+      "endnotdefrange\n",
+    )[:],
+  )
+  @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-V")))
+  @test.assert_eq(parsed.wmode, Some(1))
+  @test.assert_eq(parsed.cmap_name, Some(text_name_for_test("/Real-CMap")))
+  @test.assert_eq(parsed.cmap_type, Some(2))
+  @test.assert_eq(
+    parsed.cid_system_info,
+    Some({
+      registry: @ascii.encode("Ad%obe"),
+      ordering: @ascii.encode("UCS"),
+      supplement: 0,
+    }),
+  )
+  @test.assert_eq(parsed.codespaces, [{ length: 1, first: 0x00, last: 0x7F }])
+  @test.assert_eq(parsed.map, [
+    (0x41, text_bytes_for_test([0x00, 0x41])),
+    (0x42, text_bytes_for_test([0x00, 0x42])),
+    (0x43, text_bytes_for_test([0x00, 0x43])),
+    (0x44, text_bytes_for_test([0x00, 0x44])),
+  ])
+  @test.assert_eq(parsed.cid_map, [(0x45, 100), (0x46, 101)])
+  @test.assert_eq(parsed.notdef_map, [(0x47, 200), (0x48, 201)])
+  let escaped_literal = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "/CIDSystemInfo << /Registry (Ad\\%o(be)) /Ordering (UCS) /Supplement 1 >> def % /Supplement 9\n",
+    )[:],
+  )
+  @test.assert_eq(
+    escaped_literal.cid_system_info,
+    Some({
+      registry: @ascii.encode("Ad%o(be)"),
+      ordering: @ascii.encode("UCS"),
+      supplement: 1,
+    }),
+  )
+}
+
+///|
 test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")

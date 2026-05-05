@@ -183,6 +183,7 @@ work changes.
    Unicode lookup,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
+   comment-aware CMap metadata and mapping parsing,
    standard-font extraction, color spaces,
    sampled/interpolation/stitching/calculator functions, and raw/encoded image
    extraction are started, including 1-, 2-, 4-, and 8-bit `/Indexed` raw
@@ -206,13 +207,9 @@ work changes.
    `/FontMatrix`, `CharProcs`, `/Resources`, and width metrics. Stream decode
    now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
-   Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
-   beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
-   fallbacks, broader external/general CMap parsing beyond the current
-   codespace/CID/notdef sections, encoding-side Unicode map fallback, notdef
-   lookup, program and stream-dictionary header metadata, Identity and named
-   predefined `/UseCMap` fallbacks, and stream `/UseCMap` composition subset,
-   plus JPEG pixel decode and remaining image filter families.
+   Remaining focus: remaining rare predefined CMap family tables when source
+   tables or fixtures are available, real-world ToUnicode/CMap variation
+   fixtures, plus JPEG pixel decode and remaining image filter families.
 
 6. Encryption.
    Owner modules: `pdf_crypt*.mbt`.
@@ -344,8 +341,8 @@ and backend breadth, is about 83-88% complete.
   `/UseCMap` composition, notdef-map extraction and reverse lookup before
   inherited predefined/Identity fallbacks, encoding-side `bfchar`/`bfrange`
   Unicode fallback for otherwise unmapped charcodes, ToUnicode stream
-  inheritance through extraction, and an Identity-V native gate with vertical
-  width metadata.
+  inheritance through extraction, comment-aware CMap parsing, and an
+  Identity-V native gate with vertical width metadata.
   Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
@@ -359,14 +356,10 @@ and backend breadth, is about 83-88% complete.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.
-- Not covered enough: broader built-in non-UCS2 predefined CMap mapping tables
-  beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
-  fallbacks, broader external/general CMap parsing beyond the current
-  codespace/CID-char/CID-range/notdef lookup, encoding-side Unicode map
-  fallback, Identity `/UseCMap`, and stream `/UseCMap` composition subset,
-  additional fixture-driven Type3 resource/glyph-program coverage, more
-  real-world ToUnicode variations, and broader real-world DCT/JPEG image
-  payload corpus files.
+- Not covered enough: remaining rare predefined CMap family tables when source
+  tables or fixtures are available, additional fixture-driven Type3
+  resource/glyph-program coverage, more real-world ToUnicode variations, and
+  broader real-world DCT/JPEG image payload corpus files.
 - Not covered enough: fuller zlib/Flate byte-identity and tuning parity,
   broader DCT/JPEG and CCITT corpus validation, and optional external JBIG2
   decoder integration.
