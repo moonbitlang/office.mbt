@@ -90,6 +90,9 @@ work changes.
    CamlPDF-style deferred decryption state on `ToGet`, so file-backed encrypted
    stream bytes remain lazy until `stream_bytes` or `get_stream` forces
    plaintext materialization and `/Length` correction.
+   Password-aware public reads now also route malformed classic xref-entry
+   errors through reconstruction, matching the non-password reader path for
+   corrupted xref row markers before decryption.
    Document object selection now walks parsed object entries directly, matching
    the object iterators and avoiding false matches against parser-private
    deferred placeholders that `lookup_object_or_null` intentionally exposes as
@@ -245,7 +248,8 @@ work changes.
    AESV2 recrypt, and recrypting non-stream payload objects extracted from
    encrypted object streams. Encrypted malformed-reader acceptance now covers
    bad-startxref reconstruction followed by saved-state recrypt and compressed
-   write/reread.
+   write/reread, plus classic malformed xref-entry marker reconstruction before
+   password decryption.
    Remaining focus: broader real-world encrypted malformed-reader compatibility.
 
 7. Document-level features.

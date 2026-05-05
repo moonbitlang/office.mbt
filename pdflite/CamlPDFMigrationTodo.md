@@ -384,6 +384,8 @@ Current estimate:
   match-chain search depth.~~
 - [x] ~~Harden object-selection traversal so deferred parser placeholders are
   not treated as selectable `null` objects.~~
+- [x] ~~Route password-aware malformed classic xref-entry errors through
+  reconstruction before decryption.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

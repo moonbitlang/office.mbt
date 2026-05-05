@@ -872,6 +872,64 @@ test "private reader xref helpers report malformed inputs" {
 }
 
 ///|
+fn wbtest_push_ascii(output : Array[Byte], text : String) -> Unit {
+  for byte in @ascii.encode(text)[:] {
+    output.push(byte)
+  }
+}
+
+///|
+fn wbtest_cyclic_prev_xref_pdf() -> PdfBytes {
+  let output : Array[Byte] = []
+  wbtest_push_ascii(output, "%PDF-1.4\n")
+  let xref_offset = output.length()
+  wbtest_push_ascii(
+    output, "xref\n0 1\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 1 /Prev ",
+  )
+  wbtest_push_ascii(output, xref_offset.to_string())
+  wbtest_push_ascii(output, " >>\nstartxref\n")
+  wbtest_push_ascii(output, xref_offset.to_string())
+  wbtest_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn wbtest_hybrid_xrefstm_pdf() -> PdfBytes {
+  let output : Array[Byte] = []
+  wbtest_push_ascii(output, "%PDF-1.5\n")
+  let xref_stream_offset = output.length()
+  let xref_data : Array[Byte] = []
+  pdf_writer_push_xref_stream_entry(xref_data, 0, 0, 65535)
+  wbtest_push_ascii(output, "2 0 obj\n<< /Type /XRef /Length ")
+  wbtest_push_ascii(output, xref_data.length().to_string())
+  wbtest_push_ascii(output, " /Size 1 /W [1 4 2] >>\nstream\n")
+  for byte in xref_data {
+    output.push(byte)
+  }
+  wbtest_push_ascii(output, "\nendstream\nendobj\n")
+  let classic_xref_offset = output.length()
+  wbtest_push_ascii(
+    output, "xref\n0 1\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 1 /XRefStm ",
+  )
+  wbtest_push_ascii(output, xref_stream_offset.to_string())
+  wbtest_push_ascii(output, " >>\nstartxref\n")
+  wbtest_push_ascii(output, classic_xref_offset.to_string())
+  wbtest_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+test "private password reconstruction xref metadata probe covers repair boundaries" {
+  let hybrid = wbtest_hybrid_xrefstm_pdf()
+  pdf_reader_validate_xref_metadata_for_reconstruction(hybrid[:])
+
+  let cyclic = try? pdf_reader_validate_xref_metadata_for_reconstruction(
+    wbtest_cyclic_prev_xref_pdf()[:],
+  )
+  guard cyclic is Err(XRefExpected) else { fail("expected cyclic Prev guard") }
+}
+
+///|
 test "page-label private helpers preserve non-uppercase bytes and root guards" {
   @test.assert_eq(
     pdf_page_label_lowercase(@ascii.encode("A1Z!")),

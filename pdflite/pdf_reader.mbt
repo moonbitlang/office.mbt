@@ -2056,7 +2056,48 @@ pub fn pdf_read_document_from_bytes(
 }
 
 ///|
-fn pdf_reader_password_error_allows_reconstruction(error : PdfError) -> Bool {
+fn pdf_reader_validate_xref_metadata_for_reconstruction(
+  data : BytesView,
+) -> Unit raise PdfError {
+  let cursor = byte_cursor_of_view(data)
+  ignore(cursor.read_pdf_header())
+  let mut current_xref = pdf_read_startxref_position(cursor.data)
+  let mut done = false
+  let mut depth = 0
+  while !done {
+    if depth >= 1024 {
+      raise XRefExpected
+    }
+    cursor.seek_pdf_absolute(current_xref)
+    let section = cursor.read_pdf_xref_section()
+    match pdf_trailer_xref_stream_position(section.trailer) {
+      Some(xref_stream_position) => {
+        cursor.seek_pdf_absolute(xref_stream_position)
+        ignore(cursor.read_pdf_xref_stream_section())
+      }
+      None => ()
+    }
+    match pdf_trailer_prev_position(section.trailer) {
+      Some(previous) => current_xref = previous
+      None => done = true
+    }
+    depth += 1
+  }
+}
+
+///|
+fn pdf_reader_xref_entry_error_from_metadata(data : BytesView) -> Bool {
+  let result : Result[Unit, Error] = try? pdf_reader_validate_xref_metadata_for_reconstruction(
+    data,
+  )
+  result is Err(PdfError::XRefEntryExpected)
+}
+
+///|
+fn pdf_reader_password_error_allows_reconstruction(
+  data : BytesView,
+  error : PdfError,
+) -> Bool {
   match error {
     StartXRefExpected
     | XRefExpected
@@ -2071,6 +2112,7 @@ fn pdf_reader_password_error_allows_reconstruction(error : PdfError) -> Bool {
     | ParseObjectExpected
     | InvalidHexEscape
     | InvalidCursorPosition(_) => true
+    XRefEntryExpected => pdf_reader_xref_entry_error_from_metadata(data)
     _ => false
   }
 }
@@ -2121,7 +2163,7 @@ pub fn pdf_read_document_from_view_with_passwords(
     ),
   ) catch {
     error =>
-      if pdf_reader_password_error_allows_reconstruction(error) {
+      if pdf_reader_password_error_allows_reconstruction(data, error) {
         pdf_read_reconstructed_document_from_view(
           data,
           include_xref_stream_trailers=true,
