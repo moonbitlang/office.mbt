@@ -195,6 +195,77 @@ An isolated recovery case belongs in the migration only when it is needed by one
 of those gates. Native remains the only stabilization target until these broad
 gates are solid; backend breadth follows after native feature parity.
 
+## Prioritized Coverage Plan
+
+Current estimate: native main-feature parity is about 70-75% complete. Full
+CamlPDF parity, including deferred filter families, deeper malformed recovery,
+and backend breadth, is about 60-65% complete.
+
+### P0: Finish Native Main Workflows
+
+- Covered: byte foundation; object model; classic xref, xref-stream, compressed
+  xref-stream, object-stream, strict revision, and major reconstruction reads;
+  full and incremental writer modes; lazy stream slices; public async native
+  file wrappers.
+- Covered: page tree construction, reading, writing, page extraction,
+  `change_pages`, merge, object cleanup, inherited page attributes, page labels,
+  bookmarks, annotations, old-style and name-tree destinations, `/OpenAction`,
+  optional content, structure-tree merge/pruning basics, and example workflows
+  for `pdfdecomp.ml`, `pdftest.ml`, `pdfdraft.ml`, `pdfencrypt.ml`, and
+  `pdfmergeexample.ml`.
+- Covered: ARC4, AESV2, AESV3/AESV3 ISO authentication, encryption,
+  decryption, native secure-random writer paths, saved-state recrypt,
+  encrypted object streams, lazy encrypted stream forcing, and
+  `/EncryptMetadata false`.
+- Not covered enough: page resource lifecycle through native acceptance
+  boundaries, especially `renumber_pages`, `add_prefix`,
+  `merge_content_streams`, and `process_xobjects` together with read/edit/write
+  flows.
+- Not covered enough: remaining `change_pages` compatibility fixtures involving
+  resource-heavy pages, unusual inherited page data, and more destination/action
+  combinations.
+- Not covered enough: non-stream encrypted parser-state edges and encrypted
+  malformed-reader recovery outside the object-stream and stream-data paths.
+
+### P1: Deepen Format Parity
+
+- Covered: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode,
+  predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
+  extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
+  UTF-16BE, ToUnicode CMaps, and Identity-H/V CID text basics.
+- Not covered enough: broader predefined CMap semantics, vertical-writing
+  behavior beyond the current gates, Type3/TrueType edge coverage, and more
+  real-world ToUnicode variations.
+- Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
+  CCITT/JBIG2 external-style decode behavior, and remaining image filter
+  families.
+- Not covered enough: broader malformed xref-table/object recovery driven by
+  realistic public workflows rather than isolated parser quirks.
+
+### P2: Broaden Compatibility After Native
+
+- Covered: native target checks, native acceptance, native async file IO, and
+  full native test coverage.
+- Deferred: all-backend stabilization. Native-only secure-random/encrypted
+  writer APIs and `async_io` intentionally diverge from WasmGC today.
+- Deferred: large real-world corpus testing, performance tuning, and optional
+  external tool integration for filters that CamlPDF handled through C stubs or
+  external binaries.
+
+### Immediate Work Order
+
+- Next: add a native page/resource lifecycle gate covering resource renumbering,
+  prefixing, split-content merging, and Form XObject processing through
+  compressed read/write/reread boundaries.
+- Then: add one broader `change_pages` compatibility gate using resource-heavy
+  pages and mixed destination/action references.
+- Then: target encrypted parser-state gaps with one public password-read or
+  recrypt workflow that exposes a non-stream encrypted-object edge.
+- Then: deepen text/image parity with one predefined-CMap gate and one
+  filter/image-family gate.
+- Later: expand malformed-reader recovery from realistic documents and only
+  then widen backend validation beyond native.
+
 ## Current High-Level Checklist
 
 - Done: byte foundation, object model, writer, major reader paths, page tree,
