@@ -136,8 +136,9 @@ work changes.
    predefined CMap extraction through compressed read/write boundaries,
    including Identity-V vertical width metadata, plus image extraction through
    compressed read/write boundaries for Flate-decoded raw `/Indexed` image
-   XObjects, staged Flate-then-DCT encoded-image pass-through, and Flate
-   inline-image content parsing.
+   XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
+   encoded-image preservation, staged Flate-then-JBIG2 encoded-image
+   preservation with `/JBIG2Globals`, and Flate inline-image content parsing.
    Remaining focus: broader predefined CMap semantics beyond Identity-H/V, JPEG
    pixel decode, and remaining image filter families.
 
@@ -236,13 +237,14 @@ and backend breadth, is about 64-69% complete.
   predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, and an Identity-V
-  native gate with vertical width metadata.
+  native gate with vertical width metadata. Native image acceptance now also
+  covers JPX encoded images and staged Flate-to-JBIG2 images with
+  `/JBIG2Globals`.
 - Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
   vertical-writing behavior beyond the current gates, Type3/TrueType edge
   coverage, and more real-world ToUnicode variations.
 - Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
-  CCITT/JBIG2 external-style decode behavior, and remaining image filter
-  families.
+  CCITT decode, and optional external JBIG2 decoder integration.
 - Not covered enough: broader malformed xref-table/object recovery driven by
   realistic public workflows rather than isolated parser quirks.
 
@@ -258,7 +260,7 @@ and backend breadth, is about 64-69% complete.
 
 ### Immediate Work Order
 
-- Next: deepen image/filter parity with one remaining filter/image-family gate.
+- Next: expand malformed-reader recovery from realistic documents.
 - Later: expand malformed-reader recovery from realistic documents and only
   then widen backend validation beyond native.
 

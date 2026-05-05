@@ -1430,8 +1430,10 @@ public APIs end to end:
   `Tj`/`TJ` text remapping and reverse charcode lookup;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
-  image XObjects, staged Flate-then-DCT encoded-image pass-through, and Flate
-  inline images that survive document-wide stream decompression and reread;
+  image XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX
+  encoded-image preservation, staged Flate-then-JBIG2 encoded-image
+  preservation with `/JBIG2Globals`, and Flate inline images that survive
+  document-wide stream decompression and reread;
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;

@@ -1070,6 +1070,85 @@ fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
+fn acceptance_image_jpx_xobject_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_ascii_for_test("jpx-data")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(1)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/ColorSpace"),
+        PdfNameObject(acceptance_name_for_test("/DeviceRGB")),
+      ),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfNameObject(acceptance_name_for_test("/JPXDecode")),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_image_jbig2_globals_for_test() -> @pdflite.PdfObject {
+  let data = acceptance_ascii_for_test("jbig2-globals")
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
+fn acceptance_image_jbig2_xobject_for_test() -> @pdflite.PdfObject {
+  let encoded = @pdflite.pdf_flate_encode(
+    acceptance_ascii_for_test("jbig2-data"),
+  )
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (
+        acceptance_name_for_test("/Type"),
+        PdfNameObject(acceptance_name_for_test("/XObject")),
+      ),
+      (
+        acceptance_name_for_test("/Subtype"),
+        PdfNameObject(acceptance_name_for_test("/Image")),
+      ),
+      (acceptance_name_for_test("/Width"), PdfInteger(1)),
+      (acceptance_name_for_test("/Height"), PdfInteger(1)),
+      (
+        acceptance_name_for_test("/Filter"),
+        PdfArray([
+          PdfNameObject(acceptance_name_for_test("/FlateDecode")),
+          PdfNameObject(acceptance_name_for_test("/JBIG2Decode")),
+        ]),
+      ),
+      (
+        acceptance_name_for_test("/DecodeParms"),
+        PdfArray([
+          PdfNull,
+          @pdflite.pdf_dictionary([
+            (acceptance_name_for_test("/JBIG2Globals"), PdfIndirect(73)),
+          ]),
+        ]),
+      ),
+      (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
+    ]),
+    StreamGot(encoded),
+  )
+}
+
+///|
 fn acceptance_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
   PdfDictionary([
     (acceptance_name_for_test("/W"), PdfInteger(3)),
@@ -1092,6 +1171,8 @@ fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise
   [
     Op_Do(acceptance_name_for_test("/ImRaw")),
     Op_Do(acceptance_name_for_test("/ImJpeg")),
+    Op_Do(acceptance_name_for_test("/ImJpx")),
+    Op_Do(acceptance_name_for_test("/ImJbig2")),
     Op_InlineImage(
       acceptance_inline_image_dictionary_for_test(),
       None,
@@ -1104,16 +1185,23 @@ fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise
 fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise {
   let raw_name = acceptance_name_for_test("/ImRaw")
   let jpeg_name = acceptance_name_for_test("/ImJpeg")
+  let jpx_name = acceptance_name_for_test("/ImJpx")
+  let jbig2_name = acceptance_name_for_test("/ImJbig2")
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
   doc.add_object_given_number(70, acceptance_image_indexed_xobject_for_test())
   doc.add_object_given_number(71, acceptance_image_jpeg_xobject_for_test())
+  doc.add_object_given_number(72, acceptance_image_jpx_xobject_for_test())
+  doc.add_object_given_number(73, acceptance_image_jbig2_globals_for_test())
+  doc.add_object_given_number(74, acceptance_image_jbig2_xobject_for_test())
   let resources = @pdflite.pdf_dictionary([
     (
       acceptance_name_for_test("/XObject"),
       @pdflite.pdf_dictionary([
         (raw_name, PdfIndirect(70)),
         (jpeg_name, PdfIndirect(71)),
+        (jpx_name, PdfIndirect(72)),
+        (jbig2_name, PdfIndirect(74)),
       ]),
     ),
   ])
@@ -1176,6 +1264,27 @@ fn acceptance_assert_image_lifecycle_for_test(
   @test.assert_eq(
     doc.get_image_24bpp(pages[0].resources, jpeg_image),
     PdfJPEG(acceptance_ascii_for_test("jpg-data"), Some([1.0, 0.0])),
+  )
+  let jpx_image = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImJpx"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, jpx_image),
+    PdfJPEG2000(
+      acceptance_ascii_for_test("jpx-data"),
+      Some([0.0, 1.0, 0.0, 1.0, 0.0, 1.0]),
+    ),
+  )
+  let jbig2_image = acceptance_image_xobject_for_test(
+    doc,
+    pages[0].resources,
+    acceptance_name_for_test("/ImJbig2"),
+  )
+  @test.assert_eq(
+    doc.get_image_24bpp(pages[0].resources, jbig2_image),
+    PdfJBIG2(acceptance_ascii_for_test("jbig2-data"), None, Some(73)),
   )
 }
 
