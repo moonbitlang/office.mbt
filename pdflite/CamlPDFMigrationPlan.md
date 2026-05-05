@@ -1401,6 +1401,8 @@ end to end:
 - read an AES-128 encrypted xref-stream document whose referenced object lives
   inside an encrypted `/ObjStm`, proving password-aware object-stream expansion
   and avoiding double decryption of the embedded object.
+- read a minimal page tree through a CamlPDF-tolerated malformed classic xref
+  table, then normalize it through the writer and reread it.
 
 Near-term work should extend this suite with the next visible compatibility
 case, then fix the reader/parser/encryption gap it exposes. Broader backend

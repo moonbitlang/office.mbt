@@ -344,6 +344,35 @@ fn acceptance_pdf_with_omitted_page_tree_xrefs_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn acceptance_pdf_with_tolerated_malformed_xref_for_test() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  acceptance_push_ascii_for_test(output, "%PDF-1.4\n")
+  let catalog_offset = acceptance_push_indirect_object_for_test(
+    output, 1, 0, "<< /Type /Catalog /Pages 2 0 R >>",
+  )
+  let pages_offset = acceptance_push_indirect_object_for_test(
+    output, 2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+  )
+  let page_offset = acceptance_push_indirect_object_for_test(
+    output, 3, 0, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Resources << >> >>",
+  )
+  let xref_offset = output.length()
+  acceptance_push_ascii_for_test(output, "xref 0 4\n0000000000 abcde nJunk\n")
+  acceptance_push_padded_decimal_for_test(output, catalog_offset, 10)
+  acceptance_push_byte_for_test(output, 95)
+  acceptance_push_padded_decimal_for_test(output, 0, 5)
+  acceptance_push_ascii_for_test(output, " n \n")
+  acceptance_push_xref_entry_for_test(output, pages_offset, 0)
+  acceptance_push_xref_entry_for_test(output, page_offset, 0)
+  acceptance_push_ascii_for_test(
+    output, "trailer<< /Root 1 0 R /Size 4 >>\nstartxref ",
+  )
+  acceptance_push_ascii_for_test(output, xref_offset.to_string())
+  acceptance_push_ascii_for_test(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn acceptance_assert_minimal_page_tree_for_test(
   doc : @pdflite.PdfDocument,
 ) -> Unit raise {
@@ -767,6 +796,20 @@ test "native acceptance suite reconstructs omitted page-tree xrefs" {
   )
   @test.assert_eq(password_wrapper.denied_permissions, [])
   acceptance_assert_minimal_page_tree_for_test(password_wrapper.document)
+  let normalized = try! @pdflite.pdf_write_document(parsed)
+  let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
+  acceptance_assert_minimal_page_tree_for_test(reparsed)
+}
+
+///|
+test "native acceptance suite normalizes tolerated malformed classic xrefs" {
+  let bytes = acceptance_pdf_with_tolerated_malformed_xref_for_test()
+  let strict = try! @pdflite.pdf_read_classic_document_from_bytes(bytes)
+  @test.assert_eq(strict.first_xref() > 0, true)
+  acceptance_assert_minimal_page_tree_for_test(strict)
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(bytes)
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  acceptance_assert_minimal_page_tree_for_test(parsed)
   let normalized = try! @pdflite.pdf_write_document(parsed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(normalized)
   acceptance_assert_minimal_page_tree_for_test(reparsed)
