@@ -2545,18 +2545,22 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
       stream_to_get(byte_cursor_of_bytes(@ascii.encode("abc")), -1, 1),
     ),
   )
-  @test.assert_eq(
-    helper_doc.pdf_text_decoded_stream_data_direct(bad_deferred),
-    None,
+  let bad_deferred_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
+    bad_deferred,
   )
+  guard bad_deferred_result is Err(_) else {
+    fail("expected malformed deferred stream CMap to raise")
+  }
   let bad_filter = pdf_stream(
     PdfDictionary([(wbtest_text_name("/Filter"), PdfInteger(1))]),
     StreamGot(@ascii.encode("x")),
   )
-  @test.assert_eq(
-    helper_doc.pdf_text_decoded_stream_data_direct(bad_filter),
-    None,
+  let bad_filter_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
+    bad_filter,
   )
+  guard bad_filter_result is Err(_) else {
+    fail("expected malformed filter CMap to raise")
+  }
   let unsupported_filter = pdf_stream(
     PdfDictionary([
       (wbtest_text_name("/Length"), PdfInteger(1)),
@@ -2567,14 +2571,18 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
     ]),
     StreamGot(@ascii.encode("x")),
   )
-  @test.assert_eq(
-    helper_doc.pdf_text_decoded_stream_data_direct(unsupported_filter),
-    None,
+  let unsupported_filter_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
+    unsupported_filter,
   )
-  @test.assert_eq(
-    helper_doc.pdf_text_decoded_stream_data_direct(PdfInteger(1)),
-    None,
+  guard unsupported_filter_result is Err(_) else {
+    fail("expected unsupported filter CMap to raise")
+  }
+  let non_stream_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
+    PdfInteger(1),
   )
+  guard non_stream_result is Err(_) else {
+    fail("expected non-stream CMap to raise")
+  }
 
   let doc = pdf_document_empty()
   let font = PdfDictionary([

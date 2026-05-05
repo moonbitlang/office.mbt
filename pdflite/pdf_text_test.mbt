@@ -2839,6 +2839,68 @@ test "PdfDocument ignores malformed external CMap UseCMap values" {
 }
 
 ///|
+test "PdfDocument applies ToUnicode UseCMap stream composition" {
+  let doc = @pdflite.pdf_document_empty()
+  let base_data = @ascii.encode(
+    "2 beginbfchar\n" + "<21><0041>\n" + "<22><0042>\n" + "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    11,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(base_data.length())),
+      ]),
+      StreamGot(base_data),
+    ),
+  )
+  let derived_data = @ascii.encode(
+    "1 beginbfchar\n" + "<22><005A>\n" + "endbfchar\n",
+  )
+  doc.add_object_given_number(
+    12,
+    @pdflite.pdf_stream(
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/Length"), PdfInteger(derived_data.length())),
+        (text_name_for_test("/UseCMap"), PdfIndirect(11)),
+      ]),
+      StreamGot(derived_data),
+    ),
+  )
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type1")),
+    ),
+    (
+      text_name_for_test("/BaseFont"),
+      PdfNameObject(text_name_for_test("/Custom")),
+    ),
+    (text_name_for_test("/ToUnicode"), PdfIndirect(12)),
+  ])
+  guard (try! doc.read_font(font)) is PdfFontSimple(read) else {
+    fail("expected simple font")
+  }
+  guard read.fontdescriptor is Some(read_descriptor) else {
+    fail("expected descriptor carrying ToUnicode")
+  }
+  @test.assert_eq(
+    read_descriptor.tounicode,
+    Some([
+      (0x22, text_bytes_for_test([0x00, 0x5A])),
+      (0x21, text_bytes_for_test([0x00, 0x41])),
+    ]),
+  )
+  let extractor = try! doc.text_extractor_of_font(font)
+  @test.assert_eq(
+    extractor.codepoints_of_text(text_bytes_for_test([0x21, 0x22, 0x23])[:]),
+    [0x41, 0x5A, 0x23],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(0x21))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x5A), Some(0x22))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x42), None)
+}
+
+///|
 test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
   let tounicode = @pdflite.pdf_stream(

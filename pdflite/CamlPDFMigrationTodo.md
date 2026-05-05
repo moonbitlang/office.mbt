@@ -145,6 +145,9 @@ Current estimate:
   stream bases, cycle protection, inherited codespaces, map/CID inheritance,
   key-based derived-entry override behavior, inherited Identity fallback, and
   reverse CID lookup.~~
+- [x] ~~ToUnicode CMap stream `/UseCMap` composition through font text
+  extraction and reverse Unicode lookup, including derived-entry override of
+  inherited Unicode mappings.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus broader external/general CMap parsing beyond the current
@@ -273,6 +276,8 @@ Current estimate:
   `/UseCMap` parsing and inherited segmentation/CID fallback.~~
 - [x] ~~Add the next remaining text parity slice: external CMap stream
   `/UseCMap` composition with derived-entry overrides and cycle protection.~~
+- [x] ~~Add the next remaining text parity slice: ToUnicode stream `/UseCMap`
+  composition through extractor and reverse lookup.~~
 - [ ] Add the next remaining text parity slice: broader external/general CMap
   parsing beyond codespace/CID-char/CID-range, Identity `/UseCMap`, and stream
   `/UseCMap` composition, remaining rare predefined CMap families, or

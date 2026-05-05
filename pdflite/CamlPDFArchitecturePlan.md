@@ -170,7 +170,8 @@ work changes.
    plus `/UseCMap` name parsing from CMap programs and stream dictionaries
    with Identity-H/V inherited segmentation and CID fallback, plus recursive
    stream `/UseCMap` composition with cycle protection, inherited codespaces,
-   derived-entry map/CID overrides, and inherited Identity fallback,
+   derived-entry map/CID overrides, inherited Identity fallback, and
+   ToUnicode inheritance through text extraction and reverse Unicode lookup,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
    standard-font extraction, color spaces,
@@ -321,8 +322,9 @@ and backend breadth, is about 81-86% complete.
   codespaces plus `begincidchar`/`begincidrange` Type0 `/Encoding` streams,
   variable-length text segmentation, CID fallback, reverse CID lookup, and
   Identity-H/V `/UseCMap` base-name inheritance plus recursive stream
-  `/UseCMap` composition, and an Identity-V native gate with vertical width
-  metadata. Native image acceptance now also covers
+  `/UseCMap` composition, including ToUnicode stream inheritance through
+  extraction, and an Identity-V native gate with vertical width metadata.
+  Native image acceptance now also covers
   structured DCT/JPEG marker payloads through staged Flate-to-DCT image
   XObjects and DCT inline images, JPX encoded images, staged Flate-to-JBIG2
   images with `/JBIG2Globals`, and CCITT image XObjects through raw RGB

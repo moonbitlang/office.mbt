@@ -3444,27 +3444,16 @@ pub fn PdfDocument::parse_cmap(
 }
 
 ///|
-fn PdfDocument::pdf_text_decoded_stream_data_direct(
-  self : PdfDocument,
-  object : PdfObject,
-) -> PdfBytes? {
-  try self.pdf_text_decoded_cmap_stream_data_direct(object) catch {
-    _ => None
-  } noraise {
-    bytes => Some(bytes)
-  }
-}
-
-///|
 fn PdfDocument::pdf_text_tounicode_of_font(
   self : PdfDocument,
   font : PdfObject,
 ) -> Array[(Int, PdfBytes)]? {
   match self.lookup_direct(pdf_text_name("/ToUnicode"), font) {
     Some(PdfStreamObject(_) as stream) =>
-      match self.pdf_text_decoded_stream_data_direct(stream) {
-        Some(bytes) => pdf_text_parse_tounicode(bytes[:])
-        None => None
+      try self.parse_cmap(stream) catch {
+        _ => None
+      } noraise {
+        parsed => if parsed.map.length() == 0 { None } else { Some(parsed.map) }
       }
     _ => None
   }
