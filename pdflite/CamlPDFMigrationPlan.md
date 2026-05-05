@@ -897,6 +897,8 @@ MoonBit consequences for this project:
    ToUnicode charcode lookup for single Unicode codepoints. Native acceptance
    now also covers Type3 `/ToUnicode` text extraction with indirect CharProcs,
    custom encoding differences, Type3 metrics, compressed rewrite, and reread.
+   Focused Type3 reader coverage also preserves direct `CharProcs` streams and
+   parses their `d0`/`d1` glyph programs while expanding font metrics.
    Basic Latin glyph-list-backed fallback is also started for
    StandardEncoding, MacRomanEncoding, WinAnsiEncoding, custom encoding
    differences, effective encoding-table/reverse-table export, and reverse
@@ -1455,7 +1457,8 @@ MoonBit consequences for this project:
 The migration is now focused on native feature parity through broad public
 workflow gates, rather than isolated small edge cases. The first acceptance
 layer is `pdf_native_acceptance_test.mbt`, a black-box suite that exercises
-public APIs end to end:
+public APIs end to end. Focused black-box package tests complement it where a
+reader or writer invariant is narrower than a whole-document workflow:
 
 - construct a one-page standard-font document and verify classic xref,
   xref-stream, and compressed xref-stream read/write/reread invariants;
@@ -1466,6 +1469,8 @@ public APIs end to end:
   xref-stream write/read boundaries, including indirect CharProcs streams,
   custom encoding differences, Type3 metrics, fabricated descriptor
   ToUnicode storage, and glyph-program content parsing;
+- preserve direct Type3 `CharProcs` streams during simple-font reads, parse
+  their `d0`/`d1` glyph programs, and expand Type3 width metrics;
 - extract Type0 `/Identity-H` CID-keyed text from parsed page content after
   compressed xref-stream write/read boundaries, including two-byte `Tj`/`TJ`
   text and public font identity predicates;

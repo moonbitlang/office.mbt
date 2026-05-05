@@ -85,6 +85,19 @@ fn text_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 }
 
 ///|
+fn text_type3_charproc_stream_for_test(
+  ops : ArrayView[@pdflite.PdfContentOp],
+) -> @pdflite.PdfObject raise {
+  let data = @pdflite.pdf_content_bytes_of_ops(ops)
+  @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (text_name_for_test("/Length"), PdfInteger(data.length())),
+    ]),
+    StreamGot(data),
+  )
+}
+
+///|
 fn text_cid_system_info_object_for_test() -> @pdflite.PdfObject {
   @pdflite.pdf_dictionary([
     (text_name_for_test("/Registry"), PdfString(text_bytes_for_test([82]))),
@@ -1204,6 +1217,59 @@ test "PdfDocument read_simple_font reads Type3 glyph data" {
   @test.assert_eq(type3_data.resources, @pdflite.pdf_dictionary([]))
   @test.assert_eq(simple.encoding, PdfMacRomanEncoding)
   @test.assert_eq(simple.fonttype.debug_name(), "Type 3: charprocs for/A/B")
+}
+
+///|
+test "PdfDocument read_simple_font preserves direct Type3 CharProc streams" {
+  let doc = @pdflite.pdf_document_empty()
+  let d0_stream = text_type3_charproc_stream_for_test([Op_d0(500.0, 0.0)])
+  let d1_stream = text_type3_charproc_stream_for_test([
+    Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0),
+  ])
+  let font = @pdflite.pdf_dictionary([
+    (
+      text_name_for_test("/Subtype"),
+      PdfNameObject(text_name_for_test("/Type3")),
+    ),
+    (
+      text_name_for_test("/CharProcs"),
+      @pdflite.pdf_dictionary([
+        (text_name_for_test("/A"), d0_stream),
+        (text_name_for_test("/B"), d1_stream),
+      ]),
+    ),
+    (text_name_for_test("/FirstChar"), PdfInteger(65)),
+    (text_name_for_test("/LastChar"), PdfInteger(66)),
+    (
+      text_name_for_test("/Widths"),
+      PdfArray([PdfInteger(500), PdfInteger(600)]),
+    ),
+  ])
+  let simple = doc.read_simple_font(font)
+  guard simple.fonttype is PdfType3(type3_data) else {
+    fail("expected Type3 font")
+  }
+  @test.assert_eq(type3_data.charprocs, [
+    (text_name_for_test("/A"), d0_stream),
+    (text_name_for_test("/B"), d1_stream),
+  ])
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      type3_data.charprocs[0].1.stream_bytes(),
+    ),
+    [Op_d0(500.0, 0.0)],
+  )
+  @test.assert_eq(
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      type3_data.charprocs[1].1.stream_bytes(),
+    ),
+    [Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0)],
+  )
+  guard simple.fontmetrics is Some(metrics) else {
+    fail("expected Type3 metrics")
+  }
+  @test.assert_eq(metrics[65], 500.0)
+  @test.assert_eq(metrics[66], 600.0)
 }
 
 ///|

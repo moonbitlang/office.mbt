@@ -167,7 +167,9 @@ work changes.
    Type3 `/ToUnicode` text extraction with indirect CharProcs and custom
    metrics, embedded TrueType `FontFile2` plus `/ToUnicode` text extraction
    through compressed read/write boundaries, and Flate inline-image content
-   parsing. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
+   parsing. Unit coverage also preserves direct Type3 `CharProcs` streams and
+   parses their `d0`/`d1` glyph programs without allocating new indirect
+   objects. Stream decode now also covers CCITT `/K 0` and `/K < 0` data
    through `/CCITTFaxDecode` and `/CCF`.
    Remaining focus: broader non-UCS2 predefined CMap mapping tables, JPEG pixel
    decode, and remaining image filter families.
@@ -275,7 +277,9 @@ and backend breadth, is about 78-83% complete.
   inline images, JPX encoded images, staged Flate-to-JBIG2 images with
   `/JBIG2Globals`, and CCITT image XObjects through raw RGB extraction; native
   font acceptance covers Type3 `/ToUnicode` text with indirect CharProcs and
-  embedded TrueType `FontFile2` with generated `/ToUnicode` text extraction.
+  embedded TrueType `FontFile2` with generated `/ToUnicode` text extraction,
+  while focused font tests preserve direct Type3 `CharProcs` streams and parse
+  `d0`/`d1` glyph programs.
   Stream decode now covers CCITT `/K 0` and `/K < 0` with `/DecodeParms`
   defaults and direct indirect params. Typed stream encoding now covers CCITT
   Group 3 `/K 0` and Group 4 `/K < 0` and round-trips through decode.

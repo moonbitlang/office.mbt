@@ -89,6 +89,8 @@ Current estimate:
   text behavior.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~
+- [x] ~~Direct Type3 CharProc stream reader coverage for preserved `d0`/`d1`
+  glyph programs and expanded Type3 metrics.~~
 - [ ] More TrueType and Type3 glyph-program edge coverage beyond the current
   Type3 and embedded TrueType gates.
 - [x] ~~Structured DCT/JPEG marker payload native gate for Flate-to-DCT image
