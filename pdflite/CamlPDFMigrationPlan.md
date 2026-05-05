@@ -866,18 +866,19 @@ MoonBit consequences for this project:
    groundwork is started with custom encoding
    dictionary emission and a Type1 font dictionary helper for predefined
    encodings. Standard-14 font writing is started through `write_font`, with
-   optional object-number placement. Type3 font writing is also started for
-   the same minimal subset as CamlPDF's current writer: zero placeholder font
-   box/matrix/width entries, `CharProcs` names mapped to null glyph bodies,
-   implicit-in-font-file encoding omission, and indirect custom encoding
-   dictionaries. Embedded TrueType font writing is started for the cpdf-style
-   subset with `/FontFile2`, descriptor metrics, widths, predefined base
-   encodings, `FillUndefinedWithStandard` collapsed to its base encoding, and
-   optional object-number placement. Font descriptors now carry an optional
-   typed ToUnicode map, and TrueType font writing can emit the same simple
-   `/ToUnicode` CMap stream shape as CamlPDF when that map is present. Reading
-   simple uncompressed `beginbfchar` forms, sequential `beginbfrange` forms,
-   and array-form `beginbfrange` forms is also started. `/ToUnicode` stream
+   optional object-number placement. Type3 font writing now preserves the
+   typed glyph data carried by the MoonBit model, including `/FontBBox`,
+   `/FontMatrix`, actual `CharProcs` stream/reference objects, non-empty
+   `/Resources`, and non-empty `FirstChar`/`LastChar`/`Widths` metrics, while
+   retaining implicit-in-font-file encoding omission and indirect custom
+   encoding dictionaries. Embedded TrueType font writing is started for the
+   cpdf-style subset with `/FontFile2`, descriptor metrics, widths,
+   predefined base encodings, `FillUndefinedWithStandard` collapsed to its base
+   encoding, and optional object-number placement. Font descriptors now carry
+   an optional typed ToUnicode map, and TrueType font writing can emit the same
+   simple `/ToUnicode` CMap stream shape as CamlPDF when that map is present.
+   Reading simple uncompressed `beginbfchar` forms, sequential `beginbfrange`
+   forms, and array-form `beginbfrange` forms is also started. `/ToUnicode` stream
    data is decoded through the supported filter pipeline before parsing, and
    parsed maps are attached to simple or CID font descriptors. Compact
    one-line `beginbfchar`/`beginbfrange` sections with entries before the end
@@ -1523,6 +1524,8 @@ reader or writer invariant is narrower than a whole-document workflow:
   ToUnicode storage, and glyph-program content parsing;
 - preserve direct Type3 `CharProcs` streams during simple-font reads, parse
   their `d0`/`d1` glyph programs, and expand Type3 width metrics;
+- round-trip Type3 font writer output without dropping bbox, matrix, resources,
+  actual `CharProcs`, or width metrics;
 - extract Type0 `/Identity-H` CID-keyed text from parsed page content after
   compressed xref-stream write/read boundaries, including two-byte `Tj`/`TJ`
   text and public font identity predicates;
