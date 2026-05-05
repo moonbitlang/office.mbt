@@ -3963,6 +3963,7 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ),
     [0x41, 0x4E00],
   )
+  @test.assert_eq(ucs2_h_extractor.charcode_of_codepoint(0x4E00), Some(0x4E00))
   let ucs2_odd = try? ucs2_h_extractor.codepoints_of_text(
     text_bytes_for_test([0x00, 0x41, 0x4E])[:],
   )
@@ -3991,6 +3992,26 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     .codepoints_of_text(text_bytes_for_test([0x30, 0x42, 0x30, 0xA2])[:]),
     [0x3042, 0x30A2],
   )
+  @test.assert_eq(
+    utf16_cmap_font_h
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0xD8, 0x34, 0xDD, 0x1E])[:]),
+    [0x1D11E],
+  )
+  @test.assert_eq(
+    utf16_cmap_font_h.text_extractor().charcode_of_codepoint(0x3042),
+    Some(0x3042),
+  )
+  @test.assert_eq(
+    utf16_cmap_font_h.text_extractor().charcode_of_codepoint(0x1D11E),
+    Some(0xD834DD1E),
+  )
+  let utf16_unpaired = try? utf16_cmap_font_h
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0xD8, 0x34, 0x30, 0x42])[:])
+  guard utf16_unpaired is Err(_) else {
+    fail("expected malformed UTF16 predefined CMap text error")
+  }
   let utf16_cmap_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopUTF16Vertical"),
     composite,
@@ -4003,6 +4024,85 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     .codepoints_of_text(text_bytes_for_test([0x4E, 0x00, 0x4E, 0x8C])[:]),
     [0x4E00, 0x4E8C],
   )
+  let utf8_cmap_font_h : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUTF8"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniJIS-UTF8-H")),
+  })
+  @test.assert_eq(utf8_cmap_font_h.uses_two_byte_codes(), false)
+  @test.assert_eq(
+    utf8_cmap_font_h
+    .text_extractor()
+    .codepoints_of_text(
+      text_bytes_for_test([0x41, 0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E])[:],
+    ),
+    [0x41, 0x3042, 0x1D11E],
+  )
+  @test.assert_eq(
+    utf8_cmap_font_h.text_extractor().charcode_of_codepoint(0x3042),
+    Some(0xE38182),
+  )
+  @test.assert_eq(
+    utf8_cmap_font_h.text_extractor().charcode_of_codepoint(0x1D11E),
+    Some(0xF09D849E),
+  )
+  let utf8_bad = try? utf8_cmap_font_h
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0xE3, 0x81])[:])
+  guard utf8_bad is Err(_) else {
+    fail("expected malformed UTF8 predefined CMap text error")
+  }
+  let utf8_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
+    ..text_font_descriptor_for_test(),
+    tounicode: Some([
+      (0xE38182, text_bytes_for_test([0x26, 0x03])),
+      (0xF09D849E, text_bytes_for_test([0x03, 0xA9])),
+    ]),
+  }
+  let utf8_tounicode_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUTF8ToUnicode"),
+    composite: { ..composite, cid_fontdescriptor: utf8_tounicode_descriptor },
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniJIS-UTF8-H")),
+  })
+  let utf8_tounicode_extractor = utf8_tounicode_font.text_extractor()
+  @test.assert_eq(
+    utf8_tounicode_extractor.codepoints_of_text(
+      text_bytes_for_test([0xE3, 0x81, 0x82, 0xF0, 0x9D, 0x84, 0x9E])[:],
+    ),
+    [0x2603, 0x03A9],
+  )
+  @test.assert_eq(
+    utf8_tounicode_extractor.charcode_of_codepoint(0x2603),
+    Some(0xE38182),
+  )
+  @test.assert_eq(
+    utf8_tounicode_extractor.charcode_of_codepoint(0x03A9),
+    Some(0xF09D849E),
+  )
+  let utf32_cmap_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopUTF32Vertical"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/UniCNS-UTF32-V")),
+  })
+  @test.assert_eq(utf32_cmap_font_v.uses_two_byte_codes(), false)
+  @test.assert_eq(
+    utf32_cmap_font_v
+    .text_extractor()
+    .codepoints_of_text(
+      text_bytes_for_test([0x00, 0x00, 0x00, 0x41, 0x00, 0x01, 0xD1, 0x1E])[:],
+    ),
+    [0x41, 0x1D11E],
+  )
+  @test.assert_eq(
+    utf32_cmap_font_v.text_extractor().charcode_of_codepoint(0x1D11E),
+    Some(0x1D11E),
+  )
+  let utf32_bad = try? utf32_cmap_font_v
+    .text_extractor()
+    .codepoints_of_text(text_bytes_for_test([0x00, 0x00, 0xD8, 0x00])[:])
+  guard utf32_bad is Err(_) else {
+    fail("expected malformed UTF32 predefined CMap text error")
+  }
   let non_ucs2_predefined_font : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_name_for_test("/TopGBEUC"),
     composite,

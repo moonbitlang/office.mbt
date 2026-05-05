@@ -154,7 +154,8 @@ work changes.
    Owner modules: `pdf_text.mbt`, `pdf_space.mbt`, `pdf_fun.mbt`,
    `pdf_image.mbt`.
    Status: encodings, UTF-16BE/PDFDocEncoding, ToUnicode CMaps, Identity-H/V
-   and predefined UCS2 horizontal/vertical two-byte CID text extraction,
+   and predefined UCS2 horizontal/vertical two-byte CID text extraction plus
+   direct Unicode predefined CMap segmentation for UTF8, UTF16, and UTF32,
    common mixed-byte predefined CMap charcode segmentation for `/ToUnicode`
    extraction, RKSJ predefined-CMap ASCII and half-width Katakana built-in
    fallback, generated GB-EUC/GB2312, GBpc-EUC, Big5, UHC/CP949,
@@ -307,7 +308,8 @@ and backend breadth, is about 81-86% complete.
   predictors, filter arrays, stop-at-unknown stream decoding, raw/encoded image
   extraction basics, color spaces, functions, standard fonts, PDFDocEncoding,
   UTF-16BE, ToUnicode CMaps, Identity-H/V CID text basics, predefined UCS2
-  and UTF16 horizontal/vertical two-byte extraction, mixed-byte predefined CMap
+  and UTF16 horizontal/vertical extraction plus direct UTF8/UTF16/UTF32
+  predefined Unicode CMap segmentation and reverse lookup, mixed-byte predefined CMap
   charcode segmentation for `/ToUnicode` extraction, RKSJ predefined-CMap
   single-byte fallback, GB-EUC predefined-CMap GB2312 mapping fallback when
   `/ToUnicode` is absent, GBpc-EUC predefined-CMap mapping fallback with PC

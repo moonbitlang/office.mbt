@@ -122,6 +122,10 @@ Current estimate:
   through reader and extractor boundaries.~~
 - [x] ~~Predefined UTF16 horizontal/vertical CMap two-byte text extraction
   through CID-keyed reader and extractor boundaries.~~
+- [x] ~~Direct Unicode predefined CMap extraction for UCS2, UTF8, UTF16, and
+  UTF32 CMap names, including UTF8 variable-length segmentation, UTF16
+  surrogate-pair charcodes, UTF32 scalar validation, reverse lookup, and
+  malformed Unicode sequence coverage.~~
 - [x] ~~Mixed-byte predefined CMap charcode segmentation for common EUC, RKSJ,
   Big5, UHC, and GBK families through `/ToUnicode` text extraction.~~
 - [x] ~~RKSJ predefined CMap built-in ASCII and half-width Katakana fallback
@@ -350,6 +354,10 @@ Current estimate:
   CMap fallback with one/two/four-byte segmentation, Adobe-CNS1 Unicode
   fallback, vertical mapping, reverse lookup, and signed-`Int` packed-key
   lookup coverage.~~
+- [x] ~~Add the next remaining text parity slice: direct Unicode predefined
+  CMap handling for UTF8/UTF16/UTF32 names, including variable-length
+  segmentation, supplementary-plane reverse lookup, and malformed scalar
+  coverage.~~
 - [ ] Add the next remaining text parity slice: broader external/general CMap
   parsing beyond codespace/CID-char/CID-range/notdef lookup, Identity
   `/UseCMap`, and stream `/UseCMap` composition, remaining rare predefined
