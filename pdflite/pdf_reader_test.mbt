@@ -186,6 +186,20 @@ fn reader_classic_pdf_with_unpadded_xref_entry() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_pdf_with_inline_xref_section_header() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref 1 1\n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_classic_trailer(output, xref_offset, 2)
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_classic_pdf_with_glued_trailer_dictionary() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -239,6 +253,23 @@ fn reader_classic_pdf_with_prefixed_startxref_pointer() -> @pdflite.PdfBytes {
   reader_push_xref_entry(output, catalog_offset, 0)
   reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
   reader_push_ascii(output, "startxref junk=")
+  reader_push_ascii(output, xref_offset.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_classic_pdf_with_inline_startxref_pointer() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  reader_push_ascii(output, "xref\n0 2\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 2 >>\n")
+  reader_push_ascii(output, "startxref ")
   reader_push_ascii(output, xref_offset.to_string())
   reader_push_ascii(output, "\n%%EOF\n")
   Bytes::from_array(output)
@@ -1749,6 +1780,16 @@ test "pdf_read_classic_document_from_bytes skips non-digit startxref prefixes" {
 }
 
 ///|
+test "pdf_read_classic_document_from_bytes accepts inline startxref pointers" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_inline_startxref_pointer(),
+  )
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.first_xref() > 0, true)
+  @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
 test "pdf_read_classic_document_from_view reads borrowed slices" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 4)
@@ -1983,6 +2024,16 @@ test "pdf_revisions_from_bytes skips non-digit startxref prefixes" {
   @test.assert_eq(
     try! @pdflite.pdf_revisions_from_bytes(
       reader_classic_pdf_with_prefixed_startxref_pointer(),
+    ),
+    1,
+  )
+}
+
+///|
+test "pdf_revisions_from_bytes accepts inline startxref pointers" {
+  @test.assert_eq(
+    try! @pdflite.pdf_revisions_from_bytes(
+      reader_classic_pdf_with_inline_startxref_pointer(),
     ),
     1,
   )
@@ -2954,6 +3005,24 @@ test "pdf_read_classic_document_from_bytes accepts tokenized xref rows" {
   )
   @test.assert_eq(free.root(), 1)
   @test.assert_eq(free.object_numbers(), [])
+}
+
+///|
+test "pdf_read_classic_document_from_bytes accepts inline xref section headers" {
+  let parsed = try! @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_pdf_with_inline_xref_section_header(),
+  )
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed.lookup_object_or_null(1),
+    PdfDictionary([
+      (
+        @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
+        PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
+      ),
+    ]),
+  )
 }
 
 ///|

@@ -329,7 +329,8 @@ MoonBit consequences for this project:
    The strict classic xref reader now also mirrors CamlPDF's malformed-row
    workaround that treats `0000000000 _____ n` rows as free entries instead of
    failing the table, and accepts repeated `xref` marker lines plus
-   `xref n m` section headers inside a classic table. It also accepts
+   `xref n m` section headers inside or at the start of a classic table.
+   `startxref n` pointers on one line are covered too. It also accepts
    CamlPDF-style fixed-width xref rows whose separator columns are malformed
    independently while the offset, generation, and `n`/`f` columns remain
    parseable, and classic trailers whose dictionary starts immediately after
@@ -1284,10 +1285,11 @@ MoonBit consequences for this project:
    removes `pdf_reader.mbt` from the uncovered-line report by testing public
    malformed-file behavior, private byte-view/xref helpers, indirect stream
    length resolution failures, CamlPDF-compatible malformed zero-offset xref row
-   handling, repeated xref section markers, trailing startxref junk after EOF,
-   malformed startxref-number recovery, and by deleting two unreachable
-   defensive branches around xref blank-line parsing and post-loop trailer
-   presence. Stream-object coverage now also checks CamlPDF's ignored
+   handling, repeated and inline xref section markers, trailing startxref junk
+   after EOF, inline startxref pointers, malformed startxref-number recovery,
+   and by deleting two unreachable defensive branches around xref blank-line
+   parsing and post-loop trailer presence. Stream-object coverage now also
+   checks CamlPDF's ignored
    stream-start padding bytes before newline or data, plus missing, unreadable,
    unparseable, negative, short, and long declared `/Length` values that recover
    through `endstream` scanning; the obsolete public `StreamLengthExpected`

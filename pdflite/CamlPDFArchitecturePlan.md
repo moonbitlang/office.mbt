@@ -20,6 +20,7 @@ work changes.
    reading, writing, strict/reconstructed xrefs, object streams, name trees, and
    renumbering. Strict classic xref parsing now includes CamlPDF's fixed-width
    malformed-separator tolerance for independently bad separator columns,
+   inline `xref n count` subsection headers, inline `startxref n` pointers,
    CR/CRLF line terminators, glued reconstructed trailer dictionaries, and
    revision-specific reads where revision `1` is newest and larger numbers
    follow older `/Prev` state across classic and xref-stream update chains.
