@@ -270,6 +270,9 @@ pub(all) struct PdfParsedCMap {
   codespaces : Array[PdfCMapCodeSpace]
   usecmap : PdfName?
   wmode : Int?
+  cmap_name : PdfName?
+  cmap_type : Int?
+  cid_system_info : PdfCIDSystemInfo?
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -2379,7 +2382,7 @@ fn pdf_text_view_equals_ascii(view : BytesView, text : String) -> Bool {
 }
 
 ///|
-fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
+fn pdf_text_parse_cmap_int_after_token(data : BytesView, key : String) -> Int? {
   let cursor = byte_cursor_of_view(data)
   let mut expect_value = false
   for line in cursor.read_line_views() {
@@ -2397,13 +2400,18 @@ fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
           None => ()
         }
       }
-      if pdf_text_view_equals_ascii(token, "/WMode") {
+      if pdf_text_view_equals_ascii(token, key) {
         expect_value = true
       }
     }
   } nobreak {
     None
   }
+}
+
+///|
+fn pdf_text_parse_cmap_wmode(data : BytesView) -> Int? {
+  pdf_text_parse_cmap_int_after_token(data, "/WMode")
 }
 
 ///|
@@ -2432,6 +2440,115 @@ fn pdf_text_parse_cmap_name_token(token : BytesView) -> PdfName? {
     }
   }
   Some(pdf_name_of_bytes(Bytes::from_array(bytes)))
+}
+
+///|
+fn pdf_text_parse_cmap_name_after_token(
+  data : BytesView,
+  key : String,
+) -> PdfName? {
+  let cursor = byte_cursor_of_view(data)
+  let mut expect_value = false
+  for line in cursor.read_line_views() {
+    let tokens = pdf_split_whitespace_tokens(line)
+    for token in tokens {
+      if expect_value {
+        expect_value = false
+        match pdf_text_parse_cmap_name_token(token) {
+          Some(name) => return Some(name)
+          None => ()
+        }
+      }
+      if pdf_text_view_equals_ascii(token, key) {
+        expect_value = true
+      }
+    }
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn pdf_text_parse_cmap_object_token(token : BytesView) -> PdfObject? {
+  try pdf_parse_object_from_view(token) catch {
+    _ => None
+  } noraise {
+    object => Some(object)
+  }
+}
+
+///|
+priv enum PdfTextCMapCIDSystemInfoKey {
+  PdfTextCMapCIDSystemRegistry
+  PdfTextCMapCIDSystemOrdering
+  PdfTextCMapCIDSystemSupplement
+}
+
+///|
+fn pdf_text_parse_cmap_cid_system_value(
+  key : PdfTextCMapCIDSystemInfoKey,
+  token : BytesView,
+  registry : Array[PdfBytes],
+  ordering : Array[PdfBytes],
+  supplement : Array[Int],
+) -> Unit {
+  match (key, pdf_text_parse_cmap_object_token(token)) {
+    (PdfTextCMapCIDSystemRegistry, Some(PdfString(value))) =>
+      registry.push(value)
+    (PdfTextCMapCIDSystemOrdering, Some(PdfString(value))) =>
+      ordering.push(value)
+    (PdfTextCMapCIDSystemSupplement, Some(PdfInteger(value))) =>
+      supplement.push(value)
+    _ => ()
+  }
+}
+
+///|
+fn pdf_text_parse_cmap_cid_system_info(data : BytesView) -> PdfCIDSystemInfo? {
+  let cursor = byte_cursor_of_view(data)
+  let registries : Array[PdfBytes] = []
+  let orderings : Array[PdfBytes] = []
+  let supplements : Array[Int] = []
+  let mut seen_cid_system_info = false
+  let mut expect_value : PdfTextCMapCIDSystemInfoKey? = None
+  for line in cursor.read_line_views() {
+    let tokens = pdf_split_whitespace_tokens(line)
+    for token in tokens {
+      if !seen_cid_system_info {
+        if pdf_text_view_equals_ascii(token, "/CIDSystemInfo") {
+          seen_cid_system_info = true
+        }
+        continue
+      }
+      match expect_value {
+        Some(key) => {
+          pdf_text_parse_cmap_cid_system_value(
+            key, token, registries, orderings, supplements,
+          )
+          expect_value = None
+          if registries.length() > 0 &&
+            orderings.length() > 0 &&
+            supplements.length() > 0 {
+            return Some({
+              registry: registries[0],
+              ordering: orderings[0],
+              supplement: supplements[0],
+            })
+          }
+        }
+        None => ()
+      }
+      if pdf_text_view_equals_ascii(token, "/Registry") {
+        expect_value = Some(PdfTextCMapCIDSystemRegistry)
+      } else if pdf_text_view_equals_ascii(token, "/Ordering") {
+        expect_value = Some(PdfTextCMapCIDSystemOrdering)
+      } else if pdf_text_view_equals_ascii(token, "/Supplement") {
+        expect_value = Some(PdfTextCMapCIDSystemSupplement)
+      }
+    }
+  } nobreak {
+    None
+  }
 }
 
 ///|
@@ -3350,6 +3467,9 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
     },
     usecmap: pdf_text_parse_cmap_usecmap(data),
     wmode: pdf_text_parse_cmap_wmode(data),
+    cmap_name: pdf_text_parse_cmap_name_after_token(data, "/CMapName"),
+    cmap_type: pdf_text_parse_cmap_int_after_token(data, "/CMapType"),
+    cid_system_info: pdf_text_parse_cmap_cid_system_info(data),
   }
 }
 
@@ -3453,6 +3573,18 @@ fn pdf_text_compose_parsed_cmap(
     wmode: match current.wmode {
       Some(_) => current.wmode
       None => inherited.wmode
+    },
+    cmap_name: match current.cmap_name {
+      Some(_) => current.cmap_name
+      None => inherited.cmap_name
+    },
+    cmap_type: match current.cmap_type {
+      Some(_) => current.cmap_type
+      None => inherited.cmap_type
+    },
+    cid_system_info: match current.cid_system_info {
+      Some(_) => current.cid_system_info
+      None => inherited.cid_system_info
     },
   }
 }

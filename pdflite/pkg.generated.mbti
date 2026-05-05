@@ -1594,6 +1594,9 @@ pub(all) struct PdfParsedCMap {
   codespaces : Array[PdfCMapCodeSpace]
   usecmap : PdfName?
   wmode : Int?
+  cmap_name : PdfName?
+  cmap_type : Int?
+  cid_system_info : PdfCIDSystemInfo?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfParsedIndirectObject {

@@ -1768,6 +1768,9 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
       codespaces: [],
       usecmap: None,
       wmode: None,
+      cmap_name: None,
+      cmap_type: None,
+      cid_system_info: None,
     }),
   })
 }
@@ -2614,6 +2617,61 @@ test "pdf_parse_cmap_data reads UseCMap names across PDF whitespace" {
 }
 
 ///|
+test "pdf_parse_cmap_data reads CMap header metadata" {
+  let parsed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "/CIDSystemInfo <<\n" +
+      "  /Registry (Adobe)\n" +
+      "  /Ordering (UCS)\n" +
+      "  /Supplement 0\n" +
+      ">> def\n" +
+      "/CMapName /Adobe-Identity-UCS def\n" +
+      "/CMapType 2 def\n",
+    )[:],
+  )
+  @test.assert_eq(
+    parsed.cmap_name,
+    Some(text_name_for_test("/Adobe-Identity-UCS")),
+  )
+  @test.assert_eq(parsed.cmap_type, Some(2))
+  @test.assert_eq(
+    parsed.cid_system_info,
+    Some({
+      registry: @ascii.encode("Adobe"),
+      ordering: @ascii.encode("UCS"),
+      supplement: 0,
+    }),
+  )
+  let dict_style = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "/CIDSystemInfo 3 dict dup begin\n" +
+      "/Registry (Adobe) def\n" +
+      "/Ordering (Japan1) def\n" +
+      "/Supplement 6 def\n" +
+      "end def\n",
+    )[:],
+  )
+  @test.assert_eq(
+    dict_style.cid_system_info,
+    Some({
+      registry: @ascii.encode("Adobe"),
+      ordering: @ascii.encode("Japan1"),
+      supplement: 6,
+    }),
+  )
+  let malformed = @pdflite.pdf_parse_cmap_data(
+    @ascii.encode(
+      "/CIDSystemInfo << /Registry /Adobe /Ordering (UCS) /Supplement bad >>\n" +
+      "/CMapName Adobe-Identity-UCS def\n" +
+      "/CMapType bad def\n",
+    )[:],
+  )
+  @test.assert_eq(malformed.cmap_name, None)
+  @test.assert_eq(malformed.cmap_type, None)
+  @test.assert_eq(malformed.cid_system_info, None)
+}
+
+///|
 test "PdfDocument parse_cmap decodes stream objects" {
   let doc = @pdflite.pdf_document_empty()
   let cmap_data = @ascii.encode(
@@ -2645,6 +2703,9 @@ test "PdfDocument parse_cmap decodes stream objects" {
     codespaces: [],
     usecmap: Some(text_name_for_test("/Identity-V")),
     wmode: Some(0),
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
   })
   let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? doc.parse_cmap(
     PdfInteger(1),
@@ -2739,6 +2800,9 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   doc.add_object_given_number(4, text_valid_cid_descendant_for_test([]))
   let base_data = @ascii.encode(
     "/Identity-H usecmap\n" +
+    "/CIDSystemInfo << /Registry (Adobe) /Ordering (Test) /Supplement 3 >> def\n" +
+    "/CMapName /Base-CMap def\n" +
+    "/CMapType 1 def\n" +
     "/WMode 0 def\n" +
     "1 begincodespacerange\n" +
     "<0000><00FF>\n" +
@@ -2765,6 +2829,7 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   )
   let derived_data = @ascii.encode(
     "/WMode 1 def\n" +
+    "/CMapType 2 def\n" +
     "1 begincidchar\n" +
     "<0041> 99\n" +
     "endcidchar\n" +
@@ -2786,6 +2851,16 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   let parsed = try! doc.parse_cmap(PdfIndirect(5))
   @test.assert_eq(parsed.wmode, Some(1))
   @test.assert_eq(parsed.usecmap, Some(text_name_for_test("/Identity-H")))
+  @test.assert_eq(parsed.cmap_name, Some(text_name_for_test("/Base-CMap")))
+  @test.assert_eq(parsed.cmap_type, Some(2))
+  @test.assert_eq(
+    parsed.cid_system_info,
+    Some({
+      registry: @ascii.encode("Adobe"),
+      ordering: @ascii.encode("Test"),
+      supplement: 3,
+    }),
+  )
   @test.assert_eq(parsed.codespaces, [
     { length: 2, first: 0x0000, last: 0x00FF },
   ])

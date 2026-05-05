@@ -2285,6 +2285,9 @@ test "private external CMap helpers cover malformed and compact sections" {
     codespaces: [],
     usecmap: None,
     wmode: None,
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
   }
   @test.assert_eq(PdfExternalCMap(1, empty_parsed).uses_two_byte_codes(), false)
   @test.assert_eq(
@@ -2301,6 +2304,9 @@ test "private external CMap helpers cover malformed and compact sections" {
     codespaces: [],
     usecmap: Some(wbtest_text_name("/Identity-H")),
     wmode: None,
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
   }
   @test.assert_eq(
     PdfExternalCMap(4, identity_base_parsed).uses_two_byte_codes(),
@@ -2327,6 +2333,9 @@ test "private external CMap helpers cover malformed and compact sections" {
     codespaces: [{ length: 1, first: 0x00, last: 0x7F }],
     usecmap: Some(wbtest_text_name("/Identity-H")),
     wmode: None,
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
   }
   @test.assert_eq(
     pdf_text_parsed_cmap_charcodes_of_text(
@@ -2342,6 +2351,9 @@ test "private external CMap helpers cover malformed and compact sections" {
     codespaces: [{ length: 2, first: 0x0000, last: 0xFFFF }],
     usecmap: None,
     wmode: None,
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
   }
   @test.assert_eq(
     PdfExternalCMap(2, two_byte_parsed).uses_two_byte_codes(),
@@ -2357,6 +2369,9 @@ test "private external CMap helpers cover malformed and compact sections" {
     ],
     usecmap: None,
     wmode: None,
+    cmap_name: None,
+    cmap_type: None,
+    cid_system_info: None,
   }
   @test.assert_eq(PdfExternalCMap(3, mixed_parsed).uses_two_byte_codes(), false)
   @test.assert_eq(
@@ -2374,6 +2389,13 @@ test "private external CMap helpers cover malformed and compact sections" {
       codespaces: [{ length: 1, first: 1, last: 1 }],
       usecmap: Some(wbtest_text_name("/Identity-V")),
       wmode: Some(1),
+      cmap_name: Some(wbtest_text_name("/Derived")),
+      cmap_type: Some(2),
+      cid_system_info: Some({
+        registry: wbtest_text_bytes([69]),
+        ordering: wbtest_text_bytes([70]),
+        supplement: 5,
+      }),
     },
     {
       map: [
@@ -2385,6 +2407,13 @@ test "private external CMap helpers cover malformed and compact sections" {
       codespaces: [{ length: 2, first: 0, last: 0xFFFF }],
       usecmap: Some(wbtest_text_name("/Identity-H")),
       wmode: Some(0),
+      cmap_name: Some(wbtest_text_name("/Base")),
+      cmap_type: Some(1),
+      cid_system_info: Some({
+        registry: wbtest_text_bytes([65]),
+        ordering: wbtest_text_bytes([66]),
+        supplement: 3,
+      }),
     },
   )
   @test.assert_eq(composed.map, [
@@ -2399,6 +2428,16 @@ test "private external CMap helpers cover malformed and compact sections" {
   ])
   @test.assert_eq(composed.usecmap, Some(wbtest_text_name("/Identity-V")))
   @test.assert_eq(composed.wmode, Some(1))
+  @test.assert_eq(composed.cmap_name, Some(wbtest_text_name("/Derived")))
+  @test.assert_eq(composed.cmap_type, Some(2))
+  @test.assert_eq(
+    composed.cid_system_info,
+    Some({
+      registry: wbtest_text_bytes([69]),
+      ordering: wbtest_text_bytes([70]),
+      supplement: 5,
+    }),
+  )
   let inherited_metadata = pdf_text_compose_parsed_cmap(empty_parsed, {
     map: [],
     cid_map: [],
@@ -2406,12 +2445,32 @@ test "private external CMap helpers cover malformed and compact sections" {
     codespaces: [],
     usecmap: Some(wbtest_text_name("/Identity-H")),
     wmode: Some(0),
+    cmap_name: Some(wbtest_text_name("/Inherited")),
+    cmap_type: Some(1),
+    cid_system_info: Some({
+      registry: wbtest_text_bytes([67]),
+      ordering: wbtest_text_bytes([68]),
+      supplement: 4,
+    }),
   })
   @test.assert_eq(
     inherited_metadata.usecmap,
     Some(wbtest_text_name("/Identity-H")),
   )
   @test.assert_eq(inherited_metadata.wmode, Some(0))
+  @test.assert_eq(
+    inherited_metadata.cmap_name,
+    Some(wbtest_text_name("/Inherited")),
+  )
+  @test.assert_eq(inherited_metadata.cmap_type, Some(1))
+  @test.assert_eq(
+    inherited_metadata.cid_system_info,
+    Some({
+      registry: wbtest_text_bytes([67]),
+      ordering: wbtest_text_bytes([68]),
+      supplement: 4,
+    }),
+  )
   @test.assert_eq(
     pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" 7x")[:], 0),
     Some((7, 2)),
