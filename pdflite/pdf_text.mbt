@@ -325,6 +325,13 @@ fn pdf_text_predefined_cmap_uses_uhc_charcodes(name : PdfName) -> Bool {
 }
 
 ///|
+fn pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name : PdfName) -> Bool {
+  let text = pdf_text_string_of_name(name)
+  pdf_text_predefined_cmap_has_text_orientation(text) &&
+  text.contains("KSC-EUC")
+}
+
+///|
 fn pdf_text_predefined_cmap_uses_gbk_charcodes(name : PdfName) -> Bool {
   let text = pdf_text_string_of_name(name)
   pdf_text_predefined_cmap_has_text_orientation(text) &&
@@ -446,6 +453,18 @@ fn pdf_text_predefined_uhc_charcode(codepoint : Int) -> Int? {
       pdf_text_uhc_charcode_table, codepoint,
     )
   }
+}
+
+///|
+fn pdf_text_predefined_ksc_euc_codepoint(code : Int) -> Int? {
+  pdf_text_predefined_pair_table_lookup(pdf_text_ksc_euc_codepoint_table, code)
+}
+
+///|
+fn pdf_text_predefined_ksc_euc_charcode(codepoint : Int) -> Int? {
+  pdf_text_predefined_pair_table_lookup(
+    pdf_text_ksc_euc_charcode_table, codepoint,
+  )
 }
 
 ///|
@@ -6936,6 +6955,11 @@ fn PdfFont::pdf_text_predefined_builtin_codepoints(
               Some(codepoint) => Some([codepoint])
               None => None
             }
+          } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name) {
+            match pdf_text_predefined_ksc_euc_codepoint(code) {
+              Some(codepoint) => Some([codepoint])
+              None => None
+            }
           } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
             match pdf_text_predefined_gbk_codepoint(code) {
               Some(codepoint) => Some([codepoint])
@@ -6967,6 +6991,8 @@ fn PdfFont::pdf_text_predefined_builtin_charcode(
             pdf_text_predefined_big5_charcode(codepoint)
           } else if pdf_text_predefined_cmap_uses_uhc_charcodes(name) {
             pdf_text_predefined_uhc_charcode(codepoint)
+          } else if pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name) {
+            pdf_text_predefined_ksc_euc_charcode(codepoint)
           } else if pdf_text_predefined_cmap_uses_gbk_charcodes(name) {
             pdf_text_predefined_gbk_charcode(codepoint)
           } else {
@@ -7026,6 +7052,7 @@ fn pdf_text_predefined_mixed_byte_charcodes(
 ) -> Array[Int] raise PdfError {
   let output : Array[Int] = []
   let shift_jis = pdf_text_predefined_cmap_uses_shift_jis_charcodes(name)
+  let ksc_euc = pdf_text_predefined_cmap_uses_ksc_euc_charcodes(name)
   let gbk = pdf_text_predefined_cmap_uses_gbk_charcodes(name)
   let mut index = 0
   while index < text.length() {
@@ -7037,7 +7064,9 @@ fn pdf_text_predefined_mixed_byte_charcodes(
         output.push(first)
         index += 1
       }
-    } else if first < 0x80 || (gbk && (first == 0x80 || first == 0xFF)) {
+    } else if first < 0x80 ||
+      (ksc_euc && first == 0x80) ||
+      (gbk && (first == 0x80 || first == 0xFF)) {
       output.push(first)
       index += 1
     } else {

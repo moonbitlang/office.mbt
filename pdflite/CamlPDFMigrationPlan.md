@@ -984,8 +984,10 @@ MoonBit consequences for this project:
    generated CP949 mapping-table fallback with matching reverse lookup. GBK
    predefined-CMap extraction now has a generated Adobe GBK-EUC-UCS2 mapping
    fallback with matching reverse lookup and explicit single-byte `0x80`/`0xFF`
-   CMap behavior. KSC-EUC, HKSCS, GBK2K, and other remaining multibyte
-   predefined-CMap tables remain deferred.
+   CMap behavior. KSC-EUC predefined-CMap extraction now has a generated table
+   composed from `KSC-EUC-H` and `Adobe-Korea1-UCS2`, including deterministic
+   reverse lookup for duplicated Unicode scalars. HKSCS, KSCpc-EUC, GBK2K, and
+   other remaining multibyte predefined-CMap tables remain deferred.
    Standard-14 built-in text extraction is started for implicit encodings:
    non-symbol fonts use the current StandardEncoding subset, while Symbol and
    ZapfDingbats use focused built-in glyph/codepoint subsets. The Symbol
@@ -1518,6 +1520,10 @@ reader or writer invariant is narrower than a whole-document workflow:
 - decode GBK no-`/ToUnicode` predefined-CMap text through a generated
   GBK-EUC-UCS2 mapping table, including reverse charcode lookup, Adobe CMap
   single-byte `0x80`/`0xFF` behavior, and invalid-pair fallback;
+- decode KSC-EUC no-`/ToUnicode` predefined-CMap text through a generated
+  mapping table composed from `KSC-EUC-H` and `Adobe-Korea1-UCS2`, including
+  reverse charcode lookup, duplicate-scalar lowest-charcode selection, and
+  invalid-pair fallback;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
 - encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`

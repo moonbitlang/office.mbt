@@ -3484,6 +3484,55 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   guard gbk_truncated is Err(BadText) else {
     fail("expected BadText for truncated GBK charcode")
   }
+  let ksc_euc_builtin_font : @pdflite.PdfFont = PdfFontCIDKeyed({
+    basefont: text_name_for_test("/TopKSCEUCBuiltin"),
+    composite,
+    encoding: PdfPredefinedCMap(text_name_for_test("/KSC-EUC-H")),
+  })
+  let ksc_euc_builtin_extractor = ksc_euc_builtin_font.text_extractor()
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0x41, 0x7E, 0xA1, 0xA1, 0xB0, 0xA1, 0xC7, 0xD1, 0x80])[:],
+    ),
+    [0x41, 0x203E, 0x3000, 0xAC00, 0xD55C, 0x80],
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.codepoints_of_text(
+      text_bytes_for_test([0xA4, 0xD4])[:],
+    ),
+    [0xA4D4],
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.charcode_of_codepoint(0x41),
+    Some(0x41),
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.charcode_of_codepoint(0x203E),
+    Some(0x7E),
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.charcode_of_codepoint(0x3000),
+    Some(0xA1A1),
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.charcode_of_codepoint(0xAC00),
+    Some(0xB0A1),
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.charcode_of_codepoint(0xD55C),
+    Some(0xC7D1),
+  )
+  @test.assert_eq(
+    ksc_euc_builtin_extractor.charcode_of_codepoint(0x4E0D),
+    Some(0xDCF4),
+  )
+  @test.assert_eq(ksc_euc_builtin_extractor.charcode_of_codepoint(0x3164), None)
+  let ksc_euc_truncated = try? ksc_euc_builtin_extractor.codepoints_of_text(
+    text_bytes_for_test([0xA1])[:],
+  )
+  guard ksc_euc_truncated is Err(BadText) else {
+    fail("expected BadText for truncated KSC-EUC charcode")
+  }
   let rksj_tounicode_descriptor : @pdflite.PdfFontDescriptor = {
     ..text_font_descriptor_for_test(),
     tounicode: Some([
