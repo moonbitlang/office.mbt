@@ -1422,6 +1422,16 @@ test "pdf_read_primitive_document_from_bytes loads non-stream indirect objects" 
 }
 
 ///|
+test "pdf_parse_indirect_object_from_bytes treats empty objects as null" {
+  let parsed = try! @pdflite.pdf_parse_indirect_object_from_bytes(
+    reader_pdf_ascii("2 0 obj\nendobj\n"),
+  )
+  @test.assert_eq(parsed.number, 2)
+  @test.assert_eq(parsed.generation, 0)
+  @test.assert_eq(parsed.object, PdfNull)
+}
+
+///|
 test "pdf_read_primitive_document_from_view loads borrowed slices" {
   let payload = reader_pdf_ascii("%PDF-1.4\n1 0 obj\n[1 2]\nendobj\nxref")
   let wrapped = reader_wrap_view_for_test("abc", payload[:], "xyz")

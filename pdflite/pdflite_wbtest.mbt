@@ -648,6 +648,15 @@ test "parser prefix helper reports malformed indirect prefixes" {
   guard bad_header is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected ParseIndirectObjectExpected")
   }
+  @test.assert_eq(
+    try! pdf_parse_indirect_object_prefix_lexemes([
+      LexInt(2),
+      LexInt(0),
+      LexObj,
+      LexEndObj,
+    ]),
+    { number: 2, generation: 0, object: PdfNull },
+  )
 }
 
 ///|

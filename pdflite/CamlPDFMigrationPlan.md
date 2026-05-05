@@ -282,6 +282,8 @@ MoonBit consequences for this project:
    uses its complete/incomplete state to distinguish plain integer length
    providers from stream objects, avoiding raw byte false positives when a
    valid length object mentions `stream` in a PDF comment.
+   Empty indirect object segments like `n gen obj endobj` now parse as `null`,
+   matching CamlPDF's `parse_finish` fallback for malformed empty objects.
    Hybrid-reference files with a
    classic trailer `/XRefStm`
    entry are now started by merging the pointed-to xref stream into the same

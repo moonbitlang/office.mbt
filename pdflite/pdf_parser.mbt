@@ -237,12 +237,16 @@ fn pdf_parse_indirect_object_segment_at(
   match (lexemes[first], lexemes[first + 1], lexemes[first + 2]) {
     (LexInt(number), LexInt(generation), LexObj) => {
       let object_start = pdf_skip_comments(lexemes, first + 3)
-      let (object, after_object) = pdf_parse_value_at(lexemes, object_start)
-      let end_position = pdf_skip_comments(lexemes, after_object)
-      if end_position < lexemes.length() && lexemes[end_position] == LexEndObj {
-        ({ number, generation, object }, end_position + 1, true)
+      if object_start < lexemes.length() && lexemes[object_start] == LexEndObj {
+        ({ number, generation, object: PdfNull }, object_start + 1, true)
       } else {
-        ({ number, generation, object }, after_object, false)
+        let (object, after_object) = pdf_parse_value_at(lexemes, object_start)
+        let end_position = pdf_skip_comments(lexemes, after_object)
+        if end_position < lexemes.length() && lexemes[end_position] == LexEndObj {
+          ({ number, generation, object }, end_position + 1, true)
+        } else {
+          ({ number, generation, object }, after_object, false)
+        }
       }
     }
     _ => raise ParseIndirectObjectExpected
@@ -260,7 +264,13 @@ fn pdf_parse_indirect_object_prefix_lexemes(
   match (lexemes[first], lexemes[first + 1], lexemes[first + 2]) {
     (LexInt(number), LexInt(generation), LexObj) => {
       let object_start = pdf_skip_comments(lexemes, first + 3)
-      let (object, _) = pdf_parse_value_at(lexemes, object_start)
+      let object = if object_start < lexemes.length() &&
+        lexemes[object_start] == LexEndObj {
+        PdfNull
+      } else {
+        let (object, _) = pdf_parse_value_at(lexemes, object_start)
+        object
+      }
       { number, generation, object }
     }
     _ => raise ParseIndirectObjectExpected
