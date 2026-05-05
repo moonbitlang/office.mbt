@@ -1137,7 +1137,15 @@ test "private content helpers cover malformed operand fallbacks" {
   let bad_name = [PdfInteger(1)]
   wbtest_assert_known_content_none("j", bad_number)
   wbtest_assert_known_content_none("M", bad_number)
+  wbtest_assert_known_content_none("d", [PdfInteger(0)])
   wbtest_assert_known_content_none("d", [PdfNameObject(name), PdfInteger(0)])
+  let bad_dash : Result[PdfContentOp?, Error] = try? pdf_content_parse_known_section(
+    [PdfArray([PdfNameObject(name)]), PdfInteger(0)],
+    @ascii.encode("d"),
+  )
+  guard bad_dash is Err(PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
   wbtest_assert_known_content_none("i", bad_number)
   wbtest_assert_known_content_none("cm", [
     PdfInteger(1),

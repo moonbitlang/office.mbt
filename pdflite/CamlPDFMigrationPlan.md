@@ -574,8 +574,9 @@ MoonBit consequences for this project:
    CamlPDF's malformed `SC`/`sc`/`SCN`/`scn` fallback to black-like
    `[0 0 0]` operands for Distiller-style bad color operators, `TJ` array
    filtering that skips malformed non-string/non-number elements, shadings,
-   text quote operators, Type 3 glyph metrics, marked-content operators,
-   compatibility-section markers, and artifact marker helpers. A
+   malformed dash-array rejection for `d`, text quote operators, Type 3 glyph
+   metrics, marked-content operators, compatibility-section markers, and
+   artifact marker helpers. A
    `pdfdraft.ml`-style acceptance fixture now replaces image XObject draws and
    inline images with crossed-box path operators, drops image XObject resource
    entries, Flate-encodes the rewritten content stream, prunes the removed image

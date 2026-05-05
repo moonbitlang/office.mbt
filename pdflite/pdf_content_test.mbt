@@ -1577,6 +1577,12 @@ test "pdf_parse_content_ops_from_bytes reports trailing operands" {
 
 ///|
 test "pdf content parser reports malformed complex and inline-image operands" {
+  let malformed_dash : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+    content_bytes_for_test("[/Bad] 0 d"),
+  )
+  guard malformed_dash is Err(@pdflite.PdfError::NumberExpected) else {
+    fail("expected NumberExpected")
+  }
   let malformed_array : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("[(A) 1 TJ"),
   )

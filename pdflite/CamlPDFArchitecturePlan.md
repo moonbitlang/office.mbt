@@ -70,7 +70,8 @@ work changes.
    `/MediaBox`, and `/Rotate` references are preserved with selected pages.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
-   members.
+   members. Malformed numeric entries inside `d` dash arrays now raise instead
+   of being preserved as unknown operations.
    Remaining focus: additional `change_pages` compatibility fixtures.
 
 5. Text, font, color, function, and image layer.

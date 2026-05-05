@@ -1643,10 +1643,28 @@ fn pdf_content_matrix_from_operands(
 }
 
 ///|
+fn pdf_content_dash_op_from_operands(
+  operands : ArrayView[PdfObject],
+) -> PdfContentOp? raise PdfError {
+  if operands.length() != 2 {
+    None
+  } else {
+    match (operands[0], pdf_content_operand_number(operands, 1)) {
+      (PdfArray(_), Some(phase)) =>
+        match pdf_content_numbers_from_array(operands[0]) {
+          Some(dashes) => Some(Op_d(dashes, phase))
+          None => raise NumberExpected
+        }
+      _ => None
+    }
+  }
+}
+
+///|
 fn pdf_content_parse_known_section(
   operands : ArrayView[PdfObject],
   operator : PdfBytes,
-) -> PdfContentOp? {
+) -> PdfContentOp? raise PdfError {
   let text = @ascii.decode(operator[:]) catch { _ => "" }
   match text {
     "q" if operands.length() == 0 => Some(Op_q)
@@ -1690,15 +1708,7 @@ fn pdf_content_parse_known_section(
         Some(limit) => Some(Op_M(limit))
         None => None
       }
-    "d" if operands.length() == 2 =>
-      match
-        (
-          pdf_content_numbers_from_array(operands[0]),
-          pdf_content_operand_number(operands, 1),
-        ) {
-        (Some(dashes), Some(phase)) => Some(Op_d(dashes, phase))
-        _ => None
-      }
+    "d" => pdf_content_dash_op_from_operands(operands)
     "ri" if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(intent) => Some(Op_ri(intent))
