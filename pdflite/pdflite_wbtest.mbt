@@ -2281,6 +2281,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   let empty_parsed : PdfParsedCMap = {
     map: [],
     cid_map: [],
+    notdef_map: [],
     codespaces: [],
     usecmap: None,
     wmode: None,
@@ -2296,6 +2297,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   let identity_base_parsed : PdfParsedCMap = {
     map: [],
     cid_map: [],
+    notdef_map: [],
     codespaces: [],
     usecmap: Some(wbtest_text_name("/Identity-H")),
     wmode: None,
@@ -2321,6 +2323,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   let mixed_identity_base_parsed : PdfParsedCMap = {
     map: [],
     cid_map: [],
+    notdef_map: [],
     codespaces: [{ length: 1, first: 0x00, last: 0x7F }],
     usecmap: Some(wbtest_text_name("/Identity-H")),
     wmode: None,
@@ -2335,6 +2338,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   let two_byte_parsed : PdfParsedCMap = {
     map: [],
     cid_map: [],
+    notdef_map: [],
     codespaces: [{ length: 2, first: 0x0000, last: 0xFFFF }],
     usecmap: None,
     wmode: None,
@@ -2346,6 +2350,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   let mixed_parsed : PdfParsedCMap = {
     map: [],
     cid_map: [],
+    notdef_map: [],
     codespaces: [
       { length: 2, first: 0x4100, last: 0x41FF },
       { length: 1, first: 0x00, last: 0x7F },
@@ -2365,6 +2370,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     {
       map: [(1, wbtest_text_bytes([0x00, 0x41]))],
       cid_map: [(1, 10)],
+      notdef_map: [(1, 20)],
       codespaces: [{ length: 1, first: 1, last: 1 }],
       usecmap: Some(wbtest_text_name("/Identity-V")),
       wmode: Some(1),
@@ -2375,6 +2381,7 @@ test "private external CMap helpers cover malformed and compact sections" {
         (2, wbtest_text_bytes([0x00, 0x43])),
       ],
       cid_map: [(1, 11), (2, 12)],
+      notdef_map: [(1, 21), (2, 22)],
       codespaces: [{ length: 2, first: 0, last: 0xFFFF }],
       usecmap: Some(wbtest_text_name("/Identity-H")),
       wmode: Some(0),
@@ -2385,6 +2392,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     (2, wbtest_text_bytes([0x00, 0x43])),
   ])
   @test.assert_eq(composed.cid_map, [(1, 10), (2, 12)])
+  @test.assert_eq(composed.notdef_map, [(1, 20), (2, 22)])
   @test.assert_eq(composed.codespaces, [
     { length: 1, first: 1, last: 1 },
     { length: 2, first: 0, last: 0xFFFF },
@@ -2394,6 +2402,7 @@ test "private external CMap helpers cover malformed and compact sections" {
   let inherited_metadata = pdf_text_compose_parsed_cmap(empty_parsed, {
     map: [],
     cid_map: [],
+    notdef_map: [],
     codespaces: [],
     usecmap: Some(wbtest_text_name("/Identity-H")),
     wmode: Some(0),
@@ -2470,6 +2479,26 @@ test "private external CMap helpers cover malformed and compact sections" {
       )[:],
     ),
     Some([(0x41, 7), (0x42, 8)]),
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_notdefs(
+      @ascii.encode(
+        "1 beginnotdefchar <20> 0 endnotdefchar\n" +
+        "1 begin\n" +
+        "notdefrange\n" +
+        "<30><31> 5\n" +
+        "endnotdefrange\n",
+      )[:],
+    ),
+    Some([(0x20, 0), (0x30, 5), (0x31, 6)]),
+  )
+  @test.assert_eq(
+    pdf_text_parse_cmap_notdefs(
+      @ascii.encode(
+        "1 begin\n" + "notdefchar\n" + "<20> 0\n" + "endnotdefchar\n",
+      )[:],
+    ),
+    Some([(0x20, 0)]),
   )
   @test.assert_eq(
     pdf_text_parse_cmap_codespaces(

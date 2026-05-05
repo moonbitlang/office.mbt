@@ -165,12 +165,13 @@ work changes.
    Adobe-Korea1 families when `/ToUnicode` is absent, and generated
    Adobe-Japan1 fallbacks for 90ms/90pv RKSJ direct Unicode maps, JIS two-byte
    CMaps, EUC-H, and Hojo-EUC three-byte charcodes, external CMap stream
-   parsing for codespaces plus `begincidchar`/`begincidrange` Type0
-   `/Encoding` streams with variable-length text segmentation and CID fallback,
+   parsing for codespaces plus `begincidchar`/`begincidrange` and
+   `beginnotdefchar`/`beginnotdefrange` Type0 `/Encoding` streams with
+   variable-length text segmentation, CID fallback, and stored notdef maps,
    plus `/UseCMap` name parsing from CMap programs and stream dictionaries
    with Identity-H/V inherited segmentation and CID fallback, plus recursive
    stream `/UseCMap` composition with cycle protection, inherited codespaces,
-   derived-entry map/CID overrides, inherited Identity fallback, and
+   derived-entry map/CID/notdef overrides, inherited Identity fallback, and
    ToUnicode inheritance through text extraction and reverse Unicode lookup,
    CamlPDF-style whitespace-elided ToUnicode CMap section scanning, mixed
    multiline `bfrange` parsing, `/WMode` token parsing across PDF whitespace,
@@ -195,7 +196,7 @@ work changes.
    Remaining focus: broader built-in non-UCS2 predefined CMap mapping tables
    beyond the current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1
    fallbacks, broader external/general CMap parsing beyond the current
-   codespace/CID-char/CID-range, Identity `/UseCMap`, and stream `/UseCMap`
+   codespace/CID/notdef sections, Identity `/UseCMap`, and stream `/UseCMap`
    composition subset, plus JPEG pixel decode and remaining image filter
    families.
 

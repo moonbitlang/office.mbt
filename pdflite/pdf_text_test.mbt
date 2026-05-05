@@ -1764,6 +1764,7 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
     encoding: PdfExternalCMap(5, {
       map: [],
       cid_map: [],
+      notdef_map: [],
       codespaces: [],
       usecmap: None,
       wmode: None,
@@ -2640,6 +2641,7 @@ test "PdfDocument parse_cmap decodes stream objects" {
       (49, text_bytes_for_test([0x00, 0x62])),
     ],
     cid_map: [],
+    notdef_map: [],
     codespaces: [],
     usecmap: Some(text_name_for_test("/Identity-V")),
     wmode: Some(0),
@@ -2665,7 +2667,13 @@ test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
       "endcidchar\n" +
       "1 begincidrange\n" +
       "<8140><8142> 200\n" +
-      "endcidrange\n",
+      "endcidrange\n" +
+      "1 beginnotdefchar\n" +
+      "<20> 0\n" +
+      "endnotdefchar\n" +
+      "1 beginnotdefrange\n" +
+      "<30><31> 5\n" +
+      "endnotdefrange\n",
     )[:],
   )
   @test.assert_eq(parsed.codespaces, [
@@ -2678,6 +2686,7 @@ test "pdf_parse_cmap_data reads external CID mappings and codespaces" {
     (0x8141, 201),
     (0x8142, 202),
   ])
+  @test.assert_eq(parsed.notdef_map, [(0x20, 0), (0x30, 5), (0x31, 6)])
   @test.assert_eq(parsed.map, [])
 }
 
@@ -2737,6 +2746,9 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
     "1 begincidrange\n" +
     "<0040><0042> 500\n" +
     "endcidrange\n" +
+    "1 beginnotdefrange\n" +
+    "<0050><0051> 700\n" +
+    "endnotdefrange\n" +
     "2 beginbfchar\n" +
     "<0041><0042>\n" +
     "<0042><0043>\n" +
@@ -2756,6 +2768,9 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
     "1 begincidchar\n" +
     "<0041> 99\n" +
     "endcidchar\n" +
+    "1 beginnotdefchar\n" +
+    "<0050> 77\n" +
+    "endnotdefchar\n" +
     "1 beginbfchar\n" +
     "<0041><0041>\n" +
     "endbfchar\n",
@@ -2775,6 +2790,7 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
     { length: 2, first: 0x0000, last: 0x00FF },
   ])
   @test.assert_eq(parsed.cid_map, [(0x0041, 99), (0x0040, 500), (0x0042, 502)])
+  @test.assert_eq(parsed.notdef_map, [(0x0050, 77), (0x0051, 701)])
   @test.assert_eq(parsed.map, [
     (0x0041, text_bytes_for_test([0x00, 0x41])),
     (0x0042, text_bytes_for_test([0x00, 0x43])),

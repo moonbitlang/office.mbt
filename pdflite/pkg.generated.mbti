@@ -1590,6 +1590,7 @@ pub(all) enum PdfPageRotation {
 pub(all) struct PdfParsedCMap {
   map : Array[(Int, Bytes)]
   cid_map : Array[(Int, Int)]
+  notdef_map : Array[(Int, Int)]
   codespaces : Array[PdfCMapCodeSpace]
   usecmap : PdfName?
   wmode : Int?

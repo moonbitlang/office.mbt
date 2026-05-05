@@ -25,7 +25,7 @@ Current estimate:
   Adobe-Japan1, and Adobe-Korea1 predefined CMap fallbacks, plus external CMap
   codespace/CID parsing and `/UseCMap` stream composition through ToUnicode.~~
 - [ ] Finish broader external/general CMap parsing beyond the current
-  codespace/CID-char/CID-range, Identity `/UseCMap`, and parsed stream
+  codespace/CID/notdef sections, Identity `/UseCMap`, and parsed stream
   `/UseCMap` composition subset.
 - [ ] Add remaining rare predefined CMap family coverage when useful source
   tables or fixtures are available.
@@ -178,10 +178,13 @@ Current estimate:
 - [x] ~~ToUnicode CMap stream `/UseCMap` composition through font text
   extraction and reverse Unicode lookup, including derived-entry override of
   inherited Unicode mappings.~~
+- [x] ~~External/general CMap `beginnotdefchar` and `beginnotdefrange`
+  parsing, including compact-section recovery and `/UseCMap` composition
+  inheritance with derived-entry override behavior.~~
 - [ ] Broader built-in non-UCS2 predefined CMap mapping tables beyond the
   current Adobe-GB1, Adobe-CNS1, Adobe-Japan1, and Adobe-Korea1 fallbacks,
   plus broader external/general CMap parsing beyond the current
-  codespace/CID-char/CID-range, Identity `/UseCMap`, and parsed stream
+  codespace/CID/notdef sections, Identity `/UseCMap`, and parsed stream
   `/UseCMap` composition subset.
 - [x] ~~Type3 font `/ToUnicode` native text gate with indirect CharProcs,
   custom encoding, metrics, compressed rewrite, and reread.~~

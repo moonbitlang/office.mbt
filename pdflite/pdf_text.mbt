@@ -266,6 +266,7 @@ pub(all) struct PdfCMapCodeSpace {
 pub(all) struct PdfParsedCMap {
   map : Array[(Int, PdfBytes)]
   cid_map : Array[(Int, Int)]
+  notdef_map : Array[(Int, Int)]
   codespaces : Array[PdfCMapCodeSpace]
   usecmap : PdfName?
   wmode : Int?
@@ -2456,7 +2457,8 @@ fn pdf_text_parse_cmap_usecmap(data : BytesView) -> PdfName? {
 ///|
 fn pdf_text_cmap_end_marker(line : BytesView, start : Int) -> (Int, Int)? {
   let markers = [
-    "endbfchar", "endbfrange", "endcidchar", "endcidrange", "endcodespacerange",
+    "endbfchar", "endbfrange", "endcidchar", "endcidrange", "endnotdefchar", "endnotdefrange",
+    "endcodespacerange",
   ]
   let mut best : (Int, Int)? = None
   for marker in markers {
@@ -2937,6 +2939,8 @@ priv enum PdfTextCMapSection {
   PdfTextCMapNone
   PdfTextCMapCIDChar
   PdfTextCMapCIDRange
+  PdfTextCMapNotDefChar
+  PdfTextCMapNotDefRange
   PdfTextCMapCodeSpace
 }
 
@@ -3161,6 +3165,52 @@ fn pdf_text_parse_cmap_cid_sections(data : BytesView) -> Array[(Int, Int)]? {
 }
 
 ///|
+fn pdf_text_parse_cmap_notdef_sections(data : BytesView) -> Array[(Int, Int)]? {
+  let cursor = byte_cursor_of_view(data)
+  let entries : Array[(Int, Int)] = []
+  let mut section = PdfTextCMapNone
+  for raw_line in cursor.read_line_views() {
+    for raw_segment in pdf_text_cmap_section_line_views(raw_line) {
+      let mut line = raw_segment
+      match pdf_text_after_ascii(raw_segment, "beginnotdefchar") {
+        Some(rest) => {
+          section = PdfTextCMapNotDefChar
+          line = rest
+        }
+        None =>
+          match pdf_text_after_ascii(raw_segment, "beginnotdefrange") {
+            Some(rest) => {
+              section = PdfTextCMapNotDefRange
+              line = rest
+            }
+            None => ()
+          }
+      }
+      match section {
+        PdfTextCMapNotDefChar =>
+          pdf_text_push_cmap_cidchar_entries(entries, line)
+        PdfTextCMapNotDefRange =>
+          pdf_text_push_cmap_cidrange_entries(entries, line)
+        _ => ()
+      }
+      if pdf_text_line_contains_ascii(line, "endnotdefchar") &&
+        section is PdfTextCMapNotDefChar {
+        section = PdfTextCMapNone
+      }
+      if pdf_text_line_contains_ascii(line, "endnotdefrange") &&
+        section is PdfTextCMapNotDefRange {
+        section = PdfTextCMapNone
+      }
+    }
+  }
+  if entries.length() == 0 {
+    None
+  } else {
+    Some(entries)
+  }
+}
+
+///|
 fn pdf_text_parse_cmap_codespace_sections(
   data : BytesView,
 ) -> Array[PdfCMapCodeSpace]? {
@@ -3217,6 +3267,27 @@ fn pdf_text_parse_cmap_cids(data : BytesView) -> Array[(Int, Int)]? {
 }
 
 ///|
+fn pdf_text_parse_cmap_notdefs(data : BytesView) -> Array[(Int, Int)]? {
+  if pdf_text_cmap_contains_whitespace(data) {
+    let parsed = pdf_text_parse_cmap_notdef_sections(data)
+    let compact = pdf_text_cmap_without_whitespace(data)
+    let compact_parsed = pdf_text_parse_cmap_notdef_sections(compact[:])
+    match (parsed, compact_parsed) {
+      (Some(original_entries), Some(compact_entries)) =>
+        if compact_entries.length() > original_entries.length() {
+          Some(compact_entries)
+        } else {
+          Some(original_entries)
+        }
+      (None, Some(compact_entries)) => Some(compact_entries)
+      _ => parsed
+    }
+  } else {
+    pdf_text_parse_cmap_notdef_sections(data)
+  }
+}
+
+///|
 fn pdf_text_parse_cmap_codespaces(data : BytesView) -> Array[PdfCMapCodeSpace]? {
   if pdf_text_cmap_contains_whitespace(data) {
     let parsed = pdf_text_parse_cmap_codespace_sections(data)
@@ -3266,6 +3337,10 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
       None => []
     },
     cid_map: match pdf_text_parse_cmap_cids(data) {
+      Some(entries) => entries
+      None => []
+    },
+    notdef_map: match pdf_text_parse_cmap_notdefs(data) {
       Some(entries) => entries
       None => []
     },
@@ -3362,6 +3437,10 @@ fn pdf_text_compose_parsed_cmap(
     cid_map: pdf_text_compose_cid_entries(
       current.cid_map[:],
       inherited.cid_map[:],
+    ),
+    notdef_map: pdf_text_compose_cid_entries(
+      current.notdef_map[:],
+      inherited.notdef_map[:],
     ),
     codespaces: pdf_text_compose_codespaces(
       current.codespaces[:],
