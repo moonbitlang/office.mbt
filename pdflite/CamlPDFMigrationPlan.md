@@ -1491,6 +1491,9 @@ public APIs end to end:
 - preserve a partially decoded stream-filter workflow through read/write/reread;
 - append and read classic and compressed-xref-stream incremental revisions,
   including newest-versus-older revision checks;
+- append a compressed-xref-stream incremental revision to the checked-in
+  CamlPDF introduction fixture through native async file wrappers, then read
+  newest and older revisions while preserving multi-page tutorial text;
 - append and read a mode-dispatched compressed-xref-stream incremental revision
   through the public `PdfWriteMode` API;
 - recover a valid page tree when the strict xref table omits `/Pages` and page

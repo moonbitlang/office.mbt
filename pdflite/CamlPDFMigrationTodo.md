@@ -117,6 +117,9 @@ Current estimate:
 - [x] ~~Checked-in CamlPDF intro fixture reconstructs from a bad `startxref`
   pointer despite xref-stream/object-stream storage, then compressed rewrites
   and rereads with multi-page text extraction intact.~~
+- [x] ~~Checked-in CamlPDF intro fixture accepts a compressed-xref-stream
+  incremental update through native async file wrappers, with newest/older
+  revision reads preserving tutorial text.~~
 - [ ] Broader real-world PDF corpus testing.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
@@ -140,6 +143,7 @@ Current estimate:
 - [x] ~~Add a checked-in real PDF read/write corpus gate.~~
 - [x] ~~Widen checked-in real PDF text extraction across multiple pages and
   compressed/decompressed reread boundaries.~~
+- [x] ~~Add a checked-in real PDF incremental update and revision-read gate.~~
 - [x] ~~Add a checked-in real PDF malformed-startxref reconstruction gate.~~
 - [x] ~~Extend the real malformed-startxref gate to xref-stream/object-stream
   PDFs.~~

@@ -377,6 +377,39 @@ async test "async file wrappers read checked-in CamlPDF fixture PDFs" {
 }
 
 ///|
+async test "async file wrappers incrementally update checked-in CamlPDF intro fixture" {
+  let intro_path = pdf_async_io_repo_path_for_test(
+    ".repos/introduction_to_camlpdf.pdf",
+  )
+  let updated_path = pdf_async_io_test_path_for_test(
+    "intro_fixture_incremental",
+  )
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+
+  let updated = pdf_read_document_from_file(intro_path)
+  let added_object : @pdflite.PdfObject = PdfDictionary([
+    (
+      pdf_async_io_name_for_test("/Title"),
+      PdfString(@ascii.encode("intro fixture incremental")),
+    ),
+  ])
+  let added_number = updated.add_object(added_object)
+  pdf_write_document_incremental_update_with_compressed_xref_stream_to_file(
+    intro_path, updated, updated_path,
+  )
+  let revision_count = pdf_revisions_from_file(updated_path)
+  let newest = pdf_read_document_revision_from_file(updated_path, 1)
+  let older = pdf_read_document_revision_from_file(updated_path, 2)
+  pdf_async_io_remove_if_exists_for_test(updated_path)
+
+  @test.assert_eq(revision_count, 2)
+  @test.assert_eq(newest.lookup_object_or_null(added_number), added_object)
+  @test.assert_eq(older.lookup_object_or_null(added_number), PdfNull)
+  pdf_async_io_assert_intro_fixture_text_for_test(newest)
+  pdf_async_io_assert_intro_fixture_text_for_test(older)
+}
+
+///|
 async test "async file wrappers reconstruct checked-in CamlPDF logo fixture with bad startxref" {
   let logo_path = pdf_async_io_repo_path_for_test(".repos/logo.pdf")
   let corrupted_path = pdf_async_io_test_path_for_test(

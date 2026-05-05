@@ -292,7 +292,8 @@ and backend breadth, is about 77-82% complete.
 
 - Covered: native target checks, native acceptance, native async file IO,
   checked-in CamlPDF fixture PDF read/multi-page text-extract/write/stream
-  decompression/reread through native async file wrappers, and full native test
+  decompression/reread plus compressed incremental update/newest-versus-older
+  revision reads through native async file wrappers, and full native test
   coverage.
 - Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
   through native async file wrappers, compressed rewrite, and reread.
