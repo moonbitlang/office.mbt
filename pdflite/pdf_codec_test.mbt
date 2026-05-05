@@ -2049,13 +2049,78 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
   @test.assert_eq(skipped_stream.data, StreamGot(codec_ascii_for_test("Hi")))
   @test.assert_eq(skipped_stream.dictionary.lookup_immediate(filter), None)
 
+  let ccitt_stream = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+    StreamGot(codec_bytes_for_test([0xF0, 0x00])),
+  )
+  let ccitt = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITT(8, 2),
+    ccitt_stream,
+  )
+  guard ccitt is PdfStreamObject(ccitt_encoded) else {
+    fail("expected CCITT encoded stream")
+  }
+  @test.assert_eq(
+    ccitt_encoded.data,
+    StreamGot(codec_bytes_for_test([0xB6, 0x6A, 0x28, 0x00, 0x80, 0x08])),
+  )
+  @test.assert_eq(
+    ccitt_encoded.dictionary.lookup_immediate(filter),
+    Some(PdfNameObject(codec_name_for_test("/CCITTFaxDecode"))),
+  )
+  guard ccitt_encoded.dictionary.lookup_immediate(decodeparms)
+    is Some(PdfDictionary(_)) else {
+    fail("expected CCITT DecodeParms dictionary")
+  }
+  let ccitt_decoded = try! @pdflite.pdf_decode_stream(ccitt)
+  guard ccitt_decoded is PdfStreamObject(ccitt_decoded_stream) else {
+    fail("expected CCITT decoded stream")
+  }
+  @test.assert_eq(
+    ccitt_decoded_stream.data,
+    StreamGot(codec_bytes_for_test([0xF0, 0x00])),
+  )
+
+  let skipped_ccitt = try! @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITT(8, 2),
+    ccitt_stream,
+    only_if_smaller=true,
+  )
+  guard skipped_ccitt is PdfStreamObject(skipped_ccitt_stream) else {
+    fail("expected skipped CCITT stream")
+  }
+  @test.assert_eq(
+    skipped_ccitt_stream.data,
+    StreamGot(codec_bytes_for_test([0xF0, 0x00])),
+  )
+  @test.assert_eq(
+    skipped_ccitt_stream.dictionary.lookup_immediate(filter),
+    None,
+  )
+
+  let ccitt_bad_predictor : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITT(8, 2),
+    ccitt_stream,
+    predictor=Some(PdfStreamPredictorPNGUp),
+  )
+  guard ccitt_bad_predictor is Err(_) else {
+    fail("expected CCITT predictor encoding to raise")
+  }
+
+  let ccitt_bad_object : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+    PdfStreamCCITT(8, 2),
+    PdfInteger(0),
+  )
+  guard ccitt_bad_object is Err(_) else {
+    fail("expected CCITT encoding of a non-stream to raise")
+  }
+
   let unsupported : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
-    PdfStreamCCITT(1, 1),
+    PdfStreamCCITTG4(1, 1),
     stream,
   )
-  guard unsupported is Err(@pdflite.PdfError::FilterNotSupported(name)) &&
-    name == codec_name_for_test("/CCITTFaxDecode") else {
-    fail("expected unsupported typed CCITT encoding")
+  guard unsupported is Err(@pdflite.PdfError::CCITTNotSupported(_)) else {
+    fail("expected unsupported typed CCITTG4 encoding")
   }
 }
 

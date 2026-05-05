@@ -510,9 +510,12 @@ MoonBit consequences for this project:
    unsupported-filter path. Native CCITT decode is now started for
    `/CCITTFaxDecode` and `/CCF`, covering Group 3 one-dimensional `/K 0`, Group
    4 `/K < 0`, CamlPDF-compatible `/DecodeParms` defaults, `/BlackIs1`, and
-   direct indirect decode parameters. Stream filter encode/decode now
-   materializes `StreamToGet` data only at the owned-byte boundary required by
-   codec transforms. A
+   direct indirect decode parameters. Typed CCITT Group 3 `/K 0` encoding is
+   also started for `PdfStreamCCITT(columns, rows)`, including generated
+   `/DecodeParms` and decode round-trip coverage; Group 4 encoding remains
+   deferred because CamlPDF delegates it to ImageMagick. Stream filter
+   encode/decode now materializes `StreamToGet` data only at the owned-byte
+   boundary required by codec transforms. A
    document-aware `PdfDocument::pdf_decode_stream` path is now started for
    indirect `/Filter` and `/DecodeParms` entries, including array filters with
    indirect elements, short `/F` and `/DP` keys, predictor dictionaries reached
@@ -1438,6 +1441,8 @@ public APIs end to end:
   extraction, and reverse charcode lookup;
 - decode CCITT `/K 0` and `/K < 0` streams natively from `/CCITTFaxDecode` and
   `/CCF`, honoring `/DecodeParms` defaults and direct indirect parameters;
+- encode CCITT Group 3 `/K 0` streams through `PdfStreamCCITT(columns, rows)`
+  with generated `/DecodeParms` and decode round-trip coverage;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, staged Flate-then-DCT encoded-image pass-through, direct JPX

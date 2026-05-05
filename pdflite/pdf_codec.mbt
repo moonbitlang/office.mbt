@@ -2040,6 +2040,19 @@ fn pdf_predictor_decodeparms(
 }
 
 ///|
+fn pdf_ccitt_encoding_decodeparms(
+  k : Int,
+  columns : Int,
+  rows : Int,
+) -> PdfObject {
+  pdf_dictionary([
+    (pdf_ccitt_k_key(), PdfInteger(k)),
+    (pdf_columns_key(), PdfInteger(columns)),
+    (pdf_ccitt_rows_key(), PdfInteger(rows)),
+  ])
+}
+
+///|
 fn pdf_add_decodeparms_to_dictionary(
   dictionary : PdfObject,
   decodeparms : PdfObject,
@@ -2057,6 +2070,37 @@ fn pdf_add_decodeparms_to_dictionary(
         PdfArray([decodeparms, ..values]),
       )
     _ => raise PredictorExpected
+  }
+}
+
+///|
+fn pdf_encode_stream_with_ccitt(
+  columns : Int,
+  rows : Int,
+  object : PdfObject,
+  only_if_smaller : Bool,
+) -> PdfObject raise PdfError {
+  match object {
+    PdfStreamObject(stream) => {
+      let data = pdf_stream_data_bytes(stream.data)
+      let encoded = pdf_ccitt_encode_g3_1d_view(data[:], columns, rows)
+      if only_if_smaller && !pdf_encoded_stream_is_smaller(encoded, data) {
+        object
+      } else {
+        let dictionary = pdf_stream_replace_length(
+          pdf_add_filter_to_dictionary(
+            pdf_add_decodeparms_to_dictionary(
+              stream.dictionary,
+              pdf_ccitt_encoding_decodeparms(0, columns, rows),
+            ),
+            pdf_filter_name("/CCITTFaxDecode"),
+          ),
+          encoded.length(),
+        )
+        pdf_stream(dictionary, StreamGot(encoded))
+      }
+    }
+    _ => raise ParseStreamExpected
   }
 }
 
@@ -2108,18 +2152,29 @@ pub fn pdf_encode_stream_with_encoding(
   predictor_columns? : Int = 1,
 ) -> PdfObject raise PdfError {
   let filter = encoding.filter_name()
-  match predictor {
-    None => pdf_encode_stream_with_filter(filter, object, only_if_smaller~)
-    Some(predictor) =>
-      pdf_encode_stream_with_filter_and_predictor(
-        filter,
-        predictor.number(),
-        1,
-        8,
-        predictor_columns,
-        object,
-        only_if_smaller~,
-      )
+  match encoding {
+    PdfStreamCCITT(columns, rows) =>
+      match predictor {
+        None =>
+          pdf_encode_stream_with_ccitt(columns, rows, object, only_if_smaller)
+        Some(_) => raise PredictorExpected
+      }
+    PdfStreamCCITTG4(_, _) =>
+      raise CCITTNotSupported("CCITT Group 4 encode requires external tool")
+    _ =>
+      match predictor {
+        None => pdf_encode_stream_with_filter(filter, object, only_if_smaller~)
+        Some(predictor) =>
+          pdf_encode_stream_with_filter_and_predictor(
+            filter,
+            predictor.number(),
+            1,
+            8,
+            predictor_columns,
+            object,
+            only_if_smaller~,
+          )
+      }
   }
 }
 

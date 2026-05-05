@@ -350,6 +350,113 @@ fn pdf_ccitt_read_mode(input : BitStream) -> PdfCCITTModeKind raise PdfError {
 }
 
 ///|
+fn pdf_ccitt_write_code(
+  output : BitWriter,
+  table : ArrayView[PdfCCITTCode],
+  run : Int,
+  makeup : Bool,
+) -> Unit raise PdfError {
+  for code in table {
+    if code.run == run && code.makeup == makeup {
+      output.put_value_int(code.width, code.bits)
+      return
+    }
+  }
+  raise InvalidCCITTData
+}
+
+///|
+fn pdf_ccitt_write_eol(output : BitWriter) -> Unit raise PdfError {
+  pdf_ccitt_write_code(output, pdf_ccitt_white_codes[:], -1, false)
+}
+
+///|
+fn pdf_ccitt_write_run(
+  output : BitWriter,
+  white : Bool,
+  length : Int,
+) -> Unit raise PdfError {
+  if length < 0 {
+    raise InvalidCCITTData
+  }
+  let table = if white {
+    pdf_ccitt_white_codes[:]
+  } else {
+    pdf_ccitt_black_codes[:]
+  }
+  let mut remaining = length
+  while remaining >= 64 {
+    let mut best = 0
+    for code in table {
+      if code.makeup && code.run <= remaining && code.run > best {
+        best = code.run
+      }
+    }
+    pdf_ccitt_write_code(output, table, best, true)
+    remaining -= best
+  }
+  pdf_ccitt_write_code(output, table, remaining, false)
+}
+
+///|
+fn pdf_ccitt_encode_read_run(
+  input : BitStream,
+  max_columns : Int,
+) -> (Bool, Int) raise PdfError {
+  if max_columns <= 0 {
+    raise InvalidCCITTData
+  }
+  let iswhite = input.get_bit()
+  let mut length = 1
+  while length < max_columns {
+    let position = input.position()
+    let next = input.get_bit()
+    if next == iswhite {
+      length += 1
+    } else {
+      input.seek(position)
+      return (iswhite, length)
+    }
+  }
+  (iswhite, length)
+}
+
+///|
+fn pdf_ccitt_encode_g3_1d_view(
+  data : BytesView,
+  columns : Int,
+  rows : Int,
+) -> PdfBytes raise PdfError {
+  if columns <= 0 || rows < 0 {
+    raise InvalidCCITTData
+  }
+  let row_bytes = (columns - 1) / 8 + 1
+  if rows > 0 && row_bytes > data.length() / rows {
+    raise InvalidCCITTData
+  }
+  let input = bitstream_of_view(data)
+  let output = bit_writer_new()
+  let mut rows_left = rows
+  let mut columns_left = columns
+  while rows_left > 0 {
+    let (iswhite, length) = pdf_ccitt_encode_read_run(input, columns_left)
+    if !iswhite && columns_left == columns {
+      pdf_ccitt_write_run(output, true, 0)
+    }
+    pdf_ccitt_write_run(output, iswhite, length)
+    columns_left -= length
+    if columns_left == 0 {
+      input.align()
+      columns_left = columns
+      rows_left -= 1
+    }
+  }
+  pdf_ccitt_write_eol(output)
+  pdf_ccitt_write_eol(output)
+  output.to_bytes()
+}
+
+///|
 fn pdf_ccitt_blank_line(columns : Int, whiteval : Int) -> Array[Int] {
   [
     for _ in 0..<columns => whiteval

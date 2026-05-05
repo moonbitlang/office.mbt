@@ -80,13 +80,14 @@ work changes.
    Status: ASCIIHex, ASCII85, RunLength, LZW decode, Flate decode/encode
    including stored, fixed-Huffman, and dynamic-Huffman output choices,
    predictors, filter arrays, CCITT Group 3 one-dimensional and Group 4 decode,
-   document-aware stream decoding, document-wide stop-at-unknown stream
-   decompression, and JPEG data extraction are started. CCITT decode honors
-   CamlPDF-compatible `/DecodeParms` defaults, direct indirect parameters, and
-   the `/CCF` alias; CCITT encode remains unsupported like the prior typed
-   encoding path. Remaining focus: fuller zlib-style Flate tuning, optional
-   JBIG2 external-tool decode parity, broader CCITT corpus validation, and
-   actual JPEG pixel decoding.
+   typed CCITT Group 3 encode, document-aware stream decoding, document-wide
+   stop-at-unknown stream decompression, and JPEG data extraction are started.
+   CCITT decode honors CamlPDF-compatible `/DecodeParms` defaults, direct
+   indirect parameters, and the `/CCF` alias; typed CCITT Group 3 encode writes
+   `/DecodeParms` so encoded streams round-trip through pdflite's decoder.
+   Remaining focus: fuller zlib-style Flate tuning, optional JBIG2
+   external-tool decode parity, CCITT Group 4 external-tool encode policy,
+   broader CCITT corpus validation, and actual JPEG pixel decoding.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
@@ -210,9 +211,9 @@ gates are solid; backend breadth follows after native feature parity.
 
 ## Prioritized Coverage Plan
 
-Current estimate: native main-feature parity is about 80-84% complete. Full
+Current estimate: native main-feature parity is about 81-85% complete. Full
 CamlPDF parity, including deferred filter families, deeper malformed recovery,
-and backend breadth, is about 69-74% complete.
+and backend breadth, is about 70-75% complete.
 
 ### P0: Finish Native Main Workflows
 
@@ -251,12 +252,14 @@ and backend breadth, is about 69-74% complete.
   `/JBIG2Globals`; native font acceptance covers embedded TrueType `FontFile2`
   with generated `/ToUnicode` text extraction. Stream decode now covers CCITT
   `/K 0` and `/K < 0` with `/DecodeParms` defaults and direct indirect params.
+  Typed stream encoding now covers CCITT Group 3 `/K 0` and round-trips through
+  decode.
 - Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
   vertical-writing behavior beyond the current gates, additional Type3/TrueType
   edge coverage, and more real-world ToUnicode variations.
 - Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
-  broader CCITT corpus validation, and optional external JBIG2 decoder
-  integration.
+  broader CCITT corpus validation, CCITT Group 4 external-tool encode policy,
+  and optional external JBIG2 decoder integration.
 - Not covered enough: broader malformed xref-table/object recovery driven by
   real-world corpus files.
 

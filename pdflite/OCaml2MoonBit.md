@@ -604,6 +604,8 @@ ordinary ported code that catches one constructor and propagates the rest, use
 `expr catch { SpecificError => fallback; error => raise error }` so the
 function can keep `raise ProjectError`. Payload-carrying suberror constructors
 match with ordinary enum payload syntax such as `SpecificError(_)`.
+`catch` arms are still checked for exhaustiveness, so do not omit the final
+propagating arm when only one error constructor has special handling.
 
 ```sh
 moon run -c 'enum E { A(Int); B }

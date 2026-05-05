@@ -98,6 +98,72 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
 }
 
 ///|
+test "CCITT Group 3 encoder covers white black long runs and malformed input" {
+  let encoded = pdf_ccitt_encode_g3_1d_view(
+    ccitt_wb_bytes([0xF0, 0x00])[:],
+    8,
+    2,
+  )
+  @test.assert_eq(encoded, ccitt_wb_bytes([0xB6, 0x6A, 0x28, 0x00, 0x80, 0x08]))
+  @test.assert_eq(
+    pdf_ccitt_decode_view(encoded[:], {
+      ..pdf_ccitt_default_params(),
+      columns: 8,
+      rows: 2,
+    }),
+    ccitt_wb_bytes([0xF0, 0x00]),
+  )
+
+  let long = pdf_ccitt_encode_g3_1d_view(
+    ccitt_wb_bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])[:],
+    80,
+    1,
+  )
+  @test.assert_eq(
+    pdf_ccitt_decode_view(long[:], {
+      ..pdf_ccitt_default_params(),
+      columns: 80,
+      rows: 1,
+    }),
+    ccitt_wb_bytes([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
+  )
+
+  let empty = pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([])[:], 8, 0)
+  @test.assert_eq(empty, ccitt_wb_bytes([0x00, 0x10, 0x01]))
+
+  let short : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
+    ccitt_wb_bytes([])[:],
+    8,
+    1,
+  )
+  guard short is Err(_) else { fail("expected not enough CCITT source data") }
+
+  let invalid : Result[PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
+    ccitt_wb_bytes([])[:],
+    0,
+    1,
+  )
+  guard invalid is Err(_) else { fail("expected invalid CCITT encode params") }
+
+  let bad_write : Result[Unit, Error] = try? pdf_ccitt_write_run(
+    bit_writer_new(),
+    true,
+    -1,
+  )
+  guard bad_write is Err(_) else {
+    fail("expected invalid private CCITT run length")
+  }
+
+  let bad_read : Result[(Bool, Int), Error] = try? pdf_ccitt_encode_read_run(
+    bitstream_of_bytes(ccitt_wb_bytes([0xFF])),
+    0,
+  )
+  guard bad_read is Err(_) else {
+    fail("expected invalid private CCITT read columns")
+  }
+}
+
+///|
 test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported modes" {
   let pass = pdf_ccitt_decode_view(ccitt_wb_bits([0, 0, 0, 1])[:], {
     ..pdf_ccitt_default_params(),

@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 80-84%.
+- Native main-feature parity: 81-85%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 69-74%.
+  breadth: 70-75%.
 
 ## P0: Native Main Workflows
 
@@ -66,6 +66,8 @@ Current estimate:
   compressed read/write/reread boundaries.~~
 - [x] ~~CCITT `/K 0` and `/K < 0` native stream decode with `/DecodeParms`
   parsing and `/CCF` alias coverage.~~
+- [x] ~~Typed CCITT Group 3 `/K 0` stream encoding with `/DecodeParms`
+  round-trip coverage.~~
 - [ ] Broader predefined CMap semantics beyond Identity-H/V and more
   vertical-writing text behavior.
 - [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
@@ -100,5 +102,6 @@ Current estimate:
 - [x] ~~Expand malformed-reader recovery from realistic documents.~~
 - [x] ~~Add one Type3/TrueType font edge gate.~~
 - [x] ~~Decide and start one CCITT/JPEG decode implementation slice.~~
+- [x] ~~Add CCITT Group 3 encode parity for typed stream encoding.~~
 - [ ] Add real-world CCITT image corpus coverage.
 - [ ] Revisit non-native backend validation after native parity is stable.
