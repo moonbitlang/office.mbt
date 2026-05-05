@@ -32,7 +32,9 @@ work changes.
    do not get mistaken for stream objects.
    Xref-stream reading now also mirrors CamlPDF's tolerance for missing
    `/Type /XRef` when the stream still carries xref-stream structure such as
-   `/W`, while keeping explicit wrong `/Type` values rejected.
+   `/W`, while keeping explicit wrong `/Type` values rejected; the malformed
+   reconstruction path applies the same rule when using xref-stream
+   dictionaries as trailer candidates.
    Public reads now also probe catalog/page-tree readability after strict
    loading and fall back to reconstruction when xref omissions leave the root
    catalog or `/Pages` references unresolved.
@@ -144,5 +146,6 @@ Pick one bounded compatibility slice at a time. Each slice should include:
 - `CamlPDFMigrationPlan.md` status updates when project behavior changes,
 - `OCaml2MoonBit.md` updates only when a reusable language/API fact is newly
   verified,
-- `moon info && moon fmt`, `moon test --target all`, coverage, and a regular
-  commit.
+- native-target `moon check`/`moon test` during the inner loop, broader backend
+  validation during stabilization or backend-sensitive work, coverage, and a
+  regular commit.

@@ -566,6 +566,29 @@ fn reader_xref_stream_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_xref_stream_pdf_without_type_with_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog >>",
+  )
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Length ")
+  reader_push_ascii(output, stream_data.length().to_string())
+  reader_push_ascii(output, " /Size 3 /Root 1 0 R /W [1 4 2] >>\nstream\n")
+  for byte in stream_data {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_xref_stream_pdf_with_index() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -2019,6 +2042,29 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers" {
     parsed
     .trailer_dict()
     .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Length"))),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs xref stream trailers without Type" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_without_type_with_bad_startxref(),
+  )
+  @test.assert_eq(parsed.version(), (1, 5))
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1, 2])
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type"))),
+    None,
+  )
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/W"))),
     None,
   )
 }

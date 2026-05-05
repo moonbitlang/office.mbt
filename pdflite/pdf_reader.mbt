@@ -1193,10 +1193,10 @@ fn pdf_reconstructed_xref_stream_trailer_at(
   let parsed = cursor.read_reconstructed_indirect_prefix_at_current()
   match parsed.object {
     PdfDictionary(_) as dictionary =>
-      match dictionary.lookup_immediate(pdf_reader_type_name()) {
-        Some(PdfNameObject(name)) if name == pdf_reader_xref_name() =>
-          pdf_reader_stream_dictionary_without_xref_keys(dictionary)
-        _ => raise XRefExpected
+      if pdf_reader_xref_stream_type_ok(dictionary) {
+        pdf_reader_stream_dictionary_without_xref_keys(dictionary)
+      } else {
+        raise XRefExpected
       }
     _ => raise XRefExpected
   }
