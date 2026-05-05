@@ -87,7 +87,7 @@ work changes.
    `/DecodeParms` so encoded streams round-trip through pdflite's decoder.
    Remaining focus: fuller zlib-style Flate tuning, optional JBIG2
    external-tool decode parity, CCITT Group 4 external-tool encode policy,
-   broader CCITT corpus validation, and actual JPEG pixel decoding.
+   broader CCITT corpus validation, and DCT/JPEG real-world payload coverage.
 
 4. Page and content layer.
    Owner modules: `pdf_content.mbt`, `pdf_page.mbt`, `pdf_dest.mbt`,
@@ -258,9 +258,11 @@ and backend breadth, is about 70-75% complete.
 - Not covered enough: broader predefined CMap semantics beyond Identity-H/V,
   vertical-writing behavior beyond the current gates, additional Type3/TrueType
   edge coverage, and more real-world ToUnicode variations.
-- Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
-  broader CCITT corpus validation, CCITT Group 4 external-tool encode policy,
-  and optional external JBIG2 decoder integration.
+- Not covered enough: fuller zlib/Flate tuning parity, broader DCT/JPEG and
+  CCITT corpus validation, CCITT Group 4 external-tool encode policy, and
+  optional external JBIG2 decoder integration. Actual JPEG pixel decoding is
+  optional beyond CamlPDF image-extraction parity, which returns encoded JPEG
+  payloads.
 - Not covered enough: broader malformed xref-table/object recovery driven by
   real-world corpus files.
 
@@ -355,8 +357,9 @@ and backend breadth, is about 70-75% complete.
 - In progress: image/filter parity, Flate compression tuning, text CMap parity,
   remaining encryption edge cases, remaining malformed-reader recovery, and
   example-level integration fixtures.
-- Deferred: optional JBIG2 external-style decode, JPEG pixel decode, broader
-  predefined CMap coverage, broader CCITT corpus validation, and broad
+- Deferred: optional JBIG2 external-style decode, optional JPEG pixel decode
+  beyond CamlPDF parity, broader predefined CMap coverage, broader CCITT corpus
+  validation, and broad
   real-world PDF recovery behavior.
 
 ## Working Rule

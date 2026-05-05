@@ -73,7 +73,7 @@ Current estimate:
 - [ ] Broader predefined CMap semantics beyond Identity-H/V and more
   vertical-writing text behavior.
 - [ ] More Type3/TrueType font edge coverage beyond the embedded TrueType gate.
-- [ ] JPEG pixel decoding.
+- [ ] Additional real-world DCT/JPEG encoded-payload corpus coverage.
 - [ ] Optional external JBIG2 decoder integration and broader CCITT corpus
   validation.
 - [ ] Fuller zlib/Flate compression tuning parity.

@@ -453,9 +453,10 @@ MoonBit consequences for this project:
    Port `pdfcodec` incrementally. Start with no-op/raw streams plus
    ASCIIHex/ASCII85/RunLength because they are byte-local. Add flate through
    pure MoonBit zlib/DEFLATE code, then layer predictors on decoded bytes.
-   Keep DCT/JBIG2 pixel decode behavior behind explicit capability checks until
-   image support needs them; CCITT stream decode is now part of the native
-   codec surface and typed Group 3 encoding is started.
+   Keep DCT/JBIG2 pixel decode behavior behind explicit capability checks;
+   CamlPDF image extraction preserves DCT/JPEG as encoded data. CCITT stream
+   decode is now part of the native codec surface and typed Group 3 encoding is
+   started.
    Status: started with low-level ASCIIHex encode/decode over `Bytes`. The
    decoder skips PDF whitespace, accepts uppercase and lowercase hex digits,
    pads an odd final nibble before `>`, and reports malformed data with
@@ -1001,7 +1002,9 @@ MoonBit consequences for this project:
    not equivalent. Separation image pixels are started for 8-bit samples with
    Type 2 and Type 4 tint functions and DeviceCMYK alternates.
    Type 4 calculator bitshift direction, logical right-shift behavior, and
-   masked-width behavior are covered. JPEG decoding remains deferred.
+   masked-width behavior are covered. Actual JPEG pixel decoding remains
+   optional beyond current CamlPDF parity; encoded DCT/JPEG pass-through is
+   covered.
 
 10. Encryption.
     Port `pdfcryptprimitives` and `pdfcrypt` once reader/writer/filter basics
