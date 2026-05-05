@@ -3716,6 +3716,34 @@ test "native acceptance suite normalizes tolerated malformed classic xrefs" {
 }
 
 ///|
+test "native acceptance suite reconstructs malformed feature-rich classic documents" {
+  let bytes = @pdflite.pdf_write_document(
+    acceptance_document_feature_lifecycle_document_for_test(),
+  )
+  let corrupted = acceptance_corrupt_first_in_use_xref_offset_for_test(bytes)
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    corrupted,
+  )
+  guard strict is Err(_) else {
+    fail("expected corrupted xref offset to require reconstruction")
+  }
+  let parsed = @pdflite.pdf_read_document_from_bytes(corrupted)
+  @test.assert_eq(parsed.first_xref(), 0)
+  acceptance_assert_one_page_invariants_for_test(parsed, (1, 4))
+  let changed = parsed.change_pages(
+    parsed.pages_of_pagetree(),
+    change_references=true,
+    matrices=[(1, @pdflite.transform_translate(5.0, -6.0))],
+  )
+  let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
+    changed,
+  )
+  let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)
+  acceptance_assert_one_page_invariants_for_test(reparsed, (1, 5))
+  acceptance_assert_document_feature_lifecycle_for_test(reparsed)
+}
+
+///|
 test "native acceptance suite merges and extracts pages through reader boundaries" {
   let first = try! acceptance_one_page_document_for_test()
   let second = try! acceptance_one_page_document_for_test()

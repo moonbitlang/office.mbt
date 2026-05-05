@@ -1522,6 +1522,10 @@ public APIs end to end:
   `ObjectParsedAlreadyDecrypted` plaintext before compressed write/read.
 - read a minimal page tree through a CamlPDF-tolerated malformed classic xref
   table, then normalize it through the writer and reread it.
+- recover a feature-rich classic document after corrupting its xref offsets,
+  then run `change_pages` and compressed write/reread while preserving page
+  labels, annotations, old-style destinations, name-tree destinations, catalog
+  actions, and matrix-transformed page targets.
 - decrypt an AES-128 document after forcing malformed-xref reconstruction,
   proving direct encrypted objects still pass through the public password
   wrapper after xref fallback.

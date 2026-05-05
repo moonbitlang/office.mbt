@@ -7,9 +7,9 @@ library-agnostic; project architecture details belong in
 
 Current estimate:
 
-- Native main-feature parity: 77-81%.
+- Native main-feature parity: 78-82%.
 - Full CamlPDF parity across deferred filters, malformed recovery, and backend
-  breadth: 66-71%.
+  breadth: 67-72%.
 
 ## P0: Native Main Workflows
 
@@ -45,6 +45,9 @@ Current estimate:
 - [x] ~~Non-stream encrypted parser-state edge gate through public password-read
   or recrypt workflow.~~
 - [x] ~~Broader encrypted malformed-reader gate beyond stream/object-stream data.~~
+- [x] ~~Feature-rich classic malformed-xref reconstruction gate covering labels,
+  annotations, destinations, name-tree destinations, catalog actions,
+  `change_pages`, and compressed rewrite/reread.~~
 
 ## P1: Format Parity
 
@@ -65,7 +68,8 @@ Current estimate:
 - [ ] JPEG pixel decoding.
 - [ ] CCITT decode and optional external JBIG2 decoder integration.
 - [ ] Fuller zlib/Flate compression tuning parity.
-- [ ] Broader malformed xref-table/object recovery driven by public workflows.
+- [ ] Broader malformed xref-table/object recovery driven by public workflows
+  and real-world corpus files.
 
 ## P2: Backend Breadth And Compatibility
 
@@ -88,5 +92,7 @@ Current estimate:
 - [x] ~~Add one broader encrypted malformed-reader gate beyond stream/object-stream data.~~
 - [x] ~~Add one predefined-CMap text gate.~~
 - [x] ~~Add one remaining filter/image-family gate.~~
-- [ ] Expand malformed-reader recovery from realistic documents.
+- [x] ~~Expand malformed-reader recovery from realistic documents.~~
+- [ ] Add one Type3/TrueType font edge gate.
+- [ ] Decide and start one CCITT/JPEG decode implementation slice.
 - [ ] Revisit non-native backend validation after native parity is stable.

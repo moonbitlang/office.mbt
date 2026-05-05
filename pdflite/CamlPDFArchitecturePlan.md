@@ -225,7 +225,9 @@ and backend breadth, is about 64-69% complete.
   decryption, native secure-random writer paths, saved-state recrypt,
   encrypted object streams, lazy encrypted stream forcing, non-stream
   object-stream payload recrypt, bad-startxref encrypted reconstruction with
-  recrypt, and `/EncryptMetadata false`.
+  recrypt, feature-rich classic malformed-xref reconstruction through labels,
+  annotations, destinations, name-tree destinations, catalog actions,
+  `change_pages`, and compressed rewrite/reread, and `/EncryptMetadata false`.
 - Not covered enough: remaining `change_pages` compatibility fixtures involving
   unusual inherited page data and broader real-world destination/action
   combinations.
@@ -246,7 +248,7 @@ and backend breadth, is about 64-69% complete.
 - Not covered enough: JPEG pixel decode, fuller zlib/Flate tuning parity,
   CCITT decode, and optional external JBIG2 decoder integration.
 - Not covered enough: broader malformed xref-table/object recovery driven by
-  realistic public workflows rather than isolated parser quirks.
+  real-world corpus files.
 
 ### P2: Broaden Compatibility After Native
 
@@ -260,9 +262,9 @@ and backend breadth, is about 64-69% complete.
 
 ### Immediate Work Order
 
-- Next: expand malformed-reader recovery from realistic documents.
-- Later: expand malformed-reader recovery from realistic documents and only
-  then widen backend validation beyond native.
+- Next: add one Type3/TrueType font edge gate, then decide and start one
+  CCITT/JPEG decode implementation slice.
+- Later: widen backend validation beyond native after native parity stabilizes.
 
 ## Current High-Level Checklist
 
@@ -317,8 +319,10 @@ and backend breadth, is about 64-69% complete.
   `/EncryptMetadata false` gate through compressed encrypted output and
   saved-state recrypt; strict
   reading and writer normalization for
-  CamlPDF-tolerated malformed classic xref rows; and password decryption after
-  malformed-xref reconstruction of direct encrypted objects.
+  CamlPDF-tolerated malformed classic xref rows; feature-rich classic malformed
+  xref reconstruction through `change_pages` and compressed rewrite/reread; and
+  password decryption after malformed-xref reconstruction of direct encrypted
+  objects.
   Count-changing `change_pages` is covered through compressed reader and writer
   boundaries with explicit serial reference mapping, bookmark retargeting,
   transformed catalog `/OpenAction`, trailer `/ID`, and root metadata
