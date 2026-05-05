@@ -233,9 +233,11 @@ gates are solid; backend breadth follows after native feature parity.
   `/OpenAction`; a merge catalog-feature gate for AcroForm fields, optional
   content groups, structure trees with parent trees, and trailer `/Info`; a
   ToUnicode text-extraction gate using filtered CMap streams through compressed
-  read/write boundaries; an image-extraction gate for Flate raw indexed image
-  XObjects, Flate-to-DCT encoded images, and Flate inline images through
-  compressed read/write and document-wide decompression boundaries; an AESV2
+  read/write boundaries; an `/Identity-H` Type0 CID text-extraction gate
+  through compressed read/write boundaries; an image-extraction gate for Flate
+  raw indexed image XObjects, Flate-to-DCT encoded images, and Flate inline
+  images through compressed read/write and document-wide decompression
+  boundaries; an AESV2
   `/EncryptMetadata false` gate through compressed encrypted output and
   saved-state recrypt; strict
   reading and writer normalization for

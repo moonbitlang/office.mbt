@@ -1403,6 +1403,9 @@ public APIs end to end:
 - extract text from parsed page content with a filtered ToUnicode CMap stream
   after compressed xref-stream write/read boundaries, including `Tj` and `TJ`
   content operators and reverse charcode lookup;
+- extract Type0 `/Identity-H` CID-keyed text from parsed page content after
+  compressed xref-stream write/read boundaries, including two-byte `Tj`/`TJ`
+  text and public font identity predicates;
 - extract images from page resources and parsed content after compressed
   xref-stream write/read boundaries, including Flate-decoded raw `/Indexed`
   image XObjects, staged Flate-then-DCT encoded-image pass-through, and Flate
