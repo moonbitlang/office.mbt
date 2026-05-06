@@ -2699,6 +2699,35 @@ test "pdftext top-level font and extractor wrappers match methods" {
 }
 
 ///|
+test "PdfTextExtractor codepoints_of_text keeps ToUnicode first match and fallbacks" {
+  let extractor = @pdflite.pdf_text_extractor_of_font_real(
+    PdfFontSimple({
+      fonttype: PdfType1,
+      basefont: Some(text_name_for_test("/Helvetica")),
+      firstchar: 0,
+      lastchar: 0,
+      widths: [],
+      fontdescriptor: Some({
+        ..text_font_descriptor_for_test(),
+        tounicode: Some([
+          (65, text_bytes_for_test([0x00, 0x41])),
+          (65, text_bytes_for_test([0x00, 0x42])),
+          (66, text_bytes_for_test([0xD8, 0x00])),
+        ]),
+      }),
+      fontmetrics: None,
+      encoding: PdfWinAnsiEncoding,
+    }),
+  )
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test([65, 66, 67])[:]),
+    [0x41, 66, 67],
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x41), Some(65))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x42), Some(65))
+}
+
+///|
 test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
   let parsed = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(

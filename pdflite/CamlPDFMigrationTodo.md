@@ -586,6 +586,9 @@ Current backend snapshot:
 - [x] ~~External CMap text extraction now builds per-run hash lookup maps for
   explicit CID, notdef, and Unicode entries instead of scanning parsed maps for
   every character code.~~
+- [x] ~~Plain `/ToUnicode` codepoint extraction now builds a per-run hash lookup
+  map instead of scanning the ToUnicode table for every character code, while
+  preserving duplicate first-entry decoding and malformed UTF-16 fallback.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -1073,6 +1076,9 @@ Current backend snapshot:
   charcode sets while preserving current-over-inherited precedence.~~
 - [x] ~~Tune external CMap codepoint extraction with per-text-run hash lookup
   maps, keeping duplicate first-match behavior and malformed UTF-16 fallback
+  covered.~~
+- [x] ~~Tune plain `/ToUnicode` codepoint extraction with a per-run hash lookup
+  map, keeping duplicate first-match behavior and malformed UTF-16 fallback
   covered.~~
 - [x] ~~Tune pure Flate Huffman symbol decoding with bounded lookup-table
   lookahead and cached bit masks while preserving prefix consumed-length

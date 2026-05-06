@@ -1007,7 +1007,10 @@ MoonBit consequences for this project:
    plus UTF16 horizontal/vertical CMaps, including decoded glyph records,
    glyph-name extraction, flattened codepoint extraction, odd-length composite
    string rejection, and reverse ToUnicode charcode lookup for single Unicode
-   codepoints. Standalone `.repos/pdftext.mli`-shaped wrappers now expose font
+   codepoints. Plain `/ToUnicode` codepoint extraction now builds a per-run
+   hash lookup map, preserving duplicate first-entry decoding and malformed
+   UTF-16 fallback while avoiding a table scan for every character code.
+   Standalone `.repos/pdftext.mli`-shaped wrappers now expose font
    debug strings, font read/write, Identity-H detection, text extractors,
    codepoint and glyph-name extraction, and reverse charcode closures over the
    existing typed text API. Native acceptance now also covers Type3

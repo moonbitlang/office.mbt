@@ -10312,6 +10312,26 @@ fn PdfTextExtractor::pdf_text_external_cmap_codepoints_of_text(
 }
 
 ///|
+fn PdfTextExtractor::pdf_text_tounicode_codepoints_of_text(
+  self : PdfTextExtractor,
+  tounicode : ArrayView[(Int, PdfBytes)],
+  text : BytesView,
+) -> Array[Int] raise PdfError {
+  let lookup = pdf_text_tounicode_codepoints_lookup_map(tounicode)
+  let output : Array[Int] = []
+  for code in self.font.pdf_text_charcodes_of_text(text) {
+    match lookup.get(code) {
+      Some(codepoints) =>
+        for codepoint in codepoints {
+          output.push(codepoint)
+        }
+      None => output.push(code)
+    }
+  }
+  output
+}
+
+///|
 fn PdfTextExtractor::pdf_text_regular_codepoints_of_text(
   self : PdfTextExtractor,
   text : BytesView,
@@ -10331,7 +10351,8 @@ pub fn PdfTextExtractor::codepoints_of_text(
   text : BytesView,
 ) -> Array[Int] raise PdfError {
   match self.font.pdf_text_tounicode() {
-    Some(_) => self.pdf_text_regular_codepoints_of_text(text)
+    Some(tounicode) =>
+      self.pdf_text_tounicode_codepoints_of_text(tounicode[:], text)
     None =>
       match self.font {
         PdfFontCIDKeyed(font) =>
