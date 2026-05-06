@@ -914,6 +914,7 @@ fn reader_xref_stream_pdf_with_flate_filter_bad_startxref() -> @pdflite.PdfBytes
 ///|
 fn reader_xref_stream_pdf_with_flate_predictor_startxref(
   startxref_override : Int?,
+  use_short_names : Bool,
 ) -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.5\n")
@@ -941,9 +942,12 @@ fn reader_xref_stream_pdf_with_flate_predictor_startxref(
   reader_push_ascii(output, "2 0 obj\n")
   reader_push_ascii(output, "<< /Type /XRef /Length ")
   reader_push_ascii(output, encoded.length().to_string())
-  reader_push_ascii(
-    output, " /Size 4 /Root 1 0 R /W [1 4 2] /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns 7 >> >>\nstream\n",
-  )
+  let filter_dictionary = if use_short_names {
+    " /Size 4 /Root 1 0 R /W [1 4 2] /Filter /Fl /DP << /Predictor 12 /Columns 7 >> >>\nstream\n"
+  } else {
+    " /Size 4 /Root 1 0 R /W [1 4 2] /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns 7 >> >>\nstream\n"
+  }
+  reader_push_ascii(output, filter_dictionary)
   for byte in encoded {
     output.push(byte)
   }
@@ -959,12 +963,22 @@ fn reader_xref_stream_pdf_with_flate_predictor_startxref(
 
 ///|
 fn reader_xref_stream_pdf_with_flate_predictor() -> @pdflite.PdfBytes {
-  reader_xref_stream_pdf_with_flate_predictor_startxref(None)
+  reader_xref_stream_pdf_with_flate_predictor_startxref(None, false)
 }
 
 ///|
 fn reader_xref_stream_pdf_with_flate_predictor_bad_startxref() -> @pdflite.PdfBytes {
-  reader_xref_stream_pdf_with_flate_predictor_startxref(Some(0))
+  reader_xref_stream_pdf_with_flate_predictor_startxref(Some(0), false)
+}
+
+///|
+fn reader_xref_stream_pdf_with_short_flate_predictor() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_flate_predictor_startxref(None, true)
+}
+
+///|
+fn reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_flate_predictor_startxref(Some(0), true)
 }
 
 ///|
@@ -2746,6 +2760,44 @@ test "pdf_read_document_from_bytes reconstructs Flate predictor xref streams" {
     .lookup_immediate(
       @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DecodeParms")),
     ),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes decodes short-name Flate predictor xref streams" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_short_flate_predictor(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 3])
+  @test.assert_eq(parsed.lookup_object_or_null(3), PdfInteger(7))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DP"))),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs short-name Flate predictor xref streams" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.object_numbers(), [1, 3])
+  @test.assert_eq(parsed.lookup_object_or_null(3), PdfInteger(7))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/DP"))),
     None,
   )
 }
