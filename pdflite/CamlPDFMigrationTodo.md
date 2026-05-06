@@ -216,6 +216,9 @@ Current backend snapshot:
 - [x] ~~Add reconstructed filtered xref-stream coverage where a bad
   `startxref` forces recovery of an `/ASCIIHexDecode` xref stream and sanitizes
   stream-only trailer keys.~~
+- [x] ~~Add strict and reconstructed staged-filter xref-stream coverage for
+  direct `/Filter [/ASCIIHexDecode /RunLengthDecode]` arrays through
+  bad-startxref recovery.~~
 - [ ] Add more malformed xref-table/xref-stream/object-stream recovery cases
   from real-world PDFs.
 - [x] ~~Add a native reader-boundary gate for the next available predefined CMap
@@ -934,6 +937,8 @@ Current backend snapshot:
   coverage for omitted type fields (`/W [0 4 2]`) defaulting to in-use entries.~~
 - [x] ~~Filtered xref-stream bad-startxref reconstruction now has explicit
   coverage for ASCIIHex decoding and sanitized trailer metadata.~~
+- [x] ~~Staged-filter xref streams now have strict and reconstructed coverage
+  for direct ASCIIHex-plus-RunLength filter arrays.~~
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
   the current bad-startxref real-corpus, multi-revision, and encrypted
   object-stream gates.

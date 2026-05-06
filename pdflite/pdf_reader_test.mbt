@@ -850,6 +850,55 @@ fn reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref() -> @pdflite.PdfB
 }
 
 ///|
+fn reader_xref_stream_pdf_with_filter_array_startxref(
+  startxref_override : Int?,
+) -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.5\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 3 0 R >>",
+  )
+  let value_offset = reader_push_indirect_object(output, 3, 0, "7")
+  let xref_offset = output.length()
+  let stream_data : Array[Byte] = []
+  reader_push_xref_stream_entry(stream_data, 0, 0, 65535)
+  reader_push_xref_stream_entry(stream_data, 1, catalog_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, xref_offset, 0)
+  reader_push_xref_stream_entry(stream_data, 1, value_offset, 0)
+  let run_length = @pdflite.pdf_run_length_encode(
+    Bytes::from_array(stream_data),
+  )
+  let encoded = @pdflite.pdf_ascii_hex_encode(run_length)
+  reader_push_ascii(output, "2 0 obj\n")
+  reader_push_ascii(output, "<< /Type /XRef /Length ")
+  reader_push_ascii(output, encoded.length().to_string())
+  reader_push_ascii(
+    output, " /Size 4 /Root 1 0 R /W [1 4 2] /Filter [/ASCIIHexDecode /RunLengthDecode] >>\nstream\n",
+  )
+  for byte in encoded {
+    output.push(byte)
+  }
+  reader_push_ascii(output, "\nendstream\nendobj\nstartxref\n")
+  let startxref = match startxref_override {
+    Some(offset) => offset
+    None => xref_offset
+  }
+  reader_push_ascii(output, startxref.to_string())
+  reader_push_ascii(output, "\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
+fn reader_xref_stream_pdf_with_filter_array() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_filter_array_startxref(None)
+}
+
+///|
+fn reader_xref_stream_pdf_with_filter_array_bad_startxref() -> @pdflite.PdfBytes {
+  reader_xref_stream_pdf_with_filter_array_startxref(Some(0))
+}
+
+///|
 fn reader_hybrid_xref_stream_pdf_with_startxref_override(
   startxref_override : Int?,
 ) -> @pdflite.PdfBytes {
@@ -2472,6 +2521,44 @@ test "pdf_read_document_from_bytes reconstructs filtered xref streams" {
   )
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes decodes xref stream filter arrays" {
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_filter_array(),
+  )
+  @test.assert_eq(parsed.object_numbers(), [1, 3])
+  @test.assert_eq(parsed.lookup_object_or_null(3), PdfInteger(7))
+  @test.assert_eq(
+    parsed
+    .trailer_dict()
+    .lookup_immediate(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Filter"))),
+    None,
+  )
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs xref stream filter arrays" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_xref_stream_pdf_with_filter_array_bad_startxref(),
+  )
+  guard strict is Err(@pdflite.PdfError::XRefExpected) else {
+    fail("expected strict XRefExpected")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_xref_stream_pdf_with_filter_array_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.object_numbers(), [1, 3])
+  @test.assert_eq(parsed.lookup_object_or_null(3), PdfInteger(7))
   @test.assert_eq(
     parsed
     .trailer_dict()
