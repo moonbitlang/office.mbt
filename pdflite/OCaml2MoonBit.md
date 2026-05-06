@@ -654,6 +654,21 @@ forcing callers to allocate. Equality can compare a view against owned bytes
 when the view is the left operand; if the owned `Bytes` is on the left, slice it
 explicitly first so the comparison is typed as `BytesView` equality.
 
+```sh
+moon run -c $'fn accepts_bytes(data : Bytes) -> Int { data.length() }\nfn main { let data = Bytes::from_array([65, 66, 67]); println(accepts_bytes(data[1:]).to_string()) }'
+# Error: [4014] BytesView wanted Bytes mismatch
+
+moon run --target native -c $'#borrow(data)\nextern "C" fn accepts_native_bytes_for_probe(data : Bytes) -> Int = "Moonbit_array_length"\nfn main { let data = Bytes::from_array([65, 66, 67]); println(accepts_native_bytes_for_probe(data[1:]).to_string()) }'
+# Error: [4014] BytesView wanted Bytes mismatch
+```
+
+The reverse direction is not automatic: a `BytesView` does not type-check where
+an owned `Bytes` parameter is required, including native extern declarations.
+Keep public and internal read-only APIs typed as `BytesView` where possible.
+When a callee really requires `Bytes`, such as an ownership boundary, mutation
+boundary, long-lived value, or current C FFI byte parameter, call
+`.to_owned()` deliberately and account for the possible copy.
+
 For byte-oriented section parsers, prefer one option-returning helper that both
 finds a marker and returns the remaining `BytesView`. This avoids the common
 porting shape `contains(marker)` followed by a second lookup with an unreachable
