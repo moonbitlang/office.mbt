@@ -581,12 +581,13 @@ fn PdfDocument::pdf_bookmarks_for_pages(
 ) -> Array[PdfBookmark] raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let page_reference_numbers = self.page_reference_numbers()
+  let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
   let selected_pages = pdf_number_set(page_numbers)
   let keep = [ for _ in bookmarks => false ]
   for index in 0..<bookmarks.length() {
-    let page_number = self.pdf_destination_page_number(
+    let page_number = self.pdf_destination_page_number_with_lookup(
       bookmarks[index].target,
-      page_reference_numbers,
+      page_number_lookup,
     )
     if selected_pages.contains(page_number) {
       keep[index] = true

@@ -385,28 +385,51 @@ pub fn pdf_object_of_destination(destination : PdfDestination) -> PdfObject {
 }
 
 ///|
-fn pdf_destination_page_number_of_target(
+priv struct PdfPageNumberLookup {
+  values : @hashmap.HashMap[Int, Int]
+}
+
+///|
+fn pdf_page_number_lookup(
   page_reference_numbers : ArrayView[Int],
-  target : PdfTargetPage,
+) -> PdfPageNumberLookup {
+  let values : @hashmap.HashMap[Int, Int] = @hashmap.HashMap::new()
+  for index in 0..<page_reference_numbers.length() {
+    let object_number = page_reference_numbers[index]
+    if !values.contains(object_number) {
+      values[object_number] = index + 1
+    }
+  }
+  { values, }
+}
+
+///|
+fn PdfPageNumberLookup::page_number(
+  self : PdfPageNumberLookup,
+  object_number : Int,
 ) -> Int {
-  match target {
-    TargetOtherDocPageNumber(number) => number + 1
-    TargetPageObject(object_number) =>
-      for index in 0..<page_reference_numbers.length() {
-        if page_reference_numbers[index] == object_number {
-          break index + 1
-        }
-      } nobreak {
-        0
-      }
+  match self.values.get(object_number) {
+    Some(page_number) => page_number
+    None => 0
   }
 }
 
 ///|
-fn PdfDocument::pdf_destination_page_number(
+fn pdf_destination_page_number_of_target(
+  page_numbers : PdfPageNumberLookup,
+  target : PdfTargetPage,
+) -> Int {
+  match target {
+    TargetOtherDocPageNumber(number) => number + 1
+    TargetPageObject(object_number) => page_numbers.page_number(object_number)
+  }
+}
+
+///|
+fn PdfDocument::pdf_destination_page_number_with_lookup(
   self : PdfDocument,
   destination : PdfDestination,
-  page_reference_numbers : ArrayView[Int],
+  page_numbers : PdfPageNumberLookup,
 ) -> Int raise PdfError {
   match destination {
     DestNamed(_) | DestString(_) => {
@@ -416,7 +439,7 @@ fn PdfDocument::pdf_destination_page_number(
       if resolved == destination {
         0
       } else {
-        self.pdf_destination_page_number(resolved, page_reference_numbers)
+        self.pdf_destination_page_number_with_lookup(resolved, page_numbers)
       }
     }
     DestAction(action) =>
@@ -427,9 +450,9 @@ fn PdfDocument::pdf_destination_page_number(
         ) {
         (Some(PdfNameObject(name)), Some(raw_destination)) if name ==
           pdf_dest_goto_name() =>
-          self.pdf_destination_page_number(
+          self.pdf_destination_page_number_with_lookup(
             self.read_destination(raw_destination),
-            page_reference_numbers,
+            page_numbers,
           )
         _ => 0
       }
@@ -441,9 +464,21 @@ fn PdfDocument::pdf_destination_page_number(
     | DestFitB(target)
     | DestFitBH(target, _)
     | DestFitBV(target, _) =>
-      pdf_destination_page_number_of_target(page_reference_numbers, target)
+      pdf_destination_page_number_of_target(page_numbers, target)
     _ => 0
   }
+}
+
+///|
+fn PdfDocument::pdf_destination_page_number(
+  self : PdfDocument,
+  destination : PdfDestination,
+  page_reference_numbers : ArrayView[Int],
+) -> Int raise PdfError {
+  self.pdf_destination_page_number_with_lookup(
+    destination,
+    pdf_page_number_lookup(page_reference_numbers),
+  )
 }
 
 ///|

@@ -18,6 +18,22 @@ test "private PDF number set deduplicates membership and additions" {
 }
 
 ///|
+test "private destination page number lookup preserves first page reference" {
+  let lookup = pdf_page_number_lookup([10, 10, 20])
+  @test.assert_eq(lookup.page_number(10), 1)
+  @test.assert_eq(lookup.page_number(20), 3)
+  @test.assert_eq(lookup.page_number(30), 0)
+  @test.assert_eq(
+    pdf_destination_page_number_of_target(lookup, TargetOtherDocPageNumber(1)),
+    2,
+  )
+  @test.assert_eq(
+    pdf_destination_page_number_of_target(lookup, TargetPageObject(10)),
+    1,
+  )
+}
+
+///|
 test "pdf duplicate stream candidates reject non-stream objects" {
   @test.assert_eq(
     pdf_duplicate_stream_candidate(1, PdfInteger(1)) is None,

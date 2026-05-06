@@ -851,7 +851,10 @@ MoonBit consequences for this project:
    action `/D` rewriting. Page/destination convenience helpers are started
    with `page_number_of_target` and `target_of_page_number`;
    page-number lookup now resolves named and string destinations when the
-   catalog or destination name tree contains the target.
+   catalog or destination name tree contains the target. Destination
+   page-object resolution now also has a package-local hash-backed lookup that
+   preserves the first page-reference match while avoiding repeated page-tree
+   scans when bookmark extraction resolves many targets.
 
    Bookmark support is started with typed `PdfBookmarkColour` and
    `PdfBookmark` records, `/Root/Outlines` traversal, level reconstruction,

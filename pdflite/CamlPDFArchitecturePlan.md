@@ -218,6 +218,9 @@ work changes.
    `pdf_of_pages` now materializes inherited page attributes before extraction
    so inherited `/CropBox` values and inherited indirect `/Resources`,
    `/MediaBox`, and `/Rotate` references are preserved with selected pages.
+   Bookmark extraction now builds the page-object to page-number map once and
+   reuses it while filtering targets, preserving CamlPDF's first-match
+   resolution behavior without repeated page-reference scans.
    Structure-tree trimming now uses hash-backed deleted-page and deletion sets
    for stable `/Pg` removal and ancestor `/K` pruning, avoiding repeated linear
    membership scans on large tagged documents.
