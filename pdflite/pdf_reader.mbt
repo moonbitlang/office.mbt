@@ -1622,6 +1622,43 @@ fn ByteCursor::read_reconstructed_xref_stream_section_at(
 }
 
 ///|
+fn ByteCursor::read_reconstructed_classic_xref_section_at(
+  self : ByteCursor,
+  position : Int,
+) -> (PdfXRefSection, Int) raise PdfError {
+  self.seek_pdf_absolute(position)
+  let section = self.read_pdf_xref_section()
+  guard section.stream_object_number is None else { raise XRefExpected }
+  (section, self.absolute_position())
+}
+
+///|
+fn pdf_read_reconstructed_classic_xref_sections(
+  data : BytesView,
+) -> Array[(Int, PdfXRefSection)] {
+  let sections : Array[(Int, PdfXRefSection)] = []
+  let cursor = byte_cursor_of_view(data)
+  let mut position = 0
+  while position < data.length() {
+    if pdf_view_matches_ascii_at(data, position, [120, 114, 101, 102]) {
+      let parsed : Result[(PdfXRefSection, Int), Error] = try? cursor.read_reconstructed_classic_xref_section_at(
+        position,
+      )
+      match parsed {
+        Ok((section, next_position)) => {
+          sections.push((position, section))
+          position = next_position
+        }
+        Err(_) => position += 4
+      }
+    } else {
+      position += 1
+    }
+  }
+  sections
+}
+
+///|
 fn pdf_read_reconstructed_xref_stream_sections(
   data : BytesView,
 ) -> Array[PdfXRefSection] {
@@ -1657,6 +1694,17 @@ fn pdf_reconstructed_xref_stream_entries(
   let xrefs : Array[PdfClassicXRefEntry] = []
   for index = sections.length() - 1; index >= 0; index = index - 1 {
     pdf_classic_xrefs_add_newer_first(xrefs, sections[index].entries[:])
+  }
+  xrefs
+}
+
+///|
+fn pdf_reconstructed_classic_xref_entries(
+  sections : ArrayView[(Int, PdfXRefSection)],
+) -> Array[PdfClassicXRefEntry] {
+  let xrefs : Array[PdfClassicXRefEntry] = []
+  for index = sections.length() - 1; index >= 0; index = index - 1 {
+    pdf_classic_xrefs_add_newer_first(xrefs, sections[index].1.entries[:])
   }
   xrefs
 }
@@ -1709,6 +1757,33 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
             _ => ()
           }
         }
+    }
+  }
+}
+
+///|
+fn PdfDocument::load_reconstructed_classic_xref_plain_objects(
+  self : PdfDocument,
+  data : BytesView,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> Unit {
+  let cursor = byte_cursor_of_view(data)
+  for xref in xrefs {
+    if xref.in_use && xref.object_number != 0 {
+      try {
+        cursor.seek_pdf_absolute(xref.offset)
+        let parsed = cursor.read_first_indirect_object_at_current(xrefs)
+        if parsed.number == xref.object_number &&
+          parsed.generation == xref.generation {
+          self.load_object_given_number(
+            parsed.number,
+            parsed.object,
+            generation=parsed.generation,
+          )
+        }
+      } catch {
+        _ => ()
+      }
     }
   }
 }
@@ -1796,16 +1871,54 @@ fn PdfDocument::load_reconstructed_xref_stream_objects(
 }
 
 ///|
-priv struct PdfReconstructedXRefStreamCoverage {
+priv struct PdfReconstructedXRefCoverage {
   sections : Array[(Int, PdfNumberSet)]
 }
 
 ///|
-fn pdf_reconstructed_xref_stream_coverage(
-  sections : ArrayView[PdfXRefSection],
-) -> PdfReconstructedXRefStreamCoverage {
+fn pdf_reconstructed_classic_xref_entry_is_verified(
+  data : BytesView,
+  entries : ArrayView[PdfClassicXRefEntry],
+  xref : PdfClassicXRefEntry,
+) -> Bool {
+  if !xref.in_use {
+    true
+  } else {
+    let cursor = byte_cursor_of_view(data)
+    try {
+      cursor.seek_pdf_absolute(xref.offset)
+      let parsed = cursor.read_first_indirect_object_at_current(entries)
+      parsed.number == xref.object_number &&
+      parsed.generation == xref.generation
+    } catch {
+      _ => false
+    }
+  }
+}
+
+///|
+fn pdf_reconstructed_xref_coverage(
+  data : BytesView,
+  classic_sections : ArrayView[(Int, PdfXRefSection)],
+  xref_stream_sections : ArrayView[PdfXRefSection],
+) -> PdfReconstructedXRefCoverage {
   let covered : Array[(Int, PdfNumberSet)] = []
-  for section in sections {
+  for item in classic_sections {
+    let (offset, section) = item
+    let numbers = pdf_number_set([])
+    for xref in section.entries {
+      if xref.object_number > 0 &&
+        pdf_reconstructed_classic_xref_entry_is_verified(
+          data,
+          section.entries,
+          xref,
+        ) {
+        numbers.add(xref.object_number)
+      }
+    }
+    covered.push((offset, numbers))
+  }
+  for section in xref_stream_sections {
     match section.stream_object_offset {
       Some(offset) => {
         let numbers = pdf_number_set([])
@@ -1823,8 +1936,8 @@ fn pdf_reconstructed_xref_stream_coverage(
 }
 
 ///|
-fn PdfReconstructedXRefStreamCoverage::contains(
-  self : PdfReconstructedXRefStreamCoverage,
+fn PdfReconstructedXRefCoverage::contains(
+  self : PdfReconstructedXRefCoverage,
   object_number : Int,
   object_offset : Int,
 ) -> Bool {
@@ -1883,14 +1996,21 @@ fn pdf_read_reconstructed_document_from_view(
   document.set_version(version.major, version.minor)
   document.set_first_xref(0)
   document.set_was_linearized(pdf_read_was_linearized(data))
+  let classic_xref_sections = pdf_read_reconstructed_classic_xref_sections(data)
   let xref_stream_sections : Array[PdfXRefSection] = if include_xref_stream_trailers {
     pdf_read_reconstructed_xref_stream_sections(data)
   } else {
     []
   }
-  let xref_stream_coverage = pdf_reconstructed_xref_stream_coverage(
+  let xref_coverage = pdf_reconstructed_xref_coverage(
+    data,
+    classic_xref_sections[:],
     xref_stream_sections[:],
   )
+  let classic_xrefs = pdf_reconstructed_classic_xref_entries(
+    classic_xref_sections[:],
+  )
+  document.load_reconstructed_classic_xref_plain_objects(data, classic_xrefs[:])
   let reconstructed_xrefs = pdf_read_reconstructed_xrefs(data)
   for xref in reconstructed_xrefs {
     let parsed_result : Result[PdfParsedIndirectObject, Error] = try? cursor.read_reconstructed_object_at(
@@ -1902,7 +2022,7 @@ fn pdf_read_reconstructed_document_from_view(
         if parsed.number > 0 &&
           parsed.number == xref.object_number &&
           parsed.generation == xref.generation &&
-          !xref_stream_coverage.contains(parsed.number, xref.offset) &&
+          !xref_coverage.contains(parsed.number, xref.offset) &&
           !pdf_reader_object_is_xref_stream(parsed.object) {
           document.load_object_given_number(
             parsed.number,

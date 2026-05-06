@@ -994,6 +994,22 @@ fn reader_malformed_pdf_with_bad_startxref() -> @pdflite.PdfBytes {
 }
 
 ///|
+fn reader_classic_xref_deleted_payload_bad_startxref() -> @pdflite.PdfBytes {
+  let output : Array[Byte] = []
+  reader_push_ascii(output, "%PDF-1.4\n")
+  let catalog_offset = reader_push_indirect_object(
+    output, 1, 0, "<< /Type /Catalog /Payload 2 0 R >>",
+  )
+  ignore(reader_push_indirect_object(output, 2, 0, "13"))
+  reader_push_ascii(output, "xref\n0 3\n0000000000 65535 f \n")
+  reader_push_xref_entry(output, catalog_offset, 0)
+  reader_push_ascii(output, "0000000000 00000 f \n")
+  reader_push_ascii(output, "trailer\n<< /Root 1 0 R /Size 3 >>\nstartxref\n")
+  reader_push_ascii(output, "0\n%%EOF\n")
+  Bytes::from_array(output)
+}
+
+///|
 fn reader_malformed_pdf_with_malformed_startxref_number() -> @pdflite.PdfBytes {
   let output : Array[Byte] = []
   reader_push_ascii(output, "%PDF-1.4\n")
@@ -2625,6 +2641,24 @@ test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
   @test.assert_eq(parsed.first_xref(), 0)
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
+}
+
+///|
+test "pdf_read_document_from_bytes reconstructs classic xref free entries with bad startxref" {
+  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
+    reader_classic_xref_deleted_payload_bad_startxref(),
+  )
+  guard strict is Err(_) else {
+    fail("expected strict classic bad-startxref read to fail")
+  }
+
+  let parsed = try! @pdflite.pdf_read_document_from_bytes(
+    reader_classic_xref_deleted_payload_bad_startxref(),
+  )
+  @test.assert_eq(parsed.first_xref(), 0)
+  @test.assert_eq(parsed.root(), 1)
+  @test.assert_eq(parsed.object_numbers(), [1])
+  @test.assert_eq(parsed.lookup_object_or_null(2), PdfNull)
 }
 
 ///|
