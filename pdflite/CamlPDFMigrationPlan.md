@@ -280,7 +280,12 @@ MoonBit consequences for this project:
    `/First` dictionaries, including malformed header, offset, index, and
    object-number mismatch checks. Object-stream extraction now uses the
    document-aware stream decoder once the containing object stream is loaded,
-   so indirect `/Filter` metadata on `/ObjStm` streams is honored.
+   so indirect `/Filter` metadata on `/ObjStm` streams is honored. Strict,
+   password-aware, and reconstructed xref-stream readers now decode each
+   containing `/ObjStm` once per reader pass and reuse the parsed context for
+   all embedded entries from that object stream, avoiding repeated
+   decode/decrypt work while preserving the existing strict versus recovered
+   error behavior.
    Password-aware document reads now decrypt encrypted `/ObjStm` streams before
    slicing embedded objects, including the absent-password path that falls back
    to a blank user password, then load the embedded objects as already

@@ -512,9 +512,14 @@ test "private object stream helpers cover malformed object streams" {
     StreamGot(@ascii.encode("2 0 3 4 truefalse")),
   )
   doc.add_object_given_number(7, valid_stream)
+  let context = try! doc.read_object_stream_context(7)
   @test.assert_eq(
-    try! doc.read_object_stream_reference({ object_stream_number: 7, index: 0 }),
+    try! context.read_reference({ object_stream_number: 7, index: 0 }),
     (2, PdfBoolean(true)),
+  )
+  @test.assert_eq(
+    try! context.read_reference({ object_stream_number: 7, index: 1 }),
+    (3, PdfBoolean(false)),
   )
 
   let no_type_doc = pdf_document_empty()
@@ -529,11 +534,9 @@ test "private object stream helpers cover malformed object streams" {
       StreamGot(@ascii.encode("2 0 true")),
     ),
   )
+  let no_type_context = try! no_type_doc.read_object_stream_context(10)
   @test.assert_eq(
-    try! no_type_doc.read_object_stream_reference({
-      object_stream_number: 10,
-      index: 0,
-    }),
+    try! no_type_context.read_reference({ object_stream_number: 10, index: 0 }),
     (2, PdfBoolean(true)),
   )
 
@@ -550,26 +553,22 @@ test "private object stream helpers cover malformed object streams" {
       StreamGot(@ascii.encode("2 0 true")),
     ),
   )
-  let wrong_type : Result[(Int, PdfObject), Error] = try? wrong_type_doc.read_object_stream_reference({
-      object_stream_number: 8,
-      index: 0,
-    },
+  let wrong_type : Result[PdfObjectStreamContext, Error] = try? wrong_type_doc.read_object_stream_context(
+    8,
   )
   guard wrong_type is Err(PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let missing_stream : Result[(Int, PdfObject), Error] = try? doc.read_object_stream_reference({
-      object_stream_number: 99,
-      index: 0,
-    },
+  let missing_stream : Result[PdfObjectStreamContext, Error] = try? doc.read_object_stream_context(
+    99,
   )
   guard missing_stream is Err(PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let missing_encrypted_stream : Result[(Int, PdfObject, Bool), Error] = try? doc.read_object_stream_reference_with_passwords(
-    { object_stream_number: 99, index: 0 },
+  let missing_encrypted_stream : Result[(PdfObjectStreamContext, Bool), Error] = try? doc.read_object_stream_context_with_passwords(
+    99,
     Some(@ascii.encode("user")[:]),
     None,
   )
@@ -590,7 +589,8 @@ test "private object stream helpers cover malformed object streams" {
       StreamGot(@ascii.encode("2 99 true")),
     ),
   )
-  let bad_offset : Result[(Int, PdfObject), Error] = try? bad_offset_doc.read_object_stream_reference({
+  let bad_offset_context = try! bad_offset_doc.read_object_stream_context(9)
+  let bad_offset : Result[(Int, PdfObject), Error] = try? bad_offset_context.read_reference({
       object_stream_number: 9,
       index: 0,
     },

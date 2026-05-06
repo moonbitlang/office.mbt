@@ -104,7 +104,11 @@ work changes.
    length handling are cached once, avoiding repeated ASCII `PdfName` rebuilding
    while loading large object tables. Object-stream extraction parses headers
    and embedded object slices from borrowed `BytesView` data instead of
-   allocating temporary owned bytes. Primitive integer lexing now also parses
+   allocating temporary owned bytes. Object-stream expansion now builds one
+   decoded `/ObjStm` context per containing stream and reuses it for all
+   compressed xref entries from that stream, including password-aware and
+   reconstructed xref-stream reads, avoiding repeated stream decode/decrypt work
+   on compressed-object-heavy PDFs. Primitive integer lexing now also parses
    Int-range PDF number tokens directly from borrowed `BytesView` data, using an
    Int64 overflow guard before falling back to the existing real-number parser.
    Shared reader ASCII integer parsing also accumulates through Int64 and

@@ -958,11 +958,17 @@ fn pdf_object_stream_next_offset(
 }
 
 ///|
-fn PdfDocument::read_object_stream_reference_from_object(
+priv struct PdfObjectStreamContext {
+  data : PdfBytes
+  first : Int
+  pairs : Array[(Int, Int)]
+}
+
+///|
+fn PdfDocument::read_object_stream_context_from_object(
   self : PdfDocument,
-  reference : ObjectStreamReference,
   object_stream_object : PdfObject,
-) -> (Int, PdfObject) raise PdfError {
+) -> PdfObjectStreamContext raise PdfError {
   match object_stream_object {
     PdfStreamObject(stream) => {
       match stream.dictionary.lookup_immediate(pdf_reader_type_name()) {
@@ -981,68 +987,119 @@ fn PdfDocument::read_object_stream_reference_from_object(
       )
       let data = pdf_stream_data_bytes(decoded_stream.data)
       let pairs = pdf_object_stream_number_offsets(data[:], first, count)
-      let next_offset = pdf_object_stream_next_offset(
-        pairs[:],
-        reference.index,
-        data.length(),
-        first,
-      )
-      let (object_number, offset) = pairs[reference.index]
-      let start = first + offset
-      let end = first + next_offset
-      if start < first || start > end || end > data.length() {
-        raise StreamDataExpected
-      }
-      (object_number, pdf_parse_object_from_view(data[start:end]))
+      { data, first, pairs }
     }
     _ => raise XRefEntryExpected
   }
 }
 
 ///|
-fn PdfDocument::read_object_stream_reference(
-  self : PdfDocument,
+fn PdfObjectStreamContext::read_reference(
+  self : PdfObjectStreamContext,
   reference : ObjectStreamReference,
 ) -> (Int, PdfObject) raise PdfError {
-  self.read_object_stream_reference_from_object(
-    reference,
-    self.lookup_object_or_null(reference.object_stream_number),
+  let next_offset = pdf_object_stream_next_offset(
+    self.pairs[:],
+    reference.index,
+    self.data.length(),
+    self.first,
+  )
+  let (object_number, offset) = self.pairs[reference.index]
+  let start = self.first + offset
+  let end = self.first + next_offset
+  if start < self.first || start > end || end > self.data.length() {
+    raise StreamDataExpected
+  }
+  (object_number, pdf_parse_object_from_view(self.data[start:end]))
+}
+
+///|
+fn PdfDocument::read_object_stream_context(
+  self : PdfDocument,
+  object_stream_number : Int,
+) -> PdfObjectStreamContext raise PdfError {
+  self.read_object_stream_context_from_object(
+    self.lookup_object_or_null(object_stream_number),
   )
 }
 
 ///|
-fn PdfDocument::read_object_stream_reference_with_passwords(
+fn PdfDocument::read_object_stream_context_with_passwords(
   self : PdfDocument,
-  reference : ObjectStreamReference,
+  object_stream_number : Int,
   user_password : BytesView?,
   owner_password : BytesView?,
-) -> (Int, PdfObject, Bool) raise PdfError {
+) -> (PdfObjectStreamContext, Bool) raise PdfError {
   if !self.is_encrypted() {
-    let (object_number, object) = self.read_object_stream_reference(reference)
-    (object_number, object, false)
+    (self.read_object_stream_context(object_stream_number), false)
   } else {
-    let entry = match self.objects.get_entry(reference.object_stream_number) {
+    let entry = match self.objects.get_entry(object_stream_number) {
       Some(entry) => entry
       None => raise XRefEntryExpected
     }
-    let object_stream_object = self.lookup_object_or_null(
-      reference.object_stream_number,
-    )
+    let object_stream_object = self.lookup_object_or_null(object_stream_number)
     match
       self.decrypt_single_stream(
-        reference.object_stream_number,
+        object_stream_number,
         entry.generation,
         object_stream_object,
         user_password~,
         owner_password~,
       ) {
-      Some(decrypted_stream) => {
-        let (object_number, object) = self.read_object_stream_reference_from_object(
-          reference, decrypted_stream,
-        )
-        (object_number, object, true)
-      }
+      Some(decrypted_stream) =>
+        (self.read_object_stream_context_from_object(decrypted_stream), true)
       None => raise EncryptionAuthenticationUnsupported(PdfCryptAESV2)
+    }
+  }
+}
+
+///|
+fn pdf_reader_object_stream_numbers(
+  xrefs : ArrayView[PdfClassicXRefEntry],
+) -> Array[Int] {
+  let numbers : Array[Int] = []
+  for xref in xrefs {
+    match xref.object_stream {
+      Some(reference) =>
+        if xref.in_use &&
+          xref.object_number != 0 &&
+          !numbers.contains(reference.object_stream_number) {
+          numbers.push(reference.object_stream_number)
+        }
+      None => ()
+    }
+  }
+  numbers
+}
+
+///|
+fn PdfDocument::load_embedded_objects_from_context(
+  self : PdfDocument,
+  xrefs : ArrayView[PdfClassicXRefEntry],
+  object_stream_number : Int,
+  context : PdfObjectStreamContext,
+  already_decrypted : Bool,
+) -> Unit raise PdfError {
+  for xref in xrefs {
+    match xref.object_stream {
+      Some(reference) =>
+        if reference.object_stream_number == object_stream_number &&
+          xref.in_use &&
+          xref.object_number != 0 {
+          let (object_number, object) = context.read_reference(reference)
+          if object_number != xref.object_number {
+            raise XRefEntryExpected
+          }
+          if already_decrypted {
+            self.load_object_given_number_already_decrypted(
+              xref.object_number,
+              object,
+            )
+          } else {
+            self.load_object_given_number(xref.object_number, object)
+          }
+        }
+      None => ()
     }
   }
 }
@@ -1647,22 +1704,33 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
   self : PdfDocument,
   xrefs : ArrayView[PdfClassicXRefEntry],
 ) -> Unit {
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(reference) =>
-        if xref.in_use && xref.object_number != 0 {
-          try {
-            let (object_number, object) = self.read_object_stream_reference(
-              reference,
-            )
-            if object_number == xref.object_number {
-              self.load_object_given_number(xref.object_number, object)
-            }
-          } catch {
-            _ => ()
+  for object_stream_number in pdf_reader_object_stream_numbers(xrefs) {
+    let context_result : Result[PdfObjectStreamContext, Error] = try? self.read_object_stream_context(
+      object_stream_number,
+    )
+    match context_result {
+      Ok(context) =>
+        for xref in xrefs {
+          match xref.object_stream {
+            Some(reference) =>
+              if reference.object_stream_number == object_stream_number &&
+                xref.in_use &&
+                xref.object_number != 0 {
+                try {
+                  let (object_number, object) = context.read_reference(
+                    reference,
+                  )
+                  if object_number == xref.object_number {
+                    self.load_object_given_number(xref.object_number, object)
+                  }
+                } catch {
+                  _ => ()
+                }
+              }
+            None => ()
           }
         }
-      None => ()
+      Err(_) => ()
     }
   }
 }
@@ -1674,25 +1742,40 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
   user_password : BytesView?,
   owner_password : BytesView?,
 ) -> Unit {
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(reference) =>
-        if xref.in_use && xref.object_number != 0 {
-          try {
-            let (object_number, object, _) = self.read_object_stream_reference_with_passwords(
-              reference, user_password, owner_password,
-            )
-            if object_number == xref.object_number {
-              self.load_object_given_number_already_decrypted(
-                xref.object_number,
-                object,
-              )
-            }
-          } catch {
-            _ => ()
+  for object_stream_number in pdf_reader_object_stream_numbers(xrefs) {
+    let context_result : Result[(PdfObjectStreamContext, Bool), Error] = try? self.read_object_stream_context_with_passwords(
+      object_stream_number, user_password, owner_password,
+    )
+    match context_result {
+      Ok((context, already_decrypted)) =>
+        for xref in xrefs {
+          match xref.object_stream {
+            Some(reference) =>
+              if reference.object_stream_number == object_stream_number &&
+                xref.in_use &&
+                xref.object_number != 0 {
+                try {
+                  let (object_number, object) = context.read_reference(
+                    reference,
+                  )
+                  if object_number == xref.object_number {
+                    if already_decrypted {
+                      self.load_object_given_number_already_decrypted(
+                        xref.object_number,
+                        object,
+                      )
+                    } else {
+                      self.load_object_given_number(xref.object_number, object)
+                    }
+                  }
+                } catch {
+                  _ => ()
+                }
+              }
+            None => ()
           }
         }
-      None => ()
+      Err(_) => ()
     }
   }
 }
@@ -1981,27 +2064,16 @@ fn pdf_read_classic_document_from_view_at_revision(
         }
     }
   }
-  for xref in xrefs {
-    match xref.object_stream {
-      Some(reference) =>
-        if xref.in_use && xref.object_number != 0 {
-          let (object_number, object, already_decrypted) = document.read_object_stream_reference_with_passwords(
-            reference, user_password, owner_password,
-          )
-          if object_number != xref.object_number {
-            raise XRefEntryExpected
-          }
-          if already_decrypted {
-            document.load_object_given_number_already_decrypted(
-              xref.object_number,
-              object,
-            )
-          } else {
-            document.load_object_given_number(xref.object_number, object)
-          }
-        }
-      None => ()
-    }
+  for object_stream_number in pdf_reader_object_stream_numbers(xrefs[:]) {
+    let (context, already_decrypted) = document.read_object_stream_context_with_passwords(
+      object_stream_number, user_password, owner_password,
+    )
+    document.load_embedded_objects_from_context(
+      xrefs[:],
+      object_stream_number,
+      context,
+      already_decrypted,
+    )
   }
   document.set_trailer_dict(
     pdf_reader_sanitize_trailer(

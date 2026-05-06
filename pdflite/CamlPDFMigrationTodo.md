@@ -71,6 +71,9 @@ Current estimate:
   stream-length handling so large object-table loads avoid rebuilding names.~~
 - [x] ~~Parse object-stream headers and embedded object slices from borrowed
   `BytesView` data instead of allocating temporary owned `Bytes`.~~
+- [x] ~~Decode each `/ObjStm` once per reader pass and reuse the parsed
+  object-stream context for all compressed entries from that stream, including
+  encrypted and reconstructed xref-stream reads.~~
 - [x] ~~Cache standard encryption dictionary, crypt-filter, stream-policy, and
   AESV3 random-field names so encrypted reads/writes avoid rebuilding stable
   ASCII `PdfName` values.~~
@@ -172,6 +175,9 @@ Current estimate:
 - [x] ~~Malformed reconstruction now reuses scan-local `ByteCursor` instances
   across candidate offsets for xref, object, trailer, and xref-stream
   discovery instead of allocating a cursor for every candidate byte.~~
+- [x] ~~Object-stream expansion now materializes one decoded `/ObjStm` context
+  per containing stream and reuses it for all compressed xref entries, avoiding
+  repeated decode/decrypt work on compressed-object-heavy PDFs.~~
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~
@@ -435,6 +441,8 @@ Current estimate:
   rebuilt on repeated strict and reconstructed read paths.~~
 - [x] ~~Object-stream extraction parses header and embedded object slices from
   borrowed views instead of temporary owned byte copies.~~
+- [x] ~~Object-stream expansion decodes/decrypts each containing `/ObjStm` once
+  per reader pass and reuses the parsed context for all embedded entries.~~
 - [ ] Byte-identical zlib output strategy and broader performance parity beyond
   explicit Flate level selection.
 - [ ] Broader malformed xref-table/xref-stream/object-stream recovery beyond
