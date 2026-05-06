@@ -164,8 +164,13 @@ pub fn stream_to_get(input : ByteCursor, position : Int, length : Int) -> ToGet 
 }
 
 ///|
+let pdf_object_length_key_name : PdfName = pdf_name_of_bytes(
+  @ascii.encode("/Length"),
+)
+
+///|
 fn pdf_object_length_name() -> PdfName {
-  pdf_name_of_bytes(@ascii.encode("/Length"))
+  pdf_object_length_key_name
 }
 
 ///|

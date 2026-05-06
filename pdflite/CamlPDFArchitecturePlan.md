@@ -31,9 +31,11 @@ work changes.
    missing, unreadable, or lands away from the stream terminator. Valid
    strict-reader `/Length` streams now keep their payloads as `StreamToGet`
    cursor slices and materialize only at owned-byte boundaries such as
-   `stream_bytes`, writer output, filter decoding, and crypt transforms;
-   malformed recovered streams remain eager `StreamGot` data because their
-   boundaries come from a repair scan. Indirect stream-length providers are now
+   `stream_bytes`, writer output, filter decoding, and crypt transforms; when
+   `get_stream` forces materialization, the object model reuses a cached
+   `/Length` key while correcting the stream dictionary. Malformed recovered
+   streams remain eager `StreamGot` data because their boundaries come from a
+   repair scan. Indirect stream-length providers are now
    classified by parsing the referenced object segment, so ordinary length
    objects containing the word `stream` in comments do not get mistaken for
    stream objects. Writer trailer, stream-length, and xref-stream dictionaries

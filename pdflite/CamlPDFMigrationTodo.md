@@ -63,6 +63,8 @@ Current estimate:
   rebuilds ASCII `PdfName` values for every filter comparison.~~
 - [x] ~~Cache standard stream dictionary keys such as `/Filter`, `/Length`, and
   `/DecodeParms` so repeated stream transformations avoid rebuilding them.~~
+- [x] ~~Cache the core object-model `/Length` key used when forced deferred
+  stream materialization refreshes stream dictionaries.~~
 - [x] ~~Cache standard image extraction dictionary and encoded-image filter
   names so repeated image inspection avoids rebuilding ASCII `PdfName` values.~~
 - [x] ~~Cache standard reader keys used by xref, object-stream, trailer, and
@@ -138,6 +140,8 @@ Current estimate:
   compressed bytes before the C boundary.~~
 - [x] ~~Owned `/Crypt` identity filter encode/decode now returns the original
   immutable `Bytes` object and is covered by physical-identity assertions.~~
+- [x] ~~Deferred stream `get_stream` materialization now reuses the cached
+  object-model `/Length` key when correcting stream dictionaries.~~
 - [x] ~~Encryption dictionary and crypt-filter lookups/builders now share cached
   `PdfName` values for stable standard keys and name objects.~~
 - [x] ~~Writer trailer/xref-stream keys and inline-image metadata/filter names

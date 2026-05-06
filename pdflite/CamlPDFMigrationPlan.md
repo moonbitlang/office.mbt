@@ -161,8 +161,9 @@ MoonBit consequences for this project:
    `PdfStream`, `ToGet`, ordered dictionary
    construction, immediate lookup, add/replace/remove helpers, stream
    dictionary mutation, side-effecting deferred stream materialization with
-   `/Length` correction, object map entries, parsed/deferred object states,
-   document defaults, checked catalog lookup, add/remove object logging,
+   `/Length` correction through a cached object-model key, object map entries,
+   parsed/deferred object states, document defaults, checked catalog lookup,
+   add/remove object logging,
    explicit object-entry collection construction, object-number selection,
    parsed object-entry and stream-entry snapshots with generation numbers,
    deterministic object-number/generation callback iteration,
