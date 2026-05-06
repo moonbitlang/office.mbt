@@ -273,7 +273,10 @@ work changes.
    boundaries, Type3 no-`/ToUnicode` custom-encoding fallback through AGL glyph
    names and StandardEncoding fill-in, and Flate inline-image content parsing
    are also covered. Standard image dictionary keys and encoded-image filter
-   names are cached once for repeated metadata lookups. Standard font aliases,
+   names are cached once for repeated metadata lookups. Exact-size raw
+   DeviceRGB/CalRGB 8bpp image extraction returns the owned RGB24 payload
+   directly, preserving prefix-copy behavior only when trailing bytes are
+   present. Standard font aliases,
    encoding names, font/CID/CMap dictionary keys, and ToUnicode writer keys are
    also cached as private `PdfName` values for repeated text read/write
    lookups. Basic Latin glyph-name lookups now use package-private

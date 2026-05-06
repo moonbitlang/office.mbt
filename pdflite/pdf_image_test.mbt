@@ -674,6 +674,7 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
 test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
   let doc = @pdflite.pdf_document_empty()
   let empty_resources = @pdflite.pdf_dictionary([])
+  let rgb_data = image_bytes_for_test([1, 2, 3, 4, 5, 6])
   let rgb = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_name_for_test("/Width"), PdfInteger(2)),
@@ -684,12 +685,41 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
       ),
       (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
     ]),
-    StreamGot(image_bytes_for_test([1, 2, 3, 4, 5, 6])),
+    StreamGot(rgb_data),
   )
+  let rgb_result = doc.get_image_24bpp(empty_resources, rgb)
   @test.assert_eq(
-    try! doc.get_image_24bpp(empty_resources, rgb),
+    rgb_result,
     PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([1, 2, 3, 4, 5, 6])),
   )
+  match rgb_result {
+    PdfRawImage(_, _, _, data) =>
+      @test.assert_eq(physical_equal(rgb_data, data), true)
+    _ => fail("expected raw RGB image")
+  }
+  let rgb_extra_data = image_bytes_for_test([1, 2, 3, 4, 5, 6, 7])
+  let rgb_extra = @pdflite.pdf_stream(
+    @pdflite.pdf_dictionary([
+      (image_name_for_test("/Width"), PdfInteger(2)),
+      (image_name_for_test("/Height"), PdfInteger(1)),
+      (
+        image_name_for_test("/ColorSpace"),
+        PdfNameObject(image_name_for_test("/DeviceRGB")),
+      ),
+      (image_name_for_test("/BitsPerComponent"), PdfInteger(8)),
+    ]),
+    StreamGot(rgb_extra_data),
+  )
+  let rgb_extra_result = doc.get_image_24bpp(empty_resources, rgb_extra)
+  @test.assert_eq(
+    rgb_extra_result,
+    PdfRawImage(2, 1, PdfBPP24, image_bytes_for_test([1, 2, 3, 4, 5, 6])),
+  )
+  match rgb_extra_result {
+    PdfRawImage(_, _, _, data) =>
+      @test.assert_eq(physical_equal(rgb_extra_data, data), false)
+    _ => fail("expected raw RGB image")
+  }
   let gray = @pdflite.pdf_stream(
     @pdflite.pdf_dictionary([
       (image_name_for_test("/Width"), PdfInteger(2)),

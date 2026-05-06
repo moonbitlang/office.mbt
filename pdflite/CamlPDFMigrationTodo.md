@@ -80,6 +80,9 @@ Current estimate:
   stream materialization refreshes stream dictionaries.~~
 - [x] ~~Cache standard image extraction dictionary and encoded-image filter
   names so repeated image inspection avoids rebuilding ASCII `PdfName` values.~~
+- [x] ~~Return exact-size raw DeviceRGB/CalRGB 8bpp image extraction payloads
+  unchanged, avoiding a copy when the decoded stream is already RGB24 while
+  preserving prefix-copy behavior for trailing bytes.~~
 - [x] ~~Cache standard reader keys used by xref, object-stream, trailer, and
   stream-length handling so large object-table loads avoid rebuilding names.~~
 - [x] ~~Parse object-stream headers and embedded object slices from borrowed
@@ -182,6 +185,8 @@ Current estimate:
   decodes while consuming the encoded boundary when no `/DecodeParms` are
   present, instead of re-owning encoded data and decoding it again through the
   stream-filter path.~~
+- [x] ~~Exact-size raw DeviceRGB/CalRGB 8bpp image extraction now keeps the
+  owned RGB24 stream bytes and only allocates for trailing-byte prefix slices.~~
 - [x] ~~Owned predictor encode/decode now returns the original immutable
   `Bytes` for identity predictor `1` and is covered by physical-identity
   assertions.~~
@@ -479,6 +484,8 @@ Current estimate:
   ASCII `PdfName` values across stream decode/encode stages.~~
 - [x] ~~Standard image extraction keys and encoded-image filter names are cached
   once instead of rebuilt on every image metadata lookup.~~
+- [x] ~~Exact-size raw DeviceRGB/CalRGB 8bpp image extraction returns the
+  decoded RGB24 bytes unchanged, with prefix-copy coverage for trailing data.~~
 - [x] ~~Standard reader/xref/object-stream keys are cached once instead of
   rebuilt on repeated strict and reconstructed read paths.~~
 - [x] ~~Object-stream extraction parses header and embedded object slices from

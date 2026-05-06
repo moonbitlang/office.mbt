@@ -1239,15 +1239,45 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24(
 }
 
 ///|
-fn PdfDocument::pdf_image_raw_8bpp_as_rgb24(
+fn PdfDocument::pdf_image_raw_colour_space_as_rgb24_owned(
+  self : PdfDocument,
+  width : Int,
+  height : Int,
+  colour_space : PdfColourSpace,
+  bpc : Int?,
+  data : PdfBytes,
+) -> PdfBytes raise PdfError {
+  match (colour_space, bpc) {
+    (PdfDeviceRGB | PdfCalRGB(_, _, _, _), Some(8)) => {
+      let required = width * height * 3
+      pdf_image_require_size(data[:], required)
+      if data.length() == required {
+        data
+      } else {
+        data[:required].to_owned()
+      }
+    }
+    _ =>
+      self.pdf_image_raw_colour_space_as_rgb24(
+        width,
+        height,
+        colour_space,
+        bpc,
+        data[:],
+      )
+  }
+}
+
+///|
+fn PdfDocument::pdf_image_raw_8bpp_as_rgb24_owned(
   self : PdfDocument,
   resources : PdfObject,
   width : Int,
   height : Int,
   dictionary : PdfObject,
-  data : BytesView,
+  data : PdfBytes,
 ) -> PdfBytes raise PdfError {
-  self.pdf_image_raw_colour_space_as_rgb24(
+  self.pdf_image_raw_colour_space_as_rgb24_owned(
     width,
     height,
     self.image_colour_space(dictionary, resources),
@@ -1319,12 +1349,12 @@ pub fn PdfDocument::get_image_24bpp(
         width,
         height,
         PdfBPP24,
-        self.pdf_image_raw_8bpp_as_rgb24(
+        self.pdf_image_raw_8bpp_as_rgb24_owned(
           resources,
           width,
           height,
           decoded_stream.dictionary,
-          decoded_data[:],
+          decoded_data,
         ),
       )
     }
