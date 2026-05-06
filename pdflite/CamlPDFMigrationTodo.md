@@ -79,6 +79,8 @@ Current estimate:
   stable `PdfName` values.~~
 - [x] ~~Keep content-stream operator tokens borrowed as `BytesView` during
   parsing, allocating only when unknown operators must be preserved.~~
+- [x] ~~Dispatch known content-stream operators by direct `BytesView` byte
+  patterns instead of decoding operator tokens to MoonBit `String`.~~
 - [x] ~~Cache standard font aliases, encoding names, font/CID/CMap dictionary
   keys, and ToUnicode writer keys so text read/write hot paths reuse stable
   `PdfName` values.~~
@@ -150,6 +152,8 @@ Current estimate:
   now share cached `PdfName` values in the remaining large-file hot paths.~~
 - [x] ~~Content-stream parsing now keeps operator tokens borrowed through known
   operator dispatch and only owns bytes for preserved unknown operations.~~
+- [x] ~~Known content-stream operator dispatch now pattern matches borrowed
+  operator bytes directly and avoids per-operator ASCII string decoding.~~
 - [x] ~~Text/font parsing and writing now share cached standard font,
   encoding, font dictionary, CID, CMap, and ToUnicode names in the main text
   hot paths.~~

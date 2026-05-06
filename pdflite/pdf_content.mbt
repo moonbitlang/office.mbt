@@ -1790,71 +1790,70 @@ fn pdf_content_parse_known_section(
   operands : ArrayView[PdfObject],
   operator : BytesView,
 ) -> PdfContentOp? raise PdfError {
-  let text = @ascii.decode(operator) catch { _ => "" }
-  match text {
-    "q" if operands.length() == 0 => Some(Op_q)
-    "Q" if operands.length() == 0 => Some(Op_Q)
-    "h" if operands.length() == 0 => Some(Op_h)
-    "S" if operands.length() == 0 => Some(Op_S)
-    "s" if operands.length() == 0 => Some(Op_s)
-    "f" if operands.length() == 0 => Some(Op_f)
-    "F" if operands.length() == 0 => Some(Op_F)
-    "f*" if operands.length() == 0 => Some(Op_fstar)
-    "B" if operands.length() == 0 => Some(Op_B)
-    "B*" if operands.length() == 0 => Some(Op_Bstar)
-    "b" if operands.length() == 0 => Some(Op_b)
-    "b*" if operands.length() == 0 => Some(Op_bstar)
-    "n" if operands.length() == 0 => Some(Op_n)
-    "W" if operands.length() == 0 => Some(Op_W)
-    "W*" if operands.length() == 0 => Some(Op_Wstar)
-    "BT" if operands.length() == 0 => Some(Op_BT)
-    "ET" if operands.length() == 0 => Some(Op_ET)
-    "T*" if operands.length() == 0 => Some(Op_Tstar)
-    "EMC" if operands.length() == 0 => Some(Op_EMC)
-    "BX" if operands.length() == 0 => Some(Op_BX)
-    "EX" if operands.length() == 0 => Some(Op_EX)
-    "w" if operands.length() == 1 =>
+  match operator {
+    [113] if operands.length() == 0 => Some(Op_q)
+    [81] if operands.length() == 0 => Some(Op_Q)
+    [104] if operands.length() == 0 => Some(Op_h)
+    [83] if operands.length() == 0 => Some(Op_S)
+    [115] if operands.length() == 0 => Some(Op_s)
+    [102] if operands.length() == 0 => Some(Op_f)
+    [70] if operands.length() == 0 => Some(Op_F)
+    [102, 42] if operands.length() == 0 => Some(Op_fstar)
+    [66] if operands.length() == 0 => Some(Op_B)
+    [66, 42] if operands.length() == 0 => Some(Op_Bstar)
+    [98] if operands.length() == 0 => Some(Op_b)
+    [98, 42] if operands.length() == 0 => Some(Op_bstar)
+    [110] if operands.length() == 0 => Some(Op_n)
+    [87] if operands.length() == 0 => Some(Op_W)
+    [87, 42] if operands.length() == 0 => Some(Op_Wstar)
+    [66, 84] if operands.length() == 0 => Some(Op_BT)
+    [69, 84] if operands.length() == 0 => Some(Op_ET)
+    [84, 42] if operands.length() == 0 => Some(Op_Tstar)
+    [69, 77, 67] if operands.length() == 0 => Some(Op_EMC)
+    [66, 88] if operands.length() == 0 => Some(Op_BX)
+    [69, 88] if operands.length() == 0 => Some(Op_EX)
+    [119] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(width) => Some(Op_w(width))
         None => None
       }
-    "J" if operands.length() == 1 =>
+    [74] if operands.length() == 1 =>
       match pdf_content_operand_int(operands, 0) {
         Some(cap) => Some(Op_J(cap))
         None => None
       }
-    "j" if operands.length() == 1 =>
+    [106] if operands.length() == 1 =>
       match pdf_content_operand_int(operands, 0) {
         Some(join) => Some(Op_j(join))
         None => None
       }
-    "M" if operands.length() == 1 =>
+    [77] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(limit) => Some(Op_M(limit))
         None => None
       }
-    "d" => pdf_content_dash_op_from_operands(operands)
-    "ri" if operands.length() == 1 =>
+    [100] => pdf_content_dash_op_from_operands(operands)
+    [114, 105] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(intent) => Some(Op_ri(intent))
         None => None
       }
-    "i" if operands.length() == 1 =>
+    [105] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(flatness) => Some(Op_i(flatness))
         None => None
       }
-    "cm" if operands.length() == 6 =>
+    [99, 109] if operands.length() == 6 =>
       match pdf_content_matrix_from_operands(operands) {
         Some(matrix) => Some(Op_cm(matrix))
         None => None
       }
-    "Tm" if operands.length() == 6 =>
+    [84, 109] if operands.length() == 6 =>
       match pdf_content_matrix_from_operands(operands) {
         Some(matrix) => Some(Op_Tm(matrix))
         None => None
       }
-    "m" if operands.length() == 2 =>
+    [109] if operands.length() == 2 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1863,7 +1862,7 @@ fn pdf_content_parse_known_section(
         (Some(x), Some(y)) => Some(Op_m(x, y))
         _ => None
       }
-    "l" if operands.length() == 2 =>
+    [108] if operands.length() == 2 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1872,7 +1871,7 @@ fn pdf_content_parse_known_section(
         (Some(x), Some(y)) => Some(Op_l(x, y))
         _ => None
       }
-    "c" if operands.length() == 6 =>
+    [99] if operands.length() == 6 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1886,7 +1885,7 @@ fn pdf_content_parse_known_section(
           Some(Op_c(x1, y1, x2, y2, x3, y3))
         _ => None
       }
-    "v" if operands.length() == 4 =>
+    [118] if operands.length() == 4 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1897,7 +1896,7 @@ fn pdf_content_parse_known_section(
         (Some(x2), Some(y2), Some(x3), Some(y3)) => Some(Op_v(x2, y2, x3, y3))
         _ => None
       }
-    "y" if operands.length() == 4 =>
+    [121] if operands.length() == 4 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1908,7 +1907,7 @@ fn pdf_content_parse_known_section(
         (Some(x1), Some(y1), Some(x3), Some(y3)) => Some(Op_y(x1, y1, x3, y3))
         _ => None
       }
-    "re" if operands.length() == 4 =>
+    [114, 101] if operands.length() == 4 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1920,27 +1919,27 @@ fn pdf_content_parse_known_section(
           Some(Op_re(x, y, width, height))
         _ => None
       }
-    "Tc" if operands.length() == 1 =>
+    [84, 99] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(spacing) => Some(Op_Tc(spacing))
         None => None
       }
-    "Tw" if operands.length() == 1 =>
+    [84, 119] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(spacing) => Some(Op_Tw(spacing))
         None => None
       }
-    "Tz" if operands.length() == 1 =>
+    [84, 122] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(scale) => Some(Op_Tz(scale))
         None => None
       }
-    "TL" if operands.length() == 1 =>
+    [84, 76] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(leading) => Some(Op_TL(leading))
         None => None
       }
-    "Tf" if operands.length() == 2 =>
+    [84, 102] if operands.length() == 2 =>
       match
         (
           pdf_content_operand_name(operands, 0),
@@ -1949,17 +1948,17 @@ fn pdf_content_parse_known_section(
         (Some(font), Some(size)) => Some(Op_Tf(font, size))
         _ => None
       }
-    "Tr" if operands.length() == 1 =>
+    [84, 114] if operands.length() == 1 =>
       match pdf_content_operand_int(operands, 0) {
         Some(mode) => Some(Op_Tr(mode))
         None => None
       }
-    "Ts" if operands.length() == 1 =>
+    [84, 115] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(rise) => Some(Op_Ts(rise))
         None => None
       }
-    "Td" if operands.length() == 2 =>
+    [84, 100] if operands.length() == 2 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1968,7 +1967,7 @@ fn pdf_content_parse_known_section(
         (Some(tx), Some(ty)) => Some(Op_Td(tx, ty))
         _ => None
       }
-    "TD" if operands.length() == 2 =>
+    [84, 68] if operands.length() == 2 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -1977,22 +1976,22 @@ fn pdf_content_parse_known_section(
         (Some(tx), Some(ty)) => Some(Op_TD(tx, ty))
         _ => None
       }
-    "Tj" if operands.length() == 1 =>
+    [84, 106] if operands.length() == 1 =>
       match pdf_content_operand_string(operands, 0) {
         Some(text) => Some(Op_Tj(text))
         None => None
       }
-    "TJ" if operands.length() == 1 =>
+    [84, 74] if operands.length() == 1 =>
       match pdf_content_tj_array_from_operand(operands[0]) {
         Some(array) => Some(Op_TJ(array))
         None => None
       }
-    "'" if operands.length() == 1 =>
+    [39] if operands.length() == 1 =>
       match pdf_content_operand_string(operands, 0) {
         Some(text) => Some(Op_quote(text))
         None => None
       }
-    "\"" if operands.length() == 3 =>
+    [34] if operands.length() == 3 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2003,7 +2002,7 @@ fn pdf_content_parse_known_section(
           Some(Op_double_quote(word_space, char_space, text))
         _ => None
       }
-    "d0" if operands.length() == 2 =>
+    [100, 48] if operands.length() == 2 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2012,7 +2011,7 @@ fn pdf_content_parse_known_section(
         (Some(width_x), Some(width_y)) => Some(Op_d0(width_x, width_y))
         _ => None
       }
-    "d1" if operands.length() == 6 =>
+    [100, 49] if operands.length() == 6 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2032,17 +2031,17 @@ fn pdf_content_parse_known_section(
         ) => Some(Op_d1(width_x, width_y, llx, lly, urx, ury))
         _ => None
       }
-    "G" if operands.length() == 1 =>
+    [71] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(gray) => Some(Op_G(gray))
         None => None
       }
-    "g" if operands.length() == 1 =>
+    [103] if operands.length() == 1 =>
       match pdf_content_operand_number(operands, 0) {
         Some(gray) => Some(Op_g(gray))
         None => None
       }
-    "RG" if operands.length() == 3 =>
+    [82, 71] if operands.length() == 3 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2052,7 +2051,7 @@ fn pdf_content_parse_known_section(
         (Some(r), Some(g), Some(b)) => Some(Op_RG(r, g, b))
         _ => None
       }
-    "rg" if operands.length() == 3 =>
+    [114, 103] if operands.length() == 3 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2062,7 +2061,7 @@ fn pdf_content_parse_known_section(
         (Some(r), Some(g), Some(b)) => Some(Op_rg(r, g, b))
         _ => None
       }
-    "K" if operands.length() == 4 =>
+    [75] if operands.length() == 4 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2073,7 +2072,7 @@ fn pdf_content_parse_known_section(
         (Some(c), Some(m), Some(y), Some(k)) => Some(Op_K(c, m, y, k))
         _ => None
       }
-    "k" if operands.length() == 4 =>
+    [107] if operands.length() == 4 =>
       match
         (
           pdf_content_operand_number(operands, 0),
@@ -2084,26 +2083,26 @@ fn pdf_content_parse_known_section(
         (Some(c), Some(m), Some(y), Some(k)) => Some(Op_k(c, m, y, k))
         _ => None
       }
-    "gs" if operands.length() == 1 =>
+    [103, 115] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(name) => Some(Op_gs(name))
         None => None
       }
-    "CS" if operands.length() == 1 =>
+    [67, 83] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(name) => Some(Op_CS(name))
         None => None
       }
-    "cs" if operands.length() == 1 =>
+    [99, 115] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(name) => Some(Op_cs(name))
         None => None
       }
-    "SC" =>
+    [83, 67] =>
       Some(Op_SC(pdf_content_numbers_or_malformed_color_fallback(operands)))
-    "sc" =>
+    [115, 99] =>
       Some(Op_sc(pdf_content_numbers_or_malformed_color_fallback(operands)))
-    "SCN" =>
+    [83, 67, 78] =>
       match pdf_content_named_color_operands_or_malformed_fallback(operands) {
         Some((name, values)) => Some(Op_SCNName(name, values))
         None =>
@@ -2111,7 +2110,7 @@ fn pdf_content_parse_known_section(
             Op_SCN(pdf_content_numbers_or_malformed_color_fallback(operands)),
           )
       }
-    "scn" =>
+    [115, 99, 110] =>
       match pdf_content_named_color_operands_or_malformed_fallback(operands) {
         Some((name, values)) => Some(Op_scnName(name, values))
         None =>
@@ -2119,32 +2118,32 @@ fn pdf_content_parse_known_section(
             Op_scn(pdf_content_numbers_or_malformed_color_fallback(operands)),
           )
       }
-    "sh" if operands.length() == 1 =>
+    [115, 104] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(name) => Some(Op_sh(name))
         None => None
       }
-    "Do" if operands.length() == 1 =>
+    [68, 111] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(name) => Some(Op_Do(name))
         None => None
       }
-    "MP" if operands.length() == 1 =>
+    [77, 80] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(tag) => Some(Op_MP(tag))
         None => None
       }
-    "DP" if operands.length() == 2 =>
+    [68, 80] if operands.length() == 2 =>
       match pdf_content_operand_name(operands, 0) {
         Some(tag) => Some(Op_DP(tag, operands[1]))
         None => None
       }
-    "BMC" if operands.length() == 1 =>
+    [66, 77, 67] if operands.length() == 1 =>
       match pdf_content_operand_name(operands, 0) {
         Some(tag) => Some(Op_BMC(tag))
         None => None
       }
-    "BDC" if operands.length() == 2 =>
+    [66, 68, 67] if operands.length() == 2 =>
       match pdf_content_operand_name(operands, 0) {
         Some(tag) => Some(Op_BDC(tag, operands[1]))
         None => None

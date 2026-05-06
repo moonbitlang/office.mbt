@@ -189,9 +189,10 @@ work changes.
    Content parsing also follows CamlPDF's malformed color-operator fallback for
    bad `SC`/`sc`/`SCN`/`scn` operands and filters malformed `TJ` array
    members. Operator tokens remain borrowed as `BytesView` through known
-   operator dispatch, with ownership taken only when unknown operations must be
-   preserved. Malformed numeric entries inside `d` dash arrays now raise
-   instead of being preserved as unknown operations.
+   operator dispatch, which pattern matches the operator bytes directly instead
+   of decoding them to `String`; ownership is taken only when unknown
+   operations must be preserved. Malformed numeric entries inside `d` dash
+   arrays now raise instead of being preserved as unknown operations.
    Remaining focus: additional `change_pages` compatibility fixtures for
    unusual inherited page data and real-world destination/action combinations.
 

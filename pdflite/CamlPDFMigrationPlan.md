@@ -717,8 +717,9 @@ MoonBit consequences for this project:
    parsing now has a borrowed `BytesView` entry point,
    `pdf_parse_content_ops_from_view`, with the owned `Bytes` parser kept as a
    compatibility wrapper; the private content lexer also keeps operator tokens
-   borrowed through known-operator dispatch and allocates only for preserved
-   `Op_Unknown` bytes. A `pdftest.ml`-style acceptance fixture now parses
+   borrowed through direct byte-pattern known-operator dispatch and allocates
+   only for preserved `Op_Unknown` bytes. A `pdftest.ml`-style acceptance
+   fixture now parses
    split page content streams, rewrites each page to a single rendered content
    stream through `change_pages`, prunes unreferenced objects, writes the
    document, and reads the operators back.
