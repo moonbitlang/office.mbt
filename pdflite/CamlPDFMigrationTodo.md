@@ -27,7 +27,8 @@ Current backend snapshot:
 - [x] ~~Use checked, struck-through text for completed items so finished work
   remains visible in history.~~
 - [x] ~~Update this file whenever a substantial migration slice lands, and keep
-  project architecture details in `CamlPDFArchitecturePlan.md`.~~
+  project architecture details in `CamlPDFArchitecturePlan.md`; PDF-to-Markdown
+  acceptance details live in `PdfMarkdownAcceptancePlan.md`.~~
 - [x] ~~When a remaining item becomes too broad, split it into a fixture- or
   feature-sized checklist entry before implementing it.~~
 
@@ -115,6 +116,13 @@ Current backend snapshot:
   `introduction_to_camlpdf.pdf` do not currently provide image entries.~~
 - [ ] Add licensed real-world image corpus fixtures, prioritizing CCITT and
   DCT/JPEG encoded payload compatibility before optional pixel decoders.
+- [x] ~~Start the separate PDF-to-Markdown acceptance package described in
+  `PdfMarkdownAcceptancePlan.md`, with deterministic in-memory extraction tests
+  before generated or downloaded fixtures.~~
+- [ ] Add Pandoc-generated Latin and CJK PDF fixtures for the Markdown converter
+  once the in-memory converter API is stable.
+- [ ] Add a MarkItDown comparison report/script for selected local and
+  downloaded fixtures; use differences to drive core extraction fixes.
 - [x] ~~Add Type3 glyph-program/resource coverage where a CharProc consumes
   Type3 `/Resources` through an XObject and named inline-image color space.~~
 - [ ] Add fixture-driven Type3 glyph-program/resource coverage from real PDFs
@@ -775,7 +783,8 @@ Current backend snapshot:
 - [x] ~~Checked-in CamlPDF intro fixture recovers the newest compressed-xref
   incremental update after corrupting the final `startxref`, including reused
   object-number payloads, compressed rewrite, reread, and text extraction.~~
-- [ ] Broader real-world PDF corpus testing.
+- [ ] Broader real-world PDF corpus testing, including PDF-to-Markdown
+  comparison fixtures after the local Pandoc gates are stable.
 - [ ] Performance tuning for large files, object streams, filters, and text/image
   extraction.
 - [x] ~~Incremental writer changed-object collection now deduplicates object

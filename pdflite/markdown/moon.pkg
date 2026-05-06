@@ -1,0 +1,13 @@
+import {
+  "bobzhang/pdflite" @pdflite,
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "bobzhang/pdflite" @pdflite,
+  "bobzhang/pdflite/markdown" @markdown,
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/test",
+} for "test"
