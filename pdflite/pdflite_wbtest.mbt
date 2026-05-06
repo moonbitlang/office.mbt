@@ -539,6 +539,50 @@ test "private object stream helpers cover malformed object streams" {
       object_stream: Some({ object_stream_number: 7, index: 1 }),
     },
   ]
+  let grouped_xrefs = pdf_reader_object_stream_groups(
+    [
+      {
+        object_number: 0,
+        offset: 0,
+        generation: 0,
+        in_use: true,
+        object_stream: Some({ object_stream_number: 7, index: 0 }),
+      },
+      recovered_xrefs[0],
+      {
+        object_number: 4,
+        offset: 0,
+        generation: 0,
+        in_use: false,
+        object_stream: Some({ object_stream_number: 9, index: 0 }),
+      },
+      recovered_xrefs[1],
+      {
+        object_number: 5,
+        offset: 0,
+        generation: 0,
+        in_use: true,
+        object_stream: Some({ object_stream_number: 9, index: 0 }),
+      },
+      {
+        object_number: 6,
+        offset: 0,
+        generation: 0,
+        in_use: true,
+        object_stream: None,
+      },
+    ][:],
+  )
+  @test.assert_eq(grouped_xrefs.length(), 2)
+  @test.assert_eq(grouped_xrefs[0].0, 7)
+  @test.assert_eq(grouped_xrefs[0].1.length(), 2)
+  @test.assert_eq(grouped_xrefs[0].1[0].0.object_number, 2)
+  @test.assert_eq(grouped_xrefs[0].1[0].1.index, 0)
+  @test.assert_eq(grouped_xrefs[0].1[1].0.object_number, 3)
+  @test.assert_eq(grouped_xrefs[0].1[1].1.index, 1)
+  @test.assert_eq(grouped_xrefs[1].0, 9)
+  @test.assert_eq(grouped_xrefs[1].1.length(), 1)
+  @test.assert_eq(grouped_xrefs[1].1[0].0.object_number, 5)
   recovered_doc.load_reconstructed_xref_stream_embedded_objects(
     recovered_xrefs[:],
   )

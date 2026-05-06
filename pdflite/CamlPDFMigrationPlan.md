@@ -285,7 +285,10 @@ MoonBit consequences for this project:
    containing `/ObjStm` once per reader pass and reuse the parsed context for
    all embedded entries from that object stream, avoiding repeated
    decode/decrypt work while preserving the existing strict versus recovered
-   error behavior.
+   error behavior. Embedded object expansion now also groups type-2 xref-stream
+   entries by containing object stream before loading, preserving first-seen
+   stream order and per-stream xref order while avoiding a full xref scan for
+   every `/ObjStm`.
    Password-aware document reads now decrypt encrypted `/ObjStm` streams before
    slicing embedded objects, including the absent-password path that falls back
    to a blank user password, then load the embedded objects as already
@@ -1559,8 +1562,9 @@ MoonBit consequences for this project:
     recovery helper branches. A follow-up text coverage pass keeps
     `pdf_text.mbt` fully covered while replacing generated CID-range CMap
     reverse lookup scans with Unicode/CID-to-charcode helpers and replacing
-    CNS-EUC forward linear scans with unsigned binary range lookup; `moon
-    coverage analyze` now reports all source files fully covered.
+    CNS-EUC forward linear scans with unsigned binary range lookup. Reader
+    coverage now also keeps grouped object-stream xref expansion fully covered;
+    `moon coverage analyze` now reports all source files fully covered.
 
 ## Active Native Acceptance Milestone
 

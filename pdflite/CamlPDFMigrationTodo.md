@@ -132,6 +132,9 @@ Current estimate:
   spelling or large-file profiles expose remaining gaps.
 - [ ] Profile and tune remaining large-file hot paths for object streams,
   filters, image extraction, and non-ASCII text paths.
+- [x] ~~Group xref-stream type-2 entries by containing object stream before
+  embedded object expansion, avoiding a full xref scan per `/ObjStm` while
+  preserving first-seen stream order and per-stream entry order.~~
 - [x] ~~Replace generated Adobe-GB1, Adobe-CNS1, and Adobe-Japan1 CID-range
   CMap reverse lookup nested charcode scans with Unicode/CID-to-charcode
   helpers, preserving deterministic lowest packed-charcode selection for
@@ -254,6 +257,9 @@ Current estimate:
 - [ ] Revisit all-backend validation after native feature parity is stable.
 - [ ] Tune remaining performance for large files, object streams, filters,
   image extraction, and non-ASCII text paths.
+- [x] ~~Object-stream embedded-object loading now groups compressed xref entries
+  by `/ObjStm`, so compressed-object-heavy reads do not rescan the full xref
+  table for each object stream.~~
 - [x] ~~Generated CID-range CMap reverse lookup for Adobe-GB1, Adobe-CNS1, and
   Adobe-Japan1 now maps Unicode to CID and CID to charcode instead of scanning
   every character code in every range.~~
@@ -675,6 +681,8 @@ Current estimate:
   behavior.~~
 - [x] ~~Tune CNS-EUC predefined-CMap forward CID-range lookup with unsigned
   binary search while preserving packed-byte ordering.~~
+- [x] ~~Tune object-stream expansion by grouping xref-stream type-2 entries
+  before strict, reconstructed, and password-aware embedded-object loading.~~
 - [ ] Add the next remaining format parity slice: remaining rare predefined
   CMap families, real-world ToUnicode variation coverage, fixture-driven Type3
   resource/glyph-program behavior, or real-world image corpus coverage.

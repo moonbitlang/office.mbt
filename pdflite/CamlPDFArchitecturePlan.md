@@ -108,8 +108,11 @@ work changes.
    decoded `/ObjStm` context per containing stream and reuses it for all
    compressed xref entries from that stream, including password-aware and
    reconstructed xref-stream reads, avoiding repeated stream decode/decrypt work
-   on compressed-object-heavy PDFs. Primitive integer lexing now also parses
-   Int-range PDF number tokens directly from borrowed `BytesView` data, using an
+   on compressed-object-heavy PDFs. Xref-stream type-2 entries are grouped by
+   containing object stream before embedded expansion, avoiding a full xref scan
+   per `/ObjStm` while preserving stream and entry order. Primitive integer
+   lexing now also parses Int-range PDF number tokens directly from borrowed
+   `BytesView` data, using an
    Int64 overflow guard before falling back to the existing real-number parser.
    Shared reader ASCII integer parsing also accumulates through Int64 and
    rejects values outside MoonBit `Int` range before they become xref offsets,
@@ -505,7 +508,8 @@ and backend breadth, is about 84-89% complete.
   coverage. A May 6, 2026 `moon coverage analyze` pass reports all source
   files fully covered after closing the remaining codec, content, image,
   lexeme, reconstructed object-stream, and generated CMap reverse-lookup helper
-  branches plus the CNS-EUC unsigned range lookup.
+  branches plus the CNS-EUC unsigned range lookup and grouped object-stream
+  expansion helper.
 - Covered: checked-in CamlPDF logo fixture bad-`startxref` reconstruction
   through native async file wrappers, compressed rewrite, and reread.
 - Covered: checked-in CamlPDF intro fixture compressed-xref incremental update
